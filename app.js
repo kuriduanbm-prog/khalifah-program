@@ -1,4 +1,598 @@
 
+// ==================== 114 SURAHS DATASET ==================== //
+const QURAN_SURAHS = [
+  { num: 1, name: 'อัลฟาติฮะฮ์', arabic: 'الفاتحة', ayahs: 7 },
+  { num: 2, name: 'อัลบะเกาะเราะฮ์', arabic: 'البقرة', ayahs: 286 },
+  { num: 3, name: 'อาลิอิมรอน', arabic: 'آل عمران', ayahs: 200 },
+  { num: 4, name: 'อันนิซาอ์', arabic: 'النساء', ayahs: 176 },
+  { num: 5, name: 'อัลมาอิดะฮ์', arabic: 'المائدة', ayahs: 120 },
+  { num: 6, name: 'อัลอันอาม', arabic: 'الأنعام', ayahs: 165 },
+  { num: 7, name: 'อัลอะอ์รอฟ', arabic: 'الأعراف', ayahs: 206 },
+  { num: 8, name: 'อัลอันฟาล', arabic: 'الأنفال', ayahs: 75 },
+  { num: 9, name: 'อัตเตาบะฮ์', arabic: 'التوبة', ayahs: 129 },
+  { num: 10, name: 'ยูนุส', arabic: 'يونس', ayahs: 109 },
+  { num: 11, name: 'ฮูด', arabic: 'هود', ayahs: 123 },
+  { num: 12, name: 'ยูซุฟ', arabic: 'يوسف', ayahs: 111 },
+  { num: 13, name: 'อัรเราะอ์ด', arabic: 'الرعد', ayahs: 43 },
+  { num: 14, name: 'อิบรอฮีม', arabic: 'إبراهيم', ayahs: 52 },
+  { num: 15, name: 'อัลฮิจญร์', arabic: 'الحجر', ayahs: 99 },
+  { num: 16, name: 'อันนะห์ล', arabic: 'النحل', ayahs: 128 },
+  { num: 17, name: 'อัลอิสรออ์', arabic: 'الإسراء', ayahs: 111 },
+  { num: 18, name: 'อัลกะฮ์ฟิ', arabic: 'الكهف', ayahs: 110 },
+  { num: 19, name: 'มัรยัม', arabic: 'مريم', ayahs: 98 },
+  { num: 20, name: 'ฏอฮา', arabic: 'طه', ayahs: 135 },
+  { num: 21, name: 'อัลอันบิยาอ์', arabic: 'الأنبياء', ayahs: 112 },
+  { num: 22, name: 'อัลฮัจญ์', arabic: 'الحج', ayahs: 78 },
+  { num: 23, name: 'อัลมุอ์มินูน', arabic: 'المؤمنون', ayahs: 118 },
+  { num: 24, name: 'อันนูร', arabic: 'النور', ayahs: 64 },
+  { num: 25, name: 'อัลฟุรกอน', arabic: 'الفرقان', ayahs: 77 },
+  { num: 26, name: 'อัชชุอะรออ์', arabic: 'الشعراء', ayahs: 227 },
+  { num: 27, name: 'อันนัมล', arabic: 'النمل', ayahs: 93 },
+  { num: 28, name: 'อัลเกาะศ็อศ', arabic: 'القصص', ayahs: 88 },
+  { num: 29, name: 'อัลอันกะบูต', arabic: 'العنكبوت', ayahs: 69 },
+  { num: 30, name: 'อัรรูม', arabic: 'الروم', ayahs: 60 },
+  { num: 31, name: 'ลุกมาน', arabic: 'لقمان', ayahs: 34 },
+  { num: 32, name: 'อัสสะญะดะฮ์', arabic: 'السجدة', ayahs: 30 },
+  { num: 33, name: 'อัลอะห์ซาบ', arabic: 'الأحزاب', ayahs: 73 },
+  { num: 34, name: 'สะบะอ์', arabic: 'سبإ', ayahs: 54 },
+  { num: 35, name: 'ฟาฏิร', arabic: 'فاطر', ayahs: 45 },
+  { num: 36, name: 'ยาซีน', arabic: 'يس', ayahs: 83 },
+  { num: 37, name: 'อัศศ็อฟฟาต', arabic: 'الصافات', ayahs: 182 },
+  { num: 38, name: 'ศอด', arabic: 'ص', ayahs: 88 },
+  { num: 39, name: 'อัซซุมัร', arabic: 'الزمر', ayahs: 75 },
+  { num: 40, name: 'ฆอฟิร', arabic: 'غافر', ayahs: 85 },
+  { num: 41, name: 'ฟุศศิลัต', arabic: 'فصلت', ayahs: 54 },
+  { num: 42, name: 'อัชชูรอ', arabic: 'الشورى', ayahs: 53 },
+  { num: 43, name: 'อัซซุครุฟ', arabic: 'الزخرف', ayahs: 89 },
+  { num: 44, name: 'อัดดุคอน', arabic: 'الدخان', ayahs: 59 },
+  { num: 45, name: 'อัลญาษิยะฮ์', arabic: 'الجاثية', ayahs: 37 },
+  { num: 46, name: 'อัลอะห์กอฟ', arabic: 'الأحقاف', ayahs: 35 },
+  { num: 47, name: 'มุฮัมมัด', arabic: 'محمد', ayahs: 38 },
+  { num: 48, name: 'อัลฟัตห์', arabic: 'الفتح', ayahs: 29 },
+  { num: 49, name: 'อัลฮุญุรอต', arabic: 'الحجرات', ayahs: 18 },
+  { num: 50, name: 'กอฟ', arabic: 'ق', ayahs: 45 },
+  { num: 51, name: 'อัซซาริยาต', arabic: 'الذاريات', ayahs: 60 },
+  { num: 52, name: 'อัฏฏูร', arabic: 'الطور', ayahs: 49 },
+  { num: 53, name: 'อันนัจญม', arabic: 'النجم', ayahs: 62 },
+  { num: 54, name: 'อัลเกาะมัร', arabic: 'القمر', ayahs: 55 },
+  { num: 55, name: 'อัรเราะห์มาน', arabic: 'الرحمن', ayahs: 78 },
+  { num: 56, name: 'อัลวากิอะฮ์', arabic: 'الواقعة', ayahs: 96 },
+  { num: 57, name: 'อัลฮะดีด', arabic: 'الحديد', ayahs: 29 },
+  { num: 58, name: 'อัลมุญาดะละฮ์', arabic: 'المجادلة', ayahs: 22 },
+  { num: 59, name: 'อัลฮัชร์', arabic: 'الحشر', ayahs: 24 },
+  { num: 60, name: 'อัลมุมตะฮะนะฮ์', arabic: 'الممتحنة', ayahs: 13 },
+  { num: 61, name: 'อัศศ็อฟ', arabic: 'الصف', ayahs: 14 },
+  { num: 62, name: 'อัลญุมุอะฮ์', arabic: 'الجمعة', ayahs: 11 },
+  { num: 63, name: 'อัลมุนาฟิกูน', arabic: 'المنافقون', ayahs: 11 },
+  { num: 64, name: 'อัตตะฆอบุน', arabic: 'التغابن', ayahs: 18 },
+  { num: 65, name: 'อัฏเฏาะลาก', arabic: 'الطلاق', ayahs: 12 },
+  { num: 66, name: 'อัตตะห์รีม', arabic: 'التحريم', ayahs: 12 },
+  { num: 67, name: 'อัลมุลก์', arabic: 'الملك', ayahs: 30 },
+  { num: 68, name: 'อัลเกาะลัม', arabic: 'القلم', ayahs: 52 },
+  { num: 69, name: 'อัลฮากเกาะฮ์', arabic: 'الحاقة', ayahs: 52 },
+  { num: 70, name: 'อัลมะอาริจญ์', arabic: 'المعارج', ayahs: 44 },
+  { num: 71, name: 'นูห์', arabic: 'نوح', ayahs: 28 },
+  { num: 72, name: 'อัลญิน', arabic: 'الجن', ayahs: 28 },
+  { num: 73, name: 'อัลมุซซัมมิล', arabic: 'المزمل', ayahs: 20 },
+  { num: 74, name: 'อัลมุดดัษษิร', arabic: 'المدثر', ayahs: 56 },
+  { num: 75, name: 'อัลกิยามะฮ์', arabic: 'القيامة', ayahs: 40 },
+  { num: 76, name: 'อัลอินซาน', arabic: 'الإنسان', ayahs: 31 },
+  { num: 77, name: 'อัลมุรสะลาต', arabic: 'المرسلات', ayahs: 50 },
+  { num: 78, name: 'อันนะบะอ์', arabic: 'النبإ', ayahs: 40 },
+  { num: 79, name: 'อันนาซิอาต', arabic: 'النازعات', ayahs: 46 },
+  { num: 80, name: 'อะบะสะ', arabic: 'عبس', ayahs: 42 },
+  { num: 81, name: 'อัตตักวีร', arabic: 'التكوير', ayahs: 29 },
+  { num: 82, name: 'อัลอินฟิฏอร', arabic: 'الانفطار', ayahs: 19 },
+  { num: 83, name: 'อัลมุเฏาะฟิฟีน', arabic: 'المطففين', ayahs: 36 },
+  { num: 84, name: 'อัลอินชิกอก', arabic: 'الانشقاق', ayahs: 25 },
+  { num: 85, name: 'อัลบุรูจญ์', arabic: 'البروج', ayahs: 22 },
+  { num: 86, name: 'อัฏฏอริก', arabic: 'الطارق', ayahs: 17 },
+  { num: 87, name: 'อัลอะอ์ลา', arabic: 'الأعلى', ayahs: 19 },
+  { num: 88, name: 'อัลฆอชิยะฮ์', arabic: 'الغاشية', ayahs: 26 },
+  { num: 89, name: 'อัลฟัจญร์', arabic: 'الفجر', ayahs: 30 },
+  { num: 90, name: 'อัลบะลัด', arabic: 'البلد', ayahs: 20 },
+  { num: 91, name: 'อัชชัมส์', arabic: 'الشمس', ayahs: 15 },
+  { num: 92, name: 'อัลลัยล์', arabic: 'الليل', ayahs: 21 },
+  { num: 93, name: 'อัฎฎุฮา', arabic: 'الضحى', ayahs: 11 },
+  { num: 94, name: 'อัชชัรห์', arabic: 'الشرح', ayahs: 8 },
+  { num: 95, name: 'อัตตีน', arabic: 'التين', ayahs: 8 },
+  { num: 96, name: 'อัลอะลัก', arabic: 'العلق', ayahs: 19 },
+  { num: 97, name: 'อัลก็อดร์', arabic: 'القدر', ayahs: 5 },
+  { num: 98, name: 'อัลบัยยินะฮ์', arabic: 'البينة', ayahs: 8 },
+  { num: 99, name: 'อัซซัลซะละฮ์', arabic: 'الزلزلة', ayahs: 8 },
+  { num: 100, name: 'อัลอาดียาต', arabic: 'العاديات', ayahs: 11 },
+  { num: 101, name: 'อัลกอริอะฮ์', arabic: 'القارعة', ayahs: 11 },
+  { num: 102, name: 'อัตตะกาษุร', arabic: 'التكاثر', ayahs: 8 },
+  { num: 103, name: 'อัลอัศร์', arabic: 'العصر', ayahs: 3 },
+  { num: 104, name: 'อัลฮุมะซะฮ์', arabic: 'الهمزة', ayahs: 9 },
+  { num: 105, name: 'อัลฟีล', arabic: 'الفيل', ayahs: 5 },
+  { num: 106, name: 'กุรอยช์', arabic: 'قريش', ayahs: 4 },
+  { num: 107, name: 'อัลมาอูน', arabic: 'الماعون', ayahs: 7 },
+  { num: 108, name: 'อัลเกาษัร', arabic: 'الكوثر', ayahs: 3 },
+  { num: 109, name: 'อัลกาฟิรูน', arabic: 'الكافرون', ayahs: 6 },
+  { num: 110, name: 'อันนัศร์', arabic: 'النصر', ayahs: 3 },
+  { num: 111, name: 'อัลมะสัด', arabic: 'المسد', ayahs: 5 },
+  { num: 112, name: 'อัลอิคลาส', arabic: 'الإخلاص', ayahs: 4 },
+  { num: 113, name: 'อัลฟะลัก', arabic: 'الفلق', ayahs: 5 },
+  { num: 114, name: 'อันนาส', arabic: 'الناس', ayahs: 6 }
+];
+
+// ==================== HASANAT (ผลบุญ) LOGIC ==================== //
+
+function getStudentHasanat(studentId) {
+  if (!studentId) return null;
+  let allHasanat = {};
+  try {
+    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+  } catch (e) { allHasanat = {}; }
+
+  if (!allHasanat[studentId]) {
+    allHasanat[studentId] = {
+      studentId: studentId,
+      quran: {
+        pagesToday: 0,
+        currentPage: 0,
+        juzCompleted: 0,
+        stars: 0,
+        lastUpdated: ''
+      },
+      memorization: {
+        memorizedSurahs: [],
+        count: 0,
+        lastUpdated: ''
+      },
+      sunnah: {
+        date: new Date().toISOString().split('T')[0],
+        rawatib: {
+          subhBefore: false,
+          dhuhrBefore: false,
+          dhuhrAfter: false,
+          asrBefore: false,
+          maghribBefore: false,
+          maghribAfter: false,
+          ishaBefore: false,
+          ishaAfter: false
+        },
+        duhaRakaat: 0,
+        witrRakaat: 0,
+        tahajjudRakaat: 0,
+        totalRakaat: 0,
+        lastUpdated: ''
+      }
+    };
+  }
+  return allHasanat[studentId];
+}
+
+function saveStudentHasanat(hasanat) {
+  if (!hasanat || !hasanat.studentId) return;
+  let allHasanat = {};
+  try {
+    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+  } catch (e) { allHasanat = {}; }
+
+  allHasanat[hasanat.studentId] = hasanat;
+  localStorage.setItem('khalifah_student_hasanat', JSON.stringify(allHasanat));
+
+  // Sync with Dashboard Quran Stars & Stats
+  renderDashboardQuranStars();
+
+  // Sync to Google Sheets
+  syncRecordToGoogleSheet('recordHasanat', {
+    studentId: hasanat.studentId,
+    studentName: currentStudent ? currentStudent.fullName : '',
+    grade: currentStudent ? currentStudent.grade : '',
+    date: new Date().toISOString().split('T')[0],
+    quran: hasanat.quran,
+    memorization: hasanat.memorization,
+    sunnah: hasanat.sunnah,
+    timestamp: new Date().toISOString()
+  });
+}
+
+function switchHasanatSubTab(tab) {
+  document.querySelectorAll('.hasanat-subnav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.hasanat-subcontent').forEach(c => c.style.display = 'none');
+
+  if (tab === 'quran') {
+    const btn = document.getElementById('btnSubHasanatQuran');
+    const content = document.getElementById('subtab-quran');
+    if (btn) btn.classList.add('active');
+    if (content) content.style.display = 'block';
+  } else if (tab === 'memorize') {
+    const btn = document.getElementById('btnSubHasanatMemorize');
+    const content = document.getElementById('subtab-memorize');
+    if (btn) btn.classList.add('active');
+    if (content) content.style.display = 'block';
+    renderSurahChecklist();
+  } else if (tab === 'sunnah') {
+    const btn = document.getElementById('btnSubHasanatSunnah');
+    const content = document.getElementById('subtab-sunnah');
+    if (btn) btn.classList.add('active');
+    if (content) content.style.display = 'block';
+  }
+}
+
+function initHasanatView() {
+  if (!currentStudent) return;
+  const h = getStudentHasanat(currentStudent.studentId);
+  if (!h) return;
+
+  // 1. Quran tab
+  const pToday = document.getElementById('quranPagesTodayInput');
+  const pCur = document.getElementById('quranCurrentPageInput');
+  const jComp = document.getElementById('quranJuzCompletedInput');
+  if (pToday) pToday.value = h.quran.pagesToday || '';
+  if (pCur) pCur.value = h.quran.currentPage || '';
+  if (jComp) jComp.value = h.quran.juzCompleted || 0;
+
+  renderHasanatStarsShowcase(h.quran.stars || 0, h.quran.currentPage || 0);
+
+  // 2. Memorization tab
+  const memBadge = document.getElementById('memorizedSurahsBadge');
+  if (memBadge) {
+    memBadge.innerText = `ท่องจำได้ ${h.memorization.count || 0} / 114 ซูเราะห์`;
+  }
+
+  // 3. Sunnah tab
+  if (h.sunnah) {
+    const r = h.sunnah.rawatib || {};
+    Object.keys(r).forEach(k => {
+      const chk = document.getElementById(`chk-rawatib-${k}`);
+      const row = document.getElementById(`row-rawatib-${k}`);
+      if (chk) chk.checked = !!r[k];
+      if (row) row.classList.toggle('checked', !!r[k]);
+    });
+    const sDuha = document.getElementById('selDuhaRakaat');
+    const sWitr = document.getElementById('selWitrRakaat');
+    const sTahajjud = document.getElementById('selTahajjudRakaat');
+    if (sDuha) sDuha.value = h.sunnah.duhaRakaat || 0;
+    if (sWitr) sWitr.value = h.sunnah.witrRakaat !== undefined ? h.sunnah.witrRakaat : 3;
+    if (sTahajjud) sTahajjud.value = h.sunnah.tahajjudRakaat || 0;
+    calculateDailySunnahRakaat(false);
+  }
+}
+
+function renderHasanatStarsShowcase(stars, currentPage) {
+  const showcase = document.getElementById('hasanatStarsShowcase');
+  const badge = document.getElementById('hasanatJuzBadge');
+  const percentText = document.getElementById('hasanatQuranPercentText');
+
+  if (badge) {
+    badge.innerText = `⭐ ${stars} ดาว (${stars}/30 ยุซ)`;
+  }
+
+  if (percentText) {
+    const pct = ((currentPage / 604) * 100).toFixed(1);
+    percentText.innerText = `อ่านแล้ว ${currentPage} จาก 604 หน้า (${pct}%) - สะสม ${stars} ดาวทอง`;
+  }
+
+  if (!showcase) return;
+  if (stars === 0) {
+    showcase.innerHTML = '<span style="font-size: 0.95rem; color: #94a3b8;">ยังไม่มีดาวสะสม เริ่มบันทึกการอ่านเพื่อรับดาวได้เลย</span>';
+    return;
+  }
+
+  let starsHtml = '';
+  for (let i = 0; i < stars; i++) {
+    starsHtml += `<span class="quran-star-icon" title="ยุซที่ ${i+1} สำเร็จ">⭐</span>`;
+  }
+  showcase.innerHTML = starsHtml;
+}
+
+function autoCalculateJuzFromPage() {
+  const pCur = document.getElementById('quranCurrentPageInput');
+  const jComp = document.getElementById('quranJuzCompletedInput');
+  if (!pCur || !jComp) return;
+
+  const page = parseInt(pCur.value) || 0;
+  if (page > 0) {
+    // 20 pages per juz approx
+    const completed = Math.min(30, Math.floor(page / 20));
+    if (parseInt(jComp.value) < completed) {
+      jComp.value = completed;
+    }
+  }
+}
+
+function saveQuranReadingLog() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
+    enforceMandatoryLogin();
+    return;
+  }
+
+  const pToday = parseInt(document.getElementById('quranPagesTodayInput').value) || 0;
+  const pCur = parseInt(document.getElementById('quranCurrentPageInput').value) || 0;
+  let jComp = parseInt(document.getElementById('quranJuzCompletedInput').value) || 0;
+
+  if (pCur < 0 || pCur > 604) {
+    showToast('กรุณาระบุเลขหน้าที่ถูกต้อง (1 - 604)', 'warning');
+    return;
+  }
+
+  jComp = Math.max(0, Math.min(30, jComp));
+  const stars = jComp; // 1 ยุซ = 1 ดาว
+
+  const h = getStudentHasanat(currentStudent.studentId);
+  h.quran = {
+    pagesToday: pToday,
+    currentPage: pCur,
+    juzCompleted: jComp,
+    stars: stars,
+    lastUpdated: new Date().toISOString()
+  };
+
+  saveStudentHasanat(h);
+  renderHasanatStarsShowcase(stars, pCur);
+  playSuccessSound();
+
+  showToast(`บันทึกการอ่านอัลกุรอานสำเร็จ! ได้รับดาวสะสม ${stars} ดวง ⭐ (ด้วยความอิคลาส)`, 'success');
+}
+
+function renderSurahChecklist(filterText = '') {
+  const container = document.getElementById('surahListContainer');
+  if (!container || !currentStudent) return;
+
+  const h = getStudentHasanat(currentStudent.studentId);
+  const memorized = (h && h.memorization && h.memorization.memorizedSurahs) || [];
+
+  const search = filterText.toLowerCase().trim();
+  const filtered = QURAN_SURAHS.filter(s => {
+    return s.name.toLowerCase().includes(search) ||
+           s.arabic.includes(search) ||
+           String(s.num).includes(search);
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">ไม่พบซูเราะห์ที่ตรงกับคำค้นหา</div>';
+    return;
+  }
+
+  container.innerHTML = `<div class="surah-grid">${filtered.map(s => {
+    const isMem = memorized.includes(s.num);
+    return `
+      <div class="surah-item-card ${isMem ? 'memorized' : ''}" onclick="toggleSurahMemorized(${s.num})">
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <div class="surah-number-badge">${s.num}</div>
+          <div>
+            <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark);">${s.name}</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">${s.ayahs} อายะฮ์</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+          <span style="font-family: 'Traditional Arabic', serif; font-size: 1.05rem; color: #059669;">${s.arabic}</span>
+          <input type="checkbox" ${isMem ? 'checked' : ''} onclick="event.stopPropagation(); toggleSurahMemorized(${s.num})" style="cursor: pointer; width: 18px; height: 18px; accent-color: #059669;">
+        </div>
+      </div>
+    `;
+  }).join('')}</div>`;
+}
+
+function filterSurahsList(query) {
+  renderSurahChecklist(query);
+}
+
+function toggleSurahMemorized(surahNum) {
+  if (!currentStudent) return;
+  const h = getStudentHasanat(currentStudent.studentId);
+  let mem = h.memorization.memorizedSurahs || [];
+
+  if (mem.includes(surahNum)) {
+    mem = mem.filter(n => n !== surahNum);
+  } else {
+    mem.push(surahNum);
+    mem.sort((a, b) => a - b);
+  }
+
+  h.memorization.memorizedSurahs = mem;
+  h.memorization.count = mem.length;
+  h.memorization.lastUpdated = new Date().toISOString();
+
+  saveStudentHasanat(h);
+
+  const memBadge = document.getElementById('memorizedSurahsBadge');
+  if (memBadge) {
+    memBadge.innerText = `ท่องจำได้ ${mem.length} / 114 ซูเราะห์`;
+  }
+
+  renderSurahChecklist(document.getElementById('searchSurahInput') ? document.getElementById('searchSurahInput').value : '');
+}
+
+function saveSurahMemorizationLog() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
+    return;
+  }
+  const h = getStudentHasanat(currentStudent.studentId);
+  saveStudentHasanat(h);
+  playSuccessSound();
+  showToast(`บันทึกสถิติท่องจำอัลกุรอาน ${h.memorization.count} ซูเราะห์เรียบร้อยแล้ว`, 'success');
+}
+
+function calculateDailySunnahRakaat(shouldSave = false) {
+  const rawatibKeys = [
+    'subhBefore', 'dhuhrBefore', 'dhuhrAfter', 'asrBefore',
+    'maghribBefore', 'maghribAfter', 'ishaBefore', 'ishaAfter'
+  ];
+
+  let total = 0;
+  const rawatibState = {};
+
+  rawatibKeys.forEach(k => {
+    const chk = document.getElementById(`chk-rawatib-${k}`);
+    const row = document.getElementById(`row-rawatib-${k}`);
+    const isChecked = chk ? chk.checked : false;
+    rawatibState[k] = isChecked;
+    if (row) row.classList.toggle('checked', isChecked);
+
+    if (isChecked) {
+      if (k === 'dhuhrBefore' || k === 'asrBefore') {
+        total += 2; // Default 2 rakaat
+      } else {
+        total += 2; // 2 rakaat standard
+      }
+    }
+  });
+
+  const duha = parseInt(document.getElementById('selDuhaRakaat')?.value || 0);
+  const witr = parseInt(document.getElementById('selWitrRakaat')?.value || 0);
+  const tahajjud = parseInt(document.getElementById('selTahajjudRakaat')?.value || 0);
+
+  total += duha + witr + tahajjud;
+
+  const badge = document.getElementById('todayTotalSunnahRakaatBadge');
+  if (badge) {
+    badge.innerText = `วันนี้ละหมาดสุนัตแล้ว ${total} ร็อกอะฮ์`;
+  }
+
+  if (shouldSave && currentStudent) {
+    const h = getStudentHasanat(currentStudent.studentId);
+    h.sunnah = {
+      date: new Date().toISOString().split('T')[0],
+      rawatib: rawatibState,
+      duhaRakaat: duha,
+      witrRakaat: witr,
+      tahajjudRakaat: tahajjud,
+      totalRakaat: total,
+      lastUpdated: new Date().toISOString()
+    };
+    saveStudentHasanat(h);
+  }
+
+  return total;
+}
+
+function saveDailySunnahPrayersLog() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
+    enforceMandatoryLogin();
+    return;
+  }
+  const total = calculateDailySunnahRakaat(true);
+  playSuccessSound();
+  showToast(`บันทึกการละหมาดสุนัตประจำวันสำเร็จ! (${total} ร็อกอะฮ์)`, 'success');
+}
+
+function renderDashboardQuranStars() {
+  const starsList = document.getElementById('dashQuranStarsList');
+  const progressText = document.getElementById('dashQuranProgressText');
+  const statCount = document.getElementById('statQuranStarsCount');
+
+  if (!currentStudent) {
+    if (starsList) starsList.innerHTML = '<span style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">เข้าสู่ระบบเพื่อดูดาว</span>';
+    if (progressText) progressText.innerText = 'จบ 0/30 ยุซ (0 ดาว)';
+    if (statCount) statCount.innerText = '0 ดาว';
+    return;
+  }
+
+  const h = getStudentHasanat(currentStudent.studentId);
+  const stars = (h && h.quran && h.quran.stars) || 0;
+  const juz = (h && h.quran && h.quran.juzCompleted) || 0;
+  const curPage = (h && h.quran && h.quran.currentPage) || 0;
+
+  if (progressText) {
+    progressText.innerText = `จบ ${juz}/30 ยุซ (${stars} ดาว)`;
+  }
+
+  if (statCount) {
+    statCount.innerText = `${stars} ดาว`;
+  }
+
+  if (!starsList) return;
+  if (stars === 0) {
+    starsList.innerHTML = '<span style="font-size: 0.82rem; color: rgba(255,255,255,0.85);">เริ่มอ่านอัลกุรอานเพื่อสะสมดาว</span>';
+    return;
+  }
+
+  let starsHtml = '';
+  for (let i = 0; i < stars; i++) {
+    starsHtml += `<span class="quran-star-icon" title="ยุซที่ ${i+1} สำเร็จ">⭐</span>`;
+  }
+  starsList.innerHTML = starsHtml;
+}
+
+// ==================== PRAYER HISTORY RENDERING ==================== //
+
+function renderPrayerHistory(filterDate = null) {
+  const container = document.getElementById('prayerHistoryListContainer');
+  const badge = document.getElementById('prayerHistoryCountBadge');
+  if (!container) return;
+
+  if (!currentStudent) {
+    container.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">กรุณาเข้าสู่ระบบเพื่อดูประวัติการละหมาด</div>';
+    if (badge) badge.innerText = '0 บันทึก';
+    return;
+  }
+
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+
+  let myLogs = historyList.filter(p => p.studentId === currentStudent.studentId);
+
+  if (filterDate) {
+    myLogs = myLogs.filter(p => p.timestamp && p.timestamp.startsWith(filterDate));
+  }
+
+  if (badge) badge.innerText = `${myLogs.length} บันทึก`;
+
+  if (myLogs.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 1.5rem; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-md);">
+        <i class="fa-solid fa-calendar-xmark" style="font-size: 1.8rem; margin-bottom: 0.4rem; display: block;"></i>
+        ${filterDate ? 'ไม่พบบันทึกการละหมาดในวันที่เลือก' : 'ยังไม่มีประวัติการเช็คชื่อละหมาดย้อนหลัง'}
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = myLogs.map(p => {
+    const d = new Date(p.timestamp);
+    const dateStr = d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+    const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const status = p.status || 'ตรงเวลา';
+    const note = p.note ? `<div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;"><i class="fa-solid fa-note-sticky"></i> ${p.note}</div>` : '';
+
+    let statusClass = 'status-ontime';
+    if (status.includes('สาย')) statusClass = 'status-late';
+    if (status.includes('อุซุร') || status.includes('ประจำเดือน')) statusClass = 'status-excused';
+    if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
+
+    return `
+      <div class="prayer-history-item">
+        <div style="display: flex; align-items: center; gap: 0.85rem;">
+          ${p.photo ? `<img src="${p.photo}" alt="Photo" style="width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light); cursor: pointer;" onclick="previewPhoto('${p.photo}')">`: `<div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b;"><i class="fa-solid fa-camera"></i></div>`}
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+              <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">ละหมาด${p.prayerName}</span>
+              <span class="status-badge ${statusClass}">${status}</span>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem;">
+              <i class="fa-solid fa-clock"></i> ${dateStr} เวลา ${timeStr} น. • ณ ${p.locationName || 'พิกัด GPS'}
+            </div>
+            ${note}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterPrayerHistoryByDate() {
+  const input = document.getElementById('filterPrayerHistoryDate');
+  const dateVal = input ? input.value : null;
+  renderPrayerHistory(dateVal);
+}
+
+function clearPrayerDateFilter() {
+  const input = document.getElementById('filterPrayerHistoryDate');
+  if (input) input.value = '';
+  renderPrayerHistory(null);
+}
+
+
 // ----------------- MANDATORY LOGIN ENFORCEMENT ----------------- //
 function enforceMandatoryLogin() {
   if (!currentStudent && !currentAdmin) {
@@ -117,6 +711,8 @@ document.addEventListener('DOMContentLoaded', () => {
   renderDashboardCharts();
   renderActivitiesList();
   renderTodayPrayerTable();
+  renderDashboardQuranStars();
+  renderPrayerHistory();
   initExportDateDefaults();
   enforceMandatoryLogin();
 
@@ -245,6 +841,11 @@ function switchView(viewName) {
   // Trigger specific view setups
   if (viewName === 'dashboard') {
     renderDashboardCharts();
+    renderDashboardQuranStars();
+  } else if (viewName === 'hasanat') {
+    initHasanatView();
+  } else if (viewName === 'prayer') {
+    renderPrayerHistory();
   } else if (viewName === 'admin') {
     renderAdminStudentsTable();
     renderSubAdminsTable();
@@ -550,6 +1151,11 @@ function captureAndSavePrayerInstant() {
 
   const photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
 
+  const statusSelect = document.getElementById('prayerStatusSelect');
+  const noteInput = document.getElementById('prayerNoteInput');
+  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  const prayerNote = noteInput ? noteInput.value.trim() : '';
+
   // Save prayer record
   const prayerRecord = {
     id: 'PRY-' + Date.now(),
@@ -557,6 +1163,8 @@ function captureAndSavePrayerInstant() {
     studentName: currentStudent.fullName,
     grade: currentStudent.grade,
     prayerName: selectedPrayerTime,
+    status: prayerStatus,
+    note: prayerNote,
     timestamp: now.toISOString(),
     locationName: verifiedLocation.locationName,
     isWithinZone: verifiedLocation.isWithinZone,
@@ -597,7 +1205,11 @@ function captureAndSavePrayerInstant() {
   // Play beep sound
   playSuccessSound();
 
-  showToast(`เช็คชื่อละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว! (เวลา: ${timeStr})`, 'success');
+  if (document.getElementById('prayerNoteInput')) {
+    document.getElementById('prayerNoteInput').value = '';
+  }
+  renderPrayerHistory();
+  showToast(`เช็คชื่อละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว! (${prayerStatus})`, 'success');
 
   // Sync to Google Sheets
   syncRecordToGoogleSheet('prayerCheckIn', prayerRecord);
@@ -727,6 +1339,11 @@ function captureAndRecordPrayer() {
   // แปลงภาพเป็น Base64
   const photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
 
+  const statusSelect = document.getElementById('prayerStatusSelect');
+  const noteInput = document.getElementById('prayerNoteInput');
+  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  const prayerNote = noteInput ? noteInput.value.trim() : '';
+
   // สร้าง Object ข้อมูลการบันทึก
   const prayerRecord = {
     logId: 'PRY-' + Date.now(),
@@ -734,6 +1351,8 @@ function captureAndRecordPrayer() {
     studentName: currentStudent.fullName,
     grade: currentStudent.grade,
     prayerTime: selectedPrayerTime,
+    status: prayerStatus,
+    note: prayerNote,
     timestamp: now.toISOString(),
     date: now.toISOString().split('T')[0],
     time: timeStr,
@@ -1186,6 +1805,8 @@ function renderCurrentStudentProfile() {
     }
   }
   if (selectNewGrade) selectNewGrade.value = currentStudent.grade;
+
+  renderDashboardQuranStars();
 }
 
 /**
@@ -1549,14 +2170,30 @@ function viewStudentDetails(studentId) {
   const btnDelete = document.getElementById('btnAdminDeleteStudent');
 
   title.innerText = `ข้อมูลนักเรียน: ${student.fullName} (${student.studentId})`;
+  const hasanat = getStudentHasanat(student.studentId);
+  const qStars = (hasanat && hasanat.quran && hasanat.quran.stars) || 0;
+  const qJuz = (hasanat && hasanat.quran && hasanat.quran.juzCompleted) || 0;
+  const qPage = (hasanat && hasanat.quran && hasanat.quran.currentPage) || 0;
+  const memCount = (hasanat && hasanat.memorization && hasanat.memorization.count) || 0;
+  const sunnahRakaat = (hasanat && hasanat.sunnah && hasanat.sunnah.totalRakaat) || 0;
+
   content.innerHTML = `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
       <div><b>โรงเรียน:</b> ${student.schoolName}</div>
       <div><b>ระดับชั้น:</b> ${student.grade}</div>
       <div><b>วันเดือนปีเกิด:</b> ${student.birthDate}</div>
       <div><b>เบอร์โทรผู้ปกครอง:</b> ${student.parentPhone}</div>
       <div><b>เกรดเฉลี่ย (GPA):</b> ${student.gpa || '-'}</div>
       <div><b>สถานะ:</b> ${student.status}</div>
+    </div>
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
+      <div style="font-weight: 700; color: #166534; margin-bottom: 0.4rem;"><i class="fa-solid fa-hands-praying"></i> สถิติผลบุญและศาสนกิจ (KHALIFAH HASANAT):</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; font-size: 0.88rem;">
+        <div>⭐ <b>ดาวกุรอานสะสม:</b> ${qStars} ดาว (จบ ${qJuz}/30 ยุซ)</div>
+        <div>📖 <b>อ่านถึงหน้า:</b> ${qPage}/604 หน้า</div>
+        <div>🧠 <b>ท่องจำซูเราะห์:</b> ${memCount}/114 ซูเราะห์</div>
+        <div>🕌 <b>ละหมาดสุนัตล่าสุด:</b> ${sunnahRakaat} ร็อกอะฮ์/วัน</div>
+      </div>
     </div>
     <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md);">
       <b>สถิติการมาเรียน:</b> มาเรียน ${student.attendance ? student.attendance.present : 0} วัน, 

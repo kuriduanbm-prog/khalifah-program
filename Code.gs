@@ -12,7 +12,8 @@ const SHEETS = {
   ATTENDANCE: 'AttendanceLogs',
   ACTIVITIES: 'Activities',
   ADMINS: 'Admins',
-  SETTINGS: 'Settings'
+  SETTINGS: 'Settings',
+  HASANAT: 'HasanatLogs'
 };
 
 const MASTER_ADMIN_PASS = '096909';
@@ -40,10 +41,10 @@ function initializeSheets() {
     sheetPrayers = ss.insertSheet(SHEETS.PRAYERS);
     sheetPrayers.appendRow([
       'LogId', 'StudentId', 'StudentName', 'Grade', 'PrayerTime', 'Timestamp', 'Date', 'Time', 
-      'Latitude', 'Longitude', 'LocationName', 'DistanceMeters', 'IsWithinZone', 'PhotoUrl'
+      'Latitude', 'Longitude', 'LocationName', 'DistanceMeters', 'IsWithinZone', 'PhotoUrl', 'Status', 'Note'
     ]);
     sheetPrayers.setFrozenRows(1);
-    sheetPrayers.getRange("A1:N1").setBackground("#0284c7").setFontColor("#ffffff").setFontWeight("bold");
+    sheetPrayers.getRange("A1:P1").setBackground("#0284c7").setFontColor("#ffffff").setFontWeight("bold");
   }
 
   // 3. AttendanceLogs Sheet
@@ -92,6 +93,20 @@ function initializeSheets() {
     sheetSettings.appendRow(['CurrentAcademicYear', '2569', 'ปีการศึกษาปัจจุบัน']);
     sheetSettings.setFrozenRows(1);
     sheetSettings.getRange("A1:C1").setBackground("#0284c7").setFontColor("#ffffff").setFontWeight("bold");
+  }
+
+  // 7. HasanatLogs Sheet (ผลบุญ & ศาสนกิจ: อัลกุรอาน, ซูเราะห์, ละหมาดสุนัต)
+  let sheetHasanat = ss.getSheetByName(SHEETS.HASANAT);
+  if (!sheetHasanat) {
+    sheetHasanat = ss.insertSheet(SHEETS.HASANAT);
+    sheetHasanat.appendRow([
+      'LogId', 'StudentId', 'StudentName', 'Grade', 'Date',
+      'QuranPagesToday', 'QuranCurrentPage', 'JuzCompleted', 'StarsCount',
+      'MemorizedSurahsCount', 'MemorizedSurahsList',
+      'TotalSunnahRakaat', 'SunnahDetails', 'Timestamp'
+    ]);
+    sheetHasanat.setFrozenRows(1);
+    sheetHasanat.getRange("A1:N1").setBackground("#059669").setFontColor("#ffffff").setFontWeight("bold");
   }
 
   return { success: true, message: 'ฐานข้อมูล Google Sheets ถูกสร้างและพร้อมใช้งานเรียบร้อยแล้ว' };
@@ -178,7 +193,11 @@ function doPost(e) {
         result = updateStudentGrade(postData.studentId, postData.newGrade);
         break;
       case 'recordPrayer':
+      case 'prayerCheckIn':
         result = recordPrayer(postData.data);
+        break;
+      case 'recordHasanat':
+        result = recordHasanat(postData.data);
         break;
       case 'recordAttendance':
         result = recordAttendance(postData.data);
@@ -359,7 +378,9 @@ function recordPrayer(data) {
     data.locationName,
     data.distanceMeters,
     data.isWithinZone ? 'ใช่' : 'ไม่ใช่',
-    photoRef
+    photoRef,
+    data.status || 'ตรงเวลา',
+    data.note || ''
   ]);
 
   return { success: true, message: 'บันทึกการละหมาดเวลา ' + data.prayerTime + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef };
@@ -589,3 +610,48 @@ function updateStudentProfilePhoto(studentId, avatarUrl) {
 }
 
 
+
+
+/**
+ * บันทึกข้อมูลผลบุญและศาสนกิจ (อัลกุรอาน, ท่องจำซูเราะห์, ละหมาดสุนัต) ลง Google Sheet
+ */
+function recordHasanat(data) {
+  initializeSheets();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.HASANAT);
+  
+  const logId = 'HAS-' + new Date().getTime();
+  const timestamp = new Date().toISOString();
+  const dateStr = data.date || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+
+  const q = data.quran || {};
+  const m = data.memorization || {};
+  const s = data.sunnah || {};
+
+  const memListStr = Array.isArray(m.memorizedSurahs) ? m.memorizedSurahs.join(', ') : (m.memorizedSurahs || '');
+  const sunnahDetailsStr = JSON.stringify(s.rawatib || {});
+
+  sheet.appendRow([
+    logId,
+    data.studentId,
+    data.studentName,
+    data.grade,
+    dateStr,
+    q.pagesToday || 0,
+    q.currentPage || 0,
+    q.juzCompleted || 0,
+    q.stars || 0,
+    m.count || 0,
+    memListStr,
+    s.totalRakaat || 0,
+    sunnahDetailsStr,
+    timestamp
+  ]);
+
+  return { 
+    success: true, 
+    message: 'บันทึกข้อมูลผลบุญและศาสนกิจสำเร็จเรียบร้อย', 
+    logId: logId,
+    stars: q.stars || 0
+  };
+}
