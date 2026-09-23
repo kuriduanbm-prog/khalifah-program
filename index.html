@@ -239,19 +239,23 @@
           </div>
         </div>
 
-        <!-- Geolocation Verification Step -->
+        <!-- Geolocation Verification Step (Responsive Mobile & Tablet Layout) -->
         <div id="geofenceStatusBox" class="geofence-alert unverified">
-          <i class="fa-solid fa-location-crosshairs fa-2x"></i>
-          <div style="flex: 1;">
-            <div style="font-weight: 600; font-size: 1rem;" id="geoStatusTitle">ยังไม่ได้ตรวจสอบตำแหน่งปัจจุบัน</div>
-            <div style="font-size: 0.85rem;" id="geoStatusDesc">
-              กรุณากดปุ่ม <b>"ตรวจสอบตำแหน่งพิกัดปัจจุบัน"</b> ด้านล่าง เพื่อยืนยันว่าท่านอยู่ ณ มัสยิดอัลฮารอมัยน์ หรือ คณะวิทยาศาสตร์และเทคโนโลยี
+          <div class="geofence-alert-main">
+            <i class="fa-solid fa-location-crosshairs geofence-alert-icon"></i>
+            <div class="geofence-alert-text">
+              <div class="geofence-alert-title" id="geoStatusTitle">ยังไม่ได้ตรวจสอบตำแหน่งปัจจุบัน</div>
+              <div class="geofence-alert-desc" id="geoStatusDesc">
+                กรุณากดปุ่ม <b>"ตรวจสอบตำแหน่งพิกัด"</b> ด้านล่าง เพื่อยืนยันว่าท่านอยู่ ณ มัสยิดอัลฮารอมัยน์ หรือ คณะวิทยาศาสตร์และเทคโนโลยี
+              </div>
+              <div id="geoDetails" style="margin-top: 0.4rem; font-size: 0.78rem; opacity: 0.85; display: none;"></div>
             </div>
-            <div id="geoDetails" style="margin-top: 0.4rem; font-size: 0.78rem; opacity: 0.85; display: none;"></div>
           </div>
-          <button class="btn btn-primary" onclick="verifyGeolocation()">
-            <i class="fa-solid fa-location-arrow"></i> ตรวจสอบพิกัด
-          </button>
+          <div class="geofence-alert-action">
+            <button class="btn btn-primary" onclick="verifyGeolocation()">
+              <i class="fa-solid fa-location-arrow"></i> ตรวจสอบพิกัด
+            </button>
+          </div>
         </div>
 
         <!-- Prayer Times Selection -->
@@ -477,6 +481,9 @@
         <button class="admin-tab-btn" onclick="switchAdminTab('subadmins', this)">
           <i class="fa-solid fa-user-shield"></i> จัดการแอดมินรอง
         </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('logo', this)" id="btnTabLogo">
+          <i class="fa-solid fa-image"></i> เปลี่ยนโลโก้ระบบ
+        </button>
       </div>
 
       <!-- Admin Tab 1: Students Management -->
@@ -652,6 +659,44 @@
                 <!-- Injected via app.js -->
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab 5: System Logo Management (Exclusive for Master Admin) -->
+      <div id="admin-tab-logo" class="admin-content-tab" style="display: none;">
+        <div class="card" style="max-width: 600px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-image"></i> จัดการเปลี่ยนโลโก้ระบบ (System Logo)
+              </div>
+              <div class="card-subtitle">
+                เฉพาะแอดมินหลักเท่านั้น เมื่อเปลี่ยนแล้วโลโก้จะอัปเดตให้นักเรียนทุกคนเห็นทันที
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: var(--radius-lg); margin-bottom: 1.5rem; border: 1.5px dashed var(--border-light);">
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              ตัวอย่างโลโก้ปัจจุบันที่กำลังแสดงผลในระบบ:
+            </div>
+            <img id="adminLogoPreview" src="assets/logo.png" alt="Current Logo Preview" style="max-height: 90px; max-width: 100%; object-fit: contain; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.06));" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">เลือกไฟล์รูปภาพโลโก้ใหม่ (PNG, JPG, SVG, WebP) <span class="required">*</span></label>
+            <input type="file" id="inputNewLogo" class="form-control" accept="image/*" onchange="previewNewLogo(event)" />
+            <div class="form-hint">แนะนำใช้ไฟล์ภาพพื้นหลังโปร่งใส (Transparent PNG) เพื่อความสวยงามกลมกลืนกับหน้าเว็บ</div>
+          </div>
+
+          <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.5rem;">
+            <button class="btn btn-primary" onclick="saveNewLogo()">
+              <i class="fa-solid fa-floppy-disk"></i> บันทึกและเปลี่ยนโลโก้ทันที
+            </button>
+            <button class="btn btn-secondary" onclick="resetToDefaultLogo()">
+              <i class="fa-solid fa-rotate-left"></i> คืนค่าโลโก้เริ่มต้น
+            </button>
           </div>
         </div>
       </div>

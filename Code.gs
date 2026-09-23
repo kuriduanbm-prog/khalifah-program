@@ -201,6 +201,9 @@ function doPost(e) {
       case 'batchPromote':
         result = batchPromoteStudents(postData.fromGrade, postData.toGrade);
         break;
+      case 'updateLogo':
+        result = updateAppLogo(postData.data.logoBase64);
+        break;
       default:
         result = { success: false, error: 'Invalid POST action' };
     }
@@ -546,3 +549,22 @@ function batchPromoteStudents(fromGrade, toGrade) {
 
   return { success: true, message: `เลื่อนชั้นปีนักเรียนจาก ${fromGrade} ไป ${toGrade} สำเร็จจำนวน ${count} คน` };
 }
+
+function updateAppLogo(logoBase64) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEETS.SETTINGS);
+  if (!sheet) {
+    initializeSheets();
+    sheet = ss.getSheetByName(SHEETS.SETTINGS);
+  }
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim() === 'AppLogo') {
+      sheet.getRange(i + 1, 2).setValue(logoBase64);
+      return { success: true, message: 'บันทึกโลโก้ลง Google Sheets สำเร็จ' };
+    }
+  }
+  sheet.appendRow(['AppLogo', logoBase64, 'โลโก้ของระบบ']);
+  return { success: true, message: 'บันทึกโลโก้ใหม่ลง Google Sheets สำเร็จ' };
+}
+
