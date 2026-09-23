@@ -1930,40 +1930,66 @@ body.auth-locked #adminAuthModal {
 }
 
 .hasanat-subnav {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
-  background: var(--bg-card);
-  padding: 0.4rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 1.35rem;
+  background: #f1f5f9;
+  padding: 0.35rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid #e2e8f0;
 }
 
 .hasanat-subnav-btn {
-  flex: 1;
-  min-width: 120px;
-  padding: 0.65rem 0.85rem;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.88rem;
-  border-radius: var(--radius-md);
-  cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  transition: var(--transition);
+  padding: 0.65rem 0.35rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  gap: 0.25rem;
   white-space: nowrap;
 }
 
+.hasanat-subnav-btn .tab-top-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.hasanat-subnav-btn .tab-badge-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.12rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.05);
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.hasanat-subnav-btn:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: #0f172a;
+}
+
 .hasanat-subnav-btn.active {
+  background: #ffffff;
+  color: #047857;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.hasanat-subnav-btn.active .tab-badge-pill {
   background: #ecfdf5;
   color: #059669;
-  box-shadow: var(--shadow-sm);
-  font-weight: 700;
 }
 
 /* Surah Checklist Grid */
@@ -2140,15 +2166,14 @@ body.auth-locked #adminAuthModal {
 
 /* ==================== ENHANCED HASANAT & PRAYER DETAIL STYLES ==================== */
 
-/* Quran Stars Shelf (1-30 Juz) */
 .quran-shelf-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
-  gap: 0.4rem;
-  background: #0f172a;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 0.45rem;
+  background: #f8fafc;
   padding: 0.85rem;
   border-radius: var(--radius-lg);
-  border: 1px solid #334155;
+  border: 1px solid #e2e8f0;
   margin: 0.75rem 0;
 }
 
@@ -2337,6 +2362,251 @@ body.auth-locked #adminAuthModal {
   border: 1px solid #fde68a;
 }
 
+/* ==================== macOS LUXURY HERO BANNER ==================== */
+.welcome-banner.macos-banner {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #091a2f 0%, #0c335a 45%, #0369a1 85%, #0284c7 100%);
+  border-radius: var(--radius-xl);
+  padding: 2.2rem 1.5rem;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 20px 40px -12px rgba(3, 105, 161, 0.35), 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  text-align: center;
+}
+
+/* Ambient Floating Glow Orbs */
+.banner-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  pointer-events: none;
+  opacity: 0.55;
+  z-index: 1;
+}
+
+.banner-orb.orb-1 {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, #38bdf8 0%, rgba(56, 189, 248, 0) 70%);
+  top: -80px;
+  left: 12%;
+  animation: orbFloat1 8s ease-in-out infinite alternate;
+}
+
+.banner-orb.orb-2 {
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, #06b6d4 0%, rgba(6, 182, 212, 0) 70%);
+  bottom: -60px;
+  right: 12%;
+  animation: orbFloat2 10s ease-in-out infinite alternate;
+}
+
+@keyframes orbFloat1 {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(18px) scale(1.08); }
+}
+
+@keyframes orbFloat2 {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-18px) scale(1.06); }
+}
+
+/* Subtle Watermark Background */
+.banner-watermark-bg {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px),
+                    radial-gradient(rgba(56, 189, 248, 0.08) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.banner-inner-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* macOS Profile Avatar with Frosted Glass Ring */
+.macos-banner .banner-avatar-display {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 3.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.28), 0 14px 28px rgba(0, 0, 0, 0.28);
+  font-size: 2.5rem;
+  color: #ffffff;
+  margin-bottom: 0.85rem;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.macos-banner .banner-avatar-display:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.42), 0 18px 36px rgba(0, 0, 0, 0.35);
+}
+
+.macos-banner .banner-title {
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  margin-bottom: 0.5rem;
+}
+
+.macos-banner .banner-badges {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.95rem;
+}
+
+.macos-banner .banner-tag {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-full);
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* macOS Shiny Action Button */
+.btn-macos-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+  color: #0369a1;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: var(--radius-full);
+  padding: 0.55rem 1.6rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 1);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-macos-action:hover {
+  transform: translateY(-2px);
+  background: #ffffff;
+  color: #0284c7;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.btn-macos-action:active {
+  transform: translateY(0);
+}
+
+/* ==================== PRAYER NOTE CARD (MINIMALIST & MANDATORY TIME) ==================== */
+.prayer-notes-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem;
+  margin-top: 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.prayer-time-select-group {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.prayer-note-time-chip {
+  padding: 0.55rem 0.2rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.prayer-note-time-chip:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.prayer-note-time-chip.active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border-color: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.28);
+  transform: translateY(-1px);
+}
+
+/* ==================== HASANAT HERO CARD ==================== */
+.hasanat-hero-card {
+  background: linear-gradient(135deg, #064e3b 0%, #047857 55%, #059669 100%);
+  color: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 1.6rem 1.4rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 28px -6px rgba(4, 120, 87, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hasanat-hero-card::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hasanat-hero-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.hasanat-hero-desc {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+  font-weight: 300;
+}
+
+
 </style>
 </head>
 <body>
@@ -2448,27 +2718,33 @@ body.auth-locked #adminAuthModal {
           </button>
         </div>
       </div>
-      <div class="welcome-banner" style="text-align: center; padding: 2rem 1.25rem;">
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
-          <!-- Centered Prominent Profile Avatar -->
-          <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์" style="width: 95px; height: 95px; font-size: 2.4rem; cursor: pointer; border: 4px solid #ffffff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 0.75rem;">
+      <div class="welcome-banner macos-banner">
+        <!-- Subtle Ambient Background Light Orbs -->
+        <div class="banner-orb orb-1"></div>
+        <div class="banner-orb orb-2"></div>
+        <!-- Subtle Islamic Geometric Watermark Pattern -->
+        <div class="banner-watermark-bg"></div>
+
+        <div class="banner-inner-content">
+          <!-- Centered Prominent Profile Avatar (macOS ring) -->
+          <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์">
             <i class="fa-solid fa-user"></i>
           </label>
           <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
           
-          <!-- Welcome Greeting (Centered) -->
-          <h1 class="banner-title" id="dashGreeting" style="font-size: 1.45rem; font-weight: 700; margin: 0 0 0.5rem 0;">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
+          <!-- Welcome Greeting (Centered with luxury typography) -->
+          <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
           
-          <!-- Centered Badges -->
-          <div class="banner-badges" style="justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
+          <!-- macOS Frosted Badges -->
+          <div class="banner-badges">
             <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
             <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
             <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
           </div>
 
-          <!-- Quick Check-in Button -->
-          <div>
-            <button class="btn btn-secondary btn-sm" onclick="switchView('prayer')" style="padding: 0.45rem 1.2rem; border-radius: var(--radius-full); font-weight: 600;">
+          <!-- macOS Frosted Action Button -->
+          <div style="margin-top: 0.35rem;">
+            <button class="btn-macos-action" onclick="switchView('prayer')">
               <i class="fa-solid fa-camera"></i> เช็คชื่อละหมาดทันที
             </button>
           </div>
@@ -2712,18 +2988,32 @@ body.auth-locked #adminAuthModal {
           <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
         </button>
 
-        <!-- 5. Prayer Status, Location & Notes Field (Placed at the bottom for clean UX) -->
-        <div class="prayer-notes-card" style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.95rem; margin-top: 0.25rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
-            <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.35rem;">
-              <i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> สถานะ & หมายเหตุการละหมาด
+        <!-- 5. Minimalist Prayer Notes Field with Mandatory Prayer Time Selection -->
+        <div class="prayer-notes-card" id="prayerNotesCard">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <span style="font-weight: 700; font-size: 0.92rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.4rem;">
+              <i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> บันทึกข้อมูลเฉพาะหมายเหตุละหมาด
             </span>
-            <span style="font-size: 0.72rem; color: var(--text-muted);">
-              (บันทึกเฉพาะหมายเหตุได้)
+            <span id="prayerNoteTimeSelectedText" style="font-size: 0.75rem; color: #ef4444; font-weight: 600;">
+              * บังคับเลือกเวลา
             </span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
+          <!-- Mandatory Prayer Time Selection Chips (5 Waqt) -->
+          <div style="margin-bottom: 0.75rem;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">
+              <i class="fa-solid fa-clock" style="color: var(--primary);"></i> 1. เลือกเวลาละหมาด <span style="color: #ef4444;">* (บังคับเลือกก่อนบันทึก)</span>
+            </label>
+            <div class="prayer-time-select-group">
+              <button type="button" class="prayer-note-time-chip" data-time="ซุบฮิ" onclick="selectPrayerNoteTime('ซุบฮิ')">ซุบฮิ</button>
+              <button type="button" class="prayer-note-time-chip" data-time="ซุฮริ" onclick="selectPrayerNoteTime('ซุฮริ')">ซุฮริ</button>
+              <button type="button" class="prayer-note-time-chip" data-time="อัศรฺ" onclick="selectPrayerNoteTime('อัศรฺ')">อัศรฺ</button>
+              <button type="button" class="prayer-note-time-chip" data-time="มัฆริบ" onclick="selectPrayerNoteTime('มัฆริบ')">มัฆริบ</button>
+              <button type="button" class="prayer-note-time-chip" data-time="อีชาอ์" onclick="selectPrayerNoteTime('อีชาอ์')">อีชาอ์</button>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.65rem;">
             <div>
               <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
                 <i class="fa-solid fa-tags" style="color: var(--primary);"></i> สถานะการละหมาด
@@ -2752,11 +3042,11 @@ body.auth-locked #adminAuthModal {
             </div>
           </div>
           
-          <div style="margin-bottom: 0.75rem;">
+          <div style="margin-bottom: 0.85rem;">
             <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
               <i class="fa-solid fa-pen" style="color: var(--primary);"></i> หมายเหตุเพิ่มเติม
             </label>
-            <input type="text" class="form-control" id="prayerNoteInput" placeholder="เช่น ญะมาอะฮ์แถวแรก, อาคาร 2, กำลังเดินทาง, อุซุร..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
+            <input type="text" class="form-control" id="prayerNoteInput" placeholder="กรอกหมายเหตุด้วยตนเอง เช่น ญะมาอะฮ์แถวแรก, กำลังเดินทาง..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
             <!-- Quick Tag Chips -->
             <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
               <button type="button" class="btn-stepper" onclick="appendPrayerNote('ญะมาอะฮ์แถวแรก')">+ ญะมาอะฮ์แถวแรก</button>
@@ -2767,8 +3057,8 @@ body.auth-locked #adminAuthModal {
           </div>
 
           <!-- Standalone Note Save Button -->
-          <button type="button" class="btn btn-secondary btn-block" onclick="savePrayerNoteOnly()" style="border-color: #cbd5e1; background: #ffffff; color: var(--text-dark); font-weight: 600; padding: 0.55rem; font-size: 0.85rem;">
-            <i class="fa-solid fa-floppy-disk" style="color: var(--primary);"></i> บันทึกเฉพาะหมายเหตุ / สถานะ (ไม่ต้องถ่ายภาพ)
+          <button type="button" class="btn btn-primary btn-block" onclick="savePrayerNoteOnly()" style="font-weight: 600; padding: 0.7rem; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
+            <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลหมายเหตุละหมาด
           </button>
         </div>
 
@@ -2845,19 +3135,19 @@ body.auth-locked #adminAuthModal {
         </p>
       </div>
 
-      <!-- Sub Navigation Tabs with Badges -->
+      <!-- Sub Navigation Tabs with Badges (Segmented Touch Control) -->
       <div class="hasanat-subnav">
         <button class="hasanat-subnav-btn active" id="btnSubHasanatQuran" onclick="switchHasanatSubTab('quran')">
-          <i class="fa-solid fa-book-quran"></i> อ่านอัลกุรอาน
-          <span class="badge-sub" style="background: rgba(5,150,105,0.15); color: #059669; font-size: 0.72rem; padding: 0.1rem 0.45rem;" id="navHasanatQuranBadge">⭐ 0 ดาว</span>
+          <div class="tab-top-row"><i class="fa-solid fa-book-quran"></i> อ่านกุรอาน</div>
+          <span class="tab-badge-pill" id="navHasanatQuranBadge">⭐ 0 ดาว</span>
         </button>
         <button class="hasanat-subnav-btn" id="btnSubHasanatMemorize" onclick="switchHasanatSubTab('memorize')">
-          <i class="fa-solid fa-brain"></i> ท่องจำซูเราะห์
-          <span class="badge-sub" style="background: rgba(14,165,233,0.15); color: #0284c7; font-size: 0.72rem; padding: 0.1rem 0.45rem;" id="navHasanatMemBadge">0/114</span>
+          <div class="tab-top-row"><i class="fa-solid fa-brain"></i> ท่องจำ</div>
+          <span class="tab-badge-pill" id="navHasanatMemBadge">0 / 114</span>
         </button>
         <button class="hasanat-subnav-btn" id="btnSubHasanatSunnah" onclick="switchHasanatSubTab('sunnah')">
-          <i class="fa-solid fa-person-praying"></i> ละหมาดสุนัต
-          <span class="badge-sub" style="background: rgba(245,158,11,0.15); color: #b45309; font-size: 0.72rem; padding: 0.1rem 0.45rem;" id="navHasanatSunnahBadge">0 ร็อกอะฮ์</span>
+          <div class="tab-top-row"><i class="fa-solid fa-person-praying"></i> สุนัต</div>
+          <span class="tab-badge-pill" id="navHasanatSunnahBadge">0 ร็อกอะฮ์</span>
         </button>
       </div>
 
@@ -3162,8 +3452,8 @@ body.auth-locked #adminAuthModal {
             <div style="font-weight: 600;" id="profStudentId">STD-256901</div>
           </div>
           <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">วัน/เดือน/ปีเกิด</div>
-            <div style="font-weight: 600;" id="profBirthDate">15/08/2552</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">วันเดือนปีเกิด (พ.ศ. 8 หลัก)</div>
+            <div style="font-weight: 600;" id="profBirthDate">15082552</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">เบอร์โทรศัพท์ผู้ปกครอง</div>
@@ -3790,8 +4080,10 @@ body.auth-locked #adminAuthModal {
           </div>
           <div class="form-group">
             <label class="form-label">วันเดือนปีเกิด (ใช้เป็นรหัสผ่าน) <span class="required">*</span></label>
-            <input type="text" class="form-control" id="loginBirthDate" placeholder="เช่น 15/08/2552 หรือ 15082552">
-            <div class="form-hint">กรอกวันเดือนปีเกิดตามที่ได้ลงทะเบียนไว้</div>
+            <input type="text" class="form-control" id="loginBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+            <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
+              <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b>
+            </div>
           </div>
           <button class="btn btn-primary btn-block btn-lg" onclick="handleStudentLogin()">
             <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
@@ -3834,7 +4126,10 @@ body.auth-locked #adminAuthModal {
           </div>
           <div class="form-group">
             <label class="form-label">วันเดือนปีเกิด (รหัสผ่านของคุณ) <span class="required">*</span></label>
-            <input type="text" class="form-control" id="regBirthDate" placeholder="เช่น 20/05/2553">
+            <input type="text" class="form-control" id="regBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+            <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
+              <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b> (8 หลัก)
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">เบอร์โทรศัพท์ผู้ปกครอง <span class="required">*</span></label>
@@ -4197,6 +4492,39 @@ function openPrayerHistoryDetailModal(logId) {
 }
 
 // ----------------- ENHANCED HASANAT INTERACTIVE CONTROLS ----------------- //
+
+function switchHasanatSubTab(tabName) {
+  const tabs = ['quran', 'memorize', 'sunnah'];
+  tabs.forEach(t => {
+    const content = document.getElementById(`subtab-${t}`);
+    if (content) {
+      content.style.display = (t === tabName) ? 'block' : 'none';
+    }
+  });
+
+  const btnMap = {
+    'quran': 'btnSubHasanatQuran',
+    'memorize': 'btnSubHasanatMemorize',
+    'sunnah': 'btnSubHasanatSunnah'
+  };
+
+  Object.keys(btnMap).forEach(k => {
+    const btn = document.getElementById(btnMap[k]);
+    if (btn) {
+      if (k === tabName) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+  });
+
+  if (tabName === 'memorize') {
+    if (typeof renderSurahList === 'function') renderSurahList();
+  } else if (tabName === 'sunnah') {
+    if (typeof loadTodaySunnahChecklist === 'function') loadTodaySunnahChecklist();
+  }
+}
 
 let currentSurahCategory = 'all';
 
@@ -4776,7 +5104,7 @@ const DEFAULT_STUDENT = {
   fullName: 'นายมูฮัมหมัด ซอและห์',
   schoolName: 'โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี',
   grade: 'มัธยมศึกษาปีที่ 5',
-  birthDate: '15/08/2552',
+  birthDate: '15082552',
   parentPhone: '081-234-5678',
   status: 'Active',
   skills: {
@@ -5567,6 +5895,24 @@ function appendPrayerNote(text) {
   showToast(`เพิ่มหมายเหตุ: "${text}"`, 'info');
 }
 
+let selectedPrayerNoteTimeSlot = null;
+
+function selectPrayerNoteTime(time) {
+  selectedPrayerNoteTimeSlot = time;
+  document.querySelectorAll('.prayer-note-time-chip').forEach(chip => {
+    if (chip.getAttribute('data-time') === time) {
+      chip.classList.add('active');
+    } else {
+      chip.classList.remove('active');
+    }
+  });
+
+  const selectedTextEl = document.getElementById('prayerNoteTimeSelectedText');
+  if (selectedTextEl) {
+    selectedTextEl.innerHTML = `<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-check"></i> เลือก: ${time}</span>`;
+  }
+}
+
 function savePrayerNoteOnly() {
   if (!currentStudent) {
     showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
@@ -5574,7 +5920,19 @@ function savePrayerNoteOnly() {
     return;
   }
 
-  const pTime = selectedPrayerTime || getCurrentPrayerTimeSlot();
+  if (!selectedPrayerNoteTimeSlot) {
+    showToast('⚠️ กรุณาเลือกเวลาละหมาดก่อนบันทึกหมายเหตุ (ซุบฮิ, ซุฮริ, อัศรฺ, มัฆริบ, อีชาอ์)', 'warning');
+    const groupEl = document.querySelector('.prayer-time-select-group');
+    if (groupEl) {
+      groupEl.style.outline = '2px solid #ef4444';
+      groupEl.style.borderRadius = '12px';
+      groupEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => { groupEl.style.outline = 'none'; }, 2200);
+    }
+    return;
+  }
+
+  const pTime = selectedPrayerNoteTimeSlot;
   const statusSelect = document.getElementById('prayerStatusSelect');
   const locSelect = document.getElementById('prayerLocationSelect');
   const noteInput = document.getElementById('prayerNoteInput');
@@ -6211,16 +6569,16 @@ function handleStudentLogin() {
   const birthDate = document.getElementById('loginBirthDate').value.trim();
 
   if (!studentId || !birthDate) {
-    showToast('กรุณากรอกรหัสนักเรียนและวันเดือนปีเกิด', 'warning');
+    showToast('กรุณากรอกรหัสนักเรียนและวันเดือนปีเกิด (เช่น 01012540)', 'warning');
     return;
   }
 
-  const cleanInput = birthDate.replace(/[\/\-\.]/g, '');
+  const cleanInput = birthDate.replace(/[^0-9]/g, '');
 
   const found = allStudents.find(s => {
-    const cleanBDate = s.birthDate.replace(/[\/\-\.]/g, '');
+    const cleanBDate = String(s.birthDate || '').replace(/[^0-9]/g, '');
     return s.studentId.toLowerCase() === studentId.toLowerCase() &&
-           (cleanBDate === cleanInput || s.birthDate === birthDate);
+           (cleanBDate === cleanInput || String(s.birthDate || '').trim() === birthDate);
   });
 
   if (found) {
@@ -6232,7 +6590,7 @@ function handleStudentLogin() {
     closeModal('authModal');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
   } else {
-    showToast('รหัสนักเรียนหรือวันเดือนปีเกิดไม่ถูกต้อง', 'error');
+    showToast('รหัสนักเรียนหรือวันเดือนปีเกิดไม่ถูกต้อง (ตัวอย่าง: 01012540)', 'error');
   }
 }
 
@@ -6249,6 +6607,27 @@ function handleStudentRegister() {
     return;
   }
 
+  // ห้ามใส่เครื่องหมาย / หรือ - ตามที่ผู้ใช้กำหนด (เช่น 1 มกราคม 2540 ให้เขียนเป็น 01012540)
+  if (birthDate.includes('/') || birthDate.includes('-') || birthDate.includes('.')) {
+    showToast('วันเดือนปีเกิดห้ามใส่เครื่องหมาย / หรือ - เช่น 1 มกราคม 2540 ให้เขียนเป็น 01012540', 'warning');
+    return;
+  }
+
+  const cleanBD = birthDate.replace(/[^0-9]/g, '');
+  if (cleanBD.length !== 8) {
+    showToast('วันเดือนปีเกิดต้องมี 8 หลักพอดี (ห้ามใส่ /) เช่น 01012540', 'warning');
+    return;
+  }
+
+  const day = parseInt(cleanBD.substring(0, 2), 10);
+  const month = parseInt(cleanBD.substring(2, 4), 10);
+  const year = parseInt(cleanBD.substring(4, 8), 10);
+
+  if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2450 || year > 2600) {
+    showToast('วันเดือนปีเกิดไม่ถูกต้อง เช่น 01012540 (วัน 01-31, เดือน 01-12, พ.ศ. 4 หลัก)', 'warning');
+    return;
+  }
+
   // ตรวจสอบรหัสซ้ำ (1 คน 1 สิทธิ์)
   const isDuplicate = allStudents.some(s => s.studentId.toLowerCase() === studentId.toLowerCase());
   if (isDuplicate) {
@@ -6261,7 +6640,7 @@ function handleStudentRegister() {
     fullName: fullName,
     schoolName: schoolName,
     grade: grade,
-    birthDate: birthDate,
+    birthDate: cleanBD, // บันทึกเป็น 8 หลัก เช่น 01012540
     parentPhone: parentPhone,
     status: 'Active',
     skills: { religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0 },

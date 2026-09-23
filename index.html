@@ -138,27 +138,33 @@
           </button>
         </div>
       </div>
-      <div class="welcome-banner" style="text-align: center; padding: 2rem 1.25rem;">
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
-          <!-- Centered Prominent Profile Avatar -->
-          <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์" style="width: 95px; height: 95px; font-size: 2.4rem; cursor: pointer; border: 4px solid #ffffff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 0.75rem;">
+      <div class="welcome-banner macos-banner">
+        <!-- Subtle Ambient Background Light Orbs -->
+        <div class="banner-orb orb-1"></div>
+        <div class="banner-orb orb-2"></div>
+        <!-- Subtle Islamic Geometric Watermark Pattern -->
+        <div class="banner-watermark-bg"></div>
+
+        <div class="banner-inner-content">
+          <!-- Centered Prominent Profile Avatar (macOS ring) -->
+          <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์">
             <i class="fa-solid fa-user"></i>
           </label>
           <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
           
-          <!-- Welcome Greeting (Centered) -->
-          <h1 class="banner-title" id="dashGreeting" style="font-size: 1.45rem; font-weight: 700; margin: 0 0 0.5rem 0;">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
+          <!-- Welcome Greeting (Centered with luxury typography) -->
+          <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
           
-          <!-- Centered Badges -->
-          <div class="banner-badges" style="justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
+          <!-- macOS Frosted Badges -->
+          <div class="banner-badges">
             <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
             <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
             <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
           </div>
 
-          <!-- Quick Check-in Button -->
-          <div>
-            <button class="btn btn-secondary btn-sm" onclick="switchView('prayer')" style="padding: 0.45rem 1.2rem; border-radius: var(--radius-full); font-weight: 600;">
+          <!-- macOS Frosted Action Button -->
+          <div style="margin-top: 0.35rem;">
+            <button class="btn-macos-action" onclick="switchView('prayer')">
               <i class="fa-solid fa-camera"></i> เช็คชื่อละหมาดทันที
             </button>
           </div>
@@ -402,18 +408,32 @@
           <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
         </button>
 
-        <!-- 5. Prayer Status, Location & Notes Field (Placed at the bottom for clean UX) -->
-        <div class="prayer-notes-card" style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.95rem; margin-top: 0.25rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
-            <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.35rem;">
-              <i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> สถานะ & หมายเหตุการละหมาด
+        <!-- 5. Minimalist Prayer Notes Field with Mandatory Prayer Time Selection -->
+        <div class="prayer-notes-card" id="prayerNotesCard">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <span style="font-weight: 700; font-size: 0.92rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.4rem;">
+              <i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> บันทึกข้อมูลเฉพาะหมายเหตุละหมาด
             </span>
-            <span style="font-size: 0.72rem; color: var(--text-muted);">
-              (บันทึกเฉพาะหมายเหตุได้)
+            <span id="prayerNoteTimeSelectedText" style="font-size: 0.75rem; color: #ef4444; font-weight: 600;">
+              * บังคับเลือกเวลา
             </span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
+          <!-- Mandatory Prayer Time Selection Chips (5 Waqt) -->
+          <div style="margin-bottom: 0.75rem;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">
+              <i class="fa-solid fa-clock" style="color: var(--primary);"></i> 1. เลือกเวลาละหมาด <span style="color: #ef4444;">* (บังคับเลือกก่อนบันทึก)</span>
+            </label>
+            <div class="prayer-time-select-group">
+              <button type="button" class="prayer-note-time-chip" data-time="ซุบฮิ" onclick="selectPrayerNoteTime('ซุบฮิ')">ซุบฮิ</button>
+              <button type="button" class="prayer-note-time-chip" data-time="ซุฮริ" onclick="selectPrayerNoteTime('ซุฮริ')">ซุฮริ</button>
+              <button type="button" class="prayer-note-time-chip" data-time="อัศรฺ" onclick="selectPrayerNoteTime('อัศรฺ')">อัศรฺ</button>
+              <button type="button" class="prayer-note-time-chip" data-time="มัฆริบ" onclick="selectPrayerNoteTime('มัฆริบ')">มัฆริบ</button>
+              <button type="button" class="prayer-note-time-chip" data-time="อีชาอ์" onclick="selectPrayerNoteTime('อีชาอ์')">อีชาอ์</button>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.65rem;">
             <div>
               <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
                 <i class="fa-solid fa-tags" style="color: var(--primary);"></i> สถานะการละหมาด
@@ -442,11 +462,11 @@
             </div>
           </div>
           
-          <div style="margin-bottom: 0.75rem;">
+          <div style="margin-bottom: 0.85rem;">
             <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
               <i class="fa-solid fa-pen" style="color: var(--primary);"></i> หมายเหตุเพิ่มเติม
             </label>
-            <input type="text" class="form-control" id="prayerNoteInput" placeholder="เช่น ญะมาอะฮ์แถวแรก, อาคาร 2, กำลังเดินทาง, อุซุร..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
+            <input type="text" class="form-control" id="prayerNoteInput" placeholder="กรอกหมายเหตุด้วยตนเอง เช่น ญะมาอะฮ์แถวแรก, กำลังเดินทาง..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
             <!-- Quick Tag Chips -->
             <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
               <button type="button" class="btn-stepper" onclick="appendPrayerNote('ญะมาอะฮ์แถวแรก')">+ ญะมาอะฮ์แถวแรก</button>
@@ -457,8 +477,8 @@
           </div>
 
           <!-- Standalone Note Save Button -->
-          <button type="button" class="btn btn-secondary btn-block" onclick="savePrayerNoteOnly()" style="border-color: #cbd5e1; background: #ffffff; color: var(--text-dark); font-weight: 600; padding: 0.55rem; font-size: 0.85rem;">
-            <i class="fa-solid fa-floppy-disk" style="color: var(--primary);"></i> บันทึกเฉพาะหมายเหตุ / สถานะ (ไม่ต้องถ่ายภาพ)
+          <button type="button" class="btn btn-primary btn-block" onclick="savePrayerNoteOnly()" style="font-weight: 600; padding: 0.7rem; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
+            <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลหมายเหตุละหมาด
           </button>
         </div>
 
@@ -535,19 +555,19 @@
         </p>
       </div>
 
-      <!-- Sub Navigation Tabs with Badges -->
+      <!-- Sub Navigation Tabs with Badges (Segmented Touch Control) -->
       <div class="hasanat-subnav">
         <button class="hasanat-subnav-btn active" id="btnSubHasanatQuran" onclick="switchHasanatSubTab('quran')">
-          <i class="fa-solid fa-book-quran"></i> อ่านอัลกุรอาน
-          <span class="badge-sub" style="background: rgba(5,150,105,0.15); color: #059669; font-size: 0.72rem; padding: 0.1rem 0.45rem;" id="navHasanatQuranBadge">⭐ 0 ดาว</span>
+          <div class="tab-top-row"><i class="fa-solid fa-book-quran"></i> อ่านกุรอาน</div>
+          <span class="tab-badge-pill" id="navHasanatQuranBadge">⭐ 0 ดาว</span>
         </button>
         <button class="hasanat-subnav-btn" id="btnSubHasanatMemorize" onclick="switchHasanatSubTab('memorize')">
-          <i class="fa-solid fa-brain"></i> ท่องจำซูเราะห์
-          <span class="badge-sub" style="background: rgba(14,165,233,0.15); color: #0284c7; font-size: 0.72rem; padding: 0.1rem 0.45rem;" id="navHasanatMemBadge">0/114</span>
+          <div class="tab-top-row"><i class="fa-solid fa-brain"></i> ท่องจำ</div>
+          <span class="tab-badge-pill" id="navHasanatMemBadge">0 / 114</span>
         </button>
         <button class="hasanat-subnav-btn" id="btnSubHasanatSunnah" onclick="switchHasanatSubTab('sunnah')">
-          <i class="fa-solid fa-person-praying"></i> ละหมาดสุนัต
-          <span class="badge-sub" style="background: rgba(245,158,11,0.15); color: #b45309; font-size: 0.72rem; padding: 0.1rem 0.45rem;" id="navHasanatSunnahBadge">0 ร็อกอะฮ์</span>
+          <div class="tab-top-row"><i class="fa-solid fa-person-praying"></i> สุนัต</div>
+          <span class="tab-badge-pill" id="navHasanatSunnahBadge">0 ร็อกอะฮ์</span>
         </button>
       </div>
 
@@ -852,8 +872,8 @@
             <div style="font-weight: 600;" id="profStudentId">STD-256901</div>
           </div>
           <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">วัน/เดือน/ปีเกิด</div>
-            <div style="font-weight: 600;" id="profBirthDate">15/08/2552</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">วันเดือนปีเกิด (พ.ศ. 8 หลัก)</div>
+            <div style="font-weight: 600;" id="profBirthDate">15082552</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">เบอร์โทรศัพท์ผู้ปกครอง</div>
@@ -1480,8 +1500,10 @@
           </div>
           <div class="form-group">
             <label class="form-label">วันเดือนปีเกิด (ใช้เป็นรหัสผ่าน) <span class="required">*</span></label>
-            <input type="text" class="form-control" id="loginBirthDate" placeholder="เช่น 15/08/2552 หรือ 15082552">
-            <div class="form-hint">กรอกวันเดือนปีเกิดตามที่ได้ลงทะเบียนไว้</div>
+            <input type="text" class="form-control" id="loginBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+            <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
+              <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b>
+            </div>
           </div>
           <button class="btn btn-primary btn-block btn-lg" onclick="handleStudentLogin()">
             <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
@@ -1524,7 +1546,10 @@
           </div>
           <div class="form-group">
             <label class="form-label">วันเดือนปีเกิด (รหัสผ่านของคุณ) <span class="required">*</span></label>
-            <input type="text" class="form-control" id="regBirthDate" placeholder="เช่น 20/05/2553">
+            <input type="text" class="form-control" id="regBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+            <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
+              <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b> (8 หลัก)
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">เบอร์โทรศัพท์ผู้ปกครอง <span class="required">*</span></label>
