@@ -1429,6 +1429,105 @@ function captureAndRecordPrayer() {
   showToast(`บันทึกการละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว`, 'success');
 }
 
+function getCurrentPrayerTimeSlot() {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour < 7) return 'ซุบฮิ';
+  if (hour >= 12 && hour < 15) return 'ซุฮริ';
+  if (hour >= 15 && hour < 18) return 'อัศรฺ';
+  if (hour >= 18 && hour < 19.5) return 'มัฆริบ';
+  return 'อีชาอ์';
+}
+
+function appendPrayerNote(text) {
+  const noteInput = document.getElementById('prayerNoteInput');
+  if (!noteInput) return;
+  const currentVal = noteInput.value.trim();
+  if (!currentVal) {
+    noteInput.value = text;
+  } else if (!currentVal.includes(text)) {
+    noteInput.value = currentVal + ', ' + text;
+  }
+  showToast(`เพิ่มหมายเหตุ: "${text}"`, 'info');
+}
+
+function savePrayerNoteOnly() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
+    enforceMandatoryLogin();
+    return;
+  }
+
+  const pTime = selectedPrayerTime || getCurrentPrayerTimeSlot();
+  const statusSelect = document.getElementById('prayerStatusSelect');
+  const locSelect = document.getElementById('prayerLocationSelect');
+  const noteInput = document.getElementById('prayerNoteInput');
+
+  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  const locName = locSelect ? locSelect.value : 'มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี';
+  const prayerNote = noteInput ? noteInput.value.trim() : '';
+
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const timeStr = now.toLocaleTimeString('th-TH');
+
+  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && p.prayerTime === pTime && p.date === dateStr);
+
+  const prayerRecord = {
+    logId: existingIdx !== -1 ? todayPrayers[existingIdx].logId : ('PRY-' + Date.now()),
+    studentId: currentStudent.studentId,
+    studentName: currentStudent.fullName,
+    grade: currentStudent.grade,
+    prayerTime: pTime,
+    status: prayerStatus,
+    note: prayerNote,
+    timestamp: now.toISOString(),
+    date: dateStr,
+    time: timeStr,
+    latitude: verifiedLocation ? verifiedLocation.lat : 6.78652,
+    longitude: verifiedLocation ? verifiedLocation.lng : 101.24641,
+    locationName: locName,
+    distanceMeters: verifiedLocation ? verifiedLocation.distanceMeters : 0,
+    isWithinZone: verifiedLocation ? verifiedLocation.isWithinZone : true,
+    photoUrl: existingIdx !== -1 ? todayPrayers[existingIdx].photoUrl : ''
+  };
+
+  if (existingIdx !== -1) {
+    todayPrayers[existingIdx] = prayerRecord;
+  } else {
+    todayPrayers.unshift(prayerRecord);
+  }
+
+  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+  const histIdx = historyList.findIndex(p => p.studentId === currentStudent.studentId && p.prayerTime === pTime && p.date === dateStr);
+  if (histIdx !== -1) {
+    historyList[histIdx] = prayerRecord;
+  } else {
+    historyList.unshift(prayerRecord);
+  }
+  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList));
+
+  const prayerCard = document.getElementById(`ptime-${pTime}`);
+  if (prayerCard) {
+    prayerCard.classList.add('done');
+    const statusSpan = document.getElementById(`pstatus-${pTime}`);
+    if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
+  }
+
+  renderTodayPrayerTable();
+  renderDashboardCharts();
+
+  syncRecordToGoogleSheet('recordPrayer', prayerRecord);
+
+  playSuccessSound();
+  showToast(`บันทึกหมายเหตุการละหมาดเวลา ${pTime} เรียบร้อยแล้ว`, 'success');
+}
+
+
 function renderTodayPrayerTable() {
   const tbody = document.getElementById('todayPrayerTableBody');
   if (!tbody) return;
@@ -1758,7 +1857,7 @@ function renderCurrentStudentProfile() {
       bannerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
     }
     if (dashGreeting) dashGreeting.innerText = 'ยินดีต้อนรับสู่ KHALIFAH PROGRAM';
-    if (dashSubtitle) dashSubtitle.innerText = 'ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม (คลิกที่นี่หรือมุมขวาบนเพื่อเข้าสู่ระบบ/ลงทะเบียน)';
+    if (dashSubtitle) dashSubtitle.innerText = '';
     if (dashStudentId) dashStudentId.innerText = '-';
     if (dashGrade) dashGrade.innerText = '-';
     if (dashSchool) dashSchool.innerText = 'โรงเรียน/สถาบัน';
@@ -1808,7 +1907,7 @@ function renderCurrentStudentProfile() {
     }
   }
   if (dashGreeting) dashGreeting.innerText = `ยินดีต้อนรับ, ${currentStudent.fullName}`;
-  if (dashSubtitle) dashSubtitle.innerText = `ติดตามพัฒนาการการเรียน การละหมาด 5 เวลา และกิจกรรมของ ${currentStudent.fullName}`;
+  if (dashSubtitle) dashSubtitle.innerText = '';
   if (dashStudentId) dashStudentId.innerText = currentStudent.studentId;
   if (dashGrade) dashGrade.innerText = currentStudent.grade;
   if (dashSchool) dashSchool.innerText = currentStudent.schoolName;
@@ -3345,6 +3444,9 @@ function adminManualCheckInStudent() {
   syncRecordToGoogleSheet('activityCheckIn', logEntry);
 }
 
+let currentViewingActivityId = null;
+let currentAttendeesList = [];
+
 function renderAdminActivitiesTable() {
   const tbody = document.getElementById('adminActivitiesTableBody');
   const selectEl = document.getElementById('manualActSelect');
@@ -3364,8 +3466,15 @@ function renderAdminActivitiesTable() {
         <td><span class="activity-badge badge-upcoming">${a.type || 'กิจกรรม'}</span></td>
         <td>${a.location || '-'}</td>
         <td>${a.date || '-'}</td>
-        <td><b>${participantsCount}</b> คน</td>
-        <td style="text-align: right;">
+        <td>
+          <span style="font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #bae6fd; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <i class="fa-solid fa-users"></i> ${participantsCount} คน
+          </span>
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openActivityAttendeesModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.35rem;" title="ดูรายชื่อนักเรียนที่สแกนเข้าร่วม">
+            <i class="fa-solid fa-users-viewfinder"></i> รายชื่อ (${participantsCount})
+          </button>
           <button class="btn btn-primary btn-sm" onclick="openActivityQrModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem;">
             <i class="fa-solid fa-qrcode"></i> พิมพ์ QR
           </button>
@@ -3378,6 +3487,133 @@ function renderAdminActivitiesTable() {
     selectEl.innerHTML = activities.map(a => `<option value="${a.id}">${a.title} (${a.date})</option>`).join('');
   }
 }
+
+function openActivityAttendeesModal(actId) {
+  currentViewingActivityId = actId;
+  const act = activities.find(a => a.id === actId);
+  const titleEl = document.getElementById('actAttendeesModalTitle');
+  const subEl = document.getElementById('actAttendeesModalSubtitle');
+  const searchInput = document.getElementById('attendeesSearchInput');
+
+  if (titleEl) {
+    titleEl.innerHTML = `<i class="fa-solid fa-users-viewfinder" style="color: var(--primary);"></i> รายชื่อผู้เข้าร่วมกิจกรรม`;
+  }
+  if (subEl) {
+    subEl.innerText = `กิจกรรม: ${act ? act.title : actId} | วันที่: ${act ? act.date : '-'}`;
+  }
+  if (searchInput) searchInput.value = '';
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  currentAttendeesList = actLogs.filter(l => l.activityId === actId || (act && l.activityTitle === act.title));
+  renderAttendeesTable(currentAttendeesList);
+  openModal('activityAttendeesModal');
+}
+
+function renderAttendeesTable(list) {
+  const tbody = document.getElementById('actAttendeesTableBody');
+  const badge = document.getElementById('actAttendeesTotalBadge');
+  if (badge) {
+    badge.innerHTML = `<i class="fa-solid fa-user-check"></i> เข้าร่วมแล้ว: ${list.length} คน`;
+  }
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          <i class="fa-solid fa-user-slash" style="font-size: 1.5rem; color: #cbd5e1; margin-bottom: 0.5rem; display: block;"></i>
+          ยังไม่มีนักเรียนสแกนเข้าร่วมกิจกรรมนี้
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = list.map((item, idx) => `
+    <tr>
+      <td style="text-align: center; color: var(--text-muted);">${idx + 1}</td>
+      <td><b>${item.studentId}</b></td>
+      <td>${item.studentName}</td>
+      <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.78rem;">${item.grade || '-'}</span></td>
+      <td>${item.formattedDate || '-'}</td>
+      <td><span style="color: #059669; font-weight: 600;">${item.formattedTime || '-'}</span></td>
+      <td style="text-align: right;">
+        <button class="btn btn-icon btn-sm" onclick="deleteActivityAttendee('${item.id || item.studentId}')" title="ลบรายการเช็คชื่อนี้" style="color: #ef4444; width: 28px; height: 28px;">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterAttendeesList(query) {
+  if (!query) {
+    renderAttendeesTable(currentAttendeesList);
+    return;
+  }
+  const q = query.toLowerCase().trim();
+  const filtered = currentAttendeesList.filter(item => 
+    (item.studentName && item.studentName.toLowerCase().includes(q)) ||
+    (item.studentId && item.studentId.toLowerCase().includes(q)) ||
+    (item.grade && item.grade.toLowerCase().includes(q))
+  );
+  renderAttendeesTable(filtered);
+}
+
+function deleteActivityAttendee(logId) {
+  if (!confirm('ยืนยันที่จะลบข้อมูลการเข้าร่วมกิจกรรมของนักเรียนคนนี้?')) return;
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  actLogs = actLogs.filter(l => (l.id !== logId && l.studentId !== logId));
+  localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
+
+  if (currentViewingActivityId) {
+    const act = activities.find(a => a.id === currentViewingActivityId);
+    currentAttendeesList = actLogs.filter(l => l.activityId === currentViewingActivityId || (act && l.activityTitle === act.title));
+    renderAttendeesTable(currentAttendeesList);
+  }
+  renderAdminActivitiesTable();
+  showToast('ลบรายการเช็คชื่อเรียบร้อยแล้ว', 'info');
+}
+
+function exportAttendeesToExcel() {
+  if (!currentAttendeesList || currentAttendeesList.length === 0) {
+    showToast('ไม่มีข้อมูลนักเรียนสำหรับส่งออก', 'warning');
+    return;
+  }
+  const act = activities.find(a => a.id === currentViewingActivityId);
+  const actTitle = act ? act.title : 'Activity';
+
+  const exportData = currentAttendeesList.map((item, idx) => ({
+    'ลำดับ': idx + 1,
+    'รหัสนักเรียน': item.studentId,
+    'ชื่อ-นามสกุล': item.studentName,
+    'ระดับชั้น': item.grade || '-',
+    'กิจกรรม': item.activityTitle || actTitle,
+    'วันที่สแกนเข้า': item.formattedDate || '-',
+    'เวลาที่สแกนเข้า': item.formattedTime || '-'
+  }));
+
+  try {
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "รายชื่อผู้เข้าร่วม");
+    const fileName = `รายชื่อเข้าร่วม_${actTitle.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อยแล้ว', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('เกิดข้อผิดพลาดในการส่งออกไฟล์ Excel', 'error');
+  }
+}
+
 
 // ----------------- DASHBOARD GRADE FILTER LOGIC ----------------- //
 let currentGradeFilter = 'ALL';

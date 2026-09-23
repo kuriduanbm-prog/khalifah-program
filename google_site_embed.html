@@ -2157,44 +2157,52 @@ body.auth-locked #adminAuthModal {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.3rem 0.1rem;
+  padding: 0.35rem 0.15rem;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   transition: all 0.2s ease;
   cursor: pointer;
   user-select: none;
 }
 
+.quran-shelf-star:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+}
+
 .quran-shelf-star.active {
-  background: rgba(245, 158, 11, 0.18);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: #fefce8;
+  border: 1px solid #fde047;
+  box-shadow: 0 2px 6px rgba(234, 179, 8, 0.25);
 }
 
 .quran-shelf-star .star-icon {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   line-height: 1;
-  color: #64748b;
+  color: #cbd5e1;
   transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .quran-shelf-star.active .star-icon {
-  color: #fbbf24;
-  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
+  color: #eab308;
+  filter: drop-shadow(0 0 3px rgba(234, 179, 8, 0.6));
 }
 
 .quran-shelf-star:hover .star-icon {
-  transform: scale(1.25);
+  transform: scale(1.2);
 }
 
 .quran-shelf-star .juz-num {
   font-size: 0.65rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: #64748b;
   margin-top: 0.2rem;
 }
 
 .quran-shelf-star.active .juz-num {
-  color: #fef08a;
+  color: #854d0e;
 }
 
 /* Quick Stepper Buttons */
@@ -2440,37 +2448,27 @@ body.auth-locked #adminAuthModal {
           </button>
         </div>
       </div>
-      <div class="welcome-banner">
-        <div class="banner-content">
-          <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 260px;">
-            <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์">
-              <i class="fa-solid fa-user"></i>
-            </label>
-            <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
-            <div>
-              <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
-            <p class="banner-desc" id="dashSubtitle">ติดตามพัฒนาการการเรียน การละหมาด และกิจกรรม เพื่อการพัฒนาตนเองอย่างสมบูรณ์แบบ</p>
-            <div class="banner-badges">
-              <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
-              <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
-              <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
-            </div>
-            <!-- Quran Juz Stars Display under Student Profile -->
-            <div class="quran-stars-wrapper" id="dashQuranStarsWrapper">
-              <div class="quran-stars-title">
-                <i class="fa-solid fa-book-quran"></i> เกียรติประวัติดาวอัลกุรอาน:
-              </div>
-              <div class="quran-stars-list" id="dashQuranStarsList">
-                <span class="quran-star-icon">⭐</span>
-              </div>
-              <span class="quran-progress-pill" id="dashQuranProgressText">
-                จบ 0/30 ยุซ (0 ดาว)
-              </span>
-            </div>
+      <div class="welcome-banner" style="text-align: center; padding: 2rem 1.25rem;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+          <!-- Centered Prominent Profile Avatar -->
+          <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์" style="width: 95px; height: 95px; font-size: 2.4rem; cursor: pointer; border: 4px solid #ffffff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 0.75rem;">
+            <i class="fa-solid fa-user"></i>
+          </label>
+          <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
+          
+          <!-- Welcome Greeting (Centered) -->
+          <h1 class="banner-title" id="dashGreeting" style="font-size: 1.45rem; font-weight: 700; margin: 0 0 0.5rem 0;">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
+          
+          <!-- Centered Badges -->
+          <div class="banner-badges" style="justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
+            <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
           </div>
-        </div>
-        <div>
-          <button class="btn btn-secondary" onclick="switchView('prayer')">
+
+          <!-- Quick Check-in Button -->
+          <div>
+            <button class="btn btn-secondary btn-sm" onclick="switchView('prayer')" style="padding: 0.45rem 1.2rem; border-radius: var(--radius-full); font-weight: 600;">
               <i class="fa-solid fa-camera"></i> เช็คชื่อละหมาดทันที
             </button>
           </div>
@@ -2708,9 +2706,24 @@ body.auth-locked #adminAuthModal {
             <i class="fa-solid fa-camera-rotate"></i> สลับกล้องหน้า/หลัง
           </button>
         </div>
-        <!-- Prayer Status & Notes Field -->
-        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem;">
+
+        <!-- 4. One-Click Instant Capture & Save Button (Placed directly below camera) -->
+        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none; margin-bottom: 1.1rem;">
+          <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
+        </button>
+
+        <!-- 5. Prayer Status, Location & Notes Field (Placed at the bottom for clean UX) -->
+        <div class="prayer-notes-card" style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.95rem; margin-top: 0.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
+            <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> สถานะ & หมายเหตุการละหมาด
+            </span>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">
+              (บันทึกเฉพาะหมายเหตุได้)
+            </span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
             <div>
               <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
                 <i class="fa-solid fa-tags" style="color: var(--primary);"></i> สถานะการละหมาด
@@ -2738,17 +2751,26 @@ body.auth-locked #adminAuthModal {
               </select>
             </div>
           </div>
-          <div>
+          
+          <div style="margin-bottom: 0.75rem;">
             <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
               <i class="fa-solid fa-pen" style="color: var(--primary);"></i> หมายเหตุเพิ่มเติม
             </label>
-            <input type="text" class="form-control" id="prayerNoteInput" placeholder="เช่น ญะมาอะฮ์แถวแรก, อาคาร 2, กำลังเดินทาง..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
+            <input type="text" class="form-control" id="prayerNoteInput" placeholder="เช่น ญะมาอะฮ์แถวแรก, อาคาร 2, กำลังเดินทาง, อุซุร..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
+            <!-- Quick Tag Chips -->
+            <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
+              <button type="button" class="btn-stepper" onclick="appendPrayerNote('ญะมาอะฮ์แถวแรก')">+ ญะมาอะฮ์แถวแรก</button>
+              <button type="button" class="btn-stepper" onclick="appendPrayerNote('ละหมาดที่บ้าน')">+ ละหมาดที่บ้าน</button>
+              <button type="button" class="btn-stepper" onclick="appendPrayerNote('อุซุรชัรอีย์')">+ อุซุรชัรอีย์</button>
+              <button type="button" class="btn-stepper" onclick="appendPrayerNote('กำลังเดินทาง')">+ กำลังเดินทาง</button>
+            </div>
           </div>
-        </div>
 
-        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none;">
-          <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
-        </button>
+          <!-- Standalone Note Save Button -->
+          <button type="button" class="btn btn-secondary btn-block" onclick="savePrayerNoteOnly()" style="border-color: #cbd5e1; background: #ffffff; color: var(--text-dark); font-weight: 600; padding: 0.55rem; font-size: 0.85rem;">
+            <i class="fa-solid fa-floppy-disk" style="color: var(--primary);"></i> บันทึกเฉพาะหมายเหตุ / สถานะ (ไม่ต้องถ่ายภาพ)
+          </button>
+        </div>
 
       </div>
     </section>
@@ -2852,16 +2874,16 @@ body.auth-locked #adminAuthModal {
           </div>
 
           <!-- Stars Shelf Showcase (1-30 Juz Interactive Shelf) -->
-          <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; border-radius: var(--radius-lg); padding: 1.15rem; margin-bottom: 1.25rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
-              <span style="font-size: 0.85rem; font-weight: 600; color: #fef08a;">
-                <i class="fa-solid fa-star"></i> หิ้งดาวอัลกุรอาน 30 ยุซ (อ่านจบ 1 ยุซ = ได้รับ 1 ดาวทอง)
+          <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.4rem;">
+              <span style="font-size: 0.88rem; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-star" style="color: #f59e0b;"></i> หิ้งดาวอัลกุรอาน 30 ยุซ <span style="font-size: 0.74rem; font-weight: 500; color: var(--text-muted);">(อ่านจบ 1 ยุซ = 1 ดาวทอง)</span>
               </span>
-              <span style="font-size: 0.76rem; color: #94a3b8;" id="hasanatQuranPercentText">0 / 604 หน้า (0.0%)</span>
+              <span style="font-size: 0.78rem; font-weight: 600; color: #059669; background: #ecfdf5; padding: 0.15rem 0.5rem; border-radius: 9999px; border: 1px solid #a7f3d0;" id="hasanatQuranPercentText">0 / 604 หน้า (0.0%)</span>
             </div>
 
             <!-- Progress Bar -->
-            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.12); border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
+            <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; margin-bottom: 0.85rem;">
               <div id="hasanatQuranProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f59e0b, #10b981); transition: width 0.3s ease;"></div>
             </div>
 
@@ -2983,12 +3005,12 @@ body.auth-locked #adminAuthModal {
           </div>
 
           <!-- Live Rakaat Counter Showcase Card -->
-          <div style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; border-radius: var(--radius-lg); padding: 1.1rem; margin-bottom: 1.25rem; text-align: center;">
-            <div style="font-size: 0.8rem; color: #a7f3d0; margin-bottom: 0.2rem;">ยอดรวมการละหมาดสุนัตของวันนี้</div>
-            <div style="font-size: 2.2rem; font-weight: 800; color: #ffffff; line-height: 1.1;" id="liveSunnahTotalNum">
-              0 <span style="font-size: 1.1rem; font-weight: 500;">ร็อกอะฮ์</span>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; text-align: center;">
+            <div style="font-size: 0.82rem; font-weight: 600; color: #166534; margin-bottom: 0.2rem;">ยอดรวมการละหมาดสุนัตของวันนี้</div>
+            <div style="font-size: 2.3rem; font-weight: 800; color: #059669; line-height: 1.1;" id="liveSunnahTotalNum">
+              0 <span style="font-size: 1.1rem; font-weight: 600; color: #166534;">ร็อกอะฮ์</span>
             </div>
-            <div style="font-size: 0.78rem; color: #d1fae5; margin-top: 0.35rem; font-style: italic;">
+            <div style="font-size: 0.78rem; color: #15803d; margin-top: 0.35rem; font-style: italic;">
               "ผู้ใดละหมาดสุนัต 12 ร็อกอะฮ์ในวันหนึ่งคืนหนึ่ง อัลลอฮ์จะทรงสร้างบ้านหลังหนึ่งให้แก่เขาในสวรรค์" (บันทึกโดยมุสลิม)
             </div>
           </div>
@@ -4029,6 +4051,64 @@ body.auth-locked #adminAuthModal {
       </div>
     </div>
   </div>
+
+  <!-- Modal: Activity Attendees List (For Admin) -->
+  <div class="modal-overlay" id="activityAttendeesModal">
+    <div class="modal-dialog" style="max-width: 760px;">
+      <div class="modal-header">
+        <div>
+          <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-dark);" id="actAttendeesModalTitle">
+            <i class="fa-solid fa-users-viewfinder" style="color: var(--primary);"></i> รายชื่อนักเรียนที่เข้าร่วมกิจกรรม
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;" id="actAttendeesModalSubtitle">
+            กิจกรรม: -
+          </div>
+        </div>
+        <button class="btn-icon" onclick="closeModal('activityAttendeesModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1rem 1.25rem;">
+        <!-- Search and Export Toolbar -->
+        <div style="display: flex; gap: 0.5rem; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap;">
+          <div style="position: relative; flex: 1; min-width: 220px;">
+            <input type="text" id="attendeesSearchInput" class="form-control" placeholder="ค้นหาชื่อ หรือ รหัสนักเรียน..." oninput="filterAttendeesList(this.value)" style="padding-left: 2.2rem; height: 38px; font-size: 0.85rem;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="exportAttendeesToExcel()" style="white-space: nowrap; height: 38px; font-size: 0.82rem; font-weight: 600;">
+            <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> ส่งออก Excel
+          </button>
+        </div>
+
+        <!-- Attendees Table -->
+        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+          <table class="custom-table" style="font-size: 0.84rem;">
+            <thead>
+              <tr>
+                <th style="width: 45px; text-align: center;">#</th>
+                <th>รหัสนักเรียน</th>
+                <th>ชื่อ-นามสกุล</th>
+                <th>ระดับชั้น</th>
+                <th>วันที่เช็คชื่อ</th>
+                <th>เวลาที่เช็คชื่อ</th>
+                <th style="text-align: right; width: 70px;">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="actAttendeesTableBody">
+              <!-- Dynamically populated via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.3rem 0.75rem; border-radius: 9999px; border: 1px solid #bae6fd;" id="actAttendeesTotalBadge">
+          <i class="fa-solid fa-user-check"></i> เข้าร่วมแล้ว: 0 คน
+        </span>
+        <button class="btn btn-secondary" onclick="closeModal('activityAttendeesModal')">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
@@ -5466,6 +5546,105 @@ function captureAndRecordPrayer() {
   showToast(`บันทึกการละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว`, 'success');
 }
 
+function getCurrentPrayerTimeSlot() {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour < 7) return 'ซุบฮิ';
+  if (hour >= 12 && hour < 15) return 'ซุฮริ';
+  if (hour >= 15 && hour < 18) return 'อัศรฺ';
+  if (hour >= 18 && hour < 19.5) return 'มัฆริบ';
+  return 'อีชาอ์';
+}
+
+function appendPrayerNote(text) {
+  const noteInput = document.getElementById('prayerNoteInput');
+  if (!noteInput) return;
+  const currentVal = noteInput.value.trim();
+  if (!currentVal) {
+    noteInput.value = text;
+  } else if (!currentVal.includes(text)) {
+    noteInput.value = currentVal + ', ' + text;
+  }
+  showToast(`เพิ่มหมายเหตุ: "${text}"`, 'info');
+}
+
+function savePrayerNoteOnly() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
+    enforceMandatoryLogin();
+    return;
+  }
+
+  const pTime = selectedPrayerTime || getCurrentPrayerTimeSlot();
+  const statusSelect = document.getElementById('prayerStatusSelect');
+  const locSelect = document.getElementById('prayerLocationSelect');
+  const noteInput = document.getElementById('prayerNoteInput');
+
+  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  const locName = locSelect ? locSelect.value : 'มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี';
+  const prayerNote = noteInput ? noteInput.value.trim() : '';
+
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const timeStr = now.toLocaleTimeString('th-TH');
+
+  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && p.prayerTime === pTime && p.date === dateStr);
+
+  const prayerRecord = {
+    logId: existingIdx !== -1 ? todayPrayers[existingIdx].logId : ('PRY-' + Date.now()),
+    studentId: currentStudent.studentId,
+    studentName: currentStudent.fullName,
+    grade: currentStudent.grade,
+    prayerTime: pTime,
+    status: prayerStatus,
+    note: prayerNote,
+    timestamp: now.toISOString(),
+    date: dateStr,
+    time: timeStr,
+    latitude: verifiedLocation ? verifiedLocation.lat : 6.78652,
+    longitude: verifiedLocation ? verifiedLocation.lng : 101.24641,
+    locationName: locName,
+    distanceMeters: verifiedLocation ? verifiedLocation.distanceMeters : 0,
+    isWithinZone: verifiedLocation ? verifiedLocation.isWithinZone : true,
+    photoUrl: existingIdx !== -1 ? todayPrayers[existingIdx].photoUrl : ''
+  };
+
+  if (existingIdx !== -1) {
+    todayPrayers[existingIdx] = prayerRecord;
+  } else {
+    todayPrayers.unshift(prayerRecord);
+  }
+
+  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+  const histIdx = historyList.findIndex(p => p.studentId === currentStudent.studentId && p.prayerTime === pTime && p.date === dateStr);
+  if (histIdx !== -1) {
+    historyList[histIdx] = prayerRecord;
+  } else {
+    historyList.unshift(prayerRecord);
+  }
+  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList));
+
+  const prayerCard = document.getElementById(`ptime-${pTime}`);
+  if (prayerCard) {
+    prayerCard.classList.add('done');
+    const statusSpan = document.getElementById(`pstatus-${pTime}`);
+    if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
+  }
+
+  renderTodayPrayerTable();
+  renderDashboardCharts();
+
+  syncRecordToGoogleSheet('recordPrayer', prayerRecord);
+
+  playSuccessSound();
+  showToast(`บันทึกหมายเหตุการละหมาดเวลา ${pTime} เรียบร้อยแล้ว`, 'success');
+}
+
+
 function renderTodayPrayerTable() {
   const tbody = document.getElementById('todayPrayerTableBody');
   if (!tbody) return;
@@ -5795,7 +5974,7 @@ function renderCurrentStudentProfile() {
       bannerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
     }
     if (dashGreeting) dashGreeting.innerText = 'ยินดีต้อนรับสู่ KHALIFAH PROGRAM';
-    if (dashSubtitle) dashSubtitle.innerText = 'ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม (คลิกที่นี่หรือมุมขวาบนเพื่อเข้าสู่ระบบ/ลงทะเบียน)';
+    if (dashSubtitle) dashSubtitle.innerText = '';
     if (dashStudentId) dashStudentId.innerText = '-';
     if (dashGrade) dashGrade.innerText = '-';
     if (dashSchool) dashSchool.innerText = 'โรงเรียน/สถาบัน';
@@ -5845,7 +6024,7 @@ function renderCurrentStudentProfile() {
     }
   }
   if (dashGreeting) dashGreeting.innerText = `ยินดีต้อนรับ, ${currentStudent.fullName}`;
-  if (dashSubtitle) dashSubtitle.innerText = `ติดตามพัฒนาการการเรียน การละหมาด 5 เวลา และกิจกรรมของ ${currentStudent.fullName}`;
+  if (dashSubtitle) dashSubtitle.innerText = '';
   if (dashStudentId) dashStudentId.innerText = currentStudent.studentId;
   if (dashGrade) dashGrade.innerText = currentStudent.grade;
   if (dashSchool) dashSchool.innerText = currentStudent.schoolName;
@@ -7382,6 +7561,9 @@ function adminManualCheckInStudent() {
   syncRecordToGoogleSheet('activityCheckIn', logEntry);
 }
 
+let currentViewingActivityId = null;
+let currentAttendeesList = [];
+
 function renderAdminActivitiesTable() {
   const tbody = document.getElementById('adminActivitiesTableBody');
   const selectEl = document.getElementById('manualActSelect');
@@ -7401,8 +7583,15 @@ function renderAdminActivitiesTable() {
         <td><span class="activity-badge badge-upcoming">${a.type || 'กิจกรรม'}</span></td>
         <td>${a.location || '-'}</td>
         <td>${a.date || '-'}</td>
-        <td><b>${participantsCount}</b> คน</td>
-        <td style="text-align: right;">
+        <td>
+          <span style="font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #bae6fd; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <i class="fa-solid fa-users"></i> ${participantsCount} คน
+          </span>
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openActivityAttendeesModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.35rem;" title="ดูรายชื่อนักเรียนที่สแกนเข้าร่วม">
+            <i class="fa-solid fa-users-viewfinder"></i> รายชื่อ (${participantsCount})
+          </button>
           <button class="btn btn-primary btn-sm" onclick="openActivityQrModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem;">
             <i class="fa-solid fa-qrcode"></i> พิมพ์ QR
           </button>
@@ -7415,6 +7604,133 @@ function renderAdminActivitiesTable() {
     selectEl.innerHTML = activities.map(a => `<option value="${a.id}">${a.title} (${a.date})</option>`).join('');
   }
 }
+
+function openActivityAttendeesModal(actId) {
+  currentViewingActivityId = actId;
+  const act = activities.find(a => a.id === actId);
+  const titleEl = document.getElementById('actAttendeesModalTitle');
+  const subEl = document.getElementById('actAttendeesModalSubtitle');
+  const searchInput = document.getElementById('attendeesSearchInput');
+
+  if (titleEl) {
+    titleEl.innerHTML = `<i class="fa-solid fa-users-viewfinder" style="color: var(--primary);"></i> รายชื่อผู้เข้าร่วมกิจกรรม`;
+  }
+  if (subEl) {
+    subEl.innerText = `กิจกรรม: ${act ? act.title : actId} | วันที่: ${act ? act.date : '-'}`;
+  }
+  if (searchInput) searchInput.value = '';
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  currentAttendeesList = actLogs.filter(l => l.activityId === actId || (act && l.activityTitle === act.title));
+  renderAttendeesTable(currentAttendeesList);
+  openModal('activityAttendeesModal');
+}
+
+function renderAttendeesTable(list) {
+  const tbody = document.getElementById('actAttendeesTableBody');
+  const badge = document.getElementById('actAttendeesTotalBadge');
+  if (badge) {
+    badge.innerHTML = `<i class="fa-solid fa-user-check"></i> เข้าร่วมแล้ว: ${list.length} คน`;
+  }
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          <i class="fa-solid fa-user-slash" style="font-size: 1.5rem; color: #cbd5e1; margin-bottom: 0.5rem; display: block;"></i>
+          ยังไม่มีนักเรียนสแกนเข้าร่วมกิจกรรมนี้
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = list.map((item, idx) => `
+    <tr>
+      <td style="text-align: center; color: var(--text-muted);">${idx + 1}</td>
+      <td><b>${item.studentId}</b></td>
+      <td>${item.studentName}</td>
+      <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.78rem;">${item.grade || '-'}</span></td>
+      <td>${item.formattedDate || '-'}</td>
+      <td><span style="color: #059669; font-weight: 600;">${item.formattedTime || '-'}</span></td>
+      <td style="text-align: right;">
+        <button class="btn btn-icon btn-sm" onclick="deleteActivityAttendee('${item.id || item.studentId}')" title="ลบรายการเช็คชื่อนี้" style="color: #ef4444; width: 28px; height: 28px;">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterAttendeesList(query) {
+  if (!query) {
+    renderAttendeesTable(currentAttendeesList);
+    return;
+  }
+  const q = query.toLowerCase().trim();
+  const filtered = currentAttendeesList.filter(item => 
+    (item.studentName && item.studentName.toLowerCase().includes(q)) ||
+    (item.studentId && item.studentId.toLowerCase().includes(q)) ||
+    (item.grade && item.grade.toLowerCase().includes(q))
+  );
+  renderAttendeesTable(filtered);
+}
+
+function deleteActivityAttendee(logId) {
+  if (!confirm('ยืนยันที่จะลบข้อมูลการเข้าร่วมกิจกรรมของนักเรียนคนนี้?')) return;
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  actLogs = actLogs.filter(l => (l.id !== logId && l.studentId !== logId));
+  localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
+
+  if (currentViewingActivityId) {
+    const act = activities.find(a => a.id === currentViewingActivityId);
+    currentAttendeesList = actLogs.filter(l => l.activityId === currentViewingActivityId || (act && l.activityTitle === act.title));
+    renderAttendeesTable(currentAttendeesList);
+  }
+  renderAdminActivitiesTable();
+  showToast('ลบรายการเช็คชื่อเรียบร้อยแล้ว', 'info');
+}
+
+function exportAttendeesToExcel() {
+  if (!currentAttendeesList || currentAttendeesList.length === 0) {
+    showToast('ไม่มีข้อมูลนักเรียนสำหรับส่งออก', 'warning');
+    return;
+  }
+  const act = activities.find(a => a.id === currentViewingActivityId);
+  const actTitle = act ? act.title : 'Activity';
+
+  const exportData = currentAttendeesList.map((item, idx) => ({
+    'ลำดับ': idx + 1,
+    'รหัสนักเรียน': item.studentId,
+    'ชื่อ-นามสกุล': item.studentName,
+    'ระดับชั้น': item.grade || '-',
+    'กิจกรรม': item.activityTitle || actTitle,
+    'วันที่สแกนเข้า': item.formattedDate || '-',
+    'เวลาที่สแกนเข้า': item.formattedTime || '-'
+  }));
+
+  try {
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "รายชื่อผู้เข้าร่วม");
+    const fileName = `รายชื่อเข้าร่วม_${actTitle.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อยแล้ว', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('เกิดข้อผิดพลาดในการส่งออกไฟล์ Excel', 'error');
+  }
+}
+
 
 // ----------------- DASHBOARD GRADE FILTER LOGIC ----------------- //
 let currentGradeFilter = 'ALL';
