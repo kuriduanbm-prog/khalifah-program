@@ -102,91 +102,85 @@ let gasApiUrl = localStorage.getItem('khalifah_gas_url') || '';
 document.addEventListener('DOMContentLoaded', () => {
   loadStoredData();
   initAppLogo();
+  updateAdminUIVisibility(false);
   setupEventListeners();
   renderCurrentStudentProfile();
   renderDashboardCharts();
   renderActivitiesList();
   renderTodayPrayerTable();
   initExportDateDefaults();
+
+  // ตรวจสอบว่ามี #admin ใน URL หรือไม่
+  if (window.location.hash === '#admin') {
+    openModal('adminAuthModal');
+  }
 });
 
 function loadStoredData() {
-  // Load current student
+  // 1. Load current student (Clean start: null if not logged in or legacy test data)
   const savedStudent = localStorage.getItem('khalifah_current_student');
   if (savedStudent) {
     try {
-      currentStudent = JSON.parse(savedStudent);
+      const parsed = JSON.parse(savedStudent);
+      if (parsed && (parsed.studentId === 'STD-256901' || parsed.fullName === 'นายมูฮัมหมัด ซอและห์')) {
+        localStorage.removeItem('khalifah_current_student');
+        currentStudent = null;
+      } else {
+        currentStudent = parsed;
+      }
     } catch (e) {
-      currentStudent = DEFAULT_STUDENT;
+      currentStudent = null;
     }
   } else {
-    currentStudent = DEFAULT_STUDENT;
-    localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+    currentStudent = null;
   }
 
-  // Load all students
+  // 2. Load all students (Filter out dummy students)
   const savedAllStudents = localStorage.getItem('khalifah_all_students');
   if (savedAllStudents) {
     try {
-      allStudents = JSON.parse(savedAllStudents);
+      let parsed = JSON.parse(savedAllStudents);
+      parsed = parsed.filter(s => s.studentId !== 'STD-256901' && s.studentId !== 'STD-256902' && s.studentId !== 'STD-256903');
+      allStudents = parsed;
+      localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
     } catch (e) {
-      allStudents = [DEFAULT_STUDENT];
+      allStudents = [];
     }
   } else {
-    allStudents = [
-      DEFAULT_STUDENT,
-      {
-        studentId: 'STD-256902',
-        fullName: 'นางสาวฟาตีมะห์ ดาโอ๊ะ',
-        schoolName: 'โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี',
-        grade: 'มัธยมศึกษาปีที่ 5',
-        birthDate: '20/05/2552',
-        parentPhone: '089-876-5432',
-        status: 'Active',
-        skills: { religious: 95, science: 88, math: 82, language: 91, social: 89, tech: 86 },
-        gpa: '3.90',
-        attendance: { present: 44, late: 1, leave: 0, absent: 0 }
-      },
-      {
-        studentId: 'STD-256903',
-        fullName: 'นายอับดุลเลาะห์ ยามา',
-        schoolName: 'โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี',
-        grade: 'มัธยมศึกษาปีที่ 4',
-        birthDate: '10/11/2553',
-        parentPhone: '082-345-6789',
-        status: 'Active',
-        skills: { religious: 88, science: 79, math: 85, language: 80, social: 85, tech: 90 },
-        gpa: '3.65',
-        attendance: { present: 40, late: 3, leave: 2, absent: 0 }
-      }
-    ];
-    localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+    allStudents = [];
   }
 
-  // Load activities
+  // 3. Load activities (Clean start: empty)
   const savedActs = localStorage.getItem('khalifah_activities');
   if (savedActs) {
     try {
-      activities = JSON.parse(savedActs);
+      let parsed = JSON.parse(savedActs);
+      parsed = parsed.filter(a => a.activityId !== 'ACT-101' && a.activityId !== 'ACT-102');
+      activities = parsed;
+      localStorage.setItem('khalifah_activities', JSON.stringify(activities));
     } catch (e) {
-      activities = SAMPLE_ACTIVITIES;
+      activities = [];
     }
   } else {
-    activities = SAMPLE_ACTIVITIES;
-    localStorage.setItem('khalifah_activities', JSON.stringify(activities));
+    activities = [];
   }
 
-  // Load today prayers
+  // 4. Load today prayers (Clean start)
   const savedPrayers = localStorage.getItem('khalifah_today_prayers');
   if (savedPrayers) {
     try {
-      todayPrayers = JSON.parse(savedPrayers);
+      let parsed = JSON.parse(savedPrayers);
+      parsed = parsed.filter(p => p.studentId !== 'STD-256901');
+      todayPrayers = parsed;
+      localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
     } catch (e) {
       todayPrayers = [];
     }
+  } else {
+    todayPrayers = [];
   }
 
-  // Load Sub-admins
+  // 5. Load Sub-admins
   const savedSubAdmins = localStorage.getItem('khalifah_sub_admins');
   if (savedSubAdmins) {
     try {
@@ -195,15 +189,7 @@ function loadStoredData() {
       subAdmins = [];
     }
   } else {
-    subAdmins = [
-      {
-        username: 'teacher_hasan',
-        fullName: 'อาจารย์ฮะซัน สมาน',
-        role: 'TeacherAdmin',
-        createdAt: '2026-09-01'
-      }
-    ];
-    localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+    subAdmins = [];
   }
 
   // Set input gas URL if present
@@ -274,6 +260,11 @@ function calculateDistanceInMeters(lat1, lon1, lat2, lon2) {
  * ฟังก์ชันตรวจสอบตำแหน่งปัจจุบัน (Geofencing) และตรวจจับการปลอมแปลงพิกัด
  */
 function verifyGeolocation() {
+  if (!currentStudent) {
+    showToast('กรุณาลงทะเบียนหรือเข้าสู่ระบบนักเรียนก่อนตรวจสอบพิกัดและเช็คชื่อ', 'warning');
+    openModal('authModal');
+    return;
+  }
   const statusBox = document.getElementById('geofenceStatusBox');
   const statusTitle = document.getElementById('geoStatusTitle');
   const statusDesc = document.getElementById('geoStatusDesc');
@@ -699,7 +690,9 @@ function renderSkillRadarChart() {
 
   if (skillChartInstance) skillChartInstance.destroy();
 
-  const skills = currentStudent.skills || DEFAULT_STUDENT.skills;
+  const skills = (currentStudent && currentStudent.skills) ? currentStudent.skills : {
+    religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0
+  };
 
   skillChartInstance = new Chart(ctx, {
     type: 'radar',
@@ -715,12 +708,12 @@ function renderSkillRadarChart() {
       datasets: [{
         label: 'ระดับสมรรถนะทักษะ (คะแนนเต็ม 100)',
         data: [
-          skills.religious,
-          skills.science,
-          skills.math,
-          skills.language,
-          skills.social,
-          skills.tech
+          skills.religious || 0,
+          skills.science || 0,
+          skills.math || 0,
+          skills.language || 0,
+          skills.social || 0,
+          skills.tech || 0
         ],
         backgroundColor: 'rgba(2, 132, 199, 0.2)',
         borderColor: '#0284c7',
@@ -761,20 +754,22 @@ function renderAttendanceDoughnutChart() {
 
   if (attendanceChartInstance) attendanceChartInstance.destroy();
 
-  const att = currentStudent.attendance || DEFAULT_STUDENT.attendance;
+  const att = (currentStudent && currentStudent.attendance) ? currentStudent.attendance : {
+    present: 0, late: 0, leave: 0, absent: 0
+  };
+
+  const total = att.present + att.late + att.leave + att.absent;
+  const chartLabels = total > 0 ? ['มาเรียน', 'มาสาย', 'ลา', 'ขาด'] : ['ยังไม่มีข้อมูล'];
+  const chartData = total > 0 ? [att.present, att.late, att.leave, att.absent] : [1];
+  const chartColors = total > 0 ? ['#10b981', '#f59e0b', '#0284c7', '#ef4444'] : ['#e2e8f0'];
 
   attendanceChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['มาเรียน', 'มาสาย', 'ลา', 'ขาด'],
+      labels: chartLabels,
       datasets: [{
-        data: [att.present, att.late, att.leave, att.absent],
-        backgroundColor: [
-          '#10b981', // เขียว - มาเรียน
-          '#f59e0b', // ส้ม - มาสาย
-          '#0284c7', // ฟ้า - ลา
-          '#ef4444'  // แดง - ขาด
-        ],
+        data: chartData,
+        backgroundColor: chartColors,
         borderWidth: 0,
         hoverOffset: 4
       }]
@@ -799,13 +794,17 @@ function renderPrayerBarChart() {
 
   if (prayerChartInstance) prayerChartInstance.destroy();
 
+  // คำนวณตามจริงของนักเรียนที่ล็อกอิน
+  const myTodayCount = currentStudent ? todayPrayers.filter(p => p.studentId === currentStudent.studentId).length : 0;
+  const barData = currentStudent ? [0, 0, 0, 0, 0, 0, myTodayCount] : [0, 0, 0, 0, 0, 0, 0];
+
   prayerChartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
       datasets: [{
         label: 'จำนวนเวลาที่ละหมาด (เต็ม 5)',
-        data: [5, 4, 5, 5, 5, 4, 5],
+        data: barData,
         backgroundColor: '#0284c7',
         borderRadius: 8
       }]
@@ -836,13 +835,21 @@ function renderActivityPieChart() {
 
   if (activityChartInstance) activityChartInstance.destroy();
 
+  const joinedCount = currentStudent ? activities.filter(a => a.checkedIn).length : 0;
+  const remainingCount = currentStudent ? Math.max(0, activities.length - joinedCount) : 0;
+  const hasData = (joinedCount + remainingCount) > 0;
+
+  const pieLabels = hasData ? ['เข้าร่วมแล้ว', 'ยังไม่เข้าร่วม'] : ['ยังไม่มีกิจกรรม'];
+  const pieData = hasData ? [joinedCount, remainingCount] : [1];
+  const pieColors = hasData ? ['#9333ea', '#e2e8f0'] : ['#f1f5f9'];
+
   activityChartInstance = new Chart(ctx, {
     type: 'pie',
     data: {
-      labels: ['เข้าร่วมแล้ว', 'ยังไม่เข้าร่วม'],
+      labels: pieLabels,
       datasets: [{
-        data: [8, 2],
-        backgroundColor: ['#9333ea', '#e2e8f0'],
+        data: pieData,
+        backgroundColor: pieColors,
         borderWidth: 0
       }]
     },
@@ -862,26 +869,21 @@ function renderActivityPieChart() {
 // ----------------- PROFILE & GRADE PROMOTION ----------------- //
 
 function renderCurrentStudentProfile() {
-  if (!currentStudent) return;
-
-  // Header Elements
   const headerName = document.getElementById('headerUserName');
   const headerRole = document.getElementById('headerUserRole');
   const headerAvatar = document.getElementById('userAvatarText');
 
-  if (headerName) headerName.innerText = currentStudent.fullName;
-  if (headerRole) headerRole.innerText = currentStudent.grade;
-  if (headerAvatar) headerAvatar.innerText = currentStudent.fullName.charAt(currentStudent.fullName.startsWith('นาย') ? 3 : (currentStudent.fullName.startsWith('นางสาว') ? 6 : 0));
-
-  // Dashboard Banner Elements
+  const dashGreeting = document.getElementById('dashGreeting');
+  const dashSubtitle = document.getElementById('dashSubtitle');
   const dashStudentId = document.getElementById('dashStudentId');
   const dashGrade = document.getElementById('dashGrade');
   const dashSchool = document.getElementById('dashSchoolName');
-  if (dashStudentId) dashStudentId.innerText = currentStudent.studentId;
-  if (dashGrade) dashGrade.innerText = currentStudent.grade;
-  if (dashSchool) dashSchool.innerText = currentStudent.schoolName;
 
-  // Profile View Elements
+  const statAtt = document.getElementById('statAttendancePercent');
+  const statPry = document.getElementById('statPrayersCount');
+  const statAct = document.getElementById('statActivitiesCount');
+  const statGpa = document.getElementById('statGpa');
+
   const profFullName = document.getElementById('profFullName');
   const profSchool = document.getElementById('profSchool');
   const profGradeBadge = document.getElementById('profGradeBadge');
@@ -890,6 +892,56 @@ function renderCurrentStudentProfile() {
   const profParentPhone = document.getElementById('profParentPhone');
   const profAvatar = document.getElementById('profAvatar');
   const selectNewGrade = document.getElementById('selectNewGrade');
+
+  // GUEST STATE (เมื่อยังไม่มีการเข้าสู่ระบบ)
+  if (!currentStudent) {
+    if (headerName) headerName.innerText = 'เข้าสู่ระบบ';
+    if (headerRole) headerRole.innerText = 'นักเรียน';
+    if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
+
+    if (dashGreeting) dashGreeting.innerText = 'ยินดีต้อนรับสู่ KHALIFAH PROGRAM';
+    if (dashSubtitle) dashSubtitle.innerText = 'ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม (คลิกที่นี่หรือมุมขวาบนเพื่อเข้าสู่ระบบ/ลงทะเบียน)';
+    if (dashStudentId) dashStudentId.innerText = '-';
+    if (dashGrade) dashGrade.innerText = '-';
+    if (dashSchool) dashSchool.innerText = 'โรงเรียน/สถาบัน';
+
+    if (statAtt) statAtt.innerText = '0%';
+    if (statPry) statPry.innerText = '0 / 5';
+    if (statAct) statAct.innerText = '0 ครั้ง';
+    if (statGpa) statGpa.innerText = '0.00';
+
+    if (profFullName) profFullName.innerText = 'ยังไม่ได้เข้าสู่ระบบ';
+    if (profSchool) profSchool.innerText = 'กรุณาเข้าสู่ระบบหรือลงทะเบียนเพื่อจัดการโปรไฟล์';
+    if (profGradeBadge) profGradeBadge.innerText = 'ยังไม่ระบุชั้น';
+    if (profStudentId) profStudentId.innerText = '-';
+    if (profBirthDate) profBirthDate.innerText = '-';
+    if (profParentPhone) profParentPhone.innerText = '-';
+    if (profAvatar) profAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
+    return;
+  }
+
+  // LOGGED-IN STUDENT STATE
+  if (headerName) headerName.innerText = currentStudent.fullName;
+  if (headerRole) headerRole.innerText = currentStudent.grade;
+  if (headerAvatar) headerAvatar.innerText = currentStudent.fullName.charAt(currentStudent.fullName.startsWith('นาย') ? 3 : (currentStudent.fullName.startsWith('นางสาว') ? 6 : 0));
+
+  if (dashGreeting) dashGreeting.innerText = `ยินดีต้อนรับ, ${currentStudent.fullName}`;
+  if (dashSubtitle) dashSubtitle.innerText = `ติดตามพัฒนาการการเรียน การละหมาด 5 เวลา และกิจกรรมของ ${currentStudent.fullName}`;
+  if (dashStudentId) dashStudentId.innerText = currentStudent.studentId;
+  if (dashGrade) dashGrade.innerText = currentStudent.grade;
+  if (dashSchool) dashSchool.innerText = currentStudent.schoolName;
+
+  // Real stats calculation
+  const myPrayersToday = todayPrayers.filter(p => p.studentId === currentStudent.studentId);
+  const myActs = activities.filter(a => a.checkedIn);
+  const att = currentStudent.attendance || { present: 0, late: 0, leave: 0, absent: 0 };
+  const totalDays = att.present + att.late + att.leave + att.absent;
+  const attRate = totalDays > 0 ? ((att.present / totalDays) * 100).toFixed(1) + '%' : '0%';
+
+  if (statAtt) statAtt.innerText = attRate;
+  if (statPry) statPry.innerText = `${myPrayersToday.length} / 5`;
+  if (statAct) statAct.innerText = `${myActs.length} ครั้ง`;
+  if (statGpa) statGpa.innerText = currentStudent.gpa || '0.00';
 
   if (profFullName) profFullName.innerText = currentStudent.fullName;
   if (profSchool) profSchool.innerText = currentStudent.schoolName;
@@ -1012,9 +1064,9 @@ function handleStudentRegister() {
     birthDate: birthDate,
     parentPhone: parentPhone,
     status: 'Active',
-    skills: { religious: 85, science: 80, math: 80, language: 85, social: 85, tech: 85 },
-    gpa: '3.50',
-    attendance: { present: 1, late: 0, leave: 0, absent: 0 }
+    skills: { religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0 },
+    gpa: '0.00',
+    attendance: { present: 0, late: 0, leave: 0, absent: 0 }
   };
 
   allStudents.push(newStudent);
@@ -1045,12 +1097,27 @@ function toggleSubAdminField() {
   }
 }
 
+function updateAdminUIVisibility(isAdmin) {
+  const navAdmin = document.getElementById('nav-admin');
+  const mNavAdmin = document.getElementById('m-nav-admin');
+  const btnSettings = document.getElementById('btnSettingsHeader');
+  const btnTabLogo = document.getElementById('btnTabLogo');
+
+  if (navAdmin) navAdmin.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (mNavAdmin) mNavAdmin.style.display = isAdmin ? 'flex' : 'none';
+  if (btnSettings) btnSettings.style.display = isAdmin ? 'flex' : 'none';
+  if (btnTabLogo) {
+    btnTabLogo.style.display = (isAdmin && currentAdmin && currentAdmin.role === 'SuperAdmin') ? 'inline-block' : 'none';
+  }
+}
+
 function handleAdminLogin() {
   const pass = document.getElementById('adminPassInput').value.trim();
   const user = document.getElementById('subAdminUserInput').value.trim();
 
   if (pass === MASTER_ADMIN_PASS) {
     currentAdmin = { username: 'MasterAdmin', role: 'SuperAdmin' };
+    updateAdminUIVisibility(true);
     closeModal('adminAuthModal');
     switchView('admin');
     showToast('เข้าสู่ระบบผู้ดูแลระบบหลักสำเร็จ', 'success');
@@ -1061,6 +1128,7 @@ function handleAdminLogin() {
   const foundSub = subAdmins.find(s => s.username === user && s.password === pass);
   if (foundSub) {
     currentAdmin = foundSub;
+    updateAdminUIVisibility(true);
     closeModal('adminAuthModal');
     switchView('admin');
     showToast(`เข้าสู่ระบบแอดมินรอง: ${foundSub.fullName}`, 'success');
@@ -1072,8 +1140,26 @@ function handleAdminLogin() {
 
 function adminLogout() {
   currentAdmin = null;
+  updateAdminUIVisibility(false);
   switchView('dashboard');
   showToast('ออกจากระบบแอดมินแล้ว', 'info');
+}
+
+// ทางลัดสำหรับคุณครู/แอดมิน: คลิกโลโก้ 3 ครั้งเปิดหน้าต่างใส่รหัสแอดมินทันที
+let brandClickCount = 0;
+let brandClickTimer = null;
+function handleBrandLogoClick() {
+  brandClickCount++;
+  if (brandClickCount === 1) {
+    brandClickTimer = setTimeout(() => {
+      brandClickCount = 0;
+      switchView('dashboard');
+    }, 600);
+  } else if (brandClickCount >= 3) {
+    clearTimeout(brandClickTimer);
+    brandClickCount = 0;
+    openModal('adminAuthModal');
+  }
 }
 
 function switchAdminTab(tabName, element) {
