@@ -1,0 +1,12 @@
+{
+  "name": "khalifah-program",
+  "version": "1.0.0",
+  "description": "ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "keywords": ["education", "attendance", "prayer", "khalifah", "dashboard"],
+  "author": "Khalifah Program Team",
+  "license": "MIT"
+}
