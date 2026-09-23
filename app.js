@@ -81,6 +81,39 @@ function openPrayerHistoryDetailModal(logId) {
 
 // ----------------- ENHANCED HASANAT INTERACTIVE CONTROLS ----------------- //
 
+function switchHasanatSubTab(tabName) {
+  const tabs = ['quran', 'memorize', 'sunnah'];
+  tabs.forEach(t => {
+    const content = document.getElementById(`subtab-${t}`);
+    if (content) {
+      content.style.display = (t === tabName) ? 'block' : 'none';
+    }
+  });
+
+  const btnMap = {
+    'quran': 'btnSubHasanatQuran',
+    'memorize': 'btnSubHasanatMemorize',
+    'sunnah': 'btnSubHasanatSunnah'
+  };
+
+  Object.keys(btnMap).forEach(k => {
+    const btn = document.getElementById(btnMap[k]);
+    if (btn) {
+      if (k === tabName) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+  });
+
+  if (tabName === 'memorize') {
+    if (typeof renderSurahList === 'function') renderSurahList();
+  } else if (tabName === 'sunnah') {
+    if (typeof loadTodaySunnahChecklist === 'function') loadTodaySunnahChecklist();
+  }
+}
+
 let currentSurahCategory = 'all';
 
 function render30StarsShelf(activeStars = 0) {
@@ -1450,6 +1483,24 @@ function appendPrayerNote(text) {
   showToast(`เพิ่มหมายเหตุ: "${text}"`, 'info');
 }
 
+let selectedPrayerNoteTimeSlot = null;
+
+function selectPrayerNoteTime(time) {
+  selectedPrayerNoteTimeSlot = time;
+  document.querySelectorAll('.prayer-note-time-chip').forEach(chip => {
+    if (chip.getAttribute('data-time') === time) {
+      chip.classList.add('active');
+    } else {
+      chip.classList.remove('active');
+    }
+  });
+
+  const selectedTextEl = document.getElementById('prayerNoteTimeSelectedText');
+  if (selectedTextEl) {
+    selectedTextEl.innerHTML = `<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-check"></i> เลือก: ${time}</span>`;
+  }
+}
+
 function savePrayerNoteOnly() {
   if (!currentStudent) {
     showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
@@ -1457,7 +1508,19 @@ function savePrayerNoteOnly() {
     return;
   }
 
-  const pTime = selectedPrayerTime || getCurrentPrayerTimeSlot();
+  if (!selectedPrayerNoteTimeSlot) {
+    showToast('⚠️ กรุณาเลือกเวลาละหมาดก่อนบันทึกหมายเหตุ (ซุบฮิ, ซุฮริ, อัศรฺ, มัฆริบ, อีชาอ์)', 'warning');
+    const groupEl = document.querySelector('.prayer-time-select-group');
+    if (groupEl) {
+      groupEl.style.outline = '2px solid #ef4444';
+      groupEl.style.borderRadius = '12px';
+      groupEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => { groupEl.style.outline = 'none'; }, 2200);
+    }
+    return;
+  }
+
+  const pTime = selectedPrayerNoteTimeSlot;
   const statusSelect = document.getElementById('prayerStatusSelect');
   const locSelect = document.getElementById('prayerLocationSelect');
   const noteInput = document.getElementById('prayerNoteInput');
