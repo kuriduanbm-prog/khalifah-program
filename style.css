@@ -2127,44 +2127,52 @@ body.auth-locked #adminAuthModal {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.3rem 0.1rem;
+  padding: 0.35rem 0.15rem;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   transition: all 0.2s ease;
   cursor: pointer;
   user-select: none;
 }
 
+.quran-shelf-star:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+}
+
 .quran-shelf-star.active {
-  background: rgba(245, 158, 11, 0.18);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: #fefce8;
+  border: 1px solid #fde047;
+  box-shadow: 0 2px 6px rgba(234, 179, 8, 0.25);
 }
 
 .quran-shelf-star .star-icon {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   line-height: 1;
-  color: #64748b;
+  color: #cbd5e1;
   transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .quran-shelf-star.active .star-icon {
-  color: #fbbf24;
-  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
+  color: #eab308;
+  filter: drop-shadow(0 0 3px rgba(234, 179, 8, 0.6));
 }
 
 .quran-shelf-star:hover .star-icon {
-  transform: scale(1.25);
+  transform: scale(1.2);
 }
 
 .quran-shelf-star .juz-num {
   font-size: 0.65rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: #64748b;
   margin-top: 0.2rem;
 }
 
 .quran-shelf-star.active .juz-num {
-  color: #fef08a;
+  color: #854d0e;
 }
 
 /* Quick Stepper Buttons */

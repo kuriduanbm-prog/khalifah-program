@@ -138,37 +138,27 @@
           </button>
         </div>
       </div>
-      <div class="welcome-banner">
-        <div class="banner-content">
-          <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 260px;">
-            <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์">
-              <i class="fa-solid fa-user"></i>
-            </label>
-            <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
-            <div>
-              <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
-            <p class="banner-desc" id="dashSubtitle">ติดตามพัฒนาการการเรียน การละหมาด และกิจกรรม เพื่อการพัฒนาตนเองอย่างสมบูรณ์แบบ</p>
-            <div class="banner-badges">
-              <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
-              <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
-              <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
-            </div>
-            <!-- Quran Juz Stars Display under Student Profile -->
-            <div class="quran-stars-wrapper" id="dashQuranStarsWrapper">
-              <div class="quran-stars-title">
-                <i class="fa-solid fa-book-quran"></i> เกียรติประวัติดาวอัลกุรอาน:
-              </div>
-              <div class="quran-stars-list" id="dashQuranStarsList">
-                <span class="quran-star-icon">⭐</span>
-              </div>
-              <span class="quran-progress-pill" id="dashQuranProgressText">
-                จบ 0/30 ยุซ (0 ดาว)
-              </span>
-            </div>
+      <div class="welcome-banner" style="text-align: center; padding: 2rem 1.25rem;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%;">
+          <!-- Centered Prominent Profile Avatar -->
+          <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์" style="width: 95px; height: 95px; font-size: 2.4rem; cursor: pointer; border: 4px solid #ffffff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 0.75rem;">
+            <i class="fa-solid fa-user"></i>
+          </label>
+          <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
+          
+          <!-- Welcome Greeting (Centered) -->
+          <h1 class="banner-title" id="dashGreeting" style="font-size: 1.45rem; font-weight: 700; margin: 0 0 0.5rem 0;">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
+          
+          <!-- Centered Badges -->
+          <div class="banner-badges" style="justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
+            <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
           </div>
-        </div>
-        <div>
-          <button class="btn btn-secondary" onclick="switchView('prayer')">
+
+          <!-- Quick Check-in Button -->
+          <div>
+            <button class="btn btn-secondary btn-sm" onclick="switchView('prayer')" style="padding: 0.45rem 1.2rem; border-radius: var(--radius-full); font-weight: 600;">
               <i class="fa-solid fa-camera"></i> เช็คชื่อละหมาดทันที
             </button>
           </div>
@@ -406,9 +396,24 @@
             <i class="fa-solid fa-camera-rotate"></i> สลับกล้องหน้า/หลัง
           </button>
         </div>
-        <!-- Prayer Status & Notes Field -->
-        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.5rem;">
+
+        <!-- 4. One-Click Instant Capture & Save Button (Placed directly below camera) -->
+        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none; margin-bottom: 1.1rem;">
+          <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
+        </button>
+
+        <!-- 5. Prayer Status, Location & Notes Field (Placed at the bottom for clean UX) -->
+        <div class="prayer-notes-card" style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.95rem; margin-top: 0.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
+            <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> สถานะ & หมายเหตุการละหมาด
+            </span>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">
+              (บันทึกเฉพาะหมายเหตุได้)
+            </span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem;">
             <div>
               <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
                 <i class="fa-solid fa-tags" style="color: var(--primary);"></i> สถานะการละหมาด
@@ -436,17 +441,26 @@
               </select>
             </div>
           </div>
-          <div>
+          
+          <div style="margin-bottom: 0.75rem;">
             <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
               <i class="fa-solid fa-pen" style="color: var(--primary);"></i> หมายเหตุเพิ่มเติม
             </label>
-            <input type="text" class="form-control" id="prayerNoteInput" placeholder="เช่น ญะมาอะฮ์แถวแรก, อาคาร 2, กำลังเดินทาง..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
+            <input type="text" class="form-control" id="prayerNoteInput" placeholder="เช่น ญะมาอะฮ์แถวแรก, อาคาร 2, กำลังเดินทาง, อุซุร..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
+            <!-- Quick Tag Chips -->
+            <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
+              <button type="button" class="btn-stepper" onclick="appendPrayerNote('ญะมาอะฮ์แถวแรก')">+ ญะมาอะฮ์แถวแรก</button>
+              <button type="button" class="btn-stepper" onclick="appendPrayerNote('ละหมาดที่บ้าน')">+ ละหมาดที่บ้าน</button>
+              <button type="button" class="btn-stepper" onclick="appendPrayerNote('อุซุรชัรอีย์')">+ อุซุรชัรอีย์</button>
+              <button type="button" class="btn-stepper" onclick="appendPrayerNote('กำลังเดินทาง')">+ กำลังเดินทาง</button>
+            </div>
           </div>
-        </div>
 
-        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none;">
-          <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
-        </button>
+          <!-- Standalone Note Save Button -->
+          <button type="button" class="btn btn-secondary btn-block" onclick="savePrayerNoteOnly()" style="border-color: #cbd5e1; background: #ffffff; color: var(--text-dark); font-weight: 600; padding: 0.55rem; font-size: 0.85rem;">
+            <i class="fa-solid fa-floppy-disk" style="color: var(--primary);"></i> บันทึกเฉพาะหมายเหตุ / สถานะ (ไม่ต้องถ่ายภาพ)
+          </button>
+        </div>
 
       </div>
     </section>
@@ -550,16 +564,16 @@
           </div>
 
           <!-- Stars Shelf Showcase (1-30 Juz Interactive Shelf) -->
-          <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; border-radius: var(--radius-lg); padding: 1.15rem; margin-bottom: 1.25rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
-              <span style="font-size: 0.85rem; font-weight: 600; color: #fef08a;">
-                <i class="fa-solid fa-star"></i> หิ้งดาวอัลกุรอาน 30 ยุซ (อ่านจบ 1 ยุซ = ได้รับ 1 ดาวทอง)
+          <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.4rem;">
+              <span style="font-size: 0.88rem; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-star" style="color: #f59e0b;"></i> หิ้งดาวอัลกุรอาน 30 ยุซ <span style="font-size: 0.74rem; font-weight: 500; color: var(--text-muted);">(อ่านจบ 1 ยุซ = 1 ดาวทอง)</span>
               </span>
-              <span style="font-size: 0.76rem; color: #94a3b8;" id="hasanatQuranPercentText">0 / 604 หน้า (0.0%)</span>
+              <span style="font-size: 0.78rem; font-weight: 600; color: #059669; background: #ecfdf5; padding: 0.15rem 0.5rem; border-radius: 9999px; border: 1px solid #a7f3d0;" id="hasanatQuranPercentText">0 / 604 หน้า (0.0%)</span>
             </div>
 
             <!-- Progress Bar -->
-            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.12); border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
+            <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; margin-bottom: 0.85rem;">
               <div id="hasanatQuranProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f59e0b, #10b981); transition: width 0.3s ease;"></div>
             </div>
 
@@ -681,12 +695,12 @@
           </div>
 
           <!-- Live Rakaat Counter Showcase Card -->
-          <div style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; border-radius: var(--radius-lg); padding: 1.1rem; margin-bottom: 1.25rem; text-align: center;">
-            <div style="font-size: 0.8rem; color: #a7f3d0; margin-bottom: 0.2rem;">ยอดรวมการละหมาดสุนัตของวันนี้</div>
-            <div style="font-size: 2.2rem; font-weight: 800; color: #ffffff; line-height: 1.1;" id="liveSunnahTotalNum">
-              0 <span style="font-size: 1.1rem; font-weight: 500;">ร็อกอะฮ์</span>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; text-align: center;">
+            <div style="font-size: 0.82rem; font-weight: 600; color: #166534; margin-bottom: 0.2rem;">ยอดรวมการละหมาดสุนัตของวันนี้</div>
+            <div style="font-size: 2.3rem; font-weight: 800; color: #059669; line-height: 1.1;" id="liveSunnahTotalNum">
+              0 <span style="font-size: 1.1rem; font-weight: 600; color: #166534;">ร็อกอะฮ์</span>
             </div>
-            <div style="font-size: 0.78rem; color: #d1fae5; margin-top: 0.35rem; font-style: italic;">
+            <div style="font-size: 0.78rem; color: #15803d; margin-top: 0.35rem; font-style: italic;">
               "ผู้ใดละหมาดสุนัต 12 ร็อกอะฮ์ในวันหนึ่งคืนหนึ่ง อัลลอฮ์จะทรงสร้างบ้านหลังหนึ่งให้แก่เขาในสวรรค์" (บันทึกโดยมุสลิม)
             </div>
           </div>
@@ -1682,10 +1696,13 @@
             </a>
           </div>
 
-          <!-- Force Sync Button -->
-          <div style="margin-top: 0.75rem;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="forceSyncAllToGoogleSheet()" style="color: #059669; border-color: #86efac; background: #ecfdf5; width: 100%;">
+          <!-- Force Sync & Thai Upgrade Buttons -->
+          <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="forceSyncAllToGoogleSheet()" style="color: #059669; border-color: #86efac; background: #ecfdf5; width: 100%; font-weight: 600;">
               <i class="fa-solid fa-rotate"></i> ซิงค์ข้อมูลทั้งหมด (นักเรียน/ละหมาด/ผลบุญ) ลงชีตทันที
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="convertGoogleSheetToThai()" style="color: #0284c7; border-color: #bae6fd; background: #f0f9ff; width: 100%; font-weight: 600;">
+              <i class="fa-solid fa-language"></i> ปรับ Google Sheet ให้เป็นภาษาไทย 100% (แปลงแท็บ & หัวตาราง)
             </button>
           </div>
         </div>
@@ -1724,6 +1741,64 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal: Activity Attendees List (For Admin) -->
+  <div class="modal-overlay" id="activityAttendeesModal">
+    <div class="modal-dialog" style="max-width: 760px;">
+      <div class="modal-header">
+        <div>
+          <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-dark);" id="actAttendeesModalTitle">
+            <i class="fa-solid fa-users-viewfinder" style="color: var(--primary);"></i> รายชื่อนักเรียนที่เข้าร่วมกิจกรรม
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;" id="actAttendeesModalSubtitle">
+            กิจกรรม: -
+          </div>
+        </div>
+        <button class="btn-icon" onclick="closeModal('activityAttendeesModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1rem 1.25rem;">
+        <!-- Search and Export Toolbar -->
+        <div style="display: flex; gap: 0.5rem; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap;">
+          <div style="position: relative; flex: 1; min-width: 220px;">
+            <input type="text" id="attendeesSearchInput" class="form-control" placeholder="ค้นหาชื่อ หรือ รหัสนักเรียน..." oninput="filterAttendeesList(this.value)" style="padding-left: 2.2rem; height: 38px; font-size: 0.85rem;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="exportAttendeesToExcel()" style="white-space: nowrap; height: 38px; font-size: 0.82rem; font-weight: 600;">
+            <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> ส่งออก Excel
+          </button>
+        </div>
+
+        <!-- Attendees Table -->
+        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+          <table class="custom-table" style="font-size: 0.84rem;">
+            <thead>
+              <tr>
+                <th style="width: 45px; text-align: center;">#</th>
+                <th>รหัสนักเรียน</th>
+                <th>ชื่อ-นามสกุล</th>
+                <th>ระดับชั้น</th>
+                <th>วันที่เช็คชื่อ</th>
+                <th>เวลาที่เช็คชื่อ</th>
+                <th style="text-align: right; width: 70px;">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="actAttendeesTableBody">
+              <!-- Dynamically populated via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <span style="font-size: 0.85rem; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.3rem 0.75rem; border-radius: 9999px; border: 1px solid #bae6fd;" id="actAttendeesTotalBadge">
+          <i class="fa-solid fa-user-check"></i> เข้าร่วมแล้ว: 0 คน
+        </span>
+        <button class="btn btn-secondary" onclick="closeModal('activityAttendeesModal')">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>

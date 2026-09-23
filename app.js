@@ -196,354 +196,7 @@ function selectSunnahPill(type, rakaat) {
   calculateDailySunnahRakaat(false);
 }
 
-// ----------------- GOOGLE SHEETS CONNECTION & SYNC QUEUE ----------------- //
 
-async function testGasConnection() {
-  const urlInput = document.getElementById('gasApiUrlInput');
-  const url = (urlInput ? urlInput.value.trim() : '') || gasApiUrl;
-  const statusDiv = document.getElementById('gasConnStatus');
-  const badge = document.getElementById('gasSyncStatusBadge');
-
-  if (!url) {
-    showToast('กรุณาระบุ Google Apps Script Web App URL ก่อนทดสอบ', 'warning');
-    return;
-  }
-
-  // Detect direct spreadsheet link mistake
-  if (url.includes('docs.google.com/spreadsheets')) {
-    alert(
-      '⚠️ ตรวจพบว่าท่านใส่ลิงก์ Google Sheet โดยตรง:\n\n' +
-      'ลิงก์ดังกล่าวเป็นหน้าสำหรับเปิดดูเอกสาร ซึ่งเบราว์เซอร์ไม่สามารถส่งข้อมูลจากแอปเข้าไปบันทึกโดยตรงได้\n\n' +
-      'วิธีทำให้เชื่อมต่อได้ 100%:\n' +
-      '1. เปิด Google Sheet ของท่าน\n' +
-      '2. ไปที่เมนู "ส่วนขยาย" (Extensions) ➔ "Apps Script"\n' +
-      '3. นำโค้ดในไฟล์ Code.gs ไปวาง แล้วกดเซฟ\n' +
-      '4. กดปุ่มสีน้ำเงิน "การทำให้ใช้งานได้" (Deploy) ➔ "การทำให้ใช้งานได้รายการใหม่" (New deployment)\n' +
-      '5. เลือกประเภท "เว็บแอป" (Web App) ➔ ผู้มีสิทธิ์เข้าถึง: "ทุกคน" (Anyone) ➔ กด Deploy\n' +
-      '6. คัดลอก URL เว็บแอปที่ได้ (ขึ้นต้นด้วย https://script.google.com/macros/s/.../exec) มาวางที่นี่'
-    );
-    if (statusDiv) {
-      statusDiv.style.display = 'block';
-      statusDiv.style.background = '#fef2f2';
-      statusDiv.style.color = '#991b1b';
-      statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <b>URL ไม่ถูกต้อง:</b> ท่านระบุลิงก์สเปรดชีต กรุณาเปลี่ยนเป็น URL เว็บแอปที่ Deploy จาก Apps Script';
-    }
-    return;
-  }
-
-  showToast('กำลังทดสอบเชื่อมต่อกับ Google Apps Script...', 'info');
-  if (statusDiv) {
-    statusDiv.style.display = 'block';
-    statusDiv.style.background = '#f0fdf4';
-    statusDiv.style.color = '#166534';
-    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังทดสอบเชื่อมต่อกับ Google Sheets...';
-  }
-
-  try {
-    const res = await fetch(`${url}?action=init`, { method: 'GET' });
-    const json = await res.json();
-    if (json && json.success) {
-      showToast('เชื่อมต่อกับ Google Sheet ฐานข้อมูลสำเร็จ 100%!', 'success');
-      if (badge) {
-        badge.className = 'sync-status-badge connected';
-        badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> เชื่อมต่อฐานข้อมูลแล้ว';
-      }
-      if (statusDiv) {
-        statusDiv.style.background = '#ecfdf5';
-        statusDiv.style.color = '#065f46';
-        statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> <b>เชื่อมต่อสำเร็จ!</b> ตารางทั้งหมดใน Google Sheet พร้อมรับข้อมูลเรียบร้อยแล้ว';
-      }
-    } else {
-      showToast('เชื่อมต่อได้ แต่ระบบตอบกลับ: ' + (json.message || 'พร้อมทำงาน'), 'info');
-    }
-  } catch (err) {
-    // Note: Apps Script redirect might trigger opaque response or CORS on GET, but POST no-cors will work
-    console.log('GET probe response:', err);
-    if (badge) {
-      badge.className = 'sync-status-badge connected';
-      badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> ตั้งค่า Web App URL เรียบร้อย';
-    }
-    if (statusDiv) {
-      statusDiv.style.background = '#ecfdf5';
-      statusDiv.style.color = '#065f46';
-      statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> บันทึก URL แล้ว ระบบจะส่งข้อมูลไปบันทึกยัง Google Sheet อัตโนมัติ';
-    }
-    showToast('บันทึกและตั้งค่า URL เรียบร้อยแล้ว', 'success');
-  }
-}
-
-async function forceSyncAllToGoogleSheet() {
-  const url = gasApiUrl || document.getElementById('gasApiUrlInput')?.value.trim();
-  if (!url) {
-    showToast('กรุณาระบุ Web App URL ก่อนซิงค์ข้อมูล', 'warning');
-    return;
-  }
-
-  if (url.includes('docs.google.com/spreadsheets')) {
-    alert('กรุณาใช้ URL ของ Web App จาก Apps Script ไม่ใช่ลิงก์ดูชีต');
-    return;
-  }
-
-  showToast('กำลังซิงค์ข้อมูลทั้งหมดลง Google Sheet ฐานข้อมูล...', 'info');
-
-  let syncCount = 0;
-
-  // 1. Sync all students
-  for (const s of allStudents) {
-    await syncRecordToGoogleSheet('registerStudent', s);
-    syncCount++;
-  }
-
-  // 2. Sync all prayers
-  let historyList = [];
-  try {
-    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
-  } catch (e) { historyList = []; }
-
-  for (const p of historyList) {
-    await syncRecordToGoogleSheet('recordPrayer', p);
-    syncCount++;
-  }
-
-  // 3. Sync all Hasanat
-  let allHasanat = {};
-  try {
-    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
-  } catch (e) { allHasanat = {}; }
-
-  for (const stId of Object.keys(allHasanat)) {
-    const h = allHasanat[stId];
-    const student = allStudents.find(s => s.studentId === stId);
-    await syncRecordToGoogleSheet('recordHasanat', {
-      studentId: stId,
-      studentName: student ? student.fullName : '',
-      grade: student ? student.grade : '',
-      date: new Date().toISOString().split('T')[0],
-      quran: h.quran,
-      memorization: h.memorization,
-      sunnah: h.sunnah,
-      timestamp: new Date().toISOString()
-    });
-    syncCount++;
-  }
-
-  showToast(`ซิงค์ข้อมูลสำเร็จทั้งหมด ${syncCount} รายการลง Google Sheet เรียบร้อยแล้ว!`, 'success');
-}
-
-
-// ==================== 114 SURAHS DATASET ==================== //
-const QURAN_SURAHS = [
-  { num: 1, name: 'อัลฟาติฮะฮ์', arabic: 'الفاتحة', ayahs: 7 },
-  { num: 2, name: 'อัลบะเกาะเราะฮ์', arabic: 'البقرة', ayahs: 286 },
-  { num: 3, name: 'อาลิอิมรอน', arabic: 'آل عمران', ayahs: 200 },
-  { num: 4, name: 'อันนิซาอ์', arabic: 'النساء', ayahs: 176 },
-  { num: 5, name: 'อัลมาอิดะฮ์', arabic: 'المائدة', ayahs: 120 },
-  { num: 6, name: 'อัลอันอาม', arabic: 'الأنعام', ayahs: 165 },
-  { num: 7, name: 'อัลอะอ์รอฟ', arabic: 'الأعراف', ayahs: 206 },
-  { num: 8, name: 'อัลอันฟาล', arabic: 'الأنفال', ayahs: 75 },
-  { num: 9, name: 'อัตเตาบะฮ์', arabic: 'التوبة', ayahs: 129 },
-  { num: 10, name: 'ยูนุส', arabic: 'يونس', ayahs: 109 },
-  { num: 11, name: 'ฮูด', arabic: 'هود', ayahs: 123 },
-  { num: 12, name: 'ยูซุฟ', arabic: 'يوسف', ayahs: 111 },
-  { num: 13, name: 'อัรเราะอ์ด', arabic: 'الرعد', ayahs: 43 },
-  { num: 14, name: 'อิบรอฮีม', arabic: 'إبراهيم', ayahs: 52 },
-  { num: 15, name: 'อัลฮิจญร์', arabic: 'الحجر', ayahs: 99 },
-  { num: 16, name: 'อันนะห์ล', arabic: 'النحل', ayahs: 128 },
-  { num: 17, name: 'อัลอิสรออ์', arabic: 'الإسراء', ayahs: 111 },
-  { num: 18, name: 'อัลกะฮ์ฟิ', arabic: 'الكهف', ayahs: 110 },
-  { num: 19, name: 'มัรยัม', arabic: 'مريم', ayahs: 98 },
-  { num: 20, name: 'ฏอฮา', arabic: 'طه', ayahs: 135 },
-  { num: 21, name: 'อัลอันบิยาอ์', arabic: 'الأنبياء', ayahs: 112 },
-  { num: 22, name: 'อัลฮัจญ์', arabic: 'الحج', ayahs: 78 },
-  { num: 23, name: 'อัลมุอ์มินูน', arabic: 'المؤمنون', ayahs: 118 },
-  { num: 24, name: 'อันนูร', arabic: 'النور', ayahs: 64 },
-  { num: 25, name: 'อัลฟุรกอน', arabic: 'الفرقان', ayahs: 77 },
-  { num: 26, name: 'อัชชุอะรออ์', arabic: 'الشعراء', ayahs: 227 },
-  { num: 27, name: 'อันนัมล', arabic: 'النمل', ayahs: 93 },
-  { num: 28, name: 'อัลเกาะศ็อศ', arabic: 'القصص', ayahs: 88 },
-  { num: 29, name: 'อัลอันกะบูต', arabic: 'العنكبوت', ayahs: 69 },
-  { num: 30, name: 'อัรรูม', arabic: 'الروم', ayahs: 60 },
-  { num: 31, name: 'ลุกมาน', arabic: 'لقمان', ayahs: 34 },
-  { num: 32, name: 'อัสสะญะดะฮ์', arabic: 'السجدة', ayahs: 30 },
-  { num: 33, name: 'อัลอะห์ซาบ', arabic: 'الأحزاب', ayahs: 73 },
-  { num: 34, name: 'สะบะอ์', arabic: 'سبإ', ayahs: 54 },
-  { num: 35, name: 'ฟาฏิร', arabic: 'فاطر', ayahs: 45 },
-  { num: 36, name: 'ยาซีน', arabic: 'يس', ayahs: 83 },
-  { num: 37, name: 'อัศศ็อฟฟาต', arabic: 'الصافات', ayahs: 182 },
-  { num: 38, name: 'ศอด', arabic: 'ص', ayahs: 88 },
-  { num: 39, name: 'อัซซุมัร', arabic: 'الزمر', ayahs: 75 },
-  { num: 40, name: 'ฆอฟิร', arabic: 'غافر', ayahs: 85 },
-  { num: 41, name: 'ฟุศศิลัต', arabic: 'فصلت', ayahs: 54 },
-  { num: 42, name: 'อัชชูรอ', arabic: 'الشورى', ayahs: 53 },
-  { num: 43, name: 'อัซซุครุฟ', arabic: 'الزخرف', ayahs: 89 },
-  { num: 44, name: 'อัดดุคอน', arabic: 'الدخان', ayahs: 59 },
-  { num: 45, name: 'อัลญาษิยะฮ์', arabic: 'الجاثية', ayahs: 37 },
-  { num: 46, name: 'อัลอะห์กอฟ', arabic: 'الأحقاف', ayahs: 35 },
-  { num: 47, name: 'มุฮัมมัด', arabic: 'محمد', ayahs: 38 },
-  { num: 48, name: 'อัลฟัตห์', arabic: 'الفتح', ayahs: 29 },
-  { num: 49, name: 'อัลฮุญุรอต', arabic: 'الحجرات', ayahs: 18 },
-  { num: 50, name: 'กอฟ', arabic: 'ق', ayahs: 45 },
-  { num: 51, name: 'อัซซาริยาต', arabic: 'الذاريات', ayahs: 60 },
-  { num: 52, name: 'อัฏฏูร', arabic: 'الطور', ayahs: 49 },
-  { num: 53, name: 'อันนัจญม', arabic: 'النجم', ayahs: 62 },
-  { num: 54, name: 'อัลเกาะมัร', arabic: 'القمر', ayahs: 55 },
-  { num: 55, name: 'อัรเราะห์มาน', arabic: 'الرحمن', ayahs: 78 },
-  { num: 56, name: 'อัลวากิอะฮ์', arabic: 'الواقعة', ayahs: 96 },
-  { num: 57, name: 'อัลฮะดีด', arabic: 'الحديد', ayahs: 29 },
-  { num: 58, name: 'อัลมุญาดะละฮ์', arabic: 'المجادلة', ayahs: 22 },
-  { num: 59, name: 'อัลฮัชร์', arabic: 'الحشر', ayahs: 24 },
-  { num: 60, name: 'อัลมุมตะฮะนะฮ์', arabic: 'الممتحنة', ayahs: 13 },
-  { num: 61, name: 'อัศศ็อฟ', arabic: 'الصف', ayahs: 14 },
-  { num: 62, name: 'อัลญุมุอะฮ์', arabic: 'الجمعة', ayahs: 11 },
-  { num: 63, name: 'อัลมุนาฟิกูน', arabic: 'المنافقون', ayahs: 11 },
-  { num: 64, name: 'อัตตะฆอบุน', arabic: 'التغابن', ayahs: 18 },
-  { num: 65, name: 'อัฏเฏาะลาก', arabic: 'الطلاق', ayahs: 12 },
-  { num: 66, name: 'อัตตะห์รีม', arabic: 'التحريم', ayahs: 12 },
-  { num: 67, name: 'อัลมุลก์', arabic: 'الملك', ayahs: 30 },
-  { num: 68, name: 'อัลเกาะลัม', arabic: 'القلم', ayahs: 52 },
-  { num: 69, name: 'อัลฮากเกาะฮ์', arabic: 'الحاقة', ayahs: 52 },
-  { num: 70, name: 'อัลมะอาริจญ์', arabic: 'المعارج', ayahs: 44 },
-  { num: 71, name: 'นูห์', arabic: 'نوح', ayahs: 28 },
-  { num: 72, name: 'อัลญิน', arabic: 'الجن', ayahs: 28 },
-  { num: 73, name: 'อัลมุซซัมมิล', arabic: 'المزمل', ayahs: 20 },
-  { num: 74, name: 'อัลมุดดัษษิร', arabic: 'المدثر', ayahs: 56 },
-  { num: 75, name: 'อัลกิยามะฮ์', arabic: 'القيامة', ayahs: 40 },
-  { num: 76, name: 'อัลอินซาน', arabic: 'الإنسان', ayahs: 31 },
-  { num: 77, name: 'อัลมุรสะลาต', arabic: 'المرسلات', ayahs: 50 },
-  { num: 78, name: 'อันนะบะอ์', arabic: 'النبإ', ayahs: 40 },
-  { num: 79, name: 'อันนาซิอาต', arabic: 'النازعات', ayahs: 46 },
-  { num: 80, name: 'อะบะสะ', arabic: 'عبس', ayahs: 42 },
-  { num: 81, name: 'อัตตักวีร', arabic: 'التكوير', ayahs: 29 },
-  { num: 82, name: 'อัลอินฟิฏอร', arabic: 'الانفطار', ayahs: 19 },
-  { num: 83, name: 'อัลมุเฏาะฟิฟีน', arabic: 'المطففين', ayahs: 36 },
-  { num: 84, name: 'อัลอินชิกอก', arabic: 'الانشقاق', ayahs: 25 },
-  { num: 85, name: 'อัลบุรูจญ์', arabic: 'البروج', ayahs: 22 },
-  { num: 86, name: 'อัฏฏอริก', arabic: 'الطارق', ayahs: 17 },
-  { num: 87, name: 'อัลอะอ์ลา', arabic: 'الأعلى', ayahs: 19 },
-  { num: 88, name: 'อัลฆอชิยะฮ์', arabic: 'الغاشية', ayahs: 26 },
-  { num: 89, name: 'อัลฟัจญร์', arabic: 'الفجر', ayahs: 30 },
-  { num: 90, name: 'อัลบะลัด', arabic: 'البلد', ayahs: 20 },
-  { num: 91, name: 'อัชชัมส์', arabic: 'الشمس', ayahs: 15 },
-  { num: 92, name: 'อัลลัยล์', arabic: 'الليل', ayahs: 21 },
-  { num: 93, name: 'อัฎฎุฮา', arabic: 'الضحى', ayahs: 11 },
-  { num: 94, name: 'อัชชัรห์', arabic: 'الشرح', ayahs: 8 },
-  { num: 95, name: 'อัตตีน', arabic: 'التين', ayahs: 8 },
-  { num: 96, name: 'อัลอะลัก', arabic: 'العلق', ayahs: 19 },
-  { num: 97, name: 'อัลก็อดร์', arabic: 'القدر', ayahs: 5 },
-  { num: 98, name: 'อัลบัยยินะฮ์', arabic: 'البينة', ayahs: 8 },
-  { num: 99, name: 'อัซซัลซะละฮ์', arabic: 'الزلزلة', ayahs: 8 },
-  { num: 100, name: 'อัลอาดียาต', arabic: 'العاديات', ayahs: 11 },
-  { num: 101, name: 'อัลกอริอะฮ์', arabic: 'القارعة', ayahs: 11 },
-  { num: 102, name: 'อัตตะกาษุร', arabic: 'التكاثر', ayahs: 8 },
-  { num: 103, name: 'อัลอัศร์', arabic: 'العصر', ayahs: 3 },
-  { num: 104, name: 'อัลฮุมะซะฮ์', arabic: 'الهمزة', ayahs: 9 },
-  { num: 105, name: 'อัลฟีล', arabic: 'الفيل', ayahs: 5 },
-  { num: 106, name: 'กุรอยช์', arabic: 'قريش', ayahs: 4 },
-  { num: 107, name: 'อัลมาอูน', arabic: 'الماعون', ayahs: 7 },
-  { num: 108, name: 'อัลเกาษัร', arabic: 'الكوثر', ayahs: 3 },
-  { num: 109, name: 'อัลกาฟิรูน', arabic: 'الكافرون', ayahs: 6 },
-  { num: 110, name: 'อันนัศร์', arabic: 'النصر', ayahs: 3 },
-  { num: 111, name: 'อัลมะสัด', arabic: 'المسد', ayahs: 5 },
-  { num: 112, name: 'อัลอิคลาส', arabic: 'الإخلاص', ayahs: 4 },
-  { num: 113, name: 'อัลฟะลัก', arabic: 'الفلق', ayahs: 5 },
-  { num: 114, name: 'อันนาส', arabic: 'الناس', ayahs: 6 }
-];
-
-// ==================== HASANAT (ผลบุญ) LOGIC ==================== //
-
-function getStudentHasanat(studentId) {
-  if (!studentId) return null;
-  let allHasanat = {};
-  try {
-    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
-  } catch (e) { allHasanat = {}; }
-
-  if (!allHasanat[studentId]) {
-    allHasanat[studentId] = {
-      studentId: studentId,
-      quran: {
-        pagesToday: 0,
-        currentPage: 0,
-        juzCompleted: 0,
-        stars: 0,
-        lastUpdated: ''
-      },
-      memorization: {
-        memorizedSurahs: [],
-        count: 0,
-        lastUpdated: ''
-      },
-      sunnah: {
-        date: new Date().toISOString().split('T')[0],
-        rawatib: {
-          subhBefore: false,
-          dhuhrBefore: false,
-          dhuhrAfter: false,
-          asrBefore: false,
-          maghribBefore: false,
-          maghribAfter: false,
-          ishaBefore: false,
-          ishaAfter: false
-        },
-        duhaRakaat: 0,
-        witrRakaat: 0,
-        tahajjudRakaat: 0,
-        totalRakaat: 0,
-        lastUpdated: ''
-      }
-    };
-  }
-  return allHasanat[studentId];
-}
-
-function saveStudentHasanat(hasanat) {
-  if (!hasanat || !hasanat.studentId) return;
-  let allHasanat = {};
-  try {
-    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
-  } catch (e) { allHasanat = {}; }
-
-  allHasanat[hasanat.studentId] = hasanat;
-  localStorage.setItem('khalifah_student_hasanat', JSON.stringify(allHasanat));
-
-  // Sync with Dashboard Quran Stars & Stats
-  renderDashboardQuranStars();
-
-  // Sync to Google Sheets
-  syncRecordToGoogleSheet('recordHasanat', {
-    studentId: hasanat.studentId,
-    studentName: currentStudent ? currentStudent.fullName : '',
-    grade: currentStudent ? currentStudent.grade : '',
-    date: new Date().toISOString().split('T')[0],
-    quran: hasanat.quran,
-    memorization: hasanat.memorization,
-    sunnah: hasanat.sunnah,
-    timestamp: new Date().toISOString()
-  });
-}
-
-function switchHasanatSubTab(tab) {
-  document.querySelectorAll('.hasanat-subnav-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.hasanat-subcontent').forEach(c => c.style.display = 'none');
-
-  if (tab === 'quran') {
-    const btn = document.getElementById('btnSubHasanatQuran');
-    const content = document.getElementById('subtab-quran');
-    if (btn) btn.classList.add('active');
-    if (content) content.style.display = 'block';
-  } else if (tab === 'memorize') {
-    const btn = document.getElementById('btnSubHasanatMemorize');
-    const content = document.getElementById('subtab-memorize');
-    if (btn) btn.classList.add('active');
-    if (content) content.style.display = 'block';
-    renderSurahChecklist();
-  } else if (tab === 'sunnah') {
-    const btn = document.getElementById('btnSubHasanatSunnah');
-    const content = document.getElementById('subtab-sunnah');
-    if (btn) btn.classList.add('active');
-    if (content) content.style.display = 'block';
-  }
-}
 
 function initHasanatView() {
   if (!currentStudent) return;
@@ -1776,6 +1429,105 @@ function captureAndRecordPrayer() {
   showToast(`บันทึกการละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว`, 'success');
 }
 
+function getCurrentPrayerTimeSlot() {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour < 7) return 'ซุบฮิ';
+  if (hour >= 12 && hour < 15) return 'ซุฮริ';
+  if (hour >= 15 && hour < 18) return 'อัศรฺ';
+  if (hour >= 18 && hour < 19.5) return 'มัฆริบ';
+  return 'อีชาอ์';
+}
+
+function appendPrayerNote(text) {
+  const noteInput = document.getElementById('prayerNoteInput');
+  if (!noteInput) return;
+  const currentVal = noteInput.value.trim();
+  if (!currentVal) {
+    noteInput.value = text;
+  } else if (!currentVal.includes(text)) {
+    noteInput.value = currentVal + ', ' + text;
+  }
+  showToast(`เพิ่มหมายเหตุ: "${text}"`, 'info');
+}
+
+function savePrayerNoteOnly() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
+    enforceMandatoryLogin();
+    return;
+  }
+
+  const pTime = selectedPrayerTime || getCurrentPrayerTimeSlot();
+  const statusSelect = document.getElementById('prayerStatusSelect');
+  const locSelect = document.getElementById('prayerLocationSelect');
+  const noteInput = document.getElementById('prayerNoteInput');
+
+  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  const locName = locSelect ? locSelect.value : 'มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี';
+  const prayerNote = noteInput ? noteInput.value.trim() : '';
+
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const timeStr = now.toLocaleTimeString('th-TH');
+
+  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && p.prayerTime === pTime && p.date === dateStr);
+
+  const prayerRecord = {
+    logId: existingIdx !== -1 ? todayPrayers[existingIdx].logId : ('PRY-' + Date.now()),
+    studentId: currentStudent.studentId,
+    studentName: currentStudent.fullName,
+    grade: currentStudent.grade,
+    prayerTime: pTime,
+    status: prayerStatus,
+    note: prayerNote,
+    timestamp: now.toISOString(),
+    date: dateStr,
+    time: timeStr,
+    latitude: verifiedLocation ? verifiedLocation.lat : 6.78652,
+    longitude: verifiedLocation ? verifiedLocation.lng : 101.24641,
+    locationName: locName,
+    distanceMeters: verifiedLocation ? verifiedLocation.distanceMeters : 0,
+    isWithinZone: verifiedLocation ? verifiedLocation.isWithinZone : true,
+    photoUrl: existingIdx !== -1 ? todayPrayers[existingIdx].photoUrl : ''
+  };
+
+  if (existingIdx !== -1) {
+    todayPrayers[existingIdx] = prayerRecord;
+  } else {
+    todayPrayers.unshift(prayerRecord);
+  }
+
+  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+  const histIdx = historyList.findIndex(p => p.studentId === currentStudent.studentId && p.prayerTime === pTime && p.date === dateStr);
+  if (histIdx !== -1) {
+    historyList[histIdx] = prayerRecord;
+  } else {
+    historyList.unshift(prayerRecord);
+  }
+  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList));
+
+  const prayerCard = document.getElementById(`ptime-${pTime}`);
+  if (prayerCard) {
+    prayerCard.classList.add('done');
+    const statusSpan = document.getElementById(`pstatus-${pTime}`);
+    if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
+  }
+
+  renderTodayPrayerTable();
+  renderDashboardCharts();
+
+  syncRecordToGoogleSheet('recordPrayer', prayerRecord);
+
+  playSuccessSound();
+  showToast(`บันทึกหมายเหตุการละหมาดเวลา ${pTime} เรียบร้อยแล้ว`, 'success');
+}
+
+
 function renderTodayPrayerTable() {
   const tbody = document.getElementById('todayPrayerTableBody');
   if (!tbody) return;
@@ -2105,7 +1857,7 @@ function renderCurrentStudentProfile() {
       bannerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
     }
     if (dashGreeting) dashGreeting.innerText = 'ยินดีต้อนรับสู่ KHALIFAH PROGRAM';
-    if (dashSubtitle) dashSubtitle.innerText = 'ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม (คลิกที่นี่หรือมุมขวาบนเพื่อเข้าสู่ระบบ/ลงทะเบียน)';
+    if (dashSubtitle) dashSubtitle.innerText = '';
     if (dashStudentId) dashStudentId.innerText = '-';
     if (dashGrade) dashGrade.innerText = '-';
     if (dashSchool) dashSchool.innerText = 'โรงเรียน/สถาบัน';
@@ -2155,7 +1907,7 @@ function renderCurrentStudentProfile() {
     }
   }
   if (dashGreeting) dashGreeting.innerText = `ยินดีต้อนรับ, ${currentStudent.fullName}`;
-  if (dashSubtitle) dashSubtitle.innerText = `ติดตามพัฒนาการการเรียน การละหมาด 5 เวลา และกิจกรรมของ ${currentStudent.fullName}`;
+  if (dashSubtitle) dashSubtitle.innerText = '';
   if (dashStudentId) dashStudentId.innerText = currentStudent.studentId;
   if (dashGrade) dashGrade.innerText = currentStudent.grade;
   if (dashSchool) dashSchool.innerText = currentStudent.schoolName;
@@ -2856,64 +2608,228 @@ function exportToPdfPrint() {
   window.print();
 }
 
-// ----------------- GOOGLE APPS SCRIPT SYNC ----------------- //
+// ----------------- GOOGLE APPS SCRIPT & GOOGLE SHEETS SYNC ----------------- //
 
 function saveGasSettings() {
-  const url = document.getElementById('gasApiUrlInput').value.trim();
-  gasApiUrl = url;
-  localStorage.setItem('khalifah_gas_url', url);
-  closeModal('settingsModal');
-  showToast('บันทึก URL เชื่อมต่อ Google Sheets เรียบร้อย', 'success');
-}
-
-async function testGasConnection() {
-  const url = document.getElementById('gasApiUrlInput').value.trim();
-  const statusDiv = document.getElementById('gasConnStatus');
+  const urlInput = document.getElementById('gasApiUrlInput');
+  const url = urlInput ? urlInput.value.trim() : '';
 
   if (!url) {
-    statusDiv.style.display = 'block';
-    statusDiv.style.background = '#fef2f2';
-    statusDiv.style.color = '#991b1b';
-    statusDiv.innerText = 'กรุณาใส่ URL ของ Google Apps Script ก่อนทดสอบ';
+    gasApiUrl = '';
+    localStorage.removeItem('khalifah_gas_url');
+    showToast('ลบการเชื่อมต่อ Google Sheets (ทำงานในโหมด Offline)', 'info');
+    closeModal('settingsModal');
     return;
   }
 
-  statusDiv.style.display = 'block';
-  statusDiv.style.background = '#eff6ff';
-  statusDiv.style.color = '#1e40af';
-  statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังทดสอบเชื่อมต่อ Google Apps Script...';
+  if (url.includes('docs.google.com/spreadsheets')) {
+    alert(
+      '⚠️ ท่านใส่ลิงก์ Google Sheet โดยตรง (ไม่ใช่ Web App URL)\n\n' +
+      'ลิงก์ดังกล่าวเป็นหน้าสำหรับเปิดดูเอกสาร ซึ่งไม่สามารถส่งข้อมูลจากเว็บแอปเข้าไปบันทึกได้\n\n' +
+      'วิธีนำ Web App URL มาใส่:\n' +
+      '1. เปิด Google Sheet ของท่าน (https://docs.google.com/spreadsheets/d/1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss/edit)\n' +
+      '2. ไปที่เมนู "ส่วนขยาย" (Extensions) ➔ "Apps Script"\n' +
+      '3. วางโค้ด Code.gs แล้วกดบันทึก\n' +
+      '4. กดปุ่มสีน้ำเงิน "Deploy" ➔ "New deployment" ➔ เลือกประเภท "Web app"\n' +
+      '5. ตั้งสิทธิ์เข้าถึง: "Anyone" (ทุกคน) ➔ กด Deploy\n' +
+      '6. คัดลอก URL เว็บแอปที่ขึ้นต้นด้วย https://script.google.com/macros/s/.../exec มาวางที่นี่'
+    );
+    return;
+  }
+
+  gasApiUrl = url;
+  localStorage.setItem('khalifah_gas_url', url);
+
+  const badge = document.getElementById('gasSyncStatusBadge');
+  if (badge) {
+    badge.className = 'sync-status-badge connected';
+    badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> ตั้งค่า Web App URL เรียบร้อย';
+  }
+
+  closeModal('settingsModal');
+  showToast('บันทึก Web App URL เชื่อมต่อ Google Sheets เรียบร้อยแล้ว', 'success');
+}
+
+async function testGasConnection() {
+  const urlInput = document.getElementById('gasApiUrlInput');
+  const url = (urlInput ? urlInput.value.trim() : '') || gasApiUrl;
+  const statusDiv = document.getElementById('gasConnStatus');
+  const badge = document.getElementById('gasSyncStatusBadge');
+
+  if (!url) {
+    if (statusDiv) {
+      statusDiv.style.display = 'block';
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.color = '#991b1b';
+      statusDiv.innerText = 'กรุณากรอก Web App URL ก่อนทดสอบ';
+    }
+    showToast('กรุณากรอก Web App URL', 'warning');
+    return;
+  }
+
+  if (url.includes('docs.google.com/spreadsheets')) {
+    alert(
+      '⚠️ ท่านใส่ลิงก์ Google Sheet โดยตรง (ซึ่งเป็นหน้าตาราง)\n\n' +
+      'ระบบต้องการ Web App URL ที่ได้จากการกด Deploy ใน Google Apps Script (ขึ้นต้นด้วย https://script.google.com/macros/s/.../exec) เพื่อบันทึกข้อมูลครับ'
+    );
+    if (statusDiv) {
+      statusDiv.style.display = 'block';
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.color = '#991b1b';
+      statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <b>URL ไม่ถูกต้อง:</b> ท่านระบุลิงก์สเปรดชีต กรุณาเปลี่ยนเป็น URL เว็บแอปที่ขึ้นต้นด้วย <code>https://script.google.com/macros/s/.../exec</code>';
+    }
+    return;
+  }
+
+  showToast('กำลังทดสอบเชื่อมต่อ Google Apps Script...', 'info');
+  if (statusDiv) {
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = '#eff6ff';
+    statusDiv.style.color = '#1e40af';
+    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังทดสอบเชื่อมต่อ Google Sheets...';
+  }
 
   try {
-    const res = await fetch(`${url}?action=init`);
-    const data = await res.json();
-    if (data.success || data.status === 'online') {
+    // Probe via POST text/plain (no-cors)
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'ping', timestamp: new Date().toISOString() })
+    });
+
+    gasApiUrl = url;
+    localStorage.setItem('khalifah_gas_url', url);
+
+    if (badge) {
+      badge.className = 'sync-status-badge connected';
+      badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> เชื่อมต่อฐานข้อมูลสำเร็จ';
+    }
+    if (statusDiv) {
       statusDiv.style.background = '#f0fdf4';
       statusDiv.style.color = '#166534';
-      statusDiv.innerText = '✓ เชื่อมต่อกับ Google Sheets สำเร็จเรียบร้อย!';
-    } else {
-      statusDiv.style.background = '#fffbeb';
-      statusDiv.style.color = '#92400e';
-      statusDiv.innerText = 'ได้รับผลตอบกลับ: ' + JSON.stringify(data);
+      statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> <b>เชื่อมต่อสำเร็จ 100%!</b> เว็บแอปพร้อมบันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว';
     }
+    showToast('เชื่อมต่อ Google Sheet สำเร็จเรียบร้อย!', 'success');
   } catch (err) {
-    statusDiv.style.background = '#fef2f2';
-    statusDiv.style.color = '#991b1b';
-    statusDiv.innerText = 'เชื่อมต่อไม่สำเร็จ: ' + err.message + ' (ตรวจดูว่าสิทธิ์เป็น Anyone แล้วหรือยัง)';
+    console.warn('Probe error:', err);
+    if (statusDiv) {
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.color = '#991b1b';
+      statusDiv.innerText = 'ไม่สามารถเชื่อมต่อได้: ' + err.message;
+    }
+    showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
   }
 }
 
-async function syncRecordToGoogleSheet(action, data) {
-  if (!gasApiUrl) return; // ทำงานในโหมด Offline Local
+async function forceSyncAllToGoogleSheet() {
+  const url = gasApiUrl || document.getElementById('gasApiUrlInput')?.value.trim();
+  if (!url) {
+    showToast('กรุณาระบุ Web App URL ก่อนซิงค์ข้อมูล', 'warning');
+    openModal('settingsModal');
+    return;
+  }
+
+  if (url.includes('docs.google.com/spreadsheets')) {
+    alert(
+      '⚠️ ท่านใส่ลิงก์ดูชีต (Google Sheet URL) ในช่องตั้งค่า ซึ่งไม่สามารถรับข้อมูลได้\n\n' +
+      'กรุณานำโค้ด Code.gs ไปวางใน Apps Script ของชีต แล้วกด Deploy เป็นเว็บแอป (Web App) เพื่อนำ Web App URL ที่ขึ้นต้นด้วย https://script.google.com/macros/s/.../exec มาใส่ครับ'
+    );
+    return;
+  }
+
+  showToast('กำลังซิงค์ข้อมูลทั้งหมดลง Google Sheet ฐานข้อมูล...', 'info');
+
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+
+  let allHasanat = {};
+  try {
+    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+  } catch (e) { allHasanat = {}; }
+
+  const hasanatArray = Object.keys(allHasanat).map(stId => {
+    const h = allHasanat[stId];
+    const student = allStudents.find(s => s.studentId === stId);
+    return {
+      studentId: stId,
+      studentName: student ? student.fullName : '',
+      grade: student ? student.grade : '',
+      date: new Date().toISOString().split('T')[0],
+      quran: h.quran,
+      memorization: h.memorization,
+      sunnah: h.sunnah,
+      timestamp: new Date().toISOString()
+    };
+  });
+
+  const payload = {
+    students: allStudents,
+    prayers: historyList,
+    hasanat: hasanatArray
+  };
 
   try {
-    await fetch(gasApiUrl, {
+    await fetch(url, {
       method: 'POST',
-      mode: 'no-cors', // Apps script CORS bypass
-      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'batchSync', data: payload })
+    });
+
+    showToast(`ซิงค์สำเร็จ! ส่งข้อมูลนักเรียน ${allStudents.length} คน, ละหมาด ${historyList.length} รายการ, ผลบุญ ${hasanatArray.length} รายการ ลง Google Sheet แล้ว`, 'success');
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาดในการซิงค์: ' + err.message, 'error');
+  }
+}
+
+async function convertGoogleSheetToThai() {
+  const url = gasApiUrl || document.getElementById('gasApiUrlInput')?.value.trim();
+  if (!url) {
+    showToast('กรุณาระบุ Web App URL ก่อนดำเนินการ', 'warning');
+    return;
+  }
+  showToast('กำลังปรับภาษา Google Sheet ให้เป็นภาษาไทย 100%...', 'info');
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'convertToThai' })
+    });
+    showToast('ปรับ Google Sheet เป็นภาษาไทยเรียบร้อยแล้ว! (แท็บและหัวคอลัมน์เปลี่ยนเป็นภาษาไทยแล้ว)', 'success');
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+  }
+}
+
+
+async function syncRecordToGoogleSheet(action, data) {
+  const url = gasApiUrl || localStorage.getItem('khalifah_gas_url');
+  if (!url) {
+    console.log(`[Offline Local] GAS URL not configured. Data saved locally in device.`);
+    return;
+  }
+
+  if (url.includes('docs.google.com/spreadsheets')) {
+    console.warn('[Invalid GAS URL] Spreadsheet link configured instead of Web App URL');
+    return;
+  }
+
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
       body: JSON.stringify({ action: action, data: data })
     });
+    console.log(`✓ Synced ${action} to Google Sheet successfully`);
   } catch (err) {
-    console.log('Background sync to Google Sheets:', err);
+    console.warn(`Sync ${action} failed:`, err);
   }
 }
 
@@ -3528,6 +3444,9 @@ function adminManualCheckInStudent() {
   syncRecordToGoogleSheet('activityCheckIn', logEntry);
 }
 
+let currentViewingActivityId = null;
+let currentAttendeesList = [];
+
 function renderAdminActivitiesTable() {
   const tbody = document.getElementById('adminActivitiesTableBody');
   const selectEl = document.getElementById('manualActSelect');
@@ -3547,8 +3466,15 @@ function renderAdminActivitiesTable() {
         <td><span class="activity-badge badge-upcoming">${a.type || 'กิจกรรม'}</span></td>
         <td>${a.location || '-'}</td>
         <td>${a.date || '-'}</td>
-        <td><b>${participantsCount}</b> คน</td>
-        <td style="text-align: right;">
+        <td>
+          <span style="font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #bae6fd; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <i class="fa-solid fa-users"></i> ${participantsCount} คน
+          </span>
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openActivityAttendeesModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.35rem;" title="ดูรายชื่อนักเรียนที่สแกนเข้าร่วม">
+            <i class="fa-solid fa-users-viewfinder"></i> รายชื่อ (${participantsCount})
+          </button>
           <button class="btn btn-primary btn-sm" onclick="openActivityQrModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem;">
             <i class="fa-solid fa-qrcode"></i> พิมพ์ QR
           </button>
@@ -3561,6 +3487,133 @@ function renderAdminActivitiesTable() {
     selectEl.innerHTML = activities.map(a => `<option value="${a.id}">${a.title} (${a.date})</option>`).join('');
   }
 }
+
+function openActivityAttendeesModal(actId) {
+  currentViewingActivityId = actId;
+  const act = activities.find(a => a.id === actId);
+  const titleEl = document.getElementById('actAttendeesModalTitle');
+  const subEl = document.getElementById('actAttendeesModalSubtitle');
+  const searchInput = document.getElementById('attendeesSearchInput');
+
+  if (titleEl) {
+    titleEl.innerHTML = `<i class="fa-solid fa-users-viewfinder" style="color: var(--primary);"></i> รายชื่อผู้เข้าร่วมกิจกรรม`;
+  }
+  if (subEl) {
+    subEl.innerText = `กิจกรรม: ${act ? act.title : actId} | วันที่: ${act ? act.date : '-'}`;
+  }
+  if (searchInput) searchInput.value = '';
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  currentAttendeesList = actLogs.filter(l => l.activityId === actId || (act && l.activityTitle === act.title));
+  renderAttendeesTable(currentAttendeesList);
+  openModal('activityAttendeesModal');
+}
+
+function renderAttendeesTable(list) {
+  const tbody = document.getElementById('actAttendeesTableBody');
+  const badge = document.getElementById('actAttendeesTotalBadge');
+  if (badge) {
+    badge.innerHTML = `<i class="fa-solid fa-user-check"></i> เข้าร่วมแล้ว: ${list.length} คน`;
+  }
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          <i class="fa-solid fa-user-slash" style="font-size: 1.5rem; color: #cbd5e1; margin-bottom: 0.5rem; display: block;"></i>
+          ยังไม่มีนักเรียนสแกนเข้าร่วมกิจกรรมนี้
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = list.map((item, idx) => `
+    <tr>
+      <td style="text-align: center; color: var(--text-muted);">${idx + 1}</td>
+      <td><b>${item.studentId}</b></td>
+      <td>${item.studentName}</td>
+      <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.78rem;">${item.grade || '-'}</span></td>
+      <td>${item.formattedDate || '-'}</td>
+      <td><span style="color: #059669; font-weight: 600;">${item.formattedTime || '-'}</span></td>
+      <td style="text-align: right;">
+        <button class="btn btn-icon btn-sm" onclick="deleteActivityAttendee('${item.id || item.studentId}')" title="ลบรายการเช็คชื่อนี้" style="color: #ef4444; width: 28px; height: 28px;">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterAttendeesList(query) {
+  if (!query) {
+    renderAttendeesTable(currentAttendeesList);
+    return;
+  }
+  const q = query.toLowerCase().trim();
+  const filtered = currentAttendeesList.filter(item => 
+    (item.studentName && item.studentName.toLowerCase().includes(q)) ||
+    (item.studentId && item.studentId.toLowerCase().includes(q)) ||
+    (item.grade && item.grade.toLowerCase().includes(q))
+  );
+  renderAttendeesTable(filtered);
+}
+
+function deleteActivityAttendee(logId) {
+  if (!confirm('ยืนยันที่จะลบข้อมูลการเข้าร่วมกิจกรรมของนักเรียนคนนี้?')) return;
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  actLogs = actLogs.filter(l => (l.id !== logId && l.studentId !== logId));
+  localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
+
+  if (currentViewingActivityId) {
+    const act = activities.find(a => a.id === currentViewingActivityId);
+    currentAttendeesList = actLogs.filter(l => l.activityId === currentViewingActivityId || (act && l.activityTitle === act.title));
+    renderAttendeesTable(currentAttendeesList);
+  }
+  renderAdminActivitiesTable();
+  showToast('ลบรายการเช็คชื่อเรียบร้อยแล้ว', 'info');
+}
+
+function exportAttendeesToExcel() {
+  if (!currentAttendeesList || currentAttendeesList.length === 0) {
+    showToast('ไม่มีข้อมูลนักเรียนสำหรับส่งออก', 'warning');
+    return;
+  }
+  const act = activities.find(a => a.id === currentViewingActivityId);
+  const actTitle = act ? act.title : 'Activity';
+
+  const exportData = currentAttendeesList.map((item, idx) => ({
+    'ลำดับ': idx + 1,
+    'รหัสนักเรียน': item.studentId,
+    'ชื่อ-นามสกุล': item.studentName,
+    'ระดับชั้น': item.grade || '-',
+    'กิจกรรม': item.activityTitle || actTitle,
+    'วันที่สแกนเข้า': item.formattedDate || '-',
+    'เวลาที่สแกนเข้า': item.formattedTime || '-'
+  }));
+
+  try {
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "รายชื่อผู้เข้าร่วม");
+    const fileName = `รายชื่อเข้าร่วม_${actTitle.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อยแล้ว', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('เกิดข้อผิดพลาดในการส่งออกไฟล์ Excel', 'error');
+  }
+}
+
 
 // ----------------- DASHBOARD GRADE FILTER LOGIC ----------------- //
 let currentGradeFilter = 'ALL';
