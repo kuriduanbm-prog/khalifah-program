@@ -692,7 +692,7 @@ const DEFAULT_STUDENT = {
   fullName: 'นายมูฮัมหมัด ซอและห์',
   schoolName: 'โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี',
   grade: 'มัธยมศึกษาปีที่ 5',
-  birthDate: '15/08/2552',
+  birthDate: '15082552',
   parentPhone: '081-234-5678',
   status: 'Active',
   skills: {
@@ -2157,16 +2157,16 @@ function handleStudentLogin() {
   const birthDate = document.getElementById('loginBirthDate').value.trim();
 
   if (!studentId || !birthDate) {
-    showToast('กรุณากรอกรหัสนักเรียนและวันเดือนปีเกิด', 'warning');
+    showToast('กรุณากรอกรหัสนักเรียนและวันเดือนปีเกิด (เช่น 01012540)', 'warning');
     return;
   }
 
-  const cleanInput = birthDate.replace(/[\/\-\.]/g, '');
+  const cleanInput = birthDate.replace(/[^0-9]/g, '');
 
   const found = allStudents.find(s => {
-    const cleanBDate = s.birthDate.replace(/[\/\-\.]/g, '');
+    const cleanBDate = String(s.birthDate || '').replace(/[^0-9]/g, '');
     return s.studentId.toLowerCase() === studentId.toLowerCase() &&
-           (cleanBDate === cleanInput || s.birthDate === birthDate);
+           (cleanBDate === cleanInput || String(s.birthDate || '').trim() === birthDate);
   });
 
   if (found) {
@@ -2178,7 +2178,7 @@ function handleStudentLogin() {
     closeModal('authModal');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
   } else {
-    showToast('รหัสนักเรียนหรือวันเดือนปีเกิดไม่ถูกต้อง', 'error');
+    showToast('รหัสนักเรียนหรือวันเดือนปีเกิดไม่ถูกต้อง (ตัวอย่าง: 01012540)', 'error');
   }
 }
 
@@ -2195,6 +2195,27 @@ function handleStudentRegister() {
     return;
   }
 
+  // ห้ามใส่เครื่องหมาย / หรือ - ตามที่ผู้ใช้กำหนด (เช่น 1 มกราคม 2540 ให้เขียนเป็น 01012540)
+  if (birthDate.includes('/') || birthDate.includes('-') || birthDate.includes('.')) {
+    showToast('วันเดือนปีเกิดห้ามใส่เครื่องหมาย / หรือ - เช่น 1 มกราคม 2540 ให้เขียนเป็น 01012540', 'warning');
+    return;
+  }
+
+  const cleanBD = birthDate.replace(/[^0-9]/g, '');
+  if (cleanBD.length !== 8) {
+    showToast('วันเดือนปีเกิดต้องมี 8 หลักพอดี (ห้ามใส่ /) เช่น 01012540', 'warning');
+    return;
+  }
+
+  const day = parseInt(cleanBD.substring(0, 2), 10);
+  const month = parseInt(cleanBD.substring(2, 4), 10);
+  const year = parseInt(cleanBD.substring(4, 8), 10);
+
+  if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2450 || year > 2600) {
+    showToast('วันเดือนปีเกิดไม่ถูกต้อง เช่น 01012540 (วัน 01-31, เดือน 01-12, พ.ศ. 4 หลัก)', 'warning');
+    return;
+  }
+
   // ตรวจสอบรหัสซ้ำ (1 คน 1 สิทธิ์)
   const isDuplicate = allStudents.some(s => s.studentId.toLowerCase() === studentId.toLowerCase());
   if (isDuplicate) {
@@ -2207,7 +2228,7 @@ function handleStudentRegister() {
     fullName: fullName,
     schoolName: schoolName,
     grade: grade,
-    birthDate: birthDate,
+    birthDate: cleanBD, // บันทึกเป็น 8 หลัก เช่น 01012540
     parentPhone: parentPhone,
     status: 'Active',
     skills: { religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0 },

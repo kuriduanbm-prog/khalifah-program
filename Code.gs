@@ -434,12 +434,15 @@ function registerStudent(data) {
   }
 
   const registeredAt = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+  const cleanBD = String(data.birthDate || '').replace(/[^0-9]/g, '');
+  const birthDateFormatted = (cleanBD.length === 8) ? ("'" + cleanBD) : String(data.birthDate || '');
+
   sheet.appendRow([
     data.studentId,
     data.fullName,
     data.schoolName,
     data.grade,
-    data.birthDate,
+    birthDateFormatted,
     data.parentPhone,
     registeredAt,
     formatStudentStatusThai(data.status || 'Active'),
@@ -971,12 +974,14 @@ function batchSyncData(data) {
       }
 
       if (foundRow === -1) {
+        const cleanBD = String(s.birthDate || '').replace(/[^0-9]/g, '');
+        const birthDateFormatted = (cleanBD.length === 8) ? ("'" + cleanBD) : String(s.birthDate || '');
         sheetStudents.appendRow([
           s.studentId,
           s.fullName,
           s.schoolName,
           s.grade,
-          s.birthDate,
+          birthDateFormatted,
           s.parentPhone,
           Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"),
           formatStudentStatusThai(s.status || 'Active'),

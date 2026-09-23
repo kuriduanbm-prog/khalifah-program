@@ -872,8 +872,8 @@
             <div style="font-weight: 600;" id="profStudentId">STD-256901</div>
           </div>
           <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">วัน/เดือน/ปีเกิด</div>
-            <div style="font-weight: 600;" id="profBirthDate">15/08/2552</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">วันเดือนปีเกิด (พ.ศ. 8 หลัก)</div>
+            <div style="font-weight: 600;" id="profBirthDate">15082552</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">เบอร์โทรศัพท์ผู้ปกครอง</div>
@@ -1500,8 +1500,10 @@
           </div>
           <div class="form-group">
             <label class="form-label">วันเดือนปีเกิด (ใช้เป็นรหัสผ่าน) <span class="required">*</span></label>
-            <input type="text" class="form-control" id="loginBirthDate" placeholder="เช่น 15/08/2552 หรือ 15082552">
-            <div class="form-hint">กรอกวันเดือนปีเกิดตามที่ได้ลงทะเบียนไว้</div>
+            <input type="text" class="form-control" id="loginBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+            <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
+              <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b>
+            </div>
           </div>
           <button class="btn btn-primary btn-block btn-lg" onclick="handleStudentLogin()">
             <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
@@ -1544,7 +1546,10 @@
           </div>
           <div class="form-group">
             <label class="form-label">วันเดือนปีเกิด (รหัสผ่านของคุณ) <span class="required">*</span></label>
-            <input type="text" class="form-control" id="regBirthDate" placeholder="เช่น 20/05/2553">
+            <input type="text" class="form-control" id="regBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
+            <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
+              <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b> (8 หลัก)
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">เบอร์โทรศัพท์ผู้ปกครอง <span class="required">*</span></label>
