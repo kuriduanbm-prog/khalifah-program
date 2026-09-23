@@ -23,8 +23,8 @@
   <!-- Application Header -->
   <header class="app-header">
     <div class="header-container">
-      <div class="brand-wrapper" onclick="switchView('dashboard')">
-        <img src="assets/logo.png" alt="Khalifah Program Logo" class="brand-logo-img">
+      <div class="brand-wrapper" onclick="handleBrandLogoClick()">
+        <img src="assets/logo.png" alt="Khalifah Program Logo" class="brand-logo-img" id="mainBrandLogo">
         <div class="brand-text">
           <div class="brand-title">
             KHALIFAH <span class="badge-sub">SMART APP</span>
@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <!-- Desktop Navigation Menu -->
+      <!-- Desktop Navigation Menu (ปุ่มแอดมินจะซ่อนไว้สำหรับนักเรียน) -->
       <nav class="desktop-nav">
         <button class="nav-link active" onclick="switchView('dashboard')" id="nav-dashboard">
           <i class="fa-solid fa-chart-pie"></i> แดชบอร์ด
@@ -47,29 +47,31 @@
         <button class="nav-link" onclick="switchView('profile')" id="nav-profile">
           <i class="fa-solid fa-user-graduate"></i> โปรไฟล์ / เลื่อนชั้น
         </button>
-        <button class="nav-link" onclick="switchView('admin')" id="nav-admin">
+        <!-- ปุ่มแอดมิน: แสดงเฉพาะเมื่อแอดมินล็อกอินแล้วเท่านั้น -->
+        <button class="nav-link" onclick="switchView('admin')" id="nav-admin" style="display: none;">
           <i class="fa-solid fa-shield-halved"></i> ผู้ดูแลระบบ
         </button>
       </nav>
 
       <!-- Header Actions -->
       <div class="header-actions">
-        <button class="btn-icon" onclick="openModal('settingsModal')" title="ตั้งค่าเชื่อมต่อ Google Sheets">
+        <!-- ปุ่มฟันเฟืองตั้งค่า API: ซ่อนไว้สำหรับนักเรียน แสดงเฉพาะเมื่อแอดมินล็อกอิน -->
+        <button class="btn-icon" id="btnSettingsHeader" onclick="openModal('settingsModal')" title="ตั้งค่าเชื่อมต่อ Google Sheets" style="display: none;">
           <i class="fa-solid fa-gear"></i>
         </button>
         
-        <div class="user-badge" id="userBadge" onclick="handleUserBadgeClick()">
-          <div class="user-avatar" id="userAvatarText">น</div>
+        <div class="user-badge" id="userBadge" onclick="handleUserBadgeClick()" title="คลิกเพื่อเข้าสู่ระบบหรือจัดการบัญชี">
+          <div class="user-avatar" id="userAvatarText"><i class="fa-solid fa-user"></i></div>
           <div class="user-info">
-            <span class="user-name" id="headerUserName">นักเรียนทดสอบ</span>
-            <span class="user-role" id="headerUserRole">ม.5</span>
+            <span class="user-name" id="headerUserName">เข้าสู่ระบบ</span>
+            <span class="user-role" id="headerUserRole">นักเรียน</span>
           </div>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Mobile Bottom Navigation -->
+  <!-- Mobile Bottom Navigation (ปุ่มแอดมินจะซ่อนไว้สำหรับนักเรียน) -->
   <div class="mobile-nav">
     <button class="mobile-nav-item active" onclick="switchView('dashboard')" id="m-nav-dashboard">
       <i class="fa-solid fa-chart-pie"></i>
@@ -87,7 +89,8 @@
       <i class="fa-solid fa-user-graduate"></i>
       <span>โปรไฟล์</span>
     </button>
-    <button class="mobile-nav-item" onclick="switchView('admin')" id="m-nav-admin">
+    <!-- แสดงเฉพาะเมื่อแอดมินล็อกอิน -->
+    <button class="mobile-nav-item" onclick="switchView('admin')" id="m-nav-admin" style="display: none;">
       <i class="fa-solid fa-shield-halved"></i>
       <span>แอดมิน</span>
     </button>
@@ -239,19 +242,23 @@
           </div>
         </div>
 
-        <!-- Geolocation Verification Step -->
+        <!-- Geolocation Verification Step (Responsive Mobile & Tablet Layout) -->
         <div id="geofenceStatusBox" class="geofence-alert unverified">
-          <i class="fa-solid fa-location-crosshairs fa-2x"></i>
-          <div style="flex: 1;">
-            <div style="font-weight: 600; font-size: 1rem;" id="geoStatusTitle">ยังไม่ได้ตรวจสอบตำแหน่งปัจจุบัน</div>
-            <div style="font-size: 0.85rem;" id="geoStatusDesc">
-              กรุณากดปุ่ม <b>"ตรวจสอบตำแหน่งพิกัดปัจจุบัน"</b> ด้านล่าง เพื่อยืนยันว่าท่านอยู่ ณ มัสยิดอัลฮารอมัยน์ หรือ คณะวิทยาศาสตร์และเทคโนโลยี
+          <div class="geofence-alert-main">
+            <i class="fa-solid fa-location-crosshairs geofence-alert-icon"></i>
+            <div class="geofence-alert-text">
+              <div class="geofence-alert-title" id="geoStatusTitle">ยังไม่ได้ตรวจสอบตำแหน่งปัจจุบัน</div>
+              <div class="geofence-alert-desc" id="geoStatusDesc">
+                กรุณากดปุ่ม <b>"ตรวจสอบตำแหน่งพิกัด"</b> ด้านล่าง เพื่อยืนยันว่าท่านอยู่ ณ มัสยิดอัลฮารอมัยน์ หรือ คณะวิทยาศาสตร์และเทคโนโลยี
+              </div>
+              <div id="geoDetails" style="margin-top: 0.4rem; font-size: 0.78rem; opacity: 0.85; display: none;"></div>
             </div>
-            <div id="geoDetails" style="margin-top: 0.4rem; font-size: 0.78rem; opacity: 0.85; display: none;"></div>
           </div>
-          <button class="btn btn-primary" onclick="verifyGeolocation()">
-            <i class="fa-solid fa-location-arrow"></i> ตรวจสอบพิกัด
-          </button>
+          <div class="geofence-alert-action">
+            <button class="btn btn-primary" onclick="verifyGeolocation()">
+              <i class="fa-solid fa-location-arrow"></i> ตรวจสอบพิกัด
+            </button>
+          </div>
         </div>
 
         <!-- Prayer Times Selection -->
@@ -477,6 +484,9 @@
         <button class="admin-tab-btn" onclick="switchAdminTab('subadmins', this)">
           <i class="fa-solid fa-user-shield"></i> จัดการแอดมินรอง
         </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('logo', this)" id="btnTabLogo">
+          <i class="fa-solid fa-image"></i> เปลี่ยนโลโก้ระบบ
+        </button>
       </div>
 
       <!-- Admin Tab 1: Students Management -->
@@ -655,9 +665,61 @@
           </div>
         </div>
       </div>
+
+      <!-- Admin Tab 5: System Logo Management (Exclusive for Master Admin) -->
+      <div id="admin-tab-logo" class="admin-content-tab" style="display: none;">
+        <div class="card" style="max-width: 600px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-image"></i> จัดการเปลี่ยนโลโก้ระบบ (System Logo)
+              </div>
+              <div class="card-subtitle">
+                เฉพาะแอดมินหลักเท่านั้น เมื่อเปลี่ยนแล้วโลโก้จะอัปเดตให้นักเรียนทุกคนเห็นทันที
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align: center; padding: 1.5rem; background: #f8fafc; border-radius: var(--radius-lg); margin-bottom: 1.5rem; border: 1.5px dashed var(--border-light);">
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              ตัวอย่างโลโก้ปัจจุบันที่กำลังแสดงผลในระบบ:
+            </div>
+            <img id="adminLogoPreview" src="assets/logo.png" alt="Current Logo Preview" style="max-height: 90px; max-width: 100%; object-fit: contain; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.06));" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">เลือกไฟล์รูปภาพโลโก้ใหม่ (PNG, JPG, SVG, WebP) <span class="required">*</span></label>
+            <input type="file" id="inputNewLogo" class="form-control" accept="image/*" onchange="previewNewLogo(event)" />
+            <div class="form-hint">แนะนำใช้ไฟล์ภาพพื้นหลังโปร่งใส (Transparent PNG) เพื่อความสวยงามกลมกลืนกับหน้าเว็บ</div>
+          </div>
+
+          <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.5rem;">
+            <button class="btn btn-primary" onclick="saveNewLogo()">
+              <i class="fa-solid fa-floppy-disk"></i> บันทึกและเปลี่ยนโลโก้ทันที
+            </button>
+            <button class="btn btn-secondary" onclick="resetToDefaultLogo()">
+              <i class="fa-solid fa-rotate-left"></i> คืนค่าโลโก้เริ่มต้น
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
 
   </main>
+
+  <!-- Application Footer with discreet Admin Portal Link -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div style="font-size: 0.82rem; color: var(--text-muted);">
+        © KHALIFAH PROGRAM • ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม
+      </div>
+      <div>
+        <a href="javascript:void(0)" onclick="openModal('adminAuthModal')" class="admin-portal-link" style="font-size: 0.8rem; color: var(--text-muted); text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.6rem; border-radius: var(--radius-sm); transition: var(--transition);">
+          <i class="fa-solid fa-lock" style="font-size: 0.75rem;"></i> เจ้าหน้าที่ / ผู้ดูแลระบบ
+        </a>
+      </div>
+    </div>
+  </footer>
 
   <!-- ==================== MODALS ==================== -->
 
