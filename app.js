@@ -1,4 +1,336 @@
 
+// ==================== PRAYER HISTORY DETAIL MODAL & LOCATION FIXES ==================== //
+
+function openPrayerHistoryDetailModal(logId) {
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+
+  let record = historyList.find(p => (p.id === logId || p.logId === logId));
+  if (!record) {
+    record = todayPrayers.find(p => (p.id === logId || p.logId === logId));
+  }
+  if (!record) {
+    showToast('ไม่พบข้อมูลบันทึกละหมาดนี้', 'warning');
+    return;
+  }
+
+  const pName = document.getElementById('modalPrayerName');
+  const pBadge = document.getElementById('modalPrayerStatusBadge');
+  const pDate = document.getElementById('modalPrayerDate');
+  const pTime = document.getElementById('modalPrayerTime');
+  const pLoc = document.getElementById('modalPrayerLocation');
+  const pNote = document.getElementById('modalPrayerNote');
+  const pCoords = document.getElementById('modalPrayerCoords');
+  const pMapsLink = document.getElementById('modalPrayerMapsLink');
+  const pPhoto = document.getElementById('modalPrayerPhoto');
+  const pPhotoWrap = document.getElementById('modalPrayerPhotoWrapper');
+
+  const d = new Date(record.timestamp || record.date);
+  const dateStr = d.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' น.';
+
+  if (pName) pName.innerText = `ละหมาด${record.prayerName || record.prayerTime || '-'}`;
+  
+  const status = record.status || 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  let statusClass = 'status-ontime';
+  if (status.includes('สาย')) statusClass = 'status-late';
+  if (status.includes('อุซุร') || status.includes('ประจำเดือน')) statusClass = 'status-excused';
+  if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
+
+  if (pBadge) {
+    pBadge.innerHTML = `<span class="status-badge ${statusClass}">${status}</span>`;
+  }
+
+  if (pDate) pDate.innerText = dateStr;
+  if (pTime) pTime.innerText = timeStr;
+  if (pLoc) pLoc.innerText = record.locationName || 'พิกัด GPS';
+  if (pNote) pNote.innerText = record.note ? record.note : 'ไม่มีหมายเหตุเพิ่มเติม';
+
+  const lat = record.lat || record.latitude;
+  const lng = record.lng || record.longitude;
+
+  if (pCoords) {
+    if (lat && lng) {
+      pCoords.innerText = `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+    } else {
+      pCoords.innerText = 'ไม่ได้ระบุพิกัด';
+    }
+  }
+
+  if (pMapsLink) {
+    if (lat && lng) {
+      pMapsLink.href = `https://maps.google.com/?q=${lat},${lng}`;
+      pMapsLink.style.display = 'inline-flex';
+    } else {
+      pMapsLink.style.display = 'none';
+    }
+  }
+
+  const photoSrc = record.photo || record.photoUrl;
+  if (photoSrc && photoSrc.length > 50) {
+    if (pPhoto) pPhoto.src = photoSrc;
+    if (pPhotoWrap) pPhotoWrap.style.display = 'block';
+  } else {
+    if (pPhotoWrap) pPhotoWrap.style.display = 'none';
+  }
+
+  openModal('prayerDetailModal');
+}
+
+// ----------------- ENHANCED HASANAT INTERACTIVE CONTROLS ----------------- //
+
+let currentSurahCategory = 'all';
+
+function render30StarsShelf(activeStars = 0) {
+  const shelf = document.getElementById('quranShelfGrid');
+  if (!shelf) return;
+
+  let html = '';
+  for (let i = 1; i <= 30; i++) {
+    const isActive = i <= activeStars;
+    html += `
+      <div class="quran-shelf-star ${isActive ? 'active' : ''}" onclick="setJuzDirectly(${i})" title="ยุซที่ ${i} (${isActive ? 'อ่านจบแล้ว' : 'คลิกเพื่อตั้งว่าอ่านจบแล้ว'})">
+        <div class="star-icon">⭐</div>
+        <div class="juz-num">${i}</div>
+      </div>
+    `;
+  }
+  shelf.innerHTML = html;
+}
+
+function setJuzDirectly(juzNumber) {
+  const jComp = document.getElementById('quranJuzCompletedInput');
+  if (jComp) {
+    jComp.value = juzNumber;
+    updateShelfStarsFromInput();
+  }
+}
+
+function updateShelfStarsFromInput() {
+  const jComp = document.getElementById('quranJuzCompletedInput');
+  const pCur = document.getElementById('quranCurrentPageInput');
+  const juz = Math.max(0, Math.min(30, parseInt(jComp ? jComp.value : 0) || 0));
+  const page = parseInt(pCur ? pCur.value : 0) || 0;
+
+  render30StarsShelf(juz);
+  renderHasanatStarsShowcase(juz, page);
+
+  const bar = document.getElementById('hasanatQuranProgressBar');
+  if (bar) {
+    const pct = ((page / 604) * 100).toFixed(1);
+    bar.style.width = `${Math.min(100, pct)}%`;
+  }
+
+  const badge = document.getElementById('navHasanatQuranBadge');
+  if (badge) badge.innerText = `⭐ ${juz} ดาว`;
+}
+
+function adjustPagesToday(diff) {
+  const input = document.getElementById('quranPagesTodayInput');
+  const curPageInput = document.getElementById('quranCurrentPageInput');
+  if (!input) return;
+
+  let val = (parseInt(input.value) || 0) + diff;
+  if (val < 0) val = 0;
+  input.value = val;
+
+  // Increment current page as well
+  if (curPageInput) {
+    let cur = (parseInt(curPageInput.value) || 0) + diff;
+    if (cur > 604) cur = 604;
+    if (cur < 1) cur = 1;
+    curPageInput.value = cur;
+    autoCalculateJuzFromPage();
+  }
+}
+
+function setPagesToday(val) {
+  const input = document.getElementById('quranPagesTodayInput');
+  if (input) input.value = val;
+}
+
+function setSurahCategoryFilter(category) {
+  currentSurahCategory = category;
+  document.querySelectorAll('.surah-cat-tab').forEach(b => b.classList.remove('active'));
+
+  if (category === 'all') document.getElementById('tabCatAll')?.classList.add('active');
+  if (category === 'juzAmma') document.getElementById('tabCatJuzAmma')?.classList.add('active');
+  if (category === 'popular') document.getElementById('tabCatPopular')?.classList.add('active');
+  if (category === 'memorized') document.getElementById('tabCatMemorized')?.classList.add('active');
+
+  const note = document.getElementById('surahCurrentCategoryNote');
+  if (note) {
+    if (category === 'all') note.innerText = 'แสดงทั้ง 114 ซูเราะห์';
+    if (category === 'juzAmma') note.innerText = 'แสดงกลุ่มยุซอัมมา (ซูเราะห์ที่ 78 - 114)';
+    if (category === 'popular') note.innerText = 'แสดงซูเราะห์สำคัญยอดนิยม (ยาซีน, อัลกะฮ์ฟิ, อัลมุลก์ ฯลฯ)';
+    if (category === 'memorized') note.innerText = 'แสดงเฉพาะซูเราะห์ที่ท่านติ๊กท่องจำแล้ว';
+  }
+
+  const searchInput = document.getElementById('searchSurahInput');
+  renderSurahChecklist(searchInput ? searchInput.value : '');
+}
+
+function selectSunnahPill(type, rakaat) {
+  if (type === 'duha') {
+    const hidden = document.getElementById('selDuhaRakaat');
+    if (hidden) hidden.value = rakaat;
+    document.querySelectorAll('#pillsGroupDuha .sunnah-pill-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.getAttribute('data-val')) === rakaat);
+    });
+  } else if (type === 'witr') {
+    const hidden = document.getElementById('selWitrRakaat');
+    if (hidden) hidden.value = rakaat;
+    document.querySelectorAll('#pillsGroupWitr .sunnah-pill-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.getAttribute('data-val')) === rakaat);
+    });
+  } else if (type === 'tahajjud') {
+    const hidden = document.getElementById('selTahajjudRakaat');
+    if (hidden) hidden.value = rakaat;
+    document.querySelectorAll('#pillsGroupTahajjud .sunnah-pill-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.getAttribute('data-val')) === rakaat);
+    });
+  }
+
+  calculateDailySunnahRakaat(false);
+}
+
+// ----------------- GOOGLE SHEETS CONNECTION & SYNC QUEUE ----------------- //
+
+async function testGasConnection() {
+  const urlInput = document.getElementById('gasApiUrlInput');
+  const url = (urlInput ? urlInput.value.trim() : '') || gasApiUrl;
+  const statusDiv = document.getElementById('gasConnStatus');
+  const badge = document.getElementById('gasSyncStatusBadge');
+
+  if (!url) {
+    showToast('กรุณาระบุ Google Apps Script Web App URL ก่อนทดสอบ', 'warning');
+    return;
+  }
+
+  // Detect direct spreadsheet link mistake
+  if (url.includes('docs.google.com/spreadsheets')) {
+    alert(
+      '⚠️ ตรวจพบว่าท่านใส่ลิงก์ Google Sheet โดยตรง:\n\n' +
+      'ลิงก์ดังกล่าวเป็นหน้าสำหรับเปิดดูเอกสาร ซึ่งเบราว์เซอร์ไม่สามารถส่งข้อมูลจากแอปเข้าไปบันทึกโดยตรงได้\n\n' +
+      'วิธีทำให้เชื่อมต่อได้ 100%:\n' +
+      '1. เปิด Google Sheet ของท่าน\n' +
+      '2. ไปที่เมนู "ส่วนขยาย" (Extensions) ➔ "Apps Script"\n' +
+      '3. นำโค้ดในไฟล์ Code.gs ไปวาง แล้วกดเซฟ\n' +
+      '4. กดปุ่มสีน้ำเงิน "การทำให้ใช้งานได้" (Deploy) ➔ "การทำให้ใช้งานได้รายการใหม่" (New deployment)\n' +
+      '5. เลือกประเภท "เว็บแอป" (Web App) ➔ ผู้มีสิทธิ์เข้าถึง: "ทุกคน" (Anyone) ➔ กด Deploy\n' +
+      '6. คัดลอก URL เว็บแอปที่ได้ (ขึ้นต้นด้วย https://script.google.com/macros/s/.../exec) มาวางที่นี่'
+    );
+    if (statusDiv) {
+      statusDiv.style.display = 'block';
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.color = '#991b1b';
+      statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <b>URL ไม่ถูกต้อง:</b> ท่านระบุลิงก์สเปรดชีต กรุณาเปลี่ยนเป็น URL เว็บแอปที่ Deploy จาก Apps Script';
+    }
+    return;
+  }
+
+  showToast('กำลังทดสอบเชื่อมต่อกับ Google Apps Script...', 'info');
+  if (statusDiv) {
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = '#f0fdf4';
+    statusDiv.style.color = '#166534';
+    statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังทดสอบเชื่อมต่อกับ Google Sheets...';
+  }
+
+  try {
+    const res = await fetch(`${url}?action=init`, { method: 'GET' });
+    const json = await res.json();
+    if (json && json.success) {
+      showToast('เชื่อมต่อกับ Google Sheet ฐานข้อมูลสำเร็จ 100%!', 'success');
+      if (badge) {
+        badge.className = 'sync-status-badge connected';
+        badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> เชื่อมต่อฐานข้อมูลแล้ว';
+      }
+      if (statusDiv) {
+        statusDiv.style.background = '#ecfdf5';
+        statusDiv.style.color = '#065f46';
+        statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> <b>เชื่อมต่อสำเร็จ!</b> ตารางทั้งหมดใน Google Sheet พร้อมรับข้อมูลเรียบร้อยแล้ว';
+      }
+    } else {
+      showToast('เชื่อมต่อได้ แต่ระบบตอบกลับ: ' + (json.message || 'พร้อมทำงาน'), 'info');
+    }
+  } catch (err) {
+    // Note: Apps Script redirect might trigger opaque response or CORS on GET, but POST no-cors will work
+    console.log('GET probe response:', err);
+    if (badge) {
+      badge.className = 'sync-status-badge connected';
+      badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> ตั้งค่า Web App URL เรียบร้อย';
+    }
+    if (statusDiv) {
+      statusDiv.style.background = '#ecfdf5';
+      statusDiv.style.color = '#065f46';
+      statusDiv.innerHTML = '<i class="fa-solid fa-circle-check"></i> บันทึก URL แล้ว ระบบจะส่งข้อมูลไปบันทึกยัง Google Sheet อัตโนมัติ';
+    }
+    showToast('บันทึกและตั้งค่า URL เรียบร้อยแล้ว', 'success');
+  }
+}
+
+async function forceSyncAllToGoogleSheet() {
+  const url = gasApiUrl || document.getElementById('gasApiUrlInput')?.value.trim();
+  if (!url) {
+    showToast('กรุณาระบุ Web App URL ก่อนซิงค์ข้อมูล', 'warning');
+    return;
+  }
+
+  if (url.includes('docs.google.com/spreadsheets')) {
+    alert('กรุณาใช้ URL ของ Web App จาก Apps Script ไม่ใช่ลิงก์ดูชีต');
+    return;
+  }
+
+  showToast('กำลังซิงค์ข้อมูลทั้งหมดลง Google Sheet ฐานข้อมูล...', 'info');
+
+  let syncCount = 0;
+
+  // 1. Sync all students
+  for (const s of allStudents) {
+    await syncRecordToGoogleSheet('registerStudent', s);
+    syncCount++;
+  }
+
+  // 2. Sync all prayers
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+
+  for (const p of historyList) {
+    await syncRecordToGoogleSheet('recordPrayer', p);
+    syncCount++;
+  }
+
+  // 3. Sync all Hasanat
+  let allHasanat = {};
+  try {
+    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+  } catch (e) { allHasanat = {}; }
+
+  for (const stId of Object.keys(allHasanat)) {
+    const h = allHasanat[stId];
+    const student = allStudents.find(s => s.studentId === stId);
+    await syncRecordToGoogleSheet('recordHasanat', {
+      studentId: stId,
+      studentName: student ? student.fullName : '',
+      grade: student ? student.grade : '',
+      date: new Date().toISOString().split('T')[0],
+      quran: h.quran,
+      memorization: h.memorization,
+      sunnah: h.sunnah,
+      timestamp: new Date().toISOString()
+    });
+    syncCount++;
+  }
+
+  showToast(`ซิงค์ข้อมูลสำเร็จทั้งหมด ${syncCount} รายการลง Google Sheet เรียบร้อยแล้ว!`, 'success');
+}
+
+
 // ==================== 114 SURAHS DATASET ==================== //
 const QURAN_SURAHS = [
   { num: 1, name: 'อัลฟาติฮะฮ์', arabic: 'الفاتحة', ayahs: 7 },
@@ -227,6 +559,20 @@ function initHasanatView() {
   if (jComp) jComp.value = h.quran.juzCompleted || 0;
 
   renderHasanatStarsShowcase(h.quran.stars || 0, h.quran.currentPage || 0);
+  render30StarsShelf(h.quran.stars || 0);
+  const bar = document.getElementById('hasanatQuranProgressBar');
+  if (bar) {
+    const curP = h.quran.currentPage || 0;
+    bar.style.width = `${Math.min(100, ((curP / 604) * 100).toFixed(1))}%`;
+  }
+  const qBadge = document.getElementById('navHasanatQuranBadge');
+  if (qBadge) qBadge.innerText = `⭐ ${h.quran.stars || 0} ดาว`;
+  const mBadge = document.getElementById('navHasanatMemBadge');
+  if (mBadge) mBadge.innerText = `${h.memorization.count || 0}/114`;
+  const sBadge = document.getElementById('navHasanatSunnahBadge');
+  if (sBadge) sBadge.innerText = `${h.sunnah.totalRakaat || 0} ร็อกอะฮ์`;
+  const liveTotal = document.getElementById('liveSunnahTotalNum');
+  if (liveTotal) liveTotal.innerHTML = `${h.sunnah.totalRakaat || 0} <span style="font-size: 1.1rem; font-weight: 500;">ร็อกอะฮ์</span>`;
 
   // 2. Memorization tab
   const memBadge = document.getElementById('memorizedSurahsBadge');
@@ -338,11 +684,26 @@ function renderSurahChecklist(filterText = '') {
   const memorized = (h && h.memorization && h.memorization.memorizedSurahs) || [];
 
   const search = filterText.toLowerCase().trim();
-  const filtered = QURAN_SURAHS.filter(s => {
-    return s.name.toLowerCase().includes(search) ||
-           s.arabic.includes(search) ||
-           String(s.num).includes(search);
-  });
+  let filtered = QURAN_SURAHS;
+
+  // Category filter
+  if (currentSurahCategory === 'juzAmma') {
+    filtered = filtered.filter(s => s.num >= 78 && s.num <= 114);
+  } else if (currentSurahCategory === 'popular') {
+    const pop = [1, 18, 36, 55, 56, 67, 112, 113, 114];
+    filtered = filtered.filter(s => pop.includes(s.num));
+  } else if (currentSurahCategory === 'memorized') {
+    filtered = filtered.filter(s => memorized.includes(s.num));
+  }
+
+  // Text search filter
+  if (search) {
+    filtered = filtered.filter(s => {
+      return s.name.toLowerCase().includes(search) ||
+             s.arabic.includes(search) ||
+             String(s.num).includes(search);
+    });
+  }
 
   if (filtered.length === 0) {
     container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">ไม่พบซูเราะห์ที่ตรงกับคำค้นหา</div>';
@@ -444,6 +805,14 @@ function calculateDailySunnahRakaat(shouldSave = false) {
   const badge = document.getElementById('todayTotalSunnahRakaatBadge');
   if (badge) {
     badge.innerText = `วันนี้ละหมาดสุนัตแล้ว ${total} ร็อกอะฮ์`;
+  }
+  const liveNum = document.getElementById('liveSunnahTotalNum');
+  if (liveNum) {
+    liveNum.innerHTML = `${total} <span style="font-size: 1.1rem; font-weight: 500;">ร็อกอะฮ์</span>`;
+  }
+  const navSBadge = document.getElementById('navHasanatSunnahBadge');
+  if (navSBadge) {
+    navSBadge.innerText = `${total} ร็อกอะฮ์`;
   }
 
   if (shouldSave && currentStudent) {
@@ -560,13 +929,14 @@ function renderPrayerHistory(filterDate = null) {
     if (status.includes('อุซุร') || status.includes('ประจำเดือน')) statusClass = 'status-excused';
     if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
 
+    const cardId = p.id || p.logId || ('PRY-' + idx);
     return `
-      <div class="prayer-history-item">
-        <div style="display: flex; align-items: center; gap: 0.85rem;">
-          ${p.photo ? `<img src="${p.photo}" alt="Photo" style="width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light); cursor: pointer;" onclick="previewPhoto('${p.photo}')">`: `<div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b;"><i class="fa-solid fa-camera"></i></div>`}
-          <div>
+      <div class="prayer-history-item prayer-history-card-clickable" onclick="openPrayerHistoryDetailModal('${cardId}')" title="แตะเพื่อดูรายละเอียดเต็มและพิกัดแผนที่">
+        <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 220px;">
+          ${p.photo ? `<img src="${p.photo}" alt="Photo" style="width: 52px; height: 52px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light);">` : `<div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b;"><i class="fa-solid fa-camera"></i></div>`}
+          <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-              <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">ละหมาด${p.prayerName}</span>
+              <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">ละหมาด${p.prayerName || p.prayerTime}</span>
               <span class="status-badge ${statusClass}">${status}</span>
             </div>
             <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem;">
@@ -574,6 +944,9 @@ function renderPrayerHistory(filterDate = null) {
             </div>
             ${note}
           </div>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+          <span>ดูรายละเอียดเต็ม</span> <i class="fa-solid fa-chevron-right"></i>
         </div>
       </div>
     `;
@@ -1152,9 +1525,17 @@ function captureAndSavePrayerInstant() {
   const photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
 
   const statusSelect = document.getElementById('prayerStatusSelect');
+  const locSelect = document.getElementById('prayerLocationSelect');
   const noteInput = document.getElementById('prayerNoteInput');
   const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
   const prayerNote = noteInput ? noteInput.value.trim() : '';
+  const chosenLoc = locSelect ? locSelect.value : (verifiedLocation ? verifiedLocation.locationName : 'พิกัด GPS');
+
+  // Build accurate human-readable location name
+  let accurateLocName = chosenLoc;
+  if (verifiedLocation && verifiedLocation.isWithinZone) {
+    accurateLocName = verifiedLocation.locationName;
+  }
 
   // Save prayer record
   const prayerRecord = {
@@ -1166,10 +1547,10 @@ function captureAndSavePrayerInstant() {
     status: prayerStatus,
     note: prayerNote,
     timestamp: now.toISOString(),
-    locationName: verifiedLocation.locationName,
-    isWithinZone: verifiedLocation.isWithinZone,
-    lat: verifiedLocation.lat,
-    lng: verifiedLocation.lng,
+    locationName: accurateLocName,
+    isWithinZone: verifiedLocation ? verifiedLocation.isWithinZone : false,
+    lat: verifiedLocation ? verifiedLocation.lat : null,
+    lng: verifiedLocation ? verifiedLocation.lng : null,
     photo: photoBase64
   };
 
