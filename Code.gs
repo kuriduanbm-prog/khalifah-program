@@ -843,16 +843,57 @@ function updateAppLogo(logoBase64) {
   return { success: true, message: 'บันทึกโลโก้ใหม่ลง Google Sheets สำเร็จ' };
 }
 
+/**
+ * บันทึกรูปภาพโปรไฟล์นักเรียนลง Google Drive โฟลเดอร์ Khalifah_Profile_Photos
+ */
+function saveStudentPhotoToDrive(studentId, photoBase64) {
+  if (!photoBase64 || typeof photoBase64 !== 'string') return '';
+  if (!photoBase64.startsWith('data:image')) {
+    return photoBase64; // เป็น URL อยู่แล้ว
+  }
+  try {
+    const folderName = "Khalifah_Profile_Photos";
+    let folder;
+    const folders = DriveApp.getFoldersByName(folderName);
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = DriveApp.createFolder(folderName);
+    }
+    
+    const contentType = "image/jpeg";
+    const cleanBase64 = photoBase64.includes(',') ? photoBase64.split(',')[1] : photoBase64;
+    const bytes = Utilities.base64Decode(cleanBase64);
+    const fileName = `profile_${studentId}.jpg`;
+    
+    const existingFiles = folder.getFilesByName(fileName);
+    let file;
+    if (existingFiles.hasNext()) {
+      file = existingFiles.next();
+      file.setContent(bytes);
+    } else {
+      file = folder.createFile(Utilities.newBlob(bytes, contentType, fileName));
+    }
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return file.getUrl();
+  } catch (err) {
+    Logger.log('saveStudentPhotoToDrive error: ' + err.message);
+    return 'Stored locally on device';
+  }
+}
+
 function updateStudentProfilePhoto(studentId, avatarUrl) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
   const rows = sheet.getDataRange().getValues();
   
+  const drivePhotoUrl = saveStudentPhotoToDrive(studentId, avatarUrl);
+
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim() === String(studentId).trim()) {
-      sheet.getRange(i + 1, 9).setValue(avatarUrl);
-      return { success: true, message: 'บันทึกรูปโปรไฟล์นักเรียนใน Google Sheets สำเร็จ' };
+      sheet.getRange(i + 1, 9).setValue(drivePhotoUrl);
+      return { success: true, message: 'บันทึกรูปโปรไฟล์นักเรียนลง Google Drive และ Sheets สำเร็จ', photoUrl: drivePhotoUrl };
     }
   }
   return { success: false, message: 'ไม่พบรหัสนักเรียนในระบบ' };
@@ -916,13 +957,20 @@ function batchSyncData(data) {
   if (data.students && Array.isArray(data.students)) {
     const sheetStudents = ss.getSheetByName(SHEETS.STUDENTS);
     const existing = sheetStudents.getDataRange().getValues();
-    const existingIds = new Set();
-    for (let i = 1; i < existing.length; i++) {
-      existingIds.add(String(existing[i][0]).trim());
-    }
 
     data.students.forEach(s => {
-      if (!existingIds.has(String(s.studentId).trim())) {
+      const rawPhoto = s.avatarUrl || s.profilePhoto || '';
+      const photoLink = saveStudentPhotoToDrive(s.studentId, rawPhoto);
+
+      let foundRow = -1;
+      for (let i = 1; i < existing.length; i++) {
+        if (String(existing[i][0]).trim() === String(s.studentId).trim()) {
+          foundRow = i + 1;
+          break;
+        }
+      }
+
+      if (foundRow === -1) {
         sheetStudents.appendRow([
           s.studentId,
           s.fullName,
@@ -932,10 +980,13 @@ function batchSyncData(data) {
           s.parentPhone,
           Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"),
           formatStudentStatusThai(s.status || 'Active'),
-          s.profilePhoto || ''
+          photoLink
         ]);
-        existingIds.add(String(s.studentId).trim());
         studentsSynced++;
+      } else {
+        if (photoLink) {
+          sheetStudents.getRange(foundRow, 9).setValue(photoLink);
+        }
       }
     });
   }
