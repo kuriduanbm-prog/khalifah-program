@@ -204,6 +204,9 @@ function doPost(e) {
       case 'updateLogo':
         result = updateAppLogo(postData.data.logoBase64);
         break;
+      case 'updateProfilePhoto':
+        result = updateStudentProfilePhoto(postData.data.studentId, postData.data.avatarUrl);
+        break;
       default:
         result = { success: false, error: 'Invalid POST action' };
     }
@@ -567,4 +570,22 @@ function updateAppLogo(logoBase64) {
   sheet.appendRow(['AppLogo', logoBase64, 'โลโก้ของระบบ']);
   return { success: true, message: 'บันทึกโลโก้ใหม่ลง Google Sheets สำเร็จ' };
 }
+
+function updateStudentProfilePhoto(studentId, avatarUrl) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.STUDENTS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
+  const rows = sheet.getDataRange().getValues();
+  if (rows[0].length < 9) {
+    sheet.getRange(1, 9).setValue('ProfilePhoto');
+  }
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim() === String(studentId).trim()) {
+      sheet.getRange(i + 1, 9).setValue(avatarUrl);
+      return { success: true, message: 'บันทึกรูปโปรไฟล์นักเรียนใน Google Sheets สำเร็จ' };
+    }
+  }
+  return { success: false, message: 'ไม่พบรหัสนักเรียนในระบบ' };
+}
+
 

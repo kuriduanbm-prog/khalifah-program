@@ -117,12 +117,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadStoredData() {
-  // 1. Load current student (Clean start: null if not logged in or legacy test data)
+  // 1. Load current student (Clean start: null if legacy mock student or not logged in)
   const savedStudent = localStorage.getItem('khalifah_current_student');
   if (savedStudent) {
     try {
       const parsed = JSON.parse(savedStudent);
-      if (parsed && (parsed.studentId === 'STD-256901' || parsed.fullName === 'นายมูฮัมหมัด ซอและห์')) {
+      // Purge any mock/dummy student IDs or sample names
+      if (!parsed || parsed.studentId === 'STD-256901' || parsed.studentId === 'STD-256902' || (parsed.fullName && parsed.fullName.startsWith('นายมูฮัมหมัด ซอ'))) {
         localStorage.removeItem('khalifah_current_student');
         currentStudent = null;
       } else {
@@ -406,17 +407,13 @@ function checkPrayerUnlockState() {
  */
 async function initLiveCamera() {
   const video = document.getElementById('cameraStream');
-  const placeholder = document.getElementById('cameraPlaceholder');
-  const btnCapture = document.getElementById('btnCapture');
-  const btnSwitch = document.getElementById('btnSwitchCamera');
   const overlay = document.getElementById('cameraOverlayInfo');
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showToast('เบราว์เซอร์ของคุณไม่รองรับกล้องสตรีมสด', 'error');
+    console.warn('getUserMedia not supported');
     return;
   }
 
-  // ปิด stream เก่าถ้ามี
   if (activeCameraStream) {
     activeCameraStream.getTracks().forEach(track => track.stop());
   }
@@ -432,18 +429,191 @@ async function initLiveCamera() {
     });
 
     activeCameraStream = stream;
-    video.srcObject = stream;
-    video.style.display = 'block';
-    placeholder.style.display = 'none';
-    btnCapture.disabled = false;
-    btnSwitch.style.display = 'inline-flex';
-    overlay.style.display = 'block';
+    if (video) {
+      video.srcObject = stream;
+      video.style.display = 'block';
+      // FIX CAMERA MIRROR: front camera is mirrored, back camera is NOT mirrored
+      video.className = currentFacingMode === 'user' ? 'camera-stream camera-front' : 'camera-stream camera-back';
+      video.play();
+    }
+    if (overlay) overlay.style.display = 'block';
 
     updateCameraOverlayText();
-    showToast('เปิดกล้องสดเรียบร้อยแล้ว กรุณากดถ่ายภาพ', 'success');
   } catch (err) {
-    showToast('ไม่สามารถเปิดกล้องได้: ' + err.message, 'error');
+    console.warn('Could not start live camera:', err);
   }
+}
+
+function switchCameraFacing() {
+  currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  initLiveCamera();
+  showToast(`สลับไปใช้${currentFacingMode === 'user' ? 'กล้องหน้า' : 'กล้องหลัง'}`, 'info');
+}
+
+/**
+ * ปรับปรุงระบบเช็คชื่อละหมาด: กดแชะเดียวบันทึกทันที (No-scroll UX)
+ */
+function captureAndSavePrayerInstant() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนเช็คชื่อละหมาด', 'warning');
+    openModal('authModal');
+    return;
+  }
+
+  if (!selectedPrayerTime) {
+    // Default to the first unfinished prayer time or Subh
+    selectedPrayerTime = 'ซุบฮิ';
+    selectPrayerTime('ซุบฮิ', document.getElementById('ptime-ซุบฮิ'));
+  }
+
+  // Geofence check
+  if (!verifiedLocation) {
+    // Attempt auto-verify location
+    verifyGeolocation();
+    showToast('กำลังตรวจสอบพิกัด GPS เพื่อบันทึกละหมาด...', 'info');
+    return;
+  }
+
+  const video = document.getElementById('cameraStream');
+  const canvas = document.getElementById('snapshotCanvas');
+
+  if (!video || !video.videoWidth) {
+    showToast('กำลังเชื่อมต่อกล้องถ่ายรูป กรุณาลองใหม่อีกครั้ง', 'warning');
+    initLiveCamera();
+    return;
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+
+  // Draw camera frame with correct mirroring
+  if (currentFacingMode === 'user') {
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+  } else {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  }
+
+  // Stamp Watermark overlay
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('th-TH');
+
+  const boxHeight = 110;
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  ctx.fillRect(0, canvas.height - boxHeight, canvas.width, boxHeight);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 20px Kanit, sans-serif';
+  ctx.fillText(`KHALIFAH • ละหมาดเวลา: ${selectedPrayerTime}`, 20, canvas.height - boxHeight + 30);
+
+  ctx.font = '16px Kanit, sans-serif';
+  ctx.fillText(`นักเรียน: ${currentStudent.fullName} (${currentStudent.studentId}) | ${currentStudent.grade}`, 20, canvas.height - boxHeight + 58);
+
+  const locText = `พิกัด: ${verifiedLocation.lat.toFixed(5)}, ${verifiedLocation.lng.toFixed(5)} [${verifiedLocation.locationName}] • ${dateStr} ${timeStr}`;
+  ctx.fillText(locText, 20, canvas.height - boxHeight + 86);
+
+  ctx.fillStyle = verifiedLocation.isWithinZone ? '#10b981' : '#f59e0b';
+  ctx.fillRect(canvas.width - 24, canvas.height - boxHeight, 24, boxHeight);
+
+  const photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+  // Save prayer record
+  const prayerRecord = {
+    id: 'PRY-' + Date.now(),
+    studentId: currentStudent.studentId,
+    studentName: currentStudent.fullName,
+    grade: currentStudent.grade,
+    prayerName: selectedPrayerTime,
+    timestamp: now.toISOString(),
+    locationName: verifiedLocation.locationName,
+    isWithinZone: verifiedLocation.isWithinZone,
+    lat: verifiedLocation.lat,
+    lng: verifiedLocation.lng,
+    photo: photoBase64
+  };
+
+  // Replace or add today's prayer for this time
+  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && p.prayerName === selectedPrayerTime);
+  if (existingIdx !== -1) {
+    todayPrayers[existingIdx] = prayerRecord;
+  } else {
+    todayPrayers.push(prayerRecord);
+  }
+  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+
+  // Save to persistent prayer history
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+  historyList.unshift(prayerRecord);
+  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList.slice(0, 100)));
+
+  // Update UI Chip
+  const chipEl = document.getElementById(`ptime-${selectedPrayerTime}`);
+  if (chipEl) {
+    chipEl.classList.add('done');
+    const statusEl = document.getElementById(`pstatus-${selectedPrayerTime}`);
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-check"></i> เช็คแล้ว';
+  }
+
+  renderTodayPrayerTable();
+  renderDashboardCharts();
+  renderCurrentStudentProfile();
+
+  // Play beep sound
+  playSuccessSound();
+
+  showToast(`เช็คชื่อละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว! (เวลา: ${timeStr})`, 'success');
+
+  // Sync to Google Sheets
+  syncRecordToGoogleSheet('prayerCheckIn', prayerRecord);
+}
+
+function openPrayerHistoryModal() {
+  const container = document.getElementById('prayerHistoryListContainer');
+  if (!container) return;
+
+  if (!currentStudent) {
+    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">กรุณาเข้าสู่ระบบเพื่อดูประวัติการละหมาด</div>';
+    openModal('prayerHistoryModal');
+    return;
+  }
+
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+
+  const myHistory = historyList.filter(p => p.studentId === currentStudent.studentId);
+
+  if (myHistory.length === 0) {
+    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);"><i class="fa-solid fa-clock" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>ยังไม่มีประวัติการเช็คชื่อละหมาดที่บันทึกไว้</div>';
+  } else {
+    container.innerHTML = myHistory.map(p => {
+      const dt = new Date(p.timestamp);
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem; border-bottom: 1px solid var(--border-light);">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            ${p.photo ? `<img src="${p.photo}" alt="Prayer Photo" style="width: 48px; height: 36px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid #cbd5e1;">` : '<div style="width: 48px; height: 36px; background: #e2e8f0; border-radius: var(--radius-sm);"></div>'}
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-dark);">ละหมาด: ${p.prayerName}</div>
+              <div style="font-size: 0.76rem; color: var(--text-muted);">${dt.toLocaleDateString('th-TH')} • ${dt.toLocaleTimeString('th-TH')}</div>
+            </div>
+          </div>
+          <span class="activity-badge ${p.isWithinZone ? 'badge-active' : 'badge-upcoming'}" style="font-size: 0.72rem;">
+            ${p.isWithinZone ? 'ในเขตมัสยิด' : 'นอกเขต'}
+          </span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  openModal('prayerHistoryModal');
 }
 
 function switchCameraFacing() {
@@ -894,8 +1064,10 @@ function renderCurrentStudentProfile() {
   const selectNewGrade = document.getElementById('selectNewGrade');
 
   // GUEST STATE (เมื่อยังไม่มีการเข้าสู่ระบบ)
+  const headerSub = document.getElementById('headerUserSub');
   if (!currentStudent) {
     if (headerName) headerName.innerText = 'เข้าสู่ระบบ';
+    if (headerSub) headerSub.innerText = 'นักเรียน / ผู้ใช้';
     if (headerRole) headerRole.innerText = 'นักเรียน';
     if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
 
@@ -921,9 +1093,24 @@ function renderCurrentStudentProfile() {
   }
 
   // LOGGED-IN STUDENT STATE
-  if (headerName) headerName.innerText = currentStudent.fullName;
+  if (headerName && currentStudent.fullName) {
+    const nameParts = currentStudent.fullName.trim().split(' ');
+    headerName.innerText = nameParts[0] || currentStudent.fullName;
+    const surname = nameParts.slice(1).join(' ');
+    if (headerSub) {
+      const shortGr = currentStudent.grade ? currentStudent.grade.replace('มัธยมศึกษาปีที่ ', 'ม.').replace('ระดับชั้น ', '') : '';
+      headerSub.innerText = surname ? (surname + (shortGr ? ' • ' + shortGr : '')) : (shortGr || 'นักเรียน');
+    }
+  }
   if (headerRole) headerRole.innerText = currentStudent.grade;
-  if (headerAvatar) headerAvatar.innerText = currentStudent.fullName.charAt(currentStudent.fullName.startsWith('นาย') ? 3 : (currentStudent.fullName.startsWith('นางสาว') ? 6 : 0));
+  
+  if (headerAvatar) {
+    if (currentStudent.avatarUrl) {
+      headerAvatar.innerHTML = `<img src="${currentStudent.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else {
+      headerAvatar.innerText = currentStudent.fullName.charAt(currentStudent.fullName.startsWith('นาย') ? 3 : (currentStudent.fullName.startsWith('นางสาว') ? 6 : 0));
+    }
+  }
 
   if (dashGreeting) dashGreeting.innerText = `ยินดีต้อนรับ, ${currentStudent.fullName}`;
   if (dashSubtitle) dashSubtitle.innerText = `ติดตามพัฒนาการการเรียน การละหมาด 5 เวลา และกิจกรรมของ ${currentStudent.fullName}`;
@@ -988,7 +1175,99 @@ function updateStudentGrade() {
 // ----------------- AUTHENTICATION (STUDENT / ADMIN) ----------------- //
 
 function handleUserBadgeClick() {
-  openModal('authModal');
+  if (currentStudent) {
+    openStudentAccountModal();
+  } else {
+    openModal('authModal');
+  }
+}
+
+function openStudentAccountModal() {
+  if (!currentStudent) return;
+  const nameEl = document.getElementById('accSheetFullName');
+  const detailsEl = document.getElementById('accSheetDetails');
+  const avatarEl = document.getElementById('accSheetAvatar');
+
+  if (nameEl) nameEl.innerText = currentStudent.fullName;
+  if (detailsEl) detailsEl.innerText = `รหัส: ${currentStudent.studentId} • ${currentStudent.grade} • ${currentStudent.schoolName || ''}`;
+  if (avatarEl) {
+    if (currentStudent.avatarUrl) {
+      avatarEl.innerHTML = `<img src="${currentStudent.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else {
+      avatarEl.innerHTML = `<i class="fa-solid fa-user"></i>`;
+    }
+  }
+  openModal('studentAccountModal');
+}
+
+function studentLogout() {
+  if (!confirm('ต้องการออกจากระบบนักเรียนใช่หรือไม่?')) return;
+  currentStudent = null;
+  localStorage.removeItem('khalifah_current_student');
+  closeModal('studentAccountModal');
+  renderCurrentStudentProfile();
+  renderDashboardCharts();
+  renderActivitiesList();
+  renderTodayPrayerTable();
+  switchView('dashboard');
+  showToast('ออกจากระบบนักเรียนเรียบร้อยแล้ว', 'info');
+}
+
+// ----------------- PROFILE PHOTO UPLOAD (COMPRESSED BASE64) ----------------- //
+function handleProfilePhotoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบก่อนอัปโหลดรูปโปรไฟล์', 'warning');
+    return;
+  }
+
+  showToast('กำลังประมวลผลรูปภาพ...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      // Create thumbnail canvas 150x150
+      const canvas = document.createElement('canvas');
+      const size = 150;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Center crop square
+      const minDim = Math.min(img.width, img.height);
+      const startX = (img.width - minDim) / 2;
+      const startY = (img.height - minDim) / 2;
+      ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
+
+      // Convert to compressed JPEG data url (~15-20KB)
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+      currentStudent.avatarUrl = compressedBase64;
+      localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+
+      // Update in allStudents array
+      const idx = allStudents.findIndex(s => s.studentId === currentStudent.studentId);
+      if (idx !== -1) {
+        allStudents[idx].avatarUrl = compressedBase64;
+        localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+      }
+
+      renderCurrentStudentProfile();
+      openStudentAccountModal();
+      showToast('เปลี่ยนรูปโปรไฟล์สำเร็จ!', 'success');
+
+      // Sync to Google Sheets
+      syncRecordToGoogleSheet('updateProfilePhoto', {
+        studentId: currentStudent.studentId,
+        avatarUrl: compressedBase64
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function toggleAuthForm(formType) {
@@ -1750,4 +2029,405 @@ function dismissPwaBanner() {
   const pwaBanner = document.getElementById('pwaInstallBanner');
   if (pwaBanner) pwaBanner.style.display = 'none';
   localStorage.setItem('khalifah_pwa_dismissed', 'true');
+}
+
+// ----------------- ACTIVITIES LIVE QR CODE SCANNER (STUDENT VIEW) ----------------- //
+let qrScannerStream = null;
+let qrScanAnimationId = null;
+let qrFacingMode = 'environment'; // Default back camera for QR code scanning
+let lastScannedQrCode = '';
+let qrCooldownTimer = null;
+
+async function startQrScanner() {
+  const video = document.getElementById('qrScannerVideo');
+  const feedback = document.getElementById('qrScanFeedback');
+  if (!video) return;
+
+  if (qrScannerStream) {
+    qrScannerStream.getTracks().forEach(t => t.stop());
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: qrFacingMode, width: { ideal: 640 }, height: { ideal: 640 } },
+      audio: false
+    });
+    qrScannerStream = stream;
+    video.srcObject = stream;
+    video.setAttribute('playsinline', true);
+    video.play();
+
+    if (feedback) {
+      feedback.innerHTML = '<i class="fa-solid fa-camera"></i> <span>ส่องกล้องไปที่ QR Code ของกิจกรรมเพื่อเช็คชื่อ</span>';
+    }
+    qrScanAnimationId = requestAnimationFrame(tickQrScan);
+  } catch (err) {
+    if (feedback) {
+      feedback.innerHTML = '<span style="color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> ไม่สามารถเปิดกล้องสแกนได้: ' + err.message + '</span>';
+    }
+  }
+}
+
+function stopQrScanner() {
+  if (qrScanAnimationId) {
+    cancelAnimationFrame(qrScanAnimationId);
+    qrScanAnimationId = null;
+  }
+  if (qrScannerStream) {
+    qrScannerStream.getTracks().forEach(t => t.stop());
+    qrScannerStream = null;
+  }
+}
+
+function switchQrCameraFacing() {
+  qrFacingMode = qrFacingMode === 'environment' ? 'user' : 'environment';
+  startQrScanner();
+}
+
+function tickQrScan() {
+  const video = document.getElementById('qrScannerVideo');
+  const canvas = document.getElementById('qrScannerCanvas');
+  if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) {
+    qrScanAnimationId = requestAnimationFrame(tickQrScan);
+    return;
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if (window.jsQR) {
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert'
+    });
+
+    if (code && code.data && code.data !== lastScannedQrCode) {
+      handleQrCodeDetected(code.data);
+      lastScannedQrCode = code.data;
+      clearTimeout(qrCooldownTimer);
+      qrCooldownTimer = setTimeout(() => { lastScannedQrCode = ''; }, 3500);
+    }
+  }
+
+  qrScanAnimationId = requestAnimationFrame(tickQrScan);
+}
+
+/**
+ * ประมวลผลเมื่อสแกนพบ QR Code: สแกนซ้ำได้ ข้อมูลเวลาและวันที่จะถูกแทนที่ทันที
+ */
+function handleQrCodeDetected(qrData) {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนเช็คชื่อกิจกรรม', 'warning');
+    openModal('authModal');
+    return;
+  }
+
+  let actId = null;
+  let actTitle = 'กิจกรรมของโรงเรียน';
+
+  if (qrData.startsWith('KHALIFAH_ACT:')) {
+    const parts = qrData.split(':');
+    actId = parts[1];
+    actTitle = parts.slice(2).join(':') || 'กิจกรรม';
+  } else {
+    // Generic QR check
+    actTitle = qrData;
+    actId = 'ACT-' + Math.abs(qrData.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString().slice(0,6);
+  }
+
+  // Find or create in activities list
+  let act = activities.find(a => a.id === actId || a.title === actTitle);
+  if (!act) {
+    act = {
+      id: actId,
+      title: actTitle,
+      type: 'ทั่วไป',
+      date: new Date().toISOString().split('T')[0],
+      location: 'โรงเรียน/สถาบัน',
+      checkedIn: true
+    };
+    activities.push(act);
+  } else {
+    act.checkedIn = true;
+  }
+
+  // Load student's activity check-in log
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  const now = new Date();
+  const existingIndex = actLogs.findIndex(l => l.studentId === currentStudent.studentId && (l.activityId === act.id || l.activityTitle === act.title));
+
+  const logEntry = {
+    id: 'ACTLOG-' + Date.now(),
+    studentId: currentStudent.studentId,
+    studentName: currentStudent.fullName,
+    grade: currentStudent.grade,
+    activityId: act.id,
+    activityTitle: act.title,
+    checkInTimestamp: now.toISOString(),
+    formattedDate: now.toLocaleDateString('th-TH'),
+    formattedTime: now.toLocaleTimeString('th-TH')
+  };
+
+  if (existingIndex !== -1) {
+    // สแกนซ้ำได้ ข้อมูลเวลาเข้าวันที่จะถูกแทนที่ด้วยข้อมูลล่าสุด
+    actLogs[existingIndex] = logEntry;
+  } else {
+    actLogs.unshift(logEntry);
+  }
+
+  localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
+  localStorage.setItem('khalifah_activities', JSON.stringify(activities));
+
+  // Audio & Haptic feedback
+  playSuccessSound();
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+  const feedback = document.getElementById('qrScanFeedback');
+  if (feedback) {
+    feedback.innerHTML = `<span style="color: var(--success); font-weight: 600;"><i class="fa-solid fa-circle-check"></i> เช็คชื่อเข้า: ${act.title} สำเร็จ! (${logEntry.formattedTime})</span>`;
+  }
+
+  showToast(`เช็คชื่อเข้ากิจกรรม "${act.title}" สำเร็จ! (${logEntry.formattedTime})`, 'success');
+
+  renderStudentScannedActivities();
+  renderDashboardCharts();
+  renderCurrentStudentProfile();
+
+  // Sync to Google Sheets
+  syncRecordToGoogleSheet('activityCheckIn', logEntry);
+}
+
+function renderStudentScannedActivities() {
+  const container = document.getElementById('studentScannedActivitiesList');
+  const badge = document.getElementById('scannedActivitiesCountBadge');
+  if (!container) return;
+
+  if (!currentStudent) {
+    container.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">กรุณาเข้าสู่ระบบเพื่อดูประวัติกิจกรรม</div>';
+    if (badge) badge.innerText = '0 กิจกรรม';
+    return;
+  }
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  const myLogs = actLogs.filter(l => l.studentId === currentStudent.studentId);
+  if (badge) badge.innerText = `${myLogs.length} กิจกรรม`;
+
+  if (myLogs.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 1.5rem; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-md);">
+        <i class="fa-solid fa-calendar-xmark" style="font-size: 1.8rem; margin-bottom: 0.4rem; display: block;"></i>
+        ยังไม่มีประวัติการเช็คชื่อกิจกรรม ใช้กล้องด้านบนสแกน QR Code ของกิจกรรมได้เลย
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = myLogs.map(l => `
+    <div class="activity-card" style="padding: 0.85rem 1rem; margin-bottom: 0.65rem;">
+      <div>
+        <span class="activity-badge badge-active" style="margin-bottom: 0.2rem;">
+          <i class="fa-solid fa-check"></i> เช็คชื่อแล้ว
+        </span>
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin: 0 0 0.2rem 0;">
+          ${l.activityTitle}
+        </h4>
+        <div style="font-size: 0.76rem; color: var(--text-muted);">
+          <i class="fa-solid fa-clock"></i> เวลาเช็คล่าสุด: ${l.formattedDate} เวลา ${l.formattedTime} น.
+        </div>
+      </div>
+      <span style="font-size: 0.72rem; color: var(--primary); font-weight: 600; white-space: nowrap;">
+        สแกนอัปเดตได้
+      </span>
+    </div>
+  `).join('');
+}
+
+// ----------------- ADMIN ACTIVITIES & QR CODE GENERATOR ----------------- //
+function adminCreateNewActivity() {
+  const title = document.getElementById('newActTitle').value.trim();
+  const type = document.getElementById('newActType').value;
+  const location = document.getElementById('newActLocation').value.trim() || 'มัสยิดอัลฮารอมัยน์';
+  const date = document.getElementById('newActDate').value || new Date().toISOString().split('T')[0];
+
+  if (!title) {
+    showToast('กรุณากรอกชื่อกิจกรรม', 'warning');
+    return;
+  }
+
+  const newAct = {
+    id: 'ACT-' + Date.now().toString().slice(-6),
+    title: title,
+    type: type,
+    location: location,
+    date: date,
+    checkedIn: false
+  };
+
+  activities.unshift(newAct);
+  localStorage.setItem('khalifah_activities', JSON.stringify(activities));
+
+  document.getElementById('newActTitle').value = '';
+  renderAdminActivitiesTable();
+  showToast(`สร้างกิจกรรม "${title}" เรียบร้อยแล้ว`, 'success');
+
+  // Open QR modal right away for printing
+  openActivityQrModal(newAct.id);
+
+  syncRecordToGoogleSheet('createActivity', newAct);
+}
+
+function openActivityQrModal(actId) {
+  const act = activities.find(a => a.id === actId);
+  if (!act) return;
+
+  const displayEl = document.getElementById('activityQrCodeDisplay');
+  const titleEl = document.getElementById('activityQrName');
+  const subEl = document.getElementById('activityQrSub');
+
+  if (titleEl) titleEl.innerText = act.title;
+  if (subEl) subEl.innerText = `ประเภท: ${act.type} • วันที่: ${act.date} • สถานที่: ${act.location}`;
+
+  if (displayEl) {
+    displayEl.innerHTML = '';
+    if (window.QRCode) {
+      new QRCode(displayEl, {
+        text: `KHALIFAH_ACT:${act.id}:${act.title}`,
+        width: 220,
+        height: 220,
+        colorDark: '#0284c7',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+  }
+
+  openModal('activityQrModal');
+}
+
+function adminManualCheckInStudent() {
+  const actId = document.getElementById('manualActSelect').value;
+  const stdId = document.getElementById('manualStudentIdInput').value.trim();
+
+  if (!actId || !stdId) {
+    showToast('กรุณาเลือกกิจกรรมและระบุรหัสนักเรียน', 'warning');
+    return;
+  }
+
+  const student = allStudents.find(s => s.studentId.toLowerCase() === stdId.toLowerCase());
+  const act = activities.find(a => a.id === actId);
+
+  if (!act) {
+    showToast('ไม่พบกิจกรรมที่เลือก', 'error');
+    return;
+  }
+
+  const studentName = student ? student.fullName : ('นักเรียน (' + stdId + ')');
+  const studentGrade = student ? student.grade : '-';
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  const now = new Date();
+  const existingIndex = actLogs.findIndex(l => l.studentId.toLowerCase() === stdId.toLowerCase() && l.activityId === act.id);
+
+  const logEntry = {
+    id: 'ACTLOG-' + Date.now(),
+    studentId: stdId,
+    studentName: studentName,
+    grade: studentGrade,
+    activityId: act.id,
+    activityTitle: act.title,
+    checkInTimestamp: now.toISOString(),
+    formattedDate: now.toLocaleDateString('th-TH'),
+    formattedTime: now.toLocaleTimeString('th-TH')
+  };
+
+  if (existingIndex !== -1) {
+    actLogs[existingIndex] = logEntry;
+  } else {
+    actLogs.unshift(logEntry);
+  }
+
+  localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
+  document.getElementById('manualStudentIdInput').value = '';
+  renderAdminActivitiesTable();
+  showToast(`เช็คชื่อ ${studentName} เข้ากิจกรรม "${act.title}" เรียบร้อย!`, 'success');
+
+  syncRecordToGoogleSheet('activityCheckIn', logEntry);
+}
+
+function renderAdminActivitiesTable() {
+  const tbody = document.getElementById('adminActivitiesTableBody');
+  const selectEl = document.getElementById('manualActSelect');
+  if (!tbody) return;
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  tbody.innerHTML = activities.map(a => {
+    const participantsCount = actLogs.filter(l => l.activityId === a.id || l.activityTitle === a.title).length;
+    return `
+      <tr>
+        <td><b>${a.id}</b></td>
+        <td>${a.title}</td>
+        <td><span class="activity-badge badge-upcoming">${a.type || 'กิจกรรม'}</span></td>
+        <td>${a.location || '-'}</td>
+        <td>${a.date || '-'}</td>
+        <td><b>${participantsCount}</b> คน</td>
+        <td style="text-align: right;">
+          <button class="btn btn-primary btn-sm" onclick="openActivityQrModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem;">
+            <i class="fa-solid fa-qrcode"></i> พิมพ์ QR
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (selectEl) {
+    selectEl.innerHTML = activities.map(a => `<option value="${a.id}">${a.title} (${a.date})</option>`).join('');
+  }
+}
+
+// ----------------- DASHBOARD GRADE FILTER LOGIC ----------------- //
+let currentGradeFilter = 'ALL';
+
+function handleDashboardGradeFilterChange() {
+  const select = document.getElementById('dashGradeFilter');
+  if (select) currentGradeFilter = select.value;
+  renderDashboardCharts();
+  showToast(`แสดงสถิติตาม: ${currentGradeFilter === 'ALL' ? 'ทุกระดับชั้นปี' : currentGradeFilter}`, 'info');
+}
+
+// Simple Web Audio API Synthesizer Beep (No external files needed)
+function playSuccessSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.08); // A5
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+  } catch (e) {}
 }
