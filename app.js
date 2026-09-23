@@ -2686,6 +2686,27 @@ async function forceSyncAllToGoogleSheet() {
   }
 }
 
+async function convertGoogleSheetToThai() {
+  const url = gasApiUrl || document.getElementById('gasApiUrlInput')?.value.trim();
+  if (!url) {
+    showToast('กรุณาระบุ Web App URL ก่อนดำเนินการ', 'warning');
+    return;
+  }
+  showToast('กำลังปรับภาษา Google Sheet ให้เป็นภาษาไทย 100%...', 'info');
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'convertToThai' })
+    });
+    showToast('ปรับ Google Sheet เป็นภาษาไทยเรียบร้อยแล้ว! (แท็บและหัวคอลัมน์เปลี่ยนเป็นภาษาไทยแล้ว)', 'success');
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+  }
+}
+
+
 async function syncRecordToGoogleSheet(action, data) {
   const url = gasApiUrl || localStorage.getItem('khalifah_gas_url');
   if (!url) {

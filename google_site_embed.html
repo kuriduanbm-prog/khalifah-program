@@ -3984,10 +3984,13 @@ body.auth-locked #adminAuthModal {
             </a>
           </div>
 
-          <!-- Force Sync Button -->
-          <div style="margin-top: 0.75rem;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="forceSyncAllToGoogleSheet()" style="color: #059669; border-color: #86efac; background: #ecfdf5; width: 100%;">
+          <!-- Force Sync & Thai Upgrade Buttons -->
+          <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="forceSyncAllToGoogleSheet()" style="color: #059669; border-color: #86efac; background: #ecfdf5; width: 100%; font-weight: 600;">
               <i class="fa-solid fa-rotate"></i> ซิงค์ข้อมูลทั้งหมด (นักเรียน/ละหมาด/ผลบุญ) ลงชีตทันที
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="convertGoogleSheetToThai()" style="color: #0284c7; border-color: #bae6fd; background: #f0f9ff; width: 100%; font-weight: 600;">
+              <i class="fa-solid fa-language"></i> ปรับ Google Sheet ให้เป็นภาษาไทย 100% (แปลงแท็บ & หัวตาราง)
             </button>
           </div>
         </div>
@@ -6719,6 +6722,27 @@ async function forceSyncAllToGoogleSheet() {
     showToast('เกิดข้อผิดพลาดในการซิงค์: ' + err.message, 'error');
   }
 }
+
+async function convertGoogleSheetToThai() {
+  const url = gasApiUrl || document.getElementById('gasApiUrlInput')?.value.trim();
+  if (!url) {
+    showToast('กรุณาระบุ Web App URL ก่อนดำเนินการ', 'warning');
+    return;
+  }
+  showToast('กำลังปรับภาษา Google Sheet ให้เป็นภาษาไทย 100%...', 'info');
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'convertToThai' })
+    });
+    showToast('ปรับ Google Sheet เป็นภาษาไทยเรียบร้อยแล้ว! (แท็บและหัวคอลัมน์เปลี่ยนเป็นภาษาไทยแล้ว)', 'success');
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+  }
+}
+
 
 async function syncRecordToGoogleSheet(action, data) {
   const url = gasApiUrl || localStorage.getItem('khalifah_gas_url');
