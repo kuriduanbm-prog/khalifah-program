@@ -30,9 +30,9 @@ function getSpreadsheet() {
       return SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
     }
   } catch (err) {
-    console.warn('Could not open target spreadsheet by ID, using active spreadsheet:', err);
+    Logger.log('Could not open target spreadsheet by ID: ' + err.message);
   }
-  return getSpreadsheet();
+  return SpreadsheetApp.getActiveSpreadsheet();
 }
 
 
@@ -197,8 +197,18 @@ function doGet(e) {
 function doPost(e) {
   let result = {};
   try {
-    const postData = JSON.parse(e.postData.contents);
+    let postData = {};
+    if (e && e.postData && e.postData.contents) {
+      try {
+        postData = JSON.parse(e.postData.contents);
+      } catch (jsonErr) {
+        postData = e.parameter || {};
+      }
+    } else if (e && e.parameter) {
+      postData = e.parameter;
+    }
     const action = postData.action;
+    const data = postData.data || postData;
 
     switch (action) {
       case 'registerStudent':
@@ -215,7 +225,10 @@ function doPost(e) {
         result = recordPrayer(postData.data);
         break;
       case 'recordHasanat':
-        result = recordHasanat(postData.data);
+        result = recordHasanat(postData.data || postData);
+        break;
+      case 'batchSync':
+        result = batchSyncData(postData.data || postData);
         break;
       case 'recordAttendance':
         result = recordAttendance(postData.data);
@@ -671,5 +684,66 @@ function recordHasanat(data) {
     message: 'บันทึกข้อมูลผลบุญและศาสนกิจสำเร็จเรียบร้อย', 
     logId: logId,
     stars: q.stars || 0
+  };
+}
+
+
+/**
+ * ซิงค์ข้อมูลทั้งหมด (นักเรียน, ละหมาด, ผลบุญ) เข้า Google Sheet ในคราวเดียว
+ */
+function batchSyncData(data) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  let studentsSynced = 0;
+  let prayersSynced = 0;
+  let hasanatSynced = 0;
+
+  // 1. Sync Students
+  if (data.students && Array.isArray(data.students)) {
+    const sheetStudents = ss.getSheetByName(SHEETS.STUDENTS);
+    const existing = sheetStudents.getDataRange().getValues();
+    const existingIds = new Set();
+    for (let i = 1; i < existing.length; i++) {
+      existingIds.add(String(existing[i][0]).trim());
+    }
+
+    data.students.forEach(s => {
+      if (!existingIds.has(String(s.studentId).trim())) {
+        sheetStudents.appendRow([
+          s.studentId,
+          s.fullName,
+          s.schoolName,
+          s.grade,
+          s.birthDate,
+          s.parentPhone,
+          new Date().toISOString(),
+          s.status || 'Active'
+        ]);
+        existingIds.add(String(s.studentId).trim());
+        studentsSynced++;
+      }
+    });
+  }
+
+  // 2. Sync Prayers
+  if (data.prayers && Array.isArray(data.prayers)) {
+    data.prayers.forEach(p => {
+      recordPrayer(p);
+      prayersSynced++;
+    });
+  }
+
+  // 3. Sync Hasanat
+  if (data.hasanat && Array.isArray(data.hasanat)) {
+    data.hasanat.forEach(h => {
+      recordHasanat(h);
+      hasanatSynced++;
+    });
+  }
+
+  return {
+    success: true,
+    message: 'ซิงค์ข้อมูลลง Google Sheet สำเร็จเรียบร้อย',
+    summary: { students: studentsSynced, prayers: prayersSynced, hasanat: hasanatSynced }
   };
 }
