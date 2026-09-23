@@ -2106,3 +2106,195 @@ body.auth-locked #adminAuthModal {
     padding: 0.5rem 0.6rem;
   }
 }
+
+
+/* ==================== ENHANCED HASANAT & PRAYER DETAIL STYLES ==================== */
+
+/* Quran Stars Shelf (1-30 Juz) */
+.quran-shelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 0.4rem;
+  background: #0f172a;
+  padding: 0.85rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid #334155;
+  margin: 0.75rem 0;
+}
+
+.quran-shelf-star {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.quran-shelf-star.active {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.quran-shelf-star .star-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #64748b;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.quran-shelf-star.active .star-icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
+}
+
+.quran-shelf-star:hover .star-icon {
+  transform: scale(1.25);
+}
+
+.quran-shelf-star .juz-num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-top: 0.2rem;
+}
+
+.quran-shelf-star.active .juz-num {
+  color: #fef08a;
+}
+
+/* Quick Stepper Buttons */
+.quick-steppers-wrap {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.btn-stepper {
+  background: #f1f5f9;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-stepper:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.btn-stepper:active {
+  transform: scale(0.95);
+}
+
+/* Surah Category Tabs */
+.surah-category-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.surah-cat-tab {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  background: #ffffff;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.surah-cat-tab:hover {
+  background: #f8fafc;
+  color: var(--text-dark);
+}
+
+.surah-cat-tab.active {
+  background: #059669;
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+}
+
+/* Sunnah Quick Select Pills */
+.sunnah-pills-group {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.sunnah-pill-btn {
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sunnah-pill-btn:hover {
+  background: #e2e8f0;
+}
+
+.sunnah-pill-btn.active {
+  background: #059669;
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+}
+
+/* Prayer History Detail Modal & Items */
+.prayer-history-card-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.prayer-history-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--primary);
+}
+
+.prayer-history-card-clickable:active {
+  transform: translateY(0);
+}
+
+/* Sync Status Indicator */
+.sync-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sync-status-badge.connected {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.sync-status-badge.disconnected {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}

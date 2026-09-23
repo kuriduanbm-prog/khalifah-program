@@ -18,11 +18,29 @@ const SHEETS = {
 
 const MASTER_ADMIN_PASS = '096909';
 
+// รหัส Google Spreadsheet เป้าหมาย (ฐานข้อมูลหลักของระบบ)
+const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
+
+/**
+ * ดึงออบเจ็กต์ Spreadsheet ที่เชื่อมโยงกับฐานข้อมูล
+ */
+function getSpreadsheet() {
+  try {
+    if (TARGET_SPREADSHEET_ID && TARGET_SPREADSHEET_ID.trim() !== '') {
+      return SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
+    }
+  } catch (err) {
+    console.warn('Could not open target spreadsheet by ID, using active spreadsheet:', err);
+  }
+  return getSpreadsheet();
+}
+
+
 /**
  * ฟังก์ชันสร้างแผ่นงานเริ่มต้นทั้งหมดหากยังไม่มีใน Google Sheet
  */
 function initializeSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   
   // 1. Students Sheet
   let sheetStudents = ss.getSheetByName(SHEETS.STUDENTS);
@@ -241,7 +259,7 @@ function doPost(e) {
 
 function registerStudent(data) {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
 
@@ -280,7 +298,7 @@ function registerStudent(data) {
 
 function loginStudent(studentId, birthDate) {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
 
@@ -316,7 +334,7 @@ function loginStudent(studentId, birthDate) {
 }
 
 function updateStudentGrade(studentId, newGrade) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
 
@@ -331,7 +349,7 @@ function updateStudentGrade(studentId, newGrade) {
 
 function recordPrayer(data) {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.PRAYERS);
 
   const logId = 'PRY-' + new Date().getTime();
@@ -388,7 +406,7 @@ function recordPrayer(data) {
 
 function getPrayers(studentId, date) {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.PRAYERS);
   const rows = sheet.getDataRange().getValues();
 
@@ -422,7 +440,7 @@ function getPrayers(studentId, date) {
 
 function createActivity(data) {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ACTIVITIES);
   const actId = 'ACT-' + new Date().getTime();
 
@@ -443,7 +461,7 @@ function createActivity(data) {
 
 function getActivities() {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ACTIVITIES);
   const rows = sheet.getDataRange().getValues();
 
@@ -471,7 +489,7 @@ function verifyAdminLogin(password, username) {
   }
 
   // ตรวจสอบแอดมินรอง
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ADMINS);
   if (sheet) {
     const rows = sheet.getDataRange().getValues();
@@ -488,7 +506,7 @@ function verifyAdminLogin(password, username) {
 
 function addSubAdmin(data) {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ADMINS);
   const adminId = 'ADM-' + new Date().getTime();
 
@@ -506,7 +524,7 @@ function addSubAdmin(data) {
 
 function getSubAdmins() {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ADMINS);
   const rows = sheet.getDataRange().getValues();
   const results = [];
@@ -524,7 +542,7 @@ function getSubAdmins() {
 
 function getAllStudents() {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
 
@@ -545,7 +563,7 @@ function getAllStudents() {
 }
 
 function deleteStudent(studentId) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
 
@@ -559,7 +577,7 @@ function deleteStudent(studentId) {
 }
 
 function batchPromoteStudents(fromGrade, toGrade) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
   let count = 0;
@@ -575,7 +593,7 @@ function batchPromoteStudents(fromGrade, toGrade) {
 }
 
 function updateAppLogo(logoBase64) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(SHEETS.SETTINGS);
   if (!sheet) {
     initializeSheets();
@@ -593,7 +611,7 @@ function updateAppLogo(logoBase64) {
 }
 
 function updateStudentProfilePhoto(studentId, avatarUrl) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
   const rows = sheet.getDataRange().getValues();
@@ -617,7 +635,7 @@ function updateStudentProfilePhoto(studentId, avatarUrl) {
  */
 function recordHasanat(data) {
   initializeSheets();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.HASANAT);
   
   const logId = 'HAS-' + new Date().getTime();
