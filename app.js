@@ -1967,8 +1967,9 @@ let deferredPwaPrompt = null;
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then((reg) => {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
       console.log('[KHALIFAH] Service Worker registered with scope:', reg.scope);
+      reg.update();
     }).catch((err) => {
       console.warn('[KHALIFAH] Service Worker registration failed:', err);
     });
