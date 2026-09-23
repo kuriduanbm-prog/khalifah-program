@@ -133,8 +133,13 @@
       </div>
       <div class="welcome-banner">
         <div class="banner-content">
-          <div>
-            <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
+          <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 260px;">
+            <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์">
+              <i class="fa-solid fa-user"></i>
+            </label>
+            <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
+            <div>
+              <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
             <p class="banner-desc" id="dashSubtitle">ติดตามพัฒนาการการเรียน การละหมาด และกิจกรรม เพื่อการพัฒนาตนเองอย่างสมบูรณ์แบบ</p>
             <div class="banner-badges">
               <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
@@ -142,8 +147,9 @@
               <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
             </div>
           </div>
-          <div>
-            <button class="btn btn-secondary" onclick="switchView('prayer')">
+        </div>
+        <div>
+          <button class="btn btn-secondary" onclick="switchView('prayer')">
               <i class="fa-solid fa-camera"></i> เช็คชื่อละหมาดทันที
             </button>
           </div>
@@ -366,8 +372,13 @@
         </div>
 
         <!-- 4. One-Click Instant Capture & Save Button -->
-        <button class="btn btn-primary btn-block btn-lg" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" style="font-size: 1rem; padding: 0.85rem; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
-          <i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึกเวลาละหมาดทันที
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin: 0.4rem 0 0.8rem 0;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="switchCameraFacing()" style="font-size: 0.82rem; padding: 0.35rem 0.75rem;">
+            <i class="fa-solid fa-camera-rotate"></i> สลับกล้องหน้า/หลัง
+          </button>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none;">
+          <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
         </button>
 
       </div>
@@ -399,14 +410,27 @@
         <div id="qrScanFeedback" class="qr-feedback">
           <i class="fa-solid fa-magnifying-glass"></i> <span>กำลังเปิดกล้องค้นหา QR Code กิจกรรม...</span>
         </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: center; margin: 0.6rem 0 1rem 0; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="switchQrCameraFacing()">
+            <i class="fa-solid fa-camera-rotate"></i> สลับกล้อง
+          </button>
+          <label for="inputQrImage" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">
+            <i class="fa-solid fa-image"></i> เลือกรูป QR จากเครื่อง
+          </label>
+          <input type="file" id="inputQrImage" accept="image/*" style="display: none;" onchange="handleQrImageUpload(event)">
+        </div>
 
         <!-- Scanned Activities History of current student -->
         <div style="margin-top: 1.25rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text-dark); margin: 0;">
               <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการเข้าร่วมกิจกรรมของฉัน
             </h3>
-            <span class="badge-sub" id="scannedActivitiesCountBadge">0 กิจกรรม</span>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <input type="date" id="filterActDate" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.82rem; height: 32px; width: auto;" onchange="filterStudentActivitiesByDate()" title="เลือกวันเดือนปีเพื่อดูกิจกรรม">
+              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; height: 32px; font-size: 0.8rem;" onclick="clearActDateFilter()" title="แสดงทั้งหมด">ทั้งหมด</button>
+              <span class="badge-sub" id="scannedActivitiesCountBadge">0 กิจกรรม</span>
+            </div>
           </div>
 
           <div id="studentScannedActivitiesList">
@@ -950,6 +974,47 @@
     </div>
   </div>
   
+  
+  <!-- Modal: Activity Check-In Confirmation -->
+  <div class="modal-overlay" id="activityScanResultModal">
+    <div class="modal-dialog" style="max-width: 420px; text-align: center;">
+      <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto;">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+      </div>
+      <div class="modal-body" style="padding-top: 0.75rem;">
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.25rem;" id="scanResTitle">เช็คชื่อกิจกรรมสำเร็จ!</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem;" id="scanResSubtitle">บันทึกประวัติการเข้าร่วมกิจกรรมเรียบร้อยแล้ว</p>
+        
+        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 1rem; margin: 1rem 0; text-align: left;">
+          <div style="margin-bottom: 0.5rem;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">ชื่อกิจกรรม</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--primary);" id="scanResActName">-</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">วันที่สแกน</div>
+              <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-dark);" id="scanResDate">-</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">เวลาที่สแกน</div>
+              <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-dark);" id="scanResTime">-</div>
+            </div>
+          </div>
+          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-light);">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">ผู้เข้าร่วม</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-dark);" id="scanResStudent">-</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" onclick="closeModal('activityScanResultModal')">
+          <i class="fa-solid fa-check"></i> ตกลง
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Student Login & Registration -->
   <div class="modal-overlay" id="authModal">
     <div class="modal-dialog">
@@ -979,8 +1044,13 @@
           
           <div style="text-align: center; margin-top: 1.2rem; font-size: 0.88rem;">
             ยังไม่มีบัญชีนักเรียน? <a href="javascript:void(0)" onclick="toggleAuthForm('register')" style="color: var(--primary); font-weight: 600;">สมัครลงทะเบียนใหม่ที่นี่</a>
+          <div style="text-align: center; margin-top: 0.9rem; font-size: 0.84rem; border-top: 1px solid var(--border-light); padding-top: 0.9rem;">
+            <a href="javascript:void(0)" onclick="document.body.classList.remove('auth-locked'); closeModal('authModal'); openModal('adminAuthModal');" style="color: var(--text-muted);">
+              <i class="fa-solid fa-chalkboard-user"></i> เข้าสู่ระบบสำหรับคุณครู / แอดมิน
+            </a>
           </div>
         </div>
+      </div>
 
         <!-- Registration Form -->
         <div id="registerFormSection" style="display: none;">

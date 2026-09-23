@@ -1521,26 +1521,30 @@ html, body {
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: #ffffff;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   cursor: pointer;
   z-index: 10;
-  transition: var(--transition);
+  transition: transform 0.15s ease, background 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .btn-flip-cam:hover {
   background: var(--primary);
-  transform: rotate(180deg);
+  transform: scale(1.05);
+}
+.btn-flip-cam:active {
+  transform: scale(0.92);
 }
 
 /* ==================== COMPACT PRAYER CHIPS (NO-SCROLL) ==================== */
@@ -1750,4 +1754,68 @@ html, body {
   font-size: 0.85rem;
   background: #fff;
   color: var(--text-dark);
+}
+
+
+/* ==================== DASHBOARD BANNER AVATAR ==================== */
+.banner-avatar-display {
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 3px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.banner-avatar-display:hover {
+  transform: scale(1.05);
+}
+
+.banner-avatar-display img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 640px) {
+  .banner-avatar-display {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    font-size: 1.8rem;
+    border-width: 2.5px;
+  }
+}
+
+/* ==================== LOCKED PRAYER CAPTURE BUTTON ==================== */
+.btn-locked {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  background: #94a3b8 !important;
+  border-color: #94a3b8 !important;
+  box-shadow: none !important;
+}
+
+/* ==================== MANDATORY LOGIN OVERLAY ==================== */
+body.auth-locked .app-header,
+body.auth-locked .mobile-nav,
+body.auth-locked .main-wrapper {
+  filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+}
+body.auth-locked #authModal,
+body.auth-locked #adminAuthModal {
+  filter: none !important;
+  pointer-events: auto !important;
 }
