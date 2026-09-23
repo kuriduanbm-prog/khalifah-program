@@ -1521,26 +1521,30 @@ html, body {
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: #ffffff;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   cursor: pointer;
   z-index: 10;
-  transition: var(--transition);
+  transition: transform 0.15s ease, background 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .btn-flip-cam:hover {
   background: var(--primary);
-  transform: rotate(180deg);
+  transform: scale(1.05);
+}
+.btn-flip-cam:active {
+  transform: scale(0.92);
 }
 
 /* ==================== COMPACT PRAYER CHIPS (NO-SCROLL) ==================== */
@@ -1750,4 +1754,355 @@ html, body {
   font-size: 0.85rem;
   background: #fff;
   color: var(--text-dark);
+}
+
+
+/* ==================== DASHBOARD BANNER AVATAR ==================== */
+.banner-avatar-display {
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 3px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.banner-avatar-display:hover {
+  transform: scale(1.05);
+}
+
+.banner-avatar-display img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 640px) {
+  .banner-avatar-display {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    font-size: 1.8rem;
+    border-width: 2.5px;
+  }
+}
+
+/* ==================== LOCKED PRAYER CAPTURE BUTTON ==================== */
+.btn-locked {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  background: #94a3b8 !important;
+  border-color: #94a3b8 !important;
+  box-shadow: none !important;
+}
+
+/* ==================== MANDATORY LOGIN OVERLAY ==================== */
+body.auth-locked .app-header,
+body.auth-locked .mobile-nav,
+body.auth-locked .main-wrapper {
+  filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+}
+body.auth-locked #authModal,
+body.auth-locked #adminAuthModal {
+  filter: none !important;
+  pointer-events: auto !important;
+}
+
+
+/* ==================== HASANAT & GOOD DEEDS STYLES ==================== */
+
+/* Quran Stars in Welcome Banner */
+.quran-stars-wrapper {
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.quran-stars-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fef08a;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.quran-stars-list {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-wrap: wrap;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.quran-star-icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.7));
+  transition: transform 0.2s ease;
+}
+
+.quran-star-icon:hover {
+  transform: scale(1.3);
+}
+
+.quran-progress-pill {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+
+/* Hasanat Section Sub-tabs & Cards */
+.hasanat-hero-card {
+  background: linear-gradient(135deg, #059669 0%, #047857 60%, #065f46 100%);
+  color: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 1.6rem 1.8rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 25px rgba(5, 150, 105, 0.25);
+}
+
+.hasanat-hero-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 0 0 0.4rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hasanat-hero-desc {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-weight: 300;
+}
+
+.hasanat-subnav {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  background: var(--bg-card);
+  padding: 0.4rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  overflow-x: auto;
+}
+
+.hasanat-subnav-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.65rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.88rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.hasanat-subnav-btn.active {
+  background: #ecfdf5;
+  color: #059669;
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+}
+
+/* Surah Checklist Grid */
+.surah-list-container {
+  max-height: 480px;
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  background: #f8fafc;
+}
+
+.surah-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.6rem;
+}
+
+.surah-item-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.surah-item-card:hover {
+  border-color: #059669;
+  background: #f0fdf4;
+}
+
+.surah-item-card.memorized {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.surah-number-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.surah-item-card.memorized .surah-number-badge {
+  background: #10b981;
+  color: #ffffff;
+}
+
+/* Sunnah Prayers Checklist */
+.sunnah-category-box {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem;
+  margin-bottom: 1.1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.sunnah-category-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sunnah-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #f1f5f9;
+  margin-bottom: 0.45rem;
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+
+.sunnah-item-row:hover {
+  background: #f8fafc;
+}
+
+.sunnah-item-row.checked {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+/* Prayer Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-ontime {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.status-late {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.status-excused {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+.status-missed {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.status-pending {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+/* Prayer History Cards */
+.prayer-history-item {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  transition: box-shadow 0.2s ease;
+}
+
+.prayer-history-item:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--primary-light);
+}
+
+@media (max-width: 640px) {
+  .surah-grid {
+    grid-template-columns: 1fr;
+  }
+  .hasanat-subnav-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.6rem;
+  }
 }

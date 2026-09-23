@@ -52,6 +52,9 @@
         <button class="nav-link" onclick="switchView('activities')" id="nav-activities">
           <i class="fa-solid fa-calendar-check"></i> กิจกรรม
         </button>
+        <button class="nav-link" onclick="switchView('hasanat')" id="nav-hasanat">
+          <i class="fa-solid fa-hands-praying"></i> ผลบุญ
+        </button>
         <button class="nav-link" onclick="switchView('profile')" id="nav-profile">
           <i class="fa-solid fa-user-graduate"></i> โปรไฟล์ / เลื่อนชั้น
         </button>
@@ -94,6 +97,10 @@
       <i class="fa-solid fa-calendar-check"></i>
       <span>กิจกรรม</span>
     </button>
+    <button class="mobile-nav-item" onclick="switchView('hasanat')" id="m-nav-hasanat">
+      <i class="fa-solid fa-hands-praying"></i>
+      <span>ผลบุญ</span>
+    </button>
     <button class="mobile-nav-item" onclick="switchView('profile')" id="m-nav-profile">
       <i class="fa-solid fa-user-graduate"></i>
       <span>โปรไฟล์</span>
@@ -133,17 +140,35 @@
       </div>
       <div class="welcome-banner">
         <div class="banner-content">
-          <div>
-            <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
+          <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 260px;">
+            <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์">
+              <i class="fa-solid fa-user"></i>
+            </label>
+            <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
+            <div>
+              <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
             <p class="banner-desc" id="dashSubtitle">ติดตามพัฒนาการการเรียน การละหมาด และกิจกรรม เพื่อการพัฒนาตนเองอย่างสมบูรณ์แบบ</p>
             <div class="banner-badges">
               <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
               <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
               <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
             </div>
+            <!-- Quran Juz Stars Display under Student Profile -->
+            <div class="quran-stars-wrapper" id="dashQuranStarsWrapper">
+              <div class="quran-stars-title">
+                <i class="fa-solid fa-book-quran"></i> เกียรติประวัติดาวอัลกุรอาน:
+              </div>
+              <div class="quran-stars-list" id="dashQuranStarsList">
+                <span class="quran-star-icon">⭐</span>
+              </div>
+              <span class="quran-progress-pill" id="dashQuranProgressText">
+                จบ 0/30 ยุซ (0 ดาว)
+              </span>
+            </div>
           </div>
-          <div>
-            <button class="btn btn-secondary" onclick="switchView('prayer')">
+        </div>
+        <div>
+          <button class="btn btn-secondary" onclick="switchView('prayer')">
               <i class="fa-solid fa-camera"></i> เช็คชื่อละหมาดทันที
             </button>
           </div>
@@ -189,6 +214,16 @@
           <div class="stat-info">
             <div class="stat-value" id="statGpa">3.85</div>
             <div class="stat-label">เกรดเฉลี่ยสะสม (GPAX)</div>
+          </div>
+        </div>
+
+        <div class="stat-card" onclick="switchView('hasanat')" style="cursor: pointer;" title="คลิกเพื่อดูและบันทึกผลบุญ">
+          <div class="stat-icon-wrapper" style="background: rgba(16, 185, 129, 0.12); color: #059669;">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value" id="statQuranStarsCount">0 ดาว</div>
+            <div class="stat-label">ดาวกุรอาน / ละหมาดสุนัต</div>
           </div>
         </div>
       </div>
@@ -366,8 +401,37 @@
         </div>
 
         <!-- 4. One-Click Instant Capture & Save Button -->
-        <button class="btn btn-primary btn-block btn-lg" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" style="font-size: 1rem; padding: 0.85rem; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
-          <i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึกเวลาละหมาดทันที
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin: 0.4rem 0 0.8rem 0;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="switchCameraFacing()" style="font-size: 0.82rem; padding: 0.35rem 0.75rem;">
+            <i class="fa-solid fa-camera-rotate"></i> สลับกล้องหน้า/หลัง
+          </button>
+        </div>
+        <!-- Prayer Status & Notes Field -->
+        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.35rem;">
+            <div>
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
+                <i class="fa-solid fa-tags" style="color: var(--primary);"></i> สถานะการละหมาด
+              </label>
+              <select class="form-control" id="prayerStatusSelect" style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
+                <option value="ตรงเวลา (ญะมาอะฮ์/มัสยิด)">ตรงเวลา (ญะมาอะฮ์/มัสยิด)</option>
+                <option value="ตรงเวลา (ละหมาดคนเดียว)">ตรงเวลา (ละหมาดคนเดียว)</option>
+                <option value="สาย / กอฎอ">สาย / กอฎอ</option>
+                <option value="มีอุปสรรค / ป่วย">มีอุปสรรค / ป่วย</option>
+                <option value="อุซุรชัรอีย์ (ประจำเดือน)">อุซุรชัรอีย์ (ประจำเดือน)</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
+                <i class="fa-solid fa-pen" style="color: var(--primary);"></i> หมายเหตุเพิ่มเติม
+              </label>
+              <input type="text" class="form-control" id="prayerNoteInput" placeholder="เช่น แถวแรก, ที่หอพัก..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none;">
+          <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
         </button>
 
       </div>
@@ -399,14 +463,27 @@
         <div id="qrScanFeedback" class="qr-feedback">
           <i class="fa-solid fa-magnifying-glass"></i> <span>กำลังเปิดกล้องค้นหา QR Code กิจกรรม...</span>
         </div>
+        <div style="display: flex; gap: 0.5rem; justify-content: center; margin: 0.6rem 0 1rem 0; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="switchQrCameraFacing()">
+            <i class="fa-solid fa-camera-rotate"></i> สลับกล้อง
+          </button>
+          <label for="inputQrImage" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">
+            <i class="fa-solid fa-image"></i> เลือกรูป QR จากเครื่อง
+          </label>
+          <input type="file" id="inputQrImage" accept="image/*" style="display: none;" onchange="handleQrImageUpload(event)">
+        </div>
 
         <!-- Scanned Activities History of current student -->
         <div style="margin-top: 1.25rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text-dark); margin: 0;">
               <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการเข้าร่วมกิจกรรมของฉัน
             </h3>
-            <span class="badge-sub" id="scannedActivitiesCountBadge">0 กิจกรรม</span>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <input type="date" id="filterActDate" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.82rem; height: 32px; width: auto;" onchange="filterStudentActivitiesByDate()" title="เลือกวันเดือนปีเพื่อดูกิจกรรม">
+              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; height: 32px; font-size: 0.8rem;" onclick="clearActDateFilter()" title="แสดงทั้งหมด">ทั้งหมด</button>
+              <span class="badge-sub" id="scannedActivitiesCountBadge">0 กิจกรรม</span>
+            </div>
           </div>
 
           <div id="studentScannedActivitiesList">
@@ -416,6 +493,259 @@
 
       </div>
     </section>
+
+    
+    <!-- ==================== VIEW: HASANAT & GOOD DEEDS (ผลบุญ) ==================== -->
+    <section id="view-hasanat" class="view-section">
+      <!-- Hero Banner -->
+      <div class="hasanat-hero-card">
+        <h2 class="hasanat-hero-title">
+          <i class="fa-solid fa-hands-praying"></i> บันทึกผลบุญและศาสนกิจ (KHALIFAH HASANAT)
+        </h2>
+        <p class="hasanat-hero-desc">
+          ติดตามการอ่านอัลกุรอาน การสะสมดาวประจำยุซ การท่องจำซูเราะห์ และการละหมาดสุนัตรายวัน ด้วยความอิคลาสเพื่อความโปรดปรานของอัลลอฮ์ ﷻ
+        </p>
+      </div>
+
+      <!-- Sub Navigation Tabs -->
+      <div class="hasanat-subnav">
+        <button class="hasanat-subnav-btn active" id="btnSubHasanatQuran" onclick="switchHasanatSubTab('quran')">
+          <i class="fa-solid fa-book-quran"></i> การอ่านอัลกุรอาน
+        </button>
+        <button class="hasanat-subnav-btn" id="btnSubHasanatMemorize" onclick="switchHasanatSubTab('memorize')">
+          <i class="fa-solid fa-brain"></i> การท่องจำซูเราะห์
+        </button>
+        <button class="hasanat-subnav-btn" id="btnSubHasanatSunnah" onclick="switchHasanatSubTab('sunnah')">
+          <i class="fa-solid fa-person-praying"></i> ละหมาดสุนัตรายวัน
+        </button>
+      </div>
+
+      <!-- SUBTAB 1: QURAN READING & JUZ STARS -->
+      <div id="subtab-quran" class="hasanat-subcontent">
+        <div class="card" style="max-width: 680px; margin: 0 auto 1.5rem auto;">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fa-solid fa-book-open-reader"></i> บันทึกการอ่านอัลกุรอานประจำวัน
+            </div>
+            <span class="badge-sub" style="background: #fef3c7; color: #b45309;" id="hasanatJuzBadge">
+              ⭐ 0 ดาว (0/30 ยุซ)
+            </span>
+          </div>
+
+          <!-- Star Showcase Box -->
+          <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; text-align: center;">
+            <div style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.35rem;">เกียรติประวัติดาวอัลกุรอานที่สะสมได้ (1 ยุซ = 1 ดาวทอง)</div>
+            <div id="hasanatStarsShowcase" style="font-size: 1.6rem; min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 0.35rem; flex-wrap: wrap; margin: 0.4rem 0;">
+              <!-- Stars dynamically generated -->
+              <span style="font-size: 0.95rem; color: #94a3b8;">ยังไม่มีดาวสะสม เริ่มบันทึกการอ่านเพื่อรับดาวได้เลย</span>
+            </div>
+            <div style="font-size: 0.78rem; color: #38bdf8;" id="hasanatQuranPercentText">อ่านแล้ว 0 จาก 604 หน้า (0.0%)</div>
+          </div>
+
+          <!-- Inputs -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label class="form-label">วันนี้อ่านอัลกุรอานไปกี่หน้า? <span class="required">*</span></label>
+              <input type="number" id="quranPagesTodayInput" class="form-control" min="0" max="604" placeholder="เช่น 5 หน้า">
+            </div>
+            <div>
+              <label class="form-label">อ่านถึงหน้าไหนแล้ว? (1 - 604) <span class="required">*</span></label>
+              <input type="number" id="quranCurrentPageInput" class="form-control" min="1" max="604" placeholder="เช่น หน้าที่ 45" onchange="autoCalculateJuzFromPage()">
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.2rem;">
+            <label class="form-label">อ่านจบสะสมแล้วกี่ยุซ? (0 - 30 ยุซ) <span class="required">* (1 ยุซ = 1 ดาว)</span></label>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <input type="number" id="quranJuzCompletedInput" class="form-control" min="0" max="30" placeholder="0" style="font-size: 1.1rem; font-weight: 700; color: #b45309; text-align: center; max-width: 120px;">
+              <span style="font-size: 0.85rem; color: var(--text-muted);">
+                (อ่านจบกี่ยุซ ระบบจะบันทึกดาว ⭐ ตามจำนวนยุซที่จบลงในโปรไฟล์หน้าแดชบอร์ด)
+              </span>
+            </div>
+          </div>
+
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: #166534;">
+            <i class="fa-solid fa-heart" style="color: #16a34a;"></i> <strong>บันทึกด้วยความอิคลาส:</strong> การบันทึกนี้เพื่อกระตุ้นและเตือนตนเองในการพัฒนาศาสนกิจอย่างสม่ำเสมอเพื่อความโปรดปรานของอัลลอฮ์
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" onclick="saveQuranReadingLog()" style="background: #059669; border-color: #059669;">
+            <i class="fa-solid fa-floppy-disk"></i> บันทึกการอ่านอัลกุรอาน
+          </button>
+        </div>
+      </div>
+
+      <!-- SUBTAB 2: QURAN MEMORIZATION (TAHFIDZ) -->
+      <div id="subtab-memorize" class="hasanat-subcontent" style="display: none;">
+        <div class="card" style="max-width: 760px; margin: 0 auto 1.5rem auto;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-brain"></i> บันทึกการท่องจำซูเราะห์ (อัลกุรอาน 114 ซูเราะห์)
+              </div>
+              <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.2rem 0 0 0;">
+                ติ๊กเลือกซูเราะห์ที่ท่านสามารถท่องจำได้สำเร็จเพื่อเก็บสถิติ
+              </p>
+            </div>
+            <span class="badge-sub" style="background: #ecfdf5; color: #059669; font-size: 0.85rem;" id="memorizedSurahsBadge">
+              ท่องจำได้ 0 / 114 ซูเราะห์
+            </span>
+          </div>
+
+          <!-- Search Surah Filter -->
+          <div style="margin-bottom: 0.85rem; position: relative;">
+            <input type="text" id="searchSurahInput" class="form-control" placeholder="ค้นหาชื่อซูเราะห์ เช่น อัลฟาติฮะฮ์, ยาซีน, อัลกะฮ์ฟิ, อันนาส..." oninput="filterSurahsList(this.value)" style="padding-left: 2.2rem;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+          </div>
+
+          <!-- Surah Checklist Grid -->
+          <div class="surah-list-container" id="surahListContainer">
+            <!-- 114 Surahs generated dynamically via app.js -->
+          </div>
+
+          <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" onclick="saveSurahMemorizationLog()" style="background: #059669; border-color: #059669;">
+              <i class="fa-solid fa-floppy-disk"></i> บันทึกรายการซูเราะห์ที่ท่องจำ
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 3: DAILY SUNNAH PRAYERS -->
+      <div id="subtab-sunnah" class="hasanat-subcontent" style="display: none;">
+        <div class="card" style="max-width: 680px; margin: 0 auto 1.5rem auto;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-person-praying"></i> ละหมาดสุนัตประจำวัน (Daily Sunnah Tracker)
+              </div>
+              <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.2rem 0 0 0;">
+                บันทึกการละหมาดสุนัตร่อวาติบก่อน-หลังฟัรฎู, ละหมาดดุฮา, ละหมาดวิเตร และตะฮัจญุด
+              </p>
+            </div>
+            <span class="badge-sub" style="background: #ecfdf5; color: #059669;" id="todayTotalSunnahRakaatBadge">
+              วันนี้ละหมาดสุนัตแล้ว 0 ร็อกอะฮ์
+            </span>
+          </div>
+
+          <!-- Category 1: Sunnah Rawatib -->
+          <div class="sunnah-category-box">
+            <div class="sunnah-category-title">
+              <span><i class="fa-solid fa-clock" style="color: var(--primary);"></i> 1. สุนัตร่อวาติบ (ก่อนและหลังละหมาดฟัรฎู)</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(รวม 10-12 ร็อกอะฮ์ที่เน้นย้ำ)</span>
+            </div>
+
+            <!-- Subh -->
+            <label class="sunnah-item-row" id="row-rawatib-subhBefore">
+              <span><strong>ก่อนซุบฮิ</strong> (2 ร็อกอะฮ์) <span style="font-size: 0.72rem; color: #059669;">★ มุอักกัดสำคัญยิ่ง</span></span>
+              <input type="checkbox" id="chk-rawatib-subhBefore" onchange="calculateDailySunnahRakaat()">
+            </label>
+
+            <!-- Dhuhr -->
+            <label class="sunnah-item-row" id="row-rawatib-dhuhrBefore">
+              <span><strong>ก่อนดุฮริ</strong> (2 หรือ 4 ร็อกอะฮ์)</span>
+              <input type="checkbox" id="chk-rawatib-dhuhrBefore" onchange="calculateDailySunnahRakaat()">
+            </label>
+            <label class="sunnah-item-row" id="row-rawatib-dhuhrAfter">
+              <span><strong>หลังดุฮริ</strong> (2 ร็อกอะฮ์)</span>
+              <input type="checkbox" id="chk-rawatib-dhuhrAfter" onchange="calculateDailySunnahRakaat()">
+            </label>
+
+            <!-- Asr -->
+            <label class="sunnah-item-row" id="row-rawatib-asrBefore">
+              <span><strong>ก่อนอัสริ</strong> (2 หรือ 4 ร็อกอะฮ์)</span>
+              <input type="checkbox" id="chk-rawatib-asrBefore" onchange="calculateDailySunnahRakaat()">
+            </label>
+
+            <!-- Maghrib -->
+            <label class="sunnah-item-row" id="row-rawatib-maghribBefore">
+              <span><strong>ก่อนมัฆริบ</strong> (2 ร็อกอะฮ์)</span>
+              <input type="checkbox" id="chk-rawatib-maghribBefore" onchange="calculateDailySunnahRakaat()">
+            </label>
+            <label class="sunnah-item-row" id="row-rawatib-maghribAfter">
+              <span><strong>หลังมัฆริบ</strong> (2 ร็อกอะฮ์) <span style="font-size: 0.72rem; color: #059669;">★ มุอักกัด</span></span>
+              <input type="checkbox" id="chk-rawatib-maghribAfter" onchange="calculateDailySunnahRakaat()">
+            </label>
+
+            <!-- Isha -->
+            <label class="sunnah-item-row" id="row-rawatib-ishaBefore">
+              <span><strong>ก่อนอิชาอ์</strong> (2 ร็อกอะฮ์)</span>
+              <input type="checkbox" id="chk-rawatib-ishaBefore" onchange="calculateDailySunnahRakaat()">
+            </label>
+            <label class="sunnah-item-row" id="row-rawatib-ishaAfter">
+              <span><strong>หลังอิชาอ์</strong> (2 ร็อกอะฮ์) <span style="font-size: 0.72rem; color: #059669;">★ มุอักกัด</span></span>
+              <input type="checkbox" id="chk-rawatib-ishaAfter" onchange="calculateDailySunnahRakaat()">
+            </label>
+          </div>
+
+          <!-- Category 2: Duha Prayer -->
+          <div class="sunnah-category-box">
+            <div class="sunnah-category-title">
+              <span><i class="fa-solid fa-sun" style="color: #f59e0b;"></i> 2. ละหมาดสุนัตดุฮา (Salat ad-Duha)</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(ช่วงสาย หลังดวงอาทิตย์ขึ้น)</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.2rem;">
+              <div>
+                <strong>ละหมาดสุนัตดุฮา</strong>
+                <div style="font-size: 0.76rem; color: var(--text-muted);">เลือกจำนวนร็อกอะฮ์ที่ละหมาด</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <select id="selDuhaRakaat" class="form-control" style="font-size: 0.82rem; padding: 0.25rem 0.5rem; height: 32px; width: auto;" onchange="calculateDailySunnahRakaat()">
+                  <option value="0">ไม่ได้ละหมาด</option>
+                  <option value="2">2 ร็อกอะฮ์</option>
+                  <option value="4">4 ร็อกอะฮ์</option>
+                  <option value="6">6 ร็อกอะฮ์</option>
+                  <option value="8">8 ร็อกอะฮ์</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category 3: Night Prayers (Tahajjud & Witr) -->
+          <div class="sunnah-category-box">
+            <div class="sunnah-category-title">
+              <span><i class="fa-solid fa-moon" style="color: #6366f1;"></i> 3. ละหมาดยามค่ำคืน (วิเตร และ ตะฮัจญุด)</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(กิยามุลลัยล์)</span>
+            </div>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.2rem; border-bottom: 1px solid #f1f5f9;">
+              <div>
+                <strong>ละหมาดสุนัตวิเตร</strong>
+                <div style="font-size: 0.76rem; color: var(--text-muted);">ละหมาดปิดท้ายค่ำคืน (จำนวนคี่)</div>
+              </div>
+              <div>
+                <select id="selWitrRakaat" class="form-control" style="font-size: 0.82rem; padding: 0.25rem 0.5rem; height: 32px; width: auto;" onchange="calculateDailySunnahRakaat()">
+                  <option value="0">ไม่ได้ละหมาด</option>
+                  <option value="1">1 ร็อกอะฮ์</option>
+                  <option value="3" selected>3 ร็อกอะฮ์</option>
+                  <option value="5">5 ร็อกอะฮ์</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.2rem;">
+              <div>
+                <strong>ละหมาดสุนัตตะฮัจญุด</strong>
+                <div style="font-size: 0.76rem; color: var(--text-muted);">ละหมาดยามดึกหลังตื่นนอน</div>
+              </div>
+              <div>
+                <select id="selTahajjudRakaat" class="form-control" style="font-size: 0.82rem; padding: 0.25rem 0.5rem; height: 32px; width: auto;" onchange="calculateDailySunnahRakaat()">
+                  <option value="0">ไม่ได้ละหมาด</option>
+                  <option value="2">2 ร็อกอะฮ์</option>
+                  <option value="4">4 ร็อกอะฮ์</option>
+                  <option value="6">6 ร็อกอะฮ์</option>
+                  <option value="8">8 ร็อกอะฮ์</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" onclick="saveDailySunnahPrayersLog()" style="background: #059669; border-color: #059669;">
+            <i class="fa-solid fa-floppy-disk"></i> บันทึกการละหมาดสุนัตประจำวัน
+          </button>
+        </div>
+      </div>
+    </section>
+
 
     <!-- ==================== VIEW 4: STUDENT PROFILE & GRADE UPDATE ==================== -->
     <section id="view-profile" class="view-section">
@@ -950,6 +1280,47 @@
     </div>
   </div>
   
+  
+  <!-- Modal: Activity Check-In Confirmation -->
+  <div class="modal-overlay" id="activityScanResultModal">
+    <div class="modal-dialog" style="max-width: 420px; text-align: center;">
+      <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto;">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+      </div>
+      <div class="modal-body" style="padding-top: 0.75rem;">
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.25rem;" id="scanResTitle">เช็คชื่อกิจกรรมสำเร็จ!</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem;" id="scanResSubtitle">บันทึกประวัติการเข้าร่วมกิจกรรมเรียบร้อยแล้ว</p>
+        
+        <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 1rem; margin: 1rem 0; text-align: left;">
+          <div style="margin-bottom: 0.5rem;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">ชื่อกิจกรรม</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--primary);" id="scanResActName">-</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">วันที่สแกน</div>
+              <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-dark);" id="scanResDate">-</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">เวลาที่สแกน</div>
+              <div style="font-size: 0.88rem; font-weight: 600; color: var(--text-dark);" id="scanResTime">-</div>
+            </div>
+          </div>
+          <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-light);">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">ผู้เข้าร่วม</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-dark);" id="scanResStudent">-</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" onclick="closeModal('activityScanResultModal')">
+          <i class="fa-solid fa-check"></i> ตกลง
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Student Login & Registration -->
   <div class="modal-overlay" id="authModal">
     <div class="modal-dialog">
@@ -979,8 +1350,13 @@
           
           <div style="text-align: center; margin-top: 1.2rem; font-size: 0.88rem;">
             ยังไม่มีบัญชีนักเรียน? <a href="javascript:void(0)" onclick="toggleAuthForm('register')" style="color: var(--primary); font-weight: 600;">สมัครลงทะเบียนใหม่ที่นี่</a>
+          <div style="text-align: center; margin-top: 0.9rem; font-size: 0.84rem; border-top: 1px solid var(--border-light); padding-top: 0.9rem;">
+            <a href="javascript:void(0)" onclick="document.body.classList.remove('auth-locked'); closeModal('authModal'); openModal('adminAuthModal');" style="color: var(--text-muted);">
+              <i class="fa-solid fa-chalkboard-user"></i> เข้าสู่ระบบสำหรับคุณครู / แอดมิน
+            </a>
           </div>
         </div>
+      </div>
 
         <!-- Registration Form -->
         <div id="registerFormSection" style="display: none;">
