@@ -198,50 +198,73 @@ html, body {
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.45rem;
   background: var(--primary-light);
-  padding: 0.35rem 0.85rem 0.35rem 0.45rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.25rem;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: var(--transition);
+  flex-shrink: 0;
+  max-width: 155px;
+  box-sizing: border-box;
+  border: 1px solid rgba(2, 132, 199, 0.15);
 }
 
 .user-badge:hover {
   background: #bae6fd;
+  transform: translateY(-1px);
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
   border-radius: var(--radius-full);
   background: var(--primary);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
+  line-height: 1.12;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
 }
 
 .user-name {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-dark);
-  max-width: 120px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 95px;
 }
 
-.user-role {
-  font-size: 0.7rem;
+.user-sub {
+  font-size: 0.68rem;
   color: var(--primary-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 95px;
+  font-weight: 500;
 }
 
 .btn-icon {
@@ -646,13 +669,80 @@ html, body {
 
 /* Geofencing & Prayer Camera Layout */
 .geofence-alert {
-  padding: 1.2rem 1.5rem;
+  padding: 1.25rem;
   border-radius: var(--radius-lg);
   margin-bottom: 1.5rem;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 1rem;
   transition: var(--transition);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.geofence-alert-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.geofence-alert-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.geofence-alert-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.geofence-alert-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.geofence-alert-desc {
+  font-size: 0.88rem;
+  margin-top: 0.35rem;
+  line-height: 1.55;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.geofence-alert-action {
+  width: 100%;
+}
+
+.geofence-alert-action .btn {
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .geofence-alert {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.4rem 1.6rem;
+  }
+  .geofence-alert-main {
+    flex: 1;
+  }
+  .geofence-alert-action {
+    width: auto;
+    flex-shrink: 0;
+  }
+  .geofence-alert-action .btn {
+    width: auto;
+  }
 }
 
 .geofence-alert.within {
@@ -983,14 +1073,8 @@ html, body {
   }
 }
 
-/* Responsive Media Queries */
+/* Responsive Media Queries (Tablet & Mobile First Refinement) */
 @media (max-width: 992px) {
-  .analytics-grid {
-    grid-template-columns: 1fr;
-  }
-  .col-span-7, .col-span-5, .col-span-6, .col-span-4 {
-    grid-column: span 12;
-  }
   .desktop-nav {
     display: none;
   }
@@ -999,31 +1083,391 @@ html, body {
   }
 }
 
-@media (max-width: 640px) {
-  .header-container {
-    padding: 0.6rem 1rem;
+/* Tablet Optimizations (iPad & Medium Screens) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .analytics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
   }
-  .welcome-banner {
-    padding: 1.4rem;
-    border-radius: var(--radius-lg);
+  .col-span-12 { grid-column: span 2; }
+  .col-span-7, .col-span-5, .col-span-6, .col-span-4 {
+    grid-column: span 1;
   }
-  .banner-title {
-    font-size: 1.35rem;
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .prayer-grid-options {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.65rem;
   }
   .main-wrapper {
-    padding: 1rem 0.85rem 5.5rem 0.85rem;
+    padding: 1.25rem 1.25rem 5.5rem 1.25rem !important;
+  }
+}
+
+/* Mobile Optimizations (Smartphones & Narrow Embeds) */
+@media (max-width: 640px) {
+  .header-container {
+    padding: 0.55rem 0.85rem;
+  }
+  .brand-title {
+    font-size: 1.05rem;
+  }
+  .brand-subtitle {
+    display: none;
+  }
+  .brand-logo-img {
+    height: 38px;
+  }
+  .user-name {
+    max-width: 80px;
+    font-size: 0.76rem;
+  }
+  .welcome-banner {
+    padding: 1.25rem 1rem;
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.25rem;
+  }
+  .banner-title {
+    font-size: 1.25rem;
+    line-height: 1.35;
+  }
+  .banner-desc {
+    font-size: 0.84rem;
+  }
+  .banner-badges {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  .banner-tag {
+    font-size: 0.74rem;
+    padding: 0.2rem 0.6rem;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+    margin-bottom: 1.25rem;
+  }
+  .stat-card {
+    padding: 0.85rem 0.75rem;
+    gap: 0.6rem;
+    border-radius: var(--radius-md);
+  }
+  .stat-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
+    border-radius: var(--radius-sm);
+  }
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+  }
+  .analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .col-span-12, .col-span-7, .col-span-5, .col-span-6, .col-span-4 {
+    grid-column: span 1;
   }
   .card {
-    padding: 1.15rem;
-    border-radius: var(--radius-md);
+    padding: 1.1rem 0.95rem;
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.15rem;
+  }
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 1.02rem;
+  }
+  .card-subtitle {
+    font-size: 0.78rem;
   }
   .prayer-grid-options {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+  }
+  .prayer-time-card {
+    padding: 0.75rem 0.5rem;
+  }
+  .prayer-time-name {
+    font-size: 0.95rem;
+  }
+  .prayer-time-arabic {
+    font-size: 0.76rem;
+  }
+  .camera-container {
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
   }
   .activity-card {
     flex-direction: column;
     align-items: flex-start;
+    padding: 1rem;
+    gap: 0.85rem;
   }
+  .activity-card .btn {
+    width: 100%;
+  }
+  .main-wrapper {
+    padding: 0.75rem 0.65rem 5.5rem 0.65rem !important;
+  }
+  .mobile-nav {
+    padding: 0.35rem 0.4rem calc(0.35rem + env(safe-area-inset-bottom, 0px)) 0.4rem;
+  }
+  .mobile-nav-item {
+    padding: 0.35rem 0.5rem;
+    min-width: 52px;
+  }
+  .mobile-nav-item.active {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    box-shadow: none;
+    outline: none;
+    border: none;
+  }
+  .header-container {
+    padding: 0.45rem 0.75rem;
+    gap: 0.4rem;
+  }
+  .brand-wrapper {
+    gap: 0.45rem;
+    min-width: 0;
+    flex: 1;
+  }
+  .brand-logo-img {
+    height: 36px;
+    width: 36px;
+    min-width: 36px;
+  }
+  .brand-title {
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .brand-title .badge-sub {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.35rem;
+  }
+  .brand-subtitle {
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  .header-actions {
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+  .user-badge {
+    padding: 0.18rem 0.4rem 0.18rem 0.18rem;
+    max-width: 90px;
+    gap: 0.3rem;
+  }
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    font-size: 0.72rem;
+  }
+  .user-name {
+    max-width: 50px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .user-role {
+    display: none;
+  }
+  .banner-tag {
+    max-width: 100%;
+    word-break: break-word;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 440px) {
+  .brand-title .badge-sub {
+    display: none;
+  }
+  .brand-subtitle {
+    display: none;
+  }
+  .user-badge {
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    border-radius: 50%;
+    justify-content: center;
+    background: transparent;
+  }
+  .user-info {
+    display: none;
+  }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  }
+}
+
+/* PWA Installation Prompt Banner */
+.pwa-banner {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1.2rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  animation: fadeInDown 0.35s ease;
+}
+
+.pwa-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.pwa-banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.pwa-banner-text h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  color: #ffffff;
+}
+
+.pwa-banner-text p {
+  font-size: 0.78rem;
+  margin: 0.15rem 0 0 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn-pwa-install {
+  background: #ffffff;
+  color: #0284c7;
+  font-weight: 600;
+  border: none;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-pwa-install:hover {
+  background: #f0f9ff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-pwa-close {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.btn-pwa-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 640px) {
+  .pwa-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.85rem 1rem;
+    gap: 0.75rem;
+  }
+  .pwa-banner-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .btn-pwa-install {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Application Footer */
+.app-footer {
+  border-top: 1px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1.25rem 1.5rem;
+  margin-top: auto;
+}
+
+.footer-container {
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.admin-portal-link:hover {
+  color: var(--primary) !important;
+  background: var(--primary-light);
 }
 
 /* Print Layout for Reports */
@@ -1040,4 +1484,270 @@ html, body {
     border: 1px solid #ccc !important;
     page-break-inside: avoid;
   }
+}
+
+
+/* ==================== ENHANCED CAMERA & MIRROR FIX ==================== */
+.camera-container {
+  background: #090d16;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto 0.85rem auto;
+  box-shadow: var(--shadow-lg);
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#cameraStream {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* FIX: Front camera mirrors like a selfie mirror; Back camera does NOT mirror */
+#cameraStream.camera-front {
+  transform: scaleX(-1);
+}
+#cameraStream.camera-back {
+  transform: scaleX(1) !important;
+}
+
+.btn-flip-cam {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: var(--transition);
+}
+
+.btn-flip-cam:hover {
+  background: var(--primary);
+  transform: rotate(180deg);
+}
+
+/* ==================== COMPACT PRAYER CHIPS (NO-SCROLL) ==================== */
+.prayer-chips-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.prayer-chip {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.15rem;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.prayer-chip:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.prayer-chip.selected {
+  border-color: var(--primary);
+  background: #f0f9ff;
+  box-shadow: 0 0 0 2.5px rgba(2, 132, 199, 0.25);
+}
+
+.prayer-chip.done {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.prayer-chip-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.prayer-chip-sub {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.prayer-chip-status {
+  font-size: 0.62rem;
+  margin-top: 0.15rem;
+  display: block;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.prayer-chip.done .prayer-chip-status {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+/* ==================== QR SCANNER (STUDENT ACTIVITIES) ==================== */
+.qr-scanner-box {
+  background: #0f172a;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto 0.85rem auto;
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+}
+
+#qrScannerVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.qr-target-frame {
+  position: absolute;
+  width: 65%;
+  height: 65%;
+  border: 2.5px solid #38bdf8;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.qr-target-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: scanLaser 2s infinite ease-in-out;
+}
+
+@keyframes scanLaser {
+  0% { top: 0%; opacity: 0.8; }
+  50% { top: 98%; opacity: 1; }
+  100% { top: 0%; opacity: 0.8; }
+}
+
+.qr-feedback {
+  text-align: center;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 500;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ==================== PROFILE AVATAR UPLOAD ==================== */
+.profile-avatar-wrapper {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+
+.profile-avatar-display {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.profile-avatar-display img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.btn-avatar-upload {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary-dark);
+  color: #fff;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.btn-avatar-upload:hover {
+  background: var(--primary);
+  transform: scale(1.1);
+}
+
+/* ==================== DASHBOARD GRADE FILTER ==================== */
+.dash-filter-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.dash-filter-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dash-filter-select {
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+  background: #fff;
+  color: var(--text-dark);
 }
