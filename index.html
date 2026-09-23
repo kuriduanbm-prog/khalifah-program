@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KHALIFAH PROGRAM - ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม</title>
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js for Educational Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <!-- SheetJS for Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Application Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-wrapper" onclick="switchView('dashboard')">
+        <img src="assets/logo.png" alt="Khalifah Program Logo" class="brand-logo-img">
+        <div class="brand-text">
+          <div class="brand-title">
+            KHALIFAH <span class="badge-sub">SMART APP</span>
+          </div>
+          <div class="brand-subtitle">ระบบเช็คมาเรียน ละหมาด และกิจกรรม</div>
+        </div>
+      </div>
+
+      <!-- Desktop Navigation Menu -->
+      <nav class="desktop-nav">
+        <button class="nav-link active" onclick="switchView('dashboard')" id="nav-dashboard">
+          <i class="fa-solid fa-chart-pie"></i> แดชบอร์ด
+        </button>
+        <button class="nav-link" onclick="switchView('prayer')" id="nav-prayer">
+          <i class="fa-solid fa-mosque"></i> เช็คละหมาด 5 เวลา
+        </button>
+        <button class="nav-link" onclick="switchView('activities')" id="nav-activities">
+          <i class="fa-solid fa-calendar-check"></i> กิจกรรม
+        </button>
+        <button class="nav-link" onclick="switchView('profile')" id="nav-profile">
+          <i class="fa-solid fa-user-graduate"></i> โปรไฟล์ / เลื่อนชั้น
+        </button>
+        <button class="nav-link" onclick="switchView('admin')" id="nav-admin">
+          <i class="fa-solid fa-shield-halved"></i> ผู้ดูแลระบบ
+        </button>
+      </nav>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <button class="btn-icon" onclick="openModal('settingsModal')" title="ตั้งค่าเชื่อมต่อ Google Sheets">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        
+        <div class="user-badge" id="userBadge" onclick="handleUserBadgeClick()">
+          <div class="user-avatar" id="userAvatarText">น</div>
+          <div class="user-info">
+            <span class="user-name" id="headerUserName">นักเรียนทดสอบ</span>
+            <span class="user-role" id="headerUserRole">ม.5</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Bottom Navigation -->
+  <div class="mobile-nav">
+    <button class="mobile-nav-item active" onclick="switchView('dashboard')" id="m-nav-dashboard">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>แดชบอร์ด</span>
+    </button>
+    <button class="mobile-nav-item" onclick="switchView('prayer')" id="m-nav-prayer">
+      <i class="fa-solid fa-mosque"></i>
+      <span>ละหมาด</span>
+    </button>
+    <button class="mobile-nav-item" onclick="switchView('activities')" id="m-nav-activities">
+      <i class="fa-solid fa-calendar-check"></i>
+      <span>กิจกรรม</span>
+    </button>
+    <button class="mobile-nav-item" onclick="switchView('profile')" id="m-nav-profile">
+      <i class="fa-solid fa-user-graduate"></i>
+      <span>โปรไฟล์</span>
+    </button>
+    <button class="mobile-nav-item" onclick="switchView('admin')" id="m-nav-admin">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span>แอดมิน</span>
+    </button>
+  </div>
+
+  <!-- Main Content Layout -->
+  <main class="main-wrapper">
+
+    <!-- ==================== VIEW 1: DASHBOARD ==================== -->
+    <section id="view-dashboard" class="view-section active">
+      <!-- Welcome Hero Banner -->
+      <div class="welcome-banner">
+        <div class="banner-content">
+          <div>
+            <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
+            <p class="banner-desc" id="dashSubtitle">ติดตามพัฒนาการการเรียน การละหมาด และกิจกรรม เพื่อการพัฒนาตนเองอย่างสมบูรณ์แบบ</p>
+            <div class="banner-badges">
+              <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
+              <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
+              <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-secondary" onclick="switchView('prayer')">
+              <i class="fa-solid fa-camera"></i> เช็คชื่อละหมาดทันที
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats Counter -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon-wrapper stat-blue">
+            <i class="fa-solid fa-user-check"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value" id="statAttendancePercent">95.4%</div>
+            <div class="stat-label">อัตราการมาเรียนสะสม</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper stat-green">
+            <i class="fa-solid fa-person-praying"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value" id="statPrayersCount">5 / 5</div>
+            <div class="stat-label">ละหมาดครบ 5 เวลาวันนี้</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper stat-purple">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value" id="statActivitiesCount">8 ครั้ง</div>
+            <div class="stat-label">การเข้าร่วมกิจกรรม</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrapper stat-amber">
+            <i class="fa-solid fa-award"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value" id="statGpa">3.85</div>
+            <div class="stat-label">เกรดเฉลี่ยสะสม (GPAX)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Analytics Grid -->
+      <div class="analytics-grid">
+        <!-- Chart 1: Academic & Subject Skill Radar Chart -->
+        <div class="card col-span-7">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-compass-drafting"></i> กราฟสมรรถนะทักษะรายวิชา (Student Skill Radar)
+              </div>
+              <div class="card-subtitle">คะแนนทักษะและสมรรถนะที่อัปเดตตามผลการเรียนและคะแนนเก็บรายวิชา</div>
+            </div>
+          </div>
+          <div class="chart-container" style="height: 320px;">
+            <canvas id="skillRadarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Attendance Doughnut Chart -->
+        <div class="card col-span-5">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-clock-rotate-left"></i> สถิติการมาเรียน
+              </div>
+              <div class="card-subtitle">สัดส่วนมาเรียน เข้าเรียน มาสาย ลา ขาด</div>
+            </div>
+          </div>
+          <div class="chart-container" style="height: 320px;">
+            <canvas id="attendanceDoughnutChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 3: Weekly Prayer Consistency -->
+        <div class="card col-span-7">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-mosque"></i> สถิติการละหมาดประจำสัปดาห์ (5 เวลา)
+              </div>
+              <div class="card-subtitle">การเช็คเวลาละหมาด ซุบฮิ ซุฮริ อัศรฺ มัฆริบ อีชาอ์ ตลอด 7 วัน</div>
+            </div>
+          </div>
+          <div class="chart-container" style="height: 280px;">
+            <canvas id="prayerBarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: Activity Participation -->
+        <div class="card col-span-5">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-bullhorn"></i> การเข้าร่วมกิจกรรมโรงเรียน
+              </div>
+              <div class="card-subtitle">กิจกรรมด้านวิชาการ ศาสนา สังคม และจิตอาสา</div>
+            </div>
+          </div>
+          <div class="chart-container" style="height: 280px;">
+            <canvas id="activityPieChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: PRAYER CHECK-IN ==================== -->
+    <section id="view-prayer" class="view-section">
+      <div class="card" style="max-width: 800px; margin: 0 auto 2rem auto;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <i class="fa-solid fa-mosque"></i> บันทึกการมาละหมาด 5 เวลา (Smart Geofence & Camera)
+            </div>
+            <div class="card-subtitle">
+              ระบุพิกัดก่อนปลดล็อคกล้อง และถ่ายภาพยืนยันการละหมาดผ่านระบบกล้องสดเท่านั้น
+            </div>
+          </div>
+        </div>
+
+        <!-- Geolocation Verification Step -->
+        <div id="geofenceStatusBox" class="geofence-alert unverified">
+          <i class="fa-solid fa-location-crosshairs fa-2x"></i>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 1rem;" id="geoStatusTitle">ยังไม่ได้ตรวจสอบตำแหน่งปัจจุบัน</div>
+            <div style="font-size: 0.85rem;" id="geoStatusDesc">
+              กรุณากดปุ่ม <b>"ตรวจสอบตำแหน่งพิกัดปัจจุบัน"</b> ด้านล่าง เพื่อยืนยันว่าท่านอยู่ ณ มัสยิดอัลฮารอมัยน์ หรือ คณะวิทยาศาสตร์และเทคโนโลยี
+            </div>
+            <div id="geoDetails" style="margin-top: 0.4rem; font-size: 0.78rem; opacity: 0.85; display: none;"></div>
+          </div>
+          <button class="btn btn-primary" onclick="verifyGeolocation()">
+            <i class="fa-solid fa-location-arrow"></i> ตรวจสอบพิกัด
+          </button>
+        </div>
+
+        <!-- Prayer Times Selection -->
+        <div class="form-group">
+          <label class="form-label">
+            <b>ขั้นตอนที่ 1:</b> เลือกเวลาละหมาดที่ต้องการเช็คชื่อ <span class="required">*</span>
+          </label>
+          <div class="prayer-grid-options">
+            <div class="prayer-time-card" onclick="selectPrayerTime('ซุบฮิ', this)" id="ptime-ซุบฮิ">
+              <div class="prayer-time-name">ซุบฮิ</div>
+              <div class="prayer-time-arabic">الفجر (Fajr)</div>
+              <span class="prayer-time-status" id="pstatus-ซุบฮิ">ยังไม่เช็ค</span>
+            </div>
+            <div class="prayer-time-card" onclick="selectPrayerTime('ซุฮริ', this)" id="ptime-ซุฮริ">
+              <div class="prayer-time-name">ซุฮริ</div>
+              <div class="prayer-time-arabic">الظهر (Dhuhr)</div>
+              <span class="prayer-time-status" id="pstatus-ซุฮริ">ยังไม่เช็ค</span>
+            </div>
+            <div class="prayer-time-card" onclick="selectPrayerTime('อัศรฺ', this)" id="ptime-อัศรฺ">
+              <div class="prayer-time-name">อัศรฺ</div>
+              <div class="prayer-time-arabic">العصر (Asr)</div>
+              <span class="prayer-time-status" id="pstatus-อัศรฺ">ยังไม่เช็ค</span>
+            </div>
+            <div class="prayer-time-card" onclick="selectPrayerTime('มัฆริบ', this)" id="ptime-มัฆริบ">
+              <div class="prayer-time-name">มัฆริบ</div>
+              <div class="prayer-time-arabic">المغرب (Maghrib)</div>
+              <span class="prayer-time-status" id="pstatus-มัฆริบ">ยังไม่เช็ค</span>
+            </div>
+            <div class="prayer-time-card" onclick="selectPrayerTime('อีชาอ์', this)" id="ptime-อีชาอ์">
+              <div class="prayer-time-name">อีชาอ์</div>
+              <div class="prayer-time-arabic">العشاء (Isha'a)</div>
+              <span class="prayer-time-status" id="pstatus-อีชาอ์">ยังไม่เช็ค</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- In-App Camera Section (Locked until GPS + Prayer Selected) -->
+        <div class="form-group" style="margin-top: 1.5rem;">
+          <label class="form-label">
+            <b>ขั้นตอนที่ 2:</b> ถ่ายรูปสดผ่านกล้องในระบบเท่านั้น (ระบบจะปั๊มพิกัด วันที่ เวลา ลงบนภาพอัตโนมัติ)
+          </label>
+
+          <div class="camera-container" id="cameraBox">
+            <video id="cameraStream" autoplay playsinline muted style="display: none;"></video>
+            <canvas id="snapshotCanvas" style="display: none;"></canvas>
+            
+            <div class="camera-placeholder" id="cameraPlaceholder">
+              <i class="fa-solid fa-lock"></i>
+              <div style="font-weight: 500; font-size: 1rem;">กล้องยังไม่ปลดล็อก</div>
+              <div style="font-size: 0.85rem; margin-top: 0.3rem;">
+                กรุณากดตรวจสอบพิกัด และเลือกเวลาละหมาดก่อนเปิดกล้องถ่ายรูป
+              </div>
+            </div>
+
+            <div class="camera-overlay-info" id="cameraOverlayInfo" style="display: none;">
+              <div id="camOverlayStudent">นักเรียน: -</div>
+              <div id="camOverlayPrayer">เวลาละหมาด: -</div>
+              <div id="camOverlayLocation">สถานที่: กำลังระบุ...</div>
+              <div id="camOverlayDateTime">วัน-เวลา: -</div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary" id="btnStartCamera" onclick="initLiveCamera()" disabled>
+              <i class="fa-solid fa-video"></i> เปิดกล้องสด
+            </button>
+            <button class="btn btn-primary btn-lg" id="btnCapture" onclick="captureAndRecordPrayer()" disabled>
+              <i class="fa-solid fa-camera"></i> ถ่ายภาพและบันทึกอัตโนมัติ
+            </button>
+            <button class="btn btn-secondary" id="btnSwitchCamera" onclick="switchCameraFacing()" style="display: none;">
+              <i class="fa-solid fa-arrows-rotate"></i> สลับกล้องหน้า/หลัง
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prayer History Table -->
+      <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการละหมาดของวันนี้
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="custom-table" id="todayPrayerTable">
+            <thead>
+              <tr>
+                <th>เวลาละหมาด</th>
+                <th>เวลาบันทึก</th>
+                <th>พิกัด / สถานที่</th>
+                <th>สถานะพิกัด</th>
+                <th>รูปถ่าย</th>
+              </tr>
+            </thead>
+            <tbody id="todayPrayerTableBody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                  ยังไม่มีประวัติการละหมาดวันนี้
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: ACTIVITIES ==================== -->
+    <section id="view-activities" class="view-section">
+      <div class="card-header" style="margin-bottom: 1.5rem;">
+        <div>
+          <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-dark);">
+            <i class="fa-solid fa-calendar-check" style="color: var(--primary);"></i> กิจกรรมโรงเรียน (School Activities)
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            กิจกรรมที่ประกาศโดยผู้ดูแลระบบ นักเรียนสามารถตรวจสอบวันเวลาและกดเช็คชื่อเข้าร่วมได้ทันที
+          </p>
+        </div>
+      </div>
+
+      <div id="activitiesListContainer">
+        <!-- Rendered dynamically by JavaScript -->
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 4: STUDENT PROFILE & GRADE UPDATE ==================== -->
+    <section id="view-profile" class="view-section">
+      <div class="card" style="max-width: 650px; margin: 0 auto 2rem auto;">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fa-solid fa-id-card"></i> ข้อมูลส่วนตัวนักเรียน
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--border-light);">
+          <div style="width: 72px; height: 72px; border-radius: var(--radius-full); background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 600;" id="profAvatar">
+            น
+          </div>
+          <div>
+            <h3 style="font-size: 1.25rem; font-weight: 700;" id="profFullName">นายมูฮัมหมัด ซอและห์</h3>
+            <p style="color: var(--text-muted); font-size: 0.88rem;" id="profSchool">โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี</p>
+            <span class="badge-sub" style="margin-top: 0.3rem; display: inline-block;" id="profGradeBadge">ชั้นมัธยมศึกษาปีที่ 5</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem;">
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">รหัสนักเรียน</div>
+            <div style="font-weight: 600;" id="profStudentId">STD-256901</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">วัน/เดือน/ปีเกิด</div>
+            <div style="font-weight: 600;" id="profBirthDate">15/08/2552</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">เบอร์โทรศัพท์ผู้ปกครอง</div>
+            <div style="font-weight: 600;" id="profParentPhone">081-234-5678</div>
+          </div>
+          <div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">สถานะการใช้งาน</div>
+            <div style="color: var(--success); font-weight: 600;"><i class="fa-solid fa-circle-check"></i> ปกติ (Active)</div>
+          </div>
+        </div>
+
+        <!-- Grade Promotion Tool (ตอบโจทย์ ม.5 -> ม.6) -->
+        <div style="background: var(--primary-light); padding: 1.25rem; border-radius: var(--radius-md); border: 1.5px solid #bae6fd;">
+          <h4 style="color: var(--primary-dark); font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem;">
+            <i class="fa-solid fa-arrow-up-right-dots"></i> อัปเดตข้อมูล / เลื่อนชั้นปีการศึกษา
+          </h4>
+          <p style="font-size: 0.84rem; color: var(--text-body); margin: 0.4rem 0 1rem 0;">
+            เมื่อเริ่มต้นปีการศึกษาใหม่ หากท่านเลื่อนชั้นเรียน (เช่น จาก ม.5 ขึ้น ม.6) สามารถเลือกชั้นปีใหม่และกดบันทึกได้ทันที
+          </p>
+          <div style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
+            <select class="form-control" id="selectNewGrade" style="max-width: 220px; background: #fff;">
+              <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1</option>
+              <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
+              <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
+              <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
+              <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5</option>
+              <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6</option>
+              <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
+            </select>
+            <button class="btn btn-primary" onclick="updateStudentGrade()">
+              <i class="fa-solid fa-floppy-disk"></i> บันทึกเลื่อนชั้นปี
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 5: ADMIN CONTROL CENTER ==================== -->
+    <section id="view-admin" class="view-section">
+      <!-- Admin Header -->
+      <div class="card-header" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.45rem; font-weight: 700; color: var(--text-dark);">
+            <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> ศูนย์ควบคุมผู้ดูแลระบบ (Admin Center)
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.88rem;">
+            จัดการข้อมูลนักเรียน ประกาศกิจกรรม เลื่อนชั้นปี จัดการสิทธิ์แอดมิน และส่งออกรายงาน
+          </p>
+        </div>
+        <div style="display: flex; gap: 0.6rem;">
+          <button class="btn btn-outline" onclick="openModal('createActivityModal')">
+            <i class="fa-solid fa-plus"></i> ประกาศกิจกรรมใหม่
+          </button>
+          <button class="btn btn-secondary" onclick="adminLogout()">
+            <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบแอดมิน
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin Tabs Navigation -->
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" onclick="switchAdminTab('students', this)">
+          <i class="fa-solid fa-users"></i> ข้อมูลนักเรียนทั้งหมด
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('reports', this)">
+          <i class="fa-solid fa-file-export"></i> ส่งออกรายงาน (Word / Excel / PDF)
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('promote', this)">
+          <i class="fa-solid fa-graduation-cap"></i> เลื่อนชั้นปีอัตโนมัติยกห้อง
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('subadmins', this)">
+          <i class="fa-solid fa-user-shield"></i> จัดการแอดมินรอง
+        </button>
+      </div>
+
+      <!-- Admin Tab 1: Students Management -->
+      <div id="admin-tab-students" class="admin-content-tab active">
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.2rem;">
+            <input type="text" class="form-control" id="searchStudentInput" placeholder="ค้นหาด้วยชื่อ-สกุล หรือ รหัสนักเรียน..." style="max-width: 350px;" oninput="filterAdminStudents()">
+            <select class="form-control" id="filterGradeSelect" style="max-width: 200px;" onchange="filterAdminStudents()">
+              <option value="">ทุกระดับชั้น (ม.1 - ม.6)</option>
+              <option value="มัธยมศึกษาปีที่ 1">ม.1</option>
+              <option value="มัธยมศึกษาปีที่ 2">ม.2</option>
+              <option value="มัธยมศึกษาปีที่ 3">ม.3</option>
+              <option value="มัธยมศึกษาปีที่ 4">ม.4</option>
+              <option value="มัธยมศึกษาปีที่ 5">ม.5</option>
+              <option value="มัธยมศึกษาปีที่ 6">ม.6</option>
+            </select>
+          </div>
+
+          <div class="table-responsive">
+            <table class="custom-table" id="adminStudentsTable">
+              <thead>
+                <tr>
+                  <th>รหัสนักเรียน</th>
+                  <th>ชื่อ - นามสกุล</th>
+                  <th>ระดับชั้น</th>
+                  <th>โรงเรียน</th>
+                  <th>เบอร์ผู้ปกครอง</th>
+                  <th>การมาเรียน</th>
+                  <th>ละหมาด</th>
+                  <th>กิจกรรม</th>
+                  <th style="text-align: right;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="adminStudentsTableBody">
+                <!-- Injected via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab 2: Export Reports (Word, Excel, PDF) -->
+      <div id="admin-tab-reports" class="admin-content-tab" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-file-arrow-down"></i> ศูนย์ดาวน์โหลดและส่งออกรายงาน
+              </div>
+              <div class="card-subtitle">
+                สามารถเลือกช่วงวันที่ เลือกระดับชั้น หรือเลือกรายบุคคล และส่งออกเป็น Excel, Word หรือ PDF
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="form-group">
+              <label class="form-label">ประเภทรายงาน</label>
+              <select class="form-control" id="exportReportType">
+                <option value="all">รายงานภาพรวมทั้งหมด (เรียน+ละหมาด+กิจกรรม)</option>
+                <option value="prayer">รายงานการเช็คละหมาด 5 เวลา และพิกัด</option>
+                <option value="attendance">รายงานการเข้าเรียน มาสาย ลา ขาด</option>
+                <option value="activities">รายงานการเข้าร่วมกิจกรรม</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">เลือกระดับชั้น</label>
+              <select class="form-control" id="exportGradeSelect">
+                <option value="all">ทุกระดับชั้น</option>
+                <option value="มัธยมศึกษาปีที่ 1">ม.1</option>
+                <option value="มัธยมศึกษาปีที่ 2">ม.2</option>
+                <option value="มัธยมศึกษาปีที่ 3">ม.3</option>
+                <option value="มัธยมศึกษาปีที่ 4">ม.4</option>
+                <option value="มัธยมศึกษาปีที่ 5">ม.5</option>
+                <option value="มัธยมศึกษาปีที่ 6">ม.6</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ตั้งแต่วันที่</label>
+              <input type="date" class="form-control" id="exportStartDate">
+            </div>
+            <div class="form-group">
+              <label class="form-label">ถึงวันที่</label>
+              <input type="date" class="form-control" id="exportEndDate">
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 1.5rem; border-radius: var(--radius-lg); border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 1rem;">
+            <button class="btn btn-success btn-lg" onclick="exportToExcel()">
+              <i class="fa-solid fa-file-excel"></i> ส่งออกเป็น Excel (.xlsx)
+            </button>
+            <button class="btn btn-primary btn-lg" onclick="exportToWord()">
+              <i class="fa-solid fa-file-word"></i> ส่งออกเป็น Word (.doc)
+            </button>
+            <button class="btn btn-secondary btn-lg" onclick="exportToPdfPrint()">
+              <i class="fa-solid fa-file-pdf"></i> พิมพ์ / บันทึก PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab 3: Batch Grade Promotion -->
+      <div id="admin-tab-promote" class="admin-content-tab" style="display: none;">
+        <div class="card" style="max-width: 600px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-graduation-cap"></i> ระบบเลื่อนชั้นปีการศึกษาแบบยกห้อง
+              </div>
+              <div class="card-subtitle">อำนวยความสะดวกให้แอดมินปรับเลื่อนระดับชั้นนักเรียนอัตโนมัติเมื่อขึ้นปีการศึกษาใหม่</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div style="flex: 1;">
+              <label class="form-label">จากระดับชั้นเดิม</label>
+              <select class="form-control" id="batchFromGrade">
+                <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1</option>
+                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
+                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
+                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
+                <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5</option>
+                <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6</option>
+              </select>
+            </div>
+            <div style="padding-top: 1.5rem; font-size: 1.5rem; color: var(--primary);">
+              <i class="fa-solid fa-arrow-right"></i>
+            </div>
+            <div style="flex: 1;">
+              <label class="form-label">เลื่อนขึ้นเป็นระดับชั้นใหม่</label>
+              <select class="form-control" id="batchToGrade">
+                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
+                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
+                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
+                <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5</option>
+                <option value="มัธยมศึกษาปีที่ 6" selected>มัธยมศึกษาปีที่ 6</option>
+                <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="executeBatchPromotion()">
+            <i class="fa-solid fa-bolt"></i> ยืนยันเลื่อนชั้นปีนักเรียนทั้งหมด
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin Tab 4: Sub-Admins Management -->
+      <div id="admin-tab-subadmins" class="admin-content-tab" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-user-shield"></i> เพิ่มและจัดการผู้ดูแลระบบรอง (Sub-Admins)
+              </div>
+              <div class="card-subtitle">สร้างชื่อผู้ใช้และรหัสผ่านสำหรับคุณครู หรือผู้ช่วยแอดมิน</div>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('addSubAdminModal')">
+              <i class="fa-solid fa-user-plus"></i> เพิ่มแอดมินรอง
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="custom-table" id="subAdminsTable">
+              <thead>
+                <tr>
+                  <th>ชื่อผู้ใช้ (Username)</th>
+                  <th>ชื่อ - นามสกุล</th>
+                  <th>สิทธิ์การใช้งาน</th>
+                  <th>วันที่สร้าง</th>
+                  <th style="text-align: right;">การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="subAdminsTableBody">
+                <!-- Injected via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal: Student Login & Registration -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-dark);" id="authModalTitle">
+          เข้าสู่ระบบนักเรียน
+        </div>
+        <button class="btn-icon" onclick="closeModal('authModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Login Form -->
+        <div id="loginFormSection">
+          <div class="form-group">
+            <label class="form-label">รหัสนักเรียน (Student ID) <span class="required">*</span></label>
+            <input type="text" class="form-control" id="loginStudentId" placeholder="เช่น STD-256901">
+          </div>
+          <div class="form-group">
+            <label class="form-label">วันเดือนปีเกิด (ใช้เป็นรหัสผ่าน) <span class="required">*</span></label>
+            <input type="text" class="form-control" id="loginBirthDate" placeholder="เช่น 15/08/2552 หรือ 15082552">
+            <div class="form-hint">กรอกวันเดือนปีเกิดตามที่ได้ลงทะเบียนไว้</div>
+          </div>
+          <button class="btn btn-primary btn-block btn-lg" onclick="handleStudentLogin()">
+            <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+          </button>
+          
+          <div style="text-align: center; margin-top: 1.2rem; font-size: 0.88rem;">
+            ยังไม่มีบัญชีนักเรียน? <a href="javascript:void(0)" onclick="toggleAuthForm('register')" style="color: var(--primary); font-weight: 600;">สมัครลงทะเบียนใหม่ที่นี่</a>
+          </div>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="registerFormSection" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">รหัสนักเรียน <span class="required">* (สมัครได้เพียงครั้งเดียว)</span></label>
+            <input type="text" class="form-control" id="regStudentId" placeholder="เช่น STD-256902">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อ - นามสกุล <span class="required">*</span></label>
+            <input type="text" class="form-control" id="regFullName" placeholder="เช่น นายฟาฮัด มะดีเยาะ">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อโรงเรียน / สถาบัน <span class="required">*</span></label>
+            <input type="text" class="form-control" id="regSchoolName" placeholder="เช่น โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ระดับชั้นมัธยมศึกษา <span class="required">*</span></label>
+            <select class="form-control" id="regGrade">
+              <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
+              <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
+              <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3 (ม.3)</option>
+              <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
+              <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5 (ม.5)</option>
+              <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6 (ม.6)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">วันเดือนปีเกิด (รหัสผ่านของคุณ) <span class="required">*</span></label>
+            <input type="text" class="form-control" id="regBirthDate" placeholder="เช่น 20/05/2553">
+          </div>
+          <div class="form-group">
+            <label class="form-label">เบอร์โทรศัพท์ผู้ปกครอง <span class="required">*</span></label>
+            <input type="tel" class="form-control" id="regParentPhone" placeholder="เช่น 089-999-9999">
+          </div>
+          <button class="btn btn-primary btn-block btn-lg" onclick="handleStudentRegister()">
+            <i class="fa-solid fa-user-plus"></i> ยืนยันการลงทะเบียน
+          </button>
+          <div style="text-align: center; margin-top: 1.2rem; font-size: 0.88rem;">
+            มีบัญชีอยู่แล้ว? <a href="javascript:void(0)" onclick="toggleAuthForm('login')" style="color: var(--primary); font-weight: 600;">เข้าสู่ระบบ</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Admin Passcode Login -->
+  <div class="modal-overlay" id="adminAuthModal">
+    <div class="modal-dialog" style="max-width: 420px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-dark);">
+          <i class="fa-solid fa-lock" style="color: var(--primary);"></i> ป้อนรหัสผู้ดูแลระบบ
+        </div>
+        <button class="btn-icon" onclick="closeModal('adminAuthModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.2rem;">
+          กรอกรหัสผ่านหลักของผู้ดูแลระบบ หรือ Username/Password ของแอดมินรอง
+        </p>
+        <div class="form-group">
+          <label class="form-label">รหัสผ่านหลัก (Master Code) หรือ รหัสแอดมิน</label>
+          <input type="password" class="form-control" id="adminPassInput" placeholder="กรอกรหัสผ่าน เช่น 096909" onkeypress="if(event.key === 'Enter') handleAdminLogin()">
+        </div>
+        <div id="subAdminUsernameGroup" style="display: none;" class="form-group">
+          <label class="form-label">ชื่อผู้ใช้แอดมินรอง (Username)</label>
+          <input type="text" class="form-control" id="subAdminUserInput" placeholder="กรอก Username">
+        </div>
+        <div style="font-size: 0.8rem; margin-bottom: 1rem;">
+          <a href="javascript:void(0)" onclick="toggleSubAdminField()" style="color: var(--primary);" id="toggleSubAdminBtn">
+            เข้าสู่ระบบด้วยบัญชีแอดมินรอง?
+          </a>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="handleAdminLogin()">
+          <i class="fa-solid fa-shield-halved"></i> ยืนยันเข้าสู่ระบบ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create Activity (Admin) -->
+  <div class="modal-overlay" id="createActivityModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem;">
+          <i class="fa-solid fa-bullhorn" style="color: var(--primary);"></i> ประกาศกิจกรรมใหม่
+        </div>
+        <button class="btn-icon" onclick="closeModal('createActivityModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">ชื่อกิจกรรม <span class="required">*</span></label>
+          <input type="text" class="form-control" id="actTitle" placeholder="เช่น กิจกรรมค่ายคุณธรรมและวิชาการ ประจำปี 2569">
+        </div>
+        <div class="form-group">
+          <label class="form-label">รายละเอียดกิจกรรม</label>
+          <textarea class="form-control" id="actDesc" rows="3" placeholder="ระบุรายละเอียด กำหนดการ สิ่งที่ต้องเตรียม..."></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">วันที่เริ่ม <span class="required">*</span></label>
+            <input type="datetime-local" class="form-control" id="actStartDate">
+          </div>
+          <div class="form-group">
+            <label class="form-label">วันที่สิ้นสุด <span class="required">*</span></label>
+            <input type="datetime-local" class="form-control" id="actEndDate">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">สถานที่จัดกิจกรรม</label>
+          <input type="text" class="form-control" id="actLocation" placeholder="เช่น หอประชุมใหญ่ มหาวิทยาลัยฟาฏอนี">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('createActivityModal')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitCreateActivity()">
+          <i class="fa-solid fa-paper-plane"></i> เผยแพร่ไปยังนักเรียนทั้งหมด
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Sub-Admin -->
+  <div class="modal-overlay" id="addSubAdminModal">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem;">
+          <i class="fa-solid fa-user-shield" style="color: var(--primary);"></i> เพิ่มแอดมินรอง
+        </div>
+        <button class="btn-icon" onclick="closeModal('addSubAdminModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">ชื่อ - นามสกุล <span class="required">*</span></label>
+          <input type="text" class="form-control" id="subFullName" placeholder="เช่น อาจารย์อับดุลเลาะ มะแอ">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อผู้ใช้ (Username) <span class="required">*</span></label>
+          <input type="text" class="form-control" id="subUsername" placeholder="เช่น teacher_abdullah">
+        </div>
+        <div class="form-group">
+          <label class="form-label">รหัสผ่าน (Password) <span class="required">*</span></label>
+          <input type="password" class="form-control" id="subPassword" placeholder="กำหนดรหัสผ่าน">
+        </div>
+        <div class="form-group">
+          <label class="form-label">สิทธิ์การใช้งาน</label>
+          <select class="form-control" id="subRole">
+            <option value="TeacherAdmin">อาจารย์ประจำชั้น (ดูข้อมูลและบันทึก)</option>
+            <option value="ActivityAdmin">ฝ่ายกิจกรรม (สร้างและเช็คชื่อกิจกรรม)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('addSubAdminModal')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitAddSubAdmin()">
+          <i class="fa-solid fa-save"></i> บันทึกแอดมินรอง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Google Sheets Connection Settings -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem;">
+          <i class="fa-solid fa-gears" style="color: var(--primary);"></i> ตั้งค่าเชื่อมต่อ Google Sheets API
+        </div>
+        <button class="btn-icon" onclick="closeModal('settingsModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.2rem;">
+          นำ URL ของ Google Apps Script Web App ที่ Deploy แล้วมาวางที่นี่ เพื่อให้ระบบบันทึกและดึงข้อมูลจาก Google Sheets ของท่านแบบ Real-time
+        </p>
+        <div class="form-group">
+          <label class="form-label">Google Apps Script Web App URL</label>
+          <input type="url" class="form-control" id="gasApiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+          <div class="form-hint">หากเว้นว่างไว้ ระบบจะทำงานในโหมดออฟไลน์ / Local Demonstration Mode</div>
+        </div>
+        <div id="gasConnStatus" style="font-size: 0.85rem; padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); margin-bottom: 1rem; display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="testGasConnection()">
+          <i class="fa-solid fa-bolt"></i> ทดสอบการเชื่อมต่อ
+        </button>
+        <button class="btn btn-primary" onclick="saveGasSettings()">
+          <i class="fa-solid fa-check"></i> บันทึกการตั้งค่า
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Student Deep Detail View (For Admin) -->
+  <div class="modal-overlay" id="studentDetailModal">
+    <div class="modal-dialog" style="max-width: 700px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem;" id="studentDetailTitle">
+          รายละเอียดนักเรียนรายบุคคล
+        </div>
+        <button class="btn-icon" onclick="closeModal('studentDetailModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="studentDetailContent">
+        <!-- Rendered by app.js -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="btnAdminDeleteStudent">
+          <i class="fa-solid fa-trash"></i> ลบข้อมูลนักเรียนนี้
+        </button>
+        <button class="btn btn-secondary" onclick="closeModal('studentDetailModal')">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
