@@ -1221,10 +1221,45 @@ html, body {
     outline: none;
     border: none;
   }
-  .user-badge {
-    padding: 0.22rem 0.5rem 0.22rem 0.22rem;
-    max-width: 105px;
+  .header-container {
+    padding: 0.45rem 0.75rem;
+    gap: 0.4rem;
+  }
+  .brand-wrapper {
+    gap: 0.45rem;
+    min-width: 0;
+    flex: 1;
+  }
+  .brand-logo-img {
+    height: 36px;
+    width: 36px;
+    min-width: 36px;
+  }
+  .brand-title {
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .brand-title .badge-sub {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.35rem;
+  }
+  .brand-subtitle {
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  .header-actions {
     gap: 0.35rem;
+    flex-shrink: 0;
+  }
+  .user-badge {
+    padding: 0.18rem 0.4rem 0.18rem 0.18rem;
+    max-width: 90px;
+    gap: 0.3rem;
   }
   .user-avatar {
     width: 28px;
@@ -1233,13 +1268,171 @@ html, body {
     font-size: 0.72rem;
   }
   .user-name {
-    max-width: 60px;
+    max-width: 50px;
     font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .user-role {
-    font-size: 0.62rem;
+    display: none;
+  }
+  .banner-tag {
+    max-width: 100%;
+    word-break: break-word;
+    white-space: normal;
   }
 }
+
+@media (max-width: 440px) {
+  .brand-title .badge-sub {
+    display: none;
+  }
+  .brand-subtitle {
+    display: none;
+  }
+  .user-badge {
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    border-radius: 50%;
+    justify-content: center;
+    background: transparent;
+  }
+  .user-info {
+    display: none;
+  }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  }
+}
+
+/* PWA Installation Prompt Banner */
+.pwa-banner {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1.2rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+  animation: fadeInDown 0.35s ease;
+}
+
+.pwa-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.pwa-banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.pwa-banner-text h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  color: #ffffff;
+}
+
+.pwa-banner-text p {
+  font-size: 0.78rem;
+  margin: 0.15rem 0 0 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn-pwa-install {
+  background: #ffffff;
+  color: #0284c7;
+  font-weight: 600;
+  border: none;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-pwa-install:hover {
+  background: #f0f9ff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-pwa-close {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.btn-pwa-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 640px) {
+  .pwa-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.85rem 1rem;
+    gap: 0.75rem;
+  }
+  .pwa-banner-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .btn-pwa-install {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 /* Application Footer */
 .app-footer {
