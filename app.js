@@ -1640,14 +1640,19 @@ function verifyGeolocation() {
       let locationName = '';
       let isWithinZone = false;
 
+      // คำนวณระยะห่างถึงมัสยิดอัลฮารอมัยน์โดยตรง (จุดศูนย์กลางอ้างอิงหลัก)
+      const mosqueTarget = GEOFENCE_TARGETS.MOSQUE;
+      const distToMosque = Math.round(calculateDistanceInMeters(userLat, userLng, mosqueTarget.lat, mosqueTarget.lng));
+      const formattedMosqueDist = formatDistance(distToMosque);
+
       if (matchedTarget) {
         locationName = matchedTarget.name;
         isWithinZone = true;
       } else {
         isWithinZone = false;
         minDistance = Math.round(minDistance);
-        const nearestName = minTarget ? minTarget.name : 'พื้นที่เป้าหมาย';
-        locationName = `ห่างจาก${nearestName} ${formatDistance(minDistance)}`;
+        // หากไม่อยู่ในบริเวณจุดที่กำหนด ให้ระบุระยะห่างจากมัสยิดอัลฮารอมัยน์เป็นหลัก (บอกเป็นเมตร หรือกิโลเมตร)
+        locationName = `ห่างจากมัสยิดฮารอมัยน์ ${formattedMosqueDist}`;
       }
 
       verifiedLocation = {
@@ -1656,7 +1661,9 @@ function verifyGeolocation() {
         accuracy: accuracy,
         locationName: locationName,
         isWithinZone: isWithinZone,
-        distanceMeters: minDistance,
+        distanceMeters: isWithinZone ? minDistance : distToMosque,
+        distToMosque: distToMosque,
+        formattedMosqueDist: formattedMosqueDist,
         timestamp: new Date().toISOString()
       };
 
@@ -1754,7 +1761,11 @@ function checkPrayerUnlockState() {
       locBadge.style.background = isWithin ? '#ecfdf5' : '#fffbeb';
       locBadge.style.borderColor = isWithin ? '#a7f3d0' : '#fde68a';
       locBadge.style.color = isWithin ? '#065f46' : '#92400e';
-      locText.innerHTML = `พิกัด: <b>${locName}</b> ${isWithin ? '✓ (ในจุดเช็คชื่อ)' : '⚠️'}`;
+      if (isWithin) {
+        locText.innerHTML = `พิกัด: <b>${locName}</b> ✓ (ในจุดเช็คชื่อ)`;
+      } else {
+        locText.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: #d97706;"></i> <b>อยู่นอกพื้นที่:</b> ${locName}`;
+      }
     }
 
     // แสดงชื่อสถานที่บนปุ่มกดละหมาดโดยตรง (ขนาดพอดี ไม่ใหญ่เกินไป)
@@ -1764,7 +1775,7 @@ function checkPrayerUnlockState() {
           <i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึก${pTimeText}ทันที
         </div>
         <div style="font-size: 0.78rem; font-weight: 500; opacity: 0.92; display: flex; align-items: center; gap: 0.3rem;">
-          <i class="fa-solid fa-location-dot" style="font-size: 0.72rem;"></i> ณ ${locName}
+          <i class="fa-solid ${isWithin ? 'fa-location-dot' : 'fa-person-walking-arrow-right'}" style="font-size: 0.72rem;"></i> ${isWithin ? 'ณ ' + locName : locName}
         </div>
       </div>
     `;
