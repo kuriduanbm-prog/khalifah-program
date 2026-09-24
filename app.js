@@ -407,10 +407,100 @@ function onKhatamInputChange() {
   renderKhatamBadge(val);
 }
 
+// ==================== HASANAT DATE NAVIGATOR & MANAGEMENT ==================== //
+let hasanatSelectedDate = new Date().toISOString().split('T')[0];
+
+function triggerHasanatDatePicker() {
+  const picker = document.getElementById('hasanatDatePicker');
+  if (!picker) return;
+  if (picker.showPicker) {
+    try {
+      picker.showPicker();
+      return;
+    } catch (e) {}
+  }
+  picker.focus();
+}
+
+function initHasanatDateControls() {
+  const picker = document.getElementById('hasanatDatePicker');
+  const display = document.getElementById('hasanatDateDisplay');
+  const badge = document.getElementById('hasanatDateRelativeBadge');
+  const btnToday = document.getElementById('btnHasanatToday');
+  const activeNote = document.getElementById('quranActiveDateNote');
+
+  if (picker) picker.value = hasanatSelectedDate;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const d = new Date(hasanatSelectedDate + 'T00:00:00');
+  
+  if (display) {
+    const formatted = d.toLocaleDateString('th-TH', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    display.innerText = `วันที่ ${formatted}`;
+  }
+
+  if (badge) {
+    if (hasanatSelectedDate === todayStr) {
+      badge.innerText = 'วันนี้';
+      badge.className = 'hasanat-date-rel-badge today';
+    } else if (hasanatSelectedDate < todayStr) {
+      badge.innerText = 'ย้อนหลัง';
+      badge.className = 'hasanat-date-rel-badge past';
+    } else {
+      badge.innerText = 'ล่วงหน้า';
+      badge.className = 'hasanat-date-rel-badge future';
+    }
+  }
+
+  if (btnToday) {
+    btnToday.classList.toggle('active', hasanatSelectedDate === todayStr);
+  }
+
+  if (activeNote) {
+    if (hasanatSelectedDate === todayStr) {
+      activeNote.innerText = 'ของวันนี้';
+    } else {
+      const shortDate = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+      activeNote.innerText = `วันที่ ${shortDate}`;
+    }
+  }
+}
+
+function shiftHasanatDate(offsetDays) {
+  const cur = new Date(hasanatSelectedDate + 'T00:00:00');
+  cur.setDate(cur.getDate() + offsetDays);
+  hasanatSelectedDate = cur.toISOString().split('T')[0];
+  initHasanatDateControls();
+  initHasanatView();
+}
+
+function setHasanatTodayDate() {
+  hasanatSelectedDate = new Date().toISOString().split('T')[0];
+  initHasanatDateControls();
+  initHasanatView();
+}
+
+function onHasanatDateChange(newDateVal) {
+  if (!newDateVal) return;
+  hasanatSelectedDate = newDateVal;
+  initHasanatDateControls();
+  initHasanatView();
+}
+
 function initHasanatView() {
+  initHasanatDateControls();
   if (!currentStudent) return;
   const h = getStudentHasanat(currentStudent.studentId);
   if (!h) return;
+
+  h.dailyLogs = h.dailyLogs || {};
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dayLog = h.dailyLogs[hasanatSelectedDate] || null;
 
   // 1. Quran tab
   const pToday = document.getElementById('quranPagesTodayInput');
@@ -419,8 +509,18 @@ function initHasanatView() {
   const kInput = document.getElementById('quranKhatamCountInput');
   const kBadge = document.getElementById('quranKhatamDisplayBadge');
 
-  if (pToday) pToday.value = h.quran.pagesToday || '';
-  if (pCur) pCur.value = h.quran.currentPage || '';
+  if (pToday) {
+    if (dayLog && typeof dayLog.pagesToday !== 'undefined') {
+      pToday.value = dayLog.pagesToday;
+    } else if (hasanatSelectedDate === todayStr) {
+      pToday.value = h.quran.pagesToday || '';
+    } else {
+      pToday.value = '';
+    }
+  }
+
+  const curPageVal = (dayLog && dayLog.currentPage) ? dayLog.currentPage : (h.quran.currentPage || 0);
+  if (pCur) pCur.value = curPageVal || '';
   if (jComp) jComp.value = h.quran.juzCompleted || 0;
 
   const khatamVal = (h.quran && typeof h.quran.khatamCount === 'number')
@@ -430,21 +530,17 @@ function initHasanatView() {
   if (kInput) kInput.value = khatamVal;
   if (kBadge) kBadge.innerText = `⭐ ${khatamVal} ดาวรอบโปรไฟล์`;
 
-  renderHasanatStarsShowcase(h.quran.stars || 0, h.quran.currentPage || 0);
+  renderHasanatStarsShowcase(h.quran.stars || 0, curPageVal, khatamVal);
   render30StarsShelf(h.quran.stars || 0);
+
   const bar = document.getElementById('hasanatQuranProgressBar');
   if (bar) {
-    const curP = h.quran.currentPage || 0;
-    bar.style.width = `${Math.min(100, ((curP / 604) * 100).toFixed(1))}%`;
+    bar.style.width = `${Math.min(100, ((curPageVal / 604) * 100).toFixed(1))}%`;
   }
   const qBadge = document.getElementById('navHasanatQuranBadge');
   if (qBadge) qBadge.innerText = `⭐ ${h.quran.stars || 0} ดาว`;
   const mBadge = document.getElementById('navHasanatMemBadge');
   if (mBadge) mBadge.innerText = `${h.memorization.count || 0}/114`;
-  const sBadge = document.getElementById('navHasanatSunnahBadge');
-  if (sBadge) sBadge.innerText = `${h.sunnah.totalRakaat || 0} ร็อกอะฮ์`;
-  const liveTotal = document.getElementById('liveSunnahTotalNum');
-  if (liveTotal) liveTotal.innerHTML = `${h.sunnah.totalRakaat || 0} <span style="font-size: 1.1rem; font-weight: 500;">ร็อกอะฮ์</span>`;
 
   // 2. Memorization tab
   const memBadge = document.getElementById('memorizedSurahsBadge');
@@ -452,37 +548,75 @@ function initHasanatView() {
     memBadge.innerText = `ท่องจำได้ ${h.memorization.count || 0} / 114 ซูเราะห์`;
   }
 
-  // 3. Sunnah tab
-  if (h.sunnah) {
-    const r = h.sunnah.rawatib || {};
-    Object.keys(r).forEach(k => {
-      const chk = document.getElementById(`chk-rawatib-${k}`);
-      const row = document.getElementById(`row-rawatib-${k}`);
-      if (chk) chk.checked = !!r[k];
-      if (row) row.classList.toggle('checked', !!r[k]);
-    });
-    const sDuha = document.getElementById('selDuhaRakaat');
-    const sWitr = document.getElementById('selWitrRakaat');
-    const sTahajjud = document.getElementById('selTahajjudRakaat');
-    if (sDuha) sDuha.value = h.sunnah.duhaRakaat || 0;
-    if (sWitr) sWitr.value = h.sunnah.witrRakaat !== undefined ? h.sunnah.witrRakaat : 3;
-    if (sTahajjud) sTahajjud.value = h.sunnah.tahajjudRakaat || 0;
-    calculateDailySunnahRakaat(false);
-  }
+  // 3. Sunnah tab (Load selected date's sunnah if available)
+  const activeSunnah = (dayLog && dayLog.sunnah)
+    ? dayLog.sunnah
+    : (hasanatSelectedDate === todayStr ? (h.sunnah || {}) : {});
+
+  const r = activeSunnah.rawatib || {};
+  const rawatibKeys = [
+    'subhBefore', 'dhuhrBefore', 'dhuhrAfter', 'asrBefore',
+    'maghribBefore', 'maghribAfter', 'ishaBefore', 'ishaAfter'
+  ];
+  rawatibKeys.forEach(k => {
+    const chk = document.getElementById(`chk-rawatib-${k}`);
+    const row = document.getElementById(`row-rawatib-${k}`);
+    if (chk) chk.checked = !!r[k];
+    if (row) row.classList.toggle('checked', !!r[k]);
+  });
+
+  const sDuha = document.getElementById('selDuhaRakaat');
+  const sWitr = document.getElementById('selWitrRakaat');
+  const sTahajjud = document.getElementById('selTahajjudRakaat');
+
+  const duhaVal = activeSunnah.duhaRakaat !== undefined ? activeSunnah.duhaRakaat : 0;
+  const witrVal = activeSunnah.witrRakaat !== undefined ? activeSunnah.witrRakaat : (hasanatSelectedDate === todayStr ? 3 : 0);
+  const tahajjudVal = activeSunnah.tahajjudRakaat !== undefined ? activeSunnah.tahajjudRakaat : 0;
+
+  if (sDuha) sDuha.value = duhaVal;
+  if (sWitr) sWitr.value = witrVal;
+  if (sTahajjud) sTahajjud.value = tahajjudVal;
+
+  document.querySelectorAll('#pillsGroupDuha .sunnah-pill-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.getAttribute('data-val')) === duhaVal);
+  });
+  document.querySelectorAll('#pillsGroupWitr .sunnah-pill-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.getAttribute('data-val')) === witrVal);
+  });
+  document.querySelectorAll('#pillsGroupTahajjud .sunnah-pill-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.getAttribute('data-val')) === tahajjudVal);
+  });
+
+  calculateDailySunnahRakaat(false);
 }
 
-function renderHasanatStarsShowcase(stars, currentPage) {
+function renderHasanatStarsShowcase(stars, currentPage, khatamCount = 0) {
   const showcase = document.getElementById('hasanatStarsShowcase');
   const badge = document.getElementById('hasanatJuzBadge');
   const percentText = document.getElementById('hasanatQuranPercentText');
+  const kpiPage = document.getElementById('kpiQuranPageText');
+  const kpiJuz = document.getElementById('kpiQuranJuzText');
+  const kpiKhatam = document.getElementById('kpiQuranKhatamText');
 
   if (badge) {
     badge.innerText = `⭐ ${stars} ดาว (${stars}/30 ยุซ)`;
   }
 
+  const curP = parseInt(currentPage) || 0;
+  const pct = ((curP / 604) * 100).toFixed(1);
+
   if (percentText) {
-    const pct = ((currentPage / 604) * 100).toFixed(1);
-    percentText.innerText = `อ่านแล้ว ${currentPage} จาก 604 หน้า (${pct}%) - สะสม ${stars} ดาวทอง`;
+    percentText.innerText = `${curP} / 604 หน้า (${pct}%) • ${stars} ยุซ`;
+  }
+
+  if (kpiPage) {
+    kpiPage.innerHTML = `${curP} <span class="quran-kpi-sub">/ 604</span>`;
+  }
+  if (kpiJuz) {
+    kpiJuz.innerHTML = `${stars} <span class="quran-kpi-sub">/ 30 ยุซ</span>`;
+  }
+  if (kpiKhatam) {
+    kpiKhatam.innerHTML = `${khatamCount} <span class="quran-kpi-sub">ครั้ง</span>`;
   }
 
   if (!showcase) return;
@@ -510,6 +644,16 @@ function autoCalculateJuzFromPage() {
     if (parseInt(jComp.value) < completed) {
       jComp.value = completed;
     }
+  }
+  updateShelfStarsFromInput();
+}
+
+function onPagesTodayInputChange() {
+  const pToday = parseInt(document.getElementById('quranPagesTodayInput').value) || 0;
+  const pCurInput = document.getElementById('quranCurrentPageInput');
+  if (pCurInput && !pCurInput.value && pToday > 0) {
+    pCurInput.value = pToday;
+    autoCalculateJuzFromPage();
   }
 }
 
@@ -540,26 +684,51 @@ function saveQuranReadingLog() {
   }
 
   const stars = jComp; // 1 ยุซ = 1 ดาวในชั้นวาง
+  const todayStr = new Date().toISOString().split('T')[0];
 
   const h = getStudentHasanat(currentStudent.studentId);
-  h.quran = {
+  h.dailyLogs = h.dailyLogs || {};
+  h.dailyLogs[hasanatSelectedDate] = {
+    date: hasanatSelectedDate,
+    pagesToday: pToday,
+    currentPage: pCur,
+    timestamp: new Date().toISOString()
+  };
+
+  if (hasanatSelectedDate === todayStr) {
+    h.quran.pagesToday = pToday;
+  }
+  h.quran.currentPage = pCur;
+  h.quran.juzCompleted = jComp;
+  h.quran.stars = stars;
+  h.quran.khatamCount = Math.max(0, khatamVal);
+  h.quran.lastUpdated = new Date().toISOString();
+
+  saveStudentHasanat(h);
+  renderHasanatStarsShowcase(stars, pCur, khatamVal);
+  render30StarsShelf(stars);
+  playSuccessSound();
+
+  const d = new Date(hasanatSelectedDate + 'T00:00:00');
+  const dStr = (hasanatSelectedDate === todayStr) ? 'วันนี้' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+
+  if (khatamVal > 0) {
+    showToast(`👑 บันทึกวันที่ ${dStr} สำเร็จ! อ่านจบ 30 ยุซ ${khatamVal} ครั้ง ได้รับดาวรอบโปรไฟล์ ${khatamVal} ดวง ⭐`, 'success');
+  } else {
+    showToast(`บันทึกการอ่านอัลกุรอาน (${dStr}) สำเร็จ! สะสม ${stars} ดาวทอง ⭐`, 'success');
+  }
+
+  syncRecordToGoogleSheet('saveQuranLog', {
+    studentId: currentStudent.studentId,
+    studentName: currentStudent.fullName,
+    grade: currentStudent.grade,
+    date: hasanatSelectedDate,
     pagesToday: pToday,
     currentPage: pCur,
     juzCompleted: jComp,
     stars: stars,
-    khatamCount: Math.max(0, khatamVal),
-    lastUpdated: new Date().toISOString()
-  };
-
-  saveStudentHasanat(h);
-  renderHasanatStarsShowcase(stars, pCur);
-  playSuccessSound();
-
-  if (khatamVal > 0) {
-    showToast(`👑 บันทึกสำเร็จ! อ่านจบ 30 ยุซ ${khatamVal} ครั้ง ได้รับดาวเกียรติยศประดับรอบโปรไฟล์ ${khatamVal} ดวง ⭐`, 'success');
-  } else {
-    showToast(`บันทึกการอ่านอัลกุรอานสำเร็จ! ได้รับดาวสะสม ${stars} ดวง ⭐ (ด้วยความอิคลาส)`, 'success');
-  }
+    khatamCount: khatamVal
+  });
 }
 
 // ==================== 114 QURAN SURAHS WITH JUZ MAPPING ==================== //
@@ -829,9 +998,12 @@ function calculateDailySunnahRakaat(shouldSave = false) {
 
   total += duha + witr + tahajjud;
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = (hasanatSelectedDate === todayStr);
+
   const badge = document.getElementById('todayTotalSunnahRakaatBadge');
   if (badge) {
-    badge.innerText = `วันนี้ละหมาดสุนัตแล้ว ${total} ร็อกอะฮ์`;
+    badge.innerText = isToday ? `วันนี้ละหมาดสุนัตแล้ว ${total} ร็อกอะฮ์` : `วันที่เลือกละหมาดสุนัต ${total} ร็อกอะฮ์`;
   }
   const liveNum = document.getElementById('liveSunnahTotalNum');
   if (liveNum) {
@@ -844,8 +1016,10 @@ function calculateDailySunnahRakaat(shouldSave = false) {
 
   if (shouldSave && currentStudent) {
     const h = getStudentHasanat(currentStudent.studentId);
-    h.sunnah = {
-      date: new Date().toISOString().split('T')[0],
+    h.dailyLogs = h.dailyLogs || {};
+
+    const sunnahRecord = {
+      date: hasanatSelectedDate,
       rawatib: rawatibState,
       duhaRakaat: duha,
       witrRakaat: witr,
@@ -853,7 +1027,25 @@ function calculateDailySunnahRakaat(shouldSave = false) {
       totalRakaat: total,
       lastUpdated: new Date().toISOString()
     };
+
+    h.dailyLogs[hasanatSelectedDate] = h.dailyLogs[hasanatSelectedDate] || {};
+    h.dailyLogs[hasanatSelectedDate].sunnah = sunnahRecord;
+
+    if (isToday) {
+      h.sunnah = sunnahRecord;
+    }
     saveStudentHasanat(h);
+
+    syncRecordToGoogleSheet('saveSunnahLog', {
+      studentId: currentStudent.studentId,
+      studentName: currentStudent.fullName,
+      grade: currentStudent.grade,
+      date: hasanatSelectedDate,
+      totalRakaat: total,
+      duhaRakaat: duha,
+      witrRakaat: witr,
+      tahajjudRakaat: tahajjud
+    });
   }
 
   return total;
@@ -867,7 +1059,10 @@ function saveDailySunnahPrayersLog() {
   }
   const total = calculateDailySunnahRakaat(true);
   playSuccessSound();
-  showToast(`บันทึกการละหมาดสุนัตประจำวันสำเร็จ! (${total} ร็อกอะฮ์)`, 'success');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const d = new Date(hasanatSelectedDate + 'T00:00:00');
+  const dStr = (hasanatSelectedDate === todayStr) ? 'วันนี้' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+  showToast(`บันทึกการละหมาดสุนัต (${dStr}) สำเร็จ! (${total} ร็อกอะฮ์)`, 'success');
 }
 
 function renderDashboardQuranStars() {
@@ -1153,6 +1348,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderActivitiesList();
   renderTodayPrayerTable();
   renderDashboardQuranStars();
+  initHasanatView();
   renderPrayerHistory();
   initExportDateDefaults();
   enforceMandatoryLogin();
@@ -1287,7 +1483,18 @@ function switchView(viewName) {
     initHasanatView();
   } else if (viewName === 'prayer') {
     renderPrayerHistory();
-    initLiveCamera();
+    if (verifiedLocation) {
+      const centerOverlay = document.getElementById('camCenterActionOverlay');
+      if (centerOverlay) centerOverlay.style.display = 'none';
+      initLiveCamera();
+    } else {
+      const centerOverlay = document.getElementById('camCenterActionOverlay');
+      if (centerOverlay) centerOverlay.style.display = 'flex';
+      const video = document.getElementById('cameraStream');
+      if (video) video.style.display = 'none';
+      const camOverlay = document.getElementById('cameraOverlayInfo');
+      if (camOverlay) camOverlay.style.display = 'none';
+    }
   } else if (viewName === 'activities') {
     startQrScanner();
     renderStudentActivitiesHistory();
@@ -1348,6 +1555,12 @@ function verifyGeolocation() {
 
   statusTitle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบพิกัดความถูกต้อง...';
   statusDesc.innerText = 'กำลังคำนวณตำแหน่งผ่านสัญญาณดาวเทียม GPS กรุณารอสักครู่';
+
+  const btnCenter = document.getElementById('btnCenterVerifyGeo');
+  if (btnCenter) {
+    btnCenter.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบพิกัด...';
+    btnCenter.disabled = true;
+  }
 
   const geoOptions = {
     enableHighAccuracy: true,
@@ -1415,42 +1628,57 @@ function verifyGeolocation() {
         timestamp: new Date().toISOString()
       };
 
+      // ซ่อน Overlay กลางกล้อง และเปิดกล้องทันที
+      const centerOverlay = document.getElementById('camCenterActionOverlay');
+      if (centerOverlay) centerOverlay.style.display = 'none';
+
+      initLiveCamera();
+
       // แสดงผล UI
-      statusBox.classList.remove('unverified', 'within', 'outside');
-      if (isWithinZone) {
-        statusBox.classList.add('within');
-        statusTitle.innerHTML = `<i class="fa-solid fa-circle-check"></i> ยืนยันพิกัดถูกต้อง: อยู่ ณ ${locationName}`;
-        statusDesc.innerText = `พิกัดตรงตามจุดที่กำหนด (ความคลาดเคลื่อน ±${Math.round(accuracy)} ม.) อนุญาตให้เช็คชื่อได้`;
-      } else {
-        statusBox.classList.add('outside');
-        statusTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> อยู่นอกพื้นที่ที่กำหนด`;
-        statusDesc.innerText = `ตรวจพบว่าท่านอยู่: ${locationName} (อยู่นอกรัศมีที่อนุญาต)`;
+      if (statusBox) {
+        statusBox.classList.remove('unverified', 'within', 'outside');
+        if (isWithinZone) {
+          statusBox.classList.add('within');
+          statusTitle.innerHTML = `<i class="fa-solid fa-circle-check"></i> ยืนยันพิกัดถูกต้อง: อยู่ ณ ${locationName}`;
+          statusDesc.innerText = `พิกัดตรงตามจุดที่กำหนด (ความคลาดเคลื่อน ±${Math.round(accuracy)} ม.) อนุญาตให้เช็คชื่อได้`;
+        } else {
+          statusBox.classList.add('outside');
+          statusTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> อยู่นอกพื้นที่ที่กำหนด`;
+          statusDesc.innerText = `ตรวจพบว่าท่านอยู่: ${locationName} (อยู่นอกรัศมีที่อนุญาต)`;
+        }
       }
 
-      detailsDiv.style.display = 'block';
-      detailsDiv.innerHTML = `พิกัดปัจจุบัน: ${userLat.toFixed(6)}, ${userLng.toFixed(6)} | แม่นยำ: ±${Math.round(accuracy)}ม. ${isMockSuspected ? '⚠️ กรุณาปิด Mock Location' : '✓ ตรวจสอบผ่าน'}`;
+      if (detailsDiv) {
+        detailsDiv.style.display = 'block';
+        detailsDiv.innerHTML = `พิกัดปัจจุบัน: ${userLat.toFixed(6)}, ${userLng.toFixed(6)} | แม่นยำ: ±${Math.round(accuracy)}ม. ${isMockSuspected ? '⚠️ กรุณาปิด Mock Location' : '✓ ตรวจสอบผ่าน'}`;
+      }
 
       showToast(`ระบุพิกัดสำเร็จ: ${isWithinZone ? 'อยู่ในพื้นที่' : 'อยู่นอกพื้นที่'}`, isWithinZone ? 'success' : 'warning');
       checkPrayerUnlockState();
 
-      // Unlock Instant Prayer Capture button upon successful GPS verification
+      // ปลดล็อกปุ่มถ่ายรูปละหมาดทันที
       const btnCapture = document.getElementById('btnCaptureInstant');
       if (btnCapture) {
         btnCapture.disabled = false;
         btnCapture.classList.remove('btn-locked');
-        btnCapture.innerHTML = '<i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึกเวลาละหมาดทันที';
+        btnCapture.innerHTML = '<i class="fa-solid fa-camera"></i> ถ่ายรูปเช็คชื่อละหมาดทันที';
       }
     },
     (error) => {
-      statusTitle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ไม่สามารถเข้าถึงพิกัด GPS ได้';
-      statusDesc.innerText = 'กรุณาอนุญาตให้เบราว์เซอร์เข้าถึง Location/GPS บนอุปกรณ์ของท่าน';
+      if (statusTitle) statusTitle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ไม่สามารถเข้าถึงพิกัด GPS ได้';
+      if (statusDesc) statusDesc.innerText = 'กรุณาอนุญาตให้เบราว์เซอร์เข้าถึง Location/GPS บนอุปกรณ์ของท่าน';
       showToast('ไม่สามารถดึงพิกัดได้: ' + error.message, 'error');
+
+      if (btnCenter) {
+        btnCenter.disabled = false;
+        btnCenter.innerHTML = '<i class="fa-solid fa-rotate-right"></i> ลองตรวจสอบพิกัดอีกครั้ง';
+      }
 
       const btnCapture = document.getElementById('btnCaptureInstant');
       if (btnCapture) {
         btnCapture.disabled = true;
         btnCapture.classList.add('btn-locked');
-        btnCapture.innerHTML = '<i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป';
+        btnCapture.innerHTML = '<i class="fa-solid fa-lock"></i> กดตรวจสอบพิกัดที่กลางกล้องก่อนถ่ายรูป';
       }
     },
     geoOptions
@@ -2191,7 +2419,7 @@ function renderSkillRadarChart() {
       responsive: true,
       maintainAspectRatio: false,
       layout: {
-        padding: { top: 12, bottom: 12, left: 16, right: 16 }
+        padding: { top: 6, bottom: 6, left: 8, right: 8 }
       },
       scales: {
         r: {
@@ -2199,9 +2427,9 @@ function renderSkillRadarChart() {
           max: 100,
           ticks: { stepSize: 25, display: false },
           pointLabels: {
-            font: { family: 'Kanit', size: 11, weight: '600' },
+            font: { family: 'Kanit', size: 10, weight: '600' },
             color: '#1e293b',
-            padding: 8
+            padding: 4
           },
           grid: { color: 'rgba(203, 213, 225, 0.85)' },
           angleLines: { color: 'rgba(203, 213, 225, 0.85)' }
@@ -2243,7 +2471,10 @@ function renderAttendanceDoughnutChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '72%',
+      cutout: '66%',
+      layout: {
+        padding: { top: 6, bottom: 6, left: 6, right: 6 }
+      },
       animation: {
         animateRotate: true,
         animateScale: true,
@@ -2253,7 +2484,8 @@ function renderAttendanceDoughnutChart() {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { font: { family: 'Kanit', size: 12 }, padding: 14 }
+          align: 'center',
+          labels: { font: { family: 'Kanit', size: 11 }, padding: 10, boxWidth: 12 }
         }
       }
     }
@@ -2288,14 +2520,17 @@ function renderPrayerBarChart() {
         duration: 1400,
         easing: 'easeOutQuart'
       },
+      layout: {
+        padding: { top: 6, bottom: 6, left: 6, right: 6 }
+      },
       scales: {
         y: {
           min: 0,
           max: 5,
-          ticks: { stepSize: 1, font: { family: 'Kanit' } }
+          ticks: { stepSize: 1, font: { family: 'Kanit', size: 11 } }
         },
         x: {
-          ticks: { font: { family: 'Kanit' } }
+          ticks: { font: { family: 'Kanit', size: 10 } }
         }
       },
       plugins: {
@@ -2332,6 +2567,9 @@ function renderActivityPieChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: { top: 6, bottom: 6, left: 6, right: 6 }
+      },
       animation: {
         animateRotate: true,
         animateScale: true,
@@ -2341,7 +2579,8 @@ function renderActivityPieChart() {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { font: { family: 'Kanit', size: 12 } }
+          align: 'center',
+          labels: { font: { family: 'Kanit', size: 11 }, padding: 10, boxWidth: 12 }
         }
       }
     }
@@ -2375,6 +2614,14 @@ function renderCurrentStudentProfile() {
   const profAvatar = document.getElementById('profAvatar');
   const selectNewGrade = document.getElementById('selectNewGrade');
 
+  const profStudentIdHeader = document.getElementById('profStudentIdHeader');
+  const profFullNameDetail = document.getElementById('profFullNameDetail');
+  const profSchoolDetail = document.getElementById('profSchoolDetail');
+  const profGradeDetail = document.getElementById('profGradeDetail');
+  const profRegDate = document.getElementById('profRegDate');
+  const profStatusDetail = document.getElementById('profStatusDetail');
+  const profStatusBadge = document.getElementById('profStatusBadge');
+
   // GUEST STATE (เมื่อยังไม่มีการเข้าสู่ระบบ)
   const headerSub = document.getElementById('headerUserSub');
   if (!currentStudent) {
@@ -2388,6 +2635,8 @@ function renderCurrentStudentProfile() {
       bannerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
     }
     if (dashGreeting) dashGreeting.innerText = 'ยินดีต้อนรับสู่ KHALIFAH PROGRAM';
+    const dashGreetingName = document.getElementById('dashGreetingName');
+    if (dashGreetingName) dashGreetingName.innerText = 'ผู้ใช้งานทั่วไป';
     if (dashSubtitle) dashSubtitle.innerText = '';
     if (dashStudentId) dashStudentId.innerText = '-';
     if (dashGrade) dashGrade.innerText = '-';
@@ -2405,6 +2654,14 @@ function renderCurrentStudentProfile() {
     if (profBirthDate) profBirthDate.innerText = '-';
     if (profParentPhone) profParentPhone.innerText = '-';
     if (profAvatar) profAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
+
+    if (profStudentIdHeader) profStudentIdHeader.innerText = '-';
+    if (profFullNameDetail) profFullNameDetail.innerText = '-';
+    if (profSchoolDetail) profSchoolDetail.innerText = '-';
+    if (profGradeDetail) profGradeDetail.innerText = '-';
+    if (profRegDate) profRegDate.innerText = '-';
+    if (profStatusDetail) profStatusDetail.innerText = '-';
+    if (profStatusBadge) profStatusBadge.innerHTML = '<i class="fa-solid fa-circle-question"></i> ยังไม่ได้เข้าสู่ระบบ';
     return;
   }
 
@@ -2438,6 +2695,8 @@ function renderCurrentStudentProfile() {
     }
   }
   if (dashGreeting) dashGreeting.innerText = `ยินดีต้อนรับ, ${currentStudent.fullName}`;
+  const dashGreetingName = document.getElementById('dashGreetingName');
+  if (dashGreetingName) dashGreetingName.innerText = currentStudent.fullName;
   if (dashSubtitle) dashSubtitle.innerText = '';
   if (dashStudentId) dashStudentId.innerText = currentStudent.studentId;
   if (dashGrade) dashGrade.innerText = currentStudent.grade;
@@ -2455,12 +2714,43 @@ function renderCurrentStudentProfile() {
   if (statAct) statAct.innerText = `${myActs.length} ครั้ง`;
   if (statGpa) statGpa.innerText = currentStudent.gpa || '0.00';
 
+  // Profile Information Card & Full Registration Details
   if (profFullName) profFullName.innerText = currentStudent.fullName;
   if (profSchool) profSchool.innerText = currentStudent.schoolName;
   if (profGradeBadge) profGradeBadge.innerText = currentStudent.grade;
   if (profStudentId) profStudentId.innerText = currentStudent.studentId;
-  if (profBirthDate) profBirthDate.innerText = currentStudent.birthDate;
-  if (profParentPhone) profParentPhone.innerText = currentStudent.parentPhone;
+  if (profStudentIdHeader) profStudentIdHeader.innerText = currentStudent.studentId;
+
+  if (profFullNameDetail) profFullNameDetail.innerText = currentStudent.fullName;
+  if (profSchoolDetail) profSchoolDetail.innerText = currentStudent.schoolName;
+  if (profGradeDetail) profGradeDetail.innerText = currentStudent.grade;
+
+  // Format birthDate (e.g. 01012540 -> 01/01/2540)
+  const rawBD = currentStudent.birthDate ? String(currentStudent.birthDate).trim() : '';
+  let formattedBD = rawBD || '-';
+  if (rawBD.length === 8 && !rawBD.includes('/') && !rawBD.includes('-')) {
+    formattedBD = `${rawBD.substring(0, 2)}/${rawBD.substring(2, 4)}/${rawBD.substring(4, 8)} (${rawBD})`;
+  }
+  if (profBirthDate) profBirthDate.innerText = formattedBD;
+
+  if (profParentPhone) profParentPhone.innerText = currentStudent.parentPhone || '-';
+
+  // Format Registration Date
+  let regStr = currentStudent.registeredAt || currentStudent.createdAt || '';
+  if (!regStr) {
+    regStr = 'บันทึกในระบบเรียบร้อย (Active)';
+  } else if (regStr.includes('T')) {
+    try {
+      const rd = new Date(regStr);
+      regStr = rd.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch (e) {}
+  }
+  if (profRegDate) profRegDate.innerText = regStr;
+
+  const statusText = currentStudent.status || 'Active (กำลังศึกษา)';
+  if (profStatusDetail) profStatusDetail.innerText = statusText;
+  if (profStatusBadge) profStatusBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${statusText}`;
+
   if (profAvatar) {
     if (currentStudent.avatarUrl) {
       profAvatar.innerHTML = `<img src="${currentStudent.avatarUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
@@ -2766,6 +3056,7 @@ function handleStudentRegister() {
     birthDate: cleanBD, // บันทึกเป็น 8 หลัก เช่น 01012540
     parentPhone: parentPhone,
     status: 'Active',
+    registeredAt: new Date().toISOString(),
     avatarUrl: registerAvatarBase64 || '',
     skills: { religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0 },
     gpa: '0.00',
