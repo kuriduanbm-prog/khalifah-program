@@ -319,19 +319,14 @@
     <section id="view-prayer" class="view-section">
       <div class="card" style="max-width: 760px; margin: 0 auto 1.5rem auto; padding: 1.25rem 1.15rem;">
         
-        <!-- Header with Title and History Button -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; gap: 0.5rem; flex-wrap: wrap;">
-          <div>
-            <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-dark); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-              <i class="fa-solid fa-mosque" style="color: var(--primary);"></i> เช็คละหมาด 5 เวลา
-            </h2>
-            <p style="font-size: 0.76rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">
-              ระบุพิกัดแล้วถ่ายภาพเพื่อเช็คชื่อละหมาดทันที
-            </p>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="openPrayerHistoryModal()" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">
-            <i class="fa-solid fa-clock-rotate-left"></i> ประวัติย้อนหลัง
-          </button>
+        <!-- Header with Title -->
+        <div style="margin-bottom: 0.85rem;">
+          <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-dark); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+            <i class="fa-solid fa-mosque" style="color: var(--primary);"></i> เช็คละหมาด 5 เวลา
+          </h2>
+          <p style="font-size: 0.76rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">
+            ระบุพิกัดแล้วถ่ายภาพเพื่อเช็คชื่อละหมาดทันที
+          </p>
         </div>
 
         <!-- 1. GPS Geofence Compact Status (Hidden by default, action is now in center of camera) -->
@@ -674,7 +669,7 @@
             </div>
           </div>
 
-          <!-- Section 3: บันทึกการจบค็อตมุลกุรอาน 30 ยุซ (ดาวประดับรอบโปรไฟล์) -->
+          <!-- Section 3: บันทึกการจบค็อตมุลกุรอาน 30 ยุซ (Minimalist & Clean) -->
           <div class="khatam-counter-card">
             <div class="khatam-top-row">
               <div style="display: flex; align-items: center; gap: 0.65rem;">
@@ -682,16 +677,22 @@
                   <i class="fa-solid fa-crown"></i>
                 </div>
                 <div>
-                  <div style="font-weight: 700; font-size: 0.98rem; color: #fde047;">อ่านจบ 30 ยุซ (ค็อตมุลกุรอาน) แล้วกี่ครั้ง?</div>
-                  <div style="font-size: 0.76rem; color: rgba(255, 255, 255, 0.85);">⭐ จบ 1 ครั้ง = รับดาวเกียรติยศ 1 ดวง ลอยรอบรูปโปรไฟล์ (10 ครั้ง = 10 ดวง)</div>
+                  <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">ค็อตมุลกุรอาน (อ่านจบ 30 ยุซ)</div>
+                  <div style="font-size: 0.74rem; color: #64748b;">⭐ จบ 1 ครั้ง = รับดาวเกียรติยศ 1 ดวง ลอยรอบรูปโปรไฟล์</div>
                 </div>
               </div>
+              <span class="badge" style="background: #fefce8; color: #854d0e; border: 1px solid #fde047; font-size: 0.78rem; font-weight: 700; border-radius: 9999px; padding: 0.28rem 0.75rem;" id="quranKhatamDisplayBadge">
+                ⭐ 0 ดาวรอบโปรไฟล์
+              </span>
             </div>
 
             <div class="khatam-stepper-control">
-              <button type="button" class="btn-khatam-step" onclick="adjustKhatamCount(-1)">-</button>
-              <input type="number" id="quranKhatamCountInput" class="form-control khatam-num-input" min="0" max="100" placeholder="0" value="0" oninput="onKhatamInputChange()">
-              <button type="button" class="btn-khatam-step plus" onclick="adjustKhatamCount(1)">+</button>
+              <div class="khatam-stepper-left">
+                <button type="button" class="btn-khatam-step" onclick="adjustKhatamCount(-1)" title="ลดจำนวน">−</button>
+                <input type="number" id="quranKhatamCountInput" class="form-control khatam-num-input" min="0" max="100" placeholder="0" value="0" oninput="onKhatamInputChange()">
+                <span class="khatam-unit-label">ครั้ง</span>
+                <button type="button" class="btn-khatam-step plus" onclick="adjustKhatamCount(1)" title="เพิ่มจำนวน">+</button>
+              </div>
               <button type="button" class="btn-khatam-add-one" onclick="adjustKhatamCount(1)">
                 <i class="fa-solid fa-plus"></i> จบ 30 ยุซ 1 ครั้ง
               </button>
