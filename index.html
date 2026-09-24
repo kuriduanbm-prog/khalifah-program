@@ -434,8 +434,14 @@
           </div>
         </div>
 
+        <!-- Compact Location Indicator (Visible, not too big) -->
+        <div id="prayerVerifiedLocBadge" style="display: none; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.82rem; font-weight: 600; margin-top: 0.6rem; margin-bottom: 0.15rem; text-align: center; max-width: 100%; word-break: break-word;">
+          <i class="fa-solid fa-location-dot"></i>
+          <span id="prayerVerifiedLocText">สถานที่: กำลังตรวจสอบ...</span>
+        </div>
+
         <!-- 4. One-Click Instant Capture & Save Button (Placed directly below camera) -->
-        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none; margin-top: 0.65rem; margin-bottom: 1.1rem;">
+        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none; margin-top: 0.45rem; margin-bottom: 1.1rem;">
           <i class="fa-solid fa-lock"></i> กดตรวจสอบพิกัดที่กลางกล้องก่อนถ่ายรูป
         </button>
 
@@ -2153,6 +2159,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=2.6"></script>
+  <script src="app.js?v=2.8"></script>
 </body>
 </html>
