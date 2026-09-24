@@ -1261,6 +1261,24 @@ const GEOFENCE_TARGETS = {
     lat: 6.595447179117194,
     lng: 101.34457407757654,
     radius: 40 // เมตร
+  },
+  IBN_AFFAN_DORM: {
+    name: 'หอพักอิบนูอัฟฟาน มหาวิทยาลัยฟาฏอนี',
+    lat: 6.600294706405178,
+    lng: 101.34364379813283,
+    radius: 26 // เมตร
+  },
+  FEMALE_DORM_5: {
+    name: 'หอพักนักศึกษาหญิง (หอ 5)',
+    lat: 6.5982906571204625,
+    lng: 101.34787942340711,
+    radius: 37 // เมตร
+  },
+  MUSALLA_DORM_5: {
+    name: 'มุศ็อลลา (หอ 5)',
+    lat: 6.598852468763226,
+    lng: 101.34829218626834,
+    radius: 16 // เมตร
   }
 };
 
@@ -1593,41 +1611,36 @@ function verifyGeolocation() {
         isMockSuspected = true;
       }
 
-      // คำนวณระยะห่างจากเป้าหมายทั้ง 2 แห่ง
-      const distMosque = calculateDistanceInMeters(
-        userLat, userLng,
-        GEOFENCE_TARGETS.MOSQUE.lat, GEOFENCE_TARGETS.MOSQUE.lng
-      );
+      // คำนวณระยะห่างจากเป้าหมายทั้งหมดใน GEOFENCE_TARGETS
+      const targetEntries = Object.values(GEOFENCE_TARGETS);
+      let matchedTarget = null;
+      let minTarget = null;
+      let minDistance = Infinity;
 
-      const distScience = calculateDistanceInMeters(
-        userLat, userLng,
-        GEOFENCE_TARGETS.SCIENCE_FACULTY.lat, GEOFENCE_TARGETS.SCIENCE_FACULTY.lng
-      );
+      for (const target of targetEntries) {
+        const dist = calculateDistanceInMeters(userLat, userLng, target.lat, target.lng);
+        if (dist <= target.radius) {
+          matchedTarget = target;
+          minDistance = Math.round(dist);
+          break; // อยู่ในรัศมีที่อนุญาต
+        }
+        if (dist < minDistance) {
+          minDistance = dist;
+          minTarget = target;
+        }
+      }
 
       let locationName = '';
       let isWithinZone = false;
-      let minDistance = 0;
 
-      if (distMosque <= GEOFENCE_TARGETS.MOSQUE.radius) {
-        // อยู่ในเขตมัสยิดอัลฮารอมัยน์ 18 เมตร
-        locationName = GEOFENCE_TARGETS.MOSQUE.name;
+      if (matchedTarget) {
+        locationName = matchedTarget.name;
         isWithinZone = true;
-        minDistance = Math.round(distMosque);
-      } else if (distScience <= GEOFENCE_TARGETS.SCIENCE_FACULTY.radius) {
-        // อยู่ในเขตคณะวิทยาศาสตร์และเทคโนโลยี 40 เมตร
-        locationName = GEOFENCE_TARGETS.SCIENCE_FACULTY.name;
-        isWithinZone = true;
-        minDistance = Math.round(distScience);
       } else {
-        // อยู่นอกระยะทั้ง 2 จุด
         isWithinZone = false;
-        if (distMosque < distScience) {
-          minDistance = Math.round(distMosque);
-          locationName = `ห่างจาก${GEOFENCE_TARGETS.MOSQUE.name} ${formatDistance(minDistance)}`;
-        } else {
-          minDistance = Math.round(distScience);
-          locationName = `ห่างจาก${GEOFENCE_TARGETS.SCIENCE_FACULTY.name} ${formatDistance(minDistance)}`;
-        }
+        minDistance = Math.round(minDistance);
+        const nearestName = minTarget ? minTarget.name : 'พื้นที่เป้าหมาย';
+        locationName = `ห่างจาก${nearestName} ${formatDistance(minDistance)}`;
       }
 
       verifiedLocation = {
