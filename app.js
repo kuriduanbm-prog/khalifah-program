@@ -1686,15 +1686,8 @@ function verifyGeolocation() {
       }
 
       showToast(`ระบุพิกัดสำเร็จ: ${isWithinZone ? 'อยู่ในพื้นที่' : 'อยู่นอกพื้นที่'}`, isWithinZone ? 'success' : 'warning');
+      updateCameraOverlayText();
       checkPrayerUnlockState();
-
-      // ปลดล็อกปุ่มถ่ายรูปละหมาดทันที
-      const btnCapture = document.getElementById('btnCaptureInstant');
-      if (btnCapture) {
-        btnCapture.disabled = false;
-        btnCapture.classList.remove('btn-locked');
-        btnCapture.innerHTML = '<i class="fa-solid fa-camera"></i> ถ่ายรูปเช็คชื่อละหมาดทันที';
-      }
     },
     (error) => {
       if (statusTitle) statusTitle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ไม่สามารถเข้าถึงพิกัด GPS ได้';
@@ -1706,12 +1699,7 @@ function verifyGeolocation() {
         btnCenter.innerHTML = '<i class="fa-solid fa-rotate-right"></i> ลองตรวจสอบพิกัดอีกครั้ง';
       }
 
-      const btnCapture = document.getElementById('btnCaptureInstant');
-      if (btnCapture) {
-        btnCapture.disabled = true;
-        btnCapture.classList.add('btn-locked');
-        btnCapture.innerHTML = '<i class="fa-solid fa-lock"></i> กดตรวจสอบพิกัดที่กลางกล้องก่อนถ่ายรูป';
-      }
+      checkPrayerUnlockState();
     },
     geoOptions
   );
@@ -1747,20 +1735,44 @@ function selectPrayerTime(timeName, element) {
 
 function checkPrayerUnlockState() {
   const btnCapture = document.getElementById('btnCaptureInstant');
+  const locBadge = document.getElementById('prayerVerifiedLocBadge');
+  const locText = document.getElementById('prayerVerifiedLocText');
+
   if (!btnCapture) return;
 
   if (verifiedLocation) {
     btnCapture.disabled = false;
     btnCapture.classList.remove('btn-locked');
-    if (selectedPrayerTime) {
-      btnCapture.innerHTML = `<i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึกเวลา ${selectedPrayerTime} ทันที`;
-    } else {
-      btnCapture.innerHTML = '<i class="fa-solid fa-camera"></i> ถ่ายรูปเช็คชื่อละหมาดทันที';
+
+    const locName = verifiedLocation.locationName || 'พิกัด GPS';
+    const isWithin = verifiedLocation.isWithinZone;
+    const pTimeText = selectedPrayerTime ? `เวลา ${selectedPrayerTime}` : 'ละหมาด';
+
+    // อัปเดตแถบป้ายพิกัดกะทัดรัด (ไม่ใหญ่เกินไป เห็นได้ชัดเจน)
+    if (locBadge && locText) {
+      locBadge.style.display = 'inline-flex';
+      locBadge.style.background = isWithin ? '#ecfdf5' : '#fffbeb';
+      locBadge.style.borderColor = isWithin ? '#a7f3d0' : '#fde68a';
+      locBadge.style.color = isWithin ? '#065f46' : '#92400e';
+      locText.innerHTML = `พิกัด: <b>${locName}</b> ${isWithin ? '✓ (ในจุดเช็คชื่อ)' : '⚠️'}`;
     }
+
+    // แสดงชื่อสถานที่บนปุ่มกดละหมาดโดยตรง (ขนาดพอดี ไม่ใหญ่เกินไป)
+    btnCapture.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
+        <div style="font-size: 0.98rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+          <i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึก${pTimeText}ทันที
+        </div>
+        <div style="font-size: 0.78rem; font-weight: 500; opacity: 0.92; display: flex; align-items: center; gap: 0.3rem;">
+          <i class="fa-solid fa-location-dot" style="font-size: 0.72rem;"></i> ณ ${locName}
+        </div>
+      </div>
+    `;
   } else {
     btnCapture.disabled = true;
     btnCapture.classList.add('btn-locked');
     btnCapture.innerHTML = '<i class="fa-solid fa-lock"></i> กดตรวจสอบพิกัดที่กลางกล้องก่อนถ่ายรูป';
+    if (locBadge) locBadge.style.display = 'none';
   }
 }
 
