@@ -391,6 +391,9 @@ function doPost(e) {
       case 'recordHasanat':
       case 'saveQuranLog':
       case 'saveSunnahLog':
+      case 'saveSurahMemorizationLog':
+      case 'saveSurahLog':
+      case 'saveHasanatLog':
         result = recordHasanat(postData.data || postData);
         break;
       case 'batchSync':
@@ -483,6 +486,10 @@ function registerStudent(data) {
     Logger.log('Drive photo save error: ' + photoErr.message);
   }
 
+  const safePhotoRef = (photoLink && !photoLink.startsWith('data:image')) 
+    ? photoLink 
+    : (rawPhoto && !rawPhoto.startsWith('data:image') && rawPhoto.length < 500 ? rawPhoto : 'รูปโปรไฟล์ในอุปกรณ์');
+
   sheet.appendRow([
     studentIdFormatted,
     data.fullName || '',
@@ -492,7 +499,7 @@ function registerStudent(data) {
     parentPhoneFormatted,
     registeredAt,
     formatStudentStatusThai(data.status || 'Active'),
-    photoLink || rawPhoto
+    safePhotoRef
   ]);
 
   return { 
@@ -630,18 +637,25 @@ function updateSubjectScores(data) {
 }
 
 function recordPrayer(data) {
+  if (!data) return { success: false, message: 'ไม่มีข้อมูลการละหมาด' };
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.PRAYERS);
 
-  const logId = 'PRY-' + new Date().getTime();
-  const timestamp = new Date().toISOString();
+  const logId = data.logId || data.id || ('PRY-' + new Date().getTime());
+  const timestamp = data.timestamp || new Date().toISOString();
   const now = new Date();
-  const dateStr = Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
-  const timeStr = Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
+  const dateStr = data.date || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
+  const timeStr = data.time || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
 
-  let photoRef = data.photoUrl || '';
-  if (data.photoBase64) {
+  // จัดการรูปถ่ายพยานการละหมาด
+  const rawBase64 = data.photoBase64 || data.photo || (data.photoUrl && data.photoUrl.startsWith('data:image') ? data.photoUrl : '');
+  let photoRef = '';
+  if (data.photoUrl && !data.photoUrl.startsWith('data:image')) {
+    photoRef = data.photoUrl;
+  }
+
+  if (rawBase64 && rawBase64.startsWith('data:image')) {
     try {
       const folderName = "Khalifah_Prayer_Photos";
       let folder;
@@ -653,33 +667,58 @@ function recordPrayer(data) {
       }
       
       const contentType = "image/jpeg";
-      const bytes = Utilities.base64Decode(data.photoBase64.split(',')[1] || data.photoBase64);
-      const blob = Utilities.newBlob(bytes, contentType, `${data.studentId}_${data.prayerTime}_${dateStr}.jpg`);
+      const cleanBase64 = rawBase64.includes(',') ? rawBase64.split(',')[1] : rawBase64;
+      const bytes = Utilities.base64Decode(cleanBase64);
+      const studentIdClean = String(data.studentId || 'std').replace(/[^a-zA-Z0-9_-]/g, '');
+      const pTimeClean = String(data.prayerTime || data.prayerName || 'prayer').replace(/[^a-zA-Z0-9_\u0E00-\u0E7F-]/g, '');
+      const blob = Utilities.newBlob(bytes, contentType, `${studentIdClean}_${pTimeClean}_${dateStr}_${logId}.jpg`);
       const file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       photoRef = file.getUrl();
     } catch (err) {
-      photoRef = 'Stored locally';
+      Logger.log('Drive prayer photo error: ' + err.message);
+      photoRef = 'รูปถ่ายยืนยันในเครื่อง (Local Snapshot)';
     }
   }
 
-  const prayerNameThai = formatPrayerTimeThai(data.prayerTime);
+  if (!photoRef) {
+    photoRef = (data.photoUrl && data.photoUrl.length < 500) ? data.photoUrl : 'รูปถ่ายยืนยันในเครื่อง';
+  }
+
+  // รองรับทั้ง prayerTime, prayerName, timeSlot
+  const rawPrayerTime = data.prayerTime || data.prayerName || data.timeSlot || '';
+  const prayerNameThai = formatPrayerTimeThai(rawPrayerTime);
   const statusThai = formatStatusThai(data.status || 'ตรงเวลา');
-  const withinZoneThai = (data.isWithinZone === true || data.isWithinZone === 'ใช่') ? 'ใช่' : 'ไม่ใช่';
+  const isWithin = (data.isWithinZone === true || data.isWithinZone === 'ใช่' || data.isWithinZone === 'true');
+  const withinZoneThai = isWithin ? 'ใช่' : 'ไม่ใช่';
+
+  // รองรับทั้ง latitude/longitude และ lat/lng
+  const lat = (data.latitude !== undefined && data.latitude !== null && data.latitude !== '') 
+    ? data.latitude 
+    : ((data.lat !== undefined && data.lat !== null && data.lat !== '') ? data.lat : '');
+  const lng = (data.longitude !== undefined && data.longitude !== null && data.longitude !== '') 
+    ? data.longitude 
+    : ((data.lng !== undefined && data.lng !== null && data.lng !== '') ? data.lng : '');
+
+  // ระบุสถานที่และพิกัด Google Maps หากอยู่นอกพื้นที่
+  let locationDisplay = data.locationName || '';
+  if (lat && lng && !isWithin) {
+    locationDisplay += ` (แผนที่: https://www.google.com/maps?q=${lat},${lng})`;
+  }
 
   sheet.appendRow([
     logId,
     formatAsText(data.studentId),
-    data.studentName,
-    data.grade,
+    data.studentName || '',
+    data.grade || '',
     prayerNameThai,
     timestamp,
-    data.date || dateStr,
-    data.time || timeStr,
-    data.latitude,
-    data.longitude,
-    data.locationName,
-    data.distanceMeters,
+    dateStr,
+    timeStr,
+    lat,
+    lng,
+    locationDisplay,
+    data.distanceMeters || 0,
     withinZoneThai,
     photoRef,
     statusThai,
@@ -1038,7 +1077,10 @@ function recordHasanat(data) {
     stars: data.stars || 0,
     khatamCount: data.khatamCount || 0
   };
-  const m = data.memorization || {};
+  const m = data.memorization || {
+    count: data.count || data.memorizedCount || (Array.isArray(data.memorizedSurahs) ? data.memorizedSurahs.length : 0),
+    memorizedSurahs: data.memorizedSurahs || []
+  };
   const s = data.sunnah || {
     totalRakaat: data.totalRakaat || 0,
     rawatib: data.rawatib || {}
