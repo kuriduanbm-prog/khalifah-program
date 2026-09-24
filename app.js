@@ -364,27 +364,12 @@ function renderAvatarOrbitStars(khatamCount = 0) {
 }
 
 /**
- * แสดงป้ายเกียรติยศค็อตมุลกุรอานใต้รูปโปรไฟล์
+ * ป้ายข้อความค็อตมุลกุรอานใต้รูปโปรไฟล์ (นำออกตามความต้องการของผู้ใช้ ให้เหลือเฉพาะดาวรอบโปรไฟล์)
  */
 function renderKhatamBadge(khatamCount = 0) {
   const container = document.getElementById('dashKhatamBadgeContainer');
-  if (!container) return;
-
-  const count = parseInt(khatamCount) || 0;
-  if (count > 0) {
-    container.innerHTML = `
-      <div class="banner-khatam-pill" onclick="showKhatamHonourToast(${count}, ${count})" title="คลิกเพื่อดูบันทึกเกียรติยศแห่งกุรอาน">
-        <i class="fa-solid fa-crown" style="color: #fbbf24;"></i>
-        ค็อตมุลกุรอาน 30 ยุซ <strong>${count} จบ</strong> (${count} ดาวเกียรติยศ)
-      </div>
-    `;
-  } else {
-    container.innerHTML = `
-      <div class="banner-khatam-pill empty" onclick="switchView('hasanat'); switchHasanatSubTab('quran');" title="คลิกเพื่อบันทึกการอ่านอัลกุรอาน">
-        <i class="fa-solid fa-book-quran" style="color: #93c5fd;"></i>
-        อ่านจบ 30 ยุซ เพื่อรับดาวเกียรติยศรอบโปรไฟล์ ⭐
-      </div>
-    `;
+  if (container) {
+    container.innerHTML = '';
   }
 }
 
@@ -577,6 +562,137 @@ function saveQuranReadingLog() {
   }
 }
 
+// ==================== 114 QURAN SURAHS WITH JUZ MAPPING ==================== //
+const QURAN_SURAHS = [
+  { num: 1, name: "อัลฟาติฮะฮ์", arabic: "الفاتحة", ayahs: 7, juz: 1 },
+  { num: 2, name: "อัลบะเกาะเราะฮ์", arabic: "البقرة", ayahs: 286, juz: 1 },
+  { num: 3, name: "อาลิอิมรอน", arabic: "آل عمران", ayahs: 200, juz: 3 },
+  { num: 4, name: "อันนิซาอ์", arabic: "النساء", ayahs: 176, juz: 4 },
+  { num: 5, name: "อัลมาอิดะฮ์", arabic: "المائدة", ayahs: 120, juz: 6 },
+  { num: 6, name: "อัลอันอาม", arabic: "الأنعام", ayahs: 165, juz: 7 },
+  { num: 7, name: "อัลอะอ์รอฟ", arabic: "الأعراف", ayahs: 206, juz: 8 },
+  { num: 8, name: "อัลอันฟาล", arabic: "الأنفال", ayahs: 75, juz: 9 },
+  { num: 9, name: "อัตเตาบะฮ์", arabic: "التوبة", ayahs: 129, juz: 10 },
+  { num: 10, name: "ยูนุส", arabic: "يونس", ayahs: 109, juz: 11 },
+  { num: 11, name: "ฮูด", arabic: "هود", ayahs: 123, juz: 11 },
+  { num: 12, name: "ยูซุฟ", arabic: "يوسف", ayahs: 111, juz: 12 },
+  { num: 13, name: "อัรเราะอ์ดุ", arabic: "الرعد", ayahs: 43, juz: 13 },
+  { num: 14, name: "อิบรอฮีม", arabic: "إبراهيم", ayahs: 52, juz: 13 },
+  { num: 15, name: "อัลฮิจญร์", arabic: "الحجر", ayahs: 99, juz: 14 },
+  { num: 16, name: "อันนะห์ลุ", arabic: "النحل", ayahs: 128, juz: 14 },
+  { num: 17, name: "อัลอิสรออ์", arabic: "الإسراء", ayahs: 111, juz: 15 },
+  { num: 18, name: "อัลกะฮ์ฟิ", arabic: "الكهف", ayahs: 110, juz: 15 },
+  { num: 19, name: "มัรยัม", arabic: "مريم", ayahs: 98, juz: 16 },
+  { num: 20, name: "ฏอฮา", arabic: "طه", ayahs: 135, juz: 16 },
+  { num: 21, name: "อัลอันบิยาอ์", arabic: "الأنبياء", ayahs: 112, juz: 17 },
+  { num: 22, name: "อัลฮัจญ์", arabic: "الحج", ayahs: 78, juz: 17 },
+  { num: 23, name: "อัลมุอ์มินูน", arabic: "المؤمنون", ayahs: 118, juz: 18 },
+  { num: 24, name: "อันนูร", arabic: "النور", ayahs: 64, juz: 18 },
+  { num: 25, name: "อัลฟุรกอน", arabic: "الفرقان", ayahs: 77, juz: 18 },
+  { num: 26, name: "อัชชุอะรออ์", arabic: "الشعراء", ayahs: 227, juz: 19 },
+  { num: 27, name: "อันนัมลุ", arabic: "النمل", ayahs: 93, juz: 19 },
+  { num: 28, name: "อัลเกาะศอศ", arabic: "القصص", ayahs: 88, juz: 20 },
+  { num: 29, name: "อัลอังกะบูต", arabic: "العنكبوت", ayahs: 69, juz: 20 },
+  { num: 30, name: "อัรรูม", arabic: "الروم", ayahs: 60, juz: 21 },
+  { num: 31, name: "ลุกมาน", arabic: "لقمان", ayahs: 34, juz: 21 },
+  { num: 32, name: "อัสสะญะดะฮ์", arabic: "السجدة", ayahs: 30, juz: 21 },
+  { num: 33, name: "อัลอะห์ซาบ", arabic: "الأحزاب", ayahs: 73, juz: 21 },
+  { num: 34, name: "สะบะอ์", arabic: "سبإ", ayahs: 54, juz: 22 },
+  { num: 35, name: "ฟาฏิร", arabic: "فاطر", ayahs: 45, juz: 22 },
+  { num: 36, name: "ยาซีน", arabic: "يس", ayahs: 83, juz: 22 },
+  { num: 37, name: "อัศศ็อฟฟาต", arabic: "الصافات", ayahs: 182, juz: 23 },
+  { num: 38, name: "ศอด", arabic: "ص", ayahs: 88, juz: 23 },
+  { num: 39, name: "อัซซุมัร", arabic: "الزمر", ayahs: 75, juz: 23 },
+  { num: 40, name: "ฆอฟิร", arabic: "غافر", ayahs: 85, juz: 24 },
+  { num: 41, name: "ฟุศศิลัต", arabic: "فصلت", ayahs: 54, juz: 24 },
+  { num: 42, name: "อัชชูรอ", arabic: "الشورى", ayahs: 53, juz: 25 },
+  { num: 43, name: "อัซซุครุฟ", arabic: "الزخرف", ayahs: 89, juz: 25 },
+  { num: 44, name: "อัดดุคอน", arabic: "الدخان", ayahs: 59, juz: 25 },
+  { num: 45, name: "อัลญาษิยะฮ์", arabic: "الجاثية", ayahs: 37, juz: 25 },
+  { num: 46, name: "อัลอะห์กอฟ", arabic: "الأحقاف", ayahs: 35, juz: 26 },
+  { num: 47, name: "มุฮัมมัด", arabic: "محمد", ayahs: 38, juz: 26 },
+  { num: 48, name: "อัลฟัตห์", arabic: "الفتح", ayahs: 29, juz: 26 },
+  { num: 49, name: "อัลฮุญุรอต", arabic: "الحجرات", ayahs: 18, juz: 26 },
+  { num: 50, name: "กอฟ", arabic: "ق", ayahs: 45, juz: 26 },
+  { num: 51, name: "อัซซาริยาต", arabic: "الذاريات", ayahs: 60, juz: 26 },
+  { num: 52, name: "อัฏฏูร", arabic: "الطور", ayahs: 49, juz: 27 },
+  { num: 53, name: "อันนัจญม์", arabic: "النجم", ayahs: 62, juz: 27 },
+  { num: 54, name: "อัลเกาะมัร", arabic: "القمر", ayahs: 55, juz: 27 },
+  { num: 55, name: "อัรเราะห์มาน", arabic: "الرحمن", ayahs: 78, juz: 27 },
+  { num: 56, name: "อัลวากิอะฮ์", arabic: "الواقعة", ayahs: 96, juz: 27 },
+  { num: 57, name: "อัลฮะดีด", arabic: "الحديد", ayahs: 29, juz: 27 },
+  { num: 58, name: "อัลมุญาดะละฮ์", arabic: "المجادلة", ayahs: 22, juz: 28 },
+  { num: 59, name: "อัลฮัชร", arabic: "الحشر", ayahs: 24, juz: 28 },
+  { num: 60, name: "อัลมุมตะฮะนะฮ์", arabic: "الممتحنة", ayahs: 13, juz: 28 },
+  { num: 61, name: "อัศศ็อฟ", arabic: "الصف", ayahs: 14, juz: 28 },
+  { num: 62, name: "อัลญุมุอะฮ์", arabic: "الجمعة", ayahs: 11, juz: 28 },
+  { num: 63, name: "อัลมุนาฟิกูน", arabic: "المنافقون", ayahs: 11, juz: 28 },
+  { num: 64, name: "อัตตะฆอบุน", arabic: "التغابن", ayahs: 18, juz: 28 },
+  { num: 65, name: "อัฏเฏาะลาก", arabic: "الطلاق", ayahs: 12, juz: 28 },
+  { num: 66, name: "อัตตะห์รีม", arabic: "التحريم", ayahs: 12, juz: 28 },
+  { num: 67, name: "อัลมุลก์", arabic: "الملك", ayahs: 30, juz: 29 },
+  { num: 68, name: "อัลเกาะลัม", arabic: "القلم", ayahs: 52, juz: 29 },
+  { num: 69, name: "อัลฮากเกาะฮ์", arabic: "الحاقة", ayahs: 52, juz: 29 },
+  { num: 70, name: "อัลมะอาริจญ์", arabic: "المعارج", ayahs: 44, juz: 29 },
+  { num: 71, name: "นูห์", arabic: "نوح", ayahs: 28, juz: 29 },
+  { num: 72, name: "อัลญิน", arabic: "الجن", ayahs: 28, juz: 29 },
+  { num: 73, name: "อัลมุซซัมมิล", arabic: "المزمل", ayahs: 20, juz: 29 },
+  { num: 74, name: "อัลมุดดัษษิร", arabic: "المدثر", ayahs: 56, juz: 29 },
+  { num: 75, name: "อัลกิยามะฮ์", arabic: "القيامة", ayahs: 40, juz: 29 },
+  { num: 76, name: "อัลอินซาน", arabic: "الإنسان", ayahs: 31, juz: 29 },
+  { num: 77, name: "อัลมุรสะลาต", arabic: "المرسلات", ayahs: 50, juz: 29 },
+  { num: 78, name: "อันนะบะอ์", arabic: "النبإ", ayahs: 40, juz: 30 },
+  { num: 79, name: "อันนาซิอาต", arabic: "النازعات", ayahs: 46, juz: 30 },
+  { num: 80, name: "อะบะสะ", arabic: "عبس", ayahs: 42, juz: 30 },
+  { num: 81, name: "อัตตักวีร", arabic: "التكوير", ayahs: 29, juz: 30 },
+  { num: 82, name: "อัลอินฟิฏอร", arabic: "الانفطار", ayahs: 19, juz: 30 },
+  { num: 83, name: "อัลมุฏ็อฟฟิฟีน", arabic: "المطففين", ayahs: 36, juz: 30 },
+  { num: 84, name: "อัลอินชิกอก", arabic: "الانشقاق", ayahs: 25, juz: 30 },
+  { num: 85, name: "อัลบุรูจญ์", arabic: "البروج", ayahs: 22, juz: 30 },
+  { num: 86, name: "อัฏฏอริก", arabic: "الطارق", ayahs: 17, juz: 30 },
+  { num: 87, name: "อัลอะอ์ลา", arabic: "الأعلى", ayahs: 19, juz: 30 },
+  { num: 88, name: "อัลฆอชิยะฮ์", arabic: "الغاشية", ayahs: 26, juz: 30 },
+  { num: 89, name: "อัลฟัจญร์", arabic: "الفجر", ayahs: 30, juz: 30 },
+  { num: 90, name: "อัลบะลัด", arabic: "البلد", ayahs: 20, juz: 30 },
+  { num: 91, name: "อัชชัมส์", arabic: "الشمس", ayahs: 15, juz: 30 },
+  { num: 92, name: "อัลลัยล์", arabic: "الليل", ayahs: 21, juz: 30 },
+  { num: 93, name: "อัฎฎุฮา", arabic: "الضحى", ayahs: 11, juz: 30 },
+  { num: 94, name: "อัชชัรห์", arabic: "الشرح", ayahs: 8, juz: 30 },
+  { num: 95, name: "อัตตีน", arabic: "التين", ayahs: 8, juz: 30 },
+  { num: 96, name: "อัลอะลัก", arabic: "العلق", ayahs: 19, juz: 30 },
+  { num: 97, name: "อัลก็อดร์", arabic: "القدر", ayahs: 5, juz: 30 },
+  { num: 98, name: "อัลบัยยินะฮ์", arabic: "البينة", ayahs: 8, juz: 30 },
+  { num: 99, name: "อัซซัลซะละฮ์", arabic: "الزلزلة", ayahs: 8, juz: 30 },
+  { num: 100, name: "อัลอาดิยาต", arabic: "العاديات", ayahs: 11, juz: 30 },
+  { num: 101, name: "อัลกอริอะฮ์", arabic: "القارعة", ayahs: 11, juz: 30 },
+  { num: 102, name: "อัตตะกาษุร", arabic: "التكاثر", ayahs: 8, juz: 30 },
+  { num: 103, name: "อัลอัศร์", arabic: "العصر", ayahs: 3, juz: 30 },
+  { num: 104, name: "อัลฮุมะซะฮ์", arabic: "الهمزة", ayahs: 9, juz: 30 },
+  { num: 105, name: "อัลฟีล", arabic: "الفيل", ayahs: 5, juz: 30 },
+  { num: 106, name: "กุรอยช์", arabic: "قريش", ayahs: 4, juz: 30 },
+  { num: 107, name: "อัลมาอูน", arabic: "الماعون", ayahs: 7, juz: 30 },
+  { num: 108, name: "อัลเกาษัร", arabic: "الكوثر", ayahs: 3, juz: 30 },
+  { num: 109, name: "อัลกาฟิรูน", arabic: "الكافرون", ayahs: 6, juz: 30 },
+  { num: 110, name: "อันนัศร์", arabic: "النصر", ayahs: 3, juz: 30 },
+  { num: 111, name: "อัลมะสัด", arabic: "المسد", ayahs: 5, juz: 30 },
+  { num: 112, name: "อัลอิคลาศ", arabic: "الإخلاص", ayahs: 4, juz: 30 },
+  { num: 113, name: "อัลฟะลัก", arabic: "الفلق", ayahs: 5, juz: 30 },
+  { num: 114, name: "อันนาส", arabic: "الناس", ayahs: 6, juz: 30 }
+];
+
+let currentSurahSortOrder = 'juz-asc'; // 'juz-asc' (1-30) หรือ 'juz-desc' (30-1)
+
+function setSurahSortOrder(order) {
+  currentSurahSortOrder = order;
+  const btnAsc = document.getElementById('btnSortJuzAsc');
+  const btnDesc = document.getElementById('btnSortJuzDesc');
+  if (btnAsc) btnAsc.classList.toggle('active', order === 'juz-asc');
+  if (btnDesc) btnDesc.classList.toggle('active', order === 'juz-desc');
+
+  const searchInput = document.getElementById('searchSurahInput');
+  renderSurahChecklist(searchInput ? searchInput.value : '');
+}
+
 function renderSurahChecklist(filterText = '') {
   const container = document.getElementById('surahListContainer');
   if (!container || !currentStudent) return;
@@ -585,7 +701,7 @@ function renderSurahChecklist(filterText = '') {
   const memorized = (h && h.memorization && h.memorization.memorizedSurahs) || [];
 
   const search = filterText.toLowerCase().trim();
-  let filtered = QURAN_SURAHS;
+  let filtered = [...QURAN_SURAHS];
 
   // Category filter
   if (currentSurahCategory === 'juzAmma') {
@@ -602,12 +718,20 @@ function renderSurahChecklist(filterText = '') {
     filtered = filtered.filter(s => {
       return s.name.toLowerCase().includes(search) ||
              s.arabic.includes(search) ||
-             String(s.num).includes(search);
+             String(s.num).includes(search) ||
+             `ยุซ ${s.juz}`.includes(search);
     });
   }
 
+  // Sort order: Juz 1->30 or Juz 30->1
+  if (currentSurahSortOrder === 'juz-desc') {
+    filtered.sort((a, b) => b.num - a.num);
+  } else {
+    filtered.sort((a, b) => a.num - b.num);
+  }
+
   if (filtered.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">ไม่พบซูเราะห์ที่ตรงกับคำค้นหา</div>';
+    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.88rem;">ไม่พบซูเราะห์ที่ตรงกับคำค้นหา</div>';
     return;
   }
 
@@ -616,15 +740,17 @@ function renderSurahChecklist(filterText = '') {
     return `
       <div class="surah-item-card ${isMem ? 'memorized' : ''}" onclick="toggleSurahMemorized(${s.num})">
         <div style="display: flex; align-items: center; gap: 0.65rem;">
-          <div class="surah-number-badge">${s.num}</div>
+          <div class="surah-number-badge" title="ซูเราะห์ลำดับที่ ${s.num}">${s.num}</div>
           <div>
             <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark);">${s.name}</div>
-            <div style="font-size: 0.72rem; color: var(--text-muted);">${s.ayahs} อายะฮ์</div>
+            <div style="font-size: 0.72rem; color: #0284c7; font-weight: 600;">
+              ยุซที่ ${s.juz} • <span style="color: var(--text-muted); font-weight: 400;">${s.ayahs} อายะฮ์</span>
+            </div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.4rem;">
-          <span style="font-family: 'Traditional Arabic', serif; font-size: 1.05rem; color: #059669;">${s.arabic}</span>
-          <input type="checkbox" ${isMem ? 'checked' : ''} onclick="event.stopPropagation(); toggleSurahMemorized(${s.num})" style="cursor: pointer; width: 18px; height: 18px; accent-color: #059669;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-family: 'Traditional Arabic', serif; font-size: 1.1rem; color: #059669; direction: rtl;">${s.arabic}</span>
+          <input type="checkbox" ${isMem ? 'checked' : ''} onclick="event.stopPropagation(); toggleSurahMemorized(${s.num})" style="cursor: pointer; width: 19px; height: 19px; accent-color: #059669;">
         </div>
       </div>
     `;
@@ -1343,8 +1469,18 @@ function formatDistance(meters) {
 function selectPrayerTime(timeName, element) {
   selectedPrayerTime = timeName;
 
-  document.querySelectorAll('.prayer-time-card').forEach(el => el.classList.remove('selected'));
-  if (element) element.classList.add('selected');
+  // นำคลาส selected ออกจากทุกปุ่มเวลาละหมาดเพื่อให้เลือกได้เพียง 1 เวลาเท่านั้น
+  document.querySelectorAll('.prayer-chip, .prayer-time-card').forEach(el => el.classList.remove('selected'));
+  if (element) {
+    element.classList.add('selected');
+  } else {
+    const target = document.getElementById(`ptime-${timeName}`);
+    if (target) target.classList.add('selected');
+  }
+
+  // ซิงค์ชื่อเวลาละหมาดบนวิดีโอถ่ายทอดสด
+  const overlayPrayer = document.getElementById('camOverlayPrayer');
+  if (overlayPrayer) overlayPrayer.innerText = `เวลาละหมาด: ${timeName}`;
 
   checkPrayerUnlockState();
 }
@@ -2048,6 +2184,10 @@ function renderSkillRadarChart() {
       }]
     },
     options: {
+      animation: {
+        duration: 1600,
+        easing: 'easeOutQuart'
+      },
       responsive: true,
       maintainAspectRatio: false,
       layout: {
@@ -2104,6 +2244,12 @@ function renderAttendanceDoughnutChart() {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '72%',
+      animation: {
+        animateRotate: true,
+        animateScale: true,
+        duration: 1500,
+        easing: 'easeOutCubic'
+      },
       plugins: {
         legend: {
           position: 'bottom',
@@ -2138,6 +2284,10 @@ function renderPrayerBarChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 1400,
+        easing: 'easeOutQuart'
+      },
       scales: {
         y: {
           min: 0,
@@ -2182,6 +2332,12 @@ function renderActivityPieChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        animateRotate: true,
+        animateScale: true,
+        duration: 1500,
+        easing: 'easeOutCubic'
+      },
       plugins: {
         legend: {
           position: 'bottom',
@@ -2388,10 +2544,43 @@ function studentLogout() {
   renderTodayPrayerTable();
   switchView('dashboard');
   showToast('ออกจากระบบนักเรียนเรียบร้อยแล้ว', 'info');
-  enforceMandatoryLogin();
+  document.body.classList.add('auth-locked');
+  toggleAuthForm('login');
+  openModal('authModal');
 }
 
 // ----------------- PROFILE PHOTO UPLOAD (COMPRESSED BASE64) ----------------- //
+let registerAvatarBase64 = '';
+
+function previewRegisterAvatar(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const size = 150;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const minDim = Math.min(img.width, img.height);
+      const startX = (img.width - minDim) / 2;
+      const startY = (img.height - minDim) / 2;
+      ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
+
+      registerAvatarBase64 = canvas.toDataURL('image/jpeg', 0.85);
+      const preview = document.getElementById('regAvatarPreview');
+      if (preview) {
+        preview.innerHTML = `<img src="${registerAvatarBase64}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function handleProfilePhotoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -2465,20 +2654,22 @@ function toggleAuthForm(formType) {
 }
 
 async function handleStudentLogin() {
-  const studentId = document.getElementById('loginStudentId').value.trim();
-  const birthDate = document.getElementById('loginBirthDate').value.trim();
+  const parentPhoneInput = (document.getElementById('loginParentPhone')?.value || '').trim();
+  const studentIdInput = (document.getElementById('loginStudentId')?.value || '').trim();
 
-  if (!studentId || !birthDate) {
-    showToast('กรุณากรอกรหัสนักเรียนและวันเดือนปีเกิด (เช่น 01012540)', 'warning');
+  if (!parentPhoneInput || !studentIdInput) {
+    showToast('กรุณากรอกเบอร์โทรศัพท์ผู้ปกครอง (User) และรหัสนักเรียน (รหัสผ่าน)', 'warning');
     return;
   }
 
-  const cleanInput = birthDate.replace(/[^0-9]/g, '');
+  const cleanInputPhone = parentPhoneInput.replace(/[^0-9]/g, '');
 
   let found = allStudents.find(s => {
-    const cleanBDate = String(s.birthDate || '').replace(/[^0-9]/g, '');
-    return s.studentId.toLowerCase() === studentId.toLowerCase() &&
-           (cleanBDate === cleanInput || String(s.birthDate || '').trim() === birthDate);
+    const cleanSPhone = String(s.parentPhone || '').replace(/[^0-9]/g, '');
+    const sId = String(s.studentId || '').trim().toLowerCase();
+    const matchId = (sId === studentIdInput.toLowerCase());
+    const matchPhone = (cleanSPhone === cleanInputPhone || String(s.parentPhone || '').trim() === parentPhoneInput);
+    return matchId && matchPhone;
   });
 
   if (!found) {
@@ -2487,14 +2678,15 @@ async function handleStudentLogin() {
     if (url && !url.includes('docs.google.com/spreadsheets')) {
       showToast('กำลังค้นหาข้อมูลนักเรียนจากฐานข้อมูลกลาง...', 'info');
       try {
-        const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentId)}`);
+        const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentIdInput)}&parentPhone=${encodeURIComponent(cleanInputPhone)}`);
         const json = await resp.json();
         if (json && json.success && json.student) {
           const remoteStudent = json.student;
-          const cleanBDate = String(remoteStudent.birthDate || '').replace(/[^0-9]/g, '');
-          if (cleanBDate === cleanInput || String(remoteStudent.birthDate || '').trim() === birthDate) {
+          const cleanRemotePhone = String(remoteStudent.parentPhone || '').replace(/[^0-9]/g, '');
+          const remoteId = String(remoteStudent.studentId || '').trim().toLowerCase();
+          if (remoteId === studentIdInput.toLowerCase() && (cleanRemotePhone === cleanInputPhone || String(remoteStudent.parentPhone || '').trim() === parentPhoneInput)) {
             found = remoteStudent;
-            const existIdx = allStudents.findIndex(s => s.studentId.toLowerCase() === studentId.toLowerCase());
+            const existIdx = allStudents.findIndex(s => s.studentId.toLowerCase() === studentIdInput.toLowerCase());
             if (existIdx !== -1) {
               allStudents[existIdx] = found;
             } else {
@@ -2521,7 +2713,7 @@ async function handleStudentLogin() {
     closeModal('authModal');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
   } else {
-    showToast('รหัสนักเรียนหรือวันเดือนปีเกิดไม่ถูกต้อง (ตัวอย่าง: 01012540)', 'error');
+    showToast('เบอร์โทรศัพท์ผู้ปกครอง (User) หรือรหัสนักเรียน (รหัสผ่าน) ไม่ถูกต้อง', 'error');
   }
 }
 
@@ -2574,6 +2766,7 @@ function handleStudentRegister() {
     birthDate: cleanBD, // บันทึกเป็น 8 หลัก เช่น 01012540
     parentPhone: parentPhone,
     status: 'Active',
+    avatarUrl: registerAvatarBase64 || '',
     skills: { religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0 },
     gpa: '0.00',
     attendance: { present: 0, late: 0, leave: 0, absent: 0 }
@@ -2584,6 +2777,13 @@ function handleStudentRegister() {
 
   currentStudent = newStudent;
   localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+
+  // Reset register avatar
+  registerAvatarBase64 = '';
+  const preview = document.getElementById('regAvatarPreview');
+  if (preview) {
+    preview.innerHTML = '<i class="fa-solid fa-camera"></i>';
+  }
 
   renderCurrentStudentProfile();
   renderDashboardCharts();
