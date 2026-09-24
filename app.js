@@ -1356,7 +1356,14 @@ let prayerChartInstance = null;
 let activityChartInstance = null;
 
 // Google Apps Script API URL
-let gasApiUrl = localStorage.getItem('khalifah_gas_url') || '';
+// Web App URL เริ่มต้นสำหรับทุกเครื่องที่เข้าใช้งาน (ใส่ Web App URL ที่นี่เพื่อให้ทุกเครื่องซิงค์อัตโนมัติ)
+const DEFAULT_GAS_API_URL = 'https://script.google.com/macros/s/AKfycbysmbfdvm7ICnMbVw2ZCm0IybsC7gtU3u7SlFHu2iQzEuZvJJRNz9wAzE8nqJEmXWSE/exec';
+let storedGasUrl = localStorage.getItem('khalifah_gas_url');
+if (storedGasUrl && (storedGasUrl.includes('docs.google.com/spreadsheets') || storedGasUrl.trim() === '')) {
+  localStorage.removeItem('khalifah_gas_url');
+  storedGasUrl = null;
+}
+let gasApiUrl = storedGasUrl || DEFAULT_GAS_API_URL;
 
 // ----------------- INITIALIZATION ----------------- //
 document.addEventListener('DOMContentLoaded', () => {
@@ -3109,8 +3116,9 @@ async function handleStudentLogin() {
 
   if (!found) {
     // If not found in local device, check Google Sheets backend
-    const url = gasApiUrl || localStorage.getItem('khalifah_gas_url');
-    if (url && !url.includes('docs.google.com/spreadsheets')) {
+    let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+    if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
+    if (url) {
       showToast('กำลังค้นหาข้อมูลนักเรียนจากฐานข้อมูลกลาง...', 'info');
       try {
         const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentIdInput)}&parentPhone=${encodeURIComponent(cleanInputPhone)}`);
@@ -4116,14 +4124,12 @@ async function convertGoogleSheetToThai() {
 
 
 async function syncRecordToGoogleSheet(action, data) {
-  const url = gasApiUrl || localStorage.getItem('khalifah_gas_url');
-  if (!url) {
-    console.log(`[Offline Local] GAS URL not configured. Data saved locally in device.`);
-    return;
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (!url || url.includes('docs.google.com/spreadsheets')) {
+    url = DEFAULT_GAS_API_URL;
   }
-
-  if (url.includes('docs.google.com/spreadsheets')) {
-    console.warn('[Invalid GAS URL] Spreadsheet link configured instead of Web App URL');
+  if (!url) {
+    console.warn(`[Offline Local] GAS Web App URL not configured. Action: ${action} saved locally on device.`);
     return;
   }
 
