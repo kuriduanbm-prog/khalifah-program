@@ -1746,14 +1746,21 @@ function selectPrayerTime(timeName, element) {
 }
 
 function checkPrayerUnlockState() {
-  const btnStartCamera = document.getElementById('btnStartCamera');
-  const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+  const btnCapture = document.getElementById('btnCaptureInstant');
+  if (!btnCapture) return;
 
-  if (verifiedLocation && selectedPrayerTime) {
-    btnStartCamera.disabled = false;
-    cameraPlaceholder.querySelector('div:last-child').innerText = `พร้อมแล้ว! กดปุ่ม "เปิดกล้องสด" เพื่อบันทึกการละหมาดเวลา ${selectedPrayerTime}`;
+  if (verifiedLocation) {
+    btnCapture.disabled = false;
+    btnCapture.classList.remove('btn-locked');
+    if (selectedPrayerTime) {
+      btnCapture.innerHTML = `<i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึกเวลา ${selectedPrayerTime} ทันที`;
+    } else {
+      btnCapture.innerHTML = '<i class="fa-solid fa-camera"></i> ถ่ายรูปเช็คชื่อละหมาดทันที';
+    }
   } else {
-    btnStartCamera.disabled = true;
+    btnCapture.disabled = true;
+    btnCapture.classList.add('btn-locked');
+    btnCapture.innerHTML = '<i class="fa-solid fa-lock"></i> กดตรวจสอบพิกัดที่กลางกล้องก่อนถ่ายรูป';
   }
 }
 
@@ -1830,24 +1837,32 @@ function captureAndSavePrayerInstant() {
   const video = document.getElementById('cameraStream');
   const canvas = document.getElementById('snapshotCanvas');
 
-  if (!video || !video.videoWidth) {
-    showToast('กำลังเชื่อมต่อกล้องถ่ายรูป กรุณาลองใหม่อีกครั้ง', 'warning');
-    initLiveCamera();
-    return;
-  }
+  const vWidth = (video && video.videoWidth > 0) ? video.videoWidth : 640;
+  const vHeight = (video && video.videoHeight > 0) ? video.videoHeight : 480;
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  canvas.width = vWidth;
+  canvas.height = vHeight;
   const ctx = canvas.getContext('2d');
 
   // Draw camera frame with correct mirroring
-  if (currentFacingMode === 'user') {
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-    ctx.restore();
+  if (video && video.srcObject && video.readyState >= 2) {
+    if (currentFacingMode === 'user') {
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
   } else {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // If video hasn't rendered first frame yet, draw a placeholder canvas
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px Kanit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ภาพถ่ายพยานการละหมาด (GPS ยืนยันแล้ว)', canvas.width / 2, canvas.height / 2);
+    ctx.textAlign = 'start';
   }
 
   // Stamp Watermark overlay
