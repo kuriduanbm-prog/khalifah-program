@@ -157,9 +157,9 @@
           
           <!-- macOS Frosted Badges -->
           <div class="banner-badges">
-            <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
-            <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
-            <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">โรงเรียน / สถาบัน</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">-</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">-</span></span>
           </div>
 
           <!-- macOS Frosted Action Button -->
@@ -433,53 +433,34 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.65rem;">
-            <div>
-              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
-                <i class="fa-solid fa-tags" style="color: var(--primary);"></i> สถานะการละหมาด
-              </label>
-              <select class="form-control" id="prayerStatusSelect" style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
-                <option value="ตรงเวลา (ญะมาอะฮ์/มัสยิด)">ตรงเวลา (ญะมาอะฮ์/มัสยิด)</option>
-                <option value="ตรงเวลา (ละหมาดคนเดียว)">ตรงเวลา (ละหมาดคนเดียว)</option>
-                <option value="สาย / กอฎอ">สาย / กอฎอ</option>
-                <option value="มีอุปสรรค / ป่วย">มีอุปสรรค / ป่วย</option>
-                <option value="อุซุรชัรอีย์ (ประจำเดือน)">อุซุรชัรอีย์ (ประจำเดือน)</option>
-              </select>
-            </div>
-            <div>
-              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
-                <i class="fa-solid fa-map-location-dot" style="color: var(--primary);"></i> สถานที่ละหมาด
-              </label>
-              <select class="form-control" id="prayerLocationSelect" style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
-                <option value="มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี">มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี</option>
-                <option value="คณะวิทยาศาสตร์และเทคโนโลยี">คณะวิทยาศาสตร์และเทคโนโลยี</option>
-                <option value="มัสยิด / สุเหร่าประจำพื้นที่">มัสยิด / สุเหร่าประจำพื้นที่</option>
-                <option value="บ้านพัก / ที่อยู่อาศัย">บ้านพัก / ที่อยู่อาศัย</option>
-                <option value="หอพักนักเรียน / นักศึกษา">หอพักนักเรียน / นักศึกษา</option>
-                <option value="โรงเรียน / ห้องละหมาด">โรงเรียน / ห้องละหมาด</option>
-                <option value="อื่นๆ (ระบุในหมายเหตุ)">อื่นๆ (ระบุในหมายเหตุ)</option>
-              </select>
-            </div>
-          </div>
-          
-          <div style="margin-bottom: 0.85rem;">
-            <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
-              <i class="fa-solid fa-pen" style="color: var(--primary);"></i> หมายเหตุเพิ่มเติม
+          <div style="margin-bottom: 0.95rem;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">
+              <i class="fa-solid fa-pen" style="color: var(--primary);"></i> 2. กรอกหมายเหตุเพิ่มเติมด้วยตนเอง
             </label>
-            <input type="text" class="form-control" id="prayerNoteInput" placeholder="กรอกหมายเหตุด้วยตนเอง เช่น ญะมาอะฮ์แถวแรก, กำลังเดินทาง..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
-            <!-- Quick Tag Chips -->
-            <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
-              <button type="button" class="btn-stepper" onclick="appendPrayerNote('ญะมาอะฮ์แถวแรก')">+ ญะมาอะฮ์แถวแรก</button>
-              <button type="button" class="btn-stepper" onclick="appendPrayerNote('ละหมาดที่บ้าน')">+ ละหมาดที่บ้าน</button>
-              <button type="button" class="btn-stepper" onclick="appendPrayerNote('อุซุรชัรอีย์')">+ อุซุรชัรอีย์</button>
-              <button type="button" class="btn-stepper" onclick="appendPrayerNote('กำลังเดินทาง')">+ กำลังเดินทาง</button>
-            </div>
+            <input type="text" class="form-control" id="prayerNoteInput" placeholder="กรอกหมายเหตุด้วยตนเอง เช่น ญะมาอะฮ์แถวแรก, ละหมาดที่บ้าน, กำลังเดินทาง..." style="font-size: 0.85rem; padding: 0.45rem 0.65rem; height: 40px;">
           </div>
 
           <!-- Standalone Note Save Button -->
-          <button type="button" class="btn btn-primary btn-block" onclick="savePrayerNoteOnly()" style="font-weight: 600; padding: 0.7rem; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
+          <button type="button" class="btn btn-primary btn-block" onclick="savePrayerNoteOnly()" style="font-weight: 600; padding: 0.75rem; font-size: 0.9rem; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28);">
             <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลหมายเหตุละหมาด
           </button>
+        </div>
+
+        <!-- 6. ประวัติการเช็คชื่อและบันทึกละหมาดย้อนหลัง (ย้ายมาอยู่ล่างสุด) -->
+        <div class="card" id="prayerHistoryBottomSection" style="margin-top: 1.25rem; padding: 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-dark); margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+              <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i> ประวัติการบันทึกละหมาดย้อนหลัง
+            </h3>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <input type="date" id="filterPrayerDateBottom" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.82rem; height: 32px; width: auto;" onchange="filterPrayerHistoryByDateBottom()" title="เลือกวันเพื่อดูประวัติ">
+              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; height: 32px; font-size: 0.8rem;" onclick="clearPrayerDateFilterBottom()" title="แสดงทั้งหมด">ทั้งหมด</button>
+              <span class="badge-sub" id="prayerHistoryCountBadgeBottom">0 บันทึก</span>
+            </div>
+          </div>
+          <div id="prayerInlineHistoryContainer">
+            <!-- Injected via app.js -->
+          </div>
         </div>
 
       </div>
@@ -503,19 +484,13 @@
           <video id="qrScannerVideo" playsinline autoplay muted></video>
           <canvas id="qrScannerCanvas" style="display: none;"></canvas>
           <div class="qr-target-frame"></div>
-          <button class="btn-flip-cam" onclick="switchQrCameraFacing()" title="สลับกล้องหน้า/หลัง">
-            <i class="fa-solid fa-camera-rotate"></i>
-          </button>
         </div>
 
         <div id="qrScanFeedback" class="qr-feedback">
-          <i class="fa-solid fa-magnifying-glass"></i> <span>กำลังเปิดกล้องค้นหา QR Code กิจกรรม...</span>
+          <i class="fa-solid fa-magnifying-glass"></i> <span>กำลังเปิดกล้องหลังค้นหา QR Code กิจกรรม...</span>
         </div>
         <div style="display: flex; gap: 0.5rem; justify-content: center; margin: 0.6rem 0 1rem 0; flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="switchQrCameraFacing()">
-            <i class="fa-solid fa-camera-rotate"></i> สลับกล้อง
-          </button>
-          <label for="inputQrImage" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">
+          <label for="inputQrImage" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; padding: 0.45rem 1rem;">
             <i class="fa-solid fa-image"></i> เลือกรูป QR จากเครื่อง
           </label>
           <input type="file" id="inputQrImage" accept="image/*" style="display: none;" onchange="handleQrImageUpload(event)">
@@ -860,24 +835,24 @@
             <input type="file" id="inputProfilePhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
           </div>
           <div>
-            <h3 style="font-size: 1.25rem; font-weight: 700;" id="profFullName">นายมูฮัมหมัด ซอและห์</h3>
-            <p style="color: var(--text-muted); font-size: 0.88rem;" id="profSchool">โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี</p>
-            <span class="badge-sub" style="margin-top: 0.3rem; display: inline-block;" id="profGradeBadge">ชั้นมัธยมศึกษาปีที่ 5</span>
+            <h3 style="font-size: 1.25rem; font-weight: 700;" id="profFullName">ยังไม่ได้เข้าสู่ระบบ</h3>
+            <p style="color: var(--text-muted); font-size: 0.88rem;" id="profSchool">กรุณาเข้าสู่ระบบหรือลงทะเบียนเพื่อจัดการโปรไฟล์</p>
+            <span class="badge-sub" style="margin-top: 0.3rem; display: inline-block;" id="profGradeBadge">ยังไม่ระบุชั้น</span>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem;">
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">รหัสนักเรียน</div>
-            <div style="font-weight: 600;" id="profStudentId">STD-256901</div>
+            <div style="font-weight: 600;" id="profStudentId">-</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">วันเดือนปีเกิด (พ.ศ. 8 หลัก)</div>
-            <div style="font-weight: 600;" id="profBirthDate">15082552</div>
+            <div style="font-weight: 600;" id="profBirthDate">-</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">เบอร์โทรศัพท์ผู้ปกครอง</div>
-            <div style="font-weight: 600;" id="profParentPhone">081-234-5678</div>
+            <div style="font-weight: 600;" id="profParentPhone">-</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">สถานะการใช้งาน</div>
@@ -945,6 +920,12 @@
         <button class="admin-tab-btn active" onclick="switchAdminTab('students', this)">
           <i class="fa-solid fa-users"></i> ข้อมูลนักเรียนทั้งหมด
         </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('grading', this)">
+          <i class="fa-solid fa-marker"></i> บันทึกคะแนนสมรรถนะ (ผู้สอน)
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('subjects', this)">
+          <i class="fa-solid fa-book-open"></i> จัดการรายวิชา
+        </button>
         <button class="admin-tab-btn" onclick="switchAdminTab('reports', this)">
           <i class="fa-solid fa-file-export"></i> ส่งออกรายงาน (Word / Excel / PDF)
         </button>
@@ -952,9 +933,8 @@
           <i class="fa-solid fa-graduation-cap"></i> เลื่อนชั้นปีอัตโนมัติยกห้อง
         </button>
         <button class="admin-tab-btn" onclick="switchAdminTab('subadmins', this)">
-          <i class="fa-solid fa-user-shield"></i> จัดการแอดมินรอง
+          <i class="fa-solid fa-user-shield"></i> จัดการผู้สอน & แอดมินรอง
         </button>
-        
         <button class="admin-tab-btn" onclick="switchAdminTab('activities-admin', this)" id="btnTabActivitiesAdmin">
           <i class="fa-solid fa-qrcode"></i> กิจกรรม & QR Code
         </button>
@@ -995,6 +975,99 @@
                 </tr>
               </thead>
               <tbody id="adminStudentsTableBody">
+                <!-- Injected via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab: Teacher Competency Grading -->
+      <div id="admin-tab-grading" class="admin-content-tab" style="display: none;">
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 0.8rem;">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-marker" style="color: var(--primary);"></i> บันทึกคะแนนสมรรถนะรายวิชา (Teacher Grading)
+              </div>
+              <div class="card-subtitle">
+                อาจารย์ผู้สอนเลือกวิชาและระดับชั้น เพื่อกรอกคะแนนสมรรถนะ (0-100) ซึ่งจะเชื่อมโยงไปแสดงผลบนกราฟเรดาร์ของนักเรียนโดยตรง
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-primary" onclick="saveTeacherGradingScores()">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึกคะแนนทั้งหมด
+              </button>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label"><i class="fa-solid fa-book"></i> เลือกรายวิชา</label>
+              <select class="form-control" id="gradingSubjectSelect" onchange="renderGradingStudentsTable()">
+                <!-- Populated dynamically via app.js -->
+              </select>
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label"><i class="fa-solid fa-graduation-cap"></i> เลือกระดับชั้น</label>
+              <select class="form-control" id="gradingGradeSelect" onchange="renderGradingStudentsTable()">
+                <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
+                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
+                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3 (ม.3)</option>
+                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
+                <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5 (ม.5)</option>
+                <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6 (ม.6)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="custom-table" id="teacherGradingTable">
+              <thead>
+                <tr>
+                  <th style="width: 120px;">รหัสนักเรียน</th>
+                  <th>ชื่อ - นามสกุล</th>
+                  <th>ระดับชั้น</th>
+                  <th style="width: 160px; text-align: center;">คะแนนสมรรถนะ (0-100)</th>
+                  <th style="width: 200px; text-align: right;">ปุ่มลัดให้คะแนน</th>
+                </tr>
+              </thead>
+              <tbody id="teacherGradingTableBody">
+                <!-- Injected via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab: Subject Configuration Manager -->
+      <div id="admin-tab-subjects" class="admin-content-tab" style="display: none;">
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 0.8rem;">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-book-open" style="color: var(--primary);"></i> จัดการรายวิชาและสมรรถนะ
+              </div>
+              <div class="card-subtitle">
+                กำหนดและแก้ไขชื่อรายวิชาที่ใช้ประเมินสมรรถนะบนกราฟ Radar Chart
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="openAddSubjectModal()">
+              <i class="fa-solid fa-plus-circle"></i> เพิ่มรายวิชาใหม่
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="custom-table" id="adminSubjectsTable">
+              <thead>
+                <tr>
+                  <th style="width: 130px;">รหัสวิชา</th>
+                  <th>ชื่อรายวิชา</th>
+                  <th>แกนกราฟ Radar Chart</th>
+                  <th style="text-align: right; width: 140px;">การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="adminSubjectsTableBody">
                 <!-- Injected via app.js -->
               </tbody>
             </table>
@@ -1670,17 +1743,56 @@
           <input type="password" class="form-control" id="subPassword" placeholder="กำหนดรหัสผ่าน">
         </div>
         <div class="form-group">
-          <label class="form-label">สิทธิ์การใช้งาน</label>
-          <select class="form-control" id="subRole">
+          <label class="form-label">สิทธิ์การใช้งาน / ตำแหน่ง <span class="required">*</span></label>
+          <select class="form-control" id="subRole" onchange="toggleSubAdminSubjectField()">
+            <option value="TEACHER">อาจารย์ผู้สอนรายวิชา (Teacher) - บันทึกคะแนนสมรรถนะ</option>
             <option value="TeacherAdmin">อาจารย์ประจำชั้น (ดูข้อมูลและบันทึก)</option>
             <option value="ActivityAdmin">ฝ่ายกิจกรรม (สร้างและเช็คชื่อกิจกรรม)</option>
+            <option value="SubAdmin">ผู้ช่วยแอดมินทั่วไป</option>
+          </select>
+        </div>
+        <div class="form-group" id="subSubjectGroup">
+          <label class="form-label"><i class="fa-solid fa-book"></i> รายวิชาที่รับผิดชอบสอน</label>
+          <select class="form-control" id="subAssignedSubject">
+            <!-- Dynamically populated -->
           </select>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('addSubAdminModal')">ยกเลิก</button>
         <button class="btn btn-primary" onclick="submitAddSubAdmin()">
-          <i class="fa-solid fa-save"></i> บันทึกแอดมินรอง
+          <i class="fa-solid fa-save"></i> บันทึกข้อมูล
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Subject -->
+  <div class="modal-overlay" id="addSubjectModal">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem;" id="subjectModalTitle">
+          <i class="fa-solid fa-book-open" style="color: var(--primary);"></i> เพิ่มรายวิชาใหม่
+        </div>
+        <button class="btn-icon" onclick="closeModal('addSubjectModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editSubjectId" value="">
+        <div class="form-group">
+          <label class="form-label">รหัสวิชา <span class="required">*</span></label>
+          <input type="text" class="form-control" id="subjectCodeInput" placeholder="เช่น ISL101, SCI201">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อรายวิชา (จะปรากฏบนกราฟเรดาร์) <span class="required">*</span></label>
+          <input type="text" class="form-control" id="subjectNameInput" placeholder="เช่น ศาสนาและจริยธรรม, วิทยาศาสตร์">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('addSubjectModal')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitSaveSubject()">
+          <i class="fa-solid fa-save"></i> บันทึกรายวิชา
         </button>
       </div>
     </div>

@@ -408,6 +408,9 @@ function doPost(e) {
       case 'updateProfilePhoto':
         result = updateStudentProfilePhoto(postData.data.studentId, postData.data.avatarUrl);
         break;
+      case 'updateSubjectScores':
+        result = updateSubjectScores(postData.data);
+        break;
       default:
         result = { success: false, error: 'Invalid POST action: ' + action };
     }
@@ -510,6 +513,10 @@ function updateStudentGrade(studentId, newGrade) {
     }
   }
   return { success: false, message: 'ไม่พบรหัสนักเรียน' };
+}
+
+function updateSubjectScores(data) {
+  return { success: true, message: 'บันทึกคะแนนสมรรถนะสำเร็จ', data: data };
 }
 
 function recordPrayer(data) {

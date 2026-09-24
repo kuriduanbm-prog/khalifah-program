@@ -572,11 +572,17 @@ function renderDashboardQuranStars() {
 function renderPrayerHistory(filterDate = null) {
   const container = document.getElementById('prayerHistoryListContainer');
   const badge = document.getElementById('prayerHistoryCountBadge');
-  if (!container) return;
+  const bottomContainer = document.getElementById('prayerInlineHistoryContainer');
+  const bottomBadge = document.getElementById('prayerHistoryCountBadgeBottom');
+
+  if (!container && !bottomContainer) return;
 
   if (!currentStudent) {
-    container.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">กรุณาเข้าสู่ระบบเพื่อดูประวัติการละหมาด</div>';
+    const emptyMsg = '<div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">กรุณาเข้าสู่ระบบนักเรียนเพื่อดูประวัติการละหมาด</div>';
+    if (container) container.innerHTML = emptyMsg;
+    if (bottomContainer) bottomContainer.innerHTML = emptyMsg;
     if (badge) badge.innerText = '0 บันทึก';
+    if (bottomBadge) bottomBadge.innerText = '0 บันทึก';
     return;
   }
 
@@ -588,27 +594,30 @@ function renderPrayerHistory(filterDate = null) {
   let myLogs = historyList.filter(p => p.studentId === currentStudent.studentId);
 
   if (filterDate) {
-    myLogs = myLogs.filter(p => p.timestamp && p.timestamp.startsWith(filterDate));
+    myLogs = myLogs.filter(p => (p.timestamp && p.timestamp.startsWith(filterDate)) || (p.date && p.date === filterDate));
   }
 
   if (badge) badge.innerText = `${myLogs.length} บันทึก`;
+  if (bottomBadge) bottomBadge.innerText = `${myLogs.length} บันทึก`;
 
   if (myLogs.length === 0) {
-    container.innerHTML = `
+    const noDataHtml = `
       <div style="text-align: center; padding: 1.5rem; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-md);">
-        <i class="fa-solid fa-calendar-xmark" style="font-size: 1.8rem; margin-bottom: 0.4rem; display: block;"></i>
+        <i class="fa-solid fa-calendar-xmark" style="font-size: 1.8rem; margin-bottom: 0.4rem; display: block; color: #94a3b8;"></i>
         ${filterDate ? 'ไม่พบบันทึกการละหมาดในวันที่เลือก' : 'ยังไม่มีประวัติการเช็คชื่อละหมาดย้อนหลัง'}
       </div>
     `;
+    if (container) container.innerHTML = noDataHtml;
+    if (bottomContainer) bottomContainer.innerHTML = noDataHtml;
     return;
   }
 
-  container.innerHTML = myLogs.map(p => {
-    const d = new Date(p.timestamp);
-    const dateStr = d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-    const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const html = myLogs.map((p, idx) => {
+    const d = new Date(p.timestamp || p.date);
+    const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : (p.date || '-');
+    const timeStr = !isNaN(d.getTime()) ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : (p.time || '-');
     const status = p.status || 'ตรงเวลา';
-    const note = p.note ? `<div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;"><i class="fa-solid fa-note-sticky"></i> ${p.note}</div>` : '';
+    const note = p.note ? `<div style="font-size: 0.78rem; color: #0369a1; margin-top: 0.25rem; background: #f0f9ff; padding: 0.2rem 0.5rem; border-radius: 6px; display: inline-block;"><i class="fa-solid fa-note-sticky"></i> ${p.note}</div>` : '';
 
     let statusClass = 'status-ontime';
     if (status.includes('สาย')) statusClass = 'status-late';
@@ -616,27 +625,32 @@ function renderPrayerHistory(filterDate = null) {
     if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
 
     const cardId = p.id || p.logId || ('PRY-' + idx);
+    const photoSrc = p.photo || p.photoUrl;
+
     return `
-      <div class="prayer-history-item prayer-history-card-clickable" onclick="openPrayerHistoryDetailModal('${cardId}')" title="แตะเพื่อดูรายละเอียดเต็มและพิกัดแผนที่">
+      <div class="prayer-history-item prayer-history-card-clickable" onclick="openPrayerHistoryDetailModal('${cardId}')" title="แตะเพื่อดูรายละเอียดเต็มและพิกัดแผนที่" style="margin-bottom: 0.65rem;">
         <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 220px;">
-          ${p.photo ? `<img src="${p.photo}" alt="Photo" style="width: 52px; height: 52px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light);">` : `<div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b;"><i class="fa-solid fa-camera"></i></div>`}
+          ${(photoSrc && photoSrc.length > 50) ? `<img src="${photoSrc}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light);">` : `<div style="width: 50px; height: 50px; border-radius: var(--radius-md); background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 1.2rem;"><i class="fa-solid fa-mosque"></i></div>`}
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-              <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">ละหมาด${p.prayerName || p.prayerTime}</span>
+              <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">เวลา: ${p.prayerName || p.prayerTime}</span>
               <span class="status-badge ${statusClass}">${status}</span>
             </div>
             <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem;">
-              <i class="fa-solid fa-clock"></i> ${dateStr} เวลา ${timeStr} น. • ณ ${p.locationName || 'พิกัด GPS'}
+              <i class="fa-solid fa-clock"></i> ${dateStr} • ${timeStr} น. • ณ ${p.locationName || 'พิกัด GPS'}
             </div>
             ${note}
           </div>
         </div>
-        <div style="font-size: 0.72rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-          <span>ดูรายละเอียดเต็ม</span> <i class="fa-solid fa-chevron-right"></i>
+        <div style="font-size: 0.76rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem; white-space: nowrap;">
+          <span>ดูรายละเอียด</span> <i class="fa-solid fa-chevron-right"></i>
         </div>
       </div>
     `;
   }).join('');
+
+  if (container) container.innerHTML = html;
+  if (bottomContainer) bottomContainer.innerHTML = html;
 }
 
 function filterPrayerHistoryByDate() {
@@ -648,7 +662,19 @@ function filterPrayerHistoryByDate() {
 function clearPrayerDateFilter() {
   const input = document.getElementById('filterPrayerHistoryDate');
   if (input) input.value = '';
-  renderPrayerHistory(null);
+  renderPrayerHistory();
+}
+
+function filterPrayerHistoryByDateBottom() {
+  const input = document.getElementById('filterPrayerDateBottom');
+  const dateVal = input ? input.value : null;
+  renderPrayerHistory(dateVal);
+}
+
+function clearPrayerDateFilterBottom() {
+  const input = document.getElementById('filterPrayerDateBottom');
+  if (input) input.value = '';
+  renderPrayerHistory();
 }
 
 
@@ -905,9 +931,21 @@ function switchView(viewName) {
     initHasanatView();
   } else if (viewName === 'prayer') {
     renderPrayerHistory();
+    initLiveCamera();
+  } else if (viewName === 'activities') {
+    startQrScanner();
+    renderStudentActivitiesHistory();
   } else if (viewName === 'admin') {
     renderAdminStudentsTable();
     renderSubAdminsTable();
+    populateGradingSubjectSelect();
+  }
+
+  if (viewName !== 'activities') {
+    stopQrScanner();
+  }
+  if (viewName !== 'prayer') {
+    stopCameraStream();
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1521,13 +1559,11 @@ function savePrayerNoteOnly() {
   }
 
   const pTime = selectedPrayerNoteTimeSlot;
-  const statusSelect = document.getElementById('prayerStatusSelect');
-  const locSelect = document.getElementById('prayerLocationSelect');
   const noteInput = document.getElementById('prayerNoteInput');
-
-  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
-  const locName = locSelect ? locSelect.value : 'มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี';
   const prayerNote = noteInput ? noteInput.value.trim() : '';
+
+  const prayerStatus = prayerNote ? `ตรงเวลา (${prayerNote})` : 'ตรงเวลา';
+  const locName = (verifiedLocation && verifiedLocation.locationName) ? verifiedLocation.locationName : 'มัสยิด / สถานที่ละหมาด';
 
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
@@ -1581,13 +1617,17 @@ function savePrayerNoteOnly() {
     if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
   }
 
+  // Clear note input after saving
+  if (noteInput) noteInput.value = '';
+
   renderTodayPrayerTable();
+  renderPrayerHistory();
   renderDashboardCharts();
 
   syncRecordToGoogleSheet('recordPrayer', prayerRecord);
 
   playSuccessSound();
-  showToast(`บันทึกหมายเหตุการละหมาดเวลา ${pTime} เรียบร้อยแล้ว`, 'success');
+  showToast(`บันทึกหมายเหตุการละหมาดเวลา ${pTime} เรียบร้อยแล้ว (บันทึกลงฐานข้อมูลแล้ว)`, 'success');
 }
 
 
@@ -1698,61 +1738,103 @@ function renderDashboardCharts() {
   renderActivityPieChart();
 }
 
+let appSubjects = [];
+
+function loadAppSubjects() {
+  const saved = localStorage.getItem('khalifah_subjects');
+  if (saved) {
+    try {
+      appSubjects = JSON.parse(saved);
+    } catch (e) {
+      appSubjects = [];
+    }
+  }
+  if (!appSubjects || appSubjects.length === 0) {
+    appSubjects = [
+      { id: 'religious', code: 'ISL101', name: 'ศาสนาและจริยธรรม' },
+      { id: 'science', code: 'SCI101', name: 'วิทยาศาสตร์' },
+      { id: 'math', code: 'MAT101', name: 'คณิตศาสตร์' },
+      { id: 'language', code: 'THA101', name: 'ภาษาและการสื่อสาร' },
+      { id: 'social', code: 'SOC101', name: 'สังคมและวัฒนธรรม' },
+      { id: 'tech', code: 'TEC101', name: 'เทคโนโลยีและนวัตกรรม' }
+    ];
+    localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
+  }
+}
+
+function formatRadarLabelMultiLine(text) {
+  if (!text) return '';
+  if (text.includes('และ')) {
+    const parts = text.split('และ');
+    return [parts[0] + 'และ', parts[1]];
+  }
+  if (text.length > 8) {
+    const mid = Math.ceil(text.length / 2);
+    return [text.slice(0, mid), text.slice(mid)];
+  }
+  return text;
+}
+
 function renderSkillRadarChart() {
   const ctx = document.getElementById('skillRadarChart');
   if (!ctx) return;
 
   if (skillChartInstance) skillChartInstance.destroy();
 
-  const skills = (currentStudent && currentStudent.skills) ? currentStudent.skills : {
-    religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0
-  };
+  loadAppSubjects();
+
+  const labels = appSubjects.map(s => formatRadarLabelMultiLine(s.name));
+  const dataScores = appSubjects.map(s => {
+    if (currentStudent && currentStudent.skills) {
+      if (currentStudent.skills[s.id] !== undefined) {
+        return currentStudent.skills[s.id];
+      }
+      // fallback for old keys
+      if (s.id === 'religious' && currentStudent.skills.religious !== undefined) return currentStudent.skills.religious;
+      if (s.id === 'science' && currentStudent.skills.science !== undefined) return currentStudent.skills.science;
+      if (s.id === 'math' && currentStudent.skills.math !== undefined) return currentStudent.skills.math;
+      if (s.id === 'language' && currentStudent.skills.language !== undefined) return currentStudent.skills.language;
+      if (s.id === 'social' && currentStudent.skills.social !== undefined) return currentStudent.skills.social;
+      if (s.id === 'tech' && currentStudent.skills.tech !== undefined) return currentStudent.skills.tech;
+    }
+    return 75; // Default competency baseline
+  });
 
   skillChartInstance = new Chart(ctx, {
     type: 'radar',
     data: {
-      labels: [
-        'ศาสนาและจริยธรรม',
-        'วิทยาศาสตร์',
-        'คณิตศาสตร์',
-        'ภาษาและการสื่อสาร',
-        'สังคมและวัฒนธรรม',
-        'เทคโนโลยีและนวัตกรรม'
-      ],
+      labels: labels,
       datasets: [{
         label: 'ระดับสมรรถนะทักษะ (คะแนนเต็ม 100)',
-        data: [
-          skills.religious || 0,
-          skills.science || 0,
-          skills.math || 0,
-          skills.language || 0,
-          skills.social || 0,
-          skills.tech || 0
-        ],
-        backgroundColor: 'rgba(2, 132, 199, 0.2)',
+        data: dataScores,
+        backgroundColor: 'rgba(2, 132, 199, 0.22)',
         borderColor: '#0284c7',
         borderWidth: 2.5,
         pointBackgroundColor: '#0369a1',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
+        pointBorderColor: '#ffffff',
+        pointHoverBackgroundColor: '#ffffff',
         pointHoverBorderColor: '#0369a1',
-        pointRadius: 4
+        pointRadius: 4.5
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: { top: 12, bottom: 12, left: 16, right: 16 }
+      },
       scales: {
         r: {
           min: 0,
           max: 100,
-          ticks: { stepSize: 20, display: false },
+          ticks: { stepSize: 25, display: false },
           pointLabels: {
-            font: { family: 'Kanit', size: 12, weight: '500' },
-            color: '#334155'
+            font: { family: 'Kanit', size: 11, weight: '600' },
+            color: '#1e293b',
+            padding: 8
           },
-          grid: { color: 'rgba(226, 232, 240, 0.8)' },
-          angleLines: { color: 'rgba(226, 232, 240, 0.8)' }
+          grid: { color: 'rgba(203, 213, 225, 0.85)' },
+          angleLines: { color: 'rgba(203, 213, 225, 0.85)' }
         }
       },
       plugins: {
@@ -2152,7 +2234,7 @@ function toggleAuthForm(formType) {
   }
 }
 
-function handleStudentLogin() {
+async function handleStudentLogin() {
   const studentId = document.getElementById('loginStudentId').value.trim();
   const birthDate = document.getElementById('loginBirthDate').value.trim();
 
@@ -2163,17 +2245,48 @@ function handleStudentLogin() {
 
   const cleanInput = birthDate.replace(/[^0-9]/g, '');
 
-  const found = allStudents.find(s => {
+  let found = allStudents.find(s => {
     const cleanBDate = String(s.birthDate || '').replace(/[^0-9]/g, '');
     return s.studentId.toLowerCase() === studentId.toLowerCase() &&
            (cleanBDate === cleanInput || String(s.birthDate || '').trim() === birthDate);
   });
+
+  if (!found) {
+    // If not found in local device, check Google Sheets backend
+    const url = gasApiUrl || localStorage.getItem('khalifah_gas_url');
+    if (url && !url.includes('docs.google.com/spreadsheets')) {
+      showToast('กำลังค้นหาข้อมูลนักเรียนจากฐานข้อมูลกลาง...', 'info');
+      try {
+        const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentId)}`);
+        const json = await resp.json();
+        if (json && json.success && json.student) {
+          const remoteStudent = json.student;
+          const cleanBDate = String(remoteStudent.birthDate || '').replace(/[^0-9]/g, '');
+          if (cleanBDate === cleanInput || String(remoteStudent.birthDate || '').trim() === birthDate) {
+            found = remoteStudent;
+            const existIdx = allStudents.findIndex(s => s.studentId.toLowerCase() === studentId.toLowerCase());
+            if (existIdx !== -1) {
+              allStudents[existIdx] = found;
+            } else {
+              allStudents.push(found);
+            }
+            localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+          }
+        }
+      } catch (e) {
+        console.warn('Remote student lookup failed:', e);
+      }
+    }
+  }
 
   if (found) {
     currentStudent = found;
     localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
     renderCurrentStudentProfile();
     renderDashboardCharts();
+    renderTodayPrayerTable();
+    renderActivitiesList();
+    renderPrayerHistory();
     document.body.classList.remove('auth-locked');
     closeModal('authModal');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
@@ -2337,6 +2450,18 @@ function switchAdminTab(tabName, element) {
   if (element) element.classList.add('active');
   const target = document.getElementById(`admin-tab-${tabName}`);
   if (target) target.style.display = 'block';
+
+  if (tabName === 'grading') {
+    populateGradingSubjectSelect();
+    renderGradingStudentsTable();
+  } else if (tabName === 'subjects') {
+    renderAdminSubjectsTable();
+  } else if (tabName === 'subadmins') {
+    renderSubAdminsTable();
+    populateGradingSubjectSelect();
+  } else if (tabName === 'students') {
+    renderAdminStudentsTable();
+  }
 }
 
 function renderAdminStudentsTable(filteredList = null) {
@@ -2505,14 +2630,22 @@ function submitCreateActivity() {
   syncRecordToGoogleSheet('createActivity', newAct);
 }
 
+function toggleSubAdminSubjectField() {
+  const roleSelect = document.getElementById('subRole');
+  const group = document.getElementById('subSubjectGroup');
+  if (!roleSelect || !group) return;
+  group.style.display = (roleSelect.value === 'TEACHER') ? 'block' : 'none';
+}
+
 function submitAddSubAdmin() {
   const fullName = document.getElementById('subFullName').value.trim();
   const username = document.getElementById('subUsername').value.trim();
   const pass = document.getElementById('subPassword').value.trim();
   const role = document.getElementById('subRole').value;
+  const assignedSubj = document.getElementById('subAssignedSubject') ? document.getElementById('subAssignedSubject').value : '';
 
   if (!fullName || !username || !pass) {
-    showToast('กรุณากรอกข้อมูลแอดมินรองให้ครบถ้วน', 'warning');
+    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
     return;
   }
 
@@ -2522,6 +2655,7 @@ function submitAddSubAdmin() {
     password: pass,
     fullName: fullName,
     role: role,
+    assignedSubject: role === 'TEACHER' ? assignedSubj : '',
     createdAt: new Date().toISOString().split('T')[0]
   };
 
@@ -2530,7 +2664,7 @@ function submitAddSubAdmin() {
 
   closeModal('addSubAdminModal');
   renderSubAdminsTable();
-  showToast(`เพิ่มแอดมินรอง ${fullName} สำเร็จ`, 'success');
+  showToast(`เพิ่มผู้ดูแล/อาจารย์ผู้สอน ${fullName} สำเร็จ`, 'success');
 
   syncRecordToGoogleSheet('addSubAdmin', newSub);
 }
@@ -2538,15 +2672,188 @@ function submitAddSubAdmin() {
 function renderSubAdminsTable() {
   const tbody = document.getElementById('subAdminsTableBody');
   if (!tbody) return;
+  loadAppSubjects();
 
-  tbody.innerHTML = subAdmins.map(a => `
+  if (subAdmins.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีรายชื่อผู้ดูแลระบบรอง / อาจารย์ผู้สอน</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = subAdmins.map(a => {
+    let roleText = a.role || 'SubAdmin';
+    if (a.role === 'TEACHER') {
+      const subj = appSubjects.find(s => s.id === a.assignedSubject);
+      const subjName = subj ? subj.name : (a.assignedSubject || 'ทุกวิชา');
+      roleText = `อาจารย์ผู้สอน (${subjName})`;
+    } else if (a.role === 'TeacherAdmin') {
+      roleText = 'อาจารย์ประจำชั้น';
+    } else if (a.role === 'ActivityAdmin') {
+      roleText = 'ฝ่ายกิจกรรม';
+    }
+
+    return `
+      <tr>
+        <td><b>${a.username}</b></td>
+        <td>${a.fullName}</td>
+        <td><span class="activity-badge badge-active">${roleText}</span></td>
+        <td>${a.createdAt || '-'}</td>
+        <td style="text-align: right;">
+          <button class="btn btn-danger btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;" onclick="deleteSubAdmin('${a.username}')">
+            <i class="fa-solid fa-trash"></i> ลบ
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function deleteSubAdmin(username) {
+  if (!confirm(`ต้องการลบบัญชี ${username} ใช่หรือไม่?`)) return;
+  subAdmins = subAdmins.filter(s => s.username !== username);
+  localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+  renderSubAdminsTable();
+  showToast('ลบบัญชีเรียบร้อยแล้ว', 'success');
+}
+
+// ----------------- TEACHER COMPETENCY GRADING & SUBJECTS ----------------- //
+
+function populateGradingSubjectSelect() {
+  const select = document.getElementById('gradingSubjectSelect');
+  const subSelect = document.getElementById('subAssignedSubject');
+  loadAppSubjects();
+
+  const options = appSubjects.map(s => `<option value="${s.id}">${s.code ? s.code + ' - ' : ''}${s.name}</option>`).join('');
+
+  if (select) {
+    select.innerHTML = options;
+    if (currentAdmin && currentAdmin.assignedSubject) {
+      select.value = currentAdmin.assignedSubject;
+    }
+  }
+  if (subSelect) {
+    subSelect.innerHTML = options;
+  }
+}
+
+function renderGradingStudentsTable() {
+  const tbody = document.getElementById('teacherGradingTableBody');
+  const subjSelect = document.getElementById('gradingSubjectSelect');
+  const gradeSelect = document.getElementById('gradingGradeSelect');
+  if (!tbody || !subjSelect || !gradeSelect) return;
+
+  const currentSubj = subjSelect.value;
+  const currentGrade = gradeSelect.value;
+
+  const filtered = allStudents.filter(s => s.grade === currentGrade);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          ไม่พบรายชื่อนักเรียนในระดับชั้น ${currentGrade}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(s => {
+    const studentScore = (s.skills && s.skills[currentSubj] !== undefined) ? s.skills[currentSubj] : 75;
+    return `
+      <tr>
+        <td><b>${s.studentId}</b></td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            ${s.avatarUrl ? `<img src="${s.avatarUrl}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #e0f2fe; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0284c7; font-size: 0.8rem;">${s.fullName.charAt(0)}</div>`}
+            <div>
+              <div style="font-weight: 600; color: var(--text-dark);">${s.fullName}</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">${s.schoolName || ''}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="badge-sub">${s.grade}</span></td>
+        <td style="text-align: center;">
+          <input type="number" min="0" max="100" class="form-control grading-score-input" data-student-id="${s.studentId}" value="${studentScore}" style="width: 90px; margin: 0 auto; text-align: center; font-weight: 700; font-size: 1rem; color: #0284c7; height: 38px;">
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 80)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">80</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 90)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">90</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 100)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">100</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function setQuickScore(studentId, score) {
+  const input = document.querySelector(`.grading-score-input[data-student-id="${studentId}"]`);
+  if (input) input.value = score;
+}
+
+function saveTeacherGradingScores() {
+  const subjSelect = document.getElementById('gradingSubjectSelect');
+  if (!subjSelect) return;
+  const currentSubj = subjSelect.value;
+  const inputs = document.querySelectorAll('.grading-score-input');
+
+  if (inputs.length === 0) {
+    showToast('ไม่มีรายชื่อนักเรียนให้บันทึกคะแนน', 'warning');
+    return;
+  }
+
+  let updatedCount = 0;
+  inputs.forEach(inp => {
+    const sId = inp.getAttribute('data-student-id');
+    const val = parseInt(inp.value, 10);
+    const score = isNaN(val) ? 0 : Math.max(0, Math.min(100, val));
+
+    const sIdx = allStudents.findIndex(s => s.studentId === sId);
+    if (sIdx !== -1) {
+      if (!allStudents[sIdx].skills) allStudents[sIdx].skills = {};
+      allStudents[sIdx].skills[currentSubj] = score;
+      updatedCount++;
+
+      if (currentStudent && currentStudent.studentId === sId) {
+        if (!currentStudent.skills) currentStudent.skills = {};
+        currentStudent.skills[currentSubj] = score;
+        localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+      }
+    }
+  });
+
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+  renderSkillRadarChart();
+
+  syncRecordToGoogleSheet('updateSubjectScores', {
+    subjectId: currentSubj,
+    updatedCount: updatedCount,
+    timestamp: new Date().toISOString()
+  });
+
+  playSuccessSound();
+  showToast(`บันทึกคะแนนสมรรถนะนักเรียน ${updatedCount} คน สำเร็จแล้ว!`, 'success');
+}
+
+function renderAdminSubjectsTable() {
+  const tbody = document.getElementById('adminSubjectsTableBody');
+  if (!tbody) return;
+  loadAppSubjects();
+
+  if (appSubjects.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีข้อมูลรายวิชา</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = appSubjects.map(s => `
     <tr>
-      <td><b>${a.username}</b></td>
-      <td>${a.fullName}</td>
-      <td><span class="activity-badge badge-active">${a.role}</span></td>
-      <td>${a.createdAt}</td>
-      <td style="text-align: right;">
-        <button class="btn btn-danger" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;" onclick="deleteSubAdmin('${a.username}')">
+      <td><b>${s.code || '-'}</b></td>
+      <td style="font-weight: 600; color: var(--text-dark);">${s.name}</td>
+      <td><span class="activity-badge badge-active">${s.id}</span></td>
+      <td style="text-align: right; white-space: nowrap;">
+        <button class="btn btn-secondary btn-sm" onclick="openAddSubjectModal('${s.id}')" style="margin-right: 0.35rem; padding: 0.25rem 0.55rem; font-size: 0.78rem;">
+          <i class="fa-solid fa-pen"></i> แก้ไข
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSubject('${s.id}')" style="padding: 0.25rem 0.55rem; font-size: 0.78rem;">
           <i class="fa-solid fa-trash"></i> ลบ
         </button>
       </td>
@@ -2554,12 +2861,69 @@ function renderSubAdminsTable() {
   `).join('');
 }
 
-function deleteSubAdmin(username) {
-  if (!confirm(`ต้องการลบแอดมินรอง ${username} ใช่หรือไม่?`)) return;
-  subAdmins = subAdmins.filter(s => s.username !== username);
-  localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
-  renderSubAdminsTable();
-  showToast('ลบแอดมินรองเรียบร้อยแล้ว', 'success');
+function openAddSubjectModal(editId = null) {
+  loadAppSubjects();
+  const title = document.getElementById('subjectModalTitle');
+  const codeIn = document.getElementById('subjectCodeInput');
+  const nameIn = document.getElementById('subjectNameInput');
+  const hiddenId = document.getElementById('editSubjectId');
+
+  if (editId) {
+    const s = appSubjects.find(x => x.id === editId);
+    if (!s) return;
+    if (title) title.innerHTML = '<i class="fa-solid fa-pen" style="color: var(--primary);"></i> แก้ไขรายวิชา';
+    if (hiddenId) hiddenId.value = s.id;
+    if (codeIn) codeIn.value = s.code || '';
+    if (nameIn) nameIn.value = s.name || '';
+  } else {
+    if (title) title.innerHTML = '<i class="fa-solid fa-book-open" style="color: var(--primary);"></i> เพิ่มรายวิชาใหม่';
+    if (hiddenId) hiddenId.value = '';
+    if (codeIn) codeIn.value = '';
+    if (nameIn) nameIn.value = '';
+  }
+  openModal('addSubjectModal');
+}
+
+function submitSaveSubject() {
+  const hiddenId = document.getElementById('editSubjectId').value;
+  const code = document.getElementById('subjectCodeInput').value.trim();
+  const name = document.getElementById('subjectNameInput').value.trim();
+
+  if (!name) {
+    showToast('กรุณาระบุชื่อรายวิชา', 'warning');
+    return;
+  }
+
+  loadAppSubjects();
+
+  if (hiddenId) {
+    const idx = appSubjects.findIndex(x => x.id === hiddenId);
+    if (idx !== -1) {
+      appSubjects[idx].code = code;
+      appSubjects[idx].name = name;
+    }
+  } else {
+    const newId = 'subj_' + Date.now();
+    appSubjects.push({ id: newId, code: code || ('SUB-' + (appSubjects.length + 1)), name: name });
+  }
+
+  localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
+  closeModal('addSubjectModal');
+  renderAdminSubjectsTable();
+  renderSkillRadarChart();
+  populateGradingSubjectSelect();
+  showToast('บันทึกข้อมูลรายวิชาเรียบร้อยแล้ว', 'success');
+}
+
+function deleteSubject(id) {
+  if (!confirm('ต้องการลบรายวิชานี้ใช่หรือไม่?')) return;
+  loadAppSubjects();
+  appSubjects = appSubjects.filter(x => x.id !== id);
+  localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
+  renderAdminSubjectsTable();
+  renderSkillRadarChart();
+  populateGradingSubjectSelect();
+  showToast('ลบรายวิชาเรียบร้อยแล้ว', 'info');
 }
 
 // ----------------- REPORT EXPORT ENGINE (WORD / EXCEL / PDF) ----------------- //
