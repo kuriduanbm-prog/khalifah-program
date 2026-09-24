@@ -363,17 +363,17 @@ function doPost(e) {
         result = initializeSheets();
         break;
       case 'registerStudent':
-        result = registerStudent(postData.data);
+        result = registerStudent(postData.data || postData);
         break;
       case 'loginStudent':
-        result = loginStudent(postData.studentId, postData.birthDate || postData.parentPhone);
+        result = loginStudent(postData.studentId || (postData.data && postData.data.studentId), postData.birthDate || postData.parentPhone || (postData.data && (postData.data.birthDate || postData.data.parentPhone)));
         break;
       case 'updateStudentGrade':
-        result = updateStudentGrade(postData.studentId, postData.newGrade);
+        result = updateStudentGrade(postData.studentId || (postData.data && postData.data.studentId), postData.newGrade || (postData.data && postData.data.newGrade));
         break;
       case 'recordPrayer':
       case 'prayerCheckIn':
-        result = recordPrayer(postData.data);
+        result = recordPrayer(postData.data || postData);
         break;
       case 'recordHasanat':
       case 'saveQuranLog':
@@ -384,34 +384,34 @@ function doPost(e) {
         result = batchSyncData(postData.data || postData);
         break;
       case 'recordAttendance':
-        result = recordAttendance(postData.data);
+        result = recordAttendance(postData.data || postData);
         break;
       case 'createActivity':
-        result = createActivity(postData.data);
+        result = createActivity(postData.data || postData);
         break;
       case 'checkInActivity':
-        result = checkInActivity(postData.data);
+        result = checkInActivity(postData.data || postData);
         break;
       case 'adminLogin':
-        result = verifyAdminLogin(postData.password, postData.username);
+        result = verifyAdminLogin(postData.password || (postData.data && postData.data.password), postData.username || (postData.data && postData.data.username));
         break;
       case 'addSubAdmin':
-        result = addSubAdmin(postData.data);
+        result = addSubAdmin(postData.data || postData);
         break;
       case 'deleteStudent':
-        result = deleteStudent(postData.studentId);
+        result = deleteStudent(postData.studentId || (postData.data && postData.data.studentId));
         break;
       case 'batchPromote':
-        result = batchPromoteStudents(postData.fromGrade, postData.toGrade);
+        result = batchPromoteStudents(postData.fromGrade || (postData.data && postData.data.fromGrade), postData.toGrade || (postData.data && postData.data.toGrade));
         break;
       case 'updateLogo':
-        result = updateAppLogo(postData.data.logoBase64);
+        result = updateAppLogo((postData.data && postData.data.logoBase64) || postData.logoBase64);
         break;
       case 'updateProfilePhoto':
-        result = updateStudentProfilePhoto(postData.data.studentId, postData.data.avatarUrl);
+        result = updateStudentProfilePhoto((postData.data && postData.data.studentId) || postData.studentId, (postData.data && postData.data.avatarUrl) || postData.avatarUrl);
         break;
       case 'updateSubjectScores':
-        result = updateSubjectScores(postData.data);
+        result = updateSubjectScores(postData.data || postData);
         break;
       default:
         result = { success: false, error: 'Invalid POST action: ' + action };
@@ -439,11 +439,17 @@ function formatAsText(val) {
 }
 
 function registerStudent(data) {
+  if (!data) return { success: false, message: 'ไม่มีข้อมูลนักเรียน' };
   initializeSheets();
   const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.STUDENTS);
-  const rows = sheet.getDataRange().getValues();
+  if (!ss) return { success: false, message: 'ไม่สามารถเปิดสเปรดชีตฐานข้อมูลได้' };
+  
+  let sheet = ss.getSheetByName(SHEETS.STUDENTS);
+  if (!sheet) {
+    sheet = getOrCreateSheetSmart(ss, 'STUDENTS', HEADERS.STUDENTS, '#0284c7');
+  }
 
+  const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim().toLowerCase() === String(data.studentId).trim().toLowerCase()) {
       return { success: false, message: 'รหัสนักเรียนนี้ได้ลงทะเบียนในระบบแล้ว' };
@@ -457,13 +463,18 @@ function registerStudent(data) {
   const parentPhoneFormatted = formatAsText(data.parentPhone);
 
   const rawPhoto = data.avatarUrl || data.profilePhoto || '';
-  const photoLink = saveStudentPhotoToDrive(data.studentId, rawPhoto);
+  let photoLink = '';
+  try {
+    photoLink = saveStudentPhotoToDrive(data.studentId, rawPhoto);
+  } catch (photoErr) {
+    Logger.log('Drive photo save error: ' + photoErr.message);
+  }
 
   sheet.appendRow([
     studentIdFormatted,
-    data.fullName,
-    data.schoolName,
-    data.grade,
+    data.fullName || '',
+    data.schoolName || '',
+    data.grade || '',
     birthDateFormatted,
     parentPhoneFormatted,
     registeredAt,

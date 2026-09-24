@@ -1356,7 +1356,9 @@ let prayerChartInstance = null;
 let activityChartInstance = null;
 
 // Google Apps Script API URL
-let gasApiUrl = localStorage.getItem('khalifah_gas_url') || '';
+// Web App URL เริ่มต้นสำหรับทุกเครื่องที่เข้าใช้งาน (ใส่ Web App URL ที่นี่เพื่อให้ทุกเครื่องซิงค์อัตโนมัติ)
+const DEFAULT_GAS_API_URL = '';
+let gasApiUrl = localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
 
 // ----------------- INITIALIZATION ----------------- //
 document.addEventListener('DOMContentLoaded', () => {
@@ -4116,9 +4118,9 @@ async function convertGoogleSheetToThai() {
 
 
 async function syncRecordToGoogleSheet(action, data) {
-  const url = gasApiUrl || localStorage.getItem('khalifah_gas_url');
+  const url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
   if (!url) {
-    console.log(`[Offline Local] GAS URL not configured. Data saved locally in device.`);
+    console.warn(`[Offline Local] GAS Web App URL not configured. Action: ${action} saved locally on device.`);
     return;
   }
 
