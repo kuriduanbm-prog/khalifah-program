@@ -108,9 +108,12 @@ function switchHasanatSubTab(tabName) {
   });
 
   if (tabName === 'memorize') {
-    if (typeof renderSurahList === 'function') renderSurahList();
+    if (typeof renderSurahChecklist === 'function') {
+      const searchInput = document.getElementById('searchSurahInput');
+      renderSurahChecklist(searchInput ? searchInput.value : '');
+    }
   } else if (tabName === 'sunnah') {
-    if (typeof loadTodaySunnahChecklist === 'function') loadTodaySunnahChecklist();
+    if (typeof calculateDailySunnahRakaat === 'function') calculateDailySunnahRakaat(false);
   }
 }
 
@@ -1475,6 +1478,15 @@ function switchView(viewName) {
   const mNavItem = document.getElementById(`m-nav-${viewName}`);
   if (mNavItem) mNavItem.classList.add('active');
 
+  // Always scroll to top when switching to any view
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  } catch (e) {
+    window.scrollTo(0, 0);
+  }
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+
   // Trigger specific view setups
   if (viewName === 'dashboard') {
     renderDashboardCharts();
@@ -2358,15 +2370,20 @@ function loadAppSubjects() {
 
 function formatRadarLabelMultiLine(text) {
   if (!text) return '';
-  if (text.includes('และ')) {
-    const parts = text.split('และ');
+  const clean = String(text).trim();
+  // คำเดี่ยวไม่ตัดคำเด็ดขาด (เช่น คณิตศาสตร์, วิทยาศาสตร์)
+  if (clean === 'คณิตศาสตร์' || clean === 'วิทยาศาสตร์') {
+    return clean;
+  }
+  // ตัดบรรทัดอย่างเป็นธรรมชาติเมื่อมีคำว่า "และ"
+  if (clean.includes('และ')) {
+    const parts = clean.split('และ');
     return [parts[0] + 'และ', parts[1]];
   }
-  if (text.length > 8) {
-    const mid = Math.ceil(text.length / 2);
-    return [text.slice(0, mid), text.slice(mid)];
+  if (clean.includes(' ')) {
+    return clean.split(' ');
   }
-  return text;
+  return clean;
 }
 
 function renderSkillRadarChart() {
@@ -2413,13 +2430,13 @@ function renderSkillRadarChart() {
     },
     options: {
       animation: {
-        duration: 1600,
+        duration: 1400,
         easing: 'easeOutQuart'
       },
       responsive: true,
       maintainAspectRatio: false,
       layout: {
-        padding: { top: 6, bottom: 6, left: 8, right: 8 }
+        padding: { top: 12, bottom: 12, left: 20, right: 20 }
       },
       scales: {
         r: {
@@ -2427,9 +2444,9 @@ function renderSkillRadarChart() {
           max: 100,
           ticks: { stepSize: 25, display: false },
           pointLabels: {
-            font: { family: 'Kanit', size: 10, weight: '600' },
+            font: { family: 'Kanit', size: 10.5, weight: '600' },
             color: '#1e293b',
-            padding: 4
+            padding: 8
           },
           grid: { color: 'rgba(203, 213, 225, 0.85)' },
           angleLines: { color: 'rgba(203, 213, 225, 0.85)' }

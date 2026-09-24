@@ -3345,56 +3345,71 @@ body.auth-locked #adminAuthModal {
   margin-bottom: 0.75rem;
 }
 
-/* Khatam 30 Juz Card */
+/* Khatam 30 Juz Card (Minimalist & Clean) */
 .khatam-counter-card {
-  background: linear-gradient(135deg, #031b33 0%, #07345f 50%, #0369a1 100%);
-  border: 1.5px solid rgba(251, 191, 36, 0.5);
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
   border-radius: var(--radius-lg);
-  padding: 1.15rem;
+  padding: 1.1rem 1.2rem;
   margin-bottom: 1.25rem;
-  color: #ffffff;
-  box-shadow: 0 10px 24px rgba(3, 27, 51, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.khatam-counter-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
 }
 
 .khatam-top-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.9rem;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
 .khatam-crown-icon {
   width: 38px;
   height: 38px;
-  border-radius: 50%;
-  background: rgba(251, 191, 36, 0.2);
-  border: 1.5px solid #fbbf24;
+  border-radius: var(--radius-md);
+  background: #fefce8;
+  border: 1.5px solid #fde047;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #fbbf24;
-  font-size: 1.1rem;
-  box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+  color: #ca8a04;
+  font-size: 1.15rem;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.15);
+  flex-shrink: 0;
 }
 
 .khatam-stepper-control {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.65rem;
+  justify-content: space-between;
+  gap: 0.75rem;
   flex-wrap: wrap;
-  padding-top: 0.25rem;
+  padding: 0.65rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+}
+
+.khatam-stepper-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .btn-khatam-step {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #ffffff;
+  color: #1e293b;
+  border: 1.5px solid #cbd5e1;
   border-radius: var(--radius-md);
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   font-size: 1.2rem;
   font-weight: 700;
   display: inline-flex;
@@ -3404,36 +3419,52 @@ body.auth-locked #adminAuthModal {
   transition: all 0.15s ease;
 }
 
-.btn-khatam-step.plus {
-  background: #f59e0b;
-  color: #1e1b4b;
-  border-color: #fbbf24;
-}
-
 .btn-khatam-step:hover {
+  background: #059669;
+  color: #ffffff;
+  border-color: #059669;
   transform: scale(1.05);
 }
 
+.btn-khatam-step.plus {
+  background: #059669;
+  color: #ffffff;
+  border-color: #059669;
+}
+
+.btn-khatam-step.plus:hover {
+  background: #047857;
+  border-color: #047857;
+}
+
 .khatam-num-input {
-  font-size: 1.45rem !important;
+  font-size: 1.35rem !important;
   font-weight: 800 !important;
-  color: #fbbf24 !important;
+  color: #0f172a !important;
   text-align: center !important;
-  width: 100px !important;
-  background: rgba(0, 0, 0, 0.4) !important;
-  border: 2px solid rgba(251, 191, 36, 0.8) !important;
+  width: 70px !important;
+  height: 36px !important;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
   border-radius: var(--radius-md) !important;
+  padding: 0 0.25rem !important;
+}
+
+.khatam-unit-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-right: 0.25rem;
 }
 
 .btn-khatam-add-one {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #ffffff;
-  border: 1px solid #fde047;
+  background: #fefce8;
+  color: #854d0e;
+  border: 1.5px solid #fde047;
   border-radius: var(--radius-md);
-  padding: 0.55rem 1.05rem;
+  padding: 0.45rem 0.95rem;
   font-weight: 700;
-  font-size: 0.88rem;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+  font-size: 0.84rem;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -3442,8 +3473,10 @@ body.auth-locked #adminAuthModal {
 }
 
 .btn-khatam-add-one:hover {
+  background: #fef08a;
+  color: #713f12;
+  border-color: #eab308;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.5);
 }
 
 /* Ikhlas Notice */
