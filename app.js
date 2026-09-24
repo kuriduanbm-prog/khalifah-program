@@ -229,7 +229,198 @@ function selectSunnahPill(type, rakaat) {
   calculateDailySunnahRakaat(false);
 }
 
+// ==================== HASANAT STORAGE & KHATAM ORBIT STARS SYSTEM ==================== //
 
+/**
+ * ดึงข้อมูลผลบุญของนักเรียนจาก LocalStorage พร้อมค่าเริ่มต้นที่ปลอดภัย
+ */
+function getStudentHasanat(studentId) {
+  if (!studentId) return null;
+  let allHasanat = {};
+  try {
+    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+  } catch (e) {
+    allHasanat = {};
+  }
+  if (!allHasanat[studentId]) {
+    allHasanat[studentId] = {
+      studentId: studentId,
+      studentName: currentStudent ? currentStudent.fullName : '',
+      grade: currentStudent ? currentStudent.grade : '',
+      quran: {
+        pagesToday: 0,
+        currentPage: 0,
+        juzCompleted: 0,
+        stars: 0,
+        khatamCount: 0,
+        lastUpdated: new Date().toISOString()
+      },
+      memorization: {
+        count: 0,
+        memorizedSurahs: []
+      },
+      sunnah: {
+        rawatib: {},
+        duhaRakaat: 0,
+        witrRakaat: 3,
+        tahajjudRakaat: 0,
+        totalRakaat: 0
+      }
+    };
+  }
+
+  // ป้องกัน undefined field
+  if (!allHasanat[studentId].quran) {
+    allHasanat[studentId].quran = { pagesToday: 0, currentPage: 0, juzCompleted: 0, stars: 0, khatamCount: 0 };
+  }
+  if (typeof allHasanat[studentId].quran.khatamCount !== 'number') {
+    allHasanat[studentId].quran.khatamCount = (allHasanat[studentId].quran.juzCompleted >= 30) ? 1 : 0;
+  }
+  if (!allHasanat[studentId].memorization) {
+    allHasanat[studentId].memorization = { count: 0, memorizedSurahs: [] };
+  }
+  if (!allHasanat[studentId].sunnah) {
+    allHasanat[studentId].sunnah = { rawatib: {}, duhaRakaat: 0, witrRakaat: 3, tahajjudRakaat: 0, totalRakaat: 0 };
+  }
+  return allHasanat[studentId];
+}
+
+/**
+ * บันทึกข้อมูลผลบุญลง LocalStorage และซิงค์ไปยัง Google Sheet
+ */
+function saveStudentHasanat(hasanatObj) {
+  if (!hasanatObj || !hasanatObj.studentId) return;
+  let allHasanat = {};
+  try {
+    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+  } catch (e) {
+    allHasanat = {};
+  }
+  allHasanat[hasanatObj.studentId] = hasanatObj;
+  try {
+    localStorage.setItem('khalifah_student_hasanat', JSON.stringify(allHasanat));
+  } catch (e) {
+    console.error('Failed to save khalifah_student_hasanat:', e);
+  }
+
+  // อัปเดตดาวและเหรียญเกียรติยศที่แบนเนอร์หน้าแรกทันที
+  renderDashboardQuranStars();
+}
+
+/**
+ * วาดดาวทองคำลอยประดับรอบขอบวงกลมรูปโปรไฟล์ (1 ดาว = จบ 30 ยุซ 1 ครั้ง, 10 ดาว = จบ 10 ครั้ง)
+ * หรูหรา สไตล์ผู้ดี (Royal Gold Orbit Ring)
+ */
+function renderAvatarOrbitStars(khatamCount = 0) {
+  const ring = document.getElementById('avatarStarOrbitRing');
+  if (!ring) return;
+
+  ring.innerHTML = '';
+  const count = parseInt(khatamCount) || 0;
+  if (count <= 0) return;
+
+  const stageCenter = 72; // จุดศูนย์กลางของเวที 144px
+  const radius = 64;      // รัศมีลอยอยู่นอกขอบอวาตาร์ 96px พอดี
+
+  if (count === 1) {
+    // จบ 1 ครั้ง: ประดับดาวมงกุฎทองเด่นสง่าที่ตำแหน่ง 12 นาฬิกา (ยอดบนสุด)
+    const starEl = document.createElement('div');
+    starEl.className = 'avatar-orbit-star';
+    starEl.style.left = `${stageCenter}px`;
+    starEl.style.top = `${stageCenter - radius}px`;
+    starEl.title = 'อัลกุรอาน: ค็อตม์ 30 ยุซ จบแล้ว 1 ครั้ง ⭐ (คลิกดูเกียรติยศ)';
+    starEl.innerHTML = '<i class="fa-solid fa-star"></i>';
+    starEl.onclick = (e) => {
+      e.stopPropagation();
+      showKhatamHonourToast(1, 1);
+    };
+    ring.appendChild(starEl);
+    return;
+  }
+
+  // จบ 2 ครั้งขึ้นไป (เช่น 2, 3, 5, 10 ครั้ง): กระจายดาวเป็นวงกลมลอยรอบโปรไฟล์อย่างสมมาตรสวยงาม
+  const displayCount = Math.min(count, 24); // รองรับได้สูงสุดถึง 24 ดวงรอบขอบ
+  const step = (2 * Math.PI) / displayCount;
+
+  for (let i = 0; i < displayCount; i++) {
+    // เริ่มต้นมุมที่ด้านบนสุด (-90 องศา หรือ -PI/2) หมุนตามเข็มนาฬิกา
+    const angle = (-Math.PI / 2) + (i * step);
+    const x = Math.round(stageCenter + radius * Math.cos(angle));
+    const y = Math.round(stageCenter + radius * Math.sin(angle));
+
+    const starEl = document.createElement('div');
+    starEl.className = 'avatar-orbit-star';
+    starEl.style.left = `${x}px`;
+    starEl.style.top = `${y}px`;
+    starEl.style.animationDelay = `${(i * 0.18).toFixed(2)}s`;
+    starEl.title = `อัลกุรอาน: ค็อตม์ 30 ยุซ ครั้งที่ ${i + 1} ⭐ (คลิกดูเกียรติยศ)`;
+    starEl.innerHTML = '<i class="fa-solid fa-star"></i>';
+    starEl.onclick = (e) => {
+      e.stopPropagation();
+      showKhatamHonourToast(i + 1, count);
+    };
+    ring.appendChild(starEl);
+  }
+}
+
+/**
+ * แสดงป้ายเกียรติยศค็อตมุลกุรอานใต้รูปโปรไฟล์
+ */
+function renderKhatamBadge(khatamCount = 0) {
+  const container = document.getElementById('dashKhatamBadgeContainer');
+  if (!container) return;
+
+  const count = parseInt(khatamCount) || 0;
+  if (count > 0) {
+    container.innerHTML = `
+      <div class="banner-khatam-pill" onclick="showKhatamHonourToast(${count}, ${count})" title="คลิกเพื่อดูบันทึกเกียรติยศแห่งกุรอาน">
+        <i class="fa-solid fa-crown" style="color: #fbbf24;"></i>
+        ค็อตมุลกุรอาน 30 ยุซ <strong>${count} จบ</strong> (${count} ดาวเกียรติยศ)
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="banner-khatam-pill empty" onclick="switchView('hasanat'); switchHasanatSubTab('quran');" title="คลิกเพื่อบันทึกการอ่านอัลกุรอาน">
+        <i class="fa-solid fa-book-quran" style="color: #93c5fd;"></i>
+        อ่านจบ 30 ยุซ เพื่อรับดาวเกียรติยศรอบโปรไฟล์ ⭐
+      </div>
+    `;
+  }
+}
+
+function showKhatamHonourToast(khatamNum, totalKhatam = null) {
+  const total = totalKhatam || khatamNum;
+  playSuccessSound();
+  showToast(`👑 มาชาอัลลอฮ์! อ่านจบ 30 ยุซ (ค็อตมุลกุรอาน) สะสม ${total} ครั้ง ได้รับดาวเกียรติยศประดับรอบโปรไฟล์ ${total} ดวง ⭐`, 'success');
+}
+
+/**
+ * ปรับจำนวนครั้งที่อ่านจบ 30 ยุซ ในหน้าผลบุญ
+ */
+function adjustKhatamCount(delta) {
+  const input = document.getElementById('quranKhatamCountInput');
+  if (!input) return;
+  let val = parseInt(input.value) || 0;
+  val = Math.max(0, Math.min(100, val + delta));
+  input.value = val;
+  onKhatamInputChange();
+}
+
+/**
+ * เมื่อนักเรียนกรอกจำนวนครั้งที่อ่านจบ 30 ยุซ
+ */
+function onKhatamInputChange() {
+  const input = document.getElementById('quranKhatamCountInput');
+  const badge = document.getElementById('quranKhatamDisplayBadge');
+  if (!input) return;
+  const val = Math.max(0, parseInt(input.value) || 0);
+  if (badge) {
+    badge.innerText = `⭐ ${val} ดาวรอบโปรไฟล์`;
+  }
+  // แสดงผลล่วงหน้าแบบ Real-time บนแบนเนอร์โปรไฟล์
+  renderAvatarOrbitStars(val);
+  renderKhatamBadge(val);
+}
 
 function initHasanatView() {
   if (!currentStudent) return;
@@ -240,9 +431,19 @@ function initHasanatView() {
   const pToday = document.getElementById('quranPagesTodayInput');
   const pCur = document.getElementById('quranCurrentPageInput');
   const jComp = document.getElementById('quranJuzCompletedInput');
+  const kInput = document.getElementById('quranKhatamCountInput');
+  const kBadge = document.getElementById('quranKhatamDisplayBadge');
+
   if (pToday) pToday.value = h.quran.pagesToday || '';
   if (pCur) pCur.value = h.quran.currentPage || '';
   if (jComp) jComp.value = h.quran.juzCompleted || 0;
+
+  const khatamVal = (h.quran && typeof h.quran.khatamCount === 'number')
+    ? h.quran.khatamCount
+    : (h.quran.juzCompleted >= 30 ? 1 : 0);
+
+  if (kInput) kInput.value = khatamVal;
+  if (kBadge) kBadge.innerText = `⭐ ${khatamVal} ดาวรอบโปรไฟล์`;
 
   renderHasanatStarsShowcase(h.quran.stars || 0, h.quran.currentPage || 0);
   render30StarsShelf(h.quran.stars || 0);
@@ -337,6 +538,8 @@ function saveQuranReadingLog() {
   const pToday = parseInt(document.getElementById('quranPagesTodayInput').value) || 0;
   const pCur = parseInt(document.getElementById('quranCurrentPageInput').value) || 0;
   let jComp = parseInt(document.getElementById('quranJuzCompletedInput').value) || 0;
+  const kInput = document.getElementById('quranKhatamCountInput');
+  let khatamVal = kInput ? (parseInt(kInput.value) || 0) : 0;
 
   if (pCur < 0 || pCur > 604) {
     showToast('กรุณาระบุเลขหน้าที่ถูกต้อง (1 - 604)', 'warning');
@@ -344,7 +547,14 @@ function saveQuranReadingLog() {
   }
 
   jComp = Math.max(0, Math.min(30, jComp));
-  const stars = jComp; // 1 ยุซ = 1 ดาว
+  if (jComp >= 30 && khatamVal === 0) {
+    khatamVal = 1;
+    if (kInput) kInput.value = 1;
+    const kBadge = document.getElementById('quranKhatamDisplayBadge');
+    if (kBadge) kBadge.innerText = '⭐ 1 ดาวรอบโปรไฟล์';
+  }
+
+  const stars = jComp; // 1 ยุซ = 1 ดาวในชั้นวาง
 
   const h = getStudentHasanat(currentStudent.studentId);
   h.quran = {
@@ -352,6 +562,7 @@ function saveQuranReadingLog() {
     currentPage: pCur,
     juzCompleted: jComp,
     stars: stars,
+    khatamCount: Math.max(0, khatamVal),
     lastUpdated: new Date().toISOString()
   };
 
@@ -359,7 +570,11 @@ function saveQuranReadingLog() {
   renderHasanatStarsShowcase(stars, pCur);
   playSuccessSound();
 
-  showToast(`บันทึกการอ่านอัลกุรอานสำเร็จ! ได้รับดาวสะสม ${stars} ดวง ⭐ (ด้วยความอิคลาส)`, 'success');
+  if (khatamVal > 0) {
+    showToast(`👑 บันทึกสำเร็จ! อ่านจบ 30 ยุซ ${khatamVal} ครั้ง ได้รับดาวเกียรติยศประดับรอบโปรไฟล์ ${khatamVal} ดวง ⭐`, 'success');
+  } else {
+    showToast(`บันทึกการอ่านอัลกุรอานสำเร็จ! ได้รับดาวสะสม ${stars} ดวง ⭐ (ด้วยความอิคลาส)`, 'success');
+  }
 }
 
 function renderSurahChecklist(filterText = '') {
@@ -538,6 +753,8 @@ function renderDashboardQuranStars() {
     if (starsList) starsList.innerHTML = '<span style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">เข้าสู่ระบบเพื่อดูดาว</span>';
     if (progressText) progressText.innerText = 'จบ 0/30 ยุซ (0 ดาว)';
     if (statCount) statCount.innerText = '0 ดาว';
+    renderAvatarOrbitStars(0);
+    renderKhatamBadge(0);
     return;
   }
 
@@ -545,24 +762,37 @@ function renderDashboardQuranStars() {
   const stars = (h && h.quran && h.quran.stars) || 0;
   const juz = (h && h.quran && h.quran.juzCompleted) || 0;
   const curPage = (h && h.quran && h.quran.currentPage) || 0;
+  const khatam = (h && h.quran && typeof h.quran.khatamCount === 'number')
+    ? h.quran.khatamCount
+    : (juz >= 30 ? 1 : 0);
+
+  // วาดดาวรอบขอบรูปโปรไฟล์ และแสดงป้ายเกียรติยศใต้โปรไฟล์
+  renderAvatarOrbitStars(khatam);
+  renderKhatamBadge(khatam);
 
   if (progressText) {
-    progressText.innerText = `จบ ${juz}/30 ยุซ (${stars} ดาว)`;
+    progressText.innerText = `จบ ${juz}/30 ยุซ (${khatam > 0 ? 'ค็อตม์ ' + khatam + ' ครั้ง' : stars + ' ดาว'})`;
   }
 
   if (statCount) {
-    statCount.innerText = `${stars} ดาว`;
+    statCount.innerText = `${khatam > 0 ? khatam + ' ดาว (ค็อตม์)' : stars + ' ดาว'}`;
   }
 
   if (!starsList) return;
-  if (stars === 0) {
+  if (stars === 0 && khatam === 0) {
     starsList.innerHTML = '<span style="font-size: 0.82rem; color: rgba(255,255,255,0.85);">เริ่มอ่านอัลกุรอานเพื่อสะสมดาว</span>';
     return;
   }
 
   let starsHtml = '';
-  for (let i = 0; i < stars; i++) {
-    starsHtml += `<span class="quran-star-icon" title="ยุซที่ ${i+1} สำเร็จ">⭐</span>`;
+  if (khatam > 0) {
+    for (let i = 0; i < khatam; i++) {
+      starsHtml += `<span class="quran-star-icon" title="จบ 30 ยุซ ครั้งที่ ${i+1}">⭐</span>`;
+    }
+  } else {
+    for (let i = 0; i < stars; i++) {
+      starsHtml += `<span class="quran-star-icon" title="ยุซที่ ${i+1} สำเร็จ">⭐</span>`;
+    }
   }
   starsList.innerHTML = starsHtml;
 }
