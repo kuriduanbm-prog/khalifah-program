@@ -502,6 +502,91 @@ html, body {
   margin-top: 0.3rem;
 }
 
+/* Minimalist Birth Date Selector */
+.birthdate-picker-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+}
+
+.birthdate-col-day {
+  flex: 1;
+  min-width: 0;
+}
+
+.birthdate-col-month {
+  flex: 1.55;
+  min-width: 0;
+}
+
+.birthdate-col-year {
+  flex: 1.15;
+  min-width: 0;
+}
+
+.birthdate-select {
+  width: 100%;
+  padding: 0.68rem 0.55rem;
+  font-family: var(--font-family);
+  font-size: 0.88rem;
+  color: #334155;
+  background-color: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2.2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 0.85rem;
+  padding-right: 1.5rem;
+}
+
+.birthdate-select:hover {
+  border-color: #94a3b8;
+  background-color: #f8fafc;
+}
+
+.birthdate-select:focus {
+  border-color: var(--primary);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.birthdate-select.selected {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.birthdate-selected-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  color: #15803d;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 0.45rem;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.birthdate-code-badge {
+  background: #dcfce7;
+  color: #166534;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  font-family: monospace;
+  font-weight: 700;
+}
+
 /* Page Views */
 .view-section {
   display: none;

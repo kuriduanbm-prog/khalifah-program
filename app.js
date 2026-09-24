@@ -2953,11 +2953,126 @@ function toggleAuthForm(formType) {
     loginSection.style.display = 'none';
     regSection.style.display = 'block';
     title.innerText = 'ลงทะเบียนนักเรียนใหม่';
+    initBirthDatePicker();
   } else {
     loginSection.style.display = 'block';
     regSection.style.display = 'none';
     title.innerText = 'เข้าสู่ระบบนักเรียน';
   }
+}
+
+// ----------------- MINIMALIST BIRTH DATE PICKER ----------------- //
+const THAI_MONTH_NAMES_LIST = [
+  '', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+function initBirthDatePicker() {
+  const daySelect = document.getElementById('regBirthDay');
+  const yearSelect = document.getElementById('regBirthYear');
+  if (!daySelect || !yearSelect) return;
+
+  // Populate days 1-31 if not already populated
+  if (daySelect.options.length <= 1) {
+    for (let d = 1; d <= 31; d++) {
+      const opt = document.createElement('option');
+      const val = String(d).padStart(2, '0');
+      opt.value = val;
+      opt.textContent = `${d}`;
+      daySelect.appendChild(opt);
+    }
+  }
+
+  // Populate Buddhist years (พ.ศ.) 2568 down to 2530
+  if (yearSelect.options.length <= 1) {
+    const currentBE = new Date().getFullYear() + 543;
+    const maxBE = Math.max(currentBE, 2568);
+    const minBE = 2530;
+    for (let y = maxBE; y >= minBE; y--) {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = `${y}`;
+      yearSelect.appendChild(opt);
+    }
+  }
+}
+
+function syncBirthDatePicker() {
+  const daySelect = document.getElementById('regBirthDay');
+  const monthSelect = document.getElementById('regBirthMonth');
+  const yearSelect = document.getElementById('regBirthYear');
+  const hiddenInput = document.getElementById('regBirthDate');
+  const pill = document.getElementById('birthDateSelectedPill');
+  const previewText = document.getElementById('birthDatePreviewText');
+  const codeBadge = document.getElementById('birthDateCodeBadge');
+  const defaultHint = document.getElementById('birthDateDefaultHint');
+  const summaryBadge = document.getElementById('birthDateSummaryBadge');
+
+  if (!daySelect || !monthSelect || !yearSelect || !hiddenInput) return;
+
+  const d = daySelect.value;
+  const m = monthSelect.value;
+  const y = yearSelect.value;
+
+  // Visual selection indicator
+  [daySelect, monthSelect, yearSelect].forEach(sel => {
+    if (sel.value) sel.classList.add('selected');
+    else sel.classList.remove('selected');
+  });
+
+  // Smart day adjustment based on selected month & leap year
+  if (m) {
+    const monthNum = parseInt(m, 10);
+    const yearBE = parseInt(y, 10) || 2552;
+    const yearAD = yearBE - 543;
+    const maxDays = new Date(yearAD, monthNum, 0).getDate();
+
+    if (parseInt(d, 10) > maxDays) {
+      daySelect.value = String(maxDays).padStart(2, '0');
+    }
+  }
+
+  const cleanDay = daySelect.value;
+  if (cleanDay && m && y) {
+    const bdCode = `${cleanDay}${m}${y}`;
+    hiddenInput.value = bdCode;
+
+    const mIdx = parseInt(m, 10);
+    const monthName = THAI_MONTH_NAMES_LIST[mIdx] || m;
+    const formattedThaiDate = `${parseInt(cleanDay, 10)} ${monthName} ${y}`;
+
+    if (previewText) previewText.textContent = formattedThaiDate;
+    if (codeBadge) codeBadge.textContent = bdCode;
+    if (pill) pill.style.display = 'inline-flex';
+    if (defaultHint) defaultHint.style.display = 'none';
+    if (summaryBadge) {
+      summaryBadge.textContent = `พ.ศ. ${y}`;
+      summaryBadge.style.display = 'inline-block';
+    }
+  } else {
+    hiddenInput.value = '';
+    if (pill) pill.style.display = 'none';
+    if (defaultHint) defaultHint.style.display = 'flex';
+    if (summaryBadge) summaryBadge.style.display = 'none';
+  }
+}
+
+function resetBirthDatePicker() {
+  const daySelect = document.getElementById('regBirthDay');
+  const monthSelect = document.getElementById('regBirthMonth');
+  const yearSelect = document.getElementById('regBirthYear');
+  const hiddenInput = document.getElementById('regBirthDate');
+  const pill = document.getElementById('birthDateSelectedPill');
+  const defaultHint = document.getElementById('birthDateDefaultHint');
+  const summaryBadge = document.getElementById('birthDateSummaryBadge');
+
+  if (daySelect) { daySelect.value = ''; daySelect.classList.remove('selected'); }
+  if (monthSelect) { monthSelect.value = ''; monthSelect.classList.remove('selected'); }
+  if (yearSelect) { yearSelect.value = ''; yearSelect.classList.remove('selected'); }
+  if (hiddenInput) hiddenInput.value = '';
+  if (pill) pill.style.display = 'none';
+  if (defaultHint) defaultHint.style.display = 'flex';
+  if (summaryBadge) summaryBadge.style.display = 'none';
 }
 
 async function handleStudentLogin() {
@@ -3033,19 +3148,13 @@ function handleStudentRegister() {
   const parentPhone = document.getElementById('regParentPhone').value.trim();
 
   if (!studentId || !fullName || !schoolName || !birthDate || !parentPhone) {
-    showToast('กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง', 'warning');
-    return;
-  }
-
-  // ห้ามใส่เครื่องหมาย / หรือ - ตามที่ผู้ใช้กำหนด (เช่น 1 มกราคม 2540 ให้เขียนเป็น 01012540)
-  if (birthDate.includes('/') || birthDate.includes('-') || birthDate.includes('.')) {
-    showToast('วันเดือนปีเกิดห้ามใส่เครื่องหมาย / หรือ - เช่น 1 มกราคม 2540 ให้เขียนเป็น 01012540', 'warning');
+    showToast('กรุณากรอกข้อมูลให้ครบถ้วน และเลือกวันเดือนปีเกิด', 'warning');
     return;
   }
 
   const cleanBD = birthDate.replace(/[^0-9]/g, '');
   if (cleanBD.length !== 8) {
-    showToast('วันเดือนปีเกิดต้องมี 8 หลักพอดี (ห้ามใส่ /) เช่น 01012540', 'warning');
+    showToast('กรุณาเลือกวัน เดือน และปี พ.ศ. เกิดให้ครบถ้วน', 'warning');
     return;
   }
 
@@ -3054,7 +3163,7 @@ function handleStudentRegister() {
   const year = parseInt(cleanBD.substring(4, 8), 10);
 
   if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2450 || year > 2600) {
-    showToast('วันเดือนปีเกิดไม่ถูกต้อง เช่น 01012540 (วัน 01-31, เดือน 01-12, พ.ศ. 4 หลัก)', 'warning');
+    showToast('วันเดือนปีเกิดไม่ถูกต้อง กรุณาเลือกใหม่', 'warning');
     return;
   }
 
@@ -3086,12 +3195,13 @@ function handleStudentRegister() {
   currentStudent = newStudent;
   localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
 
-  // Reset register avatar
+  // Reset register avatar and birthdate picker
   registerAvatarBase64 = '';
   const preview = document.getElementById('regAvatarPreview');
   if (preview) {
     preview.innerHTML = '<i class="fa-solid fa-camera"></i>';
   }
+  resetBirthDatePicker();
 
   renderCurrentStudentProfile();
   renderDashboardCharts();
@@ -4829,4 +4939,11 @@ function playSuccessSound() {
     osc.start();
     osc.stop(ctx.currentTime + 0.25);
   } catch (e) {}
+}
+
+// Initialize minimalist date of birth picker
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initBirthDatePicker);
+} else {
+  initBirthDatePicker();
 }
