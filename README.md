@@ -35,13 +35,16 @@
 ## 📁 โครงสร้างโปรเจกต์ (Project Structure)
 
 ```text
-├── index.html              # หน้าเว็บหลัก (สำหรับเปิดบน GitHub Pages)
-├── style.css               # สไตล์ชีท Minimalist Blue-White
-├── app.js                  # ลอจิกหลักทั้งหมด (Camera, Geofencing, Export, Charts)
+├── index.html              # หน้าเว็บหลัก (สำหรับเปิดบน GitHub Pages / Vercel / Web Browser)
+├── style.css               # สไตล์ชีท Minimalist Blue-White & macOS Frosted Glass
+├── app.js                  # ลอจิกหลักทั้งหมด (Camera, Geofencing, Export, Charts, Hasanat)
 ├── Code.gs                 # โค้ด Google Apps Script Backend สำหรับ Google Sheets
-├── google_site_embed.html  # ไฟล์เดียวจบ (All-in-One) สำหรับฝังโค้ดใน Google Sites
+├── manifest.json           # การตั้งค่า Progressive Web App (PWA)
+├── sw.js                   # Service Worker สำหรับ PWA และโหมดออฟไลน์
 ├── assets/
-│   └── logo.png            # โลโก้ Khalifah Program
+│   ├── logo.png            # โลโก้ Khalifah Program
+│   ├── icon-192.png        # ไอคอนแอป PWA (192x192)
+│   └── icon-512.png        # ไอคอนแอป PWA (512x512)
 └── README.md               # เอกสารคู่มือโครงการ
 ```
 

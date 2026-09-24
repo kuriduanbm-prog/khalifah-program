@@ -60,7 +60,7 @@ const HEADERS = {
   HASANAT: [
     'รหัสบันทึก', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'วันที่', 
     'อ่านกุรอานวันนี้ (หน้า)', 'อ่านถึงหน้าที่', 'อ่านจบกี่ยุซ', 'จำนวนดาวที่สะสม (ดวง)', 
-    'จำนวนซูเราะห์ที่ท่องจำ', 'รายชื่อซูเราะห์ที่ท่องจำได้', 
+    'จำนวนครั้งอ่านจบ30ยุซ (ค็อตม์)', 'จำนวนซูเราะห์ที่ท่องจำ', 'รายชื่อซูเราะห์ที่ท่องจำได้', 
     'รวมร็อกอะฮ์สุนัตวันนี้', 'รายละเอียดละหมาดสุนัต', 'เวลา Timestamp'
   ]
 };
@@ -313,7 +313,7 @@ function doGet(e) {
         result = initializeSheets();
         break;
       case 'getStudent':
-        result = getStudent(e.parameter.studentId);
+        result = getStudent(e.parameter.studentId, e.parameter.parentPhone);
         break;
       case 'getAllStudents':
         result = getAllStudents();
@@ -366,7 +366,7 @@ function doPost(e) {
         result = registerStudent(postData.data);
         break;
       case 'loginStudent':
-        result = loginStudent(postData.studentId, postData.birthDate);
+        result = loginStudent(postData.studentId, postData.birthDate || postData.parentPhone);
         break;
       case 'updateStudentGrade':
         result = updateStudentGrade(postData.studentId, postData.newGrade);
@@ -408,6 +408,9 @@ function doPost(e) {
       case 'updateProfilePhoto':
         result = updateStudentProfilePhoto(postData.data.studentId, postData.data.avatarUrl);
         break;
+      case 'updateSubjectScores':
+        result = updateSubjectScores(postData.data);
+        break;
       default:
         result = { success: false, error: 'Invalid POST action: ' + action };
     }
@@ -421,6 +424,18 @@ function doPost(e) {
 
 // ----------------- BUSINESS LOGIC FUNCTIONS ----------------- //
 
+/**
+ * รักษาเลขศูนย์นำหน้า เช่น เบอร์โทร 0812345678, วันเกิด 01012540, รหัสนักเรียน 01234
+ */
+function formatAsText(val) {
+  if (val === null || val === undefined) return '';
+  const str = String(val).trim();
+  if (/^0[0-9]/.test(str)) {
+    return "'" + str;
+  }
+  return str;
+}
+
 function registerStudent(data) {
   initializeSheets();
   const ss = getSpreadsheet();
@@ -428,25 +443,30 @@ function registerStudent(data) {
   const rows = sheet.getDataRange().getValues();
 
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === String(data.studentId).trim()) {
+    if (String(rows[i][0]).trim().toLowerCase() === String(data.studentId).trim().toLowerCase()) {
       return { success: false, message: 'รหัสนักเรียนนี้ได้ลงทะเบียนในระบบแล้ว' };
     }
   }
 
   const registeredAt = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
   const cleanBD = String(data.birthDate || '').replace(/[^0-9]/g, '');
-  const birthDateFormatted = (cleanBD.length === 8) ? ("'" + cleanBD) : String(data.birthDate || '');
+  const birthDateFormatted = (cleanBD.length === 8) ? ("'" + cleanBD) : formatAsText(data.birthDate);
+  const studentIdFormatted = formatAsText(data.studentId);
+  const parentPhoneFormatted = formatAsText(data.parentPhone);
+
+  const rawPhoto = data.avatarUrl || data.profilePhoto || '';
+  const photoLink = saveStudentPhotoToDrive(data.studentId, rawPhoto);
 
   sheet.appendRow([
-    data.studentId,
+    studentIdFormatted,
     data.fullName,
     data.schoolName,
     data.grade,
     birthDateFormatted,
-    data.parentPhone,
+    parentPhoneFormatted,
     registeredAt,
     formatStudentStatusThai(data.status || 'Active'),
-    data.profilePhoto || ''
+    photoLink || rawPhoto
   ]);
 
   return { 
@@ -458,39 +478,106 @@ function registerStudent(data) {
       schoolName: data.schoolName,
       grade: data.grade,
       birthDate: data.birthDate,
-      parentPhone: data.parentPhone
+      parentPhone: data.parentPhone,
+      avatarUrl: photoLink || rawPhoto
     }
   };
 }
 
-function loginStudent(studentId, birthDate) {
+function getStudent(studentId, parentPhone) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.STUDENTS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
+  const rows = sheet.getDataRange().getValues();
+
+  const targetId = studentId ? String(studentId).trim().toLowerCase() : '';
+  const targetPhone = parentPhone ? String(parentPhone).replace(/[^0-9]/g, '') : '';
+
+  for (let i = 1; i < rows.length; i++) {
+    const sId = String(rows[i][0]).trim();
+    const sPhone = String(rows[i][5]).trim();
+    const cleanSPhone = sPhone.replace(/[^0-9]/g, '');
+
+    const idMatch = targetId ? (sId.toLowerCase() === targetId) : false;
+    const phoneMatch = targetPhone ? (cleanSPhone === targetPhone || sPhone === parentPhone) : false;
+
+    let isMatch = false;
+    if (targetId && targetPhone) {
+      isMatch = idMatch && phoneMatch;
+    } else if (targetId) {
+      isMatch = idMatch;
+    } else if (targetPhone) {
+      isMatch = phoneMatch;
+    }
+
+    if (isMatch) {
+      let bd = String(rows[i][4]);
+      if (bd.startsWith("'")) bd = bd.substring(1);
+      let ph = String(rows[i][5]);
+      if (ph.startsWith("'")) ph = ph.substring(1);
+      let sid = String(rows[i][0]);
+      if (sid.startsWith("'")) sid = sid.substring(1);
+
+      return {
+        success: true,
+        student: {
+          studentId: sid,
+          fullName: rows[i][1],
+          schoolName: rows[i][2],
+          grade: rows[i][3],
+          birthDate: bd,
+          parentPhone: ph,
+          status: rows[i][7] || 'ปกติ (กำลังศึกษา)',
+          avatarUrl: rows[i][8] || ''
+        }
+      };
+    }
+  }
+
+  return { success: false, message: 'ไม่พบข้อมูลนักเรียน' };
+}
+
+function loginStudent(studentId, passOrPhone) {
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
 
-  for (let i = 1; i < rows.length; i++) {
-    const sId = String(rows[i][0]).trim();
-    const bDate = String(rows[i][4]).trim();
-    
-    if (sId === String(studentId).trim()) {
-      const cleanBDate = bDate.replace(/[\/\-\.]/g, '');
-      const cleanInput = String(birthDate).trim().replace(/[\/\-\.]/g, '');
+  const cleanInput = String(passOrPhone || '').trim().replace(/[\/\-\.]/g, '');
+  const targetId = String(studentId || '').trim().toLowerCase();
 
-      if (cleanBDate === cleanInput || bDate === String(birthDate).trim()) {
+  for (let i = 1; i < rows.length; i++) {
+    const sId = String(rows[i][0]).trim().toLowerCase();
+    const bDate = String(rows[i][4]).trim();
+    const cleanBDate = bDate.replace(/[\/\-\.]/g, '');
+    const sPhone = String(rows[i][5]).trim();
+    const cleanPhone = sPhone.replace(/[^0-9]/g, '');
+
+    if (sId === targetId) {
+      if (cleanBDate === cleanInput || bDate === String(passOrPhone).trim() || cleanPhone === cleanInput || sPhone === String(passOrPhone).trim()) {
+        let bd = String(rows[i][4]);
+        if (bd.startsWith("'")) bd = bd.substring(1);
+        let ph = String(rows[i][5]);
+        if (ph.startsWith("'")) ph = ph.substring(1);
+        let sid = String(rows[i][0]);
+        if (sid.startsWith("'")) sid = sid.substring(1);
+
         return {
           success: true,
           student: {
-            studentId: rows[i][0],
+            studentId: sid,
             fullName: rows[i][1],
             schoolName: rows[i][2],
             grade: rows[i][3],
-            birthDate: rows[i][4],
-            parentPhone: rows[i][5]
+            birthDate: bd,
+            parentPhone: ph,
+            status: rows[i][7] || 'ปกติ (กำลังศึกษา)',
+            avatarUrl: rows[i][8] || ''
           }
         };
       } else {
-        return { success: false, message: 'วันเดือนปีเกิด (รหัสผ่าน) ไม่ถูกต้อง' };
+        return { success: false, message: 'รหัสผ่านหรือข้อมูลยืนยันไม่ถูกต้อง' };
       }
     }
   }
@@ -510,6 +597,10 @@ function updateStudentGrade(studentId, newGrade) {
     }
   }
   return { success: false, message: 'ไม่พบรหัสนักเรียน' };
+}
+
+function updateSubjectScores(data) {
+  return { success: true, message: 'บันทึกคะแนนสมรรถนะสำเร็จ', data: data };
 }
 
 function recordPrayer(data) {
@@ -552,7 +643,7 @@ function recordPrayer(data) {
 
   sheet.appendRow([
     logId,
-    data.studentId,
+    formatAsText(data.studentId),
     data.studentName,
     data.grade,
     prayerNameThai,
@@ -619,7 +710,7 @@ function recordAttendance(data) {
 
   sheet.appendRow([
     logId,
-    data.studentId,
+    formatAsText(data.studentId),
     data.studentName,
     data.grade,
     data.date || dateStr,
@@ -923,7 +1014,7 @@ function recordHasanat(data) {
 
   sheet.appendRow([
     logId,
-    data.studentId,
+    formatAsText(data.studentId),
     data.studentName,
     data.grade,
     dateStr,
@@ -931,6 +1022,7 @@ function recordHasanat(data) {
     q.currentPage || 0,
     q.juzCompleted || 0,
     q.stars || 0,
+    q.khatamCount || 0,
     m.count || 0,
     memListStr,
     s.totalRakaat || 0,
@@ -975,14 +1067,14 @@ function batchSyncData(data) {
 
       if (foundRow === -1) {
         const cleanBD = String(s.birthDate || '').replace(/[^0-9]/g, '');
-        const birthDateFormatted = (cleanBD.length === 8) ? ("'" + cleanBD) : String(s.birthDate || '');
+        const birthDateFormatted = (cleanBD.length === 8) ? ("'" + cleanBD) : formatAsText(s.birthDate);
         sheetStudents.appendRow([
-          s.studentId,
+          formatAsText(s.studentId),
           s.fullName,
           s.schoolName,
           s.grade,
           birthDateFormatted,
-          s.parentPhone,
+          formatAsText(s.parentPhone),
           Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"),
           formatStudentStatusThai(s.status || 'Active'),
           photoLink

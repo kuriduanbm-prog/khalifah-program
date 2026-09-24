@@ -229,7 +229,183 @@ function selectSunnahPill(type, rakaat) {
   calculateDailySunnahRakaat(false);
 }
 
+// ==================== HASANAT STORAGE & KHATAM ORBIT STARS SYSTEM ==================== //
 
+/**
+ * ดึงข้อมูลผลบุญของนักเรียนจาก LocalStorage พร้อมค่าเริ่มต้นที่ปลอดภัย
+ */
+function getStudentHasanat(studentId) {
+  if (!studentId) return null;
+  let allHasanat = {};
+  try {
+    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+  } catch (e) {
+    allHasanat = {};
+  }
+  if (!allHasanat[studentId]) {
+    allHasanat[studentId] = {
+      studentId: studentId,
+      studentName: currentStudent ? currentStudent.fullName : '',
+      grade: currentStudent ? currentStudent.grade : '',
+      quran: {
+        pagesToday: 0,
+        currentPage: 0,
+        juzCompleted: 0,
+        stars: 0,
+        khatamCount: 0,
+        lastUpdated: new Date().toISOString()
+      },
+      memorization: {
+        count: 0,
+        memorizedSurahs: []
+      },
+      sunnah: {
+        rawatib: {},
+        duhaRakaat: 0,
+        witrRakaat: 3,
+        tahajjudRakaat: 0,
+        totalRakaat: 0
+      }
+    };
+  }
+
+  // ป้องกัน undefined field
+  if (!allHasanat[studentId].quran) {
+    allHasanat[studentId].quran = { pagesToday: 0, currentPage: 0, juzCompleted: 0, stars: 0, khatamCount: 0 };
+  }
+  if (typeof allHasanat[studentId].quran.khatamCount !== 'number') {
+    allHasanat[studentId].quran.khatamCount = (allHasanat[studentId].quran.juzCompleted >= 30) ? 1 : 0;
+  }
+  if (!allHasanat[studentId].memorization) {
+    allHasanat[studentId].memorization = { count: 0, memorizedSurahs: [] };
+  }
+  if (!allHasanat[studentId].sunnah) {
+    allHasanat[studentId].sunnah = { rawatib: {}, duhaRakaat: 0, witrRakaat: 3, tahajjudRakaat: 0, totalRakaat: 0 };
+  }
+  return allHasanat[studentId];
+}
+
+/**
+ * บันทึกข้อมูลผลบุญลง LocalStorage และซิงค์ไปยัง Google Sheet
+ */
+function saveStudentHasanat(hasanatObj) {
+  if (!hasanatObj || !hasanatObj.studentId) return;
+  let allHasanat = {};
+  try {
+    allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+  } catch (e) {
+    allHasanat = {};
+  }
+  allHasanat[hasanatObj.studentId] = hasanatObj;
+  try {
+    localStorage.setItem('khalifah_student_hasanat', JSON.stringify(allHasanat));
+  } catch (e) {
+    console.error('Failed to save khalifah_student_hasanat:', e);
+  }
+
+  // อัปเดตดาวและเหรียญเกียรติยศที่แบนเนอร์หน้าแรกทันที
+  renderDashboardQuranStars();
+}
+
+/**
+ * วาดดาวทองคำลอยประดับรอบขอบวงกลมรูปโปรไฟล์ (1 ดาว = จบ 30 ยุซ 1 ครั้ง, 10 ดาว = จบ 10 ครั้ง)
+ * หรูหรา สไตล์ผู้ดี (Royal Gold Orbit Ring)
+ */
+function renderAvatarOrbitStars(khatamCount = 0) {
+  const ring = document.getElementById('avatarStarOrbitRing');
+  if (!ring) return;
+
+  ring.innerHTML = '';
+  const count = parseInt(khatamCount) || 0;
+  if (count <= 0) return;
+
+  const stageCenter = 72; // จุดศูนย์กลางของเวที 144px
+  const radius = 64;      // รัศมีลอยอยู่นอกขอบอวาตาร์ 96px พอดี
+
+  if (count === 1) {
+    // จบ 1 ครั้ง: ประดับดาวมงกุฎทองเด่นสง่าที่ตำแหน่ง 12 นาฬิกา (ยอดบนสุด)
+    const starEl = document.createElement('div');
+    starEl.className = 'avatar-orbit-star';
+    starEl.style.left = `${stageCenter}px`;
+    starEl.style.top = `${stageCenter - radius}px`;
+    starEl.title = 'อัลกุรอาน: ค็อตม์ 30 ยุซ จบแล้ว 1 ครั้ง ⭐ (คลิกดูเกียรติยศ)';
+    starEl.innerHTML = '<i class="fa-solid fa-star"></i>';
+    starEl.onclick = (e) => {
+      e.stopPropagation();
+      showKhatamHonourToast(1, 1);
+    };
+    ring.appendChild(starEl);
+    return;
+  }
+
+  // จบ 2 ครั้งขึ้นไป (เช่น 2, 3, 5, 10 ครั้ง): กระจายดาวเป็นวงกลมลอยรอบโปรไฟล์อย่างสมมาตรสวยงาม
+  const displayCount = Math.min(count, 24); // รองรับได้สูงสุดถึง 24 ดวงรอบขอบ
+  const step = (2 * Math.PI) / displayCount;
+
+  for (let i = 0; i < displayCount; i++) {
+    // เริ่มต้นมุมที่ด้านบนสุด (-90 องศา หรือ -PI/2) หมุนตามเข็มนาฬิกา
+    const angle = (-Math.PI / 2) + (i * step);
+    const x = Math.round(stageCenter + radius * Math.cos(angle));
+    const y = Math.round(stageCenter + radius * Math.sin(angle));
+
+    const starEl = document.createElement('div');
+    starEl.className = 'avatar-orbit-star';
+    starEl.style.left = `${x}px`;
+    starEl.style.top = `${y}px`;
+    starEl.style.animationDelay = `${(i * 0.18).toFixed(2)}s`;
+    starEl.title = `อัลกุรอาน: ค็อตม์ 30 ยุซ ครั้งที่ ${i + 1} ⭐ (คลิกดูเกียรติยศ)`;
+    starEl.innerHTML = '<i class="fa-solid fa-star"></i>';
+    starEl.onclick = (e) => {
+      e.stopPropagation();
+      showKhatamHonourToast(i + 1, count);
+    };
+    ring.appendChild(starEl);
+  }
+}
+
+/**
+ * ป้ายข้อความค็อตมุลกุรอานใต้รูปโปรไฟล์ (นำออกตามความต้องการของผู้ใช้ ให้เหลือเฉพาะดาวรอบโปรไฟล์)
+ */
+function renderKhatamBadge(khatamCount = 0) {
+  const container = document.getElementById('dashKhatamBadgeContainer');
+  if (container) {
+    container.innerHTML = '';
+  }
+}
+
+function showKhatamHonourToast(khatamNum, totalKhatam = null) {
+  const total = totalKhatam || khatamNum;
+  playSuccessSound();
+  showToast(`👑 มาชาอัลลอฮ์! อ่านจบ 30 ยุซ (ค็อตมุลกุรอาน) สะสม ${total} ครั้ง ได้รับดาวเกียรติยศประดับรอบโปรไฟล์ ${total} ดวง ⭐`, 'success');
+}
+
+/**
+ * ปรับจำนวนครั้งที่อ่านจบ 30 ยุซ ในหน้าผลบุญ
+ */
+function adjustKhatamCount(delta) {
+  const input = document.getElementById('quranKhatamCountInput');
+  if (!input) return;
+  let val = parseInt(input.value) || 0;
+  val = Math.max(0, Math.min(100, val + delta));
+  input.value = val;
+  onKhatamInputChange();
+}
+
+/**
+ * เมื่อนักเรียนกรอกจำนวนครั้งที่อ่านจบ 30 ยุซ
+ */
+function onKhatamInputChange() {
+  const input = document.getElementById('quranKhatamCountInput');
+  const badge = document.getElementById('quranKhatamDisplayBadge');
+  if (!input) return;
+  const val = Math.max(0, parseInt(input.value) || 0);
+  if (badge) {
+    badge.innerText = `⭐ ${val} ดาวรอบโปรไฟล์`;
+  }
+  // แสดงผลล่วงหน้าแบบ Real-time บนแบนเนอร์โปรไฟล์
+  renderAvatarOrbitStars(val);
+  renderKhatamBadge(val);
+}
 
 function initHasanatView() {
   if (!currentStudent) return;
@@ -240,9 +416,19 @@ function initHasanatView() {
   const pToday = document.getElementById('quranPagesTodayInput');
   const pCur = document.getElementById('quranCurrentPageInput');
   const jComp = document.getElementById('quranJuzCompletedInput');
+  const kInput = document.getElementById('quranKhatamCountInput');
+  const kBadge = document.getElementById('quranKhatamDisplayBadge');
+
   if (pToday) pToday.value = h.quran.pagesToday || '';
   if (pCur) pCur.value = h.quran.currentPage || '';
   if (jComp) jComp.value = h.quran.juzCompleted || 0;
+
+  const khatamVal = (h.quran && typeof h.quran.khatamCount === 'number')
+    ? h.quran.khatamCount
+    : (h.quran.juzCompleted >= 30 ? 1 : 0);
+
+  if (kInput) kInput.value = khatamVal;
+  if (kBadge) kBadge.innerText = `⭐ ${khatamVal} ดาวรอบโปรไฟล์`;
 
   renderHasanatStarsShowcase(h.quran.stars || 0, h.quran.currentPage || 0);
   render30StarsShelf(h.quran.stars || 0);
@@ -337,6 +523,8 @@ function saveQuranReadingLog() {
   const pToday = parseInt(document.getElementById('quranPagesTodayInput').value) || 0;
   const pCur = parseInt(document.getElementById('quranCurrentPageInput').value) || 0;
   let jComp = parseInt(document.getElementById('quranJuzCompletedInput').value) || 0;
+  const kInput = document.getElementById('quranKhatamCountInput');
+  let khatamVal = kInput ? (parseInt(kInput.value) || 0) : 0;
 
   if (pCur < 0 || pCur > 604) {
     showToast('กรุณาระบุเลขหน้าที่ถูกต้อง (1 - 604)', 'warning');
@@ -344,7 +532,14 @@ function saveQuranReadingLog() {
   }
 
   jComp = Math.max(0, Math.min(30, jComp));
-  const stars = jComp; // 1 ยุซ = 1 ดาว
+  if (jComp >= 30 && khatamVal === 0) {
+    khatamVal = 1;
+    if (kInput) kInput.value = 1;
+    const kBadge = document.getElementById('quranKhatamDisplayBadge');
+    if (kBadge) kBadge.innerText = '⭐ 1 ดาวรอบโปรไฟล์';
+  }
+
+  const stars = jComp; // 1 ยุซ = 1 ดาวในชั้นวาง
 
   const h = getStudentHasanat(currentStudent.studentId);
   h.quran = {
@@ -352,6 +547,7 @@ function saveQuranReadingLog() {
     currentPage: pCur,
     juzCompleted: jComp,
     stars: stars,
+    khatamCount: Math.max(0, khatamVal),
     lastUpdated: new Date().toISOString()
   };
 
@@ -359,7 +555,142 @@ function saveQuranReadingLog() {
   renderHasanatStarsShowcase(stars, pCur);
   playSuccessSound();
 
-  showToast(`บันทึกการอ่านอัลกุรอานสำเร็จ! ได้รับดาวสะสม ${stars} ดวง ⭐ (ด้วยความอิคลาส)`, 'success');
+  if (khatamVal > 0) {
+    showToast(`👑 บันทึกสำเร็จ! อ่านจบ 30 ยุซ ${khatamVal} ครั้ง ได้รับดาวเกียรติยศประดับรอบโปรไฟล์ ${khatamVal} ดวง ⭐`, 'success');
+  } else {
+    showToast(`บันทึกการอ่านอัลกุรอานสำเร็จ! ได้รับดาวสะสม ${stars} ดวง ⭐ (ด้วยความอิคลาส)`, 'success');
+  }
+}
+
+// ==================== 114 QURAN SURAHS WITH JUZ MAPPING ==================== //
+const QURAN_SURAHS = [
+  { num: 1, name: "อัลฟาติฮะฮ์", arabic: "الفاتحة", ayahs: 7, juz: 1 },
+  { num: 2, name: "อัลบะเกาะเราะฮ์", arabic: "البقرة", ayahs: 286, juz: 1 },
+  { num: 3, name: "อาลิอิมรอน", arabic: "آل عمران", ayahs: 200, juz: 3 },
+  { num: 4, name: "อันนิซาอ์", arabic: "النساء", ayahs: 176, juz: 4 },
+  { num: 5, name: "อัลมาอิดะฮ์", arabic: "المائدة", ayahs: 120, juz: 6 },
+  { num: 6, name: "อัลอันอาม", arabic: "الأنعام", ayahs: 165, juz: 7 },
+  { num: 7, name: "อัลอะอ์รอฟ", arabic: "الأعراف", ayahs: 206, juz: 8 },
+  { num: 8, name: "อัลอันฟาล", arabic: "الأنفال", ayahs: 75, juz: 9 },
+  { num: 9, name: "อัตเตาบะฮ์", arabic: "التوبة", ayahs: 129, juz: 10 },
+  { num: 10, name: "ยูนุส", arabic: "يونس", ayahs: 109, juz: 11 },
+  { num: 11, name: "ฮูด", arabic: "هود", ayahs: 123, juz: 11 },
+  { num: 12, name: "ยูซุฟ", arabic: "يوسف", ayahs: 111, juz: 12 },
+  { num: 13, name: "อัรเราะอ์ดุ", arabic: "الرعد", ayahs: 43, juz: 13 },
+  { num: 14, name: "อิบรอฮีม", arabic: "إبراهيم", ayahs: 52, juz: 13 },
+  { num: 15, name: "อัลฮิจญร์", arabic: "الحجر", ayahs: 99, juz: 14 },
+  { num: 16, name: "อันนะห์ลุ", arabic: "النحل", ayahs: 128, juz: 14 },
+  { num: 17, name: "อัลอิสรออ์", arabic: "الإسراء", ayahs: 111, juz: 15 },
+  { num: 18, name: "อัลกะฮ์ฟิ", arabic: "الكهف", ayahs: 110, juz: 15 },
+  { num: 19, name: "มัรยัม", arabic: "مريم", ayahs: 98, juz: 16 },
+  { num: 20, name: "ฏอฮา", arabic: "طه", ayahs: 135, juz: 16 },
+  { num: 21, name: "อัลอันบิยาอ์", arabic: "الأنبياء", ayahs: 112, juz: 17 },
+  { num: 22, name: "อัลฮัจญ์", arabic: "الحج", ayahs: 78, juz: 17 },
+  { num: 23, name: "อัลมุอ์มินูน", arabic: "المؤمنون", ayahs: 118, juz: 18 },
+  { num: 24, name: "อันนูร", arabic: "النور", ayahs: 64, juz: 18 },
+  { num: 25, name: "อัลฟุรกอน", arabic: "الفرقان", ayahs: 77, juz: 18 },
+  { num: 26, name: "อัชชุอะรออ์", arabic: "الشعراء", ayahs: 227, juz: 19 },
+  { num: 27, name: "อันนัมลุ", arabic: "النمل", ayahs: 93, juz: 19 },
+  { num: 28, name: "อัลเกาะศอศ", arabic: "القصص", ayahs: 88, juz: 20 },
+  { num: 29, name: "อัลอังกะบูต", arabic: "العنكبوت", ayahs: 69, juz: 20 },
+  { num: 30, name: "อัรรูม", arabic: "الروم", ayahs: 60, juz: 21 },
+  { num: 31, name: "ลุกมาน", arabic: "لقمان", ayahs: 34, juz: 21 },
+  { num: 32, name: "อัสสะญะดะฮ์", arabic: "السجدة", ayahs: 30, juz: 21 },
+  { num: 33, name: "อัลอะห์ซาบ", arabic: "الأحزاب", ayahs: 73, juz: 21 },
+  { num: 34, name: "สะบะอ์", arabic: "سبإ", ayahs: 54, juz: 22 },
+  { num: 35, name: "ฟาฏิร", arabic: "فاطر", ayahs: 45, juz: 22 },
+  { num: 36, name: "ยาซีน", arabic: "يس", ayahs: 83, juz: 22 },
+  { num: 37, name: "อัศศ็อฟฟาต", arabic: "الصافات", ayahs: 182, juz: 23 },
+  { num: 38, name: "ศอด", arabic: "ص", ayahs: 88, juz: 23 },
+  { num: 39, name: "อัซซุมัร", arabic: "الزمر", ayahs: 75, juz: 23 },
+  { num: 40, name: "ฆอฟิร", arabic: "غافر", ayahs: 85, juz: 24 },
+  { num: 41, name: "ฟุศศิลัต", arabic: "فصلت", ayahs: 54, juz: 24 },
+  { num: 42, name: "อัชชูรอ", arabic: "الشورى", ayahs: 53, juz: 25 },
+  { num: 43, name: "อัซซุครุฟ", arabic: "الزخرف", ayahs: 89, juz: 25 },
+  { num: 44, name: "อัดดุคอน", arabic: "الدخان", ayahs: 59, juz: 25 },
+  { num: 45, name: "อัลญาษิยะฮ์", arabic: "الجاثية", ayahs: 37, juz: 25 },
+  { num: 46, name: "อัลอะห์กอฟ", arabic: "الأحقاف", ayahs: 35, juz: 26 },
+  { num: 47, name: "มุฮัมมัด", arabic: "محمد", ayahs: 38, juz: 26 },
+  { num: 48, name: "อัลฟัตห์", arabic: "الفتح", ayahs: 29, juz: 26 },
+  { num: 49, name: "อัลฮุญุรอต", arabic: "الحجرات", ayahs: 18, juz: 26 },
+  { num: 50, name: "กอฟ", arabic: "ق", ayahs: 45, juz: 26 },
+  { num: 51, name: "อัซซาริยาต", arabic: "الذاريات", ayahs: 60, juz: 26 },
+  { num: 52, name: "อัฏฏูร", arabic: "الطور", ayahs: 49, juz: 27 },
+  { num: 53, name: "อันนัจญม์", arabic: "النجم", ayahs: 62, juz: 27 },
+  { num: 54, name: "อัลเกาะมัร", arabic: "القمر", ayahs: 55, juz: 27 },
+  { num: 55, name: "อัรเราะห์มาน", arabic: "الرحمن", ayahs: 78, juz: 27 },
+  { num: 56, name: "อัลวากิอะฮ์", arabic: "الواقعة", ayahs: 96, juz: 27 },
+  { num: 57, name: "อัลฮะดีด", arabic: "الحديد", ayahs: 29, juz: 27 },
+  { num: 58, name: "อัลมุญาดะละฮ์", arabic: "المجادلة", ayahs: 22, juz: 28 },
+  { num: 59, name: "อัลฮัชร", arabic: "الحشر", ayahs: 24, juz: 28 },
+  { num: 60, name: "อัลมุมตะฮะนะฮ์", arabic: "الممتحنة", ayahs: 13, juz: 28 },
+  { num: 61, name: "อัศศ็อฟ", arabic: "الصف", ayahs: 14, juz: 28 },
+  { num: 62, name: "อัลญุมุอะฮ์", arabic: "الجمعة", ayahs: 11, juz: 28 },
+  { num: 63, name: "อัลมุนาฟิกูน", arabic: "المنافقون", ayahs: 11, juz: 28 },
+  { num: 64, name: "อัตตะฆอบุน", arabic: "التغابن", ayahs: 18, juz: 28 },
+  { num: 65, name: "อัฏเฏาะลาก", arabic: "الطلاق", ayahs: 12, juz: 28 },
+  { num: 66, name: "อัตตะห์รีม", arabic: "التحريم", ayahs: 12, juz: 28 },
+  { num: 67, name: "อัลมุลก์", arabic: "الملك", ayahs: 30, juz: 29 },
+  { num: 68, name: "อัลเกาะลัม", arabic: "القلم", ayahs: 52, juz: 29 },
+  { num: 69, name: "อัลฮากเกาะฮ์", arabic: "الحاقة", ayahs: 52, juz: 29 },
+  { num: 70, name: "อัลมะอาริจญ์", arabic: "المعارج", ayahs: 44, juz: 29 },
+  { num: 71, name: "นูห์", arabic: "نوح", ayahs: 28, juz: 29 },
+  { num: 72, name: "อัลญิน", arabic: "الجن", ayahs: 28, juz: 29 },
+  { num: 73, name: "อัลมุซซัมมิล", arabic: "المزمل", ayahs: 20, juz: 29 },
+  { num: 74, name: "อัลมุดดัษษิร", arabic: "المدثر", ayahs: 56, juz: 29 },
+  { num: 75, name: "อัลกิยามะฮ์", arabic: "القيامة", ayahs: 40, juz: 29 },
+  { num: 76, name: "อัลอินซาน", arabic: "الإنسان", ayahs: 31, juz: 29 },
+  { num: 77, name: "อัลมุรสะลาต", arabic: "المرسلات", ayahs: 50, juz: 29 },
+  { num: 78, name: "อันนะบะอ์", arabic: "النبإ", ayahs: 40, juz: 30 },
+  { num: 79, name: "อันนาซิอาต", arabic: "النازعات", ayahs: 46, juz: 30 },
+  { num: 80, name: "อะบะสะ", arabic: "عبس", ayahs: 42, juz: 30 },
+  { num: 81, name: "อัตตักวีร", arabic: "التكوير", ayahs: 29, juz: 30 },
+  { num: 82, name: "อัลอินฟิฏอร", arabic: "الانفطار", ayahs: 19, juz: 30 },
+  { num: 83, name: "อัลมุฏ็อฟฟิฟีน", arabic: "المطففين", ayahs: 36, juz: 30 },
+  { num: 84, name: "อัลอินชิกอก", arabic: "الانشقاق", ayahs: 25, juz: 30 },
+  { num: 85, name: "อัลบุรูจญ์", arabic: "البروج", ayahs: 22, juz: 30 },
+  { num: 86, name: "อัฏฏอริก", arabic: "الطارق", ayahs: 17, juz: 30 },
+  { num: 87, name: "อัลอะอ์ลา", arabic: "الأعلى", ayahs: 19, juz: 30 },
+  { num: 88, name: "อัลฆอชิยะฮ์", arabic: "الغاشية", ayahs: 26, juz: 30 },
+  { num: 89, name: "อัลฟัจญร์", arabic: "الفجر", ayahs: 30, juz: 30 },
+  { num: 90, name: "อัลบะลัด", arabic: "البلد", ayahs: 20, juz: 30 },
+  { num: 91, name: "อัชชัมส์", arabic: "الشمس", ayahs: 15, juz: 30 },
+  { num: 92, name: "อัลลัยล์", arabic: "الليل", ayahs: 21, juz: 30 },
+  { num: 93, name: "อัฎฎุฮา", arabic: "الضحى", ayahs: 11, juz: 30 },
+  { num: 94, name: "อัชชัรห์", arabic: "الشرح", ayahs: 8, juz: 30 },
+  { num: 95, name: "อัตตีน", arabic: "التين", ayahs: 8, juz: 30 },
+  { num: 96, name: "อัลอะลัก", arabic: "العلق", ayahs: 19, juz: 30 },
+  { num: 97, name: "อัลก็อดร์", arabic: "القدر", ayahs: 5, juz: 30 },
+  { num: 98, name: "อัลบัยยินะฮ์", arabic: "البينة", ayahs: 8, juz: 30 },
+  { num: 99, name: "อัซซัลซะละฮ์", arabic: "الزلزلة", ayahs: 8, juz: 30 },
+  { num: 100, name: "อัลอาดิยาต", arabic: "العاديات", ayahs: 11, juz: 30 },
+  { num: 101, name: "อัลกอริอะฮ์", arabic: "القارعة", ayahs: 11, juz: 30 },
+  { num: 102, name: "อัตตะกาษุร", arabic: "التكاثر", ayahs: 8, juz: 30 },
+  { num: 103, name: "อัลอัศร์", arabic: "العصر", ayahs: 3, juz: 30 },
+  { num: 104, name: "อัลฮุมะซะฮ์", arabic: "الهمزة", ayahs: 9, juz: 30 },
+  { num: 105, name: "อัลฟีล", arabic: "الفيل", ayahs: 5, juz: 30 },
+  { num: 106, name: "กุรอยช์", arabic: "قريش", ayahs: 4, juz: 30 },
+  { num: 107, name: "อัลมาอูน", arabic: "الماعون", ayahs: 7, juz: 30 },
+  { num: 108, name: "อัลเกาษัร", arabic: "الكوثر", ayahs: 3, juz: 30 },
+  { num: 109, name: "อัลกาฟิรูน", arabic: "الكافرون", ayahs: 6, juz: 30 },
+  { num: 110, name: "อันนัศร์", arabic: "النصر", ayahs: 3, juz: 30 },
+  { num: 111, name: "อัลมะสัด", arabic: "المسد", ayahs: 5, juz: 30 },
+  { num: 112, name: "อัลอิคลาศ", arabic: "الإخلاص", ayahs: 4, juz: 30 },
+  { num: 113, name: "อัลฟะลัก", arabic: "الفلق", ayahs: 5, juz: 30 },
+  { num: 114, name: "อันนาส", arabic: "الناس", ayahs: 6, juz: 30 }
+];
+
+let currentSurahSortOrder = 'juz-asc'; // 'juz-asc' (1-30) หรือ 'juz-desc' (30-1)
+
+function setSurahSortOrder(order) {
+  currentSurahSortOrder = order;
+  const btnAsc = document.getElementById('btnSortJuzAsc');
+  const btnDesc = document.getElementById('btnSortJuzDesc');
+  if (btnAsc) btnAsc.classList.toggle('active', order === 'juz-asc');
+  if (btnDesc) btnDesc.classList.toggle('active', order === 'juz-desc');
+
+  const searchInput = document.getElementById('searchSurahInput');
+  renderSurahChecklist(searchInput ? searchInput.value : '');
 }
 
 function renderSurahChecklist(filterText = '') {
@@ -370,7 +701,7 @@ function renderSurahChecklist(filterText = '') {
   const memorized = (h && h.memorization && h.memorization.memorizedSurahs) || [];
 
   const search = filterText.toLowerCase().trim();
-  let filtered = QURAN_SURAHS;
+  let filtered = [...QURAN_SURAHS];
 
   // Category filter
   if (currentSurahCategory === 'juzAmma') {
@@ -387,12 +718,20 @@ function renderSurahChecklist(filterText = '') {
     filtered = filtered.filter(s => {
       return s.name.toLowerCase().includes(search) ||
              s.arabic.includes(search) ||
-             String(s.num).includes(search);
+             String(s.num).includes(search) ||
+             `ยุซ ${s.juz}`.includes(search);
     });
   }
 
+  // Sort order: Juz 1->30 or Juz 30->1
+  if (currentSurahSortOrder === 'juz-desc') {
+    filtered.sort((a, b) => b.num - a.num);
+  } else {
+    filtered.sort((a, b) => a.num - b.num);
+  }
+
   if (filtered.length === 0) {
-    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">ไม่พบซูเราะห์ที่ตรงกับคำค้นหา</div>';
+    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.88rem;">ไม่พบซูเราะห์ที่ตรงกับคำค้นหา</div>';
     return;
   }
 
@@ -401,15 +740,17 @@ function renderSurahChecklist(filterText = '') {
     return `
       <div class="surah-item-card ${isMem ? 'memorized' : ''}" onclick="toggleSurahMemorized(${s.num})">
         <div style="display: flex; align-items: center; gap: 0.65rem;">
-          <div class="surah-number-badge">${s.num}</div>
+          <div class="surah-number-badge" title="ซูเราะห์ลำดับที่ ${s.num}">${s.num}</div>
           <div>
             <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-dark);">${s.name}</div>
-            <div style="font-size: 0.72rem; color: var(--text-muted);">${s.ayahs} อายะฮ์</div>
+            <div style="font-size: 0.72rem; color: #0284c7; font-weight: 600;">
+              ยุซที่ ${s.juz} • <span style="color: var(--text-muted); font-weight: 400;">${s.ayahs} อายะฮ์</span>
+            </div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.4rem;">
-          <span style="font-family: 'Traditional Arabic', serif; font-size: 1.05rem; color: #059669;">${s.arabic}</span>
-          <input type="checkbox" ${isMem ? 'checked' : ''} onclick="event.stopPropagation(); toggleSurahMemorized(${s.num})" style="cursor: pointer; width: 18px; height: 18px; accent-color: #059669;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-family: 'Traditional Arabic', serif; font-size: 1.1rem; color: #059669; direction: rtl;">${s.arabic}</span>
+          <input type="checkbox" ${isMem ? 'checked' : ''} onclick="event.stopPropagation(); toggleSurahMemorized(${s.num})" style="cursor: pointer; width: 19px; height: 19px; accent-color: #059669;">
         </div>
       </div>
     `;
@@ -538,6 +879,8 @@ function renderDashboardQuranStars() {
     if (starsList) starsList.innerHTML = '<span style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">เข้าสู่ระบบเพื่อดูดาว</span>';
     if (progressText) progressText.innerText = 'จบ 0/30 ยุซ (0 ดาว)';
     if (statCount) statCount.innerText = '0 ดาว';
+    renderAvatarOrbitStars(0);
+    renderKhatamBadge(0);
     return;
   }
 
@@ -545,24 +888,37 @@ function renderDashboardQuranStars() {
   const stars = (h && h.quran && h.quran.stars) || 0;
   const juz = (h && h.quran && h.quran.juzCompleted) || 0;
   const curPage = (h && h.quran && h.quran.currentPage) || 0;
+  const khatam = (h && h.quran && typeof h.quran.khatamCount === 'number')
+    ? h.quran.khatamCount
+    : (juz >= 30 ? 1 : 0);
+
+  // วาดดาวรอบขอบรูปโปรไฟล์ และแสดงป้ายเกียรติยศใต้โปรไฟล์
+  renderAvatarOrbitStars(khatam);
+  renderKhatamBadge(khatam);
 
   if (progressText) {
-    progressText.innerText = `จบ ${juz}/30 ยุซ (${stars} ดาว)`;
+    progressText.innerText = `จบ ${juz}/30 ยุซ (${khatam > 0 ? 'ค็อตม์ ' + khatam + ' ครั้ง' : stars + ' ดาว'})`;
   }
 
   if (statCount) {
-    statCount.innerText = `${stars} ดาว`;
+    statCount.innerText = `${khatam > 0 ? khatam + ' ดาว (ค็อตม์)' : stars + ' ดาว'}`;
   }
 
   if (!starsList) return;
-  if (stars === 0) {
+  if (stars === 0 && khatam === 0) {
     starsList.innerHTML = '<span style="font-size: 0.82rem; color: rgba(255,255,255,0.85);">เริ่มอ่านอัลกุรอานเพื่อสะสมดาว</span>';
     return;
   }
 
   let starsHtml = '';
-  for (let i = 0; i < stars; i++) {
-    starsHtml += `<span class="quran-star-icon" title="ยุซที่ ${i+1} สำเร็จ">⭐</span>`;
+  if (khatam > 0) {
+    for (let i = 0; i < khatam; i++) {
+      starsHtml += `<span class="quran-star-icon" title="จบ 30 ยุซ ครั้งที่ ${i+1}">⭐</span>`;
+    }
+  } else {
+    for (let i = 0; i < stars; i++) {
+      starsHtml += `<span class="quran-star-icon" title="ยุซที่ ${i+1} สำเร็จ">⭐</span>`;
+    }
   }
   starsList.innerHTML = starsHtml;
 }
@@ -572,11 +928,17 @@ function renderDashboardQuranStars() {
 function renderPrayerHistory(filterDate = null) {
   const container = document.getElementById('prayerHistoryListContainer');
   const badge = document.getElementById('prayerHistoryCountBadge');
-  if (!container) return;
+  const bottomContainer = document.getElementById('prayerInlineHistoryContainer');
+  const bottomBadge = document.getElementById('prayerHistoryCountBadgeBottom');
+
+  if (!container && !bottomContainer) return;
 
   if (!currentStudent) {
-    container.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">กรุณาเข้าสู่ระบบเพื่อดูประวัติการละหมาด</div>';
+    const emptyMsg = '<div style="text-align: center; padding: 1.5rem; color: var(--text-muted);">กรุณาเข้าสู่ระบบนักเรียนเพื่อดูประวัติการละหมาด</div>';
+    if (container) container.innerHTML = emptyMsg;
+    if (bottomContainer) bottomContainer.innerHTML = emptyMsg;
     if (badge) badge.innerText = '0 บันทึก';
+    if (bottomBadge) bottomBadge.innerText = '0 บันทึก';
     return;
   }
 
@@ -588,27 +950,30 @@ function renderPrayerHistory(filterDate = null) {
   let myLogs = historyList.filter(p => p.studentId === currentStudent.studentId);
 
   if (filterDate) {
-    myLogs = myLogs.filter(p => p.timestamp && p.timestamp.startsWith(filterDate));
+    myLogs = myLogs.filter(p => (p.timestamp && p.timestamp.startsWith(filterDate)) || (p.date && p.date === filterDate));
   }
 
   if (badge) badge.innerText = `${myLogs.length} บันทึก`;
+  if (bottomBadge) bottomBadge.innerText = `${myLogs.length} บันทึก`;
 
   if (myLogs.length === 0) {
-    container.innerHTML = `
+    const noDataHtml = `
       <div style="text-align: center; padding: 1.5rem; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-md);">
-        <i class="fa-solid fa-calendar-xmark" style="font-size: 1.8rem; margin-bottom: 0.4rem; display: block;"></i>
+        <i class="fa-solid fa-calendar-xmark" style="font-size: 1.8rem; margin-bottom: 0.4rem; display: block; color: #94a3b8;"></i>
         ${filterDate ? 'ไม่พบบันทึกการละหมาดในวันที่เลือก' : 'ยังไม่มีประวัติการเช็คชื่อละหมาดย้อนหลัง'}
       </div>
     `;
+    if (container) container.innerHTML = noDataHtml;
+    if (bottomContainer) bottomContainer.innerHTML = noDataHtml;
     return;
   }
 
-  container.innerHTML = myLogs.map(p => {
-    const d = new Date(p.timestamp);
-    const dateStr = d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-    const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const html = myLogs.map((p, idx) => {
+    const d = new Date(p.timestamp || p.date);
+    const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : (p.date || '-');
+    const timeStr = !isNaN(d.getTime()) ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : (p.time || '-');
     const status = p.status || 'ตรงเวลา';
-    const note = p.note ? `<div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;"><i class="fa-solid fa-note-sticky"></i> ${p.note}</div>` : '';
+    const note = p.note ? `<div style="font-size: 0.78rem; color: #0369a1; margin-top: 0.25rem; background: #f0f9ff; padding: 0.2rem 0.5rem; border-radius: 6px; display: inline-block;"><i class="fa-solid fa-note-sticky"></i> ${p.note}</div>` : '';
 
     let statusClass = 'status-ontime';
     if (status.includes('สาย')) statusClass = 'status-late';
@@ -616,27 +981,32 @@ function renderPrayerHistory(filterDate = null) {
     if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
 
     const cardId = p.id || p.logId || ('PRY-' + idx);
+    const photoSrc = p.photo || p.photoUrl;
+
     return `
-      <div class="prayer-history-item prayer-history-card-clickable" onclick="openPrayerHistoryDetailModal('${cardId}')" title="แตะเพื่อดูรายละเอียดเต็มและพิกัดแผนที่">
+      <div class="prayer-history-item prayer-history-card-clickable" onclick="openPrayerHistoryDetailModal('${cardId}')" title="แตะเพื่อดูรายละเอียดเต็มและพิกัดแผนที่" style="margin-bottom: 0.65rem;">
         <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 220px;">
-          ${p.photo ? `<img src="${p.photo}" alt="Photo" style="width: 52px; height: 52px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light);">` : `<div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b;"><i class="fa-solid fa-camera"></i></div>`}
+          ${(photoSrc && photoSrc.length > 50) ? `<img src="${photoSrc}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light);">` : `<div style="width: 50px; height: 50px; border-radius: var(--radius-md); background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 1.2rem;"><i class="fa-solid fa-mosque"></i></div>`}
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
-              <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">ละหมาด${p.prayerName || p.prayerTime}</span>
+              <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">เวลา: ${p.prayerName || p.prayerTime}</span>
               <span class="status-badge ${statusClass}">${status}</span>
             </div>
             <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem;">
-              <i class="fa-solid fa-clock"></i> ${dateStr} เวลา ${timeStr} น. • ณ ${p.locationName || 'พิกัด GPS'}
+              <i class="fa-solid fa-clock"></i> ${dateStr} • ${timeStr} น. • ณ ${p.locationName || 'พิกัด GPS'}
             </div>
             ${note}
           </div>
         </div>
-        <div style="font-size: 0.72rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
-          <span>ดูรายละเอียดเต็ม</span> <i class="fa-solid fa-chevron-right"></i>
+        <div style="font-size: 0.76rem; color: var(--primary); font-weight: 600; display: flex; align-items: center; gap: 0.25rem; white-space: nowrap;">
+          <span>ดูรายละเอียด</span> <i class="fa-solid fa-chevron-right"></i>
         </div>
       </div>
     `;
   }).join('');
+
+  if (container) container.innerHTML = html;
+  if (bottomContainer) bottomContainer.innerHTML = html;
 }
 
 function filterPrayerHistoryByDate() {
@@ -648,7 +1018,19 @@ function filterPrayerHistoryByDate() {
 function clearPrayerDateFilter() {
   const input = document.getElementById('filterPrayerHistoryDate');
   if (input) input.value = '';
-  renderPrayerHistory(null);
+  renderPrayerHistory();
+}
+
+function filterPrayerHistoryByDateBottom() {
+  const input = document.getElementById('filterPrayerDateBottom');
+  const dateVal = input ? input.value : null;
+  renderPrayerHistory(dateVal);
+}
+
+function clearPrayerDateFilterBottom() {
+  const input = document.getElementById('filterPrayerDateBottom');
+  if (input) input.value = '';
+  renderPrayerHistory();
 }
 
 
@@ -905,9 +1287,21 @@ function switchView(viewName) {
     initHasanatView();
   } else if (viewName === 'prayer') {
     renderPrayerHistory();
+    initLiveCamera();
+  } else if (viewName === 'activities') {
+    startQrScanner();
+    renderStudentActivitiesHistory();
   } else if (viewName === 'admin') {
     renderAdminStudentsTable();
     renderSubAdminsTable();
+    populateGradingSubjectSelect();
+  }
+
+  if (viewName !== 'activities') {
+    stopQrScanner();
+  }
+  if (viewName !== 'prayer') {
+    stopCameraStream();
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1075,8 +1469,18 @@ function formatDistance(meters) {
 function selectPrayerTime(timeName, element) {
   selectedPrayerTime = timeName;
 
-  document.querySelectorAll('.prayer-time-card').forEach(el => el.classList.remove('selected'));
-  if (element) element.classList.add('selected');
+  // นำคลาส selected ออกจากทุกปุ่มเวลาละหมาดเพื่อให้เลือกได้เพียง 1 เวลาเท่านั้น
+  document.querySelectorAll('.prayer-chip, .prayer-time-card').forEach(el => el.classList.remove('selected'));
+  if (element) {
+    element.classList.add('selected');
+  } else {
+    const target = document.getElementById(`ptime-${timeName}`);
+    if (target) target.classList.add('selected');
+  }
+
+  // ซิงค์ชื่อเวลาละหมาดบนวิดีโอถ่ายทอดสด
+  const overlayPrayer = document.getElementById('camOverlayPrayer');
+  if (overlayPrayer) overlayPrayer.innerText = `เวลาละหมาด: ${timeName}`;
 
   checkPrayerUnlockState();
 }
@@ -1521,13 +1925,11 @@ function savePrayerNoteOnly() {
   }
 
   const pTime = selectedPrayerNoteTimeSlot;
-  const statusSelect = document.getElementById('prayerStatusSelect');
-  const locSelect = document.getElementById('prayerLocationSelect');
   const noteInput = document.getElementById('prayerNoteInput');
-
-  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
-  const locName = locSelect ? locSelect.value : 'มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี';
   const prayerNote = noteInput ? noteInput.value.trim() : '';
+
+  const prayerStatus = prayerNote ? `ตรงเวลา (${prayerNote})` : 'ตรงเวลา';
+  const locName = (verifiedLocation && verifiedLocation.locationName) ? verifiedLocation.locationName : 'มัสยิด / สถานที่ละหมาด';
 
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
@@ -1581,13 +1983,17 @@ function savePrayerNoteOnly() {
     if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
   }
 
+  // Clear note input after saving
+  if (noteInput) noteInput.value = '';
+
   renderTodayPrayerTable();
+  renderPrayerHistory();
   renderDashboardCharts();
 
   syncRecordToGoogleSheet('recordPrayer', prayerRecord);
 
   playSuccessSound();
-  showToast(`บันทึกหมายเหตุการละหมาดเวลา ${pTime} เรียบร้อยแล้ว`, 'success');
+  showToast(`บันทึกหมายเหตุการละหมาดเวลา ${pTime} เรียบร้อยแล้ว (บันทึกลงฐานข้อมูลแล้ว)`, 'success');
 }
 
 
@@ -1698,61 +2104,107 @@ function renderDashboardCharts() {
   renderActivityPieChart();
 }
 
+let appSubjects = [];
+
+function loadAppSubjects() {
+  const saved = localStorage.getItem('khalifah_subjects');
+  if (saved) {
+    try {
+      appSubjects = JSON.parse(saved);
+    } catch (e) {
+      appSubjects = [];
+    }
+  }
+  if (!appSubjects || appSubjects.length === 0) {
+    appSubjects = [
+      { id: 'religious', code: 'ISL101', name: 'ศาสนาและจริยธรรม' },
+      { id: 'science', code: 'SCI101', name: 'วิทยาศาสตร์' },
+      { id: 'math', code: 'MAT101', name: 'คณิตศาสตร์' },
+      { id: 'language', code: 'THA101', name: 'ภาษาและการสื่อสาร' },
+      { id: 'social', code: 'SOC101', name: 'สังคมและวัฒนธรรม' },
+      { id: 'tech', code: 'TEC101', name: 'เทคโนโลยีและนวัตกรรม' }
+    ];
+    localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
+  }
+}
+
+function formatRadarLabelMultiLine(text) {
+  if (!text) return '';
+  if (text.includes('และ')) {
+    const parts = text.split('และ');
+    return [parts[0] + 'และ', parts[1]];
+  }
+  if (text.length > 8) {
+    const mid = Math.ceil(text.length / 2);
+    return [text.slice(0, mid), text.slice(mid)];
+  }
+  return text;
+}
+
 function renderSkillRadarChart() {
   const ctx = document.getElementById('skillRadarChart');
   if (!ctx) return;
 
   if (skillChartInstance) skillChartInstance.destroy();
 
-  const skills = (currentStudent && currentStudent.skills) ? currentStudent.skills : {
-    religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0
-  };
+  loadAppSubjects();
+
+  const labels = appSubjects.map(s => formatRadarLabelMultiLine(s.name));
+  const dataScores = appSubjects.map(s => {
+    if (currentStudent && currentStudent.skills) {
+      if (currentStudent.skills[s.id] !== undefined) {
+        return currentStudent.skills[s.id];
+      }
+      // fallback for old keys
+      if (s.id === 'religious' && currentStudent.skills.religious !== undefined) return currentStudent.skills.religious;
+      if (s.id === 'science' && currentStudent.skills.science !== undefined) return currentStudent.skills.science;
+      if (s.id === 'math' && currentStudent.skills.math !== undefined) return currentStudent.skills.math;
+      if (s.id === 'language' && currentStudent.skills.language !== undefined) return currentStudent.skills.language;
+      if (s.id === 'social' && currentStudent.skills.social !== undefined) return currentStudent.skills.social;
+      if (s.id === 'tech' && currentStudent.skills.tech !== undefined) return currentStudent.skills.tech;
+    }
+    return 75; // Default competency baseline
+  });
 
   skillChartInstance = new Chart(ctx, {
     type: 'radar',
     data: {
-      labels: [
-        'ศาสนาและจริยธรรม',
-        'วิทยาศาสตร์',
-        'คณิตศาสตร์',
-        'ภาษาและการสื่อสาร',
-        'สังคมและวัฒนธรรม',
-        'เทคโนโลยีและนวัตกรรม'
-      ],
+      labels: labels,
       datasets: [{
         label: 'ระดับสมรรถนะทักษะ (คะแนนเต็ม 100)',
-        data: [
-          skills.religious || 0,
-          skills.science || 0,
-          skills.math || 0,
-          skills.language || 0,
-          skills.social || 0,
-          skills.tech || 0
-        ],
-        backgroundColor: 'rgba(2, 132, 199, 0.2)',
+        data: dataScores,
+        backgroundColor: 'rgba(2, 132, 199, 0.22)',
         borderColor: '#0284c7',
         borderWidth: 2.5,
         pointBackgroundColor: '#0369a1',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
+        pointBorderColor: '#ffffff',
+        pointHoverBackgroundColor: '#ffffff',
         pointHoverBorderColor: '#0369a1',
-        pointRadius: 4
+        pointRadius: 4.5
       }]
     },
     options: {
+      animation: {
+        duration: 1600,
+        easing: 'easeOutQuart'
+      },
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: { top: 12, bottom: 12, left: 16, right: 16 }
+      },
       scales: {
         r: {
           min: 0,
           max: 100,
-          ticks: { stepSize: 20, display: false },
+          ticks: { stepSize: 25, display: false },
           pointLabels: {
-            font: { family: 'Kanit', size: 12, weight: '500' },
-            color: '#334155'
+            font: { family: 'Kanit', size: 11, weight: '600' },
+            color: '#1e293b',
+            padding: 8
           },
-          grid: { color: 'rgba(226, 232, 240, 0.8)' },
-          angleLines: { color: 'rgba(226, 232, 240, 0.8)' }
+          grid: { color: 'rgba(203, 213, 225, 0.85)' },
+          angleLines: { color: 'rgba(203, 213, 225, 0.85)' }
         }
       },
       plugins: {
@@ -1792,6 +2244,12 @@ function renderAttendanceDoughnutChart() {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '72%',
+      animation: {
+        animateRotate: true,
+        animateScale: true,
+        duration: 1500,
+        easing: 'easeOutCubic'
+      },
       plugins: {
         legend: {
           position: 'bottom',
@@ -1826,6 +2284,10 @@ function renderPrayerBarChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 1400,
+        easing: 'easeOutQuart'
+      },
       scales: {
         y: {
           min: 0,
@@ -1870,6 +2332,12 @@ function renderActivityPieChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        animateRotate: true,
+        animateScale: true,
+        duration: 1500,
+        easing: 'easeOutCubic'
+      },
       plugins: {
         legend: {
           position: 'bottom',
@@ -2076,10 +2544,43 @@ function studentLogout() {
   renderTodayPrayerTable();
   switchView('dashboard');
   showToast('ออกจากระบบนักเรียนเรียบร้อยแล้ว', 'info');
-  enforceMandatoryLogin();
+  document.body.classList.add('auth-locked');
+  toggleAuthForm('login');
+  openModal('authModal');
 }
 
 // ----------------- PROFILE PHOTO UPLOAD (COMPRESSED BASE64) ----------------- //
+let registerAvatarBase64 = '';
+
+function previewRegisterAvatar(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const size = 150;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const minDim = Math.min(img.width, img.height);
+      const startX = (img.width - minDim) / 2;
+      const startY = (img.height - minDim) / 2;
+      ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
+
+      registerAvatarBase64 = canvas.toDataURL('image/jpeg', 0.85);
+      const preview = document.getElementById('regAvatarPreview');
+      if (preview) {
+        preview.innerHTML = `<img src="${registerAvatarBase64}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function handleProfilePhotoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -2152,33 +2653,67 @@ function toggleAuthForm(formType) {
   }
 }
 
-function handleStudentLogin() {
-  const studentId = document.getElementById('loginStudentId').value.trim();
-  const birthDate = document.getElementById('loginBirthDate').value.trim();
+async function handleStudentLogin() {
+  const parentPhoneInput = (document.getElementById('loginParentPhone')?.value || '').trim();
+  const studentIdInput = (document.getElementById('loginStudentId')?.value || '').trim();
 
-  if (!studentId || !birthDate) {
-    showToast('กรุณากรอกรหัสนักเรียนและวันเดือนปีเกิด (เช่น 01012540)', 'warning');
+  if (!parentPhoneInput || !studentIdInput) {
+    showToast('กรุณากรอกเบอร์โทรศัพท์ผู้ปกครอง (User) และรหัสนักเรียน (รหัสผ่าน)', 'warning');
     return;
   }
 
-  const cleanInput = birthDate.replace(/[^0-9]/g, '');
+  const cleanInputPhone = parentPhoneInput.replace(/[^0-9]/g, '');
 
-  const found = allStudents.find(s => {
-    const cleanBDate = String(s.birthDate || '').replace(/[^0-9]/g, '');
-    return s.studentId.toLowerCase() === studentId.toLowerCase() &&
-           (cleanBDate === cleanInput || String(s.birthDate || '').trim() === birthDate);
+  let found = allStudents.find(s => {
+    const cleanSPhone = String(s.parentPhone || '').replace(/[^0-9]/g, '');
+    const sId = String(s.studentId || '').trim().toLowerCase();
+    const matchId = (sId === studentIdInput.toLowerCase());
+    const matchPhone = (cleanSPhone === cleanInputPhone || String(s.parentPhone || '').trim() === parentPhoneInput);
+    return matchId && matchPhone;
   });
+
+  if (!found) {
+    // If not found in local device, check Google Sheets backend
+    const url = gasApiUrl || localStorage.getItem('khalifah_gas_url');
+    if (url && !url.includes('docs.google.com/spreadsheets')) {
+      showToast('กำลังค้นหาข้อมูลนักเรียนจากฐานข้อมูลกลาง...', 'info');
+      try {
+        const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentIdInput)}&parentPhone=${encodeURIComponent(cleanInputPhone)}`);
+        const json = await resp.json();
+        if (json && json.success && json.student) {
+          const remoteStudent = json.student;
+          const cleanRemotePhone = String(remoteStudent.parentPhone || '').replace(/[^0-9]/g, '');
+          const remoteId = String(remoteStudent.studentId || '').trim().toLowerCase();
+          if (remoteId === studentIdInput.toLowerCase() && (cleanRemotePhone === cleanInputPhone || String(remoteStudent.parentPhone || '').trim() === parentPhoneInput)) {
+            found = remoteStudent;
+            const existIdx = allStudents.findIndex(s => s.studentId.toLowerCase() === studentIdInput.toLowerCase());
+            if (existIdx !== -1) {
+              allStudents[existIdx] = found;
+            } else {
+              allStudents.push(found);
+            }
+            localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+          }
+        }
+      } catch (e) {
+        console.warn('Remote student lookup failed:', e);
+      }
+    }
+  }
 
   if (found) {
     currentStudent = found;
     localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
     renderCurrentStudentProfile();
     renderDashboardCharts();
+    renderTodayPrayerTable();
+    renderActivitiesList();
+    renderPrayerHistory();
     document.body.classList.remove('auth-locked');
     closeModal('authModal');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
   } else {
-    showToast('รหัสนักเรียนหรือวันเดือนปีเกิดไม่ถูกต้อง (ตัวอย่าง: 01012540)', 'error');
+    showToast('เบอร์โทรศัพท์ผู้ปกครอง (User) หรือรหัสนักเรียน (รหัสผ่าน) ไม่ถูกต้อง', 'error');
   }
 }
 
@@ -2231,6 +2766,7 @@ function handleStudentRegister() {
     birthDate: cleanBD, // บันทึกเป็น 8 หลัก เช่น 01012540
     parentPhone: parentPhone,
     status: 'Active',
+    avatarUrl: registerAvatarBase64 || '',
     skills: { religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0 },
     gpa: '0.00',
     attendance: { present: 0, late: 0, leave: 0, absent: 0 }
@@ -2241,6 +2777,13 @@ function handleStudentRegister() {
 
   currentStudent = newStudent;
   localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+
+  // Reset register avatar
+  registerAvatarBase64 = '';
+  const preview = document.getElementById('regAvatarPreview');
+  if (preview) {
+    preview.innerHTML = '<i class="fa-solid fa-camera"></i>';
+  }
 
   renderCurrentStudentProfile();
   renderDashboardCharts();
@@ -2337,6 +2880,18 @@ function switchAdminTab(tabName, element) {
   if (element) element.classList.add('active');
   const target = document.getElementById(`admin-tab-${tabName}`);
   if (target) target.style.display = 'block';
+
+  if (tabName === 'grading') {
+    populateGradingSubjectSelect();
+    renderGradingStudentsTable();
+  } else if (tabName === 'subjects') {
+    renderAdminSubjectsTable();
+  } else if (tabName === 'subadmins') {
+    renderSubAdminsTable();
+    populateGradingSubjectSelect();
+  } else if (tabName === 'students') {
+    renderAdminStudentsTable();
+  }
 }
 
 function renderAdminStudentsTable(filteredList = null) {
@@ -2505,14 +3060,22 @@ function submitCreateActivity() {
   syncRecordToGoogleSheet('createActivity', newAct);
 }
 
+function toggleSubAdminSubjectField() {
+  const roleSelect = document.getElementById('subRole');
+  const group = document.getElementById('subSubjectGroup');
+  if (!roleSelect || !group) return;
+  group.style.display = (roleSelect.value === 'TEACHER') ? 'block' : 'none';
+}
+
 function submitAddSubAdmin() {
   const fullName = document.getElementById('subFullName').value.trim();
   const username = document.getElementById('subUsername').value.trim();
   const pass = document.getElementById('subPassword').value.trim();
   const role = document.getElementById('subRole').value;
+  const assignedSubj = document.getElementById('subAssignedSubject') ? document.getElementById('subAssignedSubject').value : '';
 
   if (!fullName || !username || !pass) {
-    showToast('กรุณากรอกข้อมูลแอดมินรองให้ครบถ้วน', 'warning');
+    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
     return;
   }
 
@@ -2522,6 +3085,7 @@ function submitAddSubAdmin() {
     password: pass,
     fullName: fullName,
     role: role,
+    assignedSubject: role === 'TEACHER' ? assignedSubj : '',
     createdAt: new Date().toISOString().split('T')[0]
   };
 
@@ -2530,7 +3094,7 @@ function submitAddSubAdmin() {
 
   closeModal('addSubAdminModal');
   renderSubAdminsTable();
-  showToast(`เพิ่มแอดมินรอง ${fullName} สำเร็จ`, 'success');
+  showToast(`เพิ่มผู้ดูแล/อาจารย์ผู้สอน ${fullName} สำเร็จ`, 'success');
 
   syncRecordToGoogleSheet('addSubAdmin', newSub);
 }
@@ -2538,15 +3102,188 @@ function submitAddSubAdmin() {
 function renderSubAdminsTable() {
   const tbody = document.getElementById('subAdminsTableBody');
   if (!tbody) return;
+  loadAppSubjects();
 
-  tbody.innerHTML = subAdmins.map(a => `
+  if (subAdmins.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีรายชื่อผู้ดูแลระบบรอง / อาจารย์ผู้สอน</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = subAdmins.map(a => {
+    let roleText = a.role || 'SubAdmin';
+    if (a.role === 'TEACHER') {
+      const subj = appSubjects.find(s => s.id === a.assignedSubject);
+      const subjName = subj ? subj.name : (a.assignedSubject || 'ทุกวิชา');
+      roleText = `อาจารย์ผู้สอน (${subjName})`;
+    } else if (a.role === 'TeacherAdmin') {
+      roleText = 'อาจารย์ประจำชั้น';
+    } else if (a.role === 'ActivityAdmin') {
+      roleText = 'ฝ่ายกิจกรรม';
+    }
+
+    return `
+      <tr>
+        <td><b>${a.username}</b></td>
+        <td>${a.fullName}</td>
+        <td><span class="activity-badge badge-active">${roleText}</span></td>
+        <td>${a.createdAt || '-'}</td>
+        <td style="text-align: right;">
+          <button class="btn btn-danger btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;" onclick="deleteSubAdmin('${a.username}')">
+            <i class="fa-solid fa-trash"></i> ลบ
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function deleteSubAdmin(username) {
+  if (!confirm(`ต้องการลบบัญชี ${username} ใช่หรือไม่?`)) return;
+  subAdmins = subAdmins.filter(s => s.username !== username);
+  localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+  renderSubAdminsTable();
+  showToast('ลบบัญชีเรียบร้อยแล้ว', 'success');
+}
+
+// ----------------- TEACHER COMPETENCY GRADING & SUBJECTS ----------------- //
+
+function populateGradingSubjectSelect() {
+  const select = document.getElementById('gradingSubjectSelect');
+  const subSelect = document.getElementById('subAssignedSubject');
+  loadAppSubjects();
+
+  const options = appSubjects.map(s => `<option value="${s.id}">${s.code ? s.code + ' - ' : ''}${s.name}</option>`).join('');
+
+  if (select) {
+    select.innerHTML = options;
+    if (currentAdmin && currentAdmin.assignedSubject) {
+      select.value = currentAdmin.assignedSubject;
+    }
+  }
+  if (subSelect) {
+    subSelect.innerHTML = options;
+  }
+}
+
+function renderGradingStudentsTable() {
+  const tbody = document.getElementById('teacherGradingTableBody');
+  const subjSelect = document.getElementById('gradingSubjectSelect');
+  const gradeSelect = document.getElementById('gradingGradeSelect');
+  if (!tbody || !subjSelect || !gradeSelect) return;
+
+  const currentSubj = subjSelect.value;
+  const currentGrade = gradeSelect.value;
+
+  const filtered = allStudents.filter(s => s.grade === currentGrade);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          ไม่พบรายชื่อนักเรียนในระดับชั้น ${currentGrade}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(s => {
+    const studentScore = (s.skills && s.skills[currentSubj] !== undefined) ? s.skills[currentSubj] : 75;
+    return `
+      <tr>
+        <td><b>${s.studentId}</b></td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            ${s.avatarUrl ? `<img src="${s.avatarUrl}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #e0f2fe; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0284c7; font-size: 0.8rem;">${s.fullName.charAt(0)}</div>`}
+            <div>
+              <div style="font-weight: 600; color: var(--text-dark);">${s.fullName}</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">${s.schoolName || ''}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="badge-sub">${s.grade}</span></td>
+        <td style="text-align: center;">
+          <input type="number" min="0" max="100" class="form-control grading-score-input" data-student-id="${s.studentId}" value="${studentScore}" style="width: 90px; margin: 0 auto; text-align: center; font-weight: 700; font-size: 1rem; color: #0284c7; height: 38px;">
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 80)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">80</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 90)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">90</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 100)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">100</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function setQuickScore(studentId, score) {
+  const input = document.querySelector(`.grading-score-input[data-student-id="${studentId}"]`);
+  if (input) input.value = score;
+}
+
+function saveTeacherGradingScores() {
+  const subjSelect = document.getElementById('gradingSubjectSelect');
+  if (!subjSelect) return;
+  const currentSubj = subjSelect.value;
+  const inputs = document.querySelectorAll('.grading-score-input');
+
+  if (inputs.length === 0) {
+    showToast('ไม่มีรายชื่อนักเรียนให้บันทึกคะแนน', 'warning');
+    return;
+  }
+
+  let updatedCount = 0;
+  inputs.forEach(inp => {
+    const sId = inp.getAttribute('data-student-id');
+    const val = parseInt(inp.value, 10);
+    const score = isNaN(val) ? 0 : Math.max(0, Math.min(100, val));
+
+    const sIdx = allStudents.findIndex(s => s.studentId === sId);
+    if (sIdx !== -1) {
+      if (!allStudents[sIdx].skills) allStudents[sIdx].skills = {};
+      allStudents[sIdx].skills[currentSubj] = score;
+      updatedCount++;
+
+      if (currentStudent && currentStudent.studentId === sId) {
+        if (!currentStudent.skills) currentStudent.skills = {};
+        currentStudent.skills[currentSubj] = score;
+        localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+      }
+    }
+  });
+
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+  renderSkillRadarChart();
+
+  syncRecordToGoogleSheet('updateSubjectScores', {
+    subjectId: currentSubj,
+    updatedCount: updatedCount,
+    timestamp: new Date().toISOString()
+  });
+
+  playSuccessSound();
+  showToast(`บันทึกคะแนนสมรรถนะนักเรียน ${updatedCount} คน สำเร็จแล้ว!`, 'success');
+}
+
+function renderAdminSubjectsTable() {
+  const tbody = document.getElementById('adminSubjectsTableBody');
+  if (!tbody) return;
+  loadAppSubjects();
+
+  if (appSubjects.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีข้อมูลรายวิชา</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = appSubjects.map(s => `
     <tr>
-      <td><b>${a.username}</b></td>
-      <td>${a.fullName}</td>
-      <td><span class="activity-badge badge-active">${a.role}</span></td>
-      <td>${a.createdAt}</td>
-      <td style="text-align: right;">
-        <button class="btn btn-danger" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;" onclick="deleteSubAdmin('${a.username}')">
+      <td><b>${s.code || '-'}</b></td>
+      <td style="font-weight: 600; color: var(--text-dark);">${s.name}</td>
+      <td><span class="activity-badge badge-active">${s.id}</span></td>
+      <td style="text-align: right; white-space: nowrap;">
+        <button class="btn btn-secondary btn-sm" onclick="openAddSubjectModal('${s.id}')" style="margin-right: 0.35rem; padding: 0.25rem 0.55rem; font-size: 0.78rem;">
+          <i class="fa-solid fa-pen"></i> แก้ไข
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSubject('${s.id}')" style="padding: 0.25rem 0.55rem; font-size: 0.78rem;">
           <i class="fa-solid fa-trash"></i> ลบ
         </button>
       </td>
@@ -2554,12 +3291,69 @@ function renderSubAdminsTable() {
   `).join('');
 }
 
-function deleteSubAdmin(username) {
-  if (!confirm(`ต้องการลบแอดมินรอง ${username} ใช่หรือไม่?`)) return;
-  subAdmins = subAdmins.filter(s => s.username !== username);
-  localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
-  renderSubAdminsTable();
-  showToast('ลบแอดมินรองเรียบร้อยแล้ว', 'success');
+function openAddSubjectModal(editId = null) {
+  loadAppSubjects();
+  const title = document.getElementById('subjectModalTitle');
+  const codeIn = document.getElementById('subjectCodeInput');
+  const nameIn = document.getElementById('subjectNameInput');
+  const hiddenId = document.getElementById('editSubjectId');
+
+  if (editId) {
+    const s = appSubjects.find(x => x.id === editId);
+    if (!s) return;
+    if (title) title.innerHTML = '<i class="fa-solid fa-pen" style="color: var(--primary);"></i> แก้ไขรายวิชา';
+    if (hiddenId) hiddenId.value = s.id;
+    if (codeIn) codeIn.value = s.code || '';
+    if (nameIn) nameIn.value = s.name || '';
+  } else {
+    if (title) title.innerHTML = '<i class="fa-solid fa-book-open" style="color: var(--primary);"></i> เพิ่มรายวิชาใหม่';
+    if (hiddenId) hiddenId.value = '';
+    if (codeIn) codeIn.value = '';
+    if (nameIn) nameIn.value = '';
+  }
+  openModal('addSubjectModal');
+}
+
+function submitSaveSubject() {
+  const hiddenId = document.getElementById('editSubjectId').value;
+  const code = document.getElementById('subjectCodeInput').value.trim();
+  const name = document.getElementById('subjectNameInput').value.trim();
+
+  if (!name) {
+    showToast('กรุณาระบุชื่อรายวิชา', 'warning');
+    return;
+  }
+
+  loadAppSubjects();
+
+  if (hiddenId) {
+    const idx = appSubjects.findIndex(x => x.id === hiddenId);
+    if (idx !== -1) {
+      appSubjects[idx].code = code;
+      appSubjects[idx].name = name;
+    }
+  } else {
+    const newId = 'subj_' + Date.now();
+    appSubjects.push({ id: newId, code: code || ('SUB-' + (appSubjects.length + 1)), name: name });
+  }
+
+  localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
+  closeModal('addSubjectModal');
+  renderAdminSubjectsTable();
+  renderSkillRadarChart();
+  populateGradingSubjectSelect();
+  showToast('บันทึกข้อมูลรายวิชาเรียบร้อยแล้ว', 'success');
+}
+
+function deleteSubject(id) {
+  if (!confirm('ต้องการลบรายวิชานี้ใช่หรือไม่?')) return;
+  loadAppSubjects();
+  appSubjects = appSubjects.filter(x => x.id !== id);
+  localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
+  renderAdminSubjectsTable();
+  renderSkillRadarChart();
+  populateGradingSubjectSelect();
+  showToast('ลบรายวิชาเรียบร้อยแล้ว', 'info');
 }
 
 // ----------------- REPORT EXPORT ENGINE (WORD / EXCEL / PDF) ----------------- //

@@ -139,27 +139,39 @@
         </div>
       </div>
       <div class="welcome-banner macos-banner">
-        <!-- Subtle Ambient Background Light Orbs -->
+        <!-- Teal / Emerald Neon Geometric Panels inspired by reference design -->
+        <div class="banner-geom-card geom-1"></div>
+        <div class="banner-geom-card geom-2"></div>
+        <div class="banner-geom-card geom-3"></div>
+        <!-- Ambient Glowing Orbs -->
         <div class="banner-orb orb-1"></div>
         <div class="banner-orb orb-2"></div>
-        <!-- Subtle Islamic Geometric Watermark Pattern -->
+        <!-- Subtle Geometric Watermark Pattern -->
         <div class="banner-watermark-bg"></div>
 
         <div class="banner-inner-content">
-          <!-- Centered Prominent Profile Avatar (macOS ring) -->
-          <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์">
-            <i class="fa-solid fa-user"></i>
-          </label>
-          <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
+          <!-- Star Orbit Stage for Luxury Profile Avatar -->
+          <div class="avatar-orbit-stage" id="avatarOrbitStage">
+            <!-- Celestial decorative orbit track -->
+            <div class="avatar-orbit-track"></div>
+            <!-- Floating Orbit Stars Ring (1 star per 30 Juz completion) -->
+            <div class="avatar-star-orbit-ring" id="avatarStarOrbitRing"></div>
+
+            <!-- Centered Prominent Profile Avatar (macOS Luxury Royal Ring) -->
+            <label for="inputBannerPhoto" id="dashBannerAvatar" class="banner-avatar-display" title="คลิกเพื่อดูหรือเปลี่ยนรูปโปรไฟล์">
+              <i class="fa-solid fa-user"></i>
+            </label>
+            <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
+          </div>
           
           <!-- Welcome Greeting (Centered with luxury typography) -->
           <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
           
           <!-- macOS Frosted Badges -->
           <div class="banner-badges">
-            <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">มหาวิทยาลัยฟาฏอนี / โรงเรียนตัวอย่าง</span></span>
-            <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">STD-256901</span></span>
-            <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">มัธยมศึกษาปีที่ 5</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">โรงเรียน / สถาบัน</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">-</span></span>
+            <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">-</span></span>
           </div>
 
           <!-- macOS Frosted Action Button -->
@@ -308,7 +320,7 @@
 
     <!-- ==================== VIEW 2: PRAYER CHECK-IN ==================== -->
     <section id="view-prayer" class="view-section">
-      <div class="card" style="max-width: 620px; margin: 0 auto 1.5rem auto; padding: 1.15rem 1rem;">
+      <div class="card" style="max-width: 760px; margin: 0 auto 1.5rem auto; padding: 1.25rem 1.15rem;">
         
         <!-- Header with Title and History Button -->
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; gap: 0.5rem; flex-wrap: wrap;">
@@ -433,53 +445,34 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.65rem;">
-            <div>
-              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
-                <i class="fa-solid fa-tags" style="color: var(--primary);"></i> สถานะการละหมาด
-              </label>
-              <select class="form-control" id="prayerStatusSelect" style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
-                <option value="ตรงเวลา (ญะมาอะฮ์/มัสยิด)">ตรงเวลา (ญะมาอะฮ์/มัสยิด)</option>
-                <option value="ตรงเวลา (ละหมาดคนเดียว)">ตรงเวลา (ละหมาดคนเดียว)</option>
-                <option value="สาย / กอฎอ">สาย / กอฎอ</option>
-                <option value="มีอุปสรรค / ป่วย">มีอุปสรรค / ป่วย</option>
-                <option value="อุซุรชัรอีย์ (ประจำเดือน)">อุซุรชัรอีย์ (ประจำเดือน)</option>
-              </select>
-            </div>
-            <div>
-              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
-                <i class="fa-solid fa-map-location-dot" style="color: var(--primary);"></i> สถานที่ละหมาด
-              </label>
-              <select class="form-control" id="prayerLocationSelect" style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
-                <option value="มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี">มัสยิดอัลฮารอมัยน์ ม.ฟาฏอนี</option>
-                <option value="คณะวิทยาศาสตร์และเทคโนโลยี">คณะวิทยาศาสตร์และเทคโนโลยี</option>
-                <option value="มัสยิด / สุเหร่าประจำพื้นที่">มัสยิด / สุเหร่าประจำพื้นที่</option>
-                <option value="บ้านพัก / ที่อยู่อาศัย">บ้านพัก / ที่อยู่อาศัย</option>
-                <option value="หอพักนักเรียน / นักศึกษา">หอพักนักเรียน / นักศึกษา</option>
-                <option value="โรงเรียน / ห้องละหมาด">โรงเรียน / ห้องละหมาด</option>
-                <option value="อื่นๆ (ระบุในหมายเหตุ)">อื่นๆ (ระบุในหมายเหตุ)</option>
-              </select>
-            </div>
-          </div>
-          
-          <div style="margin-bottom: 0.85rem;">
-            <label class="form-label" style="font-size: 0.78rem; font-weight: 600; margin-bottom: 0.25rem;">
-              <i class="fa-solid fa-pen" style="color: var(--primary);"></i> หมายเหตุเพิ่มเติม
+          <div style="margin-bottom: 0.95rem;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem; display: block;">
+              <i class="fa-solid fa-pen" style="color: var(--primary);"></i> 2. กรอกหมายเหตุเพิ่มเติมด้วยตนเอง
             </label>
-            <input type="text" class="form-control" id="prayerNoteInput" placeholder="กรอกหมายเหตุด้วยตนเอง เช่น ญะมาอะฮ์แถวแรก, กำลังเดินทาง..." style="font-size: 0.82rem; padding: 0.35rem 0.5rem; height: 38px;">
-            <!-- Quick Tag Chips -->
-            <div style="display: flex; gap: 0.35rem; margin-top: 0.4rem; flex-wrap: wrap;">
-              <button type="button" class="btn-stepper" onclick="appendPrayerNote('ญะมาอะฮ์แถวแรก')">+ ญะมาอะฮ์แถวแรก</button>
-              <button type="button" class="btn-stepper" onclick="appendPrayerNote('ละหมาดที่บ้าน')">+ ละหมาดที่บ้าน</button>
-              <button type="button" class="btn-stepper" onclick="appendPrayerNote('อุซุรชัรอีย์')">+ อุซุรชัรอีย์</button>
-              <button type="button" class="btn-stepper" onclick="appendPrayerNote('กำลังเดินทาง')">+ กำลังเดินทาง</button>
-            </div>
+            <input type="text" class="form-control" id="prayerNoteInput" placeholder="กรอกหมายเหตุด้วยตนเอง เช่น ญะมาอะฮ์แถวแรก, ละหมาดที่บ้าน, กำลังเดินทาง..." style="font-size: 0.85rem; padding: 0.45rem 0.65rem; height: 40px;">
           </div>
 
           <!-- Standalone Note Save Button -->
-          <button type="button" class="btn btn-primary btn-block" onclick="savePrayerNoteOnly()" style="font-weight: 600; padding: 0.7rem; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
+          <button type="button" class="btn btn-primary btn-block" onclick="savePrayerNoteOnly()" style="font-weight: 600; padding: 0.75rem; font-size: 0.9rem; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28);">
             <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลหมายเหตุละหมาด
           </button>
+        </div>
+
+        <!-- 6. ประวัติการเช็คชื่อและบันทึกละหมาดย้อนหลัง (ย้ายมาอยู่ล่างสุด) -->
+        <div class="card" id="prayerHistoryBottomSection" style="margin-top: 1.25rem; padding: 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-dark); margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+              <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i> ประวัติการบันทึกละหมาดย้อนหลัง
+            </h3>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <input type="date" id="filterPrayerDateBottom" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.82rem; height: 32px; width: auto;" onchange="filterPrayerHistoryByDateBottom()" title="เลือกวันเพื่อดูประวัติ">
+              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; height: 32px; font-size: 0.8rem;" onclick="clearPrayerDateFilterBottom()" title="แสดงทั้งหมด">ทั้งหมด</button>
+              <span class="badge-sub" id="prayerHistoryCountBadgeBottom">0 บันทึก</span>
+            </div>
+          </div>
+          <div id="prayerInlineHistoryContainer">
+            <!-- Injected via app.js -->
+          </div>
         </div>
 
       </div>
@@ -503,19 +496,13 @@
           <video id="qrScannerVideo" playsinline autoplay muted></video>
           <canvas id="qrScannerCanvas" style="display: none;"></canvas>
           <div class="qr-target-frame"></div>
-          <button class="btn-flip-cam" onclick="switchQrCameraFacing()" title="สลับกล้องหน้า/หลัง">
-            <i class="fa-solid fa-camera-rotate"></i>
-          </button>
         </div>
 
         <div id="qrScanFeedback" class="qr-feedback">
-          <i class="fa-solid fa-magnifying-glass"></i> <span>กำลังเปิดกล้องค้นหา QR Code กิจกรรม...</span>
+          <i class="fa-solid fa-magnifying-glass"></i> <span>กำลังเปิดกล้องหลังค้นหา QR Code กิจกรรม...</span>
         </div>
         <div style="display: flex; gap: 0.5rem; justify-content: center; margin: 0.6rem 0 1rem 0; flex-wrap: wrap;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="switchQrCameraFacing()">
-            <i class="fa-solid fa-camera-rotate"></i> สลับกล้อง
-          </button>
-          <label for="inputQrImage" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">
+          <label for="inputQrImage" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; padding: 0.45rem 1rem;">
             <i class="fa-solid fa-image"></i> เลือกรูป QR จากเครื่อง
           </label>
           <input type="file" id="inputQrImage" accept="image/*" style="display: none;" onchange="handleQrImageUpload(event)">
@@ -545,13 +532,13 @@
     
     <!-- ==================== VIEW: HASANAT & GOOD DEEDS (ผลบุญ) ==================== -->
     <section id="view-hasanat" class="view-section">
-      <!-- Hero Banner -->
+      <!-- Hero Banner (Condensed & Minimal) -->
       <div class="hasanat-hero-card">
         <h2 class="hasanat-hero-title">
-          <i class="fa-solid fa-hands-praying"></i> บันทึกผลบุญและศาสนกิจ (KHALIFAH HASANAT)
+          <i class="fa-solid fa-hands-praying"></i> บันทึกผลบุญและศาสนกิจ
         </h2>
         <p class="hasanat-hero-desc">
-          ติดตามการอ่านอัลกุรอาน การสะสมดาวประจำยุซ การท่องจำซูเราะห์ และการละหมาดสุนัตประจำวัน ด้วยความอิคลาสเพื่อความโปรดปรานของอัลลอฮ์ ﷻ
+          อ่านกุรอาน • ท่องจำซูเราะห์ • ละหมาดสุนัต (เพื่อความโปรดปรานของอัลลอฮ์ ﷻ)
         </p>
       </div>
 
@@ -623,6 +610,36 @@
             </div>
           </div>
 
+          <!-- Khatam Quran 30 Juz Counter (Orbit Stars around Profile Avatar) -->
+          <div class="khatam-counter-card" style="background: linear-gradient(135deg, #041d3b 0%, #0c3866 100%); border: 1.5px solid rgba(251, 191, 36, 0.45); border-radius: var(--radius-lg); padding: 1.15rem; margin-bottom: 1.25rem; color: #ffffff; box-shadow: 0 10px 24px rgba(4, 29, 59, 0.28);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(251, 191, 36, 0.2); border: 1.5px solid #fbbf24; display: flex; align-items: center; justify-content: center; color: #fbbf24; font-size: 1.15rem; box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);">
+                  <i class="fa-solid fa-crown"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 1rem; color: #fde047;">อ่านจบ 30 ยุซ (ค็อตมุลกุรอาน) แล้วกี่ครั้ง?</div>
+                  <div style="font-size: 0.78rem; color: rgba(255, 255, 255, 0.85);">⭐ จบ 30 ยุซ 1 ครั้ง = รับดาวเกียรติยศ 1 ดวง ลอยรอบโปรไฟล์ (10 ครั้ง = 10 ดวง)</div>
+                </div>
+              </div>
+              <span class="badge" style="background: rgba(251, 191, 36, 0.22); color: #fde047; border: 1px solid rgba(251, 191, 36, 0.6); font-size: 0.82rem; padding: 0.35rem 0.75rem; border-radius: 9999px; font-weight: 700;" id="quranKhatamDisplayBadge">
+                ⭐ 0 ดาวรอบโปรไฟล์
+              </span>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; padding-top: 0.25rem;">
+              <button type="button" class="btn" onclick="adjustKhatamCount(-1)" style="background: rgba(255,255,255,0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; width: 40px; height: 40px; font-size: 1.2rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">-</button>
+              
+              <input type="number" id="quranKhatamCountInput" class="form-control" min="0" max="100" placeholder="0" value="0" oninput="onKhatamInputChange()" style="font-size: 1.45rem; font-weight: 800; color: #fbbf24; text-align: center; width: 110px; background: rgba(0,0,0,0.35); border: 2px solid rgba(251, 191, 36, 0.75); border-radius: 10px;">
+
+              <button type="button" class="btn" onclick="adjustKhatamCount(1)" style="background: #f59e0b; color: #1e1b4b; border: 1px solid #fbbf24; border-radius: 8px; width: 40px; height: 40px; font-size: 1.2rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">+</button>
+              
+              <button type="button" class="btn" onclick="adjustKhatamCount(1)" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: 1px solid #fde047; border-radius: 8px; padding: 0.5rem 1rem; font-weight: 700; font-size: 0.88rem; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <i class="fa-solid fa-plus"></i> จบ 30 ยุซ 1 ครั้ง
+              </button>
+            </div>
+          </div>
+
           <!-- Current Page & Completed Juz Inputs -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.1rem;">
             <div>
@@ -669,18 +686,31 @@
             </span>
           </div>
 
-          <!-- Category Filter Tabs -->
-          <div class="surah-category-tabs">
-            <button type="button" class="surah-cat-tab active" id="tabCatAll" onclick="setSurahCategoryFilter('all')">ทั้งหมด (114)</button>
-            <button type="button" class="surah-cat-tab" id="tabCatJuzAmma" onclick="setSurahCategoryFilter('juzAmma')">⭐ ยุซอัมมา (78-114)</button>
-            <button type="button" class="surah-cat-tab" id="tabCatPopular" onclick="setSurahCategoryFilter('popular')">ซูเราะห์ยอดนิยม</button>
-            <button type="button" class="surah-cat-tab" id="tabCatMemorized" onclick="setSurahCategoryFilter('memorized')">ท่องจำแล้ว (ที่ติ๊ก)</button>
+          <!-- Category Filter Tabs & Minimal Sort Control -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.85rem;">
+            <!-- Category Pills -->
+            <div class="surah-category-tabs" style="margin-bottom: 0;">
+              <button type="button" class="surah-cat-tab active" id="tabCatAll" onclick="setSurahCategoryFilter('all')">ทั้งหมด 114</button>
+              <button type="button" class="surah-cat-tab" id="tabCatJuzAmma" onclick="setSurahCategoryFilter('juzAmma')">⭐ ยุซอัมมา (78-114)</button>
+              <button type="button" class="surah-cat-tab" id="tabCatPopular" onclick="setSurahCategoryFilter('popular')">ยอดนิยม</button>
+              <button type="button" class="surah-cat-tab" id="tabCatMemorized" onclick="setSurahCategoryFilter('memorized')">ที่ท่องจำแล้ว</button>
+            </div>
+
+            <!-- Minimalist Juz Sort Order Selector (1-30 vs 30-1) -->
+            <div style="display: inline-flex; background: #e2e8f0; border-radius: var(--radius-full); padding: 3px; border: 1px solid #cbd5e1; gap: 2px;">
+              <button type="button" class="btn-juz-sort active" id="btnSortJuzAsc" onclick="setSurahSortOrder('juz-asc')" title="จัดเรียงตามลำดับ ยุซ 1 ถึง 30">
+                <i class="fa-solid fa-arrow-down-1-9"></i> ยุซ 1 ➔ 30
+              </button>
+              <button type="button" class="btn-juz-sort" id="btnSortJuzDesc" onclick="setSurahSortOrder('juz-desc')" title="จัดเรียงย้อนกลับ ยุซ 30 ถึง 1 (เริ่มจากยุซอัมมา)">
+                <i class="fa-solid fa-arrow-up-9-1"></i> ยุซ 30 ➔ 1
+              </button>
+            </div>
           </div>
 
-          <!-- Search Surah Filter -->
+          <!-- Minimal Search Surah Filter -->
           <div style="margin-bottom: 0.85rem; position: relative;">
-            <input type="text" id="searchSurahInput" class="form-control" placeholder="ค้นหาชื่อซูเราะห์ เช่น อัลฟาติฮะฮ์, ยาซีน, อัลกะฮ์ฟิ, อันนาส..." oninput="filterSurahsList(this.value)" style="padding-left: 2.2rem; height: 40px;">
-            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+            <input type="text" id="searchSurahInput" class="form-control" placeholder="ค้นหาชื่อซูเราะห์ เช่น อัลฟาติฮะฮ์, ยาซีน, อัลกะฮ์ฟิ, อันนาส..." oninput="filterSurahsList(this.value)" style="padding-left: 2.2rem; height: 38px; border-radius: var(--radius-full); font-size: 0.85rem;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
           </div>
 
           <!-- Surah Checklist Grid -->
@@ -860,24 +890,24 @@
             <input type="file" id="inputProfilePhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
           </div>
           <div>
-            <h3 style="font-size: 1.25rem; font-weight: 700;" id="profFullName">นายมูฮัมหมัด ซอและห์</h3>
-            <p style="color: var(--text-muted); font-size: 0.88rem;" id="profSchool">โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี</p>
-            <span class="badge-sub" style="margin-top: 0.3rem; display: inline-block;" id="profGradeBadge">ชั้นมัธยมศึกษาปีที่ 5</span>
+            <h3 style="font-size: 1.25rem; font-weight: 700;" id="profFullName">ยังไม่ได้เข้าสู่ระบบ</h3>
+            <p style="color: var(--text-muted); font-size: 0.88rem;" id="profSchool">กรุณาเข้าสู่ระบบหรือลงทะเบียนเพื่อจัดการโปรไฟล์</p>
+            <span class="badge-sub" style="margin-top: 0.3rem; display: inline-block;" id="profGradeBadge">ยังไม่ระบุชั้น</span>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem;">
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">รหัสนักเรียน</div>
-            <div style="font-weight: 600;" id="profStudentId">STD-256901</div>
+            <div style="font-weight: 600;" id="profStudentId">-</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">วันเดือนปีเกิด (พ.ศ. 8 หลัก)</div>
-            <div style="font-weight: 600;" id="profBirthDate">15082552</div>
+            <div style="font-weight: 600;" id="profBirthDate">-</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">เบอร์โทรศัพท์ผู้ปกครอง</div>
-            <div style="font-weight: 600;" id="profParentPhone">081-234-5678</div>
+            <div style="font-weight: 600;" id="profParentPhone">-</div>
           </div>
           <div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">สถานะการใช้งาน</div>
@@ -945,6 +975,12 @@
         <button class="admin-tab-btn active" onclick="switchAdminTab('students', this)">
           <i class="fa-solid fa-users"></i> ข้อมูลนักเรียนทั้งหมด
         </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('grading', this)">
+          <i class="fa-solid fa-marker"></i> บันทึกคะแนนสมรรถนะ (ผู้สอน)
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('subjects', this)">
+          <i class="fa-solid fa-book-open"></i> จัดการรายวิชา
+        </button>
         <button class="admin-tab-btn" onclick="switchAdminTab('reports', this)">
           <i class="fa-solid fa-file-export"></i> ส่งออกรายงาน (Word / Excel / PDF)
         </button>
@@ -952,9 +988,8 @@
           <i class="fa-solid fa-graduation-cap"></i> เลื่อนชั้นปีอัตโนมัติยกห้อง
         </button>
         <button class="admin-tab-btn" onclick="switchAdminTab('subadmins', this)">
-          <i class="fa-solid fa-user-shield"></i> จัดการแอดมินรอง
+          <i class="fa-solid fa-user-shield"></i> จัดการผู้สอน & แอดมินรอง
         </button>
-        
         <button class="admin-tab-btn" onclick="switchAdminTab('activities-admin', this)" id="btnTabActivitiesAdmin">
           <i class="fa-solid fa-qrcode"></i> กิจกรรม & QR Code
         </button>
@@ -995,6 +1030,99 @@
                 </tr>
               </thead>
               <tbody id="adminStudentsTableBody">
+                <!-- Injected via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab: Teacher Competency Grading -->
+      <div id="admin-tab-grading" class="admin-content-tab" style="display: none;">
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 0.8rem;">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-marker" style="color: var(--primary);"></i> บันทึกคะแนนสมรรถนะรายวิชา (Teacher Grading)
+              </div>
+              <div class="card-subtitle">
+                อาจารย์ผู้สอนเลือกวิชาและระดับชั้น เพื่อกรอกคะแนนสมรรถนะ (0-100) ซึ่งจะเชื่อมโยงไปแสดงผลบนกราฟเรดาร์ของนักเรียนโดยตรง
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-primary" onclick="saveTeacherGradingScores()">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึกคะแนนทั้งหมด
+              </button>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label"><i class="fa-solid fa-book"></i> เลือกรายวิชา</label>
+              <select class="form-control" id="gradingSubjectSelect" onchange="renderGradingStudentsTable()">
+                <!-- Populated dynamically via app.js -->
+              </select>
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label"><i class="fa-solid fa-graduation-cap"></i> เลือกระดับชั้น</label>
+              <select class="form-control" id="gradingGradeSelect" onchange="renderGradingStudentsTable()">
+                <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
+                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
+                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3 (ม.3)</option>
+                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
+                <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5 (ม.5)</option>
+                <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6 (ม.6)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="custom-table" id="teacherGradingTable">
+              <thead>
+                <tr>
+                  <th style="width: 120px;">รหัสนักเรียน</th>
+                  <th>ชื่อ - นามสกุล</th>
+                  <th>ระดับชั้น</th>
+                  <th style="width: 160px; text-align: center;">คะแนนสมรรถนะ (0-100)</th>
+                  <th style="width: 200px; text-align: right;">ปุ่มลัดให้คะแนน</th>
+                </tr>
+              </thead>
+              <tbody id="teacherGradingTableBody">
+                <!-- Injected via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tab: Subject Configuration Manager -->
+      <div id="admin-tab-subjects" class="admin-content-tab" style="display: none;">
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 0.8rem;">
+            <div>
+              <div class="card-title">
+                <i class="fa-solid fa-book-open" style="color: var(--primary);"></i> จัดการรายวิชาและสมรรถนะ
+              </div>
+              <div class="card-subtitle">
+                กำหนดและแก้ไขชื่อรายวิชาที่ใช้ประเมินสมรรถนะบนกราฟ Radar Chart
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="openAddSubjectModal()">
+              <i class="fa-solid fa-plus-circle"></i> เพิ่มรายวิชาใหม่
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="custom-table" id="adminSubjectsTable">
+              <thead>
+                <tr>
+                  <th style="width: 130px;">รหัสวิชา</th>
+                  <th>ชื่อรายวิชา</th>
+                  <th>แกนกราฟ Radar Chart</th>
+                  <th style="text-align: right; width: 140px;">การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="adminSubjectsTableBody">
                 <!-- Injected via app.js -->
               </tbody>
             </table>
@@ -1492,17 +1620,20 @@
         </button>
       </div>
       <div class="modal-body">
-        <!-- Login Form -->
+        <!-- Login Form (User = Parent Phone, Password = Student ID) -->
         <div id="loginFormSection">
           <div class="form-group">
-            <label class="form-label">รหัสนักเรียน (Student ID) <span class="required">*</span></label>
-            <input type="text" class="form-control" id="loginStudentId" placeholder="เช่น STD-256901">
+            <label class="form-label"><i class="fa-solid fa-phone" style="color: var(--primary);"></i> เบอร์โทรศัพท์ผู้ปกครอง (User) <span class="required">*</span></label>
+            <input type="tel" class="form-control" id="loginParentPhone" placeholder="เช่น 0812345678" onkeypress="if(event.key === 'Enter') handleStudentLogin()">
+            <div class="form-hint" style="color: var(--text-muted); font-size: 0.76rem; margin-top: 0.2rem;">
+              ใช้เบอร์โทรศัพท์ผู้ปกครองที่ได้ลงทะเบียนไว้
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label">วันเดือนปีเกิด (ใช้เป็นรหัสผ่าน) <span class="required">*</span></label>
-            <input type="text" class="form-control" id="loginBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
-            <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
-              <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b>
+            <label class="form-label"><i class="fa-solid fa-id-badge" style="color: var(--primary);"></i> รหัสนักเรียน (รหัสผ่าน) <span class="required">*</span></label>
+            <input type="text" class="form-control" id="loginStudentId" placeholder="เช่น STD-256901" onkeypress="if(event.key === 'Enter') handleStudentLogin()">
+            <div class="form-hint" style="color: var(--text-muted); font-size: 0.76rem; margin-top: 0.2rem;">
+              ใช้รหัสนักเรียนเป็นรหัสผ่านเข้าสู่ระบบ
             </div>
           </div>
           <button class="btn btn-primary btn-block btn-lg" onclick="handleStudentLogin()">
@@ -1511,18 +1642,31 @@
           
           <div style="text-align: center; margin-top: 1.2rem; font-size: 0.88rem;">
             ยังไม่มีบัญชีนักเรียน? <a href="javascript:void(0)" onclick="toggleAuthForm('register')" style="color: var(--primary); font-weight: 600;">สมัครลงทะเบียนใหม่ที่นี่</a>
+          </div>
           <div style="text-align: center; margin-top: 0.9rem; font-size: 0.84rem; border-top: 1px solid var(--border-light); padding-top: 0.9rem;">
             <a href="javascript:void(0)" onclick="document.body.classList.remove('auth-locked'); closeModal('authModal'); openModal('adminAuthModal');" style="color: var(--text-muted);">
               <i class="fa-solid fa-chalkboard-user"></i> เข้าสู่ระบบสำหรับคุณครู / แอดมิน
             </a>
           </div>
         </div>
-      </div>
 
         <!-- Registration Form -->
         <div id="registerFormSection" style="display: none;">
+          <!-- Profile Photo Upload -->
+          <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.15rem;">
+            <div style="position: relative; width: 92px; height: 92px; border-radius: 50%; overflow: hidden; border: 3px solid #059669; background: #f8fafc; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.1);" onclick="document.getElementById('regAvatarInput').click()" title="คลิกเพื่อเลือกรูปโปรไฟล์">
+              <div id="regAvatarPreview" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; color: #94a3b8;">
+                <i class="fa-solid fa-camera"></i>
+              </div>
+            </div>
+            <input type="file" id="regAvatarInput" accept="image/*" style="display: none;" onchange="previewRegisterAvatar(event)">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('regAvatarInput').click()" style="margin-top: 0.5rem; font-size: 0.78rem; padding: 0.32rem 0.85rem; border-radius: var(--radius-full);">
+              <i class="fa-solid fa-cloud-arrow-up"></i> เพิ่มรูปโปรไฟล์
+            </button>
+          </div>
+
           <div class="form-group">
-            <label class="form-label">รหัสนักเรียน <span class="required">* (สมัครได้เพียงครั้งเดียว)</span></label>
+            <label class="form-label">รหัสนักเรียน <span class="required">* (ใช้เป็นรหัสผ่านเข้าสู่ระบบ)</span></label>
             <input type="text" class="form-control" id="regStudentId" placeholder="เช่น STD-256902">
           </div>
           <div class="form-group">
@@ -1545,21 +1689,22 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">วันเดือนปีเกิด (รหัสผ่านของคุณ) <span class="required">*</span></label>
+            <label class="form-label">วันเดือนปีเกิด <span class="required">*</span></label>
             <input type="text" class="form-control" id="regBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
             <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
               <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b> (8 หลัก)
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">เบอร์โทรศัพท์ผู้ปกครอง <span class="required">*</span></label>
-            <input type="tel" class="form-control" id="regParentPhone" placeholder="เช่น 089-999-9999">
+            <label class="form-label">เบอร์โทรศัพท์ผู้ปกครอง <span class="required">* (ใช้เป็น User เข้าสู่ระบบ)</span></label>
+            <input type="tel" class="form-control" id="regParentPhone" placeholder="เช่น 0812345678">
           </div>
           <button class="btn btn-primary btn-block btn-lg" onclick="handleStudentRegister()">
             <i class="fa-solid fa-user-plus"></i> ยืนยันการลงทะเบียน
           </button>
           <div style="text-align: center; margin-top: 1.2rem; font-size: 0.88rem;">
             มีบัญชีอยู่แล้ว? <a href="javascript:void(0)" onclick="toggleAuthForm('login')" style="color: var(--primary); font-weight: 600;">เข้าสู่ระบบ</a>
+          </div>
           </div>
         </div>
       </div>
@@ -1670,17 +1815,56 @@
           <input type="password" class="form-control" id="subPassword" placeholder="กำหนดรหัสผ่าน">
         </div>
         <div class="form-group">
-          <label class="form-label">สิทธิ์การใช้งาน</label>
-          <select class="form-control" id="subRole">
+          <label class="form-label">สิทธิ์การใช้งาน / ตำแหน่ง <span class="required">*</span></label>
+          <select class="form-control" id="subRole" onchange="toggleSubAdminSubjectField()">
+            <option value="TEACHER">อาจารย์ผู้สอนรายวิชา (Teacher) - บันทึกคะแนนสมรรถนะ</option>
             <option value="TeacherAdmin">อาจารย์ประจำชั้น (ดูข้อมูลและบันทึก)</option>
             <option value="ActivityAdmin">ฝ่ายกิจกรรม (สร้างและเช็คชื่อกิจกรรม)</option>
+            <option value="SubAdmin">ผู้ช่วยแอดมินทั่วไป</option>
+          </select>
+        </div>
+        <div class="form-group" id="subSubjectGroup">
+          <label class="form-label"><i class="fa-solid fa-book"></i> รายวิชาที่รับผิดชอบสอน</label>
+          <select class="form-control" id="subAssignedSubject">
+            <!-- Dynamically populated -->
           </select>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('addSubAdminModal')">ยกเลิก</button>
         <button class="btn btn-primary" onclick="submitAddSubAdmin()">
-          <i class="fa-solid fa-save"></i> บันทึกแอดมินรอง
+          <i class="fa-solid fa-save"></i> บันทึกข้อมูล
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Subject -->
+  <div class="modal-overlay" id="addSubjectModal">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem;" id="subjectModalTitle">
+          <i class="fa-solid fa-book-open" style="color: var(--primary);"></i> เพิ่มรายวิชาใหม่
+        </div>
+        <button class="btn-icon" onclick="closeModal('addSubjectModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editSubjectId" value="">
+        <div class="form-group">
+          <label class="form-label">รหัสวิชา <span class="required">*</span></label>
+          <input type="text" class="form-control" id="subjectCodeInput" placeholder="เช่น ISL101, SCI201">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ชื่อรายวิชา (จะปรากฏบนกราฟเรดาร์) <span class="required">*</span></label>
+          <input type="text" class="form-control" id="subjectNameInput" placeholder="เช่น ศาสนาและจริยธรรม, วิทยาศาสตร์">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('addSubjectModal')">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitSaveSubject()">
+          <i class="fa-solid fa-save"></i> บันทึกรายวิชา
         </button>
       </div>
     </div>

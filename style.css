@@ -823,17 +823,18 @@ html, body {
   font-weight: 600;
 }
 
-/* Live Camera Box */
+/* Live Camera Box (Enlarged & Prominent for Prayer Check-in) */
 .camera-container {
   background: #090d16;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   overflow: hidden;
   position: relative;
   width: 100%;
-  max-width: 520px;
-  margin: 0 auto 1.5rem auto;
-  box-shadow: var(--shadow-lg);
-  aspect-ratio: 4/3;
+  max-width: 100%;
+  height: clamp(380px, 56vh, 560px);
+  min-height: 380px;
+  margin: 0 auto 1.25rem auto;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1.5px rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2332,44 +2333,88 @@ body.auth-locked #adminAuthModal {
   border: 1px solid #fde68a;
 }
 
-/* ==================== macOS LUXURY HERO BANNER ==================== */
+/* ==================== TEAL/EMERALD NEON GEOMETRIC BANNER (User Reference Style) ==================== */
 .welcome-banner.macos-banner {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #091a2f 0%, #0c335a 45%, #0369a1 85%, #0284c7 100%);
+  background: radial-gradient(circle at 85% 15%, rgba(20, 184, 166, 0.35) 0%, transparent 50%),
+              radial-gradient(circle at 15% 85%, rgba(13, 148, 136, 0.28) 0%, transparent 55%),
+              linear-gradient(135deg, #021214 0%, #052123 35%, #083335 70%, #0b4548 100%);
   border-radius: var(--radius-xl);
-  padding: 2.2rem 1.5rem;
+  padding: 2.2rem 1.5rem 2rem 1.5rem;
   margin-bottom: 1.75rem;
-  box-shadow: 0 20px 40px -12px rgba(3, 105, 161, 0.35), 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 24px 50px -10px rgba(1, 15, 17, 0.75), 0 0 35px rgba(20, 184, 166, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  border: 1.5px solid rgba(45, 212, 191, 0.38);
   text-align: center;
 }
 
-/* Ambient Floating Glow Orbs */
+/* Translucent Glowing Geometric Panels (Inspired by media_1790223927072.png) */
+.banner-geom-card {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 36px;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.18) 0%, rgba(6, 78, 59, 0.25) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(94, 234, 212, 0.42);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 24px rgba(45, 212, 191, 0.22), inset 0 1px 2px rgba(255, 255, 255, 0.35);
+  transition: all 0.5s ease;
+}
+
+.banner-geom-card.geom-1 {
+  width: 220px;
+  height: 160px;
+  top: -45px;
+  right: -25px;
+  transform: rotate(-28deg);
+  opacity: 0.85;
+}
+
+.banner-geom-card.geom-2 {
+  width: 260px;
+  height: 200px;
+  bottom: -95px;
+  left: 20%;
+  transform: rotate(35deg);
+  opacity: 0.75;
+}
+
+.banner-geom-card.geom-3 {
+  width: 170px;
+  height: 140px;
+  bottom: -40px;
+  right: 5%;
+  transform: rotate(-15deg);
+  opacity: 0.7;
+}
+
+/* Ambient Floating Glow Orbs with Deep Mint & Emerald Aura */
 .banner-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(48px);
+  filter: blur(52px);
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.6;
   z-index: 1;
 }
 
 .banner-orb.orb-1 {
-  width: 280px;
-  height: 280px;
-  background: radial-gradient(circle, #38bdf8 0%, rgba(56, 189, 248, 0) 70%);
+  width: 290px;
+  height: 290px;
+  background: radial-gradient(circle, #14b8a6 0%, rgba(20, 184, 166, 0) 70%);
   top: -80px;
-  left: 12%;
+  left: 10%;
   animation: orbFloat1 8s ease-in-out infinite alternate;
 }
 
 .banner-orb.orb-2 {
-  width: 240px;
-  height: 240px;
-  background: radial-gradient(circle, #06b6d4 0%, rgba(6, 182, 212, 0) 70%);
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, #2dd4bf 0%, rgba(45, 212, 191, 0) 70%);
   bottom: -60px;
-  right: 12%;
+  right: 10%;
+  opacity: 0.4;
   animation: orbFloat2 10s ease-in-out infinite alternate;
 }
 
@@ -2388,12 +2433,39 @@ body.auth-locked #adminAuthModal {
   position: absolute;
   inset: 0;
   background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px),
-                    radial-gradient(rgba(56, 189, 248, 0.08) 1.5px, transparent 1.5px);
+                    radial-gradient(rgba(45, 212, 191, 0.08) 1.5px, transparent 1.5px);
   background-size: 24px 24px;
   background-position: 0 0, 12px 12px;
   opacity: 0.85;
   pointer-events: none;
   z-index: 1;
+}
+
+/* Minimalist Juz Sort Buttons */
+.btn-juz-sort {
+  padding: 0.28rem 0.85rem;
+  font-size: 0.76rem;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn-juz-sort:hover {
+  color: #0f172a;
+}
+
+.btn-juz-sort.active {
+  background: #ffffff;
+  color: #059669;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .banner-inner-content {
@@ -2406,7 +2478,79 @@ body.auth-locked #adminAuthModal {
   width: 100%;
 }
 
-/* macOS Profile Avatar with Frosted Glass Ring */
+/* ==================== AVATAR STAR ORBIT STAGE (1-10+ STARS) ==================== */
+.avatar-orbit-stage {
+  position: relative;
+  width: 144px;
+  height: 144px;
+  margin: 0 auto 0.45rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Celestial Orbit Track Ring */
+.avatar-orbit-track {
+  position: absolute;
+  width: 126px;
+  height: 126px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(251, 191, 36, 0.38);
+  pointer-events: none;
+  animation: celestialSpin 50s linear infinite;
+  z-index: 2;
+}
+
+@keyframes celestialSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Floating Orbit Stars Container */
+.avatar-star-orbit-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* Individual Orbit Star (3D Gold, Sparkling Glow) */
+.avatar-orbit-star {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  color: #fbbf24;
+  font-size: 15px;
+  filter: drop-shadow(0 0 6px #f59e0b) drop-shadow(0 0 12px rgba(251, 191, 36, 0.85));
+  animation: starTwinkle 3s ease-in-out infinite;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+  user-select: none;
+}
+
+.avatar-orbit-star:hover {
+  transform: translate(-50%, -50%) scale(1.4);
+  filter: drop-shadow(0 0 10px #fde047) drop-shadow(0 0 20px #fbbf24);
+}
+
+@keyframes starTwinkle {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.18);
+    opacity: 1;
+    filter: drop-shadow(0 0 8px #fde047) drop-shadow(0 0 18px rgba(253, 224, 71, 0.9));
+  }
+}
+
+/* Royal Profile Avatar with Gold Rim & Frosted Glass Ring */
 .macos-banner .banner-avatar-display {
   width: 96px;
   height: 96px;
@@ -2414,22 +2558,69 @@ body.auth-locked #adminAuthModal {
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 3.5px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.28), 0 14px 28px rgba(0, 0, 0, 0.28);
+  border: 3.5px solid #ffffff;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.85), 0 0 24px rgba(245, 158, 11, 0.4), 0 16px 36px rgba(0, 0, 0, 0.5);
   font-size: 2.5rem;
   color: #ffffff;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   cursor: pointer;
+  position: relative;
+  z-index: 3;
 }
 
 .macos-banner .banner-avatar-display:hover {
-  transform: scale(1.06);
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.42), 0 18px 36px rgba(0, 0, 0, 0.35);
+  transform: scale(1.05);
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.95), 0 0 32px rgba(251, 191, 36, 0.6), 0 20px 42px rgba(0, 0, 0, 0.6);
+}
+
+/* ==================== ROYAL KHATAM BADGE UNDER AVATAR ==================== */
+.banner-khatam-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  z-index: 3;
+}
+
+.banner-khatam-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(251, 191, 36, 0.65);
+  border-radius: var(--radius-full);
+  padding: 0.35rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fde047;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 15px rgba(245, 158, 11, 0.25);
+  transition: all 0.25s ease;
+}
+
+.banner-khatam-pill:hover {
+  transform: translateY(-2px);
+  border-color: #fde047;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 22px rgba(245, 158, 11, 0.4);
+}
+
+.banner-khatam-pill.empty {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.banner-khatam-pill.empty:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border-color: rgba(251, 191, 36, 0.5);
 }
 
 .macos-banner .banner-title {
