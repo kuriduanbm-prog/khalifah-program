@@ -376,6 +376,8 @@ function doPost(e) {
         result = recordPrayer(postData.data);
         break;
       case 'recordHasanat':
+      case 'saveQuranLog':
+      case 'saveSunnahLog':
         result = recordHasanat(postData.data || postData);
         break;
       case 'batchSync':
@@ -1005,12 +1007,21 @@ function recordHasanat(data) {
   const timestamp = new Date().toISOString();
   const dateStr = data.date || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
 
-  const q = data.quran || {};
+  const q = data.quran || {
+    pagesToday: data.pagesToday || 0,
+    currentPage: data.currentPage || 0,
+    juzCompleted: data.juzCompleted || 0,
+    stars: data.stars || 0,
+    khatamCount: data.khatamCount || 0
+  };
   const m = data.memorization || {};
-  const s = data.sunnah || {};
+  const s = data.sunnah || {
+    totalRakaat: data.totalRakaat || 0,
+    rawatib: data.rawatib || {}
+  };
 
   const memListStr = Array.isArray(m.memorizedSurahs) ? m.memorizedSurahs.join(', ') : (m.memorizedSurahs || '');
-  const sunnahDetailsStr = JSON.stringify(s.rawatib || {});
+  const sunnahDetailsStr = JSON.stringify(s.rawatib || (data.rawatib || {}));
 
   sheet.appendRow([
     logId,
