@@ -139,7 +139,7 @@
         </div>
       </div>
       <div class="welcome-banner macos-banner">
-        <!-- Teal / Emerald Neon Geometric Panels inspired by reference design -->
+        <!-- Blue / Cyan Glowing Geometric Panels with Glassmorphism -->
         <div class="banner-geom-card geom-1"></div>
         <div class="banner-geom-card geom-2"></div>
         <div class="banner-geom-card geom-3"></div>
@@ -164,21 +164,18 @@
             <input type="file" id="inputBannerPhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
           </div>
           
-          <!-- Welcome Greeting (Centered with luxury typography) -->
-          <h1 class="banner-title" id="dashGreeting">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</h1>
+          <!-- Welcome Greeting (Row 1: ยินดีต้อนรับ, Row 2: Full Name in 1 single line) -->
+          <div class="banner-greeting-box">
+            <div class="banner-greeting-prefix">ยินดีต้อนรับ</div>
+            <h1 class="banner-greeting-name" id="dashGreetingName">ผู้ใช้งานทั่วไป</h1>
+            <span id="dashGreeting" style="display: none;">ยินดีต้อนรับสู่ KHALIFAH PROGRAM</span>
+          </div>
           
           <!-- macOS Frosted Badges -->
           <div class="banner-badges">
             <span class="banner-tag"><i class="fa-solid fa-school"></i> <span id="dashSchoolName">โรงเรียน / สถาบัน</span></span>
             <span class="banner-tag"><i class="fa-solid fa-id-card"></i> รหัส: <span id="dashStudentId">-</span></span>
             <span class="banner-tag"><i class="fa-solid fa-graduation-cap"></i> ระดับชั้น: <span id="dashGrade">-</span></span>
-          </div>
-
-          <!-- macOS Frosted Action Button -->
-          <div style="margin-top: 0.35rem;">
-            <button class="btn-macos-action" onclick="switchView('prayer')">
-              <i class="fa-solid fa-camera"></i> เช็คชื่อละหมาดทันที
-            </button>
           </div>
         </div>
       </div>
@@ -337,8 +334,8 @@
           </button>
         </div>
 
-        <!-- 1. GPS Geofence Compact Alert -->
-        <div id="geofenceStatusBox" class="geofence-alert unverified" style="padding: 0.65rem 0.9rem; margin-bottom: 0.75rem; gap: 0.6rem; align-items: center;">
+        <!-- 1. GPS Geofence Compact Status (Hidden by default, action is now in center of camera) -->
+        <div id="geofenceStatusBox" class="geofence-alert unverified" style="display: none; padding: 0.65rem 0.9rem; margin-bottom: 0.75rem; gap: 0.6rem; align-items: center;">
           <div class="geofence-alert-main" style="gap: 0.6rem; align-items: center;">
             <i class="fa-solid fa-location-crosshairs geofence-alert-icon" style="font-size: 1.25rem;"></i>
             <div class="geofence-alert-text">
@@ -394,13 +391,25 @@
           <video id="cameraStream" class="camera-stream camera-front" autoplay playsinline muted></video>
           <canvas id="snapshotCanvas" style="display: none;"></canvas>
           
-          <!-- Camera Flip Button (Front / Back switch) -->
+          <!-- Camera Flip Button (Only floating icon button as requested) -->
           <button class="btn-flip-cam" id="btnFlipCamera" onclick="switchCameraFacing()" title="สลับกล้องหน้า / กล้องหลัง">
             <i class="fa-solid fa-camera-rotate"></i>
           </button>
 
+          <!-- Center Geolocation & Camera Activation Overlay -->
+          <div class="camera-center-action-overlay" id="camCenterActionOverlay">
+            <div class="cam-action-glow-icon">
+              <i class="fa-solid fa-location-crosshairs"></i>
+            </div>
+            <div class="cam-action-title" id="camCenterActionTitle">กดตรวจสอบพิกัดเพื่อเปิดกล้อง</div>
+            <div class="cam-action-desc" id="camCenterActionDesc">ระบบจะตรวจสอบว่าท่านอยู่ ณ มัสยิดหรือสถาบัน เมื่อผ่านกล้องจะเปิดทันที</div>
+            <button type="button" class="btn-cam-center-verify" id="btnCenterVerifyGeo" onclick="verifyGeolocation()">
+              <i class="fa-solid fa-location-arrow"></i> ตรวจสอบพิกัดและเปิดกล้อง
+            </button>
+          </div>
+
           <!-- Watermark Overlay info on video -->
-          <div class="camera-overlay-info" id="cameraOverlayInfo">
+          <div class="camera-overlay-info" id="cameraOverlayInfo" style="display: none;">
             <div id="camOverlayStudent">นักเรียน: -</div>
             <div id="camOverlayPrayer">เวลาละหมาด: ซุบฮิ</div>
             <div id="camOverlayLocation">สถานที่: กำลังระบุ...</div>
@@ -408,16 +417,9 @@
           </div>
         </div>
 
-        <!-- 4. One-Click Instant Capture & Save Button -->
-        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin: 0.4rem 0 0.8rem 0;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="switchCameraFacing()" style="font-size: 0.82rem; padding: 0.35rem 0.75rem;">
-            <i class="fa-solid fa-camera-rotate"></i> สลับกล้องหน้า/หลัง
-          </button>
-        </div>
-
         <!-- 4. One-Click Instant Capture & Save Button (Placed directly below camera) -->
-        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none; margin-bottom: 1.1rem;">
-          <i class="fa-solid fa-lock"></i> ระบุพิกัด GPS ก่อนกดถ่ายรูป
+        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none; margin-top: 0.65rem; margin-bottom: 1.1rem;">
+          <i class="fa-solid fa-lock"></i> กดตรวจสอบพิกัดที่กลางกล้องก่อนถ่ายรูป
         </button>
 
         <!-- 5. Minimalist Prayer Notes Field with Mandatory Prayer Time Selection -->
@@ -542,6 +544,28 @@
         </p>
       </div>
 
+      <!-- Minimalist Date Navigator for Hasanat (เลือกดู/บันทึกวันใดก็ได้ + ปุ่มลัดวันนี้) -->
+      <div class="hasanat-date-nav-bar">
+        <button type="button" class="btn-hasanat-date-step" onclick="shiftHasanatDate(-1)" title="วันก่อนหน้า">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        
+        <div class="hasanat-date-display-card" onclick="triggerHasanatDatePicker()" title="คลิกเพื่อเลือกวันที่ต้องการ">
+          <i class="fa-solid fa-calendar-days" style="color: #059669; font-size: 1.05rem;"></i>
+          <span id="hasanatDateDisplay" style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">วันที่ --/--/----</span>
+          <span id="hasanatDateRelativeBadge" class="hasanat-date-rel-badge today">วันนี้</span>
+          <input type="date" id="hasanatDatePicker" class="hasanat-native-date-input" onchange="onHasanatDateChange(this.value)">
+        </div>
+
+        <button type="button" class="btn-hasanat-date-step" onclick="shiftHasanatDate(1)" title="วันถัดไป">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+
+        <button type="button" class="btn-hasanat-today" id="btnHasanatToday" onclick="setHasanatTodayDate()" title="กลับมายังวันปัจจุบัน">
+          <i class="fa-solid fa-clock-rotate-left"></i> วันนี้
+        </button>
+      </div>
+
       <!-- Sub Navigation Tabs with Badges (Segmented Touch Control) -->
       <div class="hasanat-subnav">
         <button class="hasanat-subnav-btn active" id="btnSubHasanatQuran" onclick="switchHasanatSubTab('quran')">
@@ -558,112 +582,130 @@
         </button>
       </div>
 
-      <!-- ==================== SUBTAB 1: QURAN READING & JUZ STARS ==================== -->
+      <!-- ==================== SUBTAB 1: QURAN READING & JUZ STARS (MINIMALIST REDESIGN) ==================== -->
       <div id="subtab-quran" class="hasanat-subcontent">
-        <div class="card" style="max-width: 680px; margin: 0 auto 1.5rem auto;">
-          <div class="card-header">
-            <div class="card-title">
-              <i class="fa-solid fa-book-open-reader"></i> บันทึกการอ่านอัลกุรอานประจำวัน
+        <div class="card quran-minimal-card" style="max-width: 680px; margin: 0 auto 1.5rem auto;">
+          
+          <!-- 3-KPI Overview Row (สะอาด เรียบหรู สบายตา) -->
+          <div class="quran-kpi-grid">
+            <div class="quran-kpi-box">
+              <div class="quran-kpi-label"><i class="fa-solid fa-book-open"></i> หน้าปัจจุบัน</div>
+              <div class="quran-kpi-val" id="kpiQuranPageText">0 <span class="quran-kpi-sub">/ 604</span></div>
+              <div class="quran-kpi-bar-wrap">
+                <div id="hasanatQuranProgressBar" class="quran-kpi-bar-fill" style="width: 0%;"></div>
+              </div>
             </div>
-            <span class="badge-sub" style="background: #fef3c7; color: #b45309; font-size: 0.85rem;" id="hasanatJuzBadge">
-              ⭐ 0 ดาว (0/30 ยุซ)
-            </span>
+
+            <div class="quran-kpi-box highlight-amber">
+              <div class="quran-kpi-label"><i class="fa-solid fa-star"></i> จบสะสม</div>
+              <div class="quran-kpi-val" id="kpiQuranJuzText">0 <span class="quran-kpi-sub">/ 30 ยุซ</span></div>
+              <span class="quran-kpi-pill" id="hasanatJuzBadge">⭐ 0 ดาว</span>
+            </div>
+
+            <div class="quran-kpi-box highlight-gold">
+              <div class="quran-kpi-label"><i class="fa-solid fa-crown"></i> จบค็อตม์</div>
+              <div class="quran-kpi-val" id="kpiQuranKhatamText">0 <span class="quran-kpi-sub">ครั้ง</span></div>
+              <span class="quran-kpi-pill gold" id="quranKhatamDisplayBadge">⭐ 0 ดาวรอบโปรไฟล์</span>
+            </div>
           </div>
 
-          <!-- Stars Shelf Showcase (1-30 Juz Interactive Shelf) -->
-          <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.4rem;">
-              <span style="font-size: 0.88rem; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 0.35rem;">
-                <i class="fa-solid fa-star" style="color: #f59e0b;"></i> หิ้งดาวอัลกุรอาน 30 ยุซ <span style="font-size: 0.74rem; font-weight: 500; color: var(--text-muted);">(อ่านจบ 1 ยุซ = 1 ดาวทอง)</span>
+          <!-- Section 1: บันทึกการอ่านของวันที่เลือก -->
+          <div class="quran-input-section">
+            <div class="quran-section-header">
+              <div class="quran-sec-title">
+                <i class="fa-solid fa-calendar-day" style="color: #059669;"></i>
+                <span>อ่านอัลกุรอานของวันที่เลือก</span>
+              </div>
+              <span class="quran-date-badge" id="quranActiveDateNote">ของวันนี้</span>
+            </div>
+
+            <div class="quran-daily-stepper-box">
+              <div class="quran-stepper-row">
+                <span class="quran-stepper-lbl">จำนวนหน้าที่อ่านได้ในวันนี้:</span>
+                <div class="quran-page-input-wrap">
+                  <button type="button" class="btn-quran-step" onclick="adjustPagesToday(-1)">-</button>
+                  <input type="number" id="quranPagesTodayInput" class="form-control quran-big-input" min="0" max="604" placeholder="0" oninput="onPagesTodayInputChange()">
+                  <button type="button" class="btn-quran-step" onclick="adjustPagesToday(1)">+</button>
+                  <span class="quran-unit-lbl">หน้า</span>
+                </div>
+              </div>
+
+              <!-- Quick Step Pills -->
+              <div class="quran-quick-pills">
+                <button type="button" class="quran-pill-step" onclick="adjustPagesToday(1)">+1 หน้า</button>
+                <button type="button" class="quran-pill-step" onclick="adjustPagesToday(5)">+5 หน้า</button>
+                <button type="button" class="quran-pill-step" onclick="adjustPagesToday(10)">+10 หน้า</button>
+                <button type="button" class="quran-pill-step" onclick="adjustPagesToday(20)">+1 ยุซ (20 หน้า)</button>
+                <button type="button" class="quran-pill-clear" onclick="setPagesToday(0)">ล้าง</button>
+              </div>
+            </div>
+
+            <!-- Page Bookmarking & Completed Juz (2 Clean Columns) -->
+            <div class="quran-bookmark-grid">
+              <div class="quran-field-box">
+                <label class="form-label" style="font-weight: 600; font-size: 0.88rem; margin-bottom: 0.35rem;">
+                  อ่านถึงหน้าที่ (1 - 604) <span class="required">*</span>
+                </label>
+                <input type="number" id="quranCurrentPageInput" class="form-control" min="1" max="604" placeholder="เช่น 45" oninput="autoCalculateJuzFromPage()" style="font-size: 1.1rem; font-weight: 700; text-align: center; border-radius: var(--radius-md);">
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">(กุรอานมูซอฟมี 604 หน้า คำนวณยุซให้อัตโนมัติ)</div>
+              </div>
+
+              <div class="quran-field-box">
+                <label class="form-label" style="font-weight: 600; font-size: 0.88rem; margin-bottom: 0.35rem;">
+                  อ่านจบสะสมแล้วกี่ยุซ? (0 - 30 ยุซ)
+                </label>
+                <input type="number" id="quranJuzCompletedInput" class="form-control" min="0" max="30" placeholder="0" style="font-size: 1.15rem; font-weight: 800; color: #b45309; text-align: center; border-radius: var(--radius-md);" oninput="updateShelfStarsFromInput()">
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">(จบ 1 ยุซ = 1 ดาวทองในชั้นวาง)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: หิ้งดาว 30 ยุซ (Minimalist Compact Shelf) -->
+          <div class="quran-shelf-section">
+            <div class="quran-sec-title-between">
+              <span style="font-size: 0.88rem; font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-star" style="color: #f59e0b;"></i> หิ้งดาวอัลกุรอาน 30 ยุซ
               </span>
-              <span style="font-size: 0.78rem; font-weight: 600; color: #059669; background: #ecfdf5; padding: 0.15rem 0.5rem; border-radius: 9999px; border: 1px solid #a7f3d0;" id="hasanatQuranPercentText">0 / 604 หน้า (0.0%)</span>
+              <span style="font-size: 0.76rem; color: #059669; font-weight: 600; background: #ecfdf5; padding: 0.15rem 0.55rem; border-radius: 9999px; border: 1px solid #a7f3d0;" id="hasanatQuranPercentText">0 / 604 หน้า (0.0%)</span>
             </div>
-
-            <!-- Progress Bar -->
-            <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; margin-bottom: 0.85rem;">
-              <div id="hasanatQuranProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f59e0b, #10b981); transition: width 0.3s ease;"></div>
-            </div>
-
-            <!-- 30 Stars Shelf Grid -->
+            
             <div class="quran-shelf-grid" id="quranShelfGrid">
               <!-- Dynamically populated 30 stars with Juz 1 to 30 -->
             </div>
           </div>
 
-          <!-- Stepper for Pages Read Today -->
-          <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.1rem;">
-            <label class="form-label" style="font-weight: 600; margin-bottom: 0.3rem;">
-              <i class="fa-solid fa-calendar-day" style="color: var(--primary);"></i> วันนี้อ่านอัลกุรอานไปได้กี่หน้า?
-            </label>
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <input type="number" id="quranPagesTodayInput" class="form-control" min="0" max="604" placeholder="0" style="font-size: 1.15rem; font-weight: 700; text-align: center; max-width: 110px;">
-              <span style="font-weight: 600; color: var(--text-dark);">หน้า</span>
-            </div>
-            <!-- Quick Stepper Buttons -->
-            <div class="quick-steppers-wrap">
-              <span style="font-size: 0.75rem; color: var(--text-muted); align-self: center; margin-right: 0.2rem;">เพิ่มเร็ว:</span>
-              <button type="button" class="btn-stepper" onclick="adjustPagesToday(1)">+1 หน้า</button>
-              <button type="button" class="btn-stepper" onclick="adjustPagesToday(5)">+5 หน้า</button>
-              <button type="button" class="btn-stepper" onclick="adjustPagesToday(10)">+10 หน้า</button>
-              <button type="button" class="btn-stepper" onclick="adjustPagesToday(20)">+1 ยุซ (20 หน้า)</button>
-              <button type="button" class="btn-stepper" onclick="setPagesToday(0)">ล้าง</button>
-            </div>
-          </div>
-
-          <!-- Khatam Quran 30 Juz Counter (Orbit Stars around Profile Avatar) -->
-          <div class="khatam-counter-card" style="background: linear-gradient(135deg, #041d3b 0%, #0c3866 100%); border: 1.5px solid rgba(251, 191, 36, 0.45); border-radius: var(--radius-lg); padding: 1.15rem; margin-bottom: 1.25rem; color: #ffffff; box-shadow: 0 10px 24px rgba(4, 29, 59, 0.28);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+          <!-- Section 3: บันทึกการจบค็อตมุลกุรอาน 30 ยุซ (ดาวประดับรอบโปรไฟล์) -->
+          <div class="khatam-counter-card">
+            <div class="khatam-top-row">
               <div style="display: flex; align-items: center; gap: 0.65rem;">
-                <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(251, 191, 36, 0.2); border: 1.5px solid #fbbf24; display: flex; align-items: center; justify-content: center; color: #fbbf24; font-size: 1.15rem; box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);">
+                <div class="khatam-crown-icon">
                   <i class="fa-solid fa-crown"></i>
                 </div>
                 <div>
-                  <div style="font-weight: 700; font-size: 1rem; color: #fde047;">อ่านจบ 30 ยุซ (ค็อตมุลกุรอาน) แล้วกี่ครั้ง?</div>
-                  <div style="font-size: 0.78rem; color: rgba(255, 255, 255, 0.85);">⭐ จบ 30 ยุซ 1 ครั้ง = รับดาวเกียรติยศ 1 ดวง ลอยรอบโปรไฟล์ (10 ครั้ง = 10 ดวง)</div>
+                  <div style="font-weight: 700; font-size: 0.98rem; color: #fde047;">อ่านจบ 30 ยุซ (ค็อตมุลกุรอาน) แล้วกี่ครั้ง?</div>
+                  <div style="font-size: 0.76rem; color: rgba(255, 255, 255, 0.85);">⭐ จบ 1 ครั้ง = รับดาวเกียรติยศ 1 ดวง ลอยรอบรูปโปรไฟล์ (10 ครั้ง = 10 ดวง)</div>
                 </div>
               </div>
-              <span class="badge" style="background: rgba(251, 191, 36, 0.22); color: #fde047; border: 1px solid rgba(251, 191, 36, 0.6); font-size: 0.82rem; padding: 0.35rem 0.75rem; border-radius: 9999px; font-weight: 700;" id="quranKhatamDisplayBadge">
-                ⭐ 0 ดาวรอบโปรไฟล์
-              </span>
             </div>
 
-            <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; padding-top: 0.25rem;">
-              <button type="button" class="btn" onclick="adjustKhatamCount(-1)" style="background: rgba(255,255,255,0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; width: 40px; height: 40px; font-size: 1.2rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">-</button>
-              
-              <input type="number" id="quranKhatamCountInput" class="form-control" min="0" max="100" placeholder="0" value="0" oninput="onKhatamInputChange()" style="font-size: 1.45rem; font-weight: 800; color: #fbbf24; text-align: center; width: 110px; background: rgba(0,0,0,0.35); border: 2px solid rgba(251, 191, 36, 0.75); border-radius: 10px;">
-
-              <button type="button" class="btn" onclick="adjustKhatamCount(1)" style="background: #f59e0b; color: #1e1b4b; border: 1px solid #fbbf24; border-radius: 8px; width: 40px; height: 40px; font-size: 1.2rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">+</button>
-              
-              <button type="button" class="btn" onclick="adjustKhatamCount(1)" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: 1px solid #fde047; border-radius: 8px; padding: 0.5rem 1rem; font-weight: 700; font-size: 0.88rem; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+            <div class="khatam-stepper-control">
+              <button type="button" class="btn-khatam-step" onclick="adjustKhatamCount(-1)">-</button>
+              <input type="number" id="quranKhatamCountInput" class="form-control khatam-num-input" min="0" max="100" placeholder="0" value="0" oninput="onKhatamInputChange()">
+              <button type="button" class="btn-khatam-step plus" onclick="adjustKhatamCount(1)">+</button>
+              <button type="button" class="btn-khatam-add-one" onclick="adjustKhatamCount(1)">
                 <i class="fa-solid fa-plus"></i> จบ 30 ยุซ 1 ครั้ง
               </button>
             </div>
           </div>
 
-          <!-- Current Page & Completed Juz Inputs -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.1rem;">
-            <div>
-              <label class="form-label" style="font-weight: 600;">
-                อ่านถึงหน้าไหนแล้ว? (1 - 604) <span class="required">*</span>
-              </label>
-              <input type="number" id="quranCurrentPageInput" class="form-control" min="1" max="604" placeholder="เช่น 45" oninput="autoCalculateJuzFromPage()" style="font-size: 1.05rem; font-weight: 600;">
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">(กุรอานมูซอฟมี 604 หน้า)</div>
-            </div>
-            <div>
-              <label class="form-label" style="font-weight: 600;">
-                อ่านจบสะสมแล้วกี่ยุซ? <span class="required">* (0-30 ยุซ)</span>
-              </label>
-              <input type="number" id="quranJuzCompletedInput" class="form-control" min="0" max="30" placeholder="0" style="font-size: 1.15rem; font-weight: 700; color: #b45309; text-align: center;" oninput="updateShelfStarsFromInput()">
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">(จบกี่ยุซ = ได้รับดาวตามนั้น)</div>
-            </div>
+          <!-- Sincerity Reminder (Compact) -->
+          <div class="quran-ikhlas-notice">
+            <i class="fa-solid fa-heart" style="color: #16a34a; font-size: 1rem; flex-shrink: 0;"></i>
+            <span><strong>บันทึกด้วยความอิคลาส:</strong> เพื่อกระตุ้นและเตือนตนเองในการอ่านอัลกุรอานอย่างสม่ำเสมอ เพื่อความโปรดปรานของอัลลอฮ์ ﷻ</span>
           </div>
 
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: #166534; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fa-solid fa-heart" style="color: #16a34a; font-size: 1.1rem; flex-shrink: 0;"></i>
-            <div><strong>บันทึกด้วยความอิคลาส:</strong> การบันทึกนี้เพื่อกระตุ้นและเตือนตนเองในการอ่านอัลกุรอานอย่างสม่ำเสมอ เพื่อความโปรดปรานของอัลลอฮ์ ﷻ</div>
-          </div>
-
-          <button class="btn btn-primary btn-block btn-lg" onclick="saveQuranReadingLog()" style="background: #059669; border-color: #059669; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);">
+          <!-- Save Button -->
+          <button class="btn btn-primary btn-block btn-lg" onclick="saveQuranReadingLog()" style="background: #059669; border-color: #059669; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35); font-size: 1rem; padding: 0.85rem 1.25rem;">
             <i class="fa-solid fa-floppy-disk"></i> บันทึกผลการอ่านอัลกุรอาน
           </button>
         </div>
@@ -870,17 +912,21 @@
       </div>
     </section>
 
-    <!-- ==================== VIEW 4: STUDENT PROFILE & GRADE UPDATE ==================== -->
+    <!-- ==================== VIEW 4: STUDENT PROFILE & DETAILS ==================== -->
     <section id="view-profile" class="view-section">
-      <div class="card" style="max-width: 650px; margin: 0 auto 2rem auto;">
-        <div class="card-header">
+      <div class="card" style="max-width: 680px; margin: 0 auto 2rem auto; padding: 1.5rem 1.25rem;">
+        <div class="card-header" style="margin-bottom: 1.25rem;">
           <div class="card-title">
-            <i class="fa-solid fa-id-card"></i> ข้อมูลส่วนตัวนักเรียน
+            <i class="fa-solid fa-address-card"></i> ข้อมูลส่วนตัวและประวัตินักเรียน
           </div>
+          <span class="badge" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; font-size: 0.78rem;" id="profStatusBadge">
+            <i class="fa-solid fa-circle-check"></i> กำลังศึกษา (Active)
+          </span>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--border-light);">
-          <div class="profile-avatar-wrapper">
+        <!-- Luxury Profile Header Card -->
+        <div style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border-light); flex-wrap: wrap;">
+          <div class="profile-avatar-wrapper" style="position: relative;">
             <div id="profAvatar" class="profile-avatar-display">
               <i class="fa-solid fa-user"></i>
             </div>
@@ -889,34 +935,86 @@
             </label>
             <input type="file" id="inputProfilePhoto" accept="image/*" style="display: none;" onchange="handleProfilePhotoUpload(event)">
           </div>
-          <div>
-            <h3 style="font-size: 1.25rem; font-weight: 700;" id="profFullName">ยังไม่ได้เข้าสู่ระบบ</h3>
-            <p style="color: var(--text-muted); font-size: 0.88rem;" id="profSchool">กรุณาเข้าสู่ระบบหรือลงทะเบียนเพื่อจัดการโปรไฟล์</p>
-            <span class="badge-sub" style="margin-top: 0.3rem; display: inline-block;" id="profGradeBadge">ยังไม่ระบุชั้น</span>
+          <div style="flex: 1; min-width: 200px;">
+            <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.2rem; color: var(--text-dark);" id="profFullName">ยังไม่ได้เข้าสู่ระบบ</h3>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 0.4rem;" id="profSchool">กรุณาเข้าสู่ระบบหรือลงทะเบียน</p>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+              <span class="badge-sub" style="font-size: 0.78rem;" id="profGradeBadge">ยังไม่ระบุชั้น</span>
+              <span class="badge" style="background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; font-size: 0.78rem;">
+                <i class="fa-solid fa-id-badge"></i> <span id="profStudentIdHeader">-</span>
+              </span>
+            </div>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem;">
-          <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">รหัสนักเรียน</div>
-            <div style="font-weight: 600;" id="profStudentId">-</div>
+        <!-- Full Registration Data Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; margin-bottom: 1.5rem;">
+          <div class="profile-data-box">
+            <div class="profile-data-icon"><i class="fa-solid fa-id-badge"></i></div>
+            <div class="profile-data-text">
+              <div class="profile-data-label">รหัสนักเรียน (รหัสผ่าน)</div>
+              <div class="profile-data-val" id="profStudentId">-</div>
+            </div>
           </div>
-          <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">วันเดือนปีเกิด (พ.ศ. 8 หลัก)</div>
-            <div style="font-weight: 600;" id="profBirthDate">-</div>
+
+          <div class="profile-data-box">
+            <div class="profile-data-icon"><i class="fa-solid fa-user"></i></div>
+            <div class="profile-data-text">
+              <div class="profile-data-label">ชื่อ - นามสกุล</div>
+              <div class="profile-data-val" id="profFullNameDetail">-</div>
+            </div>
           </div>
-          <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">เบอร์โทรศัพท์ผู้ปกครอง</div>
-            <div style="font-weight: 600;" id="profParentPhone">-</div>
+
+          <div class="profile-data-box">
+            <div class="profile-data-icon"><i class="fa-solid fa-school"></i></div>
+            <div class="profile-data-text">
+              <div class="profile-data-label">ชื่อโรงเรียน / สถาบัน</div>
+              <div class="profile-data-val" id="profSchoolDetail">-</div>
+            </div>
           </div>
-          <div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">สถานะการใช้งาน</div>
-            <div style="color: var(--success); font-weight: 600;"><i class="fa-solid fa-circle-check"></i> ปกติ (Active)</div>
+
+          <div class="profile-data-box">
+            <div class="profile-data-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="profile-data-text">
+              <div class="profile-data-label">ระดับชั้นปัจจุบัน</div>
+              <div class="profile-data-val" id="profGradeDetail">-</div>
+            </div>
+          </div>
+
+          <div class="profile-data-box">
+            <div class="profile-data-icon"><i class="fa-solid fa-cake-candles"></i></div>
+            <div class="profile-data-text">
+              <div class="profile-data-label">วันเดือนปีเกิด (พ.ศ. 8 หลัก)</div>
+              <div class="profile-data-val" id="profBirthDate">-</div>
+            </div>
+          </div>
+
+          <div class="profile-data-box">
+            <div class="profile-data-icon"><i class="fa-solid fa-phone"></i></div>
+            <div class="profile-data-text">
+              <div class="profile-data-label">เบอร์โทรศัพท์ผู้ปกครอง (User เข้าสู่ระบบ)</div>
+              <div class="profile-data-val" id="profParentPhone">-</div>
+            </div>
+          </div>
+
+          <div class="profile-data-box">
+            <div class="profile-data-icon"><i class="fa-solid fa-calendar-check"></i></div>
+            <div class="profile-data-text">
+              <div class="profile-data-label">วันที่ลงทะเบียน / วันที่สมัคร</div>
+              <div class="profile-data-val" id="profRegDate">-</div>
+            </div>
+          </div>
+
+          <div class="profile-data-box">
+            <div class="profile-data-icon"><i class="fa-solid fa-shield-check"></i></div>
+            <div class="profile-data-text">
+              <div class="profile-data-label">สถานะบัญชีในระบบ</div>
+              <div class="profile-data-val" style="color: var(--success);" id="profStatusDetail">ปกติ (Active)</div>
+            </div>
           </div>
         </div>
 
-        
-        <div style="margin-top: 1.5rem; text-align: center;">
+        <div style="margin-bottom: 1.5rem; text-align: center;">
           <button class="btn btn-secondary btn-block" onclick="studentLogout()" style="color: var(--danger); border-color: #fecaca; background: #fff5f5;">
             <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบนักเรียน
           </button>
