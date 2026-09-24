@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.9">
 </head>
 <body>
 
@@ -755,10 +755,20 @@
             </div>
           </div>
 
-          <!-- Minimal Search Surah Filter -->
-          <div style="margin-bottom: 0.85rem; position: relative;">
-            <input type="text" id="searchSurahInput" class="form-control" placeholder="ค้นหาชื่อซูเราะห์ เช่น อัลฟาติฮะฮ์, ยาซีน, อัลกะฮ์ฟิ, อันนาส..." oninput="filterSurahsList(this.value)" style="padding-left: 2.2rem; height: 38px; border-radius: var(--radius-full); font-size: 0.85rem;">
-            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
+          <!-- Minimal Search & Quick Actions -->
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 220px; position: relative;">
+              <input type="text" id="searchSurahInput" class="form-control" placeholder="ค้นหาชื่อซูเราะห์ เช่น อัลฟาติฮะฮ์, ยาซีน, อัลกะฮ์ฟิ, อันนาส..." oninput="filterSurahsList(this.value)" style="padding-left: 2.2rem; height: 38px; border-radius: var(--radius-full); font-size: 0.85rem;">
+              <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
+            </div>
+            <div style="display: flex; gap: 0.35rem;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllSurahsInCurrentCategory(true)" style="padding: 0.35rem 0.65rem; font-size: 0.76rem; border-radius: var(--radius-full);" title="เลือกทั้งหมดในหมวดนี้">
+                <i class="fa-solid fa-check-double" style="color: #059669;"></i> เลือกหมด
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllSurahsInCurrentCategory(false)" style="padding: 0.35rem 0.65rem; font-size: 0.76rem; border-radius: var(--radius-full);" title="ล้างการเลือกในหมวดนี้">
+                <i class="fa-solid fa-xmark"></i> ล้าง
+              </button>
+            </div>
           </div>
 
           <!-- Surah Checklist Grid -->
@@ -2159,6 +2169,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=2.8"></script>
+  <script src="app.js?v=2.9"></script>
 </body>
 </html>

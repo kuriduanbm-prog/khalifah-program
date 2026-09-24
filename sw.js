@@ -1,5 +1,5 @@
-// KHALIFAH PROGRAM - Production PWA Service Worker (v2.8)
-const CACHE_NAME = 'khalifah-cache-v2.8';
+// KHALIFAH PROGRAM - Production PWA Service Worker (v2.9)
+const CACHE_NAME = 'khalifah-cache-v2.9';
 
 // Critical local assets required for the app shell to function offline
 const PRECACHE_ASSETS = [
@@ -7,8 +7,9 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
+  'style.css?v=2.9',
   'app.js',
-  'app.js?v=2.8',
+  'app.js?v=2.9',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',

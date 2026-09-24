@@ -959,6 +959,52 @@ function toggleSurahMemorized(surahNum) {
   renderSurahChecklist(document.getElementById('searchSurahInput') ? document.getElementById('searchSurahInput').value : '');
 }
 
+function selectAllSurahsInCurrentCategory(isSelectAll) {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนเลือก', 'warning');
+    return;
+  }
+  const h = getStudentHasanat(currentStudent.studentId);
+  let mem = new Set(h.memorization.memorizedSurahs || []);
+
+  let targetSurahs = [...QURAN_SURAHS];
+  if (currentSurahCategory === 'juzAmma') {
+    targetSurahs = targetSurahs.filter(s => s.num >= 78 && s.num <= 114);
+  } else if (currentSurahCategory === 'popular') {
+    const pop = [1, 18, 36, 55, 56, 67, 112, 113, 114];
+    targetSurahs = targetSurahs.filter(s => pop.includes(s.num));
+  } else if (currentSurahCategory === 'memorized' && !isSelectAll) {
+    // If on memorized tab and clearing
+    targetSurahs = targetSurahs.filter(s => mem.has(s.num));
+  }
+
+  targetSurahs.forEach(s => {
+    if (isSelectAll) {
+      mem.add(s.num);
+    } else {
+      mem.delete(s.num);
+    }
+  });
+
+  const arr = Array.from(mem).sort((a, b) => a - b);
+  h.memorization.memorizedSurahs = arr;
+  h.memorization.count = arr.length;
+  h.memorization.lastUpdated = new Date().toISOString();
+  saveStudentHasanat(h);
+
+  const memBadge = document.getElementById('memorizedSurahsBadge');
+  if (memBadge) {
+    memBadge.innerText = `ท่องจำได้ ${arr.length} / 114 ซูเราะห์`;
+  }
+  const navMBadge = document.getElementById('navHasanatMemBadge');
+  if (navMBadge) {
+    navMBadge.innerText = `${arr.length} / 114`;
+  }
+
+  renderSurahChecklist(document.getElementById('searchSurahInput') ? document.getElementById('searchSurahInput').value : '');
+  showToast(isSelectAll ? `เลือกซูเราะห์ในหมวดนี้ทั้งหมดแล้ว (${arr.length} ซูเราะห์)` : `ล้างการเลือกในหมวดนี้แล้ว`, 'info');
+}
+
 function saveSurahMemorizationLog() {
   if (!currentStudent) {
     showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
@@ -968,6 +1014,18 @@ function saveSurahMemorizationLog() {
   saveStudentHasanat(h);
   playSuccessSound();
   showToast(`บันทึกสถิติท่องจำอัลกุรอาน ${h.memorization.count} ซูเราะห์เรียบร้อยแล้ว`, 'success');
+
+  // ซิงค์สถิติท่องจำซูเราะห์เข้า Google Sheets
+  syncRecordToGoogleSheet('saveSurahMemorizationLog', {
+    studentId: currentStudent.studentId,
+    studentName: currentStudent.fullName,
+    grade: currentStudent.grade,
+    date: hasanatSelectedDate || new Date().toISOString().split('T')[0],
+    memorization: {
+      count: h.memorization.count,
+      memorizedSurahs: h.memorization.memorizedSurahs
+    }
+  });
 }
 
 function calculateDailySunnahRakaat(shouldSave = false) {
@@ -1345,6 +1403,8 @@ let subAdmins = [];
 
 // Geolocation & Camera State
 let verifiedLocation = null;
+const GPS_EXPIRATION_MS = 60000; // พิกัดมีอายุ 60 วินาที เพื่อป้องกันการทุจริตพิกัด (1 นาที)
+let gpsCountdownInterval = null;
 let selectedPrayerTime = null;
 let activeCameraStream = null;
 let currentFacingMode = 'user'; // 'user' (กล้องหน้า) หรือ 'environment' (กล้องหลัง)
@@ -1590,8 +1650,8 @@ function verifyGeolocation() {
     return;
   }
 
-  statusTitle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบพิกัดความถูกต้อง...';
-  statusDesc.innerText = 'กำลังคำนวณตำแหน่งผ่านสัญญาณดาวเทียม GPS กรุณารอสักครู่';
+  if (statusTitle) statusTitle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบพิกัดความถูกต้อง...';
+  if (statusDesc) statusDesc.innerText = 'กำลังคำนวณตำแหน่งผ่านสัญญาณดาวเทียม GPS กรุณารอสักครู่';
 
   const btnCenter = document.getElementById('btnCenterVerifyGeo');
   if (btnCenter) {
@@ -1599,104 +1659,38 @@ function verifyGeolocation() {
     btnCenter.disabled = true;
   }
 
-  const geoOptions = {
-    enableHighAccuracy: true,
-    timeout: 10000,
-    maximumAge: 0
-  };
-
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const userLat = position.coords.latitude;
-      const userLng = position.coords.longitude;
-      const accuracy = position.coords.accuracy;
-
-      // ตรวจจับ Fake GPS เบื้องต้น
-      let isMockSuspected = false;
-      if (accuracy > 150) {
-        // ค่าความคลาดเคลื่อนสูงผิดปกติ
-        isMockSuspected = true;
-      }
-
-      // คำนวณระยะห่างจากเป้าหมายทั้งหมดใน GEOFENCE_TARGETS
-      const targetEntries = Object.values(GEOFENCE_TARGETS);
-      let matchedTarget = null;
-      let minTarget = null;
-      let minDistance = Infinity;
-
-      for (const target of targetEntries) {
-        const dist = calculateDistanceInMeters(userLat, userLng, target.lat, target.lng);
-        if (dist <= target.radius) {
-          matchedTarget = target;
-          minDistance = Math.round(dist);
-          break; // อยู่ในรัศมีที่อนุญาต
-        }
-        if (dist < minDistance) {
-          minDistance = dist;
-          minTarget = target;
-        }
-      }
-
-      let locationName = '';
-      let isWithinZone = false;
-
-      // คำนวณระยะห่างถึงมัสยิดอัลฮารอมัยน์โดยตรง (จุดศูนย์กลางอ้างอิงหลัก)
-      const mosqueTarget = GEOFENCE_TARGETS.MOSQUE;
-      const distToMosque = Math.round(calculateDistanceInMeters(userLat, userLng, mosqueTarget.lat, mosqueTarget.lng));
-      const formattedMosqueDist = formatDistance(distToMosque);
-
-      if (matchedTarget) {
-        locationName = matchedTarget.name;
-        isWithinZone = true;
-      } else {
-        isWithinZone = false;
-        minDistance = Math.round(minDistance);
-        // หากไม่อยู่ในบริเวณจุดที่กำหนด ให้ระบุระยะห่างจากมัสยิดอัลฮารอมัยน์เป็นหลัก (บอกเป็นเมตร หรือกิโลเมตร)
-        locationName = `ห่างจากมัสยิดฮารอมัยน์ ${formattedMosqueDist}`;
-      }
-
-      verifiedLocation = {
-        lat: userLat,
-        lng: userLng,
-        accuracy: accuracy,
-        locationName: locationName,
-        isWithinZone: isWithinZone,
-        distanceMeters: isWithinZone ? minDistance : distToMosque,
-        distToMosque: distToMosque,
-        formattedMosqueDist: formattedMosqueDist,
-        timestamp: new Date().toISOString()
-      };
-
+  fetchFreshPrayerLocation()
+    .then((loc) => {
       // ซ่อน Overlay กลางกล้อง และเปิดกล้องทันที
       const centerOverlay = document.getElementById('camCenterActionOverlay');
       if (centerOverlay) centerOverlay.style.display = 'none';
 
-      initLiveCamera();
-
       // แสดงผล UI
       if (statusBox) {
         statusBox.classList.remove('unverified', 'within', 'outside');
-        if (isWithinZone) {
+        if (loc.isWithinZone) {
           statusBox.classList.add('within');
-          statusTitle.innerHTML = `<i class="fa-solid fa-circle-check"></i> ยืนยันพิกัดถูกต้อง: อยู่ ณ ${locationName}`;
-          statusDesc.innerText = `พิกัดตรงตามจุดที่กำหนด (ความคลาดเคลื่อน ±${Math.round(accuracy)} ม.) อนุญาตให้เช็คชื่อได้`;
+          statusTitle.innerHTML = `<i class="fa-solid fa-circle-check"></i> ยืนยันพิกัดถูกต้อง: อยู่ ณ ${loc.locationName}`;
+          statusDesc.innerText = `พิกัดตรงตามจุดที่กำหนด (ความคลาดเคลื่อน ±${Math.round(loc.accuracy)} ม.) อนุญาตให้เช็คชื่อได้`;
         } else {
           statusBox.classList.add('outside');
           statusTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> อยู่นอกพื้นที่ที่กำหนด`;
-          statusDesc.innerText = `ตรวจพบว่าท่านอยู่: ${locationName} (อยู่นอกรัศมีที่อนุญาต)`;
+          statusDesc.innerText = `ตรวจพบว่าท่านอยู่: ${loc.locationName} (อยู่นอกรัศมีที่อนุญาต)`;
         }
       }
 
       if (detailsDiv) {
         detailsDiv.style.display = 'block';
-        detailsDiv.innerHTML = `พิกัดปัจจุบัน: ${userLat.toFixed(6)}, ${userLng.toFixed(6)} | แม่นยำ: ±${Math.round(accuracy)}ม. ${isMockSuspected ? '⚠️ กรุณาปิด Mock Location' : '✓ ตรวจสอบผ่าน'}`;
+        detailsDiv.innerHTML = `พิกัดปัจจุบัน: ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)} | แม่นยำ: ±${Math.round(loc.accuracy)}ม. ✓ ตรวจสอบผ่าน (มีผล 60 วินาที)`;
       }
 
-      showToast(`ระบุพิกัดสำเร็จ: ${isWithinZone ? 'อยู่ในพื้นที่' : 'อยู่นอกพื้นที่'}`, isWithinZone ? 'success' : 'warning');
-      updateCameraOverlayText();
-      checkPrayerUnlockState();
-    },
-    (error) => {
+      showToast(`ระบุพิกัดสำเร็จ: ${loc.isWithinZone ? 'อยู่ในพื้นที่' : 'อยู่นอกพื้นที่'}`, loc.isWithinZone ? 'success' : 'warning');
+      if (btnCenter) {
+        btnCenter.disabled = false;
+        btnCenter.innerHTML = '<i class="fa-solid fa-rotate-right"></i> อัปเดตพิกัดสดใหม่';
+      }
+    })
+    .catch((error) => {
       if (statusTitle) statusTitle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ไม่สามารถเข้าถึงพิกัด GPS ได้';
       if (statusDesc) statusDesc.innerText = 'กรุณาอนุญาตให้เบราว์เซอร์เข้าถึง Location/GPS บนอุปกรณ์ของท่าน';
       showToast('ไม่สามารถดึงพิกัดได้: ' + error.message, 'error');
@@ -1707,9 +1701,156 @@ function verifyGeolocation() {
       }
 
       checkPrayerUnlockState();
-    },
-    geoOptions
-  );
+    });
+}
+
+/**
+ * ดึงพิกัด GPS สดใหม่แบบเรียลไทม์ (ป้องกัน Fake GPS และการเดินออกจากพิกัด)
+ * คืนค่า Promise ของ verifiedLocation
+ */
+function fetchFreshPrayerLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      return reject(new Error('อุปกรณ์ของคุณไม่รองรับการระบุพิกัด GPS'));
+    }
+
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        const accuracy = position.coords.accuracy;
+
+        const targetEntries = Object.values(GEOFENCE_TARGETS);
+        let matchedTarget = null;
+        let minDistance = Infinity;
+
+        for (const target of targetEntries) {
+          const dist = calculateDistanceInMeters(userLat, userLng, target.lat, target.lng);
+          if (dist <= target.radius) {
+            matchedTarget = target;
+            minDistance = Math.round(dist);
+            break;
+          }
+          if (dist < minDistance) {
+            minDistance = dist;
+          }
+        }
+
+        const mosqueTarget = GEOFENCE_TARGETS.MOSQUE;
+        const distToMosque = Math.round(calculateDistanceInMeters(userLat, userLng, mosqueTarget.lat, mosqueTarget.lng));
+        const formattedMosqueDist = formatDistance(distToMosque);
+
+        let locationName = '';
+        let isWithinZone = false;
+
+        if (matchedTarget) {
+          locationName = matchedTarget.name;
+          isWithinZone = true;
+        } else {
+          isWithinZone = false;
+          locationName = `ห่างจากมัสยิดฮารอมัยน์ ${formattedMosqueDist}`;
+        }
+
+        verifiedLocation = {
+          lat: userLat,
+          lng: userLng,
+          accuracy: accuracy,
+          locationName: locationName,
+          isWithinZone: isWithinZone,
+          distanceMeters: isWithinZone ? minDistance : distToMosque,
+          distToMosque: distToMosque,
+          formattedMosqueDist: formattedMosqueDist,
+          timestamp: new Date().toISOString()
+        };
+
+        startGpsCountdownTimer();
+        initLiveCamera();
+        updateCameraOverlayText();
+        checkPrayerUnlockState();
+        resolve(verifiedLocation);
+      },
+      (error) => {
+        reject(error);
+      },
+      geoOptions
+    );
+  });
+}
+
+/**
+ * ตัวจับเวลานับถอยหลังอายุพิกัด GPS (60 วินาที)
+ */
+function startGpsCountdownTimer() {
+  if (gpsCountdownInterval) {
+    clearInterval(gpsCountdownInterval);
+    gpsCountdownInterval = null;
+  }
+  updateGpsCountdownDisplay();
+
+  gpsCountdownInterval = setInterval(() => {
+    if (!verifiedLocation || !verifiedLocation.timestamp) {
+      clearInterval(gpsCountdownInterval);
+      gpsCountdownInterval = null;
+      checkPrayerUnlockState();
+      return;
+    }
+
+    const elapsed = Date.now() - new Date(verifiedLocation.timestamp).getTime();
+    if (elapsed >= GPS_EXPIRATION_MS) {
+      clearInterval(gpsCountdownInterval);
+      gpsCountdownInterval = null;
+      verifiedLocation = null;
+      checkPrayerUnlockState();
+      showToast('⚠️ พิกัด GPS หมดอายุ (เกิน 60 วินาที) กรุณาตรวจสอบตำแหน่งสดใหม่', 'warning');
+    } else {
+      updateGpsCountdownDisplay();
+    }
+  }, 1000);
+}
+
+function updateGpsCountdownDisplay() {
+  if (!verifiedLocation || !verifiedLocation.timestamp) return;
+  const elapsed = Date.now() - new Date(verifiedLocation.timestamp).getTime();
+  const remainingSec = Math.max(0, Math.ceil((GPS_EXPIRATION_MS - elapsed) / 1000));
+
+  const locBadge = document.getElementById('prayerVerifiedLocBadge');
+  const locText = document.getElementById('prayerVerifiedLocText');
+  const btnCapture = document.getElementById('btnCaptureInstant');
+
+  const isWithin = verifiedLocation.isWithinZone;
+  const locName = verifiedLocation.locationName || 'พิกัด GPS';
+  const pTimeText = selectedPrayerTime ? `เวลา ${selectedPrayerTime}` : 'ละหมาด';
+
+  if (locBadge && locText) {
+    locBadge.style.display = 'inline-flex';
+    locBadge.style.background = isWithin ? '#ecfdf5' : '#fffbeb';
+    locBadge.style.borderColor = isWithin ? '#a7f3d0' : '#fde68a';
+    locBadge.style.color = isWithin ? '#065f46' : '#92400e';
+    if (isWithin) {
+      locText.innerHTML = `พิกัด: <b>${locName}</b> ✓ (สดใหม่เหลือ <span style="color:#059669; font-weight:700;">${remainingSec}s</span>)`;
+    } else {
+      locText.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: #d97706;"></i> <b>อยู่นอกพื้นที่:</b> ${locName} (สดใหม่เหลือ <span style="color:#b45309; font-weight:700;">${remainingSec}s</span>)`;
+    }
+  }
+
+  if (btnCapture && !btnCapture.disabled) {
+    btnCapture.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
+        <div style="font-size: 0.98rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+          <i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึก${pTimeText}ทันที
+        </div>
+        <div style="font-size: 0.78rem; font-weight: 500; opacity: 0.92; display: flex; align-items: center; gap: 0.3rem;">
+          <i class="fa-solid ${isWithin ? 'fa-location-dot' : 'fa-person-walking-arrow-right'}" style="font-size: 0.72rem;"></i> ${isWithin ? 'ณ ' + locName : locName} • สดใหม่เหลือ ${remainingSec}วิ
+        </div>
+      </div>
+    `;
+  }
 }
 
 function formatDistance(meters) {
@@ -1747,43 +1888,32 @@ function checkPrayerUnlockState() {
 
   if (!btnCapture) return;
 
-  if (verifiedLocation) {
+  const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
+
+  if (isGpsValid) {
     btnCapture.disabled = false;
     btnCapture.classList.remove('btn-locked');
-
-    const locName = verifiedLocation.locationName || 'พิกัด GPS';
-    const isWithin = verifiedLocation.isWithinZone;
-    const pTimeText = selectedPrayerTime ? `เวลา ${selectedPrayerTime}` : 'ละหมาด';
-
-    // อัปเดตแถบป้ายพิกัดกะทัดรัด (ไม่ใหญ่เกินไป เห็นได้ชัดเจน)
-    if (locBadge && locText) {
-      locBadge.style.display = 'inline-flex';
-      locBadge.style.background = isWithin ? '#ecfdf5' : '#fffbeb';
-      locBadge.style.borderColor = isWithin ? '#a7f3d0' : '#fde68a';
-      locBadge.style.color = isWithin ? '#065f46' : '#92400e';
-      if (isWithin) {
-        locText.innerHTML = `พิกัด: <b>${locName}</b> ✓ (ในจุดเช็คชื่อ)`;
-      } else {
-        locText.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: #d97706;"></i> <b>อยู่นอกพื้นที่:</b> ${locName}`;
-      }
-    }
-
-    // แสดงชื่อสถานที่บนปุ่มกดละหมาดโดยตรง (ขนาดพอดี ไม่ใหญ่เกินไป)
+    updateGpsCountdownDisplay();
+  } else {
+    btnCapture.disabled = false; // อนุญาตให้กดเพื่อดึงพิกัดสดใหม่อัตโนมัติได้ทันที
+    btnCapture.classList.remove('btn-locked');
     btnCapture.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
-        <div style="font-size: 0.98rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
-          <i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึก${pTimeText}ทันที
+        <div style="font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+          <i class="fa-solid fa-location-crosshairs"></i> ดึงพิกัดสด & ถ่ายรูปบันทึกทันที
         </div>
-        <div style="font-size: 0.78rem; font-weight: 500; opacity: 0.92; display: flex; align-items: center; gap: 0.3rem;">
-          <i class="fa-solid ${isWithin ? 'fa-location-dot' : 'fa-person-walking-arrow-right'}" style="font-size: 0.72rem;"></i> ${isWithin ? 'ณ ' + locName : locName}
+        <div style="font-size: 0.75rem; font-weight: 400; opacity: 0.88;">
+          (ตรวจสอบพิกัดเรียลไทม์ ป้องกันการทุจริต หมดอายุใน 60วิ)
         </div>
       </div>
     `;
-  } else {
-    btnCapture.disabled = true;
-    btnCapture.classList.add('btn-locked');
-    btnCapture.innerHTML = '<i class="fa-solid fa-lock"></i> กดตรวจสอบพิกัดที่กลางกล้องก่อนถ่ายรูป';
-    if (locBadge) locBadge.style.display = 'none';
+    if (locBadge && locText) {
+      locBadge.style.display = 'inline-flex';
+      locBadge.style.background = '#fef2f2';
+      locBadge.style.borderColor = '#fecaca';
+      locBadge.style.color = '#991b1b';
+      locText.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> ยังไม่มีพิกัดสดใหม่ (หมดอายุ 60 วินาที)';
+    }
   }
 }
 
@@ -1838,7 +1968,7 @@ function switchCameraFacing() {
 /**
  * ปรับปรุงระบบเช็คชื่อละหมาด: กดแชะเดียวบันทึกทันที (No-scroll UX)
  */
-function captureAndSavePrayerInstant() {
+async function captureAndSavePrayerInstant() {
   if (!currentStudent) {
     showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนเช็คชื่อละหมาด', 'warning');
     openModal('authModal');
@@ -1846,15 +1976,28 @@ function captureAndSavePrayerInstant() {
   }
 
   if (!selectedPrayerTime) {
-    // Default to the first unfinished prayer time or Subh
     selectedPrayerTime = 'ซุบฮิ';
     selectPrayerTime('ซุบฮิ', document.getElementById('ptime-ซุบฮิ'));
   }
 
-  // Strict Geofence check: cannot capture without verified location
-  if (!verifiedLocation) {
-    showToast('กรุณากดปุ่ม "ตรวจสอบตำแหน่งปัจจุบัน" ด้านบนก่อนถ่ายรูป', 'warning');
-    return;
+  // Anti-cheating check: check if verifiedLocation is missing or expired (> 60s)
+  const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
+  if (!isGpsValid) {
+    const btn = document.getElementById('btnCaptureInstant');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังดึงพิกัด GPS สดใหม่แบบเรียลไทม์...';
+    }
+    showToast('📍 กำลังตรวจสอบพิกัด GPS สดใหม่แบบเรียลไทม์เพื่อป้องกันการทุจริต...', 'info');
+
+    try {
+      await fetchFreshPrayerLocation();
+    } catch (err) {
+      if (btn) btn.disabled = false;
+      checkPrayerUnlockState();
+      showToast('⚠️ ไม่สามารถดึงพิกัด GPS ได้: ' + err.message + ' กรุณาเปิด Location บนอุปกรณ์', 'error');
+      return;
+    }
   }
 
   const video = document.getElementById('cameraStream');
@@ -1925,25 +2068,38 @@ function captureAndSavePrayerInstant() {
     accurateLocName = verifiedLocation.locationName;
   }
 
-  // Save prayer record
+  const logId = 'PRY-' + Date.now();
+  const mapUrl = `https://www.google.com/maps?q=${verifiedLocation.lat},${verifiedLocation.lng}`;
+
+  // Save prayer record with ALL supported key names for 100% backend compatibility
   const prayerRecord = {
-    id: 'PRY-' + Date.now(),
+    id: logId,
+    logId: logId,
     studentId: currentStudent.studentId,
     studentName: currentStudent.fullName,
     grade: currentStudent.grade,
     prayerName: selectedPrayerTime,
+    prayerTime: selectedPrayerTime,
     status: prayerStatus,
     note: prayerNote,
     timestamp: now.toISOString(),
+    date: now.toISOString().split('T')[0],
+    time: timeStr,
+    latitude: verifiedLocation.lat,
+    longitude: verifiedLocation.lng,
+    lat: verifiedLocation.lat,
+    lng: verifiedLocation.lng,
     locationName: accurateLocName,
-    isWithinZone: verifiedLocation ? verifiedLocation.isWithinZone : false,
-    lat: verifiedLocation ? verifiedLocation.lat : null,
-    lng: verifiedLocation ? verifiedLocation.lng : null,
-    photo: photoBase64
+    distanceMeters: verifiedLocation.distanceMeters,
+    isWithinZone: verifiedLocation.isWithinZone,
+    photo: photoBase64,
+    photoUrl: photoBase64,
+    photoBase64: photoBase64,
+    mapUrl: mapUrl
   };
 
   // Replace or add today's prayer for this time
-  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && p.prayerName === selectedPrayerTime);
+  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime));
   if (existingIdx !== -1) {
     todayPrayers[existingIdx] = prayerRecord;
   } else {
@@ -2203,7 +2359,7 @@ function selectPrayerNoteTime(time) {
   }
 }
 
-function savePrayerNoteOnly() {
+async function savePrayerNoteOnly() {
   if (!currentStudent) {
     showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนบันทึก', 'warning');
     enforceMandatoryLogin();
@@ -2222,6 +2378,18 @@ function savePrayerNoteOnly() {
     return;
   }
 
+  // Anti-cheating check: enforce fresh GPS check before recording note
+  const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
+  if (!isGpsValid) {
+    showToast('📍 กำลังตรวจสอบพิกัด GPS สดใหม่ก่อนบันทึกหมายเหตุ...', 'info');
+    try {
+      await fetchFreshPrayerLocation();
+    } catch (err) {
+      showToast('⚠️ ไม่สามารถดึงพิกัด GPS ได้: ' + err.message + ' กรุณาเปิด Location บนอุปกรณ์', 'error');
+      return;
+    }
+  }
+
   const pTime = selectedPrayerNoteTimeSlot;
   const noteInput = document.getElementById('prayerNoteInput');
   const prayerNote = noteInput ? noteInput.value.trim() : '';
@@ -2233,25 +2401,38 @@ function savePrayerNoteOnly() {
   const dateStr = now.toISOString().split('T')[0];
   const timeStr = now.toLocaleTimeString('th-TH');
 
-  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && p.prayerTime === pTime && p.date === dateStr);
+  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerTime === pTime || p.prayerName === pTime) && p.date === dateStr);
+
+  const logId = existingIdx !== -1 ? (todayPrayers[existingIdx].logId || todayPrayers[existingIdx].id) : ('PRY-' + Date.now());
+  const lat = verifiedLocation ? verifiedLocation.lat : 6.78652;
+  const lng = verifiedLocation ? verifiedLocation.lng : 101.24641;
+  const isWithin = verifiedLocation ? verifiedLocation.isWithinZone : false;
+  const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
 
   const prayerRecord = {
-    logId: existingIdx !== -1 ? todayPrayers[existingIdx].logId : ('PRY-' + Date.now()),
+    id: logId,
+    logId: logId,
     studentId: currentStudent.studentId,
     studentName: currentStudent.fullName,
     grade: currentStudent.grade,
     prayerTime: pTime,
+    prayerName: pTime,
     status: prayerStatus,
     note: prayerNote,
     timestamp: now.toISOString(),
     date: dateStr,
     time: timeStr,
-    latitude: verifiedLocation ? verifiedLocation.lat : 6.78652,
-    longitude: verifiedLocation ? verifiedLocation.lng : 101.24641,
+    latitude: lat,
+    longitude: lng,
+    lat: lat,
+    lng: lng,
     locationName: locName,
     distanceMeters: verifiedLocation ? verifiedLocation.distanceMeters : 0,
-    isWithinZone: verifiedLocation ? verifiedLocation.isWithinZone : true,
-    photoUrl: existingIdx !== -1 ? todayPrayers[existingIdx].photoUrl : ''
+    isWithinZone: isWithin,
+    photo: existingIdx !== -1 ? (todayPrayers[existingIdx].photo || todayPrayers[existingIdx].photoUrl) : '',
+    photoUrl: existingIdx !== -1 ? todayPrayers[existingIdx].photoUrl : '',
+    photoBase64: existingIdx !== -1 ? (todayPrayers[existingIdx].photoBase64 || todayPrayers[existingIdx].photo) : '',
+    mapUrl: mapUrl
   };
 
   if (existingIdx !== -1) {
@@ -2266,7 +2447,7 @@ function savePrayerNoteOnly() {
   try {
     historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
   } catch (e) { historyList = []; }
-  const histIdx = historyList.findIndex(p => p.studentId === currentStudent.studentId && p.prayerTime === pTime && p.date === dateStr);
+  const histIdx = historyList.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerTime === pTime || p.prayerName === pTime) && p.date === dateStr);
   if (histIdx !== -1) {
     historyList[histIdx] = prayerRecord;
   } else {
@@ -2310,31 +2491,55 @@ function renderTodayPrayerTable() {
     return;
   }
 
-  tbody.innerHTML = todayPrayers.map(p => `
-    <tr>
-      <td><b>${p.prayerTime}</b></td>
-      <td>${p.time}</td>
-      <td>${p.locationName}</td>
-      <td>
-        <span class="activity-badge ${p.isWithinZone ? 'badge-active' : 'badge-upcoming'}">
-          ${p.isWithinZone ? '✓ ในเขต' : 'นอกระยะ'}
-        </span>
-      </td>
-      <td>
-        <button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.78rem;" onclick="viewPrayerPhoto('${p.logId}')">
-          <i class="fa-solid fa-image"></i> ดูรูป
-        </button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = todayPrayers.map(p => {
+    const lat = p.latitude || p.lat;
+    const lng = p.longitude || p.lng;
+    const mapBtn = (!p.isWithinZone && lat && lng) ? `
+      <div style="margin-top: 0.25rem;">
+        <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem;">
+          <i class="fa-solid fa-map-location-dot"></i> ดูบน Map
+        </a>
+      </div>
+    ` : '';
+
+    const recId = p.logId || p.id;
+    const hasPhoto = (p.photo || p.photoUrl);
+
+    return `
+      <tr>
+        <td><b>${p.prayerTime || p.prayerName}</b></td>
+        <td>${p.time || '-'}</td>
+        <td>
+          <div>${p.locationName || 'พิกัด GPS'}</div>
+          ${mapBtn}
+        </td>
+        <td>
+          <span class="activity-badge ${p.isWithinZone ? 'badge-active' : 'badge-upcoming'}">
+            ${p.isWithinZone ? '✓ ในเขต' : 'นอกระยะ'}
+          </span>
+        </td>
+        <td>
+          ${hasPhoto ? `
+            <button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.78rem;" onclick="viewPrayerPhoto('${recId}')">
+              <i class="fa-solid fa-image"></i> ดูรูป
+            </button>
+          ` : `<span style="color: var(--text-muted); font-size: 0.78rem;">ไม่มีรูป</span>`}
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function viewPrayerPhoto(logId) {
-  const record = todayPrayers.find(p => p.logId === logId);
-  if (!record || !record.photoUrl) return;
+  const record = todayPrayers.find(p => (p.logId === logId || p.id === logId));
+  const photo = record ? (record.photoUrl || record.photo) : null;
+  if (!photo) {
+    showToast('ไม่มีรูปถ่ายสำหรับรายการนี้', 'info');
+    return;
+  }
 
   const w = window.open('');
-  w.document.write(`<img src="${record.photoUrl}" style="max-width:100%; height:auto; display:block; margin:auto;" />`);
+  w.document.write(`<img src="${photo}" style="max-width:100%; height:auto; display:block; margin:auto;" />`);
 }
 
 // ----------------- ACTIVITIES ----------------- //
