@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>KHALIFAH PROGRAM - ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม</title>
   <link rel="icon" type="image/png" href="assets/logo.png">
+
+  <!-- Open Graph / Facebook / LINE Preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="KHALIFAH PROGRAM">
+  <meta property="og:description" content="ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม">
+  <meta property="og:image" content="assets/thumbnail.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="KHALIFAH PROGRAM">
+  <meta name="twitter:description" content="ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม">
+  <meta name="twitter:image" content="assets/thumbnail.png">
   
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1788,10 +1802,52 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">วันเดือนปีเกิด <span class="required">*</span></label>
-            <input type="text" class="form-control" id="regBirthDate" maxlength="8" inputmode="numeric" placeholder="เช่น 01012540 (ห้ามใส่ /)" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
-            <div class="form-hint" style="color: #0284c7; font-size: 0.78rem; margin-top: 0.25rem;">
-              <i class="fa-solid fa-circle-info"></i> ห้ามใส่เครื่องหมาย / เช่น 1 มกราคม 2540 ให้เขียนเป็น <b>01012540</b> (8 หลัก)
+            <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <span><i class="fa-regular fa-calendar-days" style="color: var(--primary); margin-right: 0.25rem;"></i> วันเดือนปีเกิด (พ.ศ.) <span class="required">*</span></span>
+              <span id="birthDateSummaryBadge" style="display: none; font-size: 0.76rem; color: #0284c7; background: #e0f2fe; padding: 0.15rem 0.55rem; border-radius: 999px; font-weight: 600;"></span>
+            </label>
+            
+            <div class="birthdate-picker-row">
+              <div class="birthdate-col-day">
+                <select class="form-control birthdate-select" id="regBirthDay" onchange="syncBirthDatePicker()">
+                  <option value="" disabled selected>วัน</option>
+                </select>
+              </div>
+              <div class="birthdate-col-month">
+                <select class="form-control birthdate-select" id="regBirthMonth" onchange="syncBirthDatePicker()">
+                  <option value="" disabled selected>เดือน</option>
+                  <option value="01">มกราคม (ม.ค.)</option>
+                  <option value="02">กุมภาพันธ์ (ก.พ.)</option>
+                  <option value="03">มีนาคม (มี.ค.)</option>
+                  <option value="04">เมษายน (เม.ย.)</option>
+                  <option value="05">พฤษภาคม (พ.ค.)</option>
+                  <option value="06">มิถุนายน (มิ.ย.)</option>
+                  <option value="07">กรกฎาคม (ก.ค.)</option>
+                  <option value="08">สิงหาคม (ส.ค.)</option>
+                  <option value="09">กันยายน (ก.ย.)</option>
+                  <option value="10">ตุลาคม (ต.ค.)</option>
+                  <option value="11">พฤศจิกายน (พ.ย.)</option>
+                  <option value="12">ธันวาคม (ธ.ค.)</option>
+                </select>
+              </div>
+              <div class="birthdate-col-year">
+                <select class="form-control birthdate-select" id="regBirthYear" onchange="syncBirthDatePicker()">
+                  <option value="" disabled selected>ปี พ.ศ.</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Hidden input maintaining backwards compatibility with 8-digit format (DDMMYYYY) -->
+            <input type="hidden" id="regBirthDate" value="">
+
+            <div id="birthDateSelectedPill" class="birthdate-selected-pill" style="display: none;">
+              <i class="fa-solid fa-cake-candles" style="color: #16a34a;"></i>
+              <span id="birthDatePreviewText">-</span>
+              <span class="birthdate-code-badge" id="birthDateCodeBadge">00000000</span>
+            </div>
+
+            <div class="form-hint" id="birthDateDefaultHint" style="color: var(--text-muted); font-size: 0.78rem; margin-top: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-regular fa-calendar-check" style="color: #0284c7;"></i> เลือก วัน / เดือน / ปีเกิด (พ.ศ.) ของนักเรียน
             </div>
           </div>
           <div class="form-group">
