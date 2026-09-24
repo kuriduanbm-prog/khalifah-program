@@ -3228,7 +3228,7 @@ function handleStudentRegister() {
   renderDashboardCharts();
   document.body.classList.remove('auth-locked');
   closeModal('authModal');
-  showToast('ลงทะเบียนสำเร็จเรียบร้อยแล้ว', 'success');
+  showToast('ลงทะเบียนสำเร็จเรียบร้อยแล้ว กำลังบันทึกลง Google Sheet...', 'info');
 
   syncRecordToGoogleSheet('registerStudent', newStudent);
 }
@@ -4143,8 +4143,14 @@ async function syncRecordToGoogleSheet(action, data) {
       body: JSON.stringify({ action: action, data: data })
     });
     console.log(`✓ Synced ${action} to Google Sheet successfully`);
+    if (action === 'registerStudent') {
+      showToast('✓ บันทึกข้อมูลนักเรียนลง Google Sheet เรียบร้อยแล้ว', 'success');
+    }
   } catch (err) {
     console.warn(`Sync ${action} failed:`, err);
+    if (action === 'registerStudent') {
+      showToast('⚠️ ไม่สามารถส่งไปยัง Google Sheet: ' + err.message, 'warning');
+    }
   }
 }
 

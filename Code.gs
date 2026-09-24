@@ -308,6 +308,19 @@ function doGet(e) {
   let result = {};
   try {
     switch (action) {
+      case 'ping':
+      case 'checkSpreadsheet':
+      case 'getSpreadsheetInfo': {
+        const targetSs = getSpreadsheet();
+        result = {
+          success: true,
+          spreadsheetId: targetSs ? targetSs.getId() : 'none',
+          spreadsheetName: targetSs ? targetSs.getName() : 'none',
+          spreadsheetUrl: targetSs ? targetSs.getUrl() : 'none',
+          sheets: targetSs ? targetSs.getSheets().map(s => s.getName()) : []
+        };
+        break;
+      }
       case 'init':
       case 'convertToThai':
         result = initializeSheets();
