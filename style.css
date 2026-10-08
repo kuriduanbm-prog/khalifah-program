@@ -3923,7 +3923,545 @@ body.auth-locked #adminAuthModal {
 }
 
 .sunnah-item-row:active {
-  background: #ecfdf5;
+  background: #f1f5f9;
 }
+
+/* ==================== MINIMAL CLEAN HASANAT THEME (MONOCHROME & COMFORTABLE FONT) ==================== */
+.minimal-clean-hero {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  padding: 1.25rem 1.4rem !important;
+}
+
+.minimal-clean-hero::before {
+  display: none !important;
+}
+
+.hasanat-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.hasanat-hero-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #334155;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.minimal-clean-hero .hasanat-hero-title {
+  color: #0f172a !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  margin: 0 0 0.25rem 0 !important;
+}
+
+.minimal-clean-hero .hasanat-hero-desc {
+  color: #64748b !important;
+  font-size: 0.86rem !important;
+  font-weight: 400 !important;
+  margin: 0 !important;
+}
+
+/* Minimal Date Navigator */
+.minimal-date-nav {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.minimal-date-nav .hasanat-date-display-card {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.minimal-date-nav .hasanat-date-display-card i {
+  color: #475569 !important;
+}
+
+.hasanat-date-text {
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  font-size: 0.92rem !important;
+}
+
+.minimal-date-nav .hasanat-date-rel-badge.today {
+  background: #0f172a !important;
+  color: #ffffff !important;
+}
+
+.minimal-date-nav .btn-hasanat-date-step {
+  border-color: #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+.minimal-date-nav .btn-hasanat-date-step:hover {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+}
+
+.minimal-date-nav .btn-hasanat-today {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+.minimal-date-nav .btn-hasanat-today:hover {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+}
+
+/* Minimal Segmented Tabs */
+.minimal-subnav {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.minimal-subnav .hasanat-subnav-btn {
+  color: #64748b !important;
+}
+
+.minimal-subnav .hasanat-subnav-btn .tab-top-row i {
+  color: #64748b;
+}
+
+.minimal-subnav .hasanat-subnav-btn.active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.minimal-subnav .hasanat-subnav-btn.active .tab-top-row i {
+  color: #0f172a !important;
+}
+
+.minimal-subnav .hasanat-subnav-btn.active .tab-badge-pill {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* Minimal Quran Progress KPI Card */
+.quran-minimal-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg, 1rem);
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1.15rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.kpi-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.95rem;
+}
+
+.kpi-section-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.kpi-main-page-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.kpi-big-num {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-sub-label {
+  font-size: 0.88rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.kpi-right-meta {
+  text-align: right;
+}
+
+.kpi-pill-badge {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.kpi-juz-tag {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.minimal-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 0.45rem;
+}
+
+.minimal-progress-fill {
+  height: 100%;
+  background: #0f172a;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.minimal-progress-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+/* Minimal Slider Control */
+.quran-slider-control-box {
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+  margin-bottom: 0.85rem;
+}
+
+.slider-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  margin-bottom: 0.5rem;
+}
+
+.slider-hint-lbl {
+  color: #475569;
+  font-weight: 600;
+}
+
+.slider-val-tag {
+  color: #0f172a;
+  font-weight: 700;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+}
+
+.quran-range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.quran-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 22px;
+  width: 22px;
+  border-radius: 50%;
+  background: #0f172a;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.quran-range-slider::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+}
+
+.quran-quick-stepper-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45rem;
+  padding-top: 0.35rem;
+}
+
+.btn-minimal-pill {
+  padding: 0.45rem 0.25rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.btn-minimal-pill:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.btn-minimal-pill:active {
+  transform: scale(0.96);
+}
+
+/* 30-Juz Minimal Overview Card */
+.juz-minimal-overview-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg, 1rem);
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1.15rem;
+}
+
+.juz-overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.juz-overview-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.juz-overview-title i {
+  color: #475569;
+}
+
+.juz-overview-counter {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.juz-grid-container {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+@media (max-width: 500px) {
+  .juz-grid-container {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.juz-box-item {
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.2s ease;
+}
+
+.juz-box-item.done {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+}
+
+.juz-box-item.current {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 2px solid #0f172a;
+}
+
+.juz-box-item.upcoming {
+  background: #f8fafc;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+}
+
+.juz-overview-footnote {
+  display: flex;
+  gap: 0.85rem;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* Minimal Bookmark & Khatam */
+.quran-bookmark-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 0.95rem 1.15rem;
+  margin-top: 0.75rem;
+}
+
+.bookmark-label {
+  font-weight: 600;
+  font-size: 0.88rem;
+  margin-bottom: 0.35rem;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bookmark-label i {
+  color: #475569;
+  margin-right: 0.35rem;
+}
+
+.bookmark-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.bookmark-input {
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  border-radius: var(--radius-md) !important;
+  height: 46px !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.minimal-khatam-card {
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+}
+
+.minimal-khatam-card .khatam-crown-icon {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+}
+
+.khatam-title-text {
+  font-weight: 700;
+  font-size: 0.94rem;
+  color: #0f172a;
+}
+
+.khatam-sub-text {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.khatam-display-pill {
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.minimal-khatam-card .btn-khatam-add-one {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.minimal-khatam-card .btn-khatam-add-one:hover {
+  background: #f1f5f9 !important;
+}
+
+.minimal-khatam-card .btn-khatam-step.plus {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+.minimal-khatam-card .quran-ikhlas-notice {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+.minimal-khatam-card .quran-ikhlas-notice i {
+  color: #64748b !important;
+}
+
+.btn-minimal-save {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
+  height: 48px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.btn-minimal-save:hover {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+}
+
+/* Minimal Sunnah Tracker Hero */
+.sunnah-hero-counter-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+}
+
+.sunnah-hero-counter-card .sunnah-counter-label i {
+  color: #475569 !important;
+}
+
+.sunnah-hero-counter-card .sunnah-target-badge {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.sunnah-hero-counter-card .sunnah-big-num {
+  color: #0f172a !important;
+}
+
+.sunnah-hero-counter-card .sunnah-hadith-quote {
+  background: #f8fafc !important;
+  border-left: 3px solid #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.sunnah-hero-counter-card .sunnah-hadith-quote i {
+  color: #94a3b8 !important;
+}
+
 
 

@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=3.1">
+  <link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
 
@@ -560,25 +560,28 @@
     
     <!-- ==================== VIEW: HASANAT & GOOD DEEDS (ผลบุญ) ==================== -->
     <section id="view-hasanat" class="view-section">
-      <!-- Hero Banner (Condensed & Minimal) -->
-      <div class="hasanat-hero-card">
-        <h2 class="hasanat-hero-title">
-          <i class="fa-solid fa-hands-praying"></i> บันทึกผลบุญและศาสนกิจ
-        </h2>
-        <p class="hasanat-hero-desc">
-          อ่านกุรอาน • ท่องจำซูเราะห์ • ละหมาดสุนัต (เพื่อความโปรดปรานของอัลลอฮ์ ﷻ)
-        </p>
+      <!-- Minimal Clean Hero Card -->
+      <div class="hasanat-hero-card minimal-clean-hero">
+        <div class="hasanat-hero-top">
+          <div class="hasanat-hero-icon-box">
+            <i class="fa-solid fa-hands-praying"></i>
+          </div>
+          <div>
+            <h2 class="hasanat-hero-title">สวนแห่งผลบุญ (Hasanat)</h2>
+            <p class="hasanat-hero-desc">บันทึกการอ่านอัลกุรอาน ท่องจำ 114 ซูเราะห์ และละหมาดสุนัตประจำวัน</p>
+          </div>
+        </div>
       </div>
 
-      <!-- Minimalist Date Navigator for Hasanat (เลือกดู/บันทึกวันใดก็ได้ + ปุ่มลัดวันนี้) -->
-      <div class="hasanat-date-nav-bar">
+      <!-- Minimalist Date Navigator (Monochrome Icons & Comfortable Size) -->
+      <div class="hasanat-date-nav-bar minimal-date-nav">
         <button type="button" class="btn-hasanat-date-step" onclick="shiftHasanatDate(-1)" title="วันก่อนหน้า">
           <i class="fa-solid fa-chevron-left"></i>
         </button>
         
         <div class="hasanat-date-display-card" onclick="triggerHasanatDatePicker()" title="คลิกเพื่อเลือกวันที่ต้องการ">
-          <i class="fa-solid fa-calendar-days" style="color: #059669; font-size: 1.05rem;"></i>
-          <span id="hasanatDateDisplay" style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">วันที่ --/--/----</span>
+          <i class="fa-solid fa-calendar-days"></i>
+          <span id="hasanatDateDisplay" class="hasanat-date-text">วันที่ --/--/----</span>
           <span id="hasanatDateRelativeBadge" class="hasanat-date-rel-badge today">วันนี้</span>
           <input type="date" id="hasanatDatePicker" class="hasanat-native-date-input" onchange="onHasanatDateChange(this.value)">
         </div>
@@ -592,58 +595,83 @@
         </button>
       </div>
 
-      <!-- Sub Navigation Tabs with Badges (Segmented Touch Control) -->
-      <div class="hasanat-subnav">
+      <!-- Minimalist Segmented Tabs (Monochrome Icons) -->
+      <div class="hasanat-subnav minimal-subnav">
         <button class="hasanat-subnav-btn active" id="btnSubHasanatQuran" onclick="switchHasanatSubTab('quran')">
-          <div class="tab-top-row"><i class="fa-solid fa-book-quran"></i> อ่านกุรอาน</div>
-          <span class="tab-badge-pill" id="navHasanatQuranBadge">⭐ 0 ดาว</span>
+          <div class="tab-top-row"><i class="fa-solid fa-book-quran"></i> <span>อัลกุรอาน</span></div>
+          <span class="tab-badge-pill" id="navHasanatQuranBadge">0 ยุซ</span>
         </button>
         <button class="hasanat-subnav-btn" id="btnSubHasanatMemorize" onclick="switchHasanatSubTab('memorize')">
-          <div class="tab-top-row"><i class="fa-solid fa-brain"></i> ท่องจำ</div>
+          <div class="tab-top-row"><i class="fa-solid fa-brain"></i> <span>ท่องจำ</span></div>
           <span class="tab-badge-pill" id="navHasanatMemBadge">0 / 114</span>
         </button>
         <button class="hasanat-subnav-btn" id="btnSubHasanatSunnah" onclick="switchHasanatSubTab('sunnah')">
-          <div class="tab-top-row"><i class="fa-solid fa-person-praying"></i> สุนัต</div>
+          <div class="tab-top-row"><i class="fa-solid fa-person-praying"></i> <span>สุนัต</span></div>
           <span class="tab-badge-pill" id="navHasanatSunnahBadge">0 ร็อกอะฮ์</span>
         </button>
       </div>
 
-      <!-- ==================== SUBTAB 1: QURAN READING & JUZ STARS (MINIMALIST REDESIGN) ==================== -->
+      <!-- ==================== SUBTAB 1: QURAN READING (MINIMALIST & CLEAN) ==================== -->
       <div id="subtab-quran" class="hasanat-subcontent">
         <div class="card quran-minimal-card" style="max-width: 680px; margin: 0 auto 1.5rem auto;">
           
-          <!-- Modern Minimalist Bento KPI Grid -->
-          <div class="quran-bento-grid">
-            <!-- Bento 1: Page Progress & Juz Indicator -->
-            <div class="quran-bento-card bento-page-card">
-              <div class="bento-top-meta">
-                <span class="bento-label"><i class="fa-solid fa-book-open"></i> หน้าปัจจุบัน</span>
-                <span class="bento-badge" id="hasanatJuzBadge">⭐ 0 ยุซ</span>
+          <!-- Minimalist KPI Header Box -->
+          <div class="quran-minimal-kpi-card">
+            <div class="kpi-header-row">
+              <div>
+                <span class="kpi-section-label">ความคืบหน้าการอ่านอัลกุรอาน</span>
+                <div class="kpi-main-page-row">
+                  <span class="kpi-big-num" id="kpiQuranPageText">0</span>
+                  <span class="kpi-sub-label">/ 604 หน้า</span>
+                </div>
               </div>
-              <div class="bento-val-row">
-                <span class="bento-main-num" id="kpiQuranPageText">0</span>
-                <span class="bento-sub-text">/ 604 หน้า</span>
-              </div>
-              <div class="bento-progress-track">
-                <div id="hasanatQuranProgressBar" class="bento-progress-fill" style="width: 0%;"></div>
-              </div>
-              <div class="bento-progress-meta">
-                <span id="hasanatQuranPercentText">0 / 604 หน้า (0%) • 0 ยุซ</span>
+              <div class="kpi-right-meta">
+                <span class="kpi-pill-badge" id="hasanatQuranPercentText">0.0%</span>
+                <div class="kpi-juz-tag" id="hasanatJuzBadge">ยุซที่ 1</div>
               </div>
             </div>
 
-            <!-- Bento 2: Khatam Honor Card (Golden Minimalist Glow) -->
-            <div class="quran-bento-card bento-khatam-card">
-              <div class="bento-top-meta">
-                <span class="bento-label gold-label"><i class="fa-solid fa-crown"></i> จบค็อตม์ 30 ยุซ</span>
+            <!-- Sleek Minimal Progress Track -->
+            <div class="minimal-progress-track">
+              <div id="hasanatQuranProgressBar" class="minimal-progress-fill" style="width: 0%;"></div>
+            </div>
+
+            <div class="minimal-progress-legend">
+              <span>หน้า 1</span>
+              <span id="quranRemainingPagesText">เหลืออีก 604 หน้า</span>
+              <span>หน้า 604 (คัตม์)</span>
+            </div>
+
+            <!-- Interactive Minimal Range Slider -->
+            <div class="quran-slider-control-box">
+              <div class="slider-header-row">
+                <label for="quranPageSlider" class="slider-hint-lbl">เลื่อนเพื่อเปลี่ยนหน้าอย่างรวดเร็ว</label>
+                <span class="slider-val-tag" id="sliderLiveVal">หน้า 0</span>
               </div>
-              <div class="bento-val-row">
-                <span class="bento-main-num gold-num" id="kpiQuranKhatamText">0</span>
-                <span class="bento-sub-text">ครั้ง</span>
-              </div>
-              <div class="bento-khatam-pill" id="quranKhatamDisplayBadge">
-                ⭐ 0 ดาวรอบโปรไฟล์
-              </div>
+              <input type="range" id="quranPageSlider" min="0" max="604" value="0" oninput="onQuranSliderChange(this.value)" class="quran-range-slider">
+            </div>
+
+            <!-- Quick Step Pills (Monochrome Outline) -->
+            <div class="quran-quick-stepper-grid">
+              <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(1)">+1 หน้า</button>
+              <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(5)">+5 หน้า</button>
+              <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(10)">+10 หน้า</button>
+              <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(20)">+1 ยุซ</button>
+            </div>
+          </div>
+
+          <!-- Minimal 30-Juz Progress Overview -->
+          <div class="juz-minimal-overview-card">
+            <div class="juz-overview-header">
+              <span class="juz-overview-title"><i class="fa-solid fa-chart-simple"></i> ตารางความคืบหน้า 30 ยุซ</span>
+              <span class="juz-overview-counter" id="juzCompletedOverviewText">อ่านจบแล้ว 0 / 30 ยุซ</span>
+            </div>
+            <div class="juz-grid-container" id="juzMinimalGrid">
+              <!-- 30 Juz Minimal Blocks Generated via app.js -->
+            </div>
+            <div class="juz-overview-footnote">
+              <span>● ช่องทึบ = อ่านผ่านแล้ว</span>
+              <span>○ ช่องขอบ = ยุซปัจจุบัน</span>
             </div>
           </div>
 
@@ -651,19 +679,19 @@
           <div id="kpiQuranJuzText" style="display: none;">0</div>
           <div id="hasanatStarsShowcase" style="display: none;"></div>
 
-          <!-- Section 1: บันทึกการอ่านของวันที่เลือก -->
-          <div class="quran-input-section">
+          <!-- Section 1: Daily Reading Stepper -->
+          <div class="quran-input-section minimal-input-section">
             <div class="quran-section-header">
               <div class="quran-sec-title">
-                <i class="fa-solid fa-calendar-day" style="color: #059669;"></i>
-                <span>อ่านอัลกุรอานของวันที่เลือก</span>
+                <i class="fa-solid fa-calendar-day"></i>
+                <span>หน้าที่อ่านได้เฉพาะในวันที่เลือก</span>
               </div>
               <span class="quran-date-badge" id="quranActiveDateNote">ของวันนี้</span>
             </div>
 
             <div class="quran-daily-stepper-box">
               <div class="quran-stepper-row">
-                <span class="quran-stepper-lbl">จำนวนหน้าที่อ่านได้ในวันนี้:</span>
+                <span class="quran-stepper-lbl">จำนวนหน้าที่อ่านเพิ่มวันนี้:</span>
                 <div class="quran-page-input-wrap">
                   <button type="button" class="btn-quran-step" onclick="adjustPagesToday(-1)">-</button>
                   <input type="number" id="quranPagesTodayInput" class="form-control quran-big-input" min="0" max="604" placeholder="0" oninput="onPagesTodayInputChange()">
@@ -683,30 +711,30 @@
             </div>
 
             <!-- Page Bookmarking (Clean & Minimalist Full-Width) -->
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: var(--radius-lg); padding: 0.95rem 1.15rem; margin-top: 0.75rem;">
-              <label class="form-label" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.35rem; color: #0f172a; display: flex; align-items: center; justify-content: space-between;">
-                <span><i class="fa-solid fa-bookmark" style="color: #059669; margin-right: 0.35rem;"></i> อ่านถึงหน้าที่ (1 - 604) <span class="required">*</span></span>
-                <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">(กุรอานมูซอฟมี 604 หน้า)</span>
+            <div class="quran-bookmark-box">
+              <label class="form-label bookmark-label">
+                <span><i class="fa-solid fa-bookmark"></i> อ่านถึงหน้าที่ (1 - 604) <span class="required">*</span></span>
+                <span class="bookmark-sub">(กุรอานมาตรฐานมี 604 หน้า)</span>
               </label>
-              <input type="number" id="quranCurrentPageInput" class="form-control" min="1" max="604" placeholder="เช่น 45" oninput="autoCalculateJuzFromPage()" style="font-size: 1.25rem; font-weight: 800; text-align: center; border-radius: var(--radius-md); height: 48px; border-color: #cbd5e1;">
+              <input type="number" id="quranCurrentPageInput" class="form-control bookmark-input" min="1" max="604" placeholder="เช่น 45" oninput="autoCalculateJuzFromPage()">
               <input type="hidden" id="quranJuzCompletedInput" value="0">
             </div>
           </div>
 
-          <!-- Section 2: บันทึกการจบค็อตมุลกุรอาน 30 ยุซ (Minimalist & Easy-to-tap) -->
-          <div class="khatam-counter-card">
+          <!-- Section 2: Khatam 30-Juz Counter (Minimalist Clean Card) -->
+          <div class="khatam-counter-card minimal-khatam-card">
             <div class="khatam-top-row">
               <div style="display: flex; align-items: center; gap: 0.65rem;">
                 <div class="khatam-crown-icon">
                   <i class="fa-solid fa-crown"></i>
                 </div>
                 <div>
-                  <div style="font-weight: 700; font-size: 0.96rem; color: #0f172a;">ค็อตมุลกุรอาน (อ่านจบ 30 ยุซ)</div>
-                  <div style="font-size: 0.75rem; color: #64748b;">จบ 1 ครั้ง = รับดาวเกียรติยศ 1 ดวง ลอยรอบรูปโปรไฟล์</div>
+                  <div class="khatam-title-text">ค็อตมุลกุรอาน (อ่านจบครบ 30 ยุซ)</div>
+                  <div class="khatam-sub-text">บันทึกจำนวนครั้งที่อ่านจบสมบูรณ์ทั้งเล่ม</div>
                 </div>
               </div>
-              <span class="badge" style="background: #fefce8; color: #854d0e; border: 1px solid #fde047; font-size: 0.78rem; font-weight: 700; border-radius: 9999px; padding: 0.28rem 0.75rem;">
-                ★ บันทึกการจบ 30 ยุซ
+              <span class="khatam-display-pill" id="quranKhatamDisplayBadge">
+                0 ครั้ง
               </span>
             </div>
 
@@ -727,16 +755,17 @@
                 <i class="fa-solid fa-plus"></i> จบ 30 ยุซ 1 ครั้ง
               </button>
             </div>
+            <div id="kpiQuranKhatamText" style="display: none;">0</div>
 
-            <!-- Sincerity Reminder (Minimalist Note) -->
+            <!-- Sincerity Reminder (Quiet Minimalist Note) -->
             <div class="quran-ikhlas-notice">
-              <i class="fa-solid fa-heart" style="color: #10b981; font-size: 0.95rem; flex-shrink: 0;"></i>
-              <span><strong>บันทึกด้วยความอิคลาส:</strong> เพื่อกระตุ้นและเตือนตนเองในการอ่านอัลกุรอานอย่างสม่ำเสมอ เพื่อความโปรดปรานของอัลลอฮ์ ﷻ</span>
+              <i class="fa-solid fa-heart"></i>
+              <span><strong>ความอิคลาส:</strong> เพื่อเตือนตนเองและกระตุ้นการอ่านอัลกุรอานอย่างสม่ำเสมอ เพื่อความโปรดปรานของอัลลอฮ์ ﷻ</span>
             </div>
           </div>
 
-          <!-- Save Button -->
-          <button class="btn btn-primary btn-block btn-lg" onclick="saveQuranReadingLog()" style="background: #059669; border-color: #059669; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35); font-size: 1rem; padding: 0.85rem 1.25rem;">
+          <!-- Save Button (Clean Slate) -->
+          <button class="btn btn-primary btn-block btn-lg btn-minimal-save" onclick="saveQuranReadingLog()">
             <i class="fa-solid fa-floppy-disk"></i> บันทึกผลการอ่านอัลกุรอาน
           </button>
         </div>
@@ -2198,6 +2227,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=3.1"></script>
+  <script src="app.js?v=3.2"></script>
 </body>
 </html>

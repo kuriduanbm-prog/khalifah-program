@@ -600,27 +600,50 @@ function renderHasanatStarsShowcase(stars, currentPage, khatamCount = 0) {
   const kpiPage = document.getElementById('kpiQuranPageText');
   const kpiJuz = document.getElementById('kpiQuranJuzText');
   const kpiKhatam = document.getElementById('kpiQuranKhatamText');
+  const remainingText = document.getElementById('quranRemainingPagesText');
+  const slider = document.getElementById('quranPageSlider');
+  const sliderLive = document.getElementById('sliderLiveVal');
+
+  const curP = Math.max(0, Math.min(604, parseInt(currentPage) || 0));
+  const pct = ((curP / 604) * 100).toFixed(1);
+  const currentJuz = Math.min(30, Math.floor(curP / 20.13) + 1);
 
   if (badge) {
-    badge.innerText = `⭐ ${stars} ดาว (${stars}/30 ยุซ)`;
+    badge.innerText = `ยุซที่ ${currentJuz}`;
   }
 
-  const curP = parseInt(currentPage) || 0;
-  const pct = ((curP / 604) * 100).toFixed(1);
-
   if (percentText) {
-    percentText.innerText = `${curP} / 604 หน้า (${pct}%) • ${stars} ยุซ`;
+    percentText.innerText = `${pct}%`;
+  }
+
+  if (remainingText) {
+    remainingText.innerText = `เหลืออีก ${Math.max(0, 604 - curP)} หน้า`;
+  }
+
+  if (slider && parseInt(slider.value) !== curP) {
+    slider.value = curP;
+  }
+  if (sliderLive) {
+    sliderLive.innerText = `หน้า ${curP}`;
   }
 
   if (kpiPage) {
-    kpiPage.innerHTML = `${curP} <span class="quran-kpi-sub">/ 604</span>`;
+    kpiPage.innerText = curP;
   }
   if (kpiJuz) {
-    kpiJuz.innerHTML = `${stars} <span class="quran-kpi-sub">/ 30 ยุซ</span>`;
+    kpiJuz.innerText = stars;
   }
   if (kpiKhatam) {
-    kpiKhatam.innerHTML = `${khatamCount} <span class="quran-kpi-sub">ครั้ง</span>`;
+    kpiKhatam.innerText = khatamCount;
   }
+
+  const khatamBadge = document.getElementById('quranKhatamDisplayBadge');
+  if (khatamBadge) {
+    khatamBadge.innerText = `${khatamCount} ครั้ง`;
+  }
+
+  // Render 30-Juz minimal overview grid
+  render30JuzMinimalGrid(stars, currentJuz);
 
   if (!showcase) return;
   if (stars === 0) {
@@ -634,6 +657,48 @@ function renderHasanatStarsShowcase(stars, currentPage, khatamCount = 0) {
   }
   showcase.innerHTML = starsHtml;
 }
+
+function onQuranSliderChange(val) {
+  const page = Math.max(0, Math.min(604, parseInt(val) || 0));
+  const pCur = document.getElementById('quranCurrentPageInput');
+  if (pCur) pCur.value = page;
+  const sliderLive = document.getElementById('sliderLiveVal');
+  if (sliderLive) sliderLive.innerText = `หน้า ${page}`;
+  autoCalculateJuzFromPage();
+}
+
+function adjustCurrentPageDirect(delta) {
+  const pCur = document.getElementById('quranCurrentPageInput');
+  const cur = pCur ? (parseInt(pCur.value) || 0) : 0;
+  const next = Math.max(0, Math.min(604, cur + delta));
+  if (pCur) pCur.value = next;
+  const slider = document.getElementById('quranPageSlider');
+  if (slider) slider.value = next;
+  const sliderLive = document.getElementById('sliderLiveVal');
+  if (sliderLive) sliderLive.innerText = `หน้า ${next}`;
+  autoCalculateJuzFromPage();
+}
+
+function render30JuzMinimalGrid(completedJuz = 0, currentJuz = 1) {
+  const container = document.getElementById('juzMinimalGrid');
+  if (!container) return;
+  let html = '';
+  for (let i = 1; i <= 30; i++) {
+    if (i <= completedJuz) {
+      html += `<div class="juz-box-item done" title="ยุซที่ ${i} (อ่านจบแล้ว)">${i}</div>`;
+    } else if (i === currentJuz) {
+      html += `<div class="juz-box-item current" title="ยุซที่ ${i} (กำลังอ่าน)">${i}</div>`;
+    } else {
+      html += `<div class="juz-box-item upcoming" title="ยุซที่ ${i}">${i}</div>`;
+    }
+  }
+  container.innerHTML = html;
+  const countText = document.getElementById('juzCompletedOverviewText');
+  if (countText) {
+    countText.innerText = `อ่านจบแล้ว ${completedJuz} / 30 ยุซ`;
+  }
+}
+
 
 function autoCalculateJuzFromPage() {
   const pCur = document.getElementById('quranCurrentPageInput');
