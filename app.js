@@ -2055,6 +2055,23 @@ async function captureAndSavePrayerInstant() {
 
   const photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
 
+  // Trigger camera shutter flash effect
+  const flashEl = document.getElementById('cameraShutterFlash');
+  if (flashEl) {
+    flashEl.classList.remove('flashing');
+    void flashEl.offsetWidth; // trigger reflow
+    flashEl.classList.add('flashing');
+    setTimeout(() => {
+      flashEl.classList.remove('flashing');
+    }, 400);
+  }
+
+  // Play mechanical shutter click sound + haptic vibration
+  playCameraShutterSound();
+  if (navigator.vibrate) {
+    try { navigator.vibrate([40, 20, 60]); } catch(e) {}
+  }
+
   const statusSelect = document.getElementById('prayerStatusSelect');
   const locSelect = document.getElementById('prayerLocationSelect');
   const noteInput = document.getElementById('prayerNoteInput');
@@ -2127,13 +2144,25 @@ async function captureAndSavePrayerInstant() {
   renderDashboardCharts();
   renderCurrentStudentProfile();
 
-  // Play beep sound
-  playSuccessSound();
-
   if (document.getElementById('prayerNoteInput')) {
     document.getElementById('prayerNoteInput').value = '';
   }
   renderPrayerHistory();
+
+  // Instant Button Confirmation Animation
+  const btnCapture = document.getElementById('btnCaptureInstant');
+  if (btnCapture) {
+    const originalText = btnCapture.innerHTML;
+    btnCapture.style.background = '#10b981';
+    btnCapture.innerHTML = '<i class="fa-solid fa-circle-check"></i> บันทึกภาพพยานและเวลาละหมาดเรียบร้อย!';
+    setTimeout(() => {
+      btnCapture.style.background = '';
+      btnCapture.innerHTML = originalText;
+    }, 2500);
+  }
+
+  // Slide-In notification card with thumbnail & meta
+  showCameraSlideToast(photoBase64, selectedPrayerTime, accurateLocName, prayerStatus);
   showToast(`เช็คชื่อละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว! (${prayerStatus})`, 'success');
 
   // Sync to Google Sheets
@@ -5207,6 +5236,91 @@ function playSuccessSound() {
     osc.start();
     osc.stop(ctx.currentTime + 0.25);
   } catch (e) {}
+}
+
+// Synthesize Realistic Mechanical Camera Shutter Click Sound via Web Audio API
+function playCameraShutterSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const t = ctx.currentTime;
+
+    // 1. Shutter Open Click (high-frequency burst)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(1400, t);
+    osc1.frequency.exponentialRampToValueAtTime(280, t + 0.04);
+    gain1.gain.setValueAtTime(0.45, t);
+    gain1.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(t);
+    osc1.stop(t + 0.05);
+
+    // 2. Shutter Close Click (mechanical metallic release after 65ms)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(950, t + 0.065);
+    osc2.frequency.exponentialRampToValueAtTime(180, t + 0.12);
+    gain2.gain.setValueAtTime(0.35, t + 0.065);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(t + 0.065);
+    osc2.stop(t + 0.13);
+  } catch (e) {}
+}
+
+// Slide-In Notification Toast for Camera Capture Feedback
+let cameraSlideToastTimer = null;
+function showCameraSlideToast(photoUrl, prayerTime, locationName, statusText) {
+  let toast = document.getElementById('cameraSuccessSlideToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'cameraSuccessSlideToast';
+    toast.className = 'camera-slide-toast';
+    document.body.appendChild(toast);
+  }
+
+  const cleanLoc = locationName || 'พิกัด GPS ยืนยันแล้ว';
+  toast.innerHTML = `
+    <img src="${photoUrl}" class="camera-slide-toast-thumb" alt="Captured Photo">
+    <div class="camera-slide-toast-content">
+      <div class="camera-slide-toast-title">
+        <i class="fa-solid fa-circle-check"></i> บันทึกภาพพยานสำเร็จแล้ว!
+      </div>
+      <div class="camera-slide-toast-desc">
+        เวลาละหมาด: <b>${prayerTime}</b> (${statusText || 'ตรงเวลา'})
+      </div>
+      <div class="camera-slide-toast-meta">
+        <span><i class="fa-solid fa-location-dot"></i> ${cleanLoc}</span>
+        <span>•</span>
+        <span>${new Date().toLocaleTimeString('th-TH')} น.</span>
+      </div>
+    </div>
+    <button class="camera-slide-toast-close" onclick="closeCameraSlideToast()" title="ปิด">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  `;
+
+  // Force reflow and show
+  void toast.offsetWidth;
+  toast.classList.add('show');
+
+  if (cameraSlideToastTimer) clearTimeout(cameraSlideToastTimer);
+  cameraSlideToastTimer = setTimeout(() => {
+    closeCameraSlideToast();
+  }, 5000);
+}
+
+function closeCameraSlideToast() {
+  const toast = document.getElementById('cameraSuccessSlideToast');
+  if (toast) {
+    toast.classList.remove('show');
+  }
 }
 
 // Initialize minimalist date of birth picker

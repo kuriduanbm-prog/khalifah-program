@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=2.9">
+  <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body>
 
@@ -408,6 +408,9 @@
           <video id="cameraStream" class="camera-stream camera-front" autoplay playsinline muted></video>
           <canvas id="snapshotCanvas" style="display: none;"></canvas>
           
+          <!-- Camera Flash Feedback Effect -->
+          <div class="camera-shutter-flash" id="cameraShutterFlash"></div>
+
           <!-- Camera Flip Button (Only floating icon button as requested) -->
           <button class="btn-flip-cam" id="btnFlipCamera" onclick="switchCameraFacing()" title="สลับกล้องหน้า / กล้องหลัง">
             <i class="fa-solid fa-camera-rotate"></i>
@@ -2169,6 +2172,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=2.9"></script>
+  <script src="app.js?v=3.0"></script>
 </body>
 </html>

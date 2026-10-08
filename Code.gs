@@ -16,6 +16,7 @@ const SHEETS = {
   PRAYERS: 'บันทึกเวลาละหมาด',
   ATTENDANCE: 'บันทึกการมาเรียน',
   ACTIVITIES: 'กิจกรรม',
+  ACTIVITY_LOGS: 'บันทึกการเข้าร่วมกิจกรรม',
   ADMINS: 'ผู้ดูแลระบบ',
   SETTINGS: 'การตั้งค่า',
   HASANAT: 'บันทึกผลบุญ'
@@ -27,6 +28,7 @@ const LEGACY_SHEETS = {
   PRAYERS: ['PrayerLogs', 'prayerlogs', 'Prayer_Logs', 'Prayers', 'บันทึกละหมาด'],
   ATTENDANCE: ['AttendanceLogs', 'attendancelogs', 'Attendance_Logs', 'Attendance', 'เช็คชื่อมาเรียน'],
   ACTIVITIES: ['Activities', 'activities', 'Activity'],
+  ACTIVITY_LOGS: ['ActivityLogs', 'activitylogs', 'Activity_Logs', 'บันทึกเข้าร่วมกิจกรรม'],
   ADMINS: ['Admins', 'admins', 'Admin'],
   SETTINGS: ['Settings', 'settings', 'Setting'],
   HASANAT: ['HasanatLogs', 'hasanatlogs', 'Hasanat_Logs', 'Hasanat', 'ผลบุญ']
@@ -50,6 +52,10 @@ const HEADERS = {
   ACTIVITIES: [
     'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'รายละเอียด', 'วันเริ่มต้น', 'วันสิ้นสุด', 
     'สถานที่จัดกิจกรรม', 'ผู้สร้างกิจกรรม', 'วันที่สร้าง', 'จำนวนผู้เข้าร่วม'
+  ],
+  ACTIVITY_LOGS: [
+    'รหัสบันทึก', 'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'รหัสนักเรียน', 'ชื่อ-นามสกุล', 
+    'ระดับชั้น', 'วันที่เช็คชื่อ', 'เวลาเช็คชื่อ', 'เวลา Timestamp'
   ],
   ADMINS: [
     'รหัสแอดมิน', 'ชื่อผู้ใช้ (Username)', 'รหัสผ่าน (Password)', 'ชื่อ-นามสกุล', 'ระดับสิทธิ์ (Role)', 'วันที่สร้าง'
@@ -153,6 +159,9 @@ function initializeSheets() {
 
   // 4. กิจกรรม
   getOrCreateSheetSmart(ss, 'ACTIVITIES', HEADERS.ACTIVITIES, '#0284c7');
+
+  // 4.1 บันทึกการเข้าร่วมกิจกรรม
+  getOrCreateSheetSmart(ss, 'ACTIVITY_LOGS', HEADERS.ACTIVITY_LOGS, '#0284c7');
 
   // 5. ผู้ดูแลระบบ
   const sheetAdmins = getOrCreateSheetSmart(ss, 'ADMINS', HEADERS.ADMINS, '#0284c7');
@@ -406,6 +415,7 @@ function doPost(e) {
         result = createActivity(postData.data || postData);
         break;
       case 'checkInActivity':
+      case 'activityCheckIn':
         result = checkInActivity(postData.data || postData);
         break;
       case 'adminLogin':
@@ -860,19 +870,53 @@ function getActivities() {
 }
 
 function checkInActivity(data) {
+  if (!data) return { success: false, message: 'ไม่มีข้อมูลกิจกรรม' };
   initializeSheets();
   const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.ACTIVITIES);
-  const rows = sheet.getDataRange().getValues();
+  const sheetActivities = ss.getSheetByName(SHEETS.ACTIVITIES);
+  const sheetLogs = ss.getSheetByName(SHEETS.ACTIVITY_LOGS);
 
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === String(data.activityId).trim()) {
-      const currentCount = Number(rows[i][8]) || 0;
-      sheet.getRange(i + 1, 9).setValue(currentCount + 1);
-      return { success: true, message: 'บันทึกการเข้าร่วมกิจกรรมสำเร็จ' };
+  const targetActId = String(data.activityId || '').trim();
+  const targetActTitle = String(data.activityTitle || data.title || '').trim();
+  let activityFoundTitle = targetActTitle;
+
+  // 1. อัปเดตยอดผู้เข้าร่วมในแผ่นงาน ACTIVITIES
+  if (sheetActivities) {
+    const rows = sheetActivities.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const rowActId = String(rows[i][0]).trim();
+      const rowActTitle = String(rows[i][1]).trim();
+      if ((targetActId && rowActId === targetActId) || (targetActTitle && rowActTitle === targetActTitle)) {
+        const currentCount = Number(rows[i][8]) || 0;
+        sheetActivities.getRange(i + 1, 9).setValue(currentCount + 1);
+        activityFoundTitle = rowActTitle;
+        break;
+      }
     }
   }
-  return { success: false, message: 'ไม่พบกิจกรรมที่ระบุ' };
+
+  // 2. บันทึกประวัติการเข้าร่วมของนักเรียนลงในแผ่นงาน ACTIVITY_LOGS
+  if (sheetLogs) {
+    const logId = data.id || ('ACTLOG-' + new Date().getTime());
+    const now = new Date();
+    const dateStr = data.formattedDate || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
+    const timeStr = data.formattedTime || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
+    const timestamp = data.checkInTimestamp || now.toISOString();
+
+    sheetLogs.appendRow([
+      logId,
+      targetActId || '-',
+      activityFoundTitle || targetActTitle || 'กิจกรรมทั่วไป',
+      formatAsText(data.studentId || '-'),
+      data.studentName || '',
+      data.grade || '',
+      dateStr,
+      timeStr,
+      timestamp
+    ]);
+  }
+
+  return { success: true, message: 'บันทึกการเข้าร่วมกิจกรรมลง Google Sheets สำเร็จ' };
 }
 
 function verifyAdminLogin(password, username) {
@@ -991,15 +1035,50 @@ function updateAppLogo(logoBase64) {
     initializeSheets();
     sheet = ss.getSheetByName(SHEETS.SETTINGS);
   }
+
+  let logoUrl = logoBase64;
+  if (logoBase64 && typeof logoBase64 === 'string' && logoBase64.startsWith('data:image')) {
+    try {
+      const folderName = "Khalifah_System_Assets";
+      let folder;
+      const folders = DriveApp.getFoldersByName(folderName);
+      if (folders.hasNext()) {
+        folder = folders.next();
+      } else {
+        folder = DriveApp.createFolder(folderName);
+      }
+      const contentType = "image/png";
+      const cleanBase64 = logoBase64.includes(',') ? logoBase64.split(',')[1] : logoBase64;
+      const bytes = Utilities.base64Decode(cleanBase64);
+      const fileName = `system_logo.png`;
+      const existing = folder.getFilesByName(fileName);
+      let file;
+      if (existing.hasNext()) {
+        file = existing.next();
+        file.setContent(bytes);
+      } else {
+        file = folder.createFile(Utilities.newBlob(bytes, contentType, fileName));
+      }
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      logoUrl = file.getUrl();
+    } catch (err) {
+      Logger.log('Drive logo save error: ' + err.message);
+      // fallback to safe ref if string is too long for cell
+      if (logoBase64.length > 5000) {
+        logoUrl = 'โลโก้ของระบบ (บันทึกในอุปกรณ์)';
+      }
+    }
+  }
+
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]).trim() === 'AppLogo') {
-      sheet.getRange(i + 1, 2).setValue(logoBase64);
-      return { success: true, message: 'บันทึกโลโก้ลง Google Sheets สำเร็จ' };
+      sheet.getRange(i + 1, 2).setValue(logoUrl);
+      return { success: true, message: 'บันทึกโลโก้ลง Google Drive และ Sheets สำเร็จ', logoUrl: logoUrl };
     }
   }
-  sheet.appendRow(['AppLogo', logoBase64, 'โลโก้ของระบบ']);
-  return { success: true, message: 'บันทึกโลโก้ใหม่ลง Google Sheets สำเร็จ' };
+  sheet.appendRow(['AppLogo', logoUrl, 'โลโก้ของระบบ']);
+  return { success: true, message: 'บันทึกโลโก้ใหม่ลง Google Drive และ Sheets สำเร็จ', logoUrl: logoUrl };
 }
 
 /**

@@ -1634,6 +1634,121 @@ html, body {
   transform: scaleX(1) !important;
 }
 
+/* Camera Shutter White Flash Effect */
+.camera-shutter-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.camera-shutter-flash.flashing {
+  animation: cameraShutterAnimation 0.35s ease-out forwards;
+}
+
+@keyframes cameraShutterAnimation {
+  0% { opacity: 0; }
+  15% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+/* Camera Success Slide-In Notification Toast */
+.camera-slide-toast {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-150%);
+  max-width: 92%;
+  width: 440px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid #10b981;
+  border-radius: var(--radius-xl, 1rem);
+  padding: 0.85rem 1rem;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(16, 185, 129, 0.3);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  color: #ffffff;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: auto;
+}
+
+.camera-slide-toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.camera-slide-toast-thumb {
+  width: 54px;
+  height: 54px;
+  border-radius: 0.75rem;
+  border: 2px solid #10b981;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #1e293b;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.camera-slide-toast-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.camera-slide-toast-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #34d399;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.2;
+}
+
+.camera-slide-toast-desc {
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.camera-slide-toast-meta {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.camera-slide-toast-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.camera-slide-toast-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .btn-flip-cam {
   position: absolute;
   top: 12px;
