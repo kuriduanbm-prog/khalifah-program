@@ -433,14 +433,16 @@ html, body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
-  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+  background: #1e293b;
+  border-color: #1e293b;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
   transform: translateY(-1px);
 }
 
@@ -1870,22 +1872,24 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  background: #0f172a;
   color: #ffffff;
-  border: 1.5px solid rgba(125, 211, 252, 0.5);
+  border: 1px solid #0f172a;
   border-radius: var(--radius-full);
   padding: 0.75rem 1.6rem;
   font-size: 0.95rem;
   font-weight: 600;
-  box-shadow: 0 4px 20px rgba(2, 132, 199, 0.45);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
+  outline: none !important;
 }
 
 .btn-cam-center-verify:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(2, 132, 199, 0.6);
-  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.35);
+  background: #1e293b;
+  border-color: #1e293b;
 }
 
 /* ==================== COMPACT PRAYER CHIPS (NO-SCROLL) ==================== */
@@ -1897,29 +1901,31 @@ html, body {
 }
 
 .prayer-chip {
-  background: var(--bg-surface);
-  border: 1.5px solid var(--border-light);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: var(--radius-md);
   padding: 0.45rem 0.15rem;
   text-align: center;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.18s ease;
+  outline: none !important;
+  user-select: none;
 }
 
 .prayer-chip:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
 
 .prayer-chip.selected {
-  border-color: var(--primary);
-  background: #f0f9ff;
-  box-shadow: 0 0 0 2.5px rgba(2, 132, 199, 0.25);
+  border-color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px #0f172a;
 }
 
 .prayer-chip.done {
-  border-color: #86efac;
-  background: #f0fdf4;
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
 
 .prayer-chip-name {
@@ -3239,10 +3245,10 @@ body.auth-locked #adminAuthModal {
 }
 
 .prayer-note-time-chip.active {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-  border-color: #0284c7;
+  background: #0f172a;
+  border-color: #0f172a;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.28);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
   transform: translateY(-1px);
 }
 
