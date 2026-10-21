@@ -10,6 +10,15 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 
 const MASTER_ADMIN_PASS = '096909';
 
+/**
+ * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (MailApp)
+ */
+function authorizeEmailPermission() {
+  const quota = MailApp.getRemainingDailyQuota();
+  Logger.log('เปิดสิทธิ์ส่งอีเมลสำเร็จ! โควต้าส่งอีเมลคงเหลือวันนี้: ' + quota + ' ฉบับ');
+  return quota;
+}
+
 // ชื่อแผ่นงานหลักภาษาไทย (Thai Sheet Names)
 const SHEETS = {
   STUDENTS: 'รายชื่อนักเรียน',
@@ -1428,15 +1437,15 @@ function ensureApprovalsSheet() {
  */
 function registerPendingUser(data) {
   const sheet = ensureApprovalsSheet();
-  const reqId = cleanVal(data.id || ('REQ-' + new Date().getTime()));
+  const reqId = cleanVal(data.reqId || data.id || ('REQ-' + new Date().getTime()));
   const role = cleanVal(data.role || 'student');
   const userId = cleanVal(data.userId || '');
   const fullName = cleanVal(data.fullName || '');
   const email = cleanVal(data.email || '');
-  const detail = cleanVal(data.detail || '');
+  const detail = cleanVal(data.gradeOrSubj || data.detail || '');
   const otpCode = cleanVal(data.otpCode || String(Math.floor(100000 + Math.random() * 900000)));
-  const status = cleanVal(data.status || 'pending');
-  const requestedAt = cleanVal(data.requestedAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
+  const status = cleanVal(data.status || 'PendingAdmin');
+  const requestedAt = cleanVal(data.createdAt || data.requestedAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
 
   const rows = sheet.getDataRange().getValues();
   let updatedRow = -1;
@@ -1447,8 +1456,11 @@ function registerPendingUser(data) {
     }
   }
 
+  const payloadObj = data.payload || {};
+  if (data.phone && !payloadObj.phone) payloadObj.phone = cleanVal(data.phone);
+
   const rowValues = [
-    reqId, role, userId, fullName, email, detail, otpCode, status, requestedAt, JSON.stringify(data.payload || {})
+    reqId, role, userId, fullName, email, detail, otpCode, status, requestedAt, JSON.stringify(payloadObj)
   ];
 
   if (updatedRow !== -1) {
@@ -1478,36 +1490,48 @@ function approveRegistrationAndSendEmail(data) {
   const email = cleanVal(data.email || '');
   const fullName = cleanVal(data.fullName || 'ผู้สมัคร');
   const userId = cleanVal(data.userId || '');
-  const roleLabel = cleanVal(data.roleLabel || 'สมาชิก');
+  const role = cleanVal(data.role || 'student');
+  const roleLabel = cleanVal(data.roleLabel || (role === 'teacher' ? 'อาจารย์ผู้สอน' : 'นักเรียน'));
   const otpCode = cleanVal(data.otpCode || '');
-  const reqId = cleanVal(data.reqId || '');
+  const reqId = cleanVal(data.reqId || data.id || '');
 
   // อัปเดตสถานะในแผ่นงานรายการรออนุมัติสมัคร
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if ((reqId && cleanVal(rows[i][0]) === reqId) || (userId && isCodeMatch(rows[i][2], userId))) {
       sheet.getRange(i + 1, 7).setNumberFormat('@').setValue(otpCode);
-      sheet.getRange(i + 1, 8).setValue('approved');
+      sheet.getRange(i + 1, 8).setValue('Approved');
       break;
     }
   }
 
-  // ส่งอีเมลอัตโนมัติผ่าน MailApp
+  // บันทึกข้อมูลนักเรียนหรืออาจารย์ลงแผ่นงานหลักทันทีเมื่อแอดมินอนุมัติ
+  try {
+    if (data.payload) {
+      if (role === 'student') {
+        registerStudent(data.payload);
+      } else if (role === 'teacher') {
+        addSubAdmin(data.payload);
+      }
+    }
+  } catch (syncErr) {}
+
+  // ส่งอีเมลอัตโนมัติผ่าน MailApp หรือ GmailApp
   let emailSent = false;
   let emailError = '';
   if (email && email.indexOf('@') !== -1) {
+    const subject = '[KHALIFAH PROGRAM] รหัสยืนยันการอนุมัติบัญชีของคุณ (' + otpCode + ')';
+    const htmlBody = '<div style="font-family: Sarabun, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; color: #0f172a;">' +
+      '<h2 style="margin-top: 0; color: #0f172a;">KHALIFAH PROGRAM</h2>' +
+      '<p style="font-size: 15px; color: #334155;">อัสสลามุอะลัยกุม คุณ <strong>' + fullName + '</strong></p>' +
+      '<p style="font-size: 14px; color: #475569;">แอดมินได้ตรวจสอบและกดยินยอมรับรองการสมัครบัญชี <strong>' + roleLabel + '</strong> (รหัสประจำตัว: <strong>' + userId + '</strong>) ของคุณเรียบร้อยแล้ว</p>' +
+      '<div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; text-align: center; margin: 20px 0;">' +
+      '<div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">รหัสยืนยันจากแอดมิน (6 หลัก)</div>' +
+      '<div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #0f172a; font-family: monospace;">' + otpCode + '</div>' +
+      '</div>' +
+      '<p style="font-size: 13px; color: #64748b;">กรุณานำรหัส 6 หลักนี้ไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ เพื่อเข้าใช้งานระบบได้ทันที</p>' +
+      '</div>';
     try {
-      const subject = '[KHALIFAH PROGRAM] รหัสยืนยันการอนุมัติบัญชีของคุณ (' + otpCode + ')';
-      const htmlBody = '<div style="font-family: Sarabun, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; color: #0f172a;">' +
-        '<h2 style="margin-top: 0; color: #0f172a;">KHALIFAH PROGRAM</h2>' +
-        '<p style="font-size: 15px; color: #334155;">อัสสลามุอะลัยกุม คุณ <strong>' + fullName + '</strong></p>' +
-        '<p style="font-size: 14px; color: #475569;">แอดมินได้ตรวจสอบและกดยินยอมรับรองการสมัครบัญชี <strong>' + roleLabel + '</strong> (รหัสประจำตัว: <strong>' + userId + '</strong>) ของคุณเรียบร้อยแล้ว</p>' +
-        '<div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; text-align: center; margin: 20px 0;">' +
-        '<div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">รหัสยืนยันจากแอดมิน (6 หลัก)</div>' +
-        '<div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #0f172a; font-family: monospace;">' + otpCode + '</div>' +
-        '</div>' +
-        '<p style="font-size: 13px; color: #64748b;">กรุณานำรหัส 6 หลักนี้ไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ เพื่อเข้าใช้งานระบบได้ทันที</p>' +
-        '</div>';
       MailApp.sendEmail({
         to: email,
         subject: subject,
@@ -1526,7 +1550,7 @@ function approveRegistrationAndSendEmail(data) {
     otpCode: otpCode,
     message: emailSent
       ? 'อนุมัติและส่งรหัสยืนยัน (' + otpCode + ') ไปยังอีเมล ' + email + ' เรียบร้อยแล้ว'
-      : 'อนุมัติเรียบร้อยแล้ว (รหัสยืนยัน: ' + otpCode + ')'
+      : 'อนุมัติเรียบร้อยแล้ว แต่ส่งอีเมลไม่สำเร็จ: ' + emailError
   };
 }
 
@@ -1538,12 +1562,29 @@ function checkRegistrationStatus(userId, role) {
   const rows = sheet.getDataRange().getValues();
   for (let i = rows.length - 1; i >= 1; i--) {
     if (isCodeMatch(rows[i][2], userId) && (!role || cleanVal(rows[i][1]) === cleanVal(role))) {
+      let payload = {};
+      try {
+        payload = rows[i][9] ? JSON.parse(rows[i][9]) : {};
+      } catch (e) {}
+      const regObj = {
+        reqId: cleanVal(rows[i][0]),
+        role: cleanVal(rows[i][1]),
+        userId: cleanVal(rows[i][2]),
+        fullName: cleanVal(rows[i][3]),
+        email: cleanVal(rows[i][4]),
+        gradeOrSubj: cleanVal(rows[i][5]),
+        otpCode: cleanVal(rows[i][6]),
+        status: cleanVal(rows[i][7]),
+        requestedAt: cleanVal(rows[i][8]),
+        payload: payload
+      };
       return {
         success: true,
-        status: cleanVal(rows[i][7]),
-        otpCode: cleanVal(rows[i][6]),
-        userId: cleanVal(rows[i][2]),
-        role: cleanVal(rows[i][1])
+        status: regObj.status,
+        otpCode: regObj.otpCode,
+        userId: regObj.userId,
+        role: regObj.role,
+        registration: regObj
       };
     }
   }
@@ -1555,16 +1596,24 @@ function getPendingRegistrations() {
   const rows = sheet.getDataRange().getValues();
   const list = [];
   for (let i = 1; i < rows.length; i++) {
+    let payload = {};
+    try {
+      payload = rows[i][9] ? JSON.parse(rows[i][9]) : {};
+    } catch (e) {}
     list.push({
+      reqId: cleanVal(rows[i][0]),
       id: cleanVal(rows[i][0]),
       role: cleanVal(rows[i][1]),
       userId: cleanVal(rows[i][2]),
       fullName: cleanVal(rows[i][3]),
       email: cleanVal(rows[i][4]),
+      phone: cleanVal(payload.phone || payload.parentPhone || ''),
+      gradeOrSubj: cleanVal(rows[i][5]),
       detail: cleanVal(rows[i][5]),
       otpCode: cleanVal(rows[i][6]),
       status: cleanVal(rows[i][7]),
-      requestedAt: cleanVal(rows[i][8])
+      requestedAt: cleanVal(rows[i][8]),
+      payload: payload
     });
   }
   return { success: true, data: list };

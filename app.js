@@ -4383,7 +4383,7 @@ function openOtpVerifyModalPrompt(defaultRole = 'student') {
   openModal('otpVerifyModal');
 }
 
-function verifyRegistrationOtpCode() {
+async function verifyRegistrationOtpCode() {
   const codeInput = document.getElementById('otpVerifyCodeInput');
   const lookupInput = document.getElementById('otpLookupIdInput');
   const rawCode = cleanIdString(codeInput ? codeInput.value : '');
@@ -4393,21 +4393,48 @@ function verifyRegistrationOtpCode() {
     return;
   }
 
-  const pendingList = getPendingRegistrations();
+  let pendingList = getPendingRegistrations();
   let targetItem = activePendingOtpUser;
+  const lookupId = targetItem ? targetItem.userId : cleanIdString(lookupInput ? lookupInput.value : '');
 
-  if (!targetItem) {
-    const lookupId = cleanIdString(lookupInput ? lookupInput.value : '');
-    if (!lookupId) {
-      showToast('กรุณากรอกรหัสนักเรียนหรือรหัสอาจารย์ที่สมัครไว้', 'warning');
-      return;
-    }
-    targetItem = pendingList.find(p => isIdMatch(p.userId, lookupId));
-  } else {
-    // Refresh from storage in case admin regenerated or approved
-    const fresh = pendingList.find(p => isIdMatch(p.userId, targetItem.userId) && p.role === targetItem.role);
-    if (fresh) targetItem = fresh;
+  if (!lookupId) {
+    showToast('กรุณากรอกรหัสนักเรียนหรือรหัสอาจารย์ที่สมัครไว้', 'warning');
+    return;
   }
+
+  // Always check cloud status first so cross-device OTP / regeneration works immediately
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (url && !url.includes('docs.google.com/spreadsheets')) {
+    try {
+      const resp = await fetch(`${url}?action=checkRegistrationStatus&userId=${encodeURIComponent(lookupId)}`);
+      const json = await resp.json();
+      if (json && json.success) {
+        const cloudOtp = cleanIdString(json.otpCode || (json.registration && json.registration.otpCode) || '');
+        const cloudStatus = json.status || (json.registration && json.registration.status) || 'PendingAdmin';
+        let localMatch = pendingList.find(p => isIdMatch(p.userId, lookupId));
+        if (localMatch) {
+          if (cloudOtp) localMatch.otpCode = cloudOtp;
+          if (cloudStatus) localMatch.status = cloudStatus === 'approved' ? 'Approved' : cloudStatus;
+        } else if (json.registration) {
+          localMatch = {
+            reqId: json.registration.reqId || json.registration.id || ('REQ-' + Date.now()),
+            role: json.registration.role || 'student',
+            userId: json.registration.userId || lookupId,
+            fullName: json.registration.fullName || lookupId,
+            email: json.registration.email || '',
+            gradeOrSubj: json.registration.gradeOrSubj || json.registration.detail || '',
+            otpCode: cloudOtp,
+            status: cloudStatus === 'approved' ? 'Approved' : cloudStatus,
+            payload: json.registration.payload || null
+          };
+          pendingList.unshift(localMatch);
+        }
+        savePendingRegistrations(pendingList);
+      }
+    } catch (e) {}
+  }
+
+  targetItem = pendingList.find(p => isIdMatch(p.userId, lookupId)) || targetItem;
 
   if (!targetItem) {
     showToast('ไม่พบรายการคำขอสมัครของรหัสนี้ กรุณาตรวจสอบรหัสอีกครั้ง', 'error');
@@ -4662,9 +4689,57 @@ function switchAdminTab(tabName, element) {
   }
 }
 
-function renderPendingApprovalsTable() {
+let isFetchingPendingCloud = false;
+async function fetchPendingApprovalsFromCloud() {
+  if (isFetchingPendingCloud) return;
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (!url || url.includes('docs.google.com/spreadsheets')) return;
+  isFetchingPendingCloud = true;
+  try {
+    const resp = await fetch(`${url}?action=getPendingRegistrations`);
+    const json = await resp.json();
+    if (json && json.success && Array.isArray(json.data)) {
+      const localList = getPendingRegistrations();
+      json.data.forEach(r => {
+        const reqId = r.reqId || r.id || ('REQ-' + Date.now());
+        const normStatus = (r.status === 'approved' || r.status === 'Approved') ? 'Approved' : (r.status || 'PendingAdmin');
+        const idx = localList.findIndex(p => (p.reqId && p.reqId === reqId) || (isIdMatch(p.userId, r.userId) && p.role === r.role));
+        const merged = {
+          reqId: reqId,
+          role: r.role || 'student',
+          userId: cleanIdString(r.userId),
+          fullName: r.fullName || '',
+          email: r.email || '',
+          phone: r.phone || (idx !== -1 ? localList[idx].phone : '') || '',
+          gradeOrSubj: r.gradeOrSubj || r.detail || (idx !== -1 ? localList[idx].gradeOrSubj : '') || '',
+          otpCode: cleanIdString(r.otpCode),
+          status: idx !== -1 && localList[idx].status === 'Verified' ? 'Verified' : normStatus,
+          createdAt: r.requestedAt || r.createdAt || '',
+          payload: (r.payload && Object.keys(r.payload).length > 0) ? r.payload : (idx !== -1 ? localList[idx].payload : null)
+        };
+        if (idx !== -1) {
+          localList[idx] = merged;
+        } else {
+          localList.unshift(merged);
+        }
+      });
+      savePendingRegistrations(localList);
+      renderPendingApprovalsTable(true);
+    }
+  } catch (e) {
+    console.warn('Cloud pending approvals fetch warning:', e);
+  } finally {
+    isFetchingPendingCloud = false;
+  }
+}
+
+function renderPendingApprovalsTable(skipCloudFetch = false) {
   const tbody = document.getElementById('adminPendingApprovalsTableBody');
   if (!tbody) return;
+
+  if (!skipCloudFetch) {
+    fetchPendingApprovalsFromCloud();
+  }
 
   const list = getPendingRegistrations();
   renderSuperAdminOverviewKpis();
@@ -4682,11 +4757,12 @@ function renderPendingApprovalsTable() {
   }
 
   tbody.innerHTML = list.map(item => {
+    const reqKey = item.reqId || item.id || item.userId;
     const roleLabel = item.role === 'teacher'
       ? '<span class="activity-badge badge-active">อาจารย์ผู้สอน</span>'
       : '<span class="activity-badge badge-upcoming">นักเรียน</span>';
 
-    const isApproved = item.status === 'Approved' || item.status === 'Verified';
+    const isApproved = item.status === 'Approved' || item.status === 'approved' || item.status === 'Verified';
     const statusBadge = isApproved
       ? `<span class="activity-badge badge-active"><i class="fa-solid fa-check"></i> อนุมัติและส่งอีเมลแล้ว</span>`
       : `<span class="activity-badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;"><i class="fa-solid fa-clock"></i> รอแอดมินกดยินยอม</span>`;
@@ -4700,21 +4776,21 @@ function renderPendingApprovalsTable() {
           <div><i class="fa-regular fa-envelope"></i> ${escapeHtml(item.email || '-')}</div>
           <div style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-phone"></i> ${escapeHtml(item.phone || '-')}</div>
         </td>
-        <td style="font-size: 0.82rem;">${escapeHtml(item.gradeOrSubj || '-')}</td>
+        <td style="font-size: 0.82rem;">${escapeHtml(item.gradeOrSubj || item.detail || '-')}</td>
         <td>
           <div style="display: flex; align-items: center; gap: 0.35rem;">
             <span class="admin-otp-badge" title="รหัสยืนยันแบบสุ่มเฉพาะแอดมิน">${escapeHtml(item.otpCode)}</span>
-            <button class="btn btn-secondary btn-sm" onclick="adminRegenerateRandomOtp('${escapeHtml(item.reqId)}')" title="สุ่มรหัสยืนยันชุดใหม่" style="padding: 0.22rem 0.45rem; font-size: 0.74rem;">
+            <button class="btn btn-secondary btn-sm" onclick="adminRegenerateRandomOtp('${escapeHtml(reqKey)}')" title="สุ่มรหัสยืนยันชุดใหม่" style="padding: 0.22rem 0.45rem; font-size: 0.74rem;">
               <i class="fa-solid fa-dice"></i> สุ่มใหม่
             </button>
           </div>
           <div style="margin-top: 0.25rem;">${statusBadge}</div>
         </td>
         <td style="text-align: right; white-space: nowrap;">
-          <button class="btn btn-primary btn-sm" onclick="adminApproveRegistration('${escapeHtml(item.reqId)}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.3rem;">
+          <button class="btn btn-primary btn-sm" onclick="adminApproveRegistration('${escapeHtml(reqKey)}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.3rem;">
             <i class="fa-solid fa-paper-plane"></i> ยินยอม & ส่งรหัสเข้าอีเมล
           </button>
-          <button class="btn btn-danger btn-sm" onclick="adminRejectRegistration('${escapeHtml(item.reqId)}')" style="padding: 0.3rem 0.55rem; font-size: 0.78rem;">
+          <button class="btn btn-danger btn-sm" onclick="adminRejectRegistration('${escapeHtml(reqKey)}')" style="padding: 0.3rem 0.55rem; font-size: 0.78rem;">
             <i class="fa-solid fa-trash"></i>
           </button>
         </td>
@@ -4725,7 +4801,7 @@ function renderPendingApprovalsTable() {
 
 function adminRegenerateRandomOtp(reqId) {
   const list = getPendingRegistrations();
-  const idx = list.findIndex(p => p.reqId === reqId);
+  const idx = list.findIndex(p => (p.reqId || p.id) === reqId || isIdMatch(p.userId, reqId));
   if (idx === -1) return;
 
   const newOtp = generateRandomAdminOtp();
@@ -4748,13 +4824,14 @@ function adminRegenerateRandomOtp(reqId) {
     }
   }
 
-  renderPendingApprovalsTable();
+  syncRecordToGoogleSheet('registerPendingUser', item);
+  renderPendingApprovalsTable(true);
   showToast(`สุ่มรหัสยืนยันชุดใหม่สำหรับ ${item.fullName} คือ: ${newOtp}`, 'info');
 }
 
 async function adminApproveRegistration(reqId) {
   const list = getPendingRegistrations();
-  const idx = list.findIndex(p => p.reqId === reqId);
+  const idx = list.findIndex(p => (p.reqId || p.id) === reqId || isIdMatch(p.userId, reqId));
   if (idx === -1) return;
 
   const item = list[idx];
@@ -4768,7 +4845,7 @@ async function adminApproveRegistration(reqId) {
     if (sIdx !== -1) {
       allStudents[sIdx].status = 'Active';
       allStudents[sIdx].approvalStatus = 'Approved';
-    } else if (item.payload) {
+    } else if (item.payload && Object.keys(item.payload).length > 0) {
       item.payload.status = 'Active';
       item.payload.approvalStatus = 'Approved';
       allStudents.push(item.payload);
@@ -4779,7 +4856,7 @@ async function adminApproveRegistration(reqId) {
     if (tIdx !== -1) {
       subAdmins[tIdx].status = 'Active';
       subAdmins[tIdx].approvalStatus = 'Approved';
-    } else if (item.payload) {
+    } else if (item.payload && Object.keys(item.payload).length > 0) {
       item.payload.status = 'Active';
       item.payload.approvalStatus = 'Approved';
       subAdmins.push(item.payload);
@@ -4787,27 +4864,48 @@ async function adminApproveRegistration(reqId) {
     localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
   }
 
-  renderPendingApprovalsTable();
+  renderPendingApprovalsTable(true);
   renderAdminStudentsTable();
   renderSubAdminsTable();
   renderSuperAdminOverviewKpis();
 
-  // Trigger automatic email dispatch via Google Apps Script (MailApp.sendEmail)
+  // Trigger automatic email dispatch via Google Apps Script (MailApp.sendEmail) and inspect real response
   showToast(`กำลังส่งรหัสยืนยัน (${item.otpCode}) ไปยังอีเมล ${item.email} อัตโนมัติ...`, 'info');
-  await syncRecordToGoogleSheet('approveRegistrationAndSendEmail', {
-    reqId: item.reqId,
-    role: item.role,
-    userId: item.userId,
-    fullName: item.fullName,
-    email: item.email,
-    phone: item.phone,
-    otpCode: item.otpCode,
-    gradeOrSubj: item.gradeOrSubj,
-    payload: item.payload
-  });
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (!url || url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
 
-  playSuccessSound();
-  showToast(`อนุมัติสำเร็จ! ระบบส่งรหัสยืนยัน [${item.otpCode}] ไปยังอีเมล ${item.email} อัตโนมัติแล้ว`, 'success');
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'approveRegistrationAndSendEmail',
+        data: {
+          reqId: item.reqId || item.id,
+          role: item.role,
+          roleLabel: item.role === 'teacher' ? 'อาจารย์ผู้สอน' : 'นักเรียน',
+          userId: item.userId,
+          fullName: item.fullName,
+          email: item.email,
+          phone: item.phone,
+          otpCode: item.otpCode,
+          gradeOrSubj: item.gradeOrSubj || item.detail,
+          payload: item.payload
+        }
+      })
+    });
+    const resJson = await resp.json();
+    playSuccessSound();
+    if (resJson && resJson.emailSent) {
+      showToast(`ส่งอีเมลสำเร็จ! รหัสยืนยัน [${item.otpCode}] ถูกส่งไปที่ ${item.email} เรียบร้อยแล้ว`, 'success');
+    } else {
+      console.warn('Email dispatch warning:', resJson);
+      showToast(`อนุมัติสำเร็จ (รหัส: ${item.otpCode}) แต่ Apps Script ยังไม่ได้รับอนุญาตสิทธิ์ส่งอีเมล (กรุณากด Run ฟังก์ชัน authorizeEmailPermission ใน Apps Script 1 ครั้ง)`, 'warning');
+    }
+  } catch (err) {
+    playSuccessSound();
+    showToast(`อนุมัติสำเร็จ! รหัสยืนยันของ ${item.fullName} คือ [${item.otpCode}]`, 'success');
+  }
 }
 
 function adminRejectRegistration(reqId) {
