@@ -1519,25 +1519,25 @@ function approveRegistrationAndSendEmail(data) {
     }
   } catch (syncErr) {}
 
-  // ส่งอีเมลอัตโนมัติผ่าน GmailApp / MailApp พร้อมโครงสร้าง Multipart (Plain Text + HTML) และชื่อผู้ส่งอย่างเป็นทางการเพื่อป้องกันการเข้าจดหมายขยะ (Spam)
+  // ส่งอีเมลอัตโนมัติผ่าน GmailApp / MailApp พร้อมโครงสร้าง Multipart (Plain Text + HTML) และชื่อผู้ส่ง KHALIFAH PROGRAM เพื่อป้องกันการเข้าจดหมายขยะ (Spam)
   let emailSent = false;
   let emailError = '';
   if (email && email.indexOf('@') !== -1) {
-    const senderName = 'ระบบ KHALIFAH PROGRAM';
-    const subject = 'แจ้งผลการอนุมัติบัญชีและรหัสยืนยันเข้าใช้งานระบบ KHALIFAH PROGRAM (' + fullName + ')';
+    const senderName = 'KHALIFAH PROGRAM';
+    const subject = 'แจ้งผลการอนุมัติบัญชีและรหัสยืนยันเข้าใช้งาน KHALIFAH PROGRAM (' + fullName + ')';
     const plainBody =
       'อัสสลามุอะลัยกุม คุณ ' + fullName + '\n\n' +
-      'ผู้ดูแลระบบ KHALIFAH PROGRAM ได้ตรวจสอบและกดยินยอมรับรองการสมัครบัญชี ' + roleLabel + ' (รหัสประจำตัว: ' + userId + ') ของคุณเรียบร้อยแล้ว\n\n' +
+      'KHALIFAH PROGRAM ได้ตรวจสอบและกดยินยอมรับรองการสมัครบัญชี ' + roleLabel + ' (รหัสประจำตัว: ' + userId + ') ของคุณเรียบร้อยแล้ว\n\n' +
       'รหัสยืนยัน 6 หลักของคุณคือ: ' + otpCode + '\n\n' +
       'กรุณานำรหัสยืนยัน 6 หลักนี้ไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ https://khalifah-program.vercel.app เพื่อเข้าใช้งานระบบได้ทันที\n\n' +
       'ขอแสดงความนับถือ\n' +
-      'ฝ่ายดูแลระบบ KHALIFAH PROGRAM';
+      'KHALIFAH PROGRAM';
 
     const htmlBody =
       '<div style="font-family: Sarabun, Tahoma, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 28px 24px; border: 1px solid #e2e8f0; border-radius: 12px; color: #0f172a; background-color: #ffffff; line-height: 1.6;">' +
       '<div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 14px; margin-bottom: 18px;">' +
-      '<strong style="font-size: 18px; color: #0f172a; letter-spacing: 0.3px;">ระบบ KHALIFAH PROGRAM</strong>' +
-      '<div style="font-size: 12px; color: #64748b;">หนังสือแจ้งผลการอนุมัติบัญชีผู้ใช้งานและรหัสยืนยันตัวตน</div>' +
+      '<strong style="font-size: 18px; color: #0f172a; letter-spacing: 0.3px;">KHALIFAH PROGRAM</strong>' +
+      '<div style="font-size: 12px; color: #64748b;">แจ้งผลการอนุมัติบัญชีผู้ใช้งานและรหัสยืนยันตัวตน</div>' +
       '</div>' +
       '<p style="font-size: 15px; color: #1e293b; margin: 0 0 12px 0;">อัสสลามุอะลัยกุม คุณ <strong>' + fullName + '</strong></p>' +
       '<p style="font-size: 14px; color: #334155; margin: 0 0 18px 0;">ผู้ดูแลระบบได้ตรวจสอบข้อมูลและกดยินยอมรับรองการสมัครบัญชี <strong>' + roleLabel + '</strong> (รหัสประจำตัว: <strong>' + userId + '</strong>) ของท่านเรียบร้อยแล้ว</p>' +
@@ -1547,7 +1547,7 @@ function approveRegistrationAndSendEmail(data) {
       '</div>' +
       '<p style="font-size: 13.5px; color: #475569; margin: 0 0 18px 0;">ท่านสามารถนำรหัสยืนยัน 6 หลักด้านบนไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ เพื่อเข้าใช้งานระบบได้ทันที</p>' +
       '<div style="border-top: 1px solid #f1f5f9; padding-top: 14px; margin-top: 20px; font-size: 12px; color: #64748b;">' +
-      'ขอแสดงความนับถือ<br>ฝ่ายดูแลระบบ KHALIFAH PROGRAM' +
+      'ขอแสดงความนับถือ<br><strong>KHALIFAH PROGRAM</strong>' +
       '</div>' +
       '</div>';
 
