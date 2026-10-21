@@ -3942,16 +3942,27 @@ function syncBirthDatePicker() {
     const bdCode = `${cleanDay}${m}${y}`;
     hiddenInput.value = bdCode;
 
-    const mIdx = parseInt(m, 10);
-    const monthName = THAI_MONTH_NAMES_LIST[mIdx] || m;
-    const formattedThaiDate = `${parseInt(cleanDay, 10)} ${monthName} ${y}`;
+    const today = new Date();
+    const birthYearAD = parseInt(y, 10) - 543;
+    const birthMonthIdx = parseInt(m, 10) - 1;
+    const birthDayNum = parseInt(cleanDay, 10);
 
-    if (previewText) previewText.textContent = formattedThaiDate;
-    if (codeBadge) codeBadge.textContent = bdCode;
+    let ageYears = today.getFullYear() - birthYearAD;
+    const monthDiff = today.getMonth() - birthMonthIdx;
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDayNum)) {
+      ageYears--;
+    }
+    if (ageYears < 0) ageYears = 0;
+
+    if (previewText) previewText.textContent = `อายุ ${ageYears} ปี`;
+    if (codeBadge) {
+      codeBadge.textContent = '';
+      codeBadge.style.display = 'none';
+    }
     if (pill) pill.style.display = 'inline-flex';
     if (defaultHint) defaultHint.style.display = 'none';
     if (summaryBadge) {
-      summaryBadge.textContent = `พ.ศ. ${y}`;
+      summaryBadge.textContent = `อายุ ${ageYears} ปี`;
       summaryBadge.style.display = 'inline-block';
     }
   } else {
