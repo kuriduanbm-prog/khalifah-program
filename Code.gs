@@ -11,10 +11,13 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 const MASTER_ADMIN_PASS = '096909';
 
 /**
- * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (MailApp)
+ * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
  */
 function authorizeEmailPermission() {
   const quota = MailApp.getRemainingDailyQuota();
+  try {
+    GmailApp.getAliases();
+  } catch (e) {}
   Logger.log('เปิดสิทธิ์ส่งอีเมลสำเร็จ! โควต้าส่งอีเมลคงเหลือวันนี้: ' + quota + ' ฉบับ');
   return quota;
 }
@@ -1516,30 +1519,57 @@ function approveRegistrationAndSendEmail(data) {
     }
   } catch (syncErr) {}
 
-  // ส่งอีเมลอัตโนมัติผ่าน MailApp หรือ GmailApp
+  // ส่งอีเมลอัตโนมัติผ่าน GmailApp / MailApp พร้อมโครงสร้าง Multipart (Plain Text + HTML) และชื่อผู้ส่งอย่างเป็นทางการเพื่อป้องกันการเข้าจดหมายขยะ (Spam)
   let emailSent = false;
   let emailError = '';
   if (email && email.indexOf('@') !== -1) {
-    const subject = '[KHALIFAH PROGRAM] รหัสยืนยันการอนุมัติบัญชีของคุณ (' + otpCode + ')';
-    const htmlBody = '<div style="font-family: Sarabun, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; color: #0f172a;">' +
-      '<h2 style="margin-top: 0; color: #0f172a;">KHALIFAH PROGRAM</h2>' +
-      '<p style="font-size: 15px; color: #334155;">อัสสลามุอะลัยกุม คุณ <strong>' + fullName + '</strong></p>' +
-      '<p style="font-size: 14px; color: #475569;">แอดมินได้ตรวจสอบและกดยินยอมรับรองการสมัครบัญชี <strong>' + roleLabel + '</strong> (รหัสประจำตัว: <strong>' + userId + '</strong>) ของคุณเรียบร้อยแล้ว</p>' +
-      '<div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; text-align: center; margin: 20px 0;">' +
-      '<div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">รหัสยืนยันจากแอดมิน (6 หลัก)</div>' +
-      '<div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #0f172a; font-family: monospace;">' + otpCode + '</div>' +
+    const senderName = 'ระบบ KHALIFAH PROGRAM';
+    const subject = 'แจ้งผลการอนุมัติบัญชีและรหัสยืนยันเข้าใช้งานระบบ KHALIFAH PROGRAM (' + fullName + ')';
+    const plainBody =
+      'อัสสลามุอะลัยกุม คุณ ' + fullName + '\n\n' +
+      'ผู้ดูแลระบบ KHALIFAH PROGRAM ได้ตรวจสอบและกดยินยอมรับรองการสมัครบัญชี ' + roleLabel + ' (รหัสประจำตัว: ' + userId + ') ของคุณเรียบร้อยแล้ว\n\n' +
+      'รหัสยืนยัน 6 หลักของคุณคือ: ' + otpCode + '\n\n' +
+      'กรุณานำรหัสยืนยัน 6 หลักนี้ไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ https://khalifah-program.vercel.app เพื่อเข้าใช้งานระบบได้ทันที\n\n' +
+      'ขอแสดงความนับถือ\n' +
+      'ฝ่ายดูแลระบบ KHALIFAH PROGRAM';
+
+    const htmlBody =
+      '<div style="font-family: Sarabun, Tahoma, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 28px 24px; border: 1px solid #e2e8f0; border-radius: 12px; color: #0f172a; background-color: #ffffff; line-height: 1.6;">' +
+      '<div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 14px; margin-bottom: 18px;">' +
+      '<strong style="font-size: 18px; color: #0f172a; letter-spacing: 0.3px;">ระบบ KHALIFAH PROGRAM</strong>' +
+      '<div style="font-size: 12px; color: #64748b;">หนังสือแจ้งผลการอนุมัติบัญชีผู้ใช้งานและรหัสยืนยันตัวตน</div>' +
       '</div>' +
-      '<p style="font-size: 13px; color: #64748b;">กรุณานำรหัส 6 หลักนี้ไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ เพื่อเข้าใช้งานระบบได้ทันที</p>' +
+      '<p style="font-size: 15px; color: #1e293b; margin: 0 0 12px 0;">อัสสลามุอะลัยกุม คุณ <strong>' + fullName + '</strong></p>' +
+      '<p style="font-size: 14px; color: #334155; margin: 0 0 18px 0;">ผู้ดูแลระบบได้ตรวจสอบข้อมูลและกดยินยอมรับรองการสมัครบัญชี <strong>' + roleLabel + '</strong> (รหัสประจำตัว: <strong>' + userId + '</strong>) ของท่านเรียบร้อยแล้ว</p>' +
+      '<div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; text-align: center; margin: 20px 0;">' +
+      '<div style="font-size: 13px; color: #475569; margin-bottom: 6px;">รหัสยืนยันสำหรับเข้าใช้งานระบบ (6 หลัก)</div>' +
+      '<div style="font-size: 30px; font-weight: 700; letter-spacing: 6px; color: #0f172a; font-family: Consolas, monospace;">' + otpCode + '</div>' +
+      '</div>' +
+      '<p style="font-size: 13.5px; color: #475569; margin: 0 0 18px 0;">ท่านสามารถนำรหัสยืนยัน 6 หลักด้านบนไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ เพื่อเข้าใช้งานระบบได้ทันที</p>' +
+      '<div style="border-top: 1px solid #f1f5f9; padding-top: 14px; margin-top: 20px; font-size: 12px; color: #64748b;">' +
+      'ขอแสดงความนับถือ<br>ฝ่ายดูแลระบบ KHALIFAH PROGRAM' +
+      '</div>' +
       '</div>';
+
     try {
-      MailApp.sendEmail({
-        to: email,
-        subject: subject,
-        htmlBody: htmlBody
+      GmailApp.sendEmail(email, subject, plainBody, {
+        htmlBody: htmlBody,
+        name: senderName
       });
       emailSent = true;
-    } catch (err) {
-      emailError = err.toString();
+    } catch (gmailErr) {
+      try {
+        MailApp.sendEmail({
+          to: email,
+          name: senderName,
+          subject: subject,
+          body: plainBody,
+          htmlBody: htmlBody
+        });
+        emailSent = true;
+      } catch (mailErr) {
+        emailError = mailErr.toString();
+      }
     }
   }
 
