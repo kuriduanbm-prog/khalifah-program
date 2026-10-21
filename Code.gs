@@ -143,53 +143,83 @@ function getOrCreateSheetSmart(ss, key, defaultHeaders, headerBgColor) {
 }
 
 /**
- * ฟังก์ชันสร้าง/อัปเกรดแผ่นงานทั้งหมดให้เป็นภาษาไทย 100%
+ * ฟังก์ชันสร้าง/อัปเกรดแผ่นงานทั้งหมดให้เป็นภาษาไทย 100% พร้อมบังคับฟอร์แมต Plain Text ให้กับรหัสและเบอร์โทร
  */
 function initializeSheets() {
   const ss = getSpreadsheet();
   
-  // 1. รายชื่อนักเรียน
-  getOrCreateSheetSmart(ss, 'STUDENTS', HEADERS.STUDENTS, '#0284c7');
+  // 1. รายชื่อนักเรียน (บังคับคอลัมน์ A=รหัส, E=วันเกิด, F=เบอร์โทร เป็น Plain Text '@')
+  const sheetStudents = getOrCreateSheetSmart(ss, 'STUDENTS', HEADERS.STUDENTS, '#0284c7');
+  try {
+    sheetStudents.getRange('A:A').setNumberFormat('@');
+    sheetStudents.getRange('E:E').setNumberFormat('@');
+    sheetStudents.getRange('F:F').setNumberFormat('@');
+  } catch (fmtErr) {}
 
   // 2. บันทึกเวลาละหมาด
-  getOrCreateSheetSmart(ss, 'PRAYERS', HEADERS.PRAYERS, '#0284c7');
+  const sheetPrayers = getOrCreateSheetSmart(ss, 'PRAYERS', HEADERS.PRAYERS, '#0284c7');
+  try {
+    sheetPrayers.getRange('B:B').setNumberFormat('@');
+  } catch (fmtErr) {}
 
   // 3. บันทึกการมาเรียน
-  getOrCreateSheetSmart(ss, 'ATTENDANCE', HEADERS.ATTENDANCE, '#0284c7');
+  const sheetAttendance = getOrCreateSheetSmart(ss, 'ATTENDANCE', HEADERS.ATTENDANCE, '#0284c7');
+  try {
+    sheetAttendance.getRange('B:B').setNumberFormat('@');
+  } catch (fmtErr) {}
 
   // 4. กิจกรรม
   getOrCreateSheetSmart(ss, 'ACTIVITIES', HEADERS.ACTIVITIES, '#0284c7');
 
   // 4.1 บันทึกการเข้าร่วมกิจกรรม
-  getOrCreateSheetSmart(ss, 'ACTIVITY_LOGS', HEADERS.ACTIVITY_LOGS, '#0284c7');
+  const sheetActLogs = getOrCreateSheetSmart(ss, 'ACTIVITY_LOGS', HEADERS.ACTIVITY_LOGS, '#0284c7');
+  try {
+    sheetActLogs.getRange('B:B').setNumberFormat('@');
+  } catch (fmtErr) {}
 
   // 5. ผู้ดูแลระบบ
   const sheetAdmins = getOrCreateSheetSmart(ss, 'ADMINS', HEADERS.ADMINS, '#0284c7');
+  try {
+    sheetAdmins.getRange('A:A').setNumberFormat('@');
+    sheetAdmins.getRange('B:B').setNumberFormat('@');
+    sheetAdmins.getRange('C:C').setNumberFormat('@');
+  } catch (fmtErr) {}
+
   if (sheetAdmins.getLastRow() === 1) {
     sheetAdmins.appendRow([
       'ADM001', 'admin', MASTER_ADMIN_PASS, 'ผู้ดูแลระบบหลัก (Master Administrator)', 'ผู้ดูแลระบบสูงสุด', new Date().toISOString()
     ]);
+    const rIdx = sheetAdmins.getLastRow();
+    sheetAdmins.getRange(rIdx, 3).setNumberFormat('@').setValue(MASTER_ADMIN_PASS);
   }
 
   // 6. การตั้งค่า
   const sheetSettings = getOrCreateSheetSmart(ss, 'SETTINGS', HEADERS.SETTINGS, '#0284c7');
+  try {
+    sheetSettings.getRange('B:B').setNumberFormat('@');
+  } catch (fmtErr) {}
+
   if (sheetSettings.getLastRow() === 1) {
     sheetSettings.appendRow(['AppName', 'ระบบ KHALIFAH PROGRAM', 'ชื่อระบบ']);
     sheetSettings.appendRow(['MasterCode', MASTER_ADMIN_PASS, 'รหัสแอดมินหลัก']);
     sheetSettings.appendRow(['CurrentAcademicYear', '2569', 'ปีการศึกษาปัจจุบัน']);
+    sheetSettings.getRange(3, 2).setNumberFormat('@').setValue(MASTER_ADMIN_PASS);
   }
 
   // 7. บันทึกผลบุญ
-  getOrCreateSheetSmart(ss, 'HASANAT', HEADERS.HASANAT, '#059669');
+  const sheetHasanat = getOrCreateSheetSmart(ss, 'HASANAT', HEADERS.HASANAT, '#059669');
+  try {
+    sheetHasanat.getRange('B:B').setNumberFormat('@');
+  } catch (fmtErr) {}
 
-  // ทำการแปลงข้อมูลในเซลล์เดิมที่เป็นภาษาอังกฤษให้เป็นภาษาไทย
+  // ทำการแปลงข้อมูลในเซลล์เดิมที่เป็นภาษาอังกฤษให้เป็นภาษาไทย และทำความสะอาดเลขศูนย์นำหน้า
   convertDataCellsToThai(ss);
 
-  return { success: true, message: 'ฐานข้อมูล Google Sheets ถูกสร้างและอัปเกรดเป็นภาษาไทย 100% เรียบร้อยแล้ว' };
+  return { success: true, message: 'ฐานข้อมูล Google Sheets ถูกสร้างและอัปเกรดเป็นภาษาไทย 100% พร้อมรองรับเลข 0 นำหน้าเรียบร้อยแล้ว' };
 }
 
 /**
- * แปลงค่าในเซลล์แถวข้อมูล (Row 2 เป็นต้นไป) จากภาษาอังกฤษเป็นภาษาไทย
+ * แปลงค่าในเซลล์แถวข้อมูล (Row 2 เป็นต้นไป) จากภาษาอังกฤษเป็นภาษาไทย และทำความสะอาดเลข 0 นำหน้า
  */
 function convertDataCellsToThai(ss) {
   try {
@@ -219,20 +249,43 @@ function convertDataCellsToThai(ss) {
       }
     }
 
-    // 2. แปลงตารางนักเรียน (สถานะ)
+    // 2. แปลงตารางนักเรียน (สถานะ และจัดฟอร์แมตรหัสนักเรียน/เบอร์โทร/วันเกิด ให้เป็น Plain Text ที่คงเลข 0 นำหน้า)
     const sheetStudents = ss.getSheetByName(SHEETS.STUDENTS);
     if (sheetStudents && sheetStudents.getLastRow() > 1) {
+      const numRows = sheetStudents.getLastRow() - 1;
       const numCols = Math.min(sheetStudents.getLastColumn(), 9);
-      const data = sheetStudents.getRange(2, 1, sheetStudents.getLastRow() - 1, numCols).getValues();
+      const data = sheetStudents.getRange(2, 1, numRows, numCols).getValues();
       let changed = false;
       for (let i = 0; i < data.length; i++) {
+        // ทำความสะอาดรหัสนักเรียน (Col 1)
+        const cleanSid = cleanVal(data[i][0]);
+        if (cleanSid !== data[i][0]) {
+          data[i][0] = cleanSid;
+          changed = true;
+        }
+
+        // ทำความสะอาดวันเกิด (Col 5)
+        const cleanBD = normalizeBirthDate(data[i][4]);
+        if (cleanBD !== data[i][4]) {
+          data[i][4] = cleanBD;
+          changed = true;
+        }
+
+        // ทำความสะอาดเบอร์โทรศัพท์ (Col 6)
+        const cleanPh = normalizePhone(data[i][5]);
+        if (cleanPh !== data[i][5]) {
+          data[i][5] = cleanPh;
+          changed = true;
+        }
+
+        // สถานะ (Col 8)
         if (data[i][7] === 'Active' || data[i][7] === 'active') {
           data[i][7] = 'ปกติ (กำลังศึกษา)';
           changed = true;
         }
       }
       if (changed) {
-        sheetStudents.getRange(2, 1, data.length, numCols).setValues(data);
+        sheetStudents.getRange(2, 1, numRows, numCols).setNumberFormat('@').setValues(data);
       }
     }
   } catch (err) {
@@ -450,18 +503,81 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ----------------- BUSINESS LOGIC FUNCTIONS ----------------- //
+// ----------------- BUSINESS LOGIC FUNCTIONS & STRING HELPERS ----------------- //
 
 /**
- * รักษาเลขศูนย์นำหน้า เช่น เบอร์โทร 0812345678, วันเกิด 01012540, รหัสนักเรียน 01234
+ * ทำความสะอาดข้อความ ลบเครื่องหมายคำพูดเดี่ยว (') ที่หัวข้อความ และตัดช่องว่าง
+ */
+function cleanVal(val) {
+  if (val === null || val === undefined) return '';
+  let str = String(val).trim();
+  if (str.startsWith("'")) {
+    str = str.replace(/^'+/, '');
+  }
+  return str.trim();
+}
+
+/**
+ * ปรับเบอร์โทรศัพท์ให้อยู่ในรูปแบบที่ถูกต้อง โดยเติมเลข 0 นำหน้ากรณีถูก Google Sheets ตัด
+ */
+function normalizePhone(val) {
+  if (val === null || val === undefined) return '';
+  let str = cleanVal(val).replace(/[^0-9]/g, '');
+  if (str.length === 9 && (str.startsWith('8') || str.startsWith('6') || str.startsWith('9'))) {
+    str = '0' + str;
+  } else if (str.length === 8 && str.startsWith('2')) {
+    str = '0' + str;
+  }
+  return str;
+}
+
+/**
+ * ปรับวันเกิด 8 หลัก (ววดดปปปป) ให้อยู่ในรูปแบบที่ถูกต้อง โดยเติมเลข 0 นำหน้ากรณีถูกตัด
+ */
+function normalizeBirthDate(val) {
+  if (val === null || val === undefined) return '';
+  let str = cleanVal(val).replace(/[^0-9]/g, '');
+  if (str.length === 7) {
+    str = '0' + str;
+  }
+  return str;
+}
+
+/**
+ * ตรวจสอบความตรงกันของรหัส (Student ID, Code) โดยรองรับเลข 0 นำหน้า
+ */
+function isCodeMatch(c1, c2) {
+  const s1 = cleanVal(c1).toLowerCase();
+  const s2 = cleanVal(c2).toLowerCase();
+  if (!s1 || !s2) return false;
+  if (s1 === s2) return true;
+  // ถ้าเป็นตัวเลขทั้งคู่ ตรวจสอบแบบตัดศูนย์นำหน้า
+  if (/^\d+$/.test(s1) && /^\d+$/.test(s2)) {
+    return s1.replace(/^0+/, '') === s2.replace(/^0+/, '');
+  }
+  return false;
+}
+
+/**
+ * ตรวจสอบความตรงกันของเบอร์โทรศัพท์ โดยรองรับเบอร์ที่มี/ไม่มีเลข 0 นำหน้า
+ */
+function isPhoneMatch(p1, p2) {
+  const s1 = normalizePhone(p1);
+  const s2 = normalizePhone(p2);
+  if (!s1 || !s2) return false;
+  if (s1 === s2) return true;
+  const n1 = s1.replace(/^0+/, '');
+  const n2 = s2.replace(/^0+/, '');
+  if (n1 && n2 && n1 === n2) return true;
+  return false;
+}
+
+/**
+ * แปลงค่าให้เป็นข้อความ Plain Text อย่างปลอดภัย
  */
 function formatAsText(val) {
   if (val === null || val === undefined) return '';
-  const str = String(val).trim();
-  if (/^0[0-9]/.test(str)) {
-    return "'" + str;
-  }
-  return str;
+  return cleanVal(val);
 }
 
 function registerStudent(data) {
@@ -475,23 +591,23 @@ function registerStudent(data) {
     sheet = getOrCreateSheetSmart(ss, 'STUDENTS', HEADERS.STUDENTS, '#0284c7');
   }
 
+  const cleanSid = cleanVal(data.studentId);
+  const cleanBD = normalizeBirthDate(data.birthDate);
+  const cleanPh = normalizePhone(data.parentPhone);
+
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim().toLowerCase() === String(data.studentId).trim().toLowerCase()) {
+    if (isCodeMatch(rows[i][0], cleanSid)) {
       return { success: false, message: 'รหัสนักเรียนนี้ได้ลงทะเบียนในระบบแล้ว' };
     }
   }
 
   const registeredAt = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
-  const cleanBD = String(data.birthDate || '').replace(/[^0-9]/g, '');
-  const birthDateFormatted = (cleanBD.length === 8) ? ("'" + cleanBD) : formatAsText(data.birthDate);
-  const studentIdFormatted = formatAsText(data.studentId);
-  const parentPhoneFormatted = formatAsText(data.parentPhone);
 
   const rawPhoto = data.avatarUrl || data.profilePhoto || '';
   let photoLink = '';
   try {
-    photoLink = saveStudentPhotoToDrive(data.studentId, rawPhoto);
+    photoLink = saveStudentPhotoToDrive(cleanSid, rawPhoto);
   } catch (photoErr) {
     Logger.log('Drive photo save error: ' + photoErr.message);
   }
@@ -501,27 +617,33 @@ function registerStudent(data) {
     : (rawPhoto && !rawPhoto.startsWith('data:image') && rawPhoto.length < 500 ? rawPhoto : 'รูปโปรไฟล์ในอุปกรณ์');
 
   sheet.appendRow([
-    studentIdFormatted,
+    cleanSid,
     data.fullName || '',
     data.schoolName || '',
     data.grade || '',
-    birthDateFormatted,
-    parentPhoneFormatted,
+    cleanBD,
+    cleanPh,
     registeredAt,
     formatStudentStatusThai(data.status || 'Active'),
     safePhotoRef
   ]);
 
+  // ตั้งค่า NumberFormat เป็น Plain Text เพื่อรักษาเลข 0 นำหน้าแน่นอน 100%
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 1).setNumberFormat('@').setValue(cleanSid);
+  sheet.getRange(lastRow, 5).setNumberFormat('@').setValue(cleanBD);
+  sheet.getRange(lastRow, 6).setNumberFormat('@').setValue(cleanPh);
+
   return { 
     success: true, 
     message: 'ลงทะเบียนสำเร็จเรียบร้อย', 
     student: {
-      studentId: data.studentId,
+      studentId: cleanSid,
       fullName: data.fullName,
       schoolName: data.schoolName,
       grade: data.grade,
-      birthDate: data.birthDate,
-      parentPhone: data.parentPhone,
+      birthDate: cleanBD,
+      parentPhone: cleanPh,
       avatarUrl: photoLink || rawPhoto
     }
   };
@@ -534,16 +656,15 @@ function getStudent(studentId, parentPhone) {
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
   const rows = sheet.getDataRange().getValues();
 
-  const targetId = studentId ? String(studentId).trim().toLowerCase() : '';
-  const targetPhone = parentPhone ? String(parentPhone).replace(/[^0-9]/g, '') : '';
+  const targetId = cleanVal(studentId);
+  const targetPhone = normalizePhone(parentPhone);
 
   for (let i = 1; i < rows.length; i++) {
-    const sId = String(rows[i][0]).trim();
-    const sPhone = String(rows[i][5]).trim();
-    const cleanSPhone = sPhone.replace(/[^0-9]/g, '');
+    const sId = rows[i][0];
+    const sPhone = rows[i][5];
 
-    const idMatch = targetId ? (sId.toLowerCase() === targetId) : false;
-    const phoneMatch = targetPhone ? (cleanSPhone === targetPhone || sPhone === parentPhone) : false;
+    const idMatch = targetId ? isCodeMatch(sId, targetId) : false;
+    const phoneMatch = targetPhone ? isPhoneMatch(sPhone, targetPhone) : false;
 
     let isMatch = false;
     if (targetId && targetPhone) {
@@ -555,22 +676,15 @@ function getStudent(studentId, parentPhone) {
     }
 
     if (isMatch) {
-      let bd = String(rows[i][4]);
-      if (bd.startsWith("'")) bd = bd.substring(1);
-      let ph = String(rows[i][5]);
-      if (ph.startsWith("'")) ph = ph.substring(1);
-      let sid = String(rows[i][0]);
-      if (sid.startsWith("'")) sid = sid.substring(1);
-
       return {
         success: true,
         student: {
-          studentId: sid,
+          studentId: cleanVal(rows[i][0]),
           fullName: rows[i][1],
           schoolName: rows[i][2],
           grade: rows[i][3],
-          birthDate: bd,
-          parentPhone: ph,
+          birthDate: normalizeBirthDate(rows[i][4]),
+          parentPhone: normalizePhone(rows[i][5]),
           status: rows[i][7] || 'ปกติ (กำลังศึกษา)',
           avatarUrl: rows[i][8] || ''
         }
@@ -585,36 +699,29 @@ function loginStudent(studentId, passOrPhone) {
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
   const rows = sheet.getDataRange().getValues();
 
-  const cleanInput = String(passOrPhone || '').trim().replace(/[\/\-\.]/g, '');
-  const targetId = String(studentId || '').trim().toLowerCase();
+  const cleanInput = cleanVal(passOrPhone);
+  const targetId = cleanVal(studentId);
 
   for (let i = 1; i < rows.length; i++) {
-    const sId = String(rows[i][0]).trim().toLowerCase();
-    const bDate = String(rows[i][4]).trim();
-    const cleanBDate = bDate.replace(/[\/\-\.]/g, '');
-    const sPhone = String(rows[i][5]).trim();
-    const cleanPhone = sPhone.replace(/[^0-9]/g, '');
+    const sId = rows[i][0];
+    const bDate = rows[i][4];
+    const sPhone = rows[i][5];
 
-    if (sId === targetId) {
-      if (cleanBDate === cleanInput || bDate === String(passOrPhone).trim() || cleanPhone === cleanInput || sPhone === String(passOrPhone).trim()) {
-        let bd = String(rows[i][4]);
-        if (bd.startsWith("'")) bd = bd.substring(1);
-        let ph = String(rows[i][5]);
-        if (ph.startsWith("'")) ph = ph.substring(1);
-        let sid = String(rows[i][0]);
-        if (sid.startsWith("'")) sid = sid.substring(1);
-
+    if (isCodeMatch(sId, targetId)) {
+      const matchPass = isCodeMatch(bDate, cleanInput) || isPhoneMatch(sPhone, cleanInput);
+      if (matchPass) {
         return {
           success: true,
           student: {
-            studentId: sid,
+            studentId: cleanVal(rows[i][0]),
             fullName: rows[i][1],
             schoolName: rows[i][2],
             grade: rows[i][3],
-            birthDate: bd,
-            parentPhone: ph,
+            birthDate: normalizeBirthDate(rows[i][4]),
+            parentPhone: normalizePhone(rows[i][5]),
             status: rows[i][7] || 'ปกติ (กำลังศึกษา)',
             avatarUrl: rows[i][8] || ''
           }
@@ -634,7 +741,7 @@ function updateStudentGrade(studentId, newGrade) {
   const rows = sheet.getDataRange().getValues();
 
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === String(studentId).trim()) {
+    if (isCodeMatch(rows[i][0], studentId)) {
       sheet.getRange(i + 1, 4).setValue(newGrade);
       return { success: true, message: 'อัปเดตชั้นปีเป็น ' + newGrade + ' เรียบร้อยแล้ว' };
     }
@@ -920,7 +1027,7 @@ function checkInActivity(data) {
 }
 
 function verifyAdminLogin(password, username) {
-  if (String(password).trim() === MASTER_ADMIN_PASS) {
+  if (isCodeMatch(password, MASTER_ADMIN_PASS)) {
     return { success: true, role: 'SuperAdmin', username: 'MasterAdmin' };
   }
 
@@ -929,8 +1036,8 @@ function verifyAdminLogin(password, username) {
   if (sheet) {
     const rows = sheet.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
-      if (String(rows[i][1]).trim() === String(username).trim() && 
-          String(rows[i][2]).trim() === String(password).trim()) {
+      if (cleanVal(rows[i][1]).toLowerCase() === cleanVal(username).toLowerCase() && 
+          isCodeMatch(rows[i][2], password)) {
         return { success: true, role: rows[i][4], username: rows[i][1], fullName: rows[i][3] };
       }
     }
@@ -944,15 +1051,19 @@ function addSubAdmin(data) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ADMINS);
   const adminId = 'ADM-' + new Date().getTime();
+  const cleanPass = cleanVal(data.password);
 
   sheet.appendRow([
     adminId,
-    data.username,
-    data.password,
+    cleanVal(data.username),
+    cleanPass,
     data.fullName,
     data.role === 'SuperAdmin' ? 'ผู้ดูแลระบบสูงสุด' : 'ผู้ดูแลระบบ',
     Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss")
   ]);
+
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 3).setNumberFormat('@').setValue(cleanPass);
 
   return { success: true, message: 'เพิ่มผู้ดูแลระบบรองสำเร็จ' };
 }
@@ -965,8 +1076,8 @@ function getSubAdmins() {
   const results = [];
   for (let i = 1; i < rows.length; i++) {
     results.push({
-      adminId: rows[i][0],
-      username: rows[i][1],
+      adminId: cleanVal(rows[i][0]),
+      username: cleanVal(rows[i][1]),
       fullName: rows[i][3],
       role: rows[i][4],
       createdAt: rows[i][5]
@@ -979,17 +1090,18 @@ function getAllStudents() {
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
+  if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
 
   const results = [];
   for (let i = 1; i < rows.length; i++) {
     results.push({
-      studentId: rows[i][0],
+      studentId: cleanVal(rows[i][0]),
       fullName: rows[i][1],
       schoolName: rows[i][2],
       grade: rows[i][3],
-      birthDate: rows[i][4],
-      parentPhone: rows[i][5],
+      birthDate: normalizeBirthDate(rows[i][4]),
+      parentPhone: normalizePhone(rows[i][5]),
       registeredAt: rows[i][6],
       status: rows[i][7],
       profilePhoto: rows[i][8] || ''
@@ -1004,9 +1116,9 @@ function deleteStudent(studentId) {
   const rows = sheet.getDataRange().getValues();
 
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === String(studentId).trim()) {
+    if (isCodeMatch(rows[i][0], studentId)) {
       sheet.deleteRow(i + 1);
-      return { success: true, message: 'ลบข้อมูลนักเรียนรหัส ' + studentId + ' เรียบร้อยแล้ว' };
+      return { success: true, message: 'ลบข้อมูลนักเรียนรหัส ' + cleanVal(studentId) + ' เรียบร้อยแล้ว' };
     }
   }
   return { success: false, message: 'ไม่พบรหัสนักเรียน' };
@@ -1129,7 +1241,7 @@ function updateStudentProfilePhoto(studentId, avatarUrl) {
   const drivePhotoUrl = saveStudentPhotoToDrive(studentId, avatarUrl);
 
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === String(studentId).trim()) {
+    if (isCodeMatch(rows[i][0], studentId)) {
       sheet.getRange(i + 1, 9).setValue(drivePhotoUrl);
       return { success: true, message: 'บันทึกรูปโปรไฟล์นักเรียนลง Google Drive และ Sheets สำเร็จ', photoUrl: drivePhotoUrl };
     }
@@ -1211,30 +1323,35 @@ function batchSyncData(data) {
 
     data.students.forEach(s => {
       const rawPhoto = s.avatarUrl || s.profilePhoto || '';
-      const photoLink = saveStudentPhotoToDrive(s.studentId, rawPhoto);
+      const cleanSid = cleanVal(s.studentId);
+      const photoLink = saveStudentPhotoToDrive(cleanSid, rawPhoto);
 
       let foundRow = -1;
       for (let i = 1; i < existing.length; i++) {
-        if (String(existing[i][0]).trim() === String(s.studentId).trim()) {
+        if (isCodeMatch(existing[i][0], cleanSid)) {
           foundRow = i + 1;
           break;
         }
       }
 
       if (foundRow === -1) {
-        const cleanBD = String(s.birthDate || '').replace(/[^0-9]/g, '');
-        const birthDateFormatted = (cleanBD.length === 8) ? ("'" + cleanBD) : formatAsText(s.birthDate);
+        const cleanBD = normalizeBirthDate(s.birthDate);
+        const cleanPh = normalizePhone(s.parentPhone);
         sheetStudents.appendRow([
-          formatAsText(s.studentId),
+          cleanSid,
           s.fullName,
           s.schoolName,
           s.grade,
-          birthDateFormatted,
-          formatAsText(s.parentPhone),
+          cleanBD,
+          cleanPh,
           Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"),
           formatStudentStatusThai(s.status || 'Active'),
           photoLink
         ]);
+        const lastRow = sheetStudents.getLastRow();
+        sheetStudents.getRange(lastRow, 1).setNumberFormat('@').setValue(cleanSid);
+        sheetStudents.getRange(lastRow, 5).setNumberFormat('@').setValue(cleanBD);
+        sheetStudents.getRange(lastRow, 6).setNumberFormat('@').setValue(cleanPh);
         studentsSynced++;
       } else {
         if (photoLink) {

@@ -1,4 +1,61 @@
 
+// ==========================================
+// STRING & ID NORMALIZATION HELPERS (LEADING ZERO SAFE)
+// ==========================================
+function cleanIdString(id) {
+  if (id === null || id === undefined) return '';
+  let s = String(id).trim();
+  if (s.startsWith("'")) s = s.replace(/^'+/, '');
+  return s.trim();
+}
+
+function normalizePhone(p) {
+  if (p === null || p === undefined) return '';
+  let s = cleanIdString(p).replace(/[^0-9]/g, '');
+  if (s.length === 9 && (s.startsWith('8') || s.startsWith('6') || s.startsWith('9'))) {
+    s = '0' + s;
+  } else if (s.length === 8 && s.startsWith('2')) {
+    s = '0' + s;
+  }
+  return s;
+}
+
+function normalizeBirthDate(bd) {
+  if (bd === null || bd === undefined) return '';
+  let s = cleanIdString(bd).replace(/[^0-9]/g, '');
+  if (s.length === 7) {
+    s = '0' + s;
+  }
+  return s;
+}
+
+function cleanPhoneString(p) {
+  return normalizePhone(p);
+}
+
+function isIdMatch(id1, id2) {
+  const s1 = cleanIdString(id1).toLowerCase();
+  const s2 = cleanIdString(id2).toLowerCase();
+  if (!s1 || !s2) return false;
+  if (s1 === s2) return true;
+  // If both are numeric (e.g. "0123" and "123")
+  if (/^\d+$/.test(s1) && /^\d+$/.test(s2)) {
+    return s1.replace(/^0+/, '') === s2.replace(/^0+/, '');
+  }
+  return false;
+}
+
+function isPhoneMatch(p1, p2) {
+  const s1 = normalizePhone(p1);
+  const s2 = normalizePhone(p2);
+  if (!s1 || !s2) return false;
+  if (s1 === s2) return true;
+  const n1 = s1.replace(/^0+/, '');
+  const n2 = s2.replace(/^0+/, '');
+  if (n1 && n2 && n1 === n2) return true;
+  return false;
+}
+
 // ==================== PRAYER HISTORY DETAIL MODAL & LOCATION FIXES ==================== //
 
 function openPrayerHistoryDetailModal(logId) {
@@ -239,15 +296,20 @@ function selectSunnahPill(type, rakaat) {
  */
 function getStudentHasanat(studentId) {
   if (!studentId) return null;
+  const cleanId = cleanIdString(studentId);
   let allHasanat = {};
   try {
     allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
   } catch (e) {
     allHasanat = {};
   }
-  if (!allHasanat[studentId]) {
-    allHasanat[studentId] = {
-      studentId: studentId,
+
+  // ค้นหา key ที่ตรงกัน (รองรับเลข 0 นำหน้า และเครื่องหมายคำพูด)
+  let targetKey = Object.keys(allHasanat).find(k => isIdMatch(k, cleanId)) || cleanId;
+
+  if (!allHasanat[targetKey]) {
+    allHasanat[targetKey] = {
+      studentId: cleanId,
       studentName: currentStudent ? currentStudent.fullName : '',
       grade: currentStudent ? currentStudent.grade : '',
       quran: {
@@ -273,19 +335,19 @@ function getStudentHasanat(studentId) {
   }
 
   // ป้องกัน undefined field
-  if (!allHasanat[studentId].quran) {
-    allHasanat[studentId].quran = { pagesToday: 0, currentPage: 0, juzCompleted: 0, stars: 0, khatamCount: 0 };
+  if (!allHasanat[targetKey].quran) {
+    allHasanat[targetKey].quran = { pagesToday: 0, currentPage: 0, juzCompleted: 0, stars: 0, khatamCount: 0 };
   }
-  if (typeof allHasanat[studentId].quran.khatamCount !== 'number') {
-    allHasanat[studentId].quran.khatamCount = (allHasanat[studentId].quran.juzCompleted >= 30) ? 1 : 0;
+  if (typeof allHasanat[targetKey].quran.khatamCount !== 'number') {
+    allHasanat[targetKey].quran.khatamCount = (allHasanat[targetKey].quran.juzCompleted >= 30) ? 1 : 0;
   }
-  if (!allHasanat[studentId].memorization) {
-    allHasanat[studentId].memorization = { count: 0, memorizedSurahs: [] };
+  if (!allHasanat[targetKey].memorization) {
+    allHasanat[targetKey].memorization = { count: 0, memorizedSurahs: [] };
   }
-  if (!allHasanat[studentId].sunnah) {
-    allHasanat[studentId].sunnah = { rawatib: {}, duhaRakaat: 0, witrRakaat: 3, tahajjudRakaat: 0, totalRakaat: 0 };
+  if (!allHasanat[targetKey].sunnah) {
+    allHasanat[targetKey].sunnah = { rawatib: {}, duhaRakaat: 0, witrRakaat: 3, tahajjudRakaat: 0, totalRakaat: 0 };
   }
-  return allHasanat[studentId];
+  return allHasanat[targetKey];
 }
 
 /**
@@ -293,13 +355,24 @@ function getStudentHasanat(studentId) {
  */
 function saveStudentHasanat(hasanatObj) {
   if (!hasanatObj || !hasanatObj.studentId) return;
+  const cleanId = cleanIdString(hasanatObj.studentId);
+  hasanatObj.studentId = cleanId;
+
   let allHasanat = {};
   try {
     allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
   } catch (e) {
     allHasanat = {};
   }
-  allHasanat[hasanatObj.studentId] = hasanatObj;
+
+  // ลบคีย์เดิมที่รูปแบบต่างกันแต่เป็นนักเรียนคนเดียวกัน
+  Object.keys(allHasanat).forEach(k => {
+    if (k !== cleanId && isIdMatch(k, cleanId)) {
+      delete allHasanat[k];
+    }
+  });
+
+  allHasanat[cleanId] = hasanatObj;
   try {
     localStorage.setItem('khalifah_student_hasanat', JSON.stringify(allHasanat));
   } catch (e) {
@@ -1523,7 +1596,11 @@ function loadStoredData() {
         localStorage.removeItem('khalifah_current_student');
         currentStudent = null;
       } else {
+        if (parsed.studentId) parsed.studentId = cleanIdString(parsed.studentId);
+        if (parsed.parentPhone) parsed.parentPhone = normalizePhone(parsed.parentPhone);
+        if (parsed.birthDate) parsed.birthDate = normalizeBirthDate(parsed.birthDate);
         currentStudent = parsed;
+        localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
       }
     } catch (e) {
       currentStudent = null;
@@ -1532,12 +1609,17 @@ function loadStoredData() {
     currentStudent = null;
   }
 
-  // 2. Load all students (Filter out dummy students)
+  // 2. Load all students (Filter out dummy students & sanitize IDs/Phone/BirthDate)
   const savedAllStudents = localStorage.getItem('khalifah_all_students');
   if (savedAllStudents) {
     try {
       let parsed = JSON.parse(savedAllStudents);
       parsed = parsed.filter(s => s.studentId !== 'STD-256901' && s.studentId !== 'STD-256902' && s.studentId !== 'STD-256903');
+      parsed.forEach(s => {
+        if (s.studentId) s.studentId = cleanIdString(s.studentId);
+        if (s.parentPhone) s.parentPhone = normalizePhone(s.parentPhone);
+        if (s.birthDate) s.birthDate = normalizeBirthDate(s.birthDate);
+      });
       allStudents = parsed;
       localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
     } catch (e) {
@@ -3433,21 +3515,22 @@ function resetBirthDatePicker() {
 }
 
 async function handleStudentLogin() {
-  const parentPhoneInput = (document.getElementById('loginParentPhone')?.value || '').trim();
-  const studentIdInput = (document.getElementById('loginStudentId')?.value || '').trim();
+  const rawParentPhone = (document.getElementById('loginParentPhone')?.value || '').trim();
+  const rawStudentId = (document.getElementById('loginStudentId')?.value || '').trim();
 
-  if (!parentPhoneInput || !studentIdInput) {
+  const studentIdInput = cleanIdString(rawStudentId);
+  const parentPhoneInput = normalizePhone(rawParentPhone);
+
+  if (!rawParentPhone || !rawStudentId) {
     showToast('กรุณากรอกเบอร์โทรศัพท์ผู้ปกครอง (User) และรหัสนักเรียน (รหัสผ่าน)', 'warning');
     return;
   }
 
-  const cleanInputPhone = parentPhoneInput.replace(/[^0-9]/g, '');
+  const cleanInputPhone = parentPhoneInput;
 
   let found = allStudents.find(s => {
-    const cleanSPhone = String(s.parentPhone || '').replace(/[^0-9]/g, '');
-    const sId = String(s.studentId || '').trim().toLowerCase();
-    const matchId = (sId === studentIdInput.toLowerCase());
-    const matchPhone = (cleanSPhone === cleanInputPhone || String(s.parentPhone || '').trim() === parentPhoneInput);
+    const matchId = isIdMatch(s.studentId, studentIdInput);
+    const matchPhone = isPhoneMatch(s.parentPhone, cleanInputPhone) || isPhoneMatch(s.parentPhone, rawParentPhone);
     return matchId && matchPhone;
   });
 
@@ -3462,11 +3545,13 @@ async function handleStudentLogin() {
         const json = await resp.json();
         if (json && json.success && json.student) {
           const remoteStudent = json.student;
-          const cleanRemotePhone = String(remoteStudent.parentPhone || '').replace(/[^0-9]/g, '');
-          const remoteId = String(remoteStudent.studentId || '').trim().toLowerCase();
-          if (remoteId === studentIdInput.toLowerCase() && (cleanRemotePhone === cleanInputPhone || String(remoteStudent.parentPhone || '').trim() === parentPhoneInput)) {
+          remoteStudent.studentId = cleanIdString(remoteStudent.studentId);
+          remoteStudent.parentPhone = normalizePhone(remoteStudent.parentPhone);
+          if (remoteStudent.birthDate) remoteStudent.birthDate = normalizeBirthDate(remoteStudent.birthDate);
+
+          if (isIdMatch(remoteStudent.studentId, studentIdInput) && (isPhoneMatch(remoteStudent.parentPhone, cleanInputPhone) || isPhoneMatch(remoteStudent.parentPhone, rawParentPhone))) {
             found = remoteStudent;
-            const existIdx = allStudents.findIndex(s => s.studentId.toLowerCase() === studentIdInput.toLowerCase());
+            const existIdx = allStudents.findIndex(s => isIdMatch(s.studentId, studentIdInput));
             if (existIdx !== -1) {
               allStudents[existIdx] = found;
             } else {
@@ -3498,12 +3583,13 @@ async function handleStudentLogin() {
 }
 
 function handleStudentRegister() {
-  const studentId = document.getElementById('regStudentId').value.trim();
+  const studentId = cleanIdString(document.getElementById('regStudentId').value);
   const fullName = document.getElementById('regFullName').value.trim();
   const schoolName = document.getElementById('regSchoolName').value.trim();
   const grade = document.getElementById('regGrade').value;
-  const birthDate = document.getElementById('regBirthDate').value.trim();
-  const parentPhone = document.getElementById('regParentPhone').value.trim();
+  const rawBirthDate = document.getElementById('regBirthDate').value.trim();
+  const birthDate = normalizeBirthDate(rawBirthDate);
+  const parentPhone = normalizePhone(document.getElementById('regParentPhone').value);
 
   if (!studentId || !fullName || !schoolName || !birthDate || !parentPhone) {
     showToast('กรุณากรอกข้อมูลให้ครบถ้วน และเลือกวันเดือนปีเกิด', 'warning');
@@ -3525,8 +3611,8 @@ function handleStudentRegister() {
     return;
   }
 
-  // ตรวจสอบรหัสซ้ำ (1 คน 1 สิทธิ์)
-  const isDuplicate = allStudents.some(s => s.studentId.toLowerCase() === studentId.toLowerCase());
+  // ตรวจสอบรหัสซ้ำ (1 คน 1 สิทธิ์ - รองรับรหัสที่มีเลข 0 นำหน้า)
+  const isDuplicate = allStudents.some(s => isIdMatch(s.studentId, studentId));
   if (isDuplicate) {
     showToast('รหัสนักเรียนนี้มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้', 'error');
     return;
@@ -3599,10 +3685,11 @@ function updateAdminUIVisibility(isAdmin) {
 }
 
 function handleAdminLogin() {
-  const pass = document.getElementById('adminPassInput').value.trim();
-  const user = document.getElementById('subAdminUserInput').value.trim();
+  const rawPass = (document.getElementById('adminPassInput')?.value || '').trim();
+  const pass = cleanIdString(rawPass);
+  const user = (document.getElementById('subAdminUserInput')?.value || '').trim();
 
-  if (pass === MASTER_ADMIN_PASS) {
+  if (isIdMatch(pass, MASTER_ADMIN_PASS)) {
     currentAdmin = { username: 'MasterAdmin', role: 'SuperAdmin' };
     updateAdminUIVisibility(true);
     closeModal('adminAuthModal');
@@ -3611,18 +3698,18 @@ function handleAdminLogin() {
     return;
   }
 
-  // ตรวจสอบแอดมินรอง
-  const foundSub = subAdmins.find(s => s.username === user && s.password === pass);
+  // ตรวจสอบแอดมินรอง (รองรับรหัสผ่านที่มีเลข 0 นำหน้า)
+  const foundSub = subAdmins.find(s => s.username === user && isIdMatch(s.password, pass));
   if (foundSub) {
     currentAdmin = foundSub;
     updateAdminUIVisibility(true);
     closeModal('adminAuthModal');
     switchView('admin');
-    showToast(`เข้าสู่ระบบแอดมินรอง: ${foundSub.fullName}`, 'success');
+    showToast(`ยินดีต้อนรับอาจารย์ ${foundSub.fullName || foundSub.username}`, 'success');
     return;
   }
 
-  showToast('รหัสผ่านหรือชื่อผู้ใช้ไม่ถูกต้อง', 'error');
+  showToast('รหัสผ่านหรือบัญชีผู้ดูแลระบบไม่ถูกต้อง', 'error');
 }
 
 function adminLogout() {
@@ -3676,31 +3763,47 @@ function renderAdminStudentsTable(filteredList = null) {
 
   const list = filteredList || allStudents;
 
-  tbody.innerHTML = list.map(s => `
+  tbody.innerHTML = list.map(s => {
+    const sId = cleanIdString(s.studentId);
+    const sPhone = normalizePhone(s.parentPhone);
+    const prayerCount = todayPrayers.filter(p => isIdMatch(p.studentId, sId)).length;
+    return `
     <tr>
-      <td><b>${s.studentId}</b></td>
+      <td><b>${sId}</b></td>
       <td>${s.fullName}</td>
       <td><span class="activity-badge badge-upcoming">${s.grade}</span></td>
       <td>${s.schoolName}</td>
-      <td>${s.parentPhone}</td>
+      <td>${sPhone}</td>
       <td>${s.attendance ? s.attendance.present : 0} วัน</td>
-      <td>${todayPrayers.filter(p => p.studentId === s.studentId).length} เวลา</td>
+      <td>${prayerCount} เวลา</td>
       <td>${activities.filter(a => a.checkedIn).length} รายการ</td>
       <td style="text-align: right;">
-        <button class="btn btn-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;" onclick="viewStudentDetails('${s.studentId}')">
+        <button class="btn btn-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;" onclick="viewStudentDetails('${sId}')">
           <i class="fa-solid fa-eye"></i> ดูข้อมูล
         </button>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function filterAdminStudents() {
-  const search = document.getElementById('searchStudentInput').value.toLowerCase().trim();
-  const grade = document.getElementById('filterGradeSelect').value;
+  const rawSearch = (document.getElementById('searchStudentInput')?.value || '').trim();
+  const search = rawSearch.toLowerCase();
+  const searchClean = cleanIdString(rawSearch).toLowerCase();
+  const searchWithoutZero = searchClean.replace(/^0+/, '');
+  const grade = document.getElementById('filterGradeSelect')?.value;
 
   const filtered = allStudents.filter(s => {
-    const matchSearch = s.fullName.toLowerCase().includes(search) || s.studentId.toLowerCase().includes(search);
+    const sId = cleanIdString(s.studentId).toLowerCase();
+    const sIdWithoutZero = sId.replace(/^0+/, '');
+    const sPhone = cleanPhoneString(s.parentPhone);
+    const sPhoneWithoutZero = sPhone.replace(/^0+/, '');
+
+    const matchName = s.fullName.toLowerCase().includes(search);
+    const matchId = sId.includes(searchClean) || (searchWithoutZero && sIdWithoutZero.includes(searchWithoutZero));
+    const matchPhone = sPhone.includes(searchClean) || (searchWithoutZero && sPhoneWithoutZero.includes(searchWithoutZero));
+    const matchSearch = !rawSearch || matchName || matchId || matchPhone;
     const matchGrade = !grade || s.grade === grade;
     return matchSearch && matchGrade;
   });
@@ -3709,16 +3812,20 @@ function filterAdminStudents() {
 }
 
 function viewStudentDetails(studentId) {
-  const student = allStudents.find(s => s.studentId === studentId);
+  const student = allStudents.find(s => isIdMatch(s.studentId, studentId));
   if (!student) return;
+
+  const cleanId = cleanIdString(student.studentId);
+  const cleanPhone = normalizePhone(student.parentPhone);
+  const cleanBD = normalizeBirthDate(student.birthDate);
 
   const modal = document.getElementById('studentDetailModal');
   const title = document.getElementById('studentDetailTitle');
   const content = document.getElementById('studentDetailContent');
   const btnDelete = document.getElementById('btnAdminDeleteStudent');
 
-  title.innerText = `ข้อมูลนักเรียน: ${student.fullName} (${student.studentId})`;
-  const hasanat = getStudentHasanat(student.studentId);
+  title.innerText = `ข้อมูลนักเรียน: ${student.fullName} (${cleanId})`;
+  const hasanat = getStudentHasanat(cleanId);
   const qStars = (hasanat && hasanat.quran && hasanat.quran.stars) || 0;
   const qJuz = (hasanat && hasanat.quran && hasanat.quran.juzCompleted) || 0;
   const qPage = (hasanat && hasanat.quran && hasanat.quran.currentPage) || 0;
@@ -3729,8 +3836,8 @@ function viewStudentDetails(studentId) {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
       <div><b>โรงเรียน:</b> ${student.schoolName}</div>
       <div><b>ระดับชั้น:</b> ${student.grade}</div>
-      <div><b>วันเดือนปีเกิด:</b> ${student.birthDate}</div>
-      <div><b>เบอร์โทรผู้ปกครอง:</b> ${student.parentPhone}</div>
+      <div><b>วันเดือนปีเกิด:</b> ${cleanBD}</div>
+      <div><b>เบอร์โทรผู้ปกครอง:</b> ${cleanPhone}</div>
       <div><b>เกรดเฉลี่ย (GPA):</b> ${student.gpa || '-'}</div>
       <div><b>สถานะ:</b> ${student.status}</div>
     </div>
@@ -3751,20 +3858,23 @@ function viewStudentDetails(studentId) {
     </div>
   `;
 
-  btnDelete.onclick = () => deleteStudent(student.studentId);
+  btnDelete.onclick = () => deleteStudent(cleanId);
   openModal('studentDetailModal');
 }
 
 function deleteStudent(studentId) {
-  if (!confirm(`คุณต้องการลบข้อมูลนักเรียนรหัส ${studentId} ใช่หรือไม่?`)) return;
+  const student = allStudents.find(s => isIdMatch(s.studentId, studentId));
+  const cleanId = cleanIdString(studentId);
+  const sName = student ? student.fullName : cleanId;
+  if (!confirm(`คุณต้องการลบข้อมูลนักเรียน ${sName} (รหัส ${cleanId}) ใช่หรือไม่?`)) return;
 
-  allStudents = allStudents.filter(s => s.studentId !== studentId);
+  allStudents = allStudents.filter(s => !isIdMatch(s.studentId, cleanId));
   localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
   renderAdminStudentsTable();
   closeModal('studentDetailModal');
-  showToast(`ลบข้อมูลนักเรียน ${studentId} เรียบร้อยแล้ว`, 'success');
+  showToast(`ลบข้อมูลนักเรียน ${cleanId} เรียบร้อยแล้ว`, 'success');
 
-  syncRecordToGoogleSheet('deleteStudent', { studentId });
+  syncRecordToGoogleSheet('deleteStudent', { studentId: cleanId });
 }
 
 /**
@@ -5050,14 +5160,15 @@ function openActivityQrModal(actId) {
 
 function adminManualCheckInStudent() {
   const actId = document.getElementById('manualActSelect').value;
-  const stdId = document.getElementById('manualStudentIdInput').value.trim();
+  const rawStdId = document.getElementById('manualStudentIdInput').value.trim();
+  const stdId = cleanIdString(rawStdId);
 
   if (!actId || !stdId) {
     showToast('กรุณาเลือกกิจกรรมและระบุรหัสนักเรียน', 'warning');
     return;
   }
 
-  const student = allStudents.find(s => s.studentId.toLowerCase() === stdId.toLowerCase());
+  const student = allStudents.find(s => isIdMatch(s.studentId, stdId));
   const act = activities.find(a => a.id === actId);
 
   if (!act) {
@@ -5065,7 +5176,8 @@ function adminManualCheckInStudent() {
     return;
   }
 
-  const studentName = student ? student.fullName : ('นักเรียน (' + stdId + ')');
+  const resolvedStudentId = student ? cleanIdString(student.studentId) : stdId;
+  const studentName = student ? student.fullName : ('นักเรียน (' + resolvedStudentId + ')');
   const studentGrade = student ? student.grade : '-';
 
   let actLogs = [];
@@ -5074,11 +5186,11 @@ function adminManualCheckInStudent() {
   } catch (e) { actLogs = []; }
 
   const now = new Date();
-  const existingIndex = actLogs.findIndex(l => l.studentId.toLowerCase() === stdId.toLowerCase() && l.activityId === act.id);
+  const existingIndex = actLogs.findIndex(l => isIdMatch(l.studentId, resolvedStudentId) && l.activityId === act.id);
 
   const logEntry = {
     id: 'ACTLOG-' + Date.now(),
-    studentId: stdId,
+    studentId: resolvedStudentId,
     studentName: studentName,
     grade: studentGrade,
     activityId: act.id,
