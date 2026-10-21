@@ -1,7 +1,78 @@
 
 // ==========================================
-// STRING & ID NORMALIZATION HELPERS (LEADING ZERO SAFE)
+// STRING, ID NORMALIZATION & SECURITY HELPERS (LEADING ZERO + XSS SAFE)
 // ==========================================
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Brute-force login rate limiter
+let loginFailedAttempts = 0;
+let loginLockoutUntil = 0;
+
+function checkLoginRateLimit() {
+  const now = Date.now();
+  if (now < loginLockoutUntil) {
+    const waitSec = Math.ceil((loginLockoutUntil - now) / 1000);
+    showToast(`กรอกรหัสผิดเกินกำหนด กรุณารอ ${waitSec} วินาทีก่อนลองใหม่`, 'error');
+    return false;
+  }
+  return true;
+}
+
+function recordLoginFailure() {
+  loginFailedAttempts++;
+  if (loginFailedAttempts >= 5) {
+    loginLockoutUntil = Date.now() + 30000; // Lock 30 seconds after 5 failed attempts
+    loginFailedAttempts = 0;
+    showToast('ตรวจพบการเดารหัสผ่านเกิน 5 ครั้ง ระบบล็อกชั่วคราว 30 วินาที', 'error');
+  }
+}
+
+function resetLoginFailures() {
+  loginFailedAttempts = 0;
+  loginLockoutUntil = 0;
+}
+
+// Normalize grade to 0 - 4 scale (supports 0, 1, 1.5, 2, 2.5, 3, 3.5, 4 and converts legacy 0-100 scores)
+function normalizeGrade1To4(rawVal) {
+  if (rawVal === null || rawVal === undefined || rawVal === '') return 0;
+  const n = parseFloat(rawVal);
+  if (isNaN(n) || n <= 0) return 0;
+  if (n <= 4) {
+    return Math.round(n * 2) / 2; // Snap to 0.5 increments (1, 1.5, 2, 2.5, 3, 3.5, 4)
+  }
+  // Convert legacy 0-100 score to 1-4 grade scale
+  if (n >= 80) return 4;
+  if (n >= 75) return 3.5;
+  if (n >= 70) return 3;
+  if (n >= 65) return 2.5;
+  if (n >= 60) return 2;
+  if (n >= 55) return 1.5;
+  if (n >= 50) return 1;
+  return 0;
+}
+
+function recalculateStudentGpa(student) {
+  if (!student) return '0.00';
+  const gradesMap = student.subjectGrades || student.skills || {};
+  const vals = Object.values(gradesMap)
+    .map(v => normalizeGrade1To4(v))
+    .filter(v => v > 0);
+  if (vals.length === 0) {
+    return student.gpa && parseFloat(student.gpa) <= 4 ? student.gpa : '0.00';
+  }
+  const avg = vals.reduce((acc, cur) => acc + cur, 0) / vals.length;
+  student.gpa = avg.toFixed(2);
+  return student.gpa;
+}
+
 function cleanIdString(id) {
   if (id === null || id === undefined) return '';
   let s = String(id).trim();
@@ -616,13 +687,24 @@ function initHasanatView() {
   const qBadge = document.getElementById('navHasanatQuranBadge');
   if (qBadge) qBadge.innerText = `⭐ ${h.quran.stars || 0} ดาว`;
   const mBadge = document.getElementById('navHasanatMemBadge');
-  if (mBadge) mBadge.innerText = `${h.memorization.count || 0}/114`;
+  const memCountVal = h.memorization.count || 0;
+  if (mBadge) mBadge.innerText = `${memCountVal}/114`;
 
-  // 2. Memorization tab
+  // 2. Memorization tab & progress bar
   const memBadge = document.getElementById('memorizedSurahsBadge');
   if (memBadge) {
-    memBadge.innerText = `ท่องจำได้ ${h.memorization.count || 0} / 114 ซูเราะห์`;
+    memBadge.innerText = `ท่องจำได้ ${memCountVal} / 114 ซูเราะห์`;
   }
+  const memBarFill = document.getElementById('memorizedProgressBarFill');
+  if (memBarFill) {
+    memBarFill.style.width = `${Math.min(100, ((memCountVal / 114) * 100).toFixed(1))}%`;
+  }
+
+  // Update 3-Pillar Overview Strip
+  const ovQuran = document.getElementById('ovQuranPageVal');
+  if (ovQuran) ovQuran.innerText = `หน้า ${curPageVal || 0} / 604`;
+  const ovMem = document.getElementById('ovMemCountVal');
+  if (ovMem) ovMem.innerText = `${memCountVal} / 114 ซูเราะห์`;
 
   // 3. Sunnah tab (Load selected date's sunnah if available)
   const activeSunnah = (dayLog && dayLog.sunnah)
@@ -702,6 +784,10 @@ function renderHasanatStarsShowcase(stars, currentPage, khatamCount = 0) {
 
   if (kpiPage) {
     kpiPage.innerText = curP;
+  }
+  const ovQuran = document.getElementById('ovQuranPageVal');
+  if (ovQuran) {
+    ovQuran.innerText = `หน้า ${curP} / 604`;
   }
   if (kpiJuz) {
     kpiJuz.innerText = stars;
@@ -1093,6 +1179,18 @@ function toggleSurahMemorized(surahNum) {
   if (memBadge) {
     memBadge.innerText = `ท่องจำได้ ${mem.length} / 114 ซูเราะห์`;
   }
+  const navMBadge = document.getElementById('navHasanatMemBadge');
+  if (navMBadge) {
+    navMBadge.innerText = `${mem.length} / 114`;
+  }
+  const memBarFill = document.getElementById('memorizedProgressBarFill');
+  if (memBarFill) {
+    memBarFill.style.width = `${Math.min(100, ((mem.length / 114) * 100).toFixed(1))}%`;
+  }
+  const ovMem = document.getElementById('ovMemCountVal');
+  if (ovMem) {
+    ovMem.innerText = `${mem.length} / 114 ซูเราะห์`;
+  }
 
   renderSurahChecklist(document.getElementById('searchSurahInput') ? document.getElementById('searchSurahInput').value : '');
 }
@@ -1138,9 +1236,29 @@ function selectAllSurahsInCurrentCategory(isSelectAll) {
   if (navMBadge) {
     navMBadge.innerText = `${arr.length} / 114`;
   }
+  const memBarFill = document.getElementById('memorizedProgressBarFill');
+  if (memBarFill) {
+    memBarFill.style.width = `${Math.min(100, ((arr.length / 114) * 100).toFixed(1))}%`;
+  }
+  const ovMem = document.getElementById('ovMemCountVal');
+  if (ovMem) {
+    ovMem.innerText = `${arr.length} / 114 ซูเราะห์`;
+  }
 
   renderSurahChecklist(document.getElementById('searchSurahInput') ? document.getElementById('searchSurahInput').value : '');
   showToast(isSelectAll ? `เลือกซูเราะห์ในหมวดนี้ทั้งหมดแล้ว (${arr.length} ซูเราะห์)` : `ล้างการเลือกในหมวดนี้แล้ว`, 'info');
+}
+
+function toggleAllRawatib(isChecked) {
+  const rawatibKeys = [
+    'subhBefore', 'dhuhrBefore', 'dhuhrAfter', 'asrBefore',
+    'maghribBefore', 'maghribAfter', 'ishaBefore', 'ishaAfter'
+  ];
+  rawatibKeys.forEach(k => {
+    const chk = document.getElementById(`chk-rawatib-${k}`);
+    if (chk) chk.checked = !!isChecked;
+  });
+  calculateDailySunnahRakaat(false);
 }
 
 function saveSurahMemorizationLog() {
@@ -1211,6 +1329,14 @@ function calculateDailySunnahRakaat(shouldSave = false) {
   const navSBadge = document.getElementById('navHasanatSunnahBadge');
   if (navSBadge) {
     navSBadge.innerText = `${total} ร็อกอะฮ์`;
+  }
+  const ovSunnah = document.getElementById('ovSunnahVal');
+  if (ovSunnah) {
+    ovSunnah.innerText = `${total} ร็อกอะฮ์`;
+  }
+  const sunnahGoalBar = document.getElementById('sunnahGoalProgressBar');
+  if (sunnahGoalBar) {
+    sunnahGoalBar.style.width = `${Math.min(100, ((total / 12) * 100).toFixed(1))}%`;
   }
 
   if (shouldSave && currentStudent) {
@@ -1684,10 +1810,16 @@ function setupEventListeners() {
 
 // ----------------- VIEW ROUTING ----------------- //
 function switchView(viewName) {
-  // Enforce login for students before switching views (except when admin is logged in)
+  // Enforce login for students before switching views (except when admin or teacher is logged in)
   if (!currentStudent && !currentAdmin && viewName !== 'dashboard') {
-    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนเริ่มใช้งาน', 'warning');
+    showToast('กรุณาเข้าสู่ระบบก่อนเริ่มใช้งาน', 'warning');
     enforceMandatoryLogin();
+    return;
+  }
+  // If attempting to switch to teacher view and not authenticated as teacher/admin
+  if (viewName === 'teacher' && !currentAdmin) {
+    openModal('authModal');
+    selectAuthRole('teacher');
     return;
   }
   // If attempting to switch to admin and not authenticated, show passcode modal
@@ -1727,6 +1859,8 @@ function switchView(viewName) {
     initHasanatView();
   } else if (viewName === 'prayer') {
     renderPrayerHistory();
+    startPrayerLiveClock();
+    autoSelectDetectedPrayerSlot(false);
     if (verifiedLocation) {
       const centerOverlay = document.getElementById('camCenterActionOverlay');
       if (centerOverlay) centerOverlay.style.display = 'none';
@@ -1741,8 +1875,12 @@ function switchView(viewName) {
     }
   } else if (viewName === 'activities') {
     startQrScanner();
-    renderStudentActivitiesHistory();
+    renderStudentScannedActivities();
+  } else if (viewName === 'teacher') {
+    initTeacherPortalView();
   } else if (viewName === 'admin') {
+    renderSuperAdminOverviewKpis();
+    renderPendingApprovalsTable();
     renderAdminStudentsTable();
     renderSubAdminsTable();
     populateGradingSubjectSelect();
@@ -1756,6 +1894,166 @@ function switchView(viewName) {
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function stopCameraStream() {
+  if (activeCameraStream) {
+    try {
+      activeCameraStream.getTracks().forEach(track => track.stop());
+    } catch (e) {}
+    activeCameraStream = null;
+  }
+  const video = document.getElementById('cameraStream');
+  if (video) {
+    video.srcObject = null;
+  }
+}
+
+function renderStudentActivitiesHistory() {
+  renderStudentScannedActivities();
+}
+
+// ----------------- SMART PRAYER TIME AUTO-DETECTION WITH +/- BUFFER ----------------- //
+// Base prayer windows in minutes from 00:00 (Standard Southern Thailand / Fatoni schedule)
+const PRAYER_TIME_WINDOWS = [
+  { name: 'ซุบฮิ', startMin: 4 * 60 + 45, endMin: 6 * 60 + 25, baseLabel: '04:45 - 06:25 น.' },
+  { name: 'ซุฮริ', startMin: 12 * 60 + 10, endMin: 15 * 60 + 15, baseLabel: '12:10 - 15:15 น.' },
+  { name: 'อัศรฺ', startMin: 15 * 60 + 20, endMin: 18 * 60 + 5, baseLabel: '15:20 - 18:05 น.' },
+  { name: 'มัฆริบ', startMin: 18 * 60 + 10, endMin: 19 * 60 + 25, baseLabel: '18:10 - 19:25 น.' },
+  { name: 'อีชาอ์', startMin: 19 * 60 + 30, endMin: 23 * 60 + 59, baseLabel: '19:30 - 23:59 น.' }
+];
+
+let prayerBufferMinutes = parseInt(localStorage.getItem('khalifah_prayer_buffer_mins') || '30', 10);
+let prayerLiveClockInterval = null;
+
+function formatMinutesToHHMM(totalMins) {
+  const clamped = ((totalMins % 1440) + 1440) % 1440;
+  const hh = String(Math.floor(clamped / 60)).padStart(2, '0');
+  const mm = String(clamped % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function detectPrayerTimeSlotWithBuffer(bufferMins = prayerBufferMinutes) {
+  const now = new Date();
+  const curMin = now.getHours() * 60 + now.getMinutes();
+  const buf = isNaN(bufferMins) ? 30 : Math.max(0, parseInt(bufferMins, 10));
+
+  // 1. Check exact base window first
+  for (const w of PRAYER_TIME_WINDOWS) {
+    if (curMin >= w.startMin && curMin <= w.endMin) {
+      return {
+        matched: true,
+        isExact: true,
+        isBuffered: false,
+        prayerName: w.name,
+        baseLabel: w.baseLabel,
+        effectiveRange: `${formatMinutesToHHMM(w.startMin - buf)} - ${formatMinutesToHHMM(w.endMin + buf)} น.`,
+        bufferMins: buf
+      };
+    }
+  }
+
+  // 2. Check within +/- buffer window
+  for (const w of PRAYER_TIME_WINDOWS) {
+    const startWithBuf = w.startMin - buf;
+    const endWithBuf = w.endMin + buf;
+    if (curMin >= startWithBuf && curMin <= endWithBuf) {
+      const isBefore = curMin < w.startMin;
+      return {
+        matched: true,
+        isExact: false,
+        isBuffered: true,
+        bufferDirection: isBefore ? 'ก่อนเวลาจริง' : 'หลังเวลาจริง',
+        prayerName: w.name,
+        baseLabel: w.baseLabel,
+        effectiveRange: `${formatMinutesToHHMM(startWithBuf)} - ${formatMinutesToHHMM(endWithBuf)} น.`,
+        bufferMins: buf
+      };
+    }
+  }
+
+  // 3. Outside any window: find closest upcoming or most recent prayer
+  let closest = PRAYER_TIME_WINDOWS[0];
+  let minDiff = Infinity;
+  for (const w of PRAYER_TIME_WINDOWS) {
+    const mid = (w.startMin + w.endMin) / 2;
+    const diff = Math.abs(curMin - mid);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = w;
+    }
+  }
+
+  return {
+    matched: false,
+    isExact: false,
+    isBuffered: false,
+    prayerName: closest.name,
+    baseLabel: closest.baseLabel,
+    effectiveRange: `${formatMinutesToHHMM(closest.startMin - buf)} - ${formatMinutesToHHMM(closest.endMin + buf)} น.`,
+    bufferMins: buf
+  };
+}
+
+function onPrayerBufferChange(val) {
+  prayerBufferMinutes = parseInt(val, 10) || 0;
+  localStorage.setItem('khalifah_prayer_buffer_mins', String(prayerBufferMinutes));
+  autoSelectDetectedPrayerSlot(true);
+}
+
+function autoSelectDetectedPrayerSlot(showToastMsg = false) {
+  const selectEl = document.getElementById('prayerTimeBufferSelect');
+  if (selectEl && String(selectEl.value) !== String(prayerBufferMinutes)) {
+    selectEl.value = String(prayerBufferMinutes);
+  }
+
+  const res = detectPrayerTimeSlotWithBuffer(prayerBufferMinutes);
+  const banner = document.getElementById('prayerAutoDetectBanner');
+  const dot = document.getElementById('prayerAutoDetectDot');
+  const titleEl = document.getElementById('prayerAutoDetectTitle');
+  const windowEl = document.getElementById('prayerAutoDetectWindowText');
+
+  if (titleEl && windowEl) {
+    if (res.matched && res.isExact) {
+      if (banner) banner.classList.add('in-window');
+      if (dot) dot.classList.remove('outside');
+      titleEl.innerHTML = `ระบบตรวจจับอัตโนมัติ: ขณะนี้อยู่ในช่วงเวลาละหมาด <strong>${res.prayerName}</strong>`;
+      windowEl.innerText = `เวลาปกติ ${res.baseLabel} (ช่วงเผื่อเวลา ±${res.bufferMins} นาที: ${res.effectiveRange})`;
+    } else if (res.matched && res.isBuffered) {
+      if (banner) banner.classList.add('in-window');
+      if (dot) dot.classList.remove('outside');
+      titleEl.innerHTML = `อยู่ในช่วงเวลาเผื่อ (±${res.bufferMins} นาที): ละหมาด <strong>${res.prayerName}</strong> (${res.bufferDirection})`;
+      windowEl.innerText = `ช่วงเวลาเผื่อที่อนุญาต: ${res.effectiveRange} (เวลาหลัก ${res.baseLabel})`;
+    } else {
+      if (banner) banner.classList.remove('in-window');
+      if (dot) dot.classList.add('outside');
+      titleEl.innerHTML = `นอกช่วงเวลาหลัก • เลือกเวลาใกล้เคียงให้อัตโนมัติ: <strong>${res.prayerName}</strong>`;
+      windowEl.innerText = `ช่วงละหมาด ${res.prayerName}: ${res.effectiveRange} (เผื่อเวลา ±${res.bufferMins} นาทีแล้ว)`;
+    }
+  }
+
+  selectPrayerTime(res.prayerName, document.getElementById(`ptime-${res.prayerName}`));
+  if (typeof selectPrayerNoteTime === 'function') {
+    selectPrayerNoteTime(res.prayerName);
+  }
+
+  if (showToastMsg) {
+    showToast(`ตรวจจับเวลาละหมาด: ${res.prayerName} (เผื่อเวลา ±${res.bufferMins} นาที)`, 'info');
+  }
+}
+
+function startPrayerLiveClock() {
+  const updateClock = () => {
+    const clockText = document.getElementById('prayerLiveClockText');
+    if (clockText) {
+      const now = new Date();
+      clockText.innerText = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' น.';
+    }
+    updateCameraOverlayText();
+  };
+  updateClock();
+  if (prayerLiveClockInterval) clearInterval(prayerLiveClockInterval);
+  prayerLiveClockInterval = setInterval(updateClock, 1000);
 }
 
 // ----------------- HAVERSINE FORMULA & GEOFENCING ----------------- //
@@ -2205,12 +2503,12 @@ async function captureAndSavePrayerInstant() {
   // Trigger camera shutter flash effect
   const flashEl = document.getElementById('cameraShutterFlash');
   if (flashEl) {
-    flashEl.classList.remove('flashing');
+    flashEl.classList.remove('flashing', 'flash-active');
     void flashEl.offsetWidth; // trigger reflow
-    flashEl.classList.add('flashing');
+    flashEl.classList.add('flashing', 'flash-active');
     setTimeout(() => {
-      flashEl.classList.remove('flashing');
-    }, 400);
+      flashEl.classList.remove('flashing', 'flash-active');
+    }, 320);
   }
 
   // Play mechanical shutter click sound + haptic vibration
@@ -2263,7 +2561,7 @@ async function captureAndSavePrayerInstant() {
   };
 
   // Replace or add today's prayer for this time
-  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime));
+  const existingIdx = todayPrayers.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime));
   if (existingIdx !== -1) {
     todayPrayers[existingIdx] = prayerRecord;
   } else {
@@ -2277,7 +2575,7 @@ async function captureAndSavePrayerInstant() {
     historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
   } catch (e) { historyList = []; }
   historyList.unshift(prayerRecord);
-  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList.slice(0, 100)));
+  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList.slice(0, 150)));
 
   // Update UI Chip
   const chipEl = document.getElementById(`ptime-${selectedPrayerTime}`);
@@ -2285,6 +2583,35 @@ async function captureAndSavePrayerInstant() {
     chipEl.classList.add('done');
     const statusEl = document.getElementById(`pstatus-${selectedPrayerTime}`);
     if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-check"></i> เช็คแล้ว';
+  }
+
+  // 1. Show Animated Viewfinder Confirmation Overlay (#prayerCaptureSuccessOverlay)
+  const successOverlay = document.getElementById('prayerCaptureSuccessOverlay');
+  const successDetail = document.getElementById('captureSuccessDetailText');
+  const successTimeBadge = document.getElementById('captureSuccessTimeBadge');
+  if (successOverlay) {
+    if (successDetail) {
+      successDetail.innerText = `ละหมาดเวลา ${selectedPrayerTime} • ${accurateLocName}`;
+    }
+    if (successTimeBadge) {
+      successTimeBadge.innerText = `บันทึกเมื่อ ${dateStr} เวลา ${timeStr} น.`;
+    }
+    successOverlay.style.display = 'flex';
+    setTimeout(() => {
+      successOverlay.style.display = 'none';
+    }, 2400);
+  }
+
+  // 2. Show Persistent Receipt Card below button (#prayerSavedReceiptCard)
+  const receiptCard = document.getElementById('prayerSavedReceiptCard');
+  const receiptThumb = document.getElementById('prayerSavedThumbImg');
+  const receiptTitle = document.getElementById('prayerSavedReceiptTitle');
+  const receiptMeta = document.getElementById('prayerSavedReceiptMeta');
+  if (receiptCard) {
+    if (receiptThumb) receiptThumb.src = photoBase64;
+    if (receiptTitle) receiptTitle.innerText = `บันทึกภาพละหมาดเวลา "${selectedPrayerTime}" สำเร็จแล้ว`;
+    if (receiptMeta) receiptMeta.innerText = `${dateStr} • เวลา ${timeStr} น. • ณ ${accurateLocName}`;
+    receiptCard.style.display = 'flex';
   }
 
   renderTodayPrayerTable();
@@ -2300,12 +2627,12 @@ async function captureAndSavePrayerInstant() {
   const btnCapture = document.getElementById('btnCaptureInstant');
   if (btnCapture) {
     const originalText = btnCapture.innerHTML;
-    btnCapture.style.background = '#10b981';
-    btnCapture.innerHTML = '<i class="fa-solid fa-circle-check"></i> บันทึกภาพพยานและเวลาละหมาดเรียบร้อย!';
+    btnCapture.style.background = '#0f172a';
+    btnCapture.innerHTML = `<i class="fa-solid fa-circle-check"></i> ได้รับรูปและบันทึกเวลาละหมาด ${selectedPrayerTime} เรียบร้อยแล้ว!`;
     setTimeout(() => {
       btnCapture.style.background = '';
       btnCapture.innerHTML = originalText;
-    }, 2500);
+    }, 2800);
   }
 
   // Slide-In notification card with thumbnail & meta
@@ -2331,7 +2658,7 @@ function openPrayerHistoryModal() {
     historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
   } catch (e) { historyList = []; }
 
-  const myHistory = historyList.filter(p => p.studentId === currentStudent.studentId);
+  const myHistory = historyList.filter(p => isIdMatch(p.studentId, currentStudent.studentId));
 
   if (myHistory.length === 0) {
     container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);"><i class="fa-solid fa-clock" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>ยังไม่มีประวัติการเช็คชื่อละหมาดที่บันทึกไว้</div>';
@@ -2343,7 +2670,7 @@ function openPrayerHistoryModal() {
           <div style="display: flex; align-items: center; gap: 0.75rem;">
             ${p.photo ? `<img src="${p.photo}" alt="Prayer Photo" style="width: 48px; height: 36px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid #cbd5e1;">` : '<div style="width: 48px; height: 36px; background: #e2e8f0; border-radius: var(--radius-sm);"></div>'}
             <div>
-              <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-dark);">ละหมาด: ${p.prayerName}</div>
+              <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-dark);">ละหมาด: ${escapeHtml(p.prayerName)}</div>
               <div style="font-size: 0.76rem; color: var(--text-muted);">${dt.toLocaleDateString('th-TH')} • ${dt.toLocaleTimeString('th-TH')}</div>
             </div>
           </div>
@@ -2356,11 +2683,6 @@ function openPrayerHistoryModal() {
   }
 
   openModal('prayerHistoryModal');
-}
-
-function switchCameraFacing() {
-  currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-  initLiveCamera();
 }
 
 function updateCameraOverlayText() {
@@ -2834,57 +3156,83 @@ function renderSkillRadarChart() {
   loadAppSubjects();
 
   const labels = appSubjects.map(s => formatRadarLabelMultiLine(s.name));
-  const dataScores = appSubjects.map(s => {
-    if (currentStudent && currentStudent.skills) {
-      if (currentStudent.skills[s.id] !== undefined) {
-        return currentStudent.skills[s.id];
+  const dataGrades = appSubjects.map(s => {
+    if (currentStudent) {
+      const gradesMap = currentStudent.subjectGrades || {};
+      const skillsMap = currentStudent.skills || {};
+      if (gradesMap[s.id] !== undefined && gradesMap[s.id] !== '') {
+        return normalizeGrade1To4(gradesMap[s.id]);
       }
-      // fallback for old keys
-      if (s.id === 'religious' && currentStudent.skills.religious !== undefined) return currentStudent.skills.religious;
-      if (s.id === 'science' && currentStudent.skills.science !== undefined) return currentStudent.skills.science;
-      if (s.id === 'math' && currentStudent.skills.math !== undefined) return currentStudent.skills.math;
-      if (s.id === 'language' && currentStudent.skills.language !== undefined) return currentStudent.skills.language;
-      if (s.id === 'social' && currentStudent.skills.social !== undefined) return currentStudent.skills.social;
-      if (s.id === 'tech' && currentStudent.skills.tech !== undefined) return currentStudent.skills.tech;
+      if (skillsMap[s.id] !== undefined && skillsMap[s.id] !== '') {
+        return normalizeGrade1To4(skillsMap[s.id]);
+      }
     }
-    return 75; // Default competency baseline
+    return 0; // Unassigned / not yet graded = 0 (narrow center until teacher enters grade 1-4)
   });
+
+  // Render subject grade pills below radar chart
+  const pillsContainer = document.getElementById('studentSubjectGradesPills');
+  if (pillsContainer) {
+    pillsContainer.innerHTML = appSubjects.map((s, idx) => {
+      const g = dataGrades[idx];
+      const gradeLabel = g > 0 ? `เกรด ${Number.isInteger(g) ? g : g.toFixed(1)}` : 'รอผล';
+      return `
+        <div class="subject-grade-pill-item" title="${escapeHtml(s.name)}: ${gradeLabel}">
+          <span class="subject-grade-pill-name">${escapeHtml(s.name)}</span>
+          <span class="subject-grade-pill-val">${gradeLabel}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Update GPAX on dashboard if student has graded subjects
+  if (currentStudent) {
+    const newGpa = recalculateStudentGpa(currentStudent);
+    const statGpa = document.getElementById('statGpa');
+    if (statGpa) statGpa.innerText = newGpa;
+  }
 
   skillChartInstance = new Chart(ctx, {
     type: 'radar',
     data: {
       labels: labels,
       datasets: [{
-        label: 'ระดับสมรรถนะทักษะ (คะแนนเต็ม 100)',
-        data: dataScores,
-        backgroundColor: 'rgba(2, 132, 199, 0.22)',
-        borderColor: '#0284c7',
-        borderWidth: 2.5,
-        pointBackgroundColor: '#0369a1',
+        label: 'เกรดรายวิชา (เต็ม 4.00)',
+        data: dataGrades,
+        backgroundColor: 'rgba(15, 23, 42, 0.14)',
+        borderColor: '#0f172a',
+        borderWidth: 2,
+        pointBackgroundColor: '#0f172a',
         pointBorderColor: '#ffffff',
         pointHoverBackgroundColor: '#ffffff',
-        pointHoverBorderColor: '#0369a1',
-        pointRadius: 4.5
+        pointHoverBorderColor: '#0f172a',
+        pointRadius: 4
       }]
     },
     options: {
       animation: {
-        duration: 1400,
+        duration: 900,
         easing: 'easeOutQuart'
       },
       responsive: true,
       maintainAspectRatio: false,
       layout: {
-        padding: { top: 12, bottom: 12, left: 20, right: 20 }
+        padding: { top: 10, bottom: 10, left: 18, right: 18 }
       },
       scales: {
         r: {
           min: 0,
-          max: 100,
-          ticks: { stepSize: 25, display: false },
+          max: 4,
+          ticks: {
+            stepSize: 1,
+            display: true,
+            backdropColor: 'transparent',
+            color: '#64748b',
+            font: { family: 'Kanit', size: 9, weight: '600' }
+          },
           pointLabels: {
             font: { family: 'Kanit', size: 10.5, weight: '600' },
-            color: '#1e293b',
+            color: '#0f172a',
             padding: 8
           },
           grid: { color: 'rgba(203, 213, 225, 0.85)' },
@@ -2892,7 +3240,15 @@ function renderSkillRadarChart() {
         }
       },
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const val = context.raw || 0;
+              return val > 0 ? ` เกรด: ${val} / 4` : ' ยังไม่มีเกรด (0 / 4)';
+            }
+          }
+        }
       }
     }
   });
@@ -2954,9 +3310,35 @@ function renderPrayerBarChart() {
 
   if (prayerChartInstance) prayerChartInstance.destroy();
 
-  // คำนวณตามจริงของนักเรียนที่ล็อกอิน
-  const myTodayCount = currentStudent ? todayPrayers.filter(p => p.studentId === currentStudent.studentId).length : 0;
-  const barData = currentStudent ? [0, 0, 0, 0, 0, 0, myTodayCount] : [0, 0, 0, 0, 0, 0, 0];
+  // คำนวณสถิติละหมาดรายวันทั้ง 7 วันของสัปดาห์ตามจริงจากประวัติ
+  const barData = [0, 0, 0, 0, 0, 0, 0]; // จันทร์ (0) -> อาทิตย์ (6)
+  if (currentStudent) {
+    let historyList = [];
+    try {
+      historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+    } catch (e) { historyList = []; }
+
+    const combined = [...todayPrayers, ...historyList].filter(p => isIdMatch(p.studentId, currentStudent.studentId));
+    const now = new Date();
+    const dayOfWeek = (now.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+    const monday = new Date(now);
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(now.getDate() - dayOfWeek);
+
+    for (let i = 0; i < 7; i++) {
+      const targetDate = new Date(monday);
+      targetDate.setDate(monday.getDate() + i);
+      const ymd = targetDate.toISOString().split('T')[0];
+      const uniquePrayers = new Set();
+      combined.forEach(p => {
+        const pDate = p.date || (p.timestamp ? p.timestamp.split('T')[0] : '');
+        if (pDate === ymd) {
+          uniquePrayers.add(p.prayerTime || p.prayerName);
+        }
+      });
+      barData[i] = Math.min(5, uniquePrayers.size);
+    }
+  }
 
   prayerChartInstance = new Chart(ctx, {
     type: 'bar',
@@ -2965,8 +3347,8 @@ function renderPrayerBarChart() {
       datasets: [{
         label: 'จำนวนเวลาที่ละหมาด (เต็ม 5)',
         data: barData,
-        backgroundColor: '#0284c7',
-        borderRadius: 8
+        backgroundColor: '#0f172a',
+        borderRadius: 6
       }]
     },
     options: {
@@ -3383,21 +3765,109 @@ function handleProfilePhotoUpload(event) {
   reader.readAsDataURL(file);
 }
 
+// ----------------- 3-ROLE AUTHENTICATION & DYNAMIC ADMIN OTP SYSTEM ----------------- //
+let currentAuthRole = 'student'; // 'student' | 'teacher' | 'admin'
+let activePendingOtpUser = null;
+
+function getPendingRegistrations() {
+  try {
+    return JSON.parse(localStorage.getItem('khalifah_pending_registrations') || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function savePendingRegistrations(list) {
+  localStorage.setItem('khalifah_pending_registrations', JSON.stringify(list));
+}
+
+function generateRandomAdminOtp() {
+  // Cryptographically random 6-digit code (preserves leading zeros, e.g., "048291")
+  if (window.crypto && window.crypto.getRandomValues) {
+    const arr = new Uint32Array(1);
+    window.crypto.getRandomValues(arr);
+    return String(arr[0] % 1000000).padStart(6, '0');
+  }
+  return String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+}
+
+function selectAuthRole(role) {
+  currentAuthRole = role;
+  const btnStd = document.getElementById('authRoleBtnStudent');
+  const btnTch = document.getElementById('authRoleBtnTeacher');
+  const btnAdm = document.getElementById('authRoleBtnAdmin');
+
+  if (btnStd) btnStd.classList.toggle('active', role === 'student');
+  if (btnTch) btnTch.classList.toggle('active', role === 'teacher');
+  if (btnAdm) btnAdm.classList.toggle('active', role === 'admin');
+
+  const stdBox = document.getElementById('authStudentContainer');
+  const tchBox = document.getElementById('authTeacherContainer');
+  const admBox = document.getElementById('authAdminContainer');
+
+  if (stdBox) stdBox.style.display = (role === 'student') ? 'block' : 'none';
+  if (tchBox) tchBox.style.display = (role === 'teacher') ? 'block' : 'none';
+  if (admBox) admBox.style.display = (role === 'admin') ? 'block' : 'none';
+
+  const title = document.getElementById('authModalTitle');
+  if (title) {
+    if (role === 'student') {
+      title.innerHTML = '<i class="fa-solid fa-user-graduate" style="color: var(--primary);"></i> เข้าสู่ระบบ / สมัครสมาชิก (นักเรียน)';
+    } else if (role === 'teacher') {
+      title.innerHTML = '<i class="fa-solid fa-chalkboard-user" style="color: var(--primary);"></i> เข้าสู่ระบบ / สมัครสมาชิก (อาจารย์ผู้สอน)';
+      populateTeacherRegisterSubjectsChecklist();
+    } else {
+      title.innerHTML = '<i class="fa-solid fa-user-shield" style="color: var(--primary);"></i> เข้าสู่ระบบแอดมินสูงสุด (Super Admin)';
+    }
+  }
+}
+
 function toggleAuthForm(formType) {
+  selectAuthRole('student');
   const loginSection = document.getElementById('loginFormSection');
   const regSection = document.getElementById('registerFormSection');
   const title = document.getElementById('authModalTitle');
 
   if (formType === 'register') {
-    loginSection.style.display = 'none';
-    regSection.style.display = 'block';
-    title.innerText = 'ลงทะเบียนนักเรียนใหม่';
+    if (loginSection) loginSection.style.display = 'none';
+    if (regSection) regSection.style.display = 'block';
+    if (title) title.innerHTML = '<i class="fa-solid fa-user-plus" style="color: var(--primary);"></i> สมัครลงทะเบียนนักเรียนใหม่';
     initBirthDatePicker();
   } else {
-    loginSection.style.display = 'block';
-    regSection.style.display = 'none';
-    title.innerText = 'เข้าสู่ระบบนักเรียน';
+    if (loginSection) loginSection.style.display = 'block';
+    if (regSection) regSection.style.display = 'none';
+    if (title) title.innerHTML = '<i class="fa-solid fa-user-graduate" style="color: var(--primary);"></i> เข้าสู่ระบบนักเรียน';
   }
+}
+
+function toggleTeacherAuthForm(formType) {
+  selectAuthRole('teacher');
+  const loginSec = document.getElementById('teacherLoginSection');
+  const regSec = document.getElementById('teacherRegisterSection');
+  const title = document.getElementById('authModalTitle');
+
+  if (formType === 'register') {
+    if (loginSec) loginSec.style.display = 'none';
+    if (regSec) regSec.style.display = 'block';
+    if (title) title.innerHTML = '<i class="fa-solid fa-user-check" style="color: var(--primary);"></i> สมัครลงทะเบียนอาจารย์ผู้สอนใหม่';
+    populateTeacherRegisterSubjectsChecklist();
+  } else {
+    if (loginSec) loginSec.style.display = 'block';
+    if (regSec) regSec.style.display = 'none';
+    if (title) title.innerHTML = '<i class="fa-solid fa-chalkboard-user" style="color: var(--primary);"></i> เข้าสู่ระบบอาจารย์ผู้สอน';
+  }
+}
+
+function populateTeacherRegisterSubjectsChecklist() {
+  loadAppSubjects();
+  const container = document.getElementById('regTeacherSubjectsChecklist');
+  if (!container) return;
+  container.innerHTML = appSubjects.map(s => `
+    <label class="subject-checkbox-item">
+      <input type="checkbox" name="regTeacherSubjChk" value="${escapeHtml(s.id)}">
+      <span>${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</span>
+    </label>
+  `).join('');
 }
 
 // ----------------- MINIMALIST BIRTH DATE PICKER ----------------- //
@@ -3411,7 +3881,6 @@ function initBirthDatePicker() {
   const yearSelect = document.getElementById('regBirthYear');
   if (!daySelect || !yearSelect) return;
 
-  // Populate days 1-31 if not already populated
   if (daySelect.options.length <= 1) {
     for (let d = 1; d <= 31; d++) {
       const opt = document.createElement('option');
@@ -3422,7 +3891,6 @@ function initBirthDatePicker() {
     }
   }
 
-  // Populate Buddhist years (พ.ศ.) 2568 down to 2530
   if (yearSelect.options.length <= 1) {
     const currentBE = new Date().getFullYear() + 543;
     const maxBE = Math.max(currentBE, 2568);
@@ -3453,13 +3921,11 @@ function syncBirthDatePicker() {
   const m = monthSelect.value;
   const y = yearSelect.value;
 
-  // Visual selection indicator
   [daySelect, monthSelect, yearSelect].forEach(sel => {
     if (sel.value) sel.classList.add('selected');
     else sel.classList.remove('selected');
   });
 
-  // Smart day adjustment based on selected month & leap year
   if (m) {
     const monthNum = parseInt(m, 10);
     const yearBE = parseInt(y, 10) || 2552;
@@ -3515,6 +3981,8 @@ function resetBirthDatePicker() {
 }
 
 async function handleStudentLogin() {
+  if (!checkLoginRateLimit()) return;
+
   const rawParentPhone = (document.getElementById('loginParentPhone')?.value || '').trim();
   const rawStudentId = (document.getElementById('loginStudentId')?.value || '').trim();
 
@@ -3528,6 +3996,18 @@ async function handleStudentLogin() {
 
   const cleanInputPhone = parentPhoneInput;
 
+  // Check if user is in pending registrations awaiting OTP verification
+  const pendingList = getPendingRegistrations();
+  const pendingMatch = pendingList.find(p => p.role === 'student' && isIdMatch(p.userId, studentIdInput) && p.status !== 'Verified');
+  if (pendingMatch && pendingMatch.status === 'PendingAdmin') {
+    const stuInList = allStudents.find(s => isIdMatch(s.studentId, studentIdInput));
+    if (!stuInList || stuInList.approvalStatus === 'PendingAdmin') {
+      openOtpVerifyModalForPending(pendingMatch);
+      showToast('บัญชีนี้อยู่ระหว่างรอการยืนยันรหัสสุ่มจากแอดมิน กรุณากรอกรหัสยืนยัน', 'info');
+      return;
+    }
+  }
+
   let found = allStudents.find(s => {
     const matchId = isIdMatch(s.studentId, studentIdInput);
     const matchPhone = isPhoneMatch(s.parentPhone, cleanInputPhone) || isPhoneMatch(s.parentPhone, rawParentPhone);
@@ -3535,7 +4015,6 @@ async function handleStudentLogin() {
   });
 
   if (!found) {
-    // If not found in local device, check Google Sheets backend
     let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
     if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
     if (url) {
@@ -3567,6 +4046,24 @@ async function handleStudentLogin() {
   }
 
   if (found) {
+    if (found.approvalStatus === 'PendingAdmin') {
+      const pItem = pendingList.find(p => isIdMatch(p.userId, found.studentId)) || {
+        reqId: 'REQ-' + Date.now(),
+        role: 'student',
+        userId: found.studentId,
+        fullName: found.fullName,
+        email: found.email || '',
+        phone: found.parentPhone,
+        gradeOrSubj: found.grade,
+        otpCode: found.otpCode || generateRandomAdminOtp(),
+        status: 'PendingAdmin'
+      };
+      openOtpVerifyModalForPending(pItem);
+      showToast('กรุณากรอกรหัสยืนยันจากแอดมินเพื่อเปิดใช้งานบัญชี', 'warning');
+      return;
+    }
+
+    resetLoginFailures();
     currentStudent = found;
     localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
     renderCurrentStudentProfile();
@@ -3578,21 +4075,23 @@ async function handleStudentLogin() {
     closeModal('authModal');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
   } else {
+    recordLoginFailure();
     showToast('เบอร์โทรศัพท์ผู้ปกครอง (User) หรือรหัสนักเรียน (รหัสผ่าน) ไม่ถูกต้อง', 'error');
   }
 }
 
 function handleStudentRegister() {
-  const studentId = cleanIdString(document.getElementById('regStudentId').value);
-  const fullName = document.getElementById('regFullName').value.trim();
-  const schoolName = document.getElementById('regSchoolName').value.trim();
-  const grade = document.getElementById('regGrade').value;
-  const rawBirthDate = document.getElementById('regBirthDate').value.trim();
+  const studentId = cleanIdString(document.getElementById('regStudentId')?.value || '');
+  const fullName = (document.getElementById('regFullName')?.value || '').trim();
+  const email = (document.getElementById('regStudentEmail')?.value || '').trim();
+  const schoolName = (document.getElementById('regSchoolName')?.value || '').trim();
+  const grade = document.getElementById('regGrade')?.value || 'มัธยมศึกษาปีที่ 1';
+  const rawBirthDate = (document.getElementById('regBirthDate')?.value || '').trim();
   const birthDate = normalizeBirthDate(rawBirthDate);
-  const parentPhone = normalizePhone(document.getElementById('regParentPhone').value);
+  const parentPhone = normalizePhone(document.getElementById('regParentPhone')?.value || '');
 
-  if (!studentId || !fullName || !schoolName || !birthDate || !parentPhone) {
-    showToast('กรุณากรอกข้อมูลให้ครบถ้วน และเลือกวันเดือนปีเกิด', 'warning');
+  if (!studentId || !fullName || !email || !schoolName || !birthDate || !parentPhone) {
+    showToast('กรุณากรอกข้อมูลให้ครบถ้วน รวมถึงอีเมลสำหรับรับรหัสยืนยัน และวันเดือนปีเกิด', 'warning');
     return;
   }
 
@@ -3602,113 +4101,488 @@ function handleStudentRegister() {
     return;
   }
 
-  const day = parseInt(cleanBD.substring(0, 2), 10);
-  const month = parseInt(cleanBD.substring(2, 4), 10);
-  const year = parseInt(cleanBD.substring(4, 8), 10);
-
-  if (day < 1 || day > 31 || month < 1 || month > 12 || year < 2450 || year > 2600) {
-    showToast('วันเดือนปีเกิดไม่ถูกต้อง กรุณาเลือกใหม่', 'warning');
-    return;
-  }
-
-  // ตรวจสอบรหัสซ้ำ (1 คน 1 สิทธิ์ - รองรับรหัสที่มีเลข 0 นำหน้า)
-  const isDuplicate = allStudents.some(s => isIdMatch(s.studentId, studentId));
+  const isDuplicate = allStudents.some(s => isIdMatch(s.studentId, studentId) && s.approvalStatus !== 'PendingAdmin');
   if (isDuplicate) {
     showToast('รหัสนักเรียนนี้มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้', 'error');
     return;
   }
 
+  // Generate Dynamic Random 6-Digit Admin Verification Code
+  const otpCode = generateRandomAdminOtp();
+
   const newStudent = {
     studentId: studentId,
     fullName: fullName,
+    email: email,
     schoolName: schoolName,
     grade: grade,
-    birthDate: cleanBD, // บันทึกเป็น 8 หลัก เช่น 01012540
+    birthDate: cleanBD,
     parentPhone: parentPhone,
-    status: 'Active',
+    status: 'PendingAdmin',
+    approvalStatus: 'PendingAdmin',
+    otpCode: otpCode,
     registeredAt: new Date().toISOString(),
     avatarUrl: registerAvatarBase64 || '',
     skills: { religious: 0, science: 0, math: 0, language: 0, social: 0, tech: 0 },
+    subjectGrades: {},
     gpa: '0.00',
     attendance: { present: 0, late: 0, leave: 0, absent: 0 }
   };
 
-  allStudents.push(newStudent);
+  // Save or update in allStudents
+  const existIdx = allStudents.findIndex(s => isIdMatch(s.studentId, studentId));
+  if (existIdx !== -1) {
+    allStudents[existIdx] = newStudent;
+  } else {
+    allStudents.push(newStudent);
+  }
   localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
 
-  currentStudent = newStudent;
-  localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+  // Save in Pending Registrations Queue for Super Admin
+  const pendingItem = {
+    reqId: 'REQ-STD-' + Date.now(),
+    role: 'student',
+    userId: studentId,
+    fullName: fullName,
+    email: email,
+    phone: parentPhone,
+    gradeOrSubj: `${grade} (${schoolName})`,
+    otpCode: otpCode,
+    status: 'PendingAdmin',
+    createdAt: new Date().toISOString(),
+    payload: newStudent
+  };
 
-  // Reset register avatar and birthdate picker
+  const pendingList = getPendingRegistrations().filter(p => !(p.role === 'student' && isIdMatch(p.userId, studentId)));
+  pendingList.unshift(pendingItem);
+  savePendingRegistrations(pendingList);
+
+  // Reset form
   registerAvatarBase64 = '';
   const preview = document.getElementById('regAvatarPreview');
-  if (preview) {
-    preview.innerHTML = '<i class="fa-solid fa-camera"></i>';
-  }
+  if (preview) preview.innerHTML = '<i class="fa-solid fa-camera"></i>';
   resetBirthDatePicker();
 
-  renderCurrentStudentProfile();
-  renderDashboardCharts();
-  document.body.classList.remove('auth-locked');
-  closeModal('authModal');
-  showToast('ลงทะเบียนสำเร็จเรียบร้อยแล้ว กำลังบันทึกลง Google Sheet...', 'info');
+  // Sync to Google Sheets & Admin Queue
+  syncRecordToGoogleSheet('registerPendingUser', pendingItem);
+  renderPendingApprovalsTable();
+  renderSuperAdminOverviewKpis();
 
-  syncRecordToGoogleSheet('registerStudent', newStudent);
+  // Open the Admin Random OTP Verification Modal immediately!
+  openOtpVerifyModalForPending(pendingItem);
+  showToast('สร้างคำขอสมัครสำเร็จ! กรุณากรอกรหัสยืนยันจากแอดมิน (หรือรอรับทางอีเมลเมื่อแอดมินกดยินยอม)', 'info');
 }
 
-// ----------------- ADMIN CONTROLS ----------------- //
+function handleTeacherLogin() {
+  if (!checkLoginRateLimit()) return;
+
+  const rawUser = (document.getElementById('teacherLoginUser')?.value || '').trim();
+  const rawPass = (document.getElementById('teacherLoginPass')?.value || '').trim();
+  const cleanUser = cleanIdString(rawUser);
+  const cleanPass = cleanIdString(rawPass);
+
+  if (!cleanUser || !cleanPass) {
+    showToast('กรุณากรอกรหัสอาจารย์ (Username) และรหัสผ่าน', 'warning');
+    return;
+  }
+
+  // Check if pending admin OTP verification
+  const pendingList = getPendingRegistrations();
+  const pendingMatch = pendingList.find(p => p.role === 'teacher' && isIdMatch(p.userId, cleanUser) && p.status !== 'Verified');
+  if (pendingMatch && pendingMatch.status === 'PendingAdmin') {
+    const subInList = subAdmins.find(s => isIdMatch(s.username, cleanUser));
+    if (!subInList || subInList.approvalStatus === 'PendingAdmin') {
+      openOtpVerifyModalForPending(pendingMatch);
+      showToast('บัญชีอาจารย์นี้อยู่ระหว่างรอการยืนยันรหัสสุ่มจากแอดมิน', 'info');
+      return;
+    }
+  }
+
+  const foundTeacher = subAdmins.find(s => {
+    const matchUser = isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser));
+    const matchPass = isIdMatch(s.password, cleanPass);
+    return matchUser && matchPass;
+  });
+
+  if (foundTeacher) {
+    if (foundTeacher.approvalStatus === 'PendingAdmin') {
+      const pItem = pendingList.find(p => isIdMatch(p.userId, foundTeacher.username)) || {
+        reqId: 'REQ-TCH-' + Date.now(),
+        role: 'teacher',
+        userId: foundTeacher.username,
+        fullName: foundTeacher.fullName,
+        email: foundTeacher.email || '',
+        phone: foundTeacher.phone || '',
+        gradeOrSubj: (foundTeacher.assignedSubjects || [foundTeacher.assignedSubject]).filter(Boolean).join(', '),
+        otpCode: foundTeacher.otpCode || generateRandomAdminOtp(),
+        status: 'PendingAdmin'
+      };
+      openOtpVerifyModalForPending(pItem);
+      showToast('กรุณากรอกรหัสยืนยันจากแอดมินเพื่อเปิดใช้งานบัญชีอาจารย์', 'warning');
+      return;
+    }
+
+    resetLoginFailures();
+    currentAdmin = foundTeacher;
+    document.body.classList.remove('auth-locked');
+    updateAdminUIVisibility(true);
+    closeModal('authModal');
+    switchView('teacher');
+    showToast(`ยินดีต้อนรับอาจารย์ ${foundTeacher.fullName || foundTeacher.username}`, 'success');
+  } else {
+    recordLoginFailure();
+    showToast('รหัสอาจารย์ หรือ รหัสผ่านไม่ถูกต้อง', 'error');
+  }
+}
+
+function handleTeacherRegister() {
+  const teacherId = cleanIdString(document.getElementById('regTeacherId')?.value || '');
+  const teacherPass = cleanIdString(document.getElementById('regTeacherPass')?.value || '');
+  const fullName = (document.getElementById('regTeacherName')?.value || '').trim();
+  const email = (document.getElementById('regTeacherEmail')?.value || '').trim();
+  const phone = normalizePhone(document.getElementById('regTeacherPhone')?.value || '');
+
+  const checkedNodes = document.querySelectorAll('input[name="regTeacherSubjChk"]:checked');
+  const selectedSubjects = Array.from(checkedNodes).map(cb => cb.value);
+
+  if (!teacherId || !teacherPass || !fullName || !email || !phone) {
+    showToast('กรุณากรอกรหัสอาจารย์ รหัสผ่าน ชื่อ-นามสกุล อีเมล และเบอร์โทรศัพท์ให้ครบถ้วน', 'warning');
+    return;
+  }
+
+  if (selectedSubjects.length === 0) {
+    showToast('กรุณาเลือกรายวิชาที่รับผิดชอบสอนอย่างน้อย 1 วิชา', 'warning');
+    return;
+  }
+
+  const isDup = subAdmins.some(s => isIdMatch(s.username, teacherId) && s.approvalStatus !== 'PendingAdmin');
+  if (isDup) {
+    showToast('รหัสประจำตัวอาจารย์นี้มีอยู่ในระบบแล้ว', 'error');
+    return;
+  }
+
+  loadAppSubjects();
+  const otpCode = generateRandomAdminOtp();
+  const subjNames = selectedSubjects.map(id => {
+    const found = appSubjects.find(x => x.id === id);
+    return found ? found.name : id;
+  }).join(', ');
+
+  const newTeacher = {
+    adminId: 'TCH-' + Date.now(),
+    username: teacherId,
+    password: teacherPass,
+    fullName: fullName,
+    email: email,
+    phone: phone,
+    role: 'TEACHER',
+    assignedSubject: selectedSubjects[0] || '',
+    assignedSubjects: selectedSubjects,
+    status: 'PendingAdmin',
+    approvalStatus: 'PendingAdmin',
+    otpCode: otpCode,
+    createdAt: new Date().toISOString().split('T')[0]
+  };
+
+  const existIdx = subAdmins.findIndex(s => isIdMatch(s.username, teacherId));
+  if (existIdx !== -1) {
+    subAdmins[existIdx] = newTeacher;
+  } else {
+    subAdmins.push(newTeacher);
+  }
+  localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+
+  const pendingItem = {
+    reqId: 'REQ-TCH-' + Date.now(),
+    role: 'teacher',
+    userId: teacherId,
+    fullName: fullName,
+    email: email,
+    phone: phone,
+    gradeOrSubj: `วิชาที่สอน: ${subjNames}`,
+    otpCode: otpCode,
+    status: 'PendingAdmin',
+    createdAt: new Date().toISOString(),
+    payload: newTeacher
+  };
+
+  const pendingList = getPendingRegistrations().filter(p => !(p.role === 'teacher' && isIdMatch(p.userId, teacherId)));
+  pendingList.unshift(pendingItem);
+  savePendingRegistrations(pendingList);
+
+  syncRecordToGoogleSheet('registerPendingUser', pendingItem);
+  renderPendingApprovalsTable();
+  renderSuperAdminOverviewKpis();
+
+  openOtpVerifyModalForPending(pendingItem);
+  showToast('ส่งคำขอสมัครอาจารย์สำเร็จ! กรุณากรอกรหัสยืนยันจากแอดมิน (หรือรอรับทางอีเมลเมื่อแอดมินกดยินยอม)', 'info');
+}
+
+function handleInlineAdminLogin() {
+  if (!checkLoginRateLimit()) return;
+  const rawPass = (document.getElementById('inlineAdminPassInput')?.value || '').trim();
+  const pass = cleanIdString(rawPass);
+
+  if (isIdMatch(pass, MASTER_ADMIN_PASS)) {
+    resetLoginFailures();
+    currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
+    document.body.classList.remove('auth-locked');
+    updateAdminUIVisibility(true);
+    closeModal('authModal');
+    switchView('admin');
+    showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
+  } else {
+    recordLoginFailure();
+    showToast('รหัสแอดมินสูงสุดไม่ถูกต้อง', 'error');
+  }
+}
+
+// ----------------- OTP VERIFICATION MODAL & ADMIN APPROVAL CENTER ----------------- //
+
+function openOtpVerifyModalForPending(pendingItem) {
+  activePendingOtpUser = pendingItem;
+  const summaryEl = document.getElementById('otpVerifyUserSummary');
+  const lookupGroup = document.getElementById('otpLookupIdGroup');
+  const codeInput = document.getElementById('otpVerifyCodeInput');
+
+  if (lookupGroup) lookupGroup.style.display = 'none';
+  if (codeInput) codeInput.value = '';
+
+  if (summaryEl && pendingItem) {
+    const roleBadge = pendingItem.role === 'teacher' ? 'อาจารย์ผู้สอน' : 'นักเรียน';
+    const statusText = pendingItem.status === 'Approved'
+      ? '<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> แอดมินกดยินยอมแล้ว (ส่งรหัสไปที่อีเมลแล้ว)</span>'
+      : '<span style="color: #b45309; font-weight: 700;"><i class="fa-solid fa-hourglass-half"></i> รอแอดมินกดยินยอม / กรอกรหัสยืนยัน</span>';
+
+    summaryEl.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+        <span style="font-weight: 700; color: var(--text-dark);">${escapeHtml(pendingItem.fullName)} (${escapeHtml(pendingItem.userId)})</span>
+        <span class="activity-badge badge-upcoming" style="font-size: 0.72rem;">${roleBadge}</span>
+      </div>
+      <div style="font-size: 0.78rem; color: var(--text-secondary);">อีเมลรับรหัสอัตโนมัติ: <b>${escapeHtml(pendingItem.email || '-')}</b></div>
+      <div style="font-size: 0.78rem; margin-top: 0.3rem;">สถานะ: ${statusText}</div>
+    `;
+  }
+
+  openModal('otpVerifyModal');
+}
+
+function openOtpVerifyModalPrompt(defaultRole = 'student') {
+  activePendingOtpUser = null;
+  const summaryEl = document.getElementById('otpVerifyUserSummary');
+  const lookupGroup = document.getElementById('otpLookupIdGroup');
+  const lookupInput = document.getElementById('otpLookupIdInput');
+  const codeInput = document.getElementById('otpVerifyCodeInput');
+
+  if (lookupGroup) lookupGroup.style.display = 'block';
+  if (lookupInput) lookupInput.value = '';
+  if (codeInput) codeInput.value = '';
+  if (summaryEl) {
+    summaryEl.innerHTML = `<div style="font-weight: 600; color: var(--text-dark);">กรอกรหัสประจำตัวที่สมัครไว้ และรหัสยืนยัน 6 หลักที่ได้รับจากอีเมลหรือแอดมิน</div>`;
+  }
+  openModal('otpVerifyModal');
+}
+
+function verifyRegistrationOtpCode() {
+  const codeInput = document.getElementById('otpVerifyCodeInput');
+  const lookupInput = document.getElementById('otpLookupIdInput');
+  const rawCode = cleanIdString(codeInput ? codeInput.value : '');
+
+  if (!rawCode) {
+    showToast('กรุณากรอกรหัสยืนยัน 6 หลักจากแอดมินหรืออีเมล', 'warning');
+    return;
+  }
+
+  const pendingList = getPendingRegistrations();
+  let targetItem = activePendingOtpUser;
+
+  if (!targetItem) {
+    const lookupId = cleanIdString(lookupInput ? lookupInput.value : '');
+    if (!lookupId) {
+      showToast('กรุณากรอกรหัสนักเรียนหรือรหัสอาจารย์ที่สมัครไว้', 'warning');
+      return;
+    }
+    targetItem = pendingList.find(p => isIdMatch(p.userId, lookupId));
+  } else {
+    // Refresh from storage in case admin regenerated or approved
+    const fresh = pendingList.find(p => isIdMatch(p.userId, targetItem.userId) && p.role === targetItem.role);
+    if (fresh) targetItem = fresh;
+  }
+
+  if (!targetItem) {
+    showToast('ไม่พบรายการคำขอสมัครของรหัสนี้ กรุณาตรวจสอบรหัสอีกครั้ง', 'error');
+    return;
+  }
+
+  if (!isIdMatch(rawCode, targetItem.otpCode)) {
+    recordLoginFailure();
+    showToast('รหัสยืนยันไม่ถูกต้อง! กรุณาตรวจสอบรหัสสุ่มจากแอดมินหรือในอีเมลของคุณ', 'error');
+    return;
+  }
+
+  resetLoginFailures();
+  targetItem.status = 'Verified';
+  savePendingRegistrations(pendingList);
+
+  if (targetItem.role === 'student') {
+    const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, targetItem.userId));
+    if (sIdx !== -1) {
+      allStudents[sIdx].status = 'Active';
+      allStudents[sIdx].approvalStatus = 'Approved';
+      currentStudent = allStudents[sIdx];
+    } else if (targetItem.payload) {
+      targetItem.payload.status = 'Active';
+      targetItem.payload.approvalStatus = 'Approved';
+      allStudents.push(targetItem.payload);
+      currentStudent = targetItem.payload;
+    }
+    localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+    localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+
+    renderCurrentStudentProfile();
+    renderDashboardCharts();
+    document.body.classList.remove('auth-locked');
+    closeModal('otpVerifyModal');
+    closeModal('authModal');
+    playSuccessSound();
+    showToast(`ยืนยันรหัสสำเร็จ! ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
+    syncRecordToGoogleSheet('registerStudent', currentStudent);
+  } else if (targetItem.role === 'teacher') {
+    const tIdx = subAdmins.findIndex(s => isIdMatch(s.username, targetItem.userId));
+    if (tIdx !== -1) {
+      subAdmins[tIdx].status = 'Active';
+      subAdmins[tIdx].approvalStatus = 'Approved';
+      currentAdmin = subAdmins[tIdx];
+    } else if (targetItem.payload) {
+      targetItem.payload.status = 'Active';
+      targetItem.payload.approvalStatus = 'Approved';
+      subAdmins.push(targetItem.payload);
+      currentAdmin = targetItem.payload;
+    }
+    localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+
+    document.body.classList.remove('auth-locked');
+    updateAdminUIVisibility(true);
+    closeModal('otpVerifyModal');
+    closeModal('authModal');
+    playSuccessSound();
+    switchView('teacher');
+    showToast(`ยืนยันรหัสอาจารย์สำเร็จ! ยินดีต้อนรับอาจารย์ ${currentAdmin.fullName}`, 'success');
+    syncRecordToGoogleSheet('addSubAdmin', currentAdmin);
+  }
+
+  renderPendingApprovalsTable();
+  renderSuperAdminOverviewKpis();
+}
+
+async function checkOtpApprovalStatus() {
+  const lookupInput = document.getElementById('otpLookupIdInput');
+  const userId = activePendingOtpUser ? activePendingOtpUser.userId : cleanIdString(lookupInput ? lookupInput.value : '');
+  if (!userId) {
+    showToast('กรุณากรอกรหัสที่สมัครไว้ก่อนตรวจสอบสถานะ', 'warning');
+    return;
+  }
+
+  const pendingList = getPendingRegistrations();
+  const localItem = pendingList.find(p => isIdMatch(p.userId, userId));
+
+  // Check remote Google Sheet if configured
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (url && !url.includes('docs.google.com/spreadsheets')) {
+    try {
+      const resp = await fetch(`${url}?action=checkRegistrationStatus&userId=${encodeURIComponent(userId)}`);
+      const json = await resp.json();
+      if (json && json.success && json.registration) {
+        if (localItem) {
+          localItem.status = json.registration.status || localItem.status;
+          if (json.registration.otpCode) localItem.otpCode = cleanIdString(json.registration.otpCode);
+          savePendingRegistrations(pendingList);
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (localItem) {
+    openOtpVerifyModalForPending(localItem);
+    if (localItem.status === 'Approved' || localItem.status === 'Verified') {
+      showToast(`แอดมินกดยินยอมอนุมัติแล้ว! รหัสยืนยันถูกส่งไปที่อีเมล ${localItem.email} แล้ว`, 'success');
+    } else {
+      showToast('ยังอยู่ระหว่างรอแอดมินกดยินยอม (ท่านสามารถแจ้งแอดมินให้กดอนุมัติได้ทันที)', 'info');
+    }
+  } else {
+    showToast('ไม่พบคำขอสมัครของรหัสนี้ในระบบ', 'warning');
+  }
+}
+
+// ----------------- ADMIN & TEACHER VISIBILITY CONTROLS ----------------- //
 
 function toggleSubAdminField() {
   const group = document.getElementById('subAdminUsernameGroup');
   const btn = document.getElementById('toggleSubAdminBtn');
   if (group.style.display === 'none') {
     group.style.display = 'block';
-    btn.innerText = 'เข้าสู่ระบบด้วยรหัส Master Admin?';
+    btn.innerText = 'เข้าสู่ระบบด้วยรหัสแอดมินสูงสุด (Master Admin)?';
   } else {
     group.style.display = 'none';
-    btn.innerText = 'เข้าสู่ระบบด้วยบัญชีแอดมินรอง?';
+    btn.innerText = 'เข้าสู่ระบบด้วยบัญชีอาจารย์ผู้สอน / แอดมินรอง?';
   }
 }
 
-function updateAdminUIVisibility(isAdmin) {
+function updateAdminUIVisibility(isAuthenticated) {
+  const isSuper = isAuthenticated && currentAdmin && currentAdmin.role === 'SuperAdmin';
+  const isTeacherOrAdmin = isAuthenticated && !!currentAdmin;
+
   const navAdmin = document.getElementById('nav-admin');
   const mNavAdmin = document.getElementById('m-nav-admin');
+  const navTeacher = document.getElementById('nav-teacher');
+  const mNavTeacher = document.getElementById('m-nav-teacher');
   const btnSettings = document.getElementById('btnSettingsHeader');
   const btnTabLogo = document.getElementById('btnTabLogo');
 
-  if (navAdmin) navAdmin.style.display = isAdmin ? 'inline-flex' : 'none';
-  if (mNavAdmin) mNavAdmin.style.display = isAdmin ? 'flex' : 'none';
-  if (btnSettings) btnSettings.style.display = isAdmin ? 'flex' : 'none';
-  if (btnTabLogo) {
-    btnTabLogo.style.display = (isAdmin && currentAdmin && currentAdmin.role === 'SuperAdmin') ? 'inline-block' : 'none';
-  }
+  if (navTeacher) navTeacher.style.display = isTeacherOrAdmin ? 'inline-flex' : 'none';
+  if (mNavTeacher) mNavTeacher.style.display = isTeacherOrAdmin ? 'flex' : 'none';
+
+  if (navAdmin) navAdmin.style.display = isSuper ? 'inline-flex' : 'none';
+  if (mNavAdmin) mNavAdmin.style.display = isSuper ? 'flex' : 'none';
+  if (btnSettings) btnSettings.style.display = isSuper ? 'flex' : 'none';
+  if (btnTabLogo) btnTabLogo.style.display = isSuper ? 'inline-block' : 'none';
 }
 
 function handleAdminLogin() {
+  if (!checkLoginRateLimit()) return;
+
   const rawPass = (document.getElementById('adminPassInput')?.value || '').trim();
   const pass = cleanIdString(rawPass);
-  const user = (document.getElementById('subAdminUserInput')?.value || '').trim();
+  const user = cleanIdString((document.getElementById('subAdminUserInput')?.value || '').trim());
 
-  if (isIdMatch(pass, MASTER_ADMIN_PASS)) {
-    currentAdmin = { username: 'MasterAdmin', role: 'SuperAdmin' };
+  if (isIdMatch(pass, MASTER_ADMIN_PASS) && !user) {
+    resetLoginFailures();
+    currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
+    document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(true);
     closeModal('adminAuthModal');
     switchView('admin');
-    showToast('เข้าสู่ระบบผู้ดูแลระบบหลักสำเร็จ', 'success');
+    showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
     return;
   }
 
-  // ตรวจสอบแอดมินรอง (รองรับรหัสผ่านที่มีเลข 0 นำหน้า)
-  const foundSub = subAdmins.find(s => s.username === user && isIdMatch(s.password, pass));
+  const foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
   if (foundSub) {
+    if (foundSub.approvalStatus === 'PendingAdmin') {
+      showToast('บัญชีอาจารย์นี้ยังไม่ได้รับการยืนยันรหัสจากแอดมินสูงสุด', 'warning');
+      return;
+    }
+    resetLoginFailures();
     currentAdmin = foundSub;
+    document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(true);
     closeModal('adminAuthModal');
-    switchView('admin');
+    switchView(foundSub.role === 'SuperAdmin' ? 'admin' : 'teacher');
     showToast(`ยินดีต้อนรับอาจารย์ ${foundSub.fullName || foundSub.username}`, 'success');
     return;
   }
 
+  recordLoginFailure();
   showToast('รหัสผ่านหรือบัญชีผู้ดูแลระบบไม่ถูกต้อง', 'error');
 }
 
@@ -3716,10 +4590,13 @@ function adminLogout() {
   currentAdmin = null;
   updateAdminUIVisibility(false);
   switchView('dashboard');
-  showToast('ออกจากระบบแอดมินแล้ว', 'info');
+  showToast('ออกจากระบบผู้ดูแล/อาจารย์แล้ว', 'info');
 }
 
-// ทางลัดสำหรับคุณครู/แอดมิน: คลิกโลโก้ 3 ครั้งเปิดหน้าต่างใส่รหัสแอดมินทันที
+function teacherLogout() {
+  adminLogout();
+}
+
 let brandClickCount = 0;
 let brandClickTimer = null;
 function handleBrandLogoClick() {
@@ -3736,6 +4613,30 @@ function handleBrandLogoClick() {
   }
 }
 
+// ----------------- SUPER ADMIN CONTROL CENTER ----------------- //
+
+function renderSuperAdminOverviewKpis() {
+  const kpiStd = document.getElementById('adminKpiStudentsCount');
+  const kpiTch = document.getElementById('adminKpiTeachersCount');
+  const kpiPending = document.getElementById('adminKpiPendingCount');
+  const kpiPrayers = document.getElementById('adminKpiPrayersToday');
+  const badgePending = document.getElementById('pendingApprovalsBadgeCount');
+
+  const activeStudentsCount = allStudents.length;
+  const activeTeachersCount = subAdmins.length;
+  const pendingList = getPendingRegistrations().filter(p => p.status === 'PendingAdmin');
+  const prayersCount = todayPrayers.length;
+
+  if (kpiStd) kpiStd.innerText = activeStudentsCount;
+  if (kpiTch) kpiTch.innerText = activeTeachersCount;
+  if (kpiPending) kpiPending.innerText = pendingList.length;
+  if (kpiPrayers) kpiPrayers.innerText = prayersCount;
+  if (badgePending) {
+    badgePending.innerText = pendingList.length;
+    badgePending.style.display = pendingList.length > 0 ? 'inline-block' : 'none';
+  }
+}
+
 function switchAdminTab(tabName, element) {
   document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.admin-content-tab').forEach(tab => tab.style.display = 'none');
@@ -3744,7 +4645,11 @@ function switchAdminTab(tabName, element) {
   const target = document.getElementById(`admin-tab-${tabName}`);
   if (target) target.style.display = 'block';
 
-  if (tabName === 'grading') {
+  renderSuperAdminOverviewKpis();
+
+  if (tabName === 'approvals') {
+    renderPendingApprovalsTable();
+  } else if (tabName === 'grading') {
     populateGradingSubjectSelect();
     renderGradingStudentsTable();
   } else if (tabName === 'subjects') {
@@ -3757,29 +4662,228 @@ function switchAdminTab(tabName, element) {
   }
 }
 
+function renderPendingApprovalsTable() {
+  const tbody = document.getElementById('adminPendingApprovalsTableBody');
+  if (!tbody) return;
+
+  const list = getPendingRegistrations();
+  renderSuperAdminOverviewKpis();
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-check" style="font-size: 1.4rem; margin-bottom: 0.4rem; display: block; color: #94a3b8;"></i>
+          ไม่มีรายการคำขอสมัครที่รออนุมัติในขณะนี้
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    const roleLabel = item.role === 'teacher'
+      ? '<span class="activity-badge badge-active">อาจารย์ผู้สอน</span>'
+      : '<span class="activity-badge badge-upcoming">นักเรียน</span>';
+
+    const isApproved = item.status === 'Approved' || item.status === 'Verified';
+    const statusBadge = isApproved
+      ? `<span class="activity-badge badge-active"><i class="fa-solid fa-check"></i> อนุมัติและส่งอีเมลแล้ว</span>`
+      : `<span class="activity-badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;"><i class="fa-solid fa-clock"></i> รอแอดมินกดยินยอม</span>`;
+
+    return `
+      <tr>
+        <td>${roleLabel}</td>
+        <td><b>${escapeHtml(item.userId)}</b></td>
+        <td style="font-weight: 600;">${escapeHtml(item.fullName)}</td>
+        <td>
+          <div><i class="fa-regular fa-envelope"></i> ${escapeHtml(item.email || '-')}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-phone"></i> ${escapeHtml(item.phone || '-')}</div>
+        </td>
+        <td style="font-size: 0.82rem;">${escapeHtml(item.gradeOrSubj || '-')}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <span class="admin-otp-badge" title="รหัสยืนยันแบบสุ่มเฉพาะแอดมิน">${escapeHtml(item.otpCode)}</span>
+            <button class="btn btn-secondary btn-sm" onclick="adminRegenerateRandomOtp('${escapeHtml(item.reqId)}')" title="สุ่มรหัสยืนยันชุดใหม่" style="padding: 0.22rem 0.45rem; font-size: 0.74rem;">
+              <i class="fa-solid fa-dice"></i> สุ่มใหม่
+            </button>
+          </div>
+          <div style="margin-top: 0.25rem;">${statusBadge}</div>
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-primary btn-sm" onclick="adminApproveRegistration('${escapeHtml(item.reqId)}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.3rem;">
+            <i class="fa-solid fa-paper-plane"></i> ยินยอม & ส่งรหัสเข้าอีเมล
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="adminRejectRegistration('${escapeHtml(item.reqId)}')" style="padding: 0.3rem 0.55rem; font-size: 0.78rem;">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function adminRegenerateRandomOtp(reqId) {
+  const list = getPendingRegistrations();
+  const idx = list.findIndex(p => p.reqId === reqId);
+  if (idx === -1) return;
+
+  const newOtp = generateRandomAdminOtp();
+  list[idx].otpCode = newOtp;
+  savePendingRegistrations(list);
+
+  // Sync updated OTP to student/teacher record as well
+  const item = list[idx];
+  if (item.role === 'student') {
+    const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, item.userId));
+    if (sIdx !== -1) {
+      allStudents[sIdx].otpCode = newOtp;
+      localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+    }
+  } else {
+    const tIdx = subAdmins.findIndex(s => isIdMatch(s.username, item.userId));
+    if (tIdx !== -1) {
+      subAdmins[tIdx].otpCode = newOtp;
+      localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+    }
+  }
+
+  renderPendingApprovalsTable();
+  showToast(`สุ่มรหัสยืนยันชุดใหม่สำหรับ ${item.fullName} คือ: ${newOtp}`, 'info');
+}
+
+async function adminApproveRegistration(reqId) {
+  const list = getPendingRegistrations();
+  const idx = list.findIndex(p => p.reqId === reqId);
+  if (idx === -1) return;
+
+  const item = list[idx];
+  item.status = 'Approved';
+  item.approvedAt = new Date().toISOString();
+  savePendingRegistrations(list);
+
+  // Activate in local allStudents or subAdmins immediately
+  if (item.role === 'student') {
+    const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, item.userId));
+    if (sIdx !== -1) {
+      allStudents[sIdx].status = 'Active';
+      allStudents[sIdx].approvalStatus = 'Approved';
+    } else if (item.payload) {
+      item.payload.status = 'Active';
+      item.payload.approvalStatus = 'Approved';
+      allStudents.push(item.payload);
+    }
+    localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+  } else if (item.role === 'teacher') {
+    const tIdx = subAdmins.findIndex(s => isIdMatch(s.username, item.userId));
+    if (tIdx !== -1) {
+      subAdmins[tIdx].status = 'Active';
+      subAdmins[tIdx].approvalStatus = 'Approved';
+    } else if (item.payload) {
+      item.payload.status = 'Active';
+      item.payload.approvalStatus = 'Approved';
+      subAdmins.push(item.payload);
+    }
+    localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+  }
+
+  renderPendingApprovalsTable();
+  renderAdminStudentsTable();
+  renderSubAdminsTable();
+  renderSuperAdminOverviewKpis();
+
+  // Trigger automatic email dispatch via Google Apps Script (MailApp.sendEmail)
+  showToast(`กำลังส่งรหัสยืนยัน (${item.otpCode}) ไปยังอีเมล ${item.email} อัตโนมัติ...`, 'info');
+  await syncRecordToGoogleSheet('approveRegistrationAndSendEmail', {
+    reqId: item.reqId,
+    role: item.role,
+    userId: item.userId,
+    fullName: item.fullName,
+    email: item.email,
+    phone: item.phone,
+    otpCode: item.otpCode,
+    gradeOrSubj: item.gradeOrSubj,
+    payload: item.payload
+  });
+
+  playSuccessSound();
+  showToast(`อนุมัติสำเร็จ! ระบบส่งรหัสยืนยัน [${item.otpCode}] ไปยังอีเมล ${item.email} อัตโนมัติแล้ว`, 'success');
+}
+
+function adminRejectRegistration(reqId) {
+  if (!confirm('ต้องการลบคำขอสมัครรายการนี้ใช่หรือไม่?')) return;
+  let list = getPendingRegistrations();
+  const target = list.find(p => p.reqId === reqId);
+  list = list.filter(p => p.reqId !== reqId);
+  savePendingRegistrations(list);
+
+  if (target) {
+    if (target.role === 'student') {
+      allStudents = allStudents.filter(s => !(isIdMatch(s.studentId, target.userId) && s.approvalStatus === 'PendingAdmin'));
+      localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+    } else {
+      subAdmins = subAdmins.filter(s => !(isIdMatch(s.username, target.userId) && s.approvalStatus === 'PendingAdmin'));
+      localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+    }
+  }
+
+  renderPendingApprovalsTable();
+  renderSuperAdminOverviewKpis();
+  showToast('ลบคำขอสมัครเรียบร้อยแล้ว', 'info');
+}
+
 function renderAdminStudentsTable(filteredList = null) {
   const tbody = document.getElementById('adminStudentsTableBody');
   if (!tbody) return;
 
   const list = filteredList || allStudents;
+  renderSuperAdminOverviewKpis();
+
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          ยังไม่มีรายชื่อนักเรียนในระบบ (สามารถกดปุ่ม "+ เพิ่มนักเรียนใหม่" ด้านบนได้เลย)
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
   tbody.innerHTML = list.map(s => {
     const sId = cleanIdString(s.studentId);
     const sPhone = normalizePhone(s.parentPhone);
     const prayerCount = todayPrayers.filter(p => isIdMatch(p.studentId, sId)).length;
+    const gpaVal = recalculateStudentGpa(s);
+    const h = getStudentHasanat(sId);
+    const qPage = (h && h.quran && h.quran.currentPage) || 0;
+    const memCount = (h && h.memorization && h.memorization.count) || 0;
+
     return `
     <tr>
-      <td><b>${sId}</b></td>
-      <td>${s.fullName}</td>
-      <td><span class="activity-badge badge-upcoming">${s.grade}</span></td>
-      <td>${s.schoolName}</td>
-      <td>${sPhone}</td>
-      <td>${s.attendance ? s.attendance.present : 0} วัน</td>
-      <td>${prayerCount} เวลา</td>
-      <td>${activities.filter(a => a.checkedIn).length} รายการ</td>
-      <td style="text-align: right;">
-        <button class="btn btn-secondary" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;" onclick="viewStudentDetails('${sId}')">
-          <i class="fa-solid fa-eye"></i> ดูข้อมูล
+      <td><b>${escapeHtml(sId)}</b></td>
+      <td>
+        <div style="font-weight: 600; color: var(--text-dark);">${escapeHtml(s.fullName)}</div>
+        <div style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(s.email || '')}</div>
+      </td>
+      <td><span class="activity-badge badge-upcoming">${escapeHtml(s.grade)}</span></td>
+      <td>${escapeHtml(s.schoolName || '-')}</td>
+      <td>${escapeHtml(sPhone)}</td>
+      <td>
+        <span style="font-weight: 600;">${s.attendance ? s.attendance.present : 0} วัน</span>
+        <span style="font-size: 0.74rem; color: var(--text-muted);"> (สาย ${s.attendance ? s.attendance.late : 0} / ขาด ${s.attendance ? s.attendance.absent : 0})</span>
+      </td>
+      <td>
+        <div>ละหมาดวันนี้: <b>${prayerCount}/5</b></div>
+        <div style="font-size: 0.74rem; color: var(--text-muted);">กุรอานหน้า ${qPage} • จำ ${memCount} ซูเราะห์</div>
+      </td>
+      <td><span class="subject-grade-pill-val">GPA ${escapeHtml(gpaVal)}</span></td>
+      <td style="text-align: right; white-space: nowrap;">
+        <button class="btn btn-primary btn-sm" style="padding: 0.28rem 0.6rem; font-size: 0.78rem; margin-right: 0.25rem;" onclick="viewStudentDetails('${escapeHtml(sId)}')">
+          <i class="fa-solid fa-sliders"></i> แก้ไขเชิงลึก
+        </button>
+        <button class="btn btn-danger btn-sm" style="padding: 0.28rem 0.5rem; font-size: 0.78rem;" onclick="deleteStudent('${escapeHtml(sId)}')" title="ลบนักเรียน">
+          <i class="fa-solid fa-trash"></i>
         </button>
       </td>
     </tr>
@@ -3800,7 +4904,7 @@ function filterAdminStudents() {
     const sPhone = cleanPhoneString(s.parentPhone);
     const sPhoneWithoutZero = sPhone.replace(/^0+/, '');
 
-    const matchName = s.fullName.toLowerCase().includes(search);
+    const matchName = (s.fullName || '').toLowerCase().includes(search);
     const matchId = sId.includes(searchClean) || (searchWithoutZero && sIdWithoutZero.includes(searchWithoutZero));
     const matchPhone = sPhone.includes(searchClean) || (searchWithoutZero && sPhoneWithoutZero.includes(searchWithoutZero));
     const matchSearch = !rawSearch || matchName || matchId || matchPhone;
@@ -3811,75 +4915,337 @@ function filterAdminStudents() {
   renderAdminStudentsTable(filtered);
 }
 
+let currentAdminEditingStudentOriginalId = null;
+
+function openAdminAddStudentModal() {
+  const newTempId = 'STD-' + String(allStudents.length + 1).padStart(4, '0');
+  const blankStudent = {
+    studentId: newTempId,
+    fullName: 'นักเรียนใหม่',
+    email: '',
+    schoolName: 'โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี',
+    grade: 'มัธยมศึกษาปีที่ 1',
+    birthDate: '01012555',
+    parentPhone: '0810000000',
+    status: 'Active',
+    approvalStatus: 'Approved',
+    registeredAt: new Date().toISOString(),
+    skills: {},
+    subjectGrades: {},
+    gpa: '0.00',
+    attendance: { present: 0, late: 0, leave: 0, absent: 0 }
+  };
+  allStudents.unshift(blankStudent);
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+  renderAdminStudentsTable();
+  viewStudentDetails(newTempId);
+}
+
 function viewStudentDetails(studentId) {
   const student = allStudents.find(s => isIdMatch(s.studentId, studentId));
   if (!student) return;
 
+  loadAppSubjects();
   const cleanId = cleanIdString(student.studentId);
+  currentAdminEditingStudentOriginalId = cleanId;
   const cleanPhone = normalizePhone(student.parentPhone);
   const cleanBD = normalizeBirthDate(student.birthDate);
 
-  const modal = document.getElementById('studentDetailModal');
   const title = document.getElementById('studentDetailTitle');
   const content = document.getElementById('studentDetailContent');
   const btnDelete = document.getElementById('btnAdminDeleteStudent');
 
-  title.innerText = `ข้อมูลนักเรียน: ${student.fullName} (${cleanId})`;
+  if (title) title.innerHTML = `<i class="fa-solid fa-user-pen"></i> จัดการและแก้ไขข้อมูลเชิงลึก: ${escapeHtml(student.fullName)} (${escapeHtml(cleanId)})`;
+
   const hasanat = getStudentHasanat(cleanId);
-  const qStars = (hasanat && hasanat.quran && hasanat.quran.stars) || 0;
-  const qJuz = (hasanat && hasanat.quran && hasanat.quran.juzCompleted) || 0;
   const qPage = (hasanat && hasanat.quran && hasanat.quran.currentPage) || 0;
+  const qJuz = (hasanat && hasanat.quran && hasanat.quran.juzCompleted) || 0;
+  const qKhatam = (hasanat && hasanat.quran && hasanat.quran.khatamCount) || 0;
   const memCount = (hasanat && hasanat.memorization && hasanat.memorization.count) || 0;
   const sunnahRakaat = (hasanat && hasanat.sunnah && hasanat.sunnah.totalRakaat) || 0;
 
+  const att = student.attendance || { present: 0, late: 0, leave: 0, absent: 0 };
+  const gradesMap = student.subjectGrades || student.skills || {};
+
+  // Load student's prayer logs so Admin can inspect or delete any individual prayer entry
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+  const studentPrayers = historyList.filter(p => isIdMatch(p.studentId, cleanId)).slice(0, 10);
+
+  const gradeOptions = [
+    { val: '0', label: '0 (รอผล / ไม่ผ่าน)' },
+    { val: '1', label: 'เกรด 1.0' },
+    { val: '1.5', label: 'เกรด 1.5' },
+    { val: '2', label: 'เกรด 2.0' },
+    { val: '2.5', label: 'เกรด 2.5' },
+    { val: '3', label: 'เกรด 3.0' },
+    { val: '3.5', label: 'เกรด 3.5' },
+    { val: '4', label: 'เกรด 4.0 (ดีเยี่ยม)' }
+  ];
+
+  const subjectsEditorHtml = appSubjects.map(subj => {
+    const curG = normalizeGrade1To4(gradesMap[subj.id]);
+    const opts = gradeOptions.map(o => `<option value="${o.val}" ${parseFloat(o.val) === curG ? 'selected' : ''}>${o.label}</option>`).join('');
+    return `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: #ffffff; border: 1px solid #e2e8f0; padding: 0.45rem 0.65rem; border-radius: 6px;">
+        <span style="font-size: 0.82rem; font-weight: 600; color: #1e293b;">${escapeHtml(subj.name)}</span>
+        <select class="form-control admin-edit-std-subj-grade" data-subj-id="${escapeHtml(subj.id)}" style="width: 145px; height: 32px; font-size: 0.8rem; font-weight: 700; padding: 0 0.45rem;">
+          ${opts}
+        </select>
+      </div>
+    `;
+  }).join('');
+
   content.innerHTML = `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
-      <div><b>โรงเรียน:</b> ${student.schoolName}</div>
-      <div><b>ระดับชั้น:</b> ${student.grade}</div>
-      <div><b>วันเดือนปีเกิด:</b> ${cleanBD}</div>
-      <div><b>เบอร์โทรผู้ปกครอง:</b> ${cleanPhone}</div>
-      <div><b>เกรดเฉลี่ย (GPA):</b> ${student.gpa || '-'}</div>
-      <div><b>สถานะ:</b> ${student.status}</div>
-    </div>
-    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
-      <div style="font-weight: 700; color: #166534; margin-bottom: 0.4rem;"><i class="fa-solid fa-hands-praying"></i> สถิติผลบุญและศาสนกิจ (KHALIFAH HASANAT):</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; font-size: 0.88rem;">
-        <div>⭐ <b>ดาวกุรอานสะสม:</b> ${qStars} ดาว (จบ ${qJuz}/30 ยุซ)</div>
-        <div>📖 <b>อ่านถึงหน้า:</b> ${qPage}/604 หน้า</div>
-        <div>🧠 <b>ท่องจำซูเราะห์:</b> ${memCount}/114 ซูเราะห์</div>
-        <div>🕌 <b>ละหมาดสุนัตล่าสุด:</b> ${sunnahRakaat} ร็อกอะฮ์/วัน</div>
+    <!-- Section 1: ข้อมูลส่วนตัวและบัญชี -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 0.95rem; margin-bottom: 0.9rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.65rem;">
+        <i class="fa-solid fa-id-card"></i> 1. ข้อมูลประวัตินักเรียนและบัญชีผู้ใช้
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.65rem;">
+        <div>
+          <label class="form-label" style="font-size: 0.76rem;">รหัสนักเรียน (รหัสผ่าน)</label>
+          <input type="text" class="form-control" id="adminEditStdId" value="${escapeHtml(cleanId)}" style="height: 36px; font-size: 0.85rem; font-weight: 700;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.76rem;">ชื่อ - นามสกุล</label>
+          <input type="text" class="form-control" id="adminEditStdName" value="${escapeHtml(student.fullName)}" style="height: 36px; font-size: 0.85rem;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.76rem;">ระดับชั้นมัธยมศึกษา</label>
+          <select class="form-control" id="adminEditStdGrade" style="height: 36px; font-size: 0.85rem;">
+            ${['มัธยมศึกษาปีที่ 1','มัธยมศึกษาปีที่ 2','มัธยมศึกษาปีที่ 3','มัธยมศึกษาปีที่ 4','มัธยมศึกษาปีที่ 5','มัธยมศึกษาปีที่ 6'].map(g => `<option value="${g}" ${student.grade === g ? 'selected' : ''}>${g}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.76rem;">โรงเรียน / สถาบัน</label>
+          <input type="text" class="form-control" id="adminEditStdSchool" value="${escapeHtml(student.schoolName || '')}" style="height: 36px; font-size: 0.85rem;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.76rem;">เบอร์โทรศัพท์ผู้ปกครอง (User)</label>
+          <input type="text" class="form-control" id="adminEditStdPhone" value="${escapeHtml(cleanPhone)}" style="height: 36px; font-size: 0.85rem;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.76rem;">อีเมลนักเรียน</label>
+          <input type="email" class="form-control" id="adminEditStdEmail" value="${escapeHtml(student.email || '')}" style="height: 36px; font-size: 0.85rem;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.76rem;">รหัสวันเกิด 8 หลัก (DDMMYYYY)</label>
+          <input type="text" class="form-control" id="adminEditStdBirthDate" value="${escapeHtml(cleanBD)}" style="height: 36px; font-size: 0.85rem;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.76rem;">สถานะบัญชี</label>
+          <select class="form-control" id="adminEditStdStatus" style="height: 36px; font-size: 0.85rem;">
+            <option value="Active" ${student.status === 'Active' ? 'selected' : ''}>Active (ปกติ)</option>
+            <option value="PendingAdmin" ${student.status === 'PendingAdmin' ? 'selected' : ''}>PendingAdmin (รอยืนยัน)</option>
+            <option value="Suspended" ${student.status === 'Suspended' ? 'selected' : ''}>Suspended (ระงับชั่วคราว)</option>
+          </select>
+        </div>
       </div>
     </div>
-    <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md);">
-      <b>สถิติการมาเรียน:</b> มาเรียน ${student.attendance ? student.attendance.present : 0} วัน, 
-      มาสาย ${student.attendance ? student.attendance.late : 0}, 
-      ลา ${student.attendance ? student.attendance.leave : 0}, 
-      ขาด ${student.attendance ? student.attendance.absent : 0}
+
+    <!-- Section 2: สถิติการมาเรียน (Attendance) -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 0.95rem; margin-bottom: 0.9rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.65rem;">
+        <i class="fa-solid fa-calendar-check"></i> 2. แก้ไขสถิติการมาเรียน (วัน)
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem;">
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">มาเรียน (วัน)</label>
+          <input type="number" min="0" class="form-control" id="adminEditAttPresent" value="${att.present || 0}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">มาสาย (ครั้ง)</label>
+          <input type="number" min="0" class="form-control" id="adminEditAttLate" value="${att.late || 0}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">ลา (ครั้ง)</label>
+          <input type="number" min="0" class="form-control" id="adminEditAttLeave" value="${att.leave || 0}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">ขาดเรียน (ครั้ง)</label>
+          <input type="number" min="0" class="form-control" id="adminEditAttAbsent" value="${att.absent || 0}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: เกรดรายวิชา 1 - 4 (เชื่อมกราฟเรดาร์ทักษะ) -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 0.95rem; margin-bottom: 0.9rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+        <span style="font-weight: 700; font-size: 0.9rem; color: #0f172a;"><i class="fa-solid fa-chart-pie"></i> 3. เกรดรายวิชา (ระดับ 1 - 4 แสดงผลในกราฟทักษะ)</span>
+        <span class="subject-grade-pill-val">GPAX: ${escapeHtml(recalculateStudentGpa(student))}</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.5rem;">
+        ${subjectsEditorHtml}
+      </div>
+    </div>
+
+    <!-- Section 4: สถิติผลบุญ (Hasanat) -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 0.95rem; margin-bottom: 0.9rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.65rem;">
+        <i class="fa-solid fa-book-quran"></i> 4. แก้ไขข้อมูลผลบุญและศาสนกิจ (Hasanat)
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.65rem;">
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">อ่านกุรอานถึงหน้า (0-604)</label>
+          <input type="number" min="0" max="604" class="form-control" id="adminEditQuranPage" value="${qPage}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">ยุซที่อ่านจบ (0-30)</label>
+          <input type="number" min="0" max="30" class="form-control" id="adminEditQuranJuz" value="${qJuz}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">จบ 30 ยุซ (ค็อตม์กี่ครั้ง)</label>
+          <input type="number" min="0" class="form-control" id="adminEditQuranKhatam" value="${qKhatam}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">ซูเราะห์ที่ท่องจำ (0-114)</label>
+          <input type="number" min="0" max="114" class="form-control" id="adminEditMemCount" value="${memCount}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.75rem;">ละหมาดสุนัต (ร็อกอะฮ์)</label>
+          <input type="number" min="0" class="form-control" id="adminEditSunnahRakaat" value="${sunnahRakaat}" style="height: 36px; text-align: center; font-weight: 700;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5: ประวัติการละหมาดล่าสุดของนักเรียนคนนี้ (ลบรายการที่ผิดพลาดได้) -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 0.95rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 0.55rem;">
+        <i class="fa-solid fa-mosque"></i> 5. ประวัติการเช็คละหมาดล่าสุด (${studentPrayers.length} รายการล่าสุด)
+      </div>
+      ${studentPrayers.length === 0 ? '<div style="font-size: 0.8rem; color: var(--text-muted);">ยังไม่มีประวัติการเช็คละหมาด</div>' : studentPrayers.map(p => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0; border-bottom: 1px solid #e2e8f0; font-size: 0.8rem;">
+          <div>
+            <b>ละหมาด ${escapeHtml(p.prayerName || p.prayerTime)}</b> • ${escapeHtml(p.date || '')} ${escapeHtml(p.time || '')} (${escapeHtml(p.locationName || 'GPS')})
+          </div>
+          <button type="button" class="btn btn-danger btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.72rem;" onclick="adminDeleteStudentPrayerRecord('${escapeHtml(cleanId)}', '${escapeHtml(p.id || p.logId)}')">
+            <i class="fa-solid fa-trash"></i> ลบ
+          </button>
+        </div>
+      `).join('')}
     </div>
   `;
 
-  btnDelete.onclick = () => deleteStudent(cleanId);
+  if (btnDelete) btnDelete.onclick = () => deleteStudent(cleanId);
   openModal('studentDetailModal');
+}
+
+function saveAdminStudentDeepEdit() {
+  const origId = currentAdminEditingStudentOriginalId;
+  if (!origId) return;
+
+  const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, origId));
+  if (sIdx === -1) return;
+
+  const student = allStudents[sIdx];
+  const newId = cleanIdString(document.getElementById('adminEditStdId')?.value || origId);
+  const newName = (document.getElementById('adminEditStdName')?.value || '').trim();
+  const newGrade = document.getElementById('adminEditStdGrade')?.value || student.grade;
+  const newSchool = (document.getElementById('adminEditStdSchool')?.value || '').trim();
+  const newPhone = normalizePhone(document.getElementById('adminEditStdPhone')?.value || '');
+  const newEmail = (document.getElementById('adminEditStdEmail')?.value || '').trim();
+  const newBD = normalizeBirthDate(document.getElementById('adminEditStdBirthDate')?.value || '');
+  const newStatus = document.getElementById('adminEditStdStatus')?.value || 'Active';
+
+  student.studentId = newId;
+  student.fullName = newName || student.fullName;
+  student.grade = newGrade;
+  student.schoolName = newSchool;
+  student.parentPhone = newPhone;
+  student.email = newEmail;
+  student.birthDate = newBD;
+  student.status = newStatus;
+  if (newStatus === 'Active') student.approvalStatus = 'Approved';
+
+  student.attendance = {
+    present: Math.max(0, parseInt(document.getElementById('adminEditAttPresent')?.value || 0, 10)),
+    late: Math.max(0, parseInt(document.getElementById('adminEditAttLate')?.value || 0, 10)),
+    leave: Math.max(0, parseInt(document.getElementById('adminEditAttLeave')?.value || 0, 10)),
+    absent: Math.max(0, parseInt(document.getElementById('adminEditAttAbsent')?.value || 0, 10))
+  };
+
+  student.subjectGrades = student.subjectGrades || {};
+  student.skills = student.skills || {};
+  document.querySelectorAll('.admin-edit-std-subj-grade').forEach(sel => {
+    const subjId = sel.getAttribute('data-subj-id');
+    const gVal = normalizeGrade1To4(sel.value);
+    student.subjectGrades[subjId] = gVal;
+    student.skills[subjId] = gVal;
+  });
+  recalculateStudentGpa(student);
+
+  // Update Hasanat for this student
+  const h = getStudentHasanat(newId);
+  const qPage = Math.max(0, Math.min(604, parseInt(document.getElementById('adminEditQuranPage')?.value || 0, 10)));
+  const qJuz = Math.max(0, Math.min(30, parseInt(document.getElementById('adminEditQuranJuz')?.value || 0, 10)));
+  const qKhatam = Math.max(0, parseInt(document.getElementById('adminEditQuranKhatam')?.value || 0, 10));
+  const memCount = Math.max(0, Math.min(114, parseInt(document.getElementById('adminEditMemCount')?.value || 0, 10)));
+  const sunnahRakaat = Math.max(0, parseInt(document.getElementById('adminEditSunnahRakaat')?.value || 0, 10));
+
+  h.quran.currentPage = qPage;
+  h.quran.juzCompleted = qJuz;
+  h.quran.stars = qJuz;
+  h.quran.khatamCount = qKhatam;
+  h.memorization.count = memCount;
+  h.sunnah = h.sunnah || {};
+  h.sunnah.totalRakaat = sunnahRakaat;
+  saveStudentHasanat(h);
+
+  allStudents[sIdx] = student;
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+
+  if (currentStudent && isIdMatch(currentStudent.studentId, origId)) {
+    currentStudent = student;
+    localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+    renderCurrentStudentProfile();
+    renderDashboardCharts();
+  }
+
+  renderAdminStudentsTable();
+  closeModal('studentDetailModal');
+  playSuccessSound();
+  showToast(`บันทึกการแก้ไขข้อมูลของ ${student.fullName} (${newId}) เรียบร้อยแล้ว`, 'success');
+
+  syncRecordToGoogleSheet('updateStudentFull', student);
+}
+
+function adminDeleteStudentPrayerRecord(studentId, logId) {
+  if (!confirm('ต้องการลบประวัติการเช็คละหมาดรายการนี้ใช่หรือไม่?')) return;
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+
+  historyList = historyList.filter(p => (p.id !== logId && p.logId !== logId));
+  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList));
+
+  todayPrayers = todayPrayers.filter(p => (p.id !== logId && p.logId !== logId));
+  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+
+  viewStudentDetails(studentId);
+  renderAdminStudentsTable();
+  showToast('ลบประวัติการละหมาดเรียบร้อยแล้ว', 'info');
 }
 
 function deleteStudent(studentId) {
   const student = allStudents.find(s => isIdMatch(s.studentId, studentId));
   const cleanId = cleanIdString(studentId);
   const sName = student ? student.fullName : cleanId;
-  if (!confirm(`คุณต้องการลบข้อมูลนักเรียน ${sName} (รหัส ${cleanId}) ใช่หรือไม่?`)) return;
+  if (!confirm(`คุณต้องการลบข้อมูลนักเรียน ${sName} (รหัส ${cleanId}) ออกจากระบบใช่หรือไม่?`)) return;
 
   allStudents = allStudents.filter(s => !isIdMatch(s.studentId, cleanId));
   localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
   renderAdminStudentsTable();
+  renderSuperAdminOverviewKpis();
   closeModal('studentDetailModal');
   showToast(`ลบข้อมูลนักเรียน ${cleanId} เรียบร้อยแล้ว`, 'success');
 
   syncRecordToGoogleSheet('deleteStudent', { studentId: cleanId });
 }
 
-/**
- * เลื่อนชั้นปีการศึกษาแบบยกห้องโดยแอดมิน (Batch Grade Promotion)
- */
 function executeBatchPromotion() {
   const fromGrade = document.getElementById('batchFromGrade').value;
   const toGrade = document.getElementById('batchToGrade').value;
@@ -3910,7 +5276,7 @@ function executeBatchPromotion() {
   syncRecordToGoogleSheet('batchPromote', { fromGrade, toGrade });
 }
 
-// ----------------- CREATE ACTIVITY & SUB-ADMINS ----------------- //
+// ----------------- CREATE ACTIVITY & FULL TEACHER / SUB-ADMIN CRUD ----------------- //
 
 function submitCreateActivity() {
   const title = document.getElementById('actTitle').value.trim();
@@ -3950,71 +5316,171 @@ function toggleSubAdminSubjectField() {
   const roleSelect = document.getElementById('subRole');
   const group = document.getElementById('subSubjectGroup');
   if (!roleSelect || !group) return;
-  group.style.display = (roleSelect.value === 'TEACHER') ? 'block' : 'none';
+  group.style.display = (roleSelect.value === 'TEACHER' || roleSelect.value === 'TeacherAdmin') ? 'block' : 'none';
+}
+
+function renderSubAdminModalSubjectsChecklist(selectedIds = []) {
+  loadAppSubjects();
+  const container = document.getElementById('subAssignedSubjectsChecklist');
+  if (!container) return;
+  container.innerHTML = appSubjects.map(s => {
+    const isChecked = selectedIds.includes(s.id);
+    return `
+      <label class="subject-checkbox-item">
+        <input type="checkbox" name="subModalSubjChk" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''}>
+        <span>${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</span>
+      </label>
+    `;
+  }).join('');
+}
+
+function openAddSubAdminModal() {
+  const origInput = document.getElementById('editSubAdminOriginalUser');
+  const titleEl = document.getElementById('subAdminModalTitle');
+  if (origInput) origInput.value = '';
+  if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-plus" style="color: var(--primary);"></i> เพิ่มบัญชีอาจารย์ผู้สอน / แอดมินรอง';
+
+  if (document.getElementById('subFullName')) document.getElementById('subFullName').value = '';
+  if (document.getElementById('subUsername')) document.getElementById('subUsername').value = '';
+  if (document.getElementById('subPassword')) document.getElementById('subPassword').value = '';
+  if (document.getElementById('subEmail')) document.getElementById('subEmail').value = '';
+  if (document.getElementById('subPhone')) document.getElementById('subPhone').value = '';
+  if (document.getElementById('subRole')) document.getElementById('subRole').value = 'TEACHER';
+
+  renderSubAdminModalSubjectsChecklist([]);
+  toggleSubAdminSubjectField();
+  openModal('addSubAdminModal');
+}
+
+function openEditTeacherModal(username) {
+  const t = subAdmins.find(s => isIdMatch(s.username, username));
+  if (!t) return;
+
+  const origInput = document.getElementById('editSubAdminOriginalUser');
+  const titleEl = document.getElementById('subAdminModalTitle');
+  if (origInput) origInput.value = cleanIdString(t.username);
+  if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-user-pen" style="color: var(--primary);"></i> แก้ไขข้อมูลอาจารย์: ${escapeHtml(t.fullName)}`;
+
+  if (document.getElementById('subFullName')) document.getElementById('subFullName').value = t.fullName || '';
+  if (document.getElementById('subUsername')) document.getElementById('subUsername').value = cleanIdString(t.username);
+  if (document.getElementById('subPassword')) document.getElementById('subPassword').value = cleanIdString(t.password);
+  if (document.getElementById('subEmail')) document.getElementById('subEmail').value = t.email || '';
+  if (document.getElementById('subPhone')) document.getElementById('subPhone').value = normalizePhone(t.phone || '');
+  if (document.getElementById('subRole')) document.getElementById('subRole').value = t.role || 'TEACHER';
+
+  const assignedArr = Array.isArray(t.assignedSubjects)
+    ? t.assignedSubjects
+    : (t.assignedSubject ? [t.assignedSubject] : []);
+  renderSubAdminModalSubjectsChecklist(assignedArr);
+  toggleSubAdminSubjectField();
+  openModal('addSubAdminModal');
 }
 
 function submitAddSubAdmin() {
-  const fullName = document.getElementById('subFullName').value.trim();
-  const username = document.getElementById('subUsername').value.trim();
-  const pass = document.getElementById('subPassword').value.trim();
-  const role = document.getElementById('subRole').value;
-  const assignedSubj = document.getElementById('subAssignedSubject') ? document.getElementById('subAssignedSubject').value : '';
+  const origUser = cleanIdString(document.getElementById('editSubAdminOriginalUser')?.value || '');
+  const fullName = (document.getElementById('subFullName')?.value || '').trim();
+  const username = cleanIdString(document.getElementById('subUsername')?.value || '');
+  const pass = cleanIdString(document.getElementById('subPassword')?.value || '');
+  const email = (document.getElementById('subEmail')?.value || '').trim();
+  const phone = normalizePhone(document.getElementById('subPhone')?.value || '');
+  const role = document.getElementById('subRole')?.value || 'TEACHER';
+
+  const checkedNodes = document.querySelectorAll('input[name="subModalSubjChk"]:checked');
+  const selectedSubjects = Array.from(checkedNodes).map(cb => cb.value);
+  const fallbackSubj = document.getElementById('subAssignedSubject')?.value || '';
+  const finalSubjects = selectedSubjects.length > 0 ? selectedSubjects : (fallbackSubj ? [fallbackSubj] : []);
 
   if (!fullName || !username || !pass) {
-    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+    showToast('กรุณากรอกชื่อ-นามสกุล รหัสอาจารย์ และรหัสผ่านให้ครบถ้วน', 'warning');
     return;
   }
 
-  const newSub = {
-    adminId: 'ADM-' + Date.now(),
+  const recordData = {
+    adminId: 'TCH-' + Date.now(),
     username: username,
     password: pass,
     fullName: fullName,
+    email: email,
+    phone: phone,
     role: role,
-    assignedSubject: role === 'TEACHER' ? assignedSubj : '',
+    assignedSubject: finalSubjects[0] || '',
+    assignedSubjects: finalSubjects,
+    status: 'Active',
+    approvalStatus: 'Approved',
     createdAt: new Date().toISOString().split('T')[0]
   };
 
-  subAdmins.push(newSub);
+  if (origUser) {
+    const idx = subAdmins.findIndex(s => isIdMatch(s.username, origUser));
+    if (idx !== -1) {
+      recordData.adminId = subAdmins[idx].adminId || recordData.adminId;
+      recordData.createdAt = subAdmins[idx].createdAt || recordData.createdAt;
+      subAdmins[idx] = recordData;
+    } else {
+      subAdmins.push(recordData);
+    }
+  } else {
+    const dupIdx = subAdmins.findIndex(s => isIdMatch(s.username, username));
+    if (dupIdx !== -1) {
+      subAdmins[dupIdx] = recordData;
+    } else {
+      subAdmins.push(recordData);
+    }
+  }
+
   localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+  if (currentAdmin && isIdMatch(currentAdmin.username, origUser || username)) {
+    currentAdmin = recordData;
+  }
 
   closeModal('addSubAdminModal');
   renderSubAdminsTable();
-  showToast(`เพิ่มผู้ดูแล/อาจารย์ผู้สอน ${fullName} สำเร็จ`, 'success');
+  renderSuperAdminOverviewKpis();
+  showToast(`บันทึกข้อมูลอาจารย์ ${fullName} เรียบร้อยแล้ว`, 'success');
 
-  syncRecordToGoogleSheet('addSubAdmin', newSub);
+  syncRecordToGoogleSheet('addSubAdmin', recordData);
 }
 
 function renderSubAdminsTable() {
   const tbody = document.getElementById('subAdminsTableBody');
   if (!tbody) return;
   loadAppSubjects();
+  renderSuperAdminOverviewKpis();
 
   if (subAdmins.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีรายชื่อผู้ดูแลระบบรอง / อาจารย์ผู้สอน</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีรายชื่ออาจารย์ผู้สอนในระบบ (กด "+ เพิ่มบัญชีอาจารย์ใหม่" เพื่อสร้างได้ทันที)</td></tr>`;
     return;
   }
 
   tbody.innerHTML = subAdmins.map(a => {
-    let roleText = a.role || 'SubAdmin';
-    if (a.role === 'TEACHER') {
-      const subj = appSubjects.find(s => s.id === a.assignedSubject);
-      const subjName = subj ? subj.name : (a.assignedSubject || 'ทุกวิชา');
-      roleText = `อาจารย์ผู้สอน (${subjName})`;
-    } else if (a.role === 'TeacherAdmin') {
-      roleText = 'อาจารย์ประจำชั้น';
-    } else if (a.role === 'ActivityAdmin') {
-      roleText = 'ฝ่ายกิจกรรม';
-    }
+    const assignedIds = Array.isArray(a.assignedSubjects)
+      ? a.assignedSubjects
+      : (a.assignedSubject ? [a.assignedSubject] : []);
+
+    const subjNames = assignedIds.map(id => {
+      const s = appSubjects.find(x => x.id === id);
+      return s ? s.name : id;
+    }).filter(Boolean).join(', ') || 'ทุกวิชา';
+
+    const statusBadge = a.approvalStatus === 'PendingAdmin'
+      ? '<span class="activity-badge" style="background:#fef3c7;color:#92400e;">รอยืนยันรหัส</span>'
+      : `<span class="activity-badge badge-active">${escapeHtml(subjNames)}</span>`;
 
     return `
       <tr>
-        <td><b>${a.username}</b></td>
-        <td>${a.fullName}</td>
-        <td><span class="activity-badge badge-active">${roleText}</span></td>
-        <td>${a.createdAt || '-'}</td>
-        <td style="text-align: right;">
-          <button class="btn btn-danger btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;" onclick="deleteSubAdmin('${a.username}')">
+        <td><b>${escapeHtml(cleanIdString(a.username))}</b></td>
+        <td style="font-weight: 600;">${escapeHtml(a.fullName)}</td>
+        <td>
+          <div>${escapeHtml(a.email || '-')}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(a.phone || '')}</div>
+        </td>
+        <td>${statusBadge}</td>
+        <td>${escapeHtml(a.createdAt || '-')}</td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-primary btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.78rem; margin-right: 0.25rem;" onclick="openEditTeacherModal('${escapeHtml(cleanIdString(a.username))}')">
+            <i class="fa-solid fa-pen"></i> แก้ไข
+          </button>
+          <button class="btn btn-danger btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.78rem;" onclick="deleteSubAdmin('${escapeHtml(cleanIdString(a.username))}')">
             <i class="fa-solid fa-trash"></i> ลบ
           </button>
         </td>
@@ -4024,21 +5490,22 @@ function renderSubAdminsTable() {
 }
 
 function deleteSubAdmin(username) {
-  if (!confirm(`ต้องการลบบัญชี ${username} ใช่หรือไม่?`)) return;
-  subAdmins = subAdmins.filter(s => s.username !== username);
+  if (!confirm(`ต้องการลบบัญชีอาจารย์ ${username} ใช่หรือไม่?`)) return;
+  subAdmins = subAdmins.filter(s => !isIdMatch(s.username, username));
   localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
   renderSubAdminsTable();
-  showToast('ลบบัญชีเรียบร้อยแล้ว', 'success');
+  renderSuperAdminOverviewKpis();
+  showToast('ลบบัญชีอาจารย์เรียบร้อยแล้ว', 'success');
 }
 
-// ----------------- TEACHER COMPETENCY GRADING & SUBJECTS ----------------- //
+// ----------------- TEACHER GRADING (1 - 4 SCALE) IN ADMIN & TEACHER PORTAL ----------------- //
 
 function populateGradingSubjectSelect() {
   const select = document.getElementById('gradingSubjectSelect');
   const subSelect = document.getElementById('subAssignedSubject');
   loadAppSubjects();
 
-  const options = appSubjects.map(s => `<option value="${s.id}">${s.code ? s.code + ' - ' : ''}${s.name}</option>`).join('');
+  const options = appSubjects.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</option>`).join('');
 
   if (select) {
     select.innerHTML = options;
@@ -4049,6 +5516,7 @@ function populateGradingSubjectSelect() {
   if (subSelect) {
     subSelect.innerHTML = options;
   }
+  renderSubAdminModalSubjectsChecklist([]);
 }
 
 function renderGradingStudentsTable() {
@@ -4066,44 +5534,54 @@ function renderGradingStudentsTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-          ไม่พบรายชื่อนักเรียนในระดับชั้น ${currentGrade}
+          ไม่พบรายชื่อนักเรียนในระดับชั้น ${escapeHtml(currentGrade)}
         </td>
       </tr>
     `;
     return;
   }
 
+  const gradeChoices = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4];
+
   tbody.innerHTML = filtered.map(s => {
-    const studentScore = (s.skills && s.skills[currentSubj] !== undefined) ? s.skills[currentSubj] : 75;
+    const rawVal = (s.subjectGrades && s.subjectGrades[currentSubj] !== undefined)
+      ? s.subjectGrades[currentSubj]
+      : (s.skills && s.skills[currentSubj] !== undefined ? s.skills[currentSubj] : 0);
+    const curGradeVal = normalizeGrade1To4(rawVal);
+    const sId = cleanIdString(s.studentId);
+
     return `
       <tr>
-        <td><b>${s.studentId}</b></td>
+        <td><b>${escapeHtml(sId)}</b></td>
         <td>
           <div style="display: flex; align-items: center; gap: 0.65rem;">
-            ${s.avatarUrl ? `<img src="${s.avatarUrl}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #e0f2fe; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0284c7; font-size: 0.8rem;">${s.fullName.charAt(0)}</div>`}
+            ${s.avatarUrl ? `<img src="${s.avatarUrl}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0f172a; font-size: 0.8rem;">${escapeHtml((s.fullName || 'น').charAt(0))}</div>`}
             <div>
-              <div style="font-weight: 600; color: var(--text-dark);">${s.fullName}</div>
-              <div style="font-size: 0.78rem; color: var(--text-muted);">${s.schoolName || ''}</div>
+              <div style="font-weight: 600; color: var(--text-dark);">${escapeHtml(s.fullName)}</div>
+              <div style="font-size: 0.76rem; color: var(--text-muted);">GPAX ปัจจุบัน: ${escapeHtml(recalculateStudentGpa(s))}</div>
             </div>
           </div>
         </td>
-        <td><span class="badge-sub">${s.grade}</span></td>
+        <td><span class="badge-sub">${escapeHtml(s.grade)}</span></td>
         <td style="text-align: center;">
-          <input type="number" min="0" max="100" class="form-control grading-score-input" data-student-id="${s.studentId}" value="${studentScore}" style="width: 90px; margin: 0 auto; text-align: center; font-weight: 700; font-size: 1rem; color: #0284c7; height: 38px;">
+          <select class="grade-select-pill grading-score-input" data-student-id="${escapeHtml(sId)}">
+            ${gradeChoices.map(g => `<option value="${g}" ${g === curGradeVal ? 'selected' : ''}>${g === 0 ? '0 (รอผล)' : 'เกรด ' + g}</option>`).join('')}
+          </select>
         </td>
         <td style="text-align: right; white-space: nowrap;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 80)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">80</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 90)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">90</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${s.studentId}', 100)" style="padding: 0.2rem 0.45rem; font-size: 0.75rem;">100</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${escapeHtml(sId)}', 1)" style="padding: 0.22rem 0.5rem; font-size: 0.75rem;">เกรด 1</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${escapeHtml(sId)}', 2)" style="padding: 0.22rem 0.5rem; font-size: 0.75rem;">เกรด 2</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${escapeHtml(sId)}', 3)" style="padding: 0.22rem 0.5rem; font-size: 0.75rem;">เกรด 3</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setQuickScore('${escapeHtml(sId)}', 4)" style="padding: 0.22rem 0.5rem; font-size: 0.75rem;">เกรด 4</button>
         </td>
       </tr>
     `;
   }).join('');
 }
 
-function setQuickScore(studentId, score) {
+function setQuickScore(studentId, gradeVal) {
   const input = document.querySelector(`.grading-score-input[data-student-id="${studentId}"]`);
-  if (input) input.value = score;
+  if (input) input.value = String(gradeVal);
 }
 
 function saveTeacherGradingScores() {
@@ -4113,41 +5591,347 @@ function saveTeacherGradingScores() {
   const inputs = document.querySelectorAll('.grading-score-input');
 
   if (inputs.length === 0) {
-    showToast('ไม่มีรายชื่อนักเรียนให้บันทึกคะแนน', 'warning');
+    showToast('ไม่มีรายชื่อนักเรียนให้บันทึกเกรด', 'warning');
     return;
   }
 
   let updatedCount = 0;
   inputs.forEach(inp => {
     const sId = inp.getAttribute('data-student-id');
-    const val = parseInt(inp.value, 10);
-    const score = isNaN(val) ? 0 : Math.max(0, Math.min(100, val));
+    const gradeVal = normalizeGrade1To4(inp.value);
 
-    const sIdx = allStudents.findIndex(s => s.studentId === sId);
+    const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, sId));
     if (sIdx !== -1) {
+      if (!allStudents[sIdx].subjectGrades) allStudents[sIdx].subjectGrades = {};
       if (!allStudents[sIdx].skills) allStudents[sIdx].skills = {};
-      allStudents[sIdx].skills[currentSubj] = score;
+      allStudents[sIdx].subjectGrades[currentSubj] = gradeVal;
+      allStudents[sIdx].skills[currentSubj] = gradeVal;
+      recalculateStudentGpa(allStudents[sIdx]);
       updatedCount++;
 
-      if (currentStudent && currentStudent.studentId === sId) {
-        if (!currentStudent.skills) currentStudent.skills = {};
-        currentStudent.skills[currentSubj] = score;
+      if (currentStudent && isIdMatch(currentStudent.studentId, sId)) {
+        currentStudent = allStudents[sIdx];
         localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
       }
     }
   });
 
   localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+  renderGradingStudentsTable();
   renderSkillRadarChart();
+  renderCurrentStudentProfile();
 
-  syncRecordToGoogleSheet('updateSubjectScores', {
+  syncRecordToGoogleSheet('saveSubjectGrades', {
     subjectId: currentSubj,
     updatedCount: updatedCount,
     timestamp: new Date().toISOString()
   });
 
   playSuccessSound();
-  showToast(`บันทึกคะแนนสมรรถนะนักเรียน ${updatedCount} คน สำเร็จแล้ว!`, 'success');
+  showToast(`บันทึกเกรดรายวิชา (ระดับ 1-4) ของนักเรียน ${updatedCount} คน และอัปเดตกราฟทักษะสำเร็จ!`, 'success');
+}
+
+// ----------------- DEDICATED TEACHER PORTAL (#view-teacher) ----------------- //
+let teacherDailyAttendanceDraft = {}; // { [studentId]: 'present' | 'late' | 'leave' | 'absent' }
+
+function initTeacherPortalView() {
+  loadAppSubjects();
+  const titleEl = document.getElementById('teacherWelcomeTitle');
+  const subEl = document.getElementById('teacherAssignedSubjectsSubtitle');
+  const dateInput = document.getElementById('teacherAttDateInput');
+
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+
+  if (currentAdmin) {
+    if (titleEl) titleEl.innerText = `ระบบอาจารย์ผู้สอน: ${currentAdmin.fullName || currentAdmin.username}`;
+    const assignedIds = Array.isArray(currentAdmin.assignedSubjects)
+      ? currentAdmin.assignedSubjects
+      : (currentAdmin.assignedSubject ? [currentAdmin.assignedSubject] : []);
+    const assignedSubjObjs = (currentAdmin.role === 'SuperAdmin' || assignedIds.length === 0)
+      ? appSubjects
+      : appSubjects.filter(s => assignedIds.includes(s.id));
+
+    const names = assignedSubjObjs.map(s => s.name).join(', ');
+    if (subEl) subEl.innerText = `วิชาที่ได้รับมอบหมาย: ${names || 'ทุกวิชา'}`;
+
+    const portalSubjSel = document.getElementById('teacherPortalSubjectSelect');
+    if (portalSubjSel) {
+      portalSubjSel.innerHTML = assignedSubjObjs.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</option>`).join('');
+    }
+  }
+
+  renderTeacherAttendanceTable();
+  renderTeacherGradesPortalTable();
+}
+
+function switchTeacherPortalTab(tabName, btnEl) {
+  document.querySelectorAll('#view-teacher .admin-tab-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+
+  const tabAtt = document.getElementById('teacher-tab-attendance');
+  const tabGrd = document.getElementById('teacher-tab-grades');
+  if (tabAtt) tabAtt.style.display = (tabName === 'attendance') ? 'block' : 'none';
+  if (tabGrd) tabGrd.style.display = (tabName === 'grades') ? 'block' : 'none';
+
+  if (tabName === 'attendance') {
+    renderTeacherAttendanceTable();
+  } else {
+    renderTeacherGradesPortalTable();
+  }
+}
+
+function renderTeacherAttendanceTable() {
+  const tbody = document.getElementById('teacherAttendanceTableBody');
+  const gradeSelect = document.getElementById('teacherAttGradeSelect');
+  const dateInput = document.getElementById('teacherAttDateInput');
+  if (!tbody || !gradeSelect) return;
+
+  const selectedGrade = gradeSelect.value;
+  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+  const filtered = allStudents.filter(s => s.grade === selectedGrade);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          ไม่พบรายชื่อนักเรียนในระดับชั้น ${escapeHtml(selectedGrade)}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  // Load saved daily attendance log for this date if exists
+  let savedLogs = {};
+  try {
+    savedLogs = JSON.parse(localStorage.getItem('khalifah_daily_attendance_logs') || '{}');
+  } catch (e) { savedLogs = {}; }
+  const dayMap = savedLogs[selectedDate] || {};
+
+  tbody.innerHTML = filtered.map(s => {
+    const sId = cleanIdString(s.studentId);
+    const curState = teacherDailyAttendanceDraft[sId] || dayMap[sId] || 'present';
+    teacherDailyAttendanceDraft[sId] = curState;
+    const att = s.attendance || { present: 0, late: 0, leave: 0, absent: 0 };
+
+    return `
+      <tr>
+        <td><b>${escapeHtml(sId)}</b></td>
+        <td style="font-weight: 600;">${escapeHtml(s.fullName)}</td>
+        <td style="font-size: 0.8rem; color: var(--text-secondary);">
+          มา ${att.present || 0} • สาย ${att.late || 0} • ลา ${att.leave || 0} • ขาด ${att.absent || 0}
+        </td>
+        <td style="text-align: center;">
+          <div class="att-status-btn-group">
+            <button type="button" class="att-status-btn ${curState === 'present' ? 'active-present' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'present')">
+              <i class="fa-solid fa-check"></i> มาเรียน
+            </button>
+            <button type="button" class="att-status-btn ${curState === 'late' ? 'active-late' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'late')">
+              มาสาย
+            </button>
+            <button type="button" class="att-status-btn ${curState === 'leave' ? 'active-leave' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'leave')">
+              ลา
+            </button>
+            <button type="button" class="att-status-btn ${curState === 'absent' ? 'active-absent' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'absent')">
+              ขาด
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function setStudentDailyAttendance(studentId, status) {
+  teacherDailyAttendanceDraft[cleanIdString(studentId)] = status;
+  renderTeacherAttendanceTable();
+}
+
+function markAllStudentsPresentInClass() {
+  const gradeSelect = document.getElementById('teacherAttGradeSelect');
+  if (!gradeSelect) return;
+  const filtered = allStudents.filter(s => s.grade === gradeSelect.value);
+  filtered.forEach(s => {
+    teacherDailyAttendanceDraft[cleanIdString(s.studentId)] = 'present';
+  });
+  renderTeacherAttendanceTable();
+  showToast('เลือกสถานะ "มาเรียน" ให้ทั้งห้องเรียบร้อย กดบันทึกด้านล่างเพื่อยืนยัน', 'info');
+}
+
+function saveTeacherDailyAttendance() {
+  const gradeSelect = document.getElementById('teacherAttGradeSelect');
+  const dateInput = document.getElementById('teacherAttDateInput');
+  if (!gradeSelect) return;
+
+  const selectedGrade = gradeSelect.value;
+  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+  const filtered = allStudents.filter(s => s.grade === selectedGrade);
+
+  if (filtered.length === 0) {
+    showToast('ไม่มีรายชื่อนักเรียนในชั้นเรียนนี้', 'warning');
+    return;
+  }
+
+  let savedLogs = {};
+  try {
+    savedLogs = JSON.parse(localStorage.getItem('khalifah_daily_attendance_logs') || '{}');
+  } catch (e) { savedLogs = {}; }
+
+  const prevDayMap = savedLogs[selectedDate] || {};
+  savedLogs[selectedDate] = { ...prevDayMap };
+
+  let count = 0;
+  filtered.forEach(s => {
+    const sId = cleanIdString(s.studentId);
+    const newStatus = teacherDailyAttendanceDraft[sId] || 'present';
+    const oldStatus = prevDayMap[sId] || null;
+
+    s.attendance = s.attendance || { present: 0, late: 0, leave: 0, absent: 0 };
+    if (oldStatus && s.attendance[oldStatus] > 0) {
+      s.attendance[oldStatus] = Math.max(0, s.attendance[oldStatus] - 1);
+    }
+    s.attendance[newStatus] = (s.attendance[newStatus] || 0) + 1;
+    savedLogs[selectedDate][sId] = newStatus;
+    count++;
+
+    if (currentStudent && isIdMatch(currentStudent.studentId, sId)) {
+      currentStudent = s;
+      localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+    }
+  });
+
+  localStorage.setItem('khalifah_daily_attendance_logs', JSON.stringify(savedLogs));
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+
+  renderTeacherAttendanceTable();
+  renderCurrentStudentProfile();
+  renderDashboardCharts();
+  playSuccessSound();
+  showToast(`บันทึกการเช็คชื่อมาเรียนวันที่ ${selectedDate} จำนวน ${count} คน สำเร็จ!`, 'success');
+
+  syncRecordToGoogleSheet('saveDailyAttendance', {
+    date: selectedDate,
+    grade: selectedGrade,
+    teacher: currentAdmin ? currentAdmin.username : 'Teacher',
+    records: savedLogs[selectedDate]
+  });
+}
+
+function renderTeacherGradesPortalTable() {
+  const tbody = document.getElementById('teacherPortalGradesTableBody');
+  const subjSelect = document.getElementById('teacherPortalSubjectSelect');
+  const gradeSelect = document.getElementById('teacherPortalGradeSelect');
+  if (!tbody || !subjSelect || !gradeSelect) return;
+
+  const currentSubj = subjSelect.value;
+  const currentGrade = gradeSelect.value;
+  const filtered = allStudents.filter(s => s.grade === currentGrade);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          ไม่พบรายชื่อนักเรียนในระดับชั้น ${escapeHtml(currentGrade)}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const gradeChoices = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4];
+
+  tbody.innerHTML = filtered.map(s => {
+    const sId = cleanIdString(s.studentId);
+    const rawVal = (s.subjectGrades && s.subjectGrades[currentSubj] !== undefined)
+      ? s.subjectGrades[currentSubj]
+      : (s.skills && s.skills[currentSubj] !== undefined ? s.skills[currentSubj] : 0);
+    const curGradeVal = normalizeGrade1To4(rawVal);
+
+    return `
+      <tr>
+        <td><b>${escapeHtml(sId)}</b></td>
+        <td>
+          <div style="font-weight: 600; color: var(--text-dark);">${escapeHtml(s.fullName)}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">GPAX: ${escapeHtml(recalculateStudentGpa(s))}</div>
+        </td>
+        <td><span class="badge-sub">${escapeHtml(s.grade)}</span></td>
+        <td style="text-align: center;">
+          <select class="grade-select-pill teacher-portal-grade-input" data-student-id="${escapeHtml(sId)}">
+            ${gradeChoices.map(g => `<option value="${g}" ${g === curGradeVal ? 'selected' : ''}>${g === 0 ? '0 (รอผล)' : 'เกรด ' + g}</option>`).join('')}
+          </select>
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 1)" style="padding: 0.22rem 0.5rem; font-size: 0.75rem;">เกรด 1</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 2)" style="padding: 0.22rem 0.5rem; font-size: 0.75rem;">เกรด 2</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 3)" style="padding: 0.22rem 0.5rem; font-size: 0.75rem;">เกรด 3</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 4)" style="padding: 0.22rem 0.5rem; font-size: 0.75rem;">เกรด 4</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function setTeacherPortalQuickGrade(studentId, gradeVal) {
+  const el = document.querySelector(`.teacher-portal-grade-input[data-student-id="${studentId}"]`);
+  if (el) el.value = String(gradeVal);
+}
+
+function saveTeacherPortalGrades() {
+  const subjSelect = document.getElementById('teacherPortalSubjectSelect');
+  if (!subjSelect) return;
+  const currentSubj = subjSelect.value;
+  const inputs = document.querySelectorAll('.teacher-portal-grade-input');
+
+  if (inputs.length === 0) {
+    showToast('ไม่มีรายชื่อนักเรียนให้บันทึกเกรด', 'warning');
+    return;
+  }
+
+  let updatedCount = 0;
+  const gradesBatch = [];
+
+  inputs.forEach(inp => {
+    const sId = inp.getAttribute('data-student-id');
+    const gradeVal = normalizeGrade1To4(inp.value);
+
+    const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, sId));
+    if (sIdx !== -1) {
+      if (!allStudents[sIdx].subjectGrades) allStudents[sIdx].subjectGrades = {};
+      if (!allStudents[sIdx].skills) allStudents[sIdx].skills = {};
+      allStudents[sIdx].subjectGrades[currentSubj] = gradeVal;
+      allStudents[sIdx].skills[currentSubj] = gradeVal;
+      const newGpa = recalculateStudentGpa(allStudents[sIdx]);
+      updatedCount++;
+
+      gradesBatch.push({
+        studentId: sId,
+        gradeVal: gradeVal,
+        gpa: newGpa
+      });
+
+      if (currentStudent && isIdMatch(currentStudent.studentId, sId)) {
+        currentStudent = allStudents[sIdx];
+        localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+      }
+    }
+  });
+
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+  renderTeacherGradesPortalTable();
+  renderSkillRadarChart();
+  renderCurrentStudentProfile();
+
+  syncRecordToGoogleSheet('saveSubjectGrades', {
+    subjectId: currentSubj,
+    teacher: currentAdmin ? currentAdmin.username : 'Teacher',
+    grades: gradesBatch,
+    timestamp: new Date().toISOString()
+  });
+
+  playSuccessSound();
+  showToast(`บันทึกเกรดวิชา (ระดับ 1-4) ของนักเรียน ${updatedCount} คน สำเร็จ! กราฟทักษะของนักเรียนอัปเดตทันที`, 'success');
 }
 
 function renderAdminSubjectsTable() {

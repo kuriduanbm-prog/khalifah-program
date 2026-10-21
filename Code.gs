@@ -405,6 +405,12 @@ function doGet(e) {
       case 'getSubAdmins':
         result = getSubAdmins();
         break;
+      case 'checkRegistrationStatus':
+        result = checkRegistrationStatus(e.parameter.userId, e.parameter.role);
+        break;
+      case 'getPendingRegistrations':
+        result = getPendingRegistrations();
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -491,6 +497,21 @@ function doPost(e) {
         break;
       case 'updateSubjectScores':
         result = updateSubjectScores(postData.data || postData);
+        break;
+      case 'registerPendingUser':
+        result = registerPendingUser(postData.data || postData);
+        break;
+      case 'approveRegistrationAndSendEmail':
+        result = approveRegistrationAndSendEmail(postData.data || postData);
+        break;
+      case 'updateStudentFull':
+        result = updateStudentFull(postData.data || postData);
+        break;
+      case 'saveDailyAttendance':
+        result = saveDailyAttendance(postData.data || postData);
+        break;
+      case 'saveSubjectGrades':
+        result = saveSubjectGrades(postData.data || postData);
         break;
       default:
         result = { success: false, error: 'Invalid POST action: ' + action };
@@ -1382,4 +1403,224 @@ function batchSyncData(data) {
     message: 'ซิงค์ข้อมูลลง Google Sheet และจัดหมวดภาษาไทยเรียบร้อยแล้ว',
     summary: { students: studentsSynced, prayers: prayersSynced, hasanat: hasanatSynced }
   };
+}
+
+// ==========================================
+// V4.0: ระบบยืนยันตัวตนผ่านแอดมิน (Random OTP + Email), อาจารย์ผู้สอน, และจัดการข้อมูลเชิงลึก
+// ==========================================
+
+function ensureApprovalsSheet() {
+  const ss = getSpreadsheet();
+  const sheetName = 'รายการรออนุมัติสมัคร';
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow([
+      'รหัสคำขอ', 'ประเภทผู้ใช้', 'รหัสประจำตัว', 'ชื่อ-นามสกุล', 'อีเมล',
+      'รายละเอียดเพิ่มเติม', 'รหัสยืนยันสุ่ม (OTP)', 'สถานะ', 'เวลาที่สมัคร', 'ข้อมูล JSON'
+    ]);
+  }
+  return sheet;
+}
+
+/**
+ * บันทึกคำขอสมัครสมาชิกใหม่ (นักเรียน / อาจารย์ผู้สอน) พร้อมรหัสสุ่ม 6 หลักสำหรับแอดมินอนุมัติ
+ */
+function registerPendingUser(data) {
+  const sheet = ensureApprovalsSheet();
+  const reqId = cleanVal(data.id || ('REQ-' + new Date().getTime()));
+  const role = cleanVal(data.role || 'student');
+  const userId = cleanVal(data.userId || '');
+  const fullName = cleanVal(data.fullName || '');
+  const email = cleanVal(data.email || '');
+  const detail = cleanVal(data.detail || '');
+  const otpCode = cleanVal(data.otpCode || String(Math.floor(100000 + Math.random() * 900000)));
+  const status = cleanVal(data.status || 'pending');
+  const requestedAt = cleanVal(data.requestedAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
+
+  const rows = sheet.getDataRange().getValues();
+  let updatedRow = -1;
+  for (let i = 1; i < rows.length; i++) {
+    if (isCodeMatch(rows[i][2], userId) && cleanVal(rows[i][1]) === role) {
+      updatedRow = i + 1;
+      break;
+    }
+  }
+
+  const rowValues = [
+    reqId, role, userId, fullName, email, detail, otpCode, status, requestedAt, JSON.stringify(data.payload || {})
+  ];
+
+  if (updatedRow !== -1) {
+    sheet.getRange(updatedRow, 1, 1, rowValues.length).setValues([rowValues]);
+    sheet.getRange(updatedRow, 3).setNumberFormat('@').setValue(userId);
+    sheet.getRange(updatedRow, 7).setNumberFormat('@').setValue(otpCode);
+  } else {
+    sheet.appendRow(rowValues);
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 3).setNumberFormat('@').setValue(userId);
+    sheet.getRange(lastRow, 7).setNumberFormat('@').setValue(otpCode);
+  }
+
+  return {
+    success: true,
+    message: 'บันทึกคำขอสมัครเรียบร้อย รอแอดมินอนุมัติและส่งรหัสยืนยันทางอีเมล',
+    reqId: reqId,
+    otpCode: otpCode
+  };
+}
+
+/**
+ * แอดมินกดยินยอม (Approve) และส่งรหัสยืนยันแบบสุ่มเข้าอีเมลของผู้สมัครอัตโนมัติทันที
+ */
+function approveRegistrationAndSendEmail(data) {
+  const sheet = ensureApprovalsSheet();
+  const email = cleanVal(data.email || '');
+  const fullName = cleanVal(data.fullName || 'ผู้สมัคร');
+  const userId = cleanVal(data.userId || '');
+  const roleLabel = cleanVal(data.roleLabel || 'สมาชิก');
+  const otpCode = cleanVal(data.otpCode || '');
+  const reqId = cleanVal(data.reqId || '');
+
+  // อัปเดตสถานะในแผ่นงานรายการรออนุมัติสมัคร
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if ((reqId && cleanVal(rows[i][0]) === reqId) || (userId && isCodeMatch(rows[i][2], userId))) {
+      sheet.getRange(i + 1, 7).setNumberFormat('@').setValue(otpCode);
+      sheet.getRange(i + 1, 8).setValue('approved');
+      break;
+    }
+  }
+
+  // ส่งอีเมลอัตโนมัติผ่าน MailApp
+  let emailSent = false;
+  let emailError = '';
+  if (email && email.indexOf('@') !== -1) {
+    try {
+      const subject = '[KHALIFAH PROGRAM] รหัสยืนยันการอนุมัติบัญชีของคุณ (' + otpCode + ')';
+      const htmlBody = '<div style="font-family: Sarabun, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; color: #0f172a;">' +
+        '<h2 style="margin-top: 0; color: #0f172a;">KHALIFAH PROGRAM</h2>' +
+        '<p style="font-size: 15px; color: #334155;">อัสสลามุอะลัยกุม คุณ <strong>' + fullName + '</strong></p>' +
+        '<p style="font-size: 14px; color: #475569;">แอดมินได้ตรวจสอบและกดยินยอมรับรองการสมัครบัญชี <strong>' + roleLabel + '</strong> (รหัสประจำตัว: <strong>' + userId + '</strong>) ของคุณเรียบร้อยแล้ว</p>' +
+        '<div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; text-align: center; margin: 20px 0;">' +
+        '<div style="font-size: 12px; color: #64748b; margin-bottom: 6px;">รหัสยืนยันจากแอดมิน (6 หลัก)</div>' +
+        '<div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #0f172a; font-family: monospace;">' + otpCode + '</div>' +
+        '</div>' +
+        '<p style="font-size: 13px; color: #64748b;">กรุณานำรหัส 6 หลักนี้ไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ เพื่อเข้าใช้งานระบบได้ทันที</p>' +
+        '</div>';
+      MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        htmlBody: htmlBody
+      });
+      emailSent = true;
+    } catch (err) {
+      emailError = err.toString();
+    }
+  }
+
+  return {
+    success: true,
+    emailSent: emailSent,
+    emailError: emailError,
+    otpCode: otpCode,
+    message: emailSent
+      ? 'อนุมัติและส่งรหัสยืนยัน (' + otpCode + ') ไปยังอีเมล ' + email + ' เรียบร้อยแล้ว'
+      : 'อนุมัติเรียบร้อยแล้ว (รหัสยืนยัน: ' + otpCode + ')'
+  };
+}
+
+/**
+ * ตรวจสอบสถานะการอนุมัติของผู้สมัครจากรหัสประจำตัว
+ */
+function checkRegistrationStatus(userId, role) {
+  const sheet = ensureApprovalsSheet();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (isCodeMatch(rows[i][2], userId) && (!role || cleanVal(rows[i][1]) === cleanVal(role))) {
+      return {
+        success: true,
+        status: cleanVal(rows[i][7]),
+        otpCode: cleanVal(rows[i][6]),
+        userId: cleanVal(rows[i][2]),
+        role: cleanVal(rows[i][1])
+      };
+    }
+  }
+  return { success: false, status: 'not_found' };
+}
+
+function getPendingRegistrations() {
+  const sheet = ensureApprovalsSheet();
+  const rows = sheet.getDataRange().getValues();
+  const list = [];
+  for (let i = 1; i < rows.length; i++) {
+    list.push({
+      id: cleanVal(rows[i][0]),
+      role: cleanVal(rows[i][1]),
+      userId: cleanVal(rows[i][2]),
+      fullName: cleanVal(rows[i][3]),
+      email: cleanVal(rows[i][4]),
+      detail: cleanVal(rows[i][5]),
+      otpCode: cleanVal(rows[i][6]),
+      status: cleanVal(rows[i][7]),
+      requestedAt: cleanVal(rows[i][8])
+    });
+  }
+  return { success: true, data: list };
+}
+
+/**
+ * แอดมินสูงสุดแก้ไขข้อมูลนักเรียนเชิงลึกครบทุกส่วน
+ */
+function updateStudentFull(student) {
+  if (!student || !student.studentId) {
+    return { success: false, error: 'ไม่พบรหัสนักเรียน' };
+  }
+  return registerStudent(student);
+}
+
+/**
+ * อาจารย์ผู้สอนบันทึกเช็คชื่อมาเรียนรายวัน
+ */
+function saveDailyAttendance(data) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.ATTENDANCE);
+  const dateStr = cleanVal(data.date || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd"));
+  const gradeStr = cleanVal(data.grade || '');
+  const records = data.records || {};
+  const timeStr = Utilities.formatDate(new Date(), "Asia/Bangkok", "HH:mm:ss");
+  let count = 0;
+
+  Object.keys(records).forEach(sid => {
+    const cleanSid = cleanVal(sid);
+    const status = cleanVal(records[sid]);
+    const logId = 'ATT-' + new Date().getTime() + '-' + count;
+    sheet.appendRow([
+      logId,
+      cleanSid,
+      '',
+      gradeStr,
+      dateStr,
+      timeStr,
+      formatAttendanceStatusThai(status),
+      'เช็คชื่อโดยอาจารย์ (' + cleanVal(data.teacherId || 'admin') + ')'
+    ]);
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
+    count++;
+  });
+
+  return { success: true, count: count, message: 'บันทึกการเช็คชื่อเรียบร้อยแล้ว' };
+}
+
+/**
+ * อาจารย์ผู้สอนหรือแอดมินบันทึกเกรดรายวิชา (ระดับเกรด 1 - 4)
+ */
+function saveSubjectGrades(data) {
+  return updateSubjectScores({
+    subjectName: data.subject,
+    scores: data.grades || {}
+  });
 }

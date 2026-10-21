@@ -4503,5 +4503,579 @@ body.auth-locked #adminAuthModal {
   color: #94a3b8 !important;
 }
 
+/* ==========================================================================
+   V4.0 UPGRADES: PRAYER AUTO-DETECT & CAPTURE ANIMATION, HASANAT OVERVIEW,
+   3-ROLE AUTH & OTP, TEACHER PORTAL & SUPER ADMIN CONTROL CENTER
+   ("ดูไม่เหมือนเอไอ" - Clean, Minimalist, Monochrome Craft)
+   ========================================================================== */
+
+/* 1. Prayer Time Live Clock & Auto-Detect Banner (+/- Buffer) */
+.prayer-live-clock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.prayer-live-clock-pill i {
+  color: #475569;
+}
+
+.prayer-autodetect-banner {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 0.85rem;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.prayer-autodetect-banner.in-window {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.prayer-autodetect-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.prayer-autodetect-status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.autodetect-pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #0f172a;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.12);
+  animation: subtlePulseDot 2.2s infinite ease-in-out;
+}
+
+.autodetect-pulse-dot.outside {
+  background: #94a3b8;
+  box-shadow: none;
+  animation: none;
+}
+
+@keyframes subtlePulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.18); opacity: 0.7; }
+}
+
+.prayer-autodetect-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.prayer-buffer-select {
+  height: 30px;
+  padding: 0 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+/* 2. Prayer Capture Confirmation Overlay & Persistent Receipt */
+.camera-shutter-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 25;
+  transition: opacity 0.12s ease-out;
+}
+
+.camera-shutter-flash.flash-active {
+  opacity: 0.92;
+}
+
+.prayer-capture-success-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.84);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: captureOverlayFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes captureOverlayFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.capture-success-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.4rem;
+  text-align: center;
+  max-width: 310px;
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  animation: captureCardPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes captureCardPop {
+  0% { transform: translateY(10px) scale(0.92); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.capture-success-icon-ring {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.65rem auto;
+  box-shadow: 0 0 0 6px #f1f5f9;
+}
+
+.capture-success-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.2rem;
+}
+
+.capture-success-detail {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.capture-success-time-pill {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 0.2rem 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.prayer-saved-receipt-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.75rem;
+  animation: captureOverlayFadeIn 0.25s ease;
+}
+
+.prayer-saved-receipt-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.prayer-saved-thumb-wrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  flex-shrink: 0;
+  background: #0f172a;
+}
+
+.prayer-saved-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.prayer-saved-thumb-check {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.58rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ffffff;
+}
+
+.prayer-saved-receipt-badge {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+/* 3. Hasanat 3-Pillar Overview Strip (#view-hasanat) */
+.hasanat-overview-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.15rem;
+}
+
+.hasanat-ov-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 0.85rem 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.hasanat-ov-card:hover {
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.hasanat-ov-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.hasanat-ov-info {
+  min-width: 0;
+}
+
+.hasanat-ov-val {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hasanat-ov-label {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin-top: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .hasanat-overview-strip {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+/* 4. Skill Radar Subject Grades Pills (1-4 Grade Scale) */
+.subject-grades-pills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.subject-grade-pill-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  padding: 0.38rem 0.6rem;
+  font-size: 0.76rem;
+}
+
+.subject-grade-pill-name {
+  color: #334155;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subject-grade-pill-val {
+  font-weight: 700;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.1rem 0.42rem;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* 5. Super Admin KPI Overview Grid */
+.admin-kpi-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.admin-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  transition: border-color 0.18s ease;
+}
+
+.admin-kpi-card:hover {
+  border-color: #94a3b8;
+}
+
+.admin-kpi-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.admin-kpi-label i {
+  color: #334155;
+}
+
+.admin-kpi-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0.25rem 0 0.1rem 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-kpi-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .admin-kpi-overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 6. 3-Role Auth Switcher & OTP Input */
+.auth-role-switcher {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  background: #f1f5f9;
+  padding: 0.3rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.15rem;
+}
+
+.auth-role-btn {
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.5rem 0.35rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all 0.18s ease;
+}
+
+.auth-role-btn:hover {
+  color: #0f172a;
+}
+
+.auth-role-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.otp-code-input-box {
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.22em !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+  height: 48px !important;
+  background: #f8fafc !important;
+  border: 1.5px solid #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+.admin-otp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: monospace;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.6rem;
+}
+
+/* 7. Multi-Subject Checkbox Grid & Teacher Attendance Controls */
+.subject-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.45rem;
+  max-height: 185px;
+  overflow-y: auto;
+  padding: 0.55rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+}
+
+.subject-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.38rem 0.55rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.subject-checkbox-item:hover {
+  border-color: #94a3b8;
+}
+
+.subject-checkbox-item input[type="checkbox"] {
+  accent-color: #0f172a;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.att-status-btn-group {
+  display: inline-flex;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+}
+
+.att-status-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.att-status-btn:hover {
+  border-color: #64748b;
+  color: #0f172a;
+}
+
+.att-status-btn.active-present {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.att-status-btn.active-late {
+  background: #475569;
+  border-color: #475569;
+  color: #ffffff;
+}
+
+.att-status-btn.active-leave {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.att-status-btn.active-absent {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.grade-select-pill {
+  height: 34px;
+  padding: 0 0.6rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  min-width: 110px;
+  cursor: pointer;
+}
+
+
 
 
