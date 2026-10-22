@@ -702,9 +702,13 @@ function initHasanatView() {
 
   // Update 3-Pillar Overview Strip
   const ovQuran = document.getElementById('ovQuranPageVal');
-  if (ovQuran) ovQuran.innerText = `หน้า ${curPageVal || 0} / 604`;
+  if (ovQuran) ovQuran.innerText = `${curPageVal || 0}`;
+  const ovQuranJuzPill = document.getElementById('ovQuranJuzPill');
+  if (ovQuranJuzPill) ovQuranJuzPill.innerText = `${h.quran.stars || 0}/30 ยุซ`;
   const ovMem = document.getElementById('ovMemCountVal');
-  if (ovMem) ovMem.innerText = `${memCountVal} / 114 ซูเราะห์`;
+  if (ovMem) ovMem.innerText = `${memCountVal}`;
+  const ovMemPctPill = document.getElementById('ovMemPctPill');
+  if (ovMemPctPill) ovMemPctPill.innerText = `${Math.round((memCountVal / 114) * 100)}%`;
 
   // 3. Sunnah tab (Load selected date's sunnah if available)
   const activeSunnah = (dayLog && dayLog.sunnah)
@@ -787,7 +791,11 @@ function renderHasanatStarsShowcase(stars, currentPage, khatamCount = 0) {
   }
   const ovQuran = document.getElementById('ovQuranPageVal');
   if (ovQuran) {
-    ovQuran.innerText = `หน้า ${curP} / 604`;
+    ovQuran.innerText = `${curP}`;
+  }
+  const ovQuranJuzPill = document.getElementById('ovQuranJuzPill');
+  if (ovQuranJuzPill) {
+    ovQuranJuzPill.innerText = `${stars || 0}/30 ยุซ`;
   }
   if (kpiJuz) {
     kpiJuz.innerText = stars;
@@ -1189,7 +1197,11 @@ function toggleSurahMemorized(surahNum) {
   }
   const ovMem = document.getElementById('ovMemCountVal');
   if (ovMem) {
-    ovMem.innerText = `${mem.length} / 114 ซูเราะห์`;
+    ovMem.innerText = `${mem.length}`;
+  }
+  const ovMemPctPill = document.getElementById('ovMemPctPill');
+  if (ovMemPctPill) {
+    ovMemPctPill.innerText = `${Math.round((mem.length / 114) * 100)}%`;
   }
 
   renderSurahChecklist(document.getElementById('searchSurahInput') ? document.getElementById('searchSurahInput').value : '');
@@ -1242,7 +1254,11 @@ function selectAllSurahsInCurrentCategory(isSelectAll) {
   }
   const ovMem = document.getElementById('ovMemCountVal');
   if (ovMem) {
-    ovMem.innerText = `${arr.length} / 114 ซูเราะห์`;
+    ovMem.innerText = `${arr.length}`;
+  }
+  const ovMemPctPill = document.getElementById('ovMemPctPill');
+  if (ovMemPctPill) {
+    ovMemPctPill.innerText = `${Math.round((arr.length / 114) * 100)}%`;
   }
 
   renderSurahChecklist(document.getElementById('searchSurahInput') ? document.getElementById('searchSurahInput').value : '');
@@ -1332,7 +1348,7 @@ function calculateDailySunnahRakaat(shouldSave = false) {
   }
   const ovSunnah = document.getElementById('ovSunnahVal');
   if (ovSunnah) {
-    ovSunnah.innerText = `${total} ร็อกอะฮ์`;
+    ovSunnah.innerText = `${total}`;
   }
   const sunnahGoalBar = document.getElementById('sunnahGoalProgressBar');
   if (sunnahGoalBar) {
@@ -2010,25 +2026,47 @@ function autoSelectDetectedPrayerSlot(showToastMsg = false) {
   const res = detectPrayerTimeSlotWithBuffer(prayerBufferMinutes);
   const banner = document.getElementById('prayerAutoDetectBanner');
   const dot = document.getElementById('prayerAutoDetectDot');
-  const titleEl = document.getElementById('prayerAutoDetectTitle');
-  const windowEl = document.getElementById('prayerAutoDetectWindowText');
+  const nameEl = document.getElementById('autoDetectedPrayerName');
+  const pillEl = document.getElementById('autoDetectedStatusPill');
+  const descEl = document.getElementById('autoDetectedWindowDesc');
+  const slotLabelEl = document.getElementById('selectedPrayerSlotLabel');
 
-  if (titleEl && windowEl) {
-    if (res.matched && res.isExact) {
-      if (banner) banner.classList.add('in-window');
-      if (dot) dot.classList.remove('outside');
-      titleEl.innerHTML = `ระบบตรวจจับอัตโนมัติ: ขณะนี้อยู่ในช่วงเวลาละหมาด <strong>${res.prayerName}</strong>`;
-      windowEl.innerText = `เวลาปกติ ${res.baseLabel} (ช่วงเผื่อเวลา ±${res.bufferMins} นาที: ${res.effectiveRange})`;
-    } else if (res.matched && res.isBuffered) {
-      if (banner) banner.classList.add('in-window');
-      if (dot) dot.classList.remove('outside');
-      titleEl.innerHTML = `อยู่ในช่วงเวลาเผื่อ (±${res.bufferMins} นาที): ละหมาด <strong>${res.prayerName}</strong> (${res.bufferDirection})`;
-      windowEl.innerText = `ช่วงเวลาเผื่อที่อนุญาต: ${res.effectiveRange} (เวลาหลัก ${res.baseLabel})`;
-    } else {
-      if (banner) banner.classList.remove('in-window');
-      if (dot) dot.classList.add('outside');
-      titleEl.innerHTML = `นอกช่วงเวลาหลัก • เลือกเวลาใกล้เคียงให้อัตโนมัติ: <strong>${res.prayerName}</strong>`;
-      windowEl.innerText = `ช่วงละหมาด ${res.prayerName}: ${res.effectiveRange} (เผื่อเวลา ±${res.bufferMins} นาทีแล้ว)`;
+  if (nameEl) {
+    nameEl.innerText = `ละหมาด ${res.prayerName}`;
+  }
+  if (slotLabelEl) {
+    slotLabelEl.innerHTML = `<i class="fa-solid fa-check"></i> เลือกอัตโนมัติ: ${res.prayerName}`;
+  }
+
+  if (res.matched && res.isExact) {
+    if (banner) banner.classList.add('in-window');
+    if (dot) dot.classList.remove('outside');
+    if (pillEl) {
+      pillEl.className = 'autodetect-status-pill ontime';
+      pillEl.innerText = 'อยู่ในช่วงเวลาละหมาด';
+    }
+    if (descEl) {
+      descEl.innerText = `เวลาปกติ ${res.baseLabel} • ช่วงเผื่อเวลา ±${res.bufferMins} นาที (${res.effectiveRange})`;
+    }
+  } else if (res.matched && res.isBuffered) {
+    if (banner) banner.classList.add('in-window');
+    if (dot) dot.classList.remove('outside');
+    if (pillEl) {
+      pillEl.className = 'autodetect-status-pill buffered';
+      pillEl.innerText = `${res.bufferDirection} (±${res.bufferMins} นาที)`;
+    }
+    if (descEl) {
+      descEl.innerText = `ช่วงเวลาเผื่อที่อนุญาต: ${res.effectiveRange} (เวลาหลัก ${res.baseLabel})`;
+    }
+  } else {
+    if (banner) banner.classList.remove('in-window');
+    if (dot) dot.classList.add('outside');
+    if (pillEl) {
+      pillEl.className = 'autodetect-status-pill outside';
+      pillEl.innerText = 'เวลาใกล้เคียง';
+    }
+    if (descEl) {
+      descEl.innerText = `ช่วงละหมาด ${res.prayerName}: ${res.effectiveRange} (เผื่อเวลา ±${res.bufferMins} นาทีแล้ว)`;
     }
   }
 
@@ -2038,7 +2076,7 @@ function autoSelectDetectedPrayerSlot(showToastMsg = false) {
   }
 
   if (showToastMsg) {
-    showToast(`ตรวจจับเวลาละหมาด: ${res.prayerName} (เผื่อเวลา ±${res.bufferMins} นาที)`, 'info');
+    showToast(`ซิงค์เวลาละหมาดปัจจุบันสำเร็จ: ${res.prayerName} (เผื่อเวลา ±${res.bufferMins} นาที)`, 'info');
   }
 }
 
@@ -2587,30 +2625,43 @@ async function captureAndSavePrayerInstant() {
 
   // 1. Show Animated Viewfinder Confirmation Overlay (#prayerCaptureSuccessOverlay)
   const successOverlay = document.getElementById('prayerCaptureSuccessOverlay');
-  const successDetail = document.getElementById('captureSuccessDetailText');
-  const successTimeBadge = document.getElementById('captureSuccessTimeBadge');
+  const overlayImg = document.getElementById('captureOverlayPreviewImg');
+  const overlayStamp = document.getElementById('captureOverlayTimeStamp');
+  const overlayTitle = document.getElementById('captureOverlayTitle');
+  const overlaySub = document.getElementById('captureOverlaySub');
   if (successOverlay) {
-    if (successDetail) {
-      successDetail.innerText = `ละหมาดเวลา ${selectedPrayerTime} • ${accurateLocName}`;
-    }
-    if (successTimeBadge) {
-      successTimeBadge.innerText = `บันทึกเมื่อ ${dateStr} เวลา ${timeStr} น.`;
-    }
+    if (overlayImg) overlayImg.src = photoBase64;
+    if (overlayStamp) overlayStamp.innerText = `${timeStr} น.`;
+    if (overlayTitle) overlayTitle.innerText = `บันทึกละหมาดเวลา ${selectedPrayerTime} สำเร็จ!`;
+    if (overlaySub) overlaySub.innerText = `สถานที่: ${accurateLocName} • ${dateStr}`;
     successOverlay.style.display = 'flex';
     setTimeout(() => {
       successOverlay.style.display = 'none';
-    }, 2400);
+    }, 2600);
   }
 
   // 2. Show Persistent Receipt Card below button (#prayerSavedReceiptCard)
   const receiptCard = document.getElementById('prayerSavedReceiptCard');
-  const receiptThumb = document.getElementById('prayerSavedThumbImg');
-  const receiptTitle = document.getElementById('prayerSavedReceiptTitle');
-  const receiptMeta = document.getElementById('prayerSavedReceiptMeta');
   if (receiptCard) {
-    if (receiptThumb) receiptThumb.src = photoBase64;
-    if (receiptTitle) receiptTitle.innerText = `บันทึกภาพละหมาดเวลา "${selectedPrayerTime}" สำเร็จแล้ว`;
-    if (receiptMeta) receiptMeta.innerText = `${dateStr} • เวลา ${timeStr} น. • ณ ${accurateLocName}`;
+    receiptCard.innerHTML = `
+      <div class="prayer-saved-receipt-left">
+        <div class="prayer-saved-thumb-wrap">
+          <img src="${photoBase64}" alt="Prayer Receipt">
+          <span class="prayer-saved-thumb-check"><i class="fa-solid fa-check"></i></span>
+        </div>
+        <div style="min-width: 0;">
+          <div style="font-size: 0.84rem; font-weight: 700; color: #0f172a;">
+            บันทึกภาพละหมาดเวลา "${escapeHtml(selectedPrayerTime)}" เรียบร้อยแล้ว
+          </div>
+          <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.1rem;">
+            ${escapeHtml(dateStr)} • เวลา ${escapeHtml(timeStr)} น. • ณ ${escapeHtml(accurateLocName)}
+          </div>
+        </div>
+      </div>
+      <span class="prayer-saved-receipt-badge">
+        <i class="fa-solid fa-circle-check"></i> บันทึกแล้ว
+      </span>
+    `;
     receiptCard.style.display = 'flex';
   }
 
@@ -4653,22 +4704,48 @@ function handleBrandLogoClick() {
 
 // ----------------- SUPER ADMIN CONTROL CENTER ----------------- //
 
+function getOrInitAdminMasterOtp() {
+  let code = localStorage.getItem('khalifah_admin_master_otp');
+  if (!code || code.length !== 6) {
+    code = generateRandomAdminOtp();
+    localStorage.setItem('khalifah_admin_master_otp', code);
+  }
+  return code;
+}
+
+function regenerateAdminRandomOtp(showToastMsg = false) {
+  const newCode = generateRandomAdminOtp();
+  localStorage.setItem('khalifah_admin_master_otp', newCode);
+  renderSuperAdminOverviewKpis();
+  if (showToastMsg) {
+    showToast(`สุ่มรหัสกลางแอดมินชุดใหม่สำเร็จ: ${newCode}`, 'info');
+  }
+  return newCode;
+}
+
 function renderSuperAdminOverviewKpis() {
   const kpiStd = document.getElementById('adminKpiStudentsCount');
   const kpiTch = document.getElementById('adminKpiTeachersCount');
   const kpiPending = document.getElementById('adminKpiPendingCount');
   const kpiPrayers = document.getElementById('adminKpiPrayersToday');
-  const badgePending = document.getElementById('pendingApprovalsBadgeCount');
+  const kpiActSub = document.getElementById('adminKpiActivitiesSub');
+  const badgePending = document.getElementById('adminTabPendingBadge') || document.getElementById('pendingApprovalsBadgeCount');
+  const liveCodeBadge = document.getElementById('adminLiveRandomCodeBadge');
+  const masterOtpDisplay = document.getElementById('adminCurrentMasterOtpDisplay');
 
   const activeStudentsCount = allStudents.length;
   const activeTeachersCount = subAdmins.length;
   const pendingList = getPendingRegistrations().filter(p => p.status === 'PendingAdmin');
   const prayersCount = todayPrayers.length;
+  const masterOtp = getOrInitAdminMasterOtp();
 
-  if (kpiStd) kpiStd.innerText = activeStudentsCount;
-  if (kpiTch) kpiTch.innerText = activeTeachersCount;
-  if (kpiPending) kpiPending.innerText = pendingList.length;
-  if (kpiPrayers) kpiPrayers.innerText = prayersCount;
+  if (kpiStd) kpiStd.innerText = `${activeStudentsCount} คน`;
+  if (kpiTch) kpiTch.innerText = `${activeTeachersCount} ท่าน`;
+  if (kpiPending) kpiPending.innerText = `${pendingList.length} รายการ`;
+  if (kpiPrayers) kpiPrayers.innerText = `${prayersCount} รายการ`;
+  if (kpiActSub) kpiActSub.innerText = `กิจกรรมทั้งหมด ${activities.length} รายการ`;
+  if (liveCodeBadge) liveCodeBadge.innerText = masterOtp;
+  if (masterOtpDisplay) masterOtpDisplay.innerText = masterOtp;
   if (badgePending) {
     badgePending.innerText = pendingList.length;
     badgePending.style.display = pendingList.length > 0 ? 'inline-block' : 'none';
@@ -4758,7 +4835,7 @@ function renderPendingApprovalsTable(skipCloudFetch = false) {
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
           <i class="fa-solid fa-circle-check" style="font-size: 1.4rem; margin-bottom: 0.4rem; display: block; color: #94a3b8;"></i>
           ไม่มีรายการคำขอสมัครที่รออนุมัติในขณะนี้
         </td>
@@ -4775,7 +4852,7 @@ function renderPendingApprovalsTable(skipCloudFetch = false) {
 
     const isApproved = item.status === 'Approved' || item.status === 'approved' || item.status === 'Verified';
     const statusBadge = isApproved
-      ? `<span class="activity-badge badge-active"><i class="fa-solid fa-check"></i> อนุมัติและส่งอีเมลแล้ว</span>`
+      ? `<span class="activity-badge badge-active"><i class="fa-solid fa-check"></i> อนุมัติแล้ว</span>`
       : `<span class="activity-badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;"><i class="fa-solid fa-clock"></i> รอแอดมินกดยินยอม</span>`;
 
     return `
@@ -4788,18 +4865,18 @@ function renderPendingApprovalsTable(skipCloudFetch = false) {
           <div style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-phone"></i> ${escapeHtml(item.phone || '-')}</div>
         </td>
         <td style="font-size: 0.82rem;">${escapeHtml(item.gradeOrSubj || item.detail || '-')}</td>
-        <td>
-          <div style="display: flex; align-items: center; gap: 0.35rem;">
+        <td style="text-align: center;">
+          <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
             <span class="admin-otp-badge" title="รหัสยืนยันแบบสุ่มเฉพาะแอดมิน">${escapeHtml(item.otpCode)}</span>
             <button class="btn btn-secondary btn-sm" onclick="adminRegenerateRandomOtp('${escapeHtml(reqKey)}')" title="สุ่มรหัสยืนยันชุดใหม่" style="padding: 0.22rem 0.45rem; font-size: 0.74rem;">
               <i class="fa-solid fa-dice"></i> สุ่มใหม่
             </button>
           </div>
-          <div style="margin-top: 0.25rem;">${statusBadge}</div>
         </td>
+        <td>${statusBadge}</td>
         <td style="text-align: right; white-space: nowrap;">
           <button class="btn btn-primary btn-sm" onclick="adminApproveRegistration('${escapeHtml(reqKey)}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.3rem;">
-            <i class="fa-solid fa-paper-plane"></i> ยินยอม & ส่งรหัสเข้าอีเมล
+            <i class="fa-solid fa-paper-plane"></i> ยินยอม & ส่งอีเมล
           </button>
           <button class="btn btn-danger btn-sm" onclick="adminRejectRegistration('${escapeHtml(reqKey)}')" style="padding: 0.3rem 0.55rem; font-size: 0.78rem;">
             <i class="fa-solid fa-trash"></i>
@@ -4973,18 +5050,23 @@ function renderAdminStudentsTable(filteredList = null) {
       <td><b>${escapeHtml(sId)}</b></td>
       <td>
         <div style="font-weight: 600; color: var(--text-dark);">${escapeHtml(s.fullName)}</div>
-        <div style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(s.email || '')}</div>
+        <div style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(s.schoolName || '')}</div>
       </td>
       <td><span class="activity-badge badge-upcoming">${escapeHtml(s.grade)}</span></td>
-      <td>${escapeHtml(s.schoolName || '-')}</td>
-      <td>${escapeHtml(sPhone)}</td>
       <td>
-        <span style="font-weight: 600;">${s.attendance ? s.attendance.present : 0} วัน</span>
-        <span style="font-size: 0.74rem; color: var(--text-muted);"> (สาย ${s.attendance ? s.attendance.late : 0} / ขาด ${s.attendance ? s.attendance.absent : 0})</span>
+        <div style="font-weight: 600; color: #0f172a;">${escapeHtml(sPhone || '-')}</div>
+        <div style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(s.email || '-')}</div>
       </td>
       <td>
-        <div>ละหมาดวันนี้: <b>${prayerCount}/5</b></div>
-        <div style="font-size: 0.74rem; color: var(--text-muted);">กุรอานหน้า ${qPage} • จำ ${memCount} ซูเราะห์</div>
+        <div style="font-weight: 600; color: #0f172a;">มา ${s.attendance ? s.attendance.present : 0} วัน</div>
+        <div style="font-size: 0.74rem; color: var(--text-muted);">สาย ${s.attendance ? s.attendance.late : 0} • ลา ${s.attendance ? (s.attendance.leave || 0) : 0} • ขาด ${s.attendance ? s.attendance.absent : 0}</div>
+      </td>
+      <td>
+        <span class="subject-grade-pill-val">${prayerCount} / 5 เวลา</span>
+      </td>
+      <td>
+        <div style="font-weight: 600; color: #0f172a;">หน้า ${qPage} / 604</div>
+        <div style="font-size: 0.74rem; color: var(--text-muted);">จำ ${memCount} ซูเราะห์</div>
       </td>
       <td><span class="subject-grade-pill-val">GPA ${escapeHtml(gpaVal)}</span></td>
       <td style="text-align: right; white-space: nowrap;">
@@ -4998,6 +5080,14 @@ function renderAdminStudentsTable(filteredList = null) {
     </tr>
   `;
   }).join('');
+}
+
+function openAdminEditStudentModal(studentId = null) {
+  if (!studentId) {
+    openAdminAddStudentModal();
+  } else {
+    viewStudentDetails(studentId);
+  }
 }
 
 function filterAdminStudents() {
@@ -5462,6 +5552,10 @@ function openAddSubAdminModal() {
 }
 
 function openEditTeacherModal(username) {
+  if (!username) {
+    openAddSubAdminModal();
+    return;
+  }
   const t = subAdmins.find(s => isIdMatch(s.username, username));
   if (!t) return;
 
@@ -5571,9 +5665,10 @@ function renderSubAdminsTable() {
       return s ? s.name : id;
     }).filter(Boolean).join(', ') || 'ทุกวิชา';
 
+    const subjBadge = `<span class="activity-badge badge-upcoming">${escapeHtml(subjNames)}</span>`;
     const statusBadge = a.approvalStatus === 'PendingAdmin'
-      ? '<span class="activity-badge" style="background:#fef3c7;color:#92400e;">รอยืนยันรหัส</span>'
-      : `<span class="activity-badge badge-active">${escapeHtml(subjNames)}</span>`;
+      ? '<span class="activity-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">รอยืนยันรหัส</span>'
+      : '<span class="activity-badge badge-active">อนุมัติแล้ว</span>';
 
     return `
       <tr>
@@ -5583,8 +5678,8 @@ function renderSubAdminsTable() {
           <div>${escapeHtml(a.email || '-')}</div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(a.phone || '')}</div>
         </td>
+        <td>${subjBadge}</td>
         <td>${statusBadge}</td>
-        <td>${escapeHtml(a.createdAt || '-')}</td>
         <td style="text-align: right; white-space: nowrap;">
           <button class="btn btn-primary btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.78rem; margin-right: 0.25rem;" onclick="openEditTeacherModal('${escapeHtml(cleanIdString(a.username))}')">
             <i class="fa-solid fa-pen"></i> แก้ไข
@@ -5637,13 +5732,13 @@ function renderGradingStudentsTable() {
   const currentSubj = subjSelect.value;
   const currentGrade = gradeSelect.value;
 
-  const filtered = allStudents.filter(s => s.grade === currentGrade);
+  const filtered = allStudents.filter(s => currentGrade === 'ALL' || !currentGrade || s.grade === currentGrade);
 
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-          ไม่พบรายชื่อนักเรียนในระดับชั้น ${escapeHtml(currentGrade)}
+          ไม่พบรายชื่อนักเรียนในระดับชั้นที่เลือก
         </td>
       </tr>
     `;
@@ -5777,7 +5872,12 @@ function initTeacherPortalView() {
 
 function switchTeacherPortalTab(tabName, btnEl) {
   document.querySelectorAll('#view-teacher .admin-tab-btn').forEach(b => b.classList.remove('active'));
-  if (btnEl) btnEl.classList.add('active');
+  if (btnEl) {
+    btnEl.classList.add('active');
+  } else {
+    const fallbackBtn = document.getElementById(tabName === 'attendance' ? 'btnTeacherTabAtt' : 'btnTeacherTabGrade');
+    if (fallbackBtn) fallbackBtn.classList.add('active');
+  }
 
   const tabAtt = document.getElementById('teacher-tab-attendance');
   const tabGrd = document.getElementById('teacher-tab-grades');
@@ -5791,21 +5891,35 @@ function switchTeacherPortalTab(tabName, btnEl) {
   }
 }
 
+function switchTeacherTab(tabName, btnEl = null) {
+  switchTeacherPortalTab(tabName, btnEl);
+}
+
 function renderTeacherAttendanceTable() {
   const tbody = document.getElementById('teacherAttendanceTableBody');
   const gradeSelect = document.getElementById('teacherAttGradeSelect');
   const dateInput = document.getElementById('teacherAttDateInput');
+  const searchInput = document.getElementById('teacherAttSearchInput');
   if (!tbody || !gradeSelect) return;
 
   const selectedGrade = gradeSelect.value;
   const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
-  const filtered = allStudents.filter(s => s.grade === selectedGrade);
+  const searchQuery = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
+
+  const filtered = allStudents.filter(s => {
+    const matchGrade = (selectedGrade === 'ALL' || !selectedGrade || s.grade === selectedGrade);
+    if (!matchGrade) return false;
+    if (!searchQuery) return true;
+    const sId = cleanIdString(s.studentId).toLowerCase();
+    const sName = (s.fullName || '').toLowerCase();
+    return sId.includes(searchQuery) || sName.includes(searchQuery);
+  });
 
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-          ไม่พบรายชื่อนักเรียนในระดับชั้น ${escapeHtml(selectedGrade)}
+        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          ไม่พบรายชื่อนักเรียนในระดับชั้นที่เลือก
         </td>
       </tr>
     `;
@@ -5829,10 +5943,11 @@ function renderTeacherAttendanceTable() {
       <tr>
         <td><b>${escapeHtml(sId)}</b></td>
         <td style="font-weight: 600;">${escapeHtml(s.fullName)}</td>
-        <td style="font-size: 0.8rem; color: var(--text-secondary);">
-          มา ${att.present || 0} • สาย ${att.late || 0} • ลา ${att.leave || 0} • ขาด ${att.absent || 0}
+        <td><span class="activity-badge badge-upcoming">${escapeHtml(s.grade)}</span></td>
+        <td style="text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
+          มา <b>${att.present || 0}</b> • สาย ${att.late || 0} • ลา ${att.leave || 0} • ขาด ${att.absent || 0}
         </td>
-        <td style="text-align: center;">
+        <td style="text-align: right;">
           <div class="att-status-btn-group">
             <button type="button" class="att-status-btn ${curState === 'present' ? 'active-present' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'present')">
               <i class="fa-solid fa-check"></i> มาเรียน
@@ -5858,15 +5973,20 @@ function setStudentDailyAttendance(studentId, status) {
   renderTeacherAttendanceTable();
 }
 
-function markAllStudentsPresentInClass() {
+function markAllStudentsPresentInClass(status = 'present') {
   const gradeSelect = document.getElementById('teacherAttGradeSelect');
   if (!gradeSelect) return;
-  const filtered = allStudents.filter(s => s.grade === gradeSelect.value);
+  const selectedGrade = gradeSelect.value;
+  const filtered = allStudents.filter(s => selectedGrade === 'ALL' || !selectedGrade || s.grade === selectedGrade);
   filtered.forEach(s => {
-    teacherDailyAttendanceDraft[cleanIdString(s.studentId)] = 'present';
+    teacherDailyAttendanceDraft[cleanIdString(s.studentId)] = status || 'present';
   });
   renderTeacherAttendanceTable();
   showToast('เลือกสถานะ "มาเรียน" ให้ทั้งห้องเรียบร้อย กดบันทึกด้านล่างเพื่อยืนยัน', 'info');
+}
+
+function markAllTeacherAttendance(status = 'present') {
+  markAllStudentsPresentInClass(status);
 }
 
 function saveTeacherDailyAttendance() {
@@ -5876,7 +5996,7 @@ function saveTeacherDailyAttendance() {
 
   const selectedGrade = gradeSelect.value;
   const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
-  const filtered = allStudents.filter(s => s.grade === selectedGrade);
+  const filtered = allStudents.filter(s => selectedGrade === 'ALL' || !selectedGrade || s.grade === selectedGrade);
 
   if (filtered.length === 0) {
     showToast('ไม่มีรายชื่อนักเรียนในชั้นเรียนนี้', 'warning');
@@ -5928,6 +6048,10 @@ function saveTeacherDailyAttendance() {
   });
 }
 
+function saveTeacherAttendanceBatch() {
+  saveTeacherDailyAttendance();
+}
+
 function renderTeacherGradesPortalTable() {
   const tbody = document.getElementById('teacherPortalGradesTableBody');
   const subjSelect = document.getElementById('teacherPortalSubjectSelect');
@@ -5936,13 +6060,13 @@ function renderTeacherGradesPortalTable() {
 
   const currentSubj = subjSelect.value;
   const currentGrade = gradeSelect.value;
-  const filtered = allStudents.filter(s => s.grade === currentGrade);
+  const filtered = allStudents.filter(s => currentGrade === 'ALL' || !currentGrade || s.grade === currentGrade);
 
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-          ไม่พบรายชื่อนักเรียนในระดับชั้น ${escapeHtml(currentGrade)}
+          ไม่พบรายชื่อนักเรียนในระดับชั้นที่เลือก
         </td>
       </tr>
     `;
@@ -5985,6 +6109,10 @@ function renderTeacherGradesPortalTable() {
 function setTeacherPortalQuickGrade(studentId, gradeVal) {
   const el = document.querySelector(`.teacher-portal-grade-input[data-student-id="${studentId}"]`);
   if (el) el.value = String(gradeVal);
+}
+
+function renderTeacherPortalGradesTable() {
+  renderTeacherGradesPortalTable();
 }
 
 function saveTeacherPortalGrades() {
