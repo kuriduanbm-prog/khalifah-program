@@ -6181,7 +6181,443 @@ body.portal-mode-teacher .app-header {
   transform: scale(1.1);
 }
 
+/* ==========================================================================
+   STAFF LIVE MONITOR KIOSK MODE & SPLIT ACTIVITY ATTENDEES MODAL (v5.3)
+   ========================================================================== */
 
+/* Kiosk Mode Fullscreen & Isolation */
+body.staff-monitor-active .app-header,
+body.staff-monitor-active .mobile-nav,
+body.staff-monitor-active .app-footer,
+body.staff-monitor-active .auth-modal,
+body.staff-monitor-active #authModal {
+  display: none !important;
+}
 
+body.staff-monitor-active {
+  background-color: #f8fafc !important;
+  overflow-x: hidden;
+}
 
+body.staff-monitor-active .main-wrapper {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+body.staff-monitor-active #view-staff-monitor {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Staff Kiosk Top Navigation Bar */
+.staff-kiosk-header {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-light);
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.staff-kiosk-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.staff-kiosk-logo {
+  width: 42px;
+  height: 42px;
+  background: var(--primary-light);
+  border-radius: var(--radius-md);
+  border: 1px solid #bae6fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.staff-kiosk-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.staff-kiosk-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
+.staff-kiosk-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.staff-kiosk-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.staff-live-pill {
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1px solid #a7f3d0 !important;
+  padding: 0.3rem 0.75rem !important;
+  font-weight: 700;
+}
+
+.staff-header-btn {
+  height: 38px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+/* 2-Column Responsive Kiosk Grid */
+.staff-kiosk-grid {
+  display: grid;
+  grid-template-columns: 370px 1fr;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  max-width: 1650px;
+  margin: 0 auto;
+  min-height: calc(100vh - 80px);
+}
+
+.kiosk-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
+}
+
+/* Left Panel: QR Card */
+.kiosk-qr-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  height: 100%;
+}
+
+.kiosk-act-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 0 0 0.35rem 0;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.kiosk-act-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.kiosk-qr-box {
+  background: #ffffff;
+  padding: 1rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.15rem;
+  width: 270px;
+  height: 270px;
+  max-width: 100%;
+}
+
+.kiosk-qr-box img,
+.kiosk-qr-box canvas {
+  width: 236px !important;
+  height: 236px !important;
+  image-rendering: pixelated;
+}
+
+.kiosk-qr-instructions {
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.kiosk-qr-scan-hint {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-bottom: 0.25rem;
+}
+
+.kiosk-qr-sub-hint {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Right Panel: Feed & Live Attendees */
+.kiosk-feed-card {
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.kiosk-kpi-strip {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.kiosk-kpi-item {
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.kiosk-kpi-item.count-item {
+  border-left: 4px solid #0284c7;
+}
+
+.kiosk-kpi-item.latest-item {
+  border-left: 4px solid #f59e0b;
+}
+
+.kiosk-kpi-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.kiosk-kpi-val {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #0284c7;
+  line-height: 1.1;
+}
+
+.kiosk-kpi-latest-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kiosk-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.kiosk-search-box {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.kiosk-search-box input {
+  width: 100%;
+  height: 38px;
+  padding-left: 2.2rem;
+  padding-right: 0.85rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: 0.84rem;
+  background: #ffffff;
+  outline: none;
+  transition: var(--transition);
+}
+
+.kiosk-search-box input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.kiosk-search-box i {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.kiosk-table-wrapper {
+  flex: 1;
+  min-height: 360px;
+  max-height: calc(100vh - 310px);
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+
+.kiosk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.kiosk-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #1e293b;
+  color: #ffffff;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-align: left;
+}
+
+.kiosk-table tbody td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.kiosk-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.kiosk-table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Flash highlight animation when a new student scans */
+@keyframes scanPulse {
+  0% {
+    background-color: #dcfce7;
+    transform: scale(1.008);
+  }
+  40% {
+    background-color: #bbf7d0;
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+.row-new-scan {
+  animation: scanPulse 2.8s ease-out;
+}
+
+/* ==========================================================================
+   2-COLUMN SPLIT LAYOUT FOR ADMIN ACTIVITY ATTENDEES MODAL
+   ========================================================================== */
+.act-monitor-modal-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.15rem;
+}
+
+.act-modal-qr-panel {
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.act-modal-qr-box {
+  background: #ffffff;
+  padding: 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  width: 216px;
+  height: 216px;
+}
+
+.act-modal-qr-box img,
+.act-modal-qr-box canvas {
+  width: 196px !important;
+  height: 196px !important;
+  image-rendering: pixelated;
+}
+
+.act-modal-table-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .staff-kiosk-grid {
+    grid-template-columns: 1fr;
+  }
+  .act-monitor-modal-grid {
+    grid-template-columns: 1fr;
+  }
+  .kiosk-kpi-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .d-none-sm {
+    display: none !important;
+  }
+  .staff-kiosk-header {
+    padding: 0.65rem 1rem;
+  }
+}
 

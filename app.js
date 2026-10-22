@@ -1581,6 +1581,7 @@ function clearPrayerDateFilterBottom() {
 
 // ----------------- MANDATORY LOGIN ENFORCEMENT ----------------- //
 function enforceMandatoryLogin() {
+  if (isStaffMonitorMode) return;
   if (!currentStudent && !currentAdmin) {
     document.body.classList.add('auth-locked');
     openModal('authModal');
@@ -1718,6 +1719,12 @@ let gasApiUrl = storedGasUrl || DEFAULT_GAS_API_URL;
 document.addEventListener('DOMContentLoaded', () => {
   loadStoredData();
   initAppLogo();
+
+  // Check if opened as Staff / Kiosk Live Monitor via URL parameter (e.g. ?monitor=ACT-xxx or ?staff_monitor=ACT-xxx)
+  if (typeof checkStaffMonitorUrlParams === 'function' && checkStaffMonitorUrlParams()) {
+    return; // Kiosk mode active, skip normal login / student dashboards
+  }
+
   if (currentStudent || currentAdmin) {
     document.body.classList.remove('auth-locked');
   } else {
@@ -1873,6 +1880,15 @@ function setupEventListeners() {
 
 // ----------------- VIEW ROUTING ----------------- //
 function switchView(viewName) {
+  if (viewName === 'staff-monitor') {
+    isStaffMonitorMode = true;
+    document.body.classList.add('staff-monitor-active');
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    const staffSec = document.getElementById('view-staff-monitor');
+    if (staffSec) staffSec.classList.add('active');
+    return;
+  }
+
   // Enforce login before switching views
   if (!currentStudent && !currentAdmin) {
     enforceMandatoryLogin();
@@ -7794,10 +7810,17 @@ try {
           if (typeof renderStudentScannedActivities === 'function') renderStudentScannedActivities();
           if (typeof renderActivitiesList === 'function') renderActivitiesList();
 
+          // Live update on Staff Kiosk Monitor
+          if (typeof renderStaffKioskMonitor === 'function' && isStaffMonitorMode) {
+            renderStaffKioskMonitor(incomingLog.studentId);
+            if (typeof playStaffScanDingSound === 'function') playStaffScanDingSound();
+          }
+
           if (currentViewingActivityId) {
             const act = activities.find(a => (a.id === currentViewingActivityId || a.activityId === currentViewingActivityId));
             currentAttendeesList = actLogs.filter(l => l.activityId === currentViewingActivityId || (act && l.activityTitle === act.title));
             if (typeof renderAttendeesTable === 'function') renderAttendeesTable(currentAttendeesList);
+            if (typeof playStaffScanDingSound === 'function') playStaffScanDingSound();
           }
         }
       }
@@ -7814,6 +7837,9 @@ window.addEventListener('storage', (e) => {
     if (typeof renderAdminLiveActivityFeed === 'function') renderAdminLiveActivityFeed();
     if (typeof renderStudentScannedActivities === 'function') renderStudentScannedActivities();
     if (typeof renderActivitiesList === 'function') renderActivitiesList();
+    if (typeof renderStaffKioskMonitor === 'function' && isStaffMonitorMode) {
+      renderStaffKioskMonitor();
+    }
     if (currentViewingActivityId) {
       let actLogs = [];
       try {
@@ -8486,8 +8512,14 @@ function renderAdminActivitiesTable() {
           </span>
         </td>
         <td style="text-align: right; white-space: nowrap;">
-          <button class="btn btn-primary btn-sm" onclick="openActivityAttendeesModal('${actId}')" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-right: 0.3rem; font-weight: 600;" title="เปิดดูมอนิเตอร์สดและรายชื่อผู้สแกนกิจกรรมนี้">
+          <button class="btn btn-primary btn-sm" onclick="openActivityAttendeesModal('${actId}')" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-right: 0.3rem; font-weight: 600;" title="เปิดดูมอนิเตอร์สดและรายชื่อผู้สแกนกิจกรรมนี้ (พร้อม QR Code ข้างซ้าย)">
             <i class="fa-solid fa-tower-broadcast"></i> เปิดมอนิเตอร์สด (${participantsCount})
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="copyStaffMonitorLink('${actId}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; margin-right: 0.3rem;" title="คัดลอกลิงก์มอนิเตอร์สำหรับสตาฟ (ไม่ต้องล็อกอิน)">
+            <i class="fa-solid fa-share-nodes"></i> แชร์ให้สตาฟ
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openStaffMonitorStandalone('${actId}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; margin-right: 0.3rem;" title="เปิดหน้าจอมอนิเตอร์แบบ Kiosk เต็มจอในแท็บใหม่">
+            <i class="fa-solid fa-display"></i> จอ Kiosk
           </button>
           <button class="btn btn-secondary btn-sm" onclick="openActivityQrModal('${actId}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; margin-right: 0.3rem;" title="แสดง QR Code สำหรับให้นักเรียนสแกน">
             <i class="fa-solid fa-qrcode"></i> พิมพ์ QR
@@ -8953,17 +8985,36 @@ function stopAdminActivityLivePolling() {
 function openActivityAttendeesModal(actId) {
   currentViewingActivityId = actId;
   const act = activities.find(a => (a.id === actId || a.activityId === actId));
+  const resolvedId = act ? (act.id || act.activityId) : actId;
+  const actTitle = act ? act.title : actId;
+
   const titleEl = document.getElementById('actAttendeesModalTitle');
   const subEl = document.getElementById('actAttendeesModalSubtitle');
   const searchInput = document.getElementById('attendeesSearchInput');
 
   if (titleEl) {
-    titleEl.innerHTML = `<i class="fa-solid fa-tower-broadcast" style="color: var(--primary);"></i> มอนิเตอร์ผู้สแกน: ${act ? act.title : actId}`;
+    titleEl.innerHTML = `<i class="fa-solid fa-tower-broadcast" style="color: var(--primary);"></i> มอนิเตอร์ผู้สแกน: ${actTitle}`;
   }
   if (subEl) {
     subEl.innerText = `ประเภท: ${act ? act.type : '-'} | วันที่: ${act ? act.date : '-'} | สถานที่: ${act ? act.location : '-'}`;
   }
   if (searchInput) searchInput.value = '';
+
+  // Render High-Contrast QR Code on Left Panel of Modal for on-screen scanning
+  const qrEl = document.getElementById('actModalQrCodeDisplay');
+  if (qrEl) {
+    qrEl.innerHTML = '';
+    if (window.QRCode) {
+      new QRCode(qrEl, {
+        text: `KHALIFAH_ACT:${resolvedId}:${actTitle}`,
+        width: 196,
+        height: 196,
+        colorDark: '#0284c7',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+  }
 
   let actLogs = [];
   try {
@@ -8992,7 +9043,7 @@ function renderAttendeesTable(list) {
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
           <i class="fa-solid fa-user-slash" style="font-size: 1.5rem; color: #cbd5e1; margin-bottom: 0.5rem; display: block;"></i>
           ยังไม่มีนักเรียนสแกนเข้าร่วมกิจกรรมนี้
         </td>
@@ -9004,11 +9055,10 @@ function renderAttendeesTable(list) {
   tbody.innerHTML = list.map((item, idx) => `
     <tr>
       <td style="text-align: center; color: var(--text-muted);">${idx + 1}</td>
+      <td><span style="color: #0284c7; font-weight: 700;"><i class="fa-regular fa-clock"></i> ${item.formattedTime || '-'}</span></td>
       <td><b>${item.studentId}</b></td>
-      <td>${item.studentName}</td>
+      <td style="font-weight: 600;">${item.studentName}</td>
       <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.78rem;">${item.grade || '-'}</span></td>
-      <td>${item.formattedDate || '-'}</td>
-      <td><span style="color: #0284c7; font-weight: 600;">${item.formattedTime || '-'}</span></td>
       <td style="text-align: right;">
         <button class="btn btn-icon btn-sm" onclick="deleteActivityAttendee('${item.id || item.studentId}')" title="ลบรายการเช็คชื่อนี้" style="color: #ef4444; width: 28px; height: 28px;">
           <i class="fa-solid fa-trash-can"></i>
@@ -9871,6 +9921,447 @@ async function fetchPrayersFromCloud() {
     }
   } catch (err) {
     console.warn('fetchPrayersFromCloud err:', err);
+  }
+}
+
+// ==========================================================================
+// STAFF & KIOSK LIVE ACTIVITY MONITOR ENGINE (ZERO-AUTH PUBLIC ACCESS)
+// ==========================================================================
+let isStaffMonitorMode = false;
+let staffMonitorActiveActId = null;
+let isStaffSoundEnabled = true;
+
+function checkStaffMonitorUrlParams() {
+  let targetActId = null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('monitor')) {
+      targetActId = params.get('monitor');
+    } else if (params.has('staff_monitor')) {
+      targetActId = params.get('staff_monitor');
+    } else if (window.location.hash.startsWith('#monitor=')) {
+      targetActId = window.location.hash.replace('#monitor=', '');
+    }
+  } catch (e) {
+    targetActId = null;
+  }
+
+  if (targetActId !== null && targetActId !== undefined) {
+    isStaffMonitorMode = true;
+    document.body.classList.add('staff-monitor-active');
+    document.body.classList.remove('auth-locked');
+    closeModal('authModal');
+    closeModal('adminAuthModal');
+
+    // Switch view directly to staff monitor
+    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+    const staffView = document.getElementById('view-staff-monitor');
+    if (staffView) staffView.classList.add('active');
+
+    // Initialize Staff Kiosk Engine
+    initStaffMonitor(targetActId);
+    return true;
+  }
+  return false;
+}
+
+function initStaffMonitor(targetActId) {
+  isStaffMonitorMode = true;
+  document.body.classList.add('staff-monitor-active');
+  document.body.classList.remove('auth-locked');
+  closeModal('authModal');
+  closeModal('adminAuthModal');
+
+  // Load activities if available
+  if (activities.length === 0) {
+    try {
+      activities = JSON.parse(localStorage.getItem('khalifah_activities') || '[]');
+    } catch (e) { activities = []; }
+  }
+
+  // Populate Activity Selector
+  const selectEl = document.getElementById('staffKioskActSelect');
+  if (selectEl) {
+    if (activities.length === 0) {
+      selectEl.innerHTML = `<option value="">(กำลังค้นหากิจกรรมจากคลาวด์...)</option>`;
+    } else {
+      selectEl.innerHTML = activities.map(a => {
+        const aId = a.id || a.activityId;
+        return `<option value="${aId}">${a.title} (${a.date || '-'})</option>`;
+      }).join('');
+    }
+  }
+
+  // Determine which activity to display
+  let selectedAct = null;
+  if (targetActId && targetActId !== 'all' && targetActId !== 'live') {
+    selectedAct = activities.find(a => (a.id === targetActId || a.activityId === targetActId || a.title === targetActId));
+  }
+  if (!selectedAct && activities.length > 0) {
+    selectedAct = activities[0];
+  }
+
+  if (selectedAct) {
+    const actId = selectedAct.id || selectedAct.activityId;
+    changeStaffKioskActivity(actId);
+  } else {
+    const titleEl = document.getElementById('staffKioskActTitle');
+    if (titleEl) titleEl.innerText = 'กำลังเชื่อมต่อกิจกรรม...';
+  }
+
+  // Start fast live polling (2.5s)
+  startAdminActivityLivePolling(2500);
+
+  // Immediate cloud fetch
+  fetchActivitiesAndLogsFromCloud(false).then(() => {
+    if (activities.length > 0) {
+      const currentSelect = document.getElementById('staffKioskActSelect');
+      if (currentSelect) {
+        currentSelect.innerHTML = activities.map(a => {
+          const aId = a.id || a.activityId;
+          return `<option value="${aId}">${a.title} (${a.date || '-'})</option>`;
+        }).join('');
+      }
+      if (!staffMonitorActiveActId) {
+        let match = activities.find(a => (a.id === targetActId || a.activityId === targetActId));
+        if (!match) match = activities[0];
+        if (match) changeStaffKioskActivity(match.id || match.activityId);
+      } else {
+        renderStaffKioskMonitor();
+      }
+    }
+  });
+}
+
+function changeStaffKioskActivity(actId) {
+  if (!actId) return;
+  staffMonitorActiveActId = actId;
+
+  const selectEl = document.getElementById('staffKioskActSelect');
+  if (selectEl && selectEl.value !== actId) {
+    selectEl.value = actId;
+  }
+
+  // Update browser URL query string without page reload
+  try {
+    const cleanUrl = window.location.pathname + '?monitor=' + encodeURIComponent(actId);
+    window.history.replaceState({ monitor: actId }, '', cleanUrl);
+  } catch (e) {}
+
+  const act = activities.find(a => (a.id === actId || a.activityId === actId));
+  const resolvedId = act ? (act.id || act.activityId) : actId;
+  const actTitle = act ? act.title : actId;
+
+  const titleEl = document.getElementById('staffKioskActTitle');
+  const typeBadge = document.getElementById('staffKioskActTypeBadge');
+  const dateEl = document.getElementById('staffKioskActDate');
+  const locEl = document.getElementById('staffKioskActLocation');
+
+  if (titleEl) titleEl.innerText = actTitle;
+  if (typeBadge) typeBadge.innerText = act ? (act.type || 'กิจกรรม') : 'กิจกรรม';
+  if (dateEl) dateEl.innerText = act ? (act.date || '-') : '-';
+  if (locEl) locEl.innerText = act ? (act.location || 'โรงเรียน/สถาบัน') : '-';
+
+  // Render High-Contrast QR Code on Left Column
+  const qrDisplay = document.getElementById('staffKioskQrDisplay');
+  if (qrDisplay) {
+    qrDisplay.innerHTML = '';
+    if (window.QRCode) {
+      new QRCode(qrDisplay, {
+        text: `KHALIFAH_ACT:${resolvedId}:${actTitle}`,
+        width: 236,
+        height: 236,
+        colorDark: '#0284c7',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+  }
+
+  renderStaffKioskMonitor();
+}
+
+function renderStaffKioskMonitor(highlightStudentId = null) {
+  const tbody = document.getElementById('staffKioskTableBody');
+  const totalCountEl = document.getElementById('staffKioskTotalCount');
+  const latestNameEl = document.getElementById('staffKioskLatestName');
+  const updatedTimeEl = document.getElementById('staffKioskLastUpdatedTime');
+
+  if (!tbody || !staffMonitorActiveActId) return;
+
+  const act = activities.find(a => (a.id === staffMonitorActiveActId || a.activityId === staffMonitorActiveActId));
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  // Filter logs for currently monitored activity
+  let logs = actLogs.filter(l => l.activityId === staffMonitorActiveActId || (act && l.activityTitle === act.title));
+
+  // Sort latest first
+  logs.sort((a, b) => {
+    const ta = a.checkInTimestamp ? new Date(a.checkInTimestamp).getTime() : 0;
+    const tb = b.checkInTimestamp ? new Date(b.checkInTimestamp).getTime() : 0;
+    return tb - ta;
+  });
+
+  // Update total count
+  if (totalCountEl) {
+    totalCountEl.innerHTML = `${logs.length} <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-muted);">คน</span>`;
+  }
+
+  // Update latest scanned student
+  if (latestNameEl) {
+    if (logs.length > 0) {
+      const topLog = logs[0];
+      latestNameEl.innerHTML = `
+        <span style="color: #0284c7; font-weight: 800;">${topLog.studentName}</span>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-left: 0.4rem;">(${topLog.grade || '-'})</span>
+        <span style="font-size: 0.78rem; font-weight: 700; color: #10b981; margin-left: 0.4rem;"><i class="fa-regular fa-clock"></i> ${topLog.formattedTime || '-'}</span>
+      `;
+    } else {
+      latestNameEl.innerText = 'ยังไม่มีรายการสแกนใหม่';
+    }
+  }
+
+  // Update timestamp
+  if (updatedTimeEl) {
+    const now = new Date();
+    updatedTimeEl.innerText = `อัปเดตล่าสุด: ${now.toLocaleTimeString('th-TH')} น.`;
+  }
+
+  if (logs.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem 1.5rem;">
+          <i class="fa-solid fa-satellite-dish" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 0.75rem; display: block;"></i>
+          <span style="font-weight: 600; font-size: 0.95rem; color: var(--text-dark); display: block; margin-bottom: 0.25rem;">กำลังรอนักเรียนสแกน QR Code</span>
+          <span style="font-size: 0.82rem;">เมื่อนักเรียนสแกนแล้ว รายชื่อจะปรากฏในตารางนี้ทันทีแบบเรียลไทม์</span>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = logs.map((item, idx) => {
+    const isNew = highlightStudentId && isIdMatch(item.studentId, highlightStudentId);
+    return `
+      <tr class="${isNew ? 'row-new-scan' : ''}">
+        <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${idx + 1}</td>
+        <td>
+          <span style="font-weight: 700; color: #0284c7;"><i class="fa-regular fa-clock"></i> ${item.formattedTime || '-'}</span>
+        </td>
+        <td><b>${item.studentId || '-'}</b></td>
+        <td style="font-weight: 600; color: var(--text-dark);">${item.studentName || '-'}</td>
+        <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.78rem;">${item.grade || '-'}</span></td>
+        <td style="text-align: right;">
+          <span style="background: #dcfce7; color: #166534; font-size: 0.74rem; font-weight: 700; padding: 0.22rem 0.6rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.25rem;">
+            <i class="fa-solid fa-circle-check"></i> ${item.source || 'สแกนสำเร็จ'}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterStaffKioskList(query) {
+  if (!query) {
+    renderStaffKioskMonitor();
+    return;
+  }
+  const q = query.toLowerCase().trim();
+  const tbody = document.getElementById('staffKioskTableBody');
+  if (!tbody || !staffMonitorActiveActId) return;
+
+  const act = activities.find(a => (a.id === staffMonitorActiveActId || a.activityId === staffMonitorActiveActId));
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  let logs = actLogs.filter(l => l.activityId === staffMonitorActiveActId || (act && l.activityTitle === act.title));
+  logs.sort((a, b) => {
+    const ta = a.checkInTimestamp ? new Date(a.checkInTimestamp).getTime() : 0;
+    const tb = b.checkInTimestamp ? new Date(b.checkInTimestamp).getTime() : 0;
+    return tb - ta;
+  });
+
+  const filtered = logs.filter(item =>
+    (item.studentName && item.studentName.toLowerCase().includes(q)) ||
+    (item.studentId && item.studentId.toLowerCase().includes(q)) ||
+    (item.grade && item.grade.toLowerCase().includes(q))
+  );
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          ไม่พบข้อมูลที่ตรงกับ "${query}"
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((item, idx) => `
+    <tr>
+      <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${idx + 1}</td>
+      <td>
+        <span style="font-weight: 700; color: #0284c7;"><i class="fa-regular fa-clock"></i> ${item.formattedTime || '-'}</span>
+      </td>
+      <td><b>${item.studentId || '-'}</b></td>
+      <td style="font-weight: 600; color: var(--text-dark);">${item.studentName || '-'}</td>
+      <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.78rem;">${item.grade || '-'}</span></td>
+      <td style="text-align: right;">
+        <span style="background: #dcfce7; color: #166534; font-size: 0.74rem; font-weight: 700; padding: 0.22rem 0.6rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.25rem;">
+          <i class="fa-solid fa-circle-check"></i> ${item.source || 'สแกนสำเร็จ'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function refreshStaffMonitorLive(showToastMsg = false) {
+  fetchActivitiesAndLogsFromCloud(showToastMsg);
+}
+
+function toggleStaffSound() {
+  isStaffSoundEnabled = !isStaffSoundEnabled;
+  const btn = document.getElementById('btnStaffSoundToggle');
+  if (btn) {
+    btn.innerHTML = `<i class="fa-solid fa-${isStaffSoundEnabled ? 'volume-high' : 'volume-xmark'}"></i> <span class="d-none-sm" id="staffSoundBtnText">เสียง: ${isStaffSoundEnabled ? 'เปิด' : 'ปิด'}</span>`;
+  }
+  if (isStaffSoundEnabled) {
+    playStaffScanDingSound();
+    showToast('เปิดเสียงแจ้งเตือนเมื่อนักเรียนสแกนแล้ว', 'info');
+  } else {
+    showToast('ปิดเสียงแจ้งเตือนแล้ว', 'info');
+  }
+}
+
+function playStaffScanDingSound() {
+  if (!isStaffSoundEnabled) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    // Pleasant dual-frequency chime (D5 -> A5)
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.42);
+  } catch (e) {}
+}
+
+function toggleStaffFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().then(() => {
+      const btn = document.getElementById('staffFullscreenBtnText');
+      if (btn) btn.innerText = 'ย่อจอ';
+    }).catch(err => {
+      console.warn('Fullscreen error:', err);
+    });
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().then(() => {
+        const btn = document.getElementById('staffFullscreenBtnText');
+        if (btn) btn.innerText = 'เต็มจอ';
+      });
+    }
+  }
+}
+
+function copyStaffMonitorLink(actId) {
+  const targetId = actId || staffMonitorActiveActId || (activities[0] ? (activities[0].id || activities[0].activityId) : '');
+  const url = `${window.location.origin}${window.location.pathname}?monitor=${encodeURIComponent(targetId)}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('📋 คัดลอกลิงก์มอนิเตอร์สำหรับสตาฟเรียบร้อย! สามารถแชร์ให้ตัวแทนเปิดขึ้นจอได้ทันทีโดยไม่ต้องล็อกอิน', 'success');
+    }).catch(() => {
+      prompt('คัดลอกลิงก์มอนิเตอร์สำหรับสตาฟ (ไม่ต้องล็อกอิน):', url);
+    });
+  } else {
+    prompt('คัดลอกลิงก์มอนิเตอร์สำหรับสตาฟ (ไม่ต้องล็อกอิน):', url);
+  }
+}
+
+function copyStaffCurrentLink() {
+  copyStaffMonitorLink(staffMonitorActiveActId);
+}
+
+function copyCurrentModalStaffLink() {
+  copyStaffMonitorLink(currentViewingActivityId);
+}
+
+function openStaffMonitorStandalone(actId) {
+  const targetId = actId || staffMonitorActiveActId || (activities[0] ? (activities[0].id || activities[0].activityId) : '');
+  const url = `${window.location.pathname}?monitor=${encodeURIComponent(targetId)}`;
+  window.open(url, '_blank');
+}
+
+function openCurrentModalStandaloneKiosk() {
+  openStaffMonitorStandalone(currentViewingActivityId);
+}
+
+function printCurrentStaffQr() {
+  if (!staffMonitorActiveActId) return;
+  openActivityQrModal(staffMonitorActiveActId);
+  setTimeout(() => {
+    printActivityQrCode();
+  }, 300);
+}
+
+function printCurrentModalQr() {
+  if (!currentViewingActivityId) return;
+  openActivityQrModal(currentViewingActivityId);
+  setTimeout(() => {
+    printActivityQrCode();
+  }, 300);
+}
+
+function exportStaffAttendeesToExcel() {
+  if (!staffMonitorActiveActId) return;
+  const act = activities.find(a => (a.id === staffMonitorActiveActId || a.activityId === staffMonitorActiveActId));
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  const list = actLogs.filter(l => l.activityId === staffMonitorActiveActId || (act && l.activityTitle === act.title));
+  if (list.length === 0) {
+    showToast('ไม่มีข้อมูลผู้เข้าร่วมสำหรับส่งออก Excel', 'warning');
+    return;
+  }
+
+  const exportData = list.map((item, idx) => ({
+    'ลำดับ': idx + 1,
+    'รหัสนักเรียน': item.studentId,
+    'ชื่อ-นามสกุล': item.studentName,
+    'ระดับชั้น': item.grade || '-',
+    'กิจกรรม': item.activityTitle || (act ? act.title : staffMonitorActiveActId),
+    'วันที่เช็คชื่อ': item.formattedDate || '-',
+    'เวลาที่เช็คชื่อ': item.formattedTime || '-',
+    'ช่องทาง': item.source || 'สแกน QR Code'
+  }));
+
+  try {
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'ผู้เข้าร่วมกิจกรรม');
+    const safeTitle = (act ? act.title : 'กิจกรรม').replace(/[^a-zA-Z0-9ก-๙_-]/g, '_');
+    XLSX.writeFile(wb, `ผู้เข้าร่วม_${safeTitle}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('ส่งออกไฟล์ Excel สำเร็จ!', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('เกิดข้อผิดพลาดในการส่งออก Excel', 'error');
   }
 }
 
