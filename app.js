@@ -1709,7 +1709,12 @@ let gasApiUrl = storedGasUrl || DEFAULT_GAS_API_URL;
 document.addEventListener('DOMContentLoaded', () => {
   loadStoredData();
   initAppLogo();
-  updateAdminUIVisibility(false);
+  if (currentStudent || currentAdmin) {
+    document.body.classList.remove('auth-locked');
+  } else {
+    document.body.classList.add('auth-locked');
+  }
+  updateAdminUIVisibility(!!currentAdmin);
   setupEventListeners();
   renderCurrentStudentProfile();
   renderDashboardCharts();
@@ -1721,6 +1726,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initExportDateDefaults();
   enforceMandatoryLogin();
 
+  // ซิงค์รายการกิจกรรมและรายชื่ออาจารย์จาก Cloud เบื้องหลัง
+  setTimeout(() => {
+    if (typeof fetchActivitiesAndLogsFromCloud === 'function') fetchActivitiesAndLogsFromCloud(false);
+    if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(false);
+  }, 600);
+
   // ตรวจสอบว่ามี #admin ใน URL หรือไม่
   if (window.location.hash === '#admin') {
     openModal('adminAuthModal');
@@ -1728,13 +1739,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadStoredData() {
-  // 1. Load current student (Clean start: null if legacy mock student or not logged in)
+  // 1. Load current student (Clean start: null if legacy mock student, unverified, or not logged in)
   const savedStudent = localStorage.getItem('khalifah_current_student');
   if (savedStudent) {
     try {
       const parsed = JSON.parse(savedStudent);
-      // Purge any mock/dummy student IDs or sample names
-      if (!parsed || parsed.studentId === 'STD-256901' || parsed.studentId === 'STD-256902' || (parsed.fullName && parsed.fullName.startsWith('นายมูฮัมหมัด ซอ'))) {
+      const isUnverified = parsed && (
+        parsed.approvalStatus === 'PendingAdmin' ||
+        parsed.approvalStatus === 'AwaitingOtp' ||
+        parsed.status === 'PendingAdmin' ||
+        parsed.status === 'รอผู้สมัครกรอกรหัส OTP'
+      );
+      // Purge any mock/dummy student IDs, sample names, or unverified OTP accounts
+      if (!parsed || isUnverified || parsed.studentId === 'STD-256901' || parsed.studentId === 'STD-256902' || (parsed.fullName && parsed.fullName.startsWith('นายมูฮัมหมัด ซอ'))) {
         localStorage.removeItem('khalifah_current_student');
         currentStudent = null;
       } else {
@@ -1771,12 +1788,17 @@ function loadStoredData() {
     allStudents = [];
   }
 
-  // 3. Load activities (Clean start: empty)
+  // 3. Load activities (Clean start & normalize id/activityId)
   const savedActs = localStorage.getItem('khalifah_activities');
   if (savedActs) {
     try {
       let parsed = JSON.parse(savedActs);
-      parsed = parsed.filter(a => a.activityId !== 'ACT-101' && a.activityId !== 'ACT-102');
+      parsed = parsed.filter(a => a.activityId !== 'ACT-101' && a.activityId !== 'ACT-102' && a.id !== 'ACT-101' && a.id !== 'ACT-102');
+      parsed.forEach(a => {
+        const normId = a.id || a.activityId;
+        a.id = normId;
+        a.activityId = normId;
+      });
       activities = parsed;
       localStorage.setItem('khalifah_activities', JSON.stringify(activities));
     } catch (e) {
@@ -1826,12 +1848,18 @@ function setupEventListeners() {
 
 // ----------------- VIEW ROUTING ----------------- //
 function switchView(viewName) {
-  // Enforce login for students before switching views (except when admin or teacher is logged in)
-  if (!currentStudent && !currentAdmin && viewName !== 'dashboard') {
-    showToast('กรุณาเข้าสู่ระบบก่อนเริ่มใช้งาน', 'warning');
+  // Enforce login before switching views
+  if (!currentStudent && !currentAdmin) {
     enforceMandatoryLogin();
     return;
   }
+
+  // Isolate Back-Office (Admin & Teacher) from Student tabs
+  const studentViews = ['dashboard', 'prayer', 'activities', 'hasanat', 'profile'];
+  if (currentAdmin && studentViews.includes(viewName)) {
+    viewName = currentAdmin.role === 'SuperAdmin' ? 'admin' : 'teacher';
+  }
+
   // If attempting to switch to teacher view and not authenticated as teacher/admin
   if (viewName === 'teacher' && !currentAdmin) {
     openModal('authModal');
@@ -1890,6 +1918,7 @@ function switchView(viewName) {
       if (camOverlay) camOverlay.style.display = 'none';
     }
   } else if (viewName === 'activities') {
+    if (typeof fetchActivitiesAndLogsFromCloud === 'function') fetchActivitiesAndLogsFromCloud(false);
     startQrScanner();
     renderStudentScannedActivities();
   } else if (viewName === 'teacher') {
@@ -1900,8 +1929,16 @@ function switchView(viewName) {
     renderAdminStudentsTable();
     renderSubAdminsTable();
     populateGradingSubjectSelect();
+    renderAdminActivitiesTable();
+    if (typeof renderAdminLiveActivityFeed === 'function') renderAdminLiveActivityFeed();
+    if (typeof fetchActivitiesAndLogsFromCloud === 'function') fetchActivitiesAndLogsFromCloud(false);
+    if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(false);
+    if (typeof startAdminActivityLivePolling === 'function') startAdminActivityLivePolling();
   }
 
+  if (viewName !== 'admin') {
+    if (typeof stopAdminActivityLivePolling === 'function') stopAdminActivityLivePolling();
+  }
   if (viewName !== 'activities') {
     stopQrScanner();
   }
@@ -3106,43 +3143,87 @@ function renderActivitiesList() {
     return;
   }
 
-  container.innerHTML = activities.map(act => `
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  container.innerHTML = activities.map(act => {
+    const actId = act.id || act.activityId;
+    const isChecked = currentStudent
+      ? actLogs.some(l => isIdMatch(l.studentId, currentStudent.studentId) && (l.activityId === actId || l.activityTitle === act.title))
+      : !!act.checkedIn;
+    const dateDisplay = act.date || (act.startDate ? formatDateTime(act.startDate) : '-');
+    return `
     <div class="activity-card">
       <div style="flex: 1;">
-        <span class="activity-badge ${act.status === 'Active' ? 'badge-active' : 'badge-upcoming'}">
-          ${act.status === 'Active' ? 'กำลังเปิดรับเช็คชื่อ' : 'เร็วๆ นี้'}
+        <span class="activity-badge ${(act.status === 'Active' || !act.status) ? 'badge-active' : 'badge-upcoming'}">
+          ${(act.status === 'Active' || !act.status) ? 'กำลังเปิดรับเช็คชื่อ' : 'เร็วๆ นี้'}
         </span>
-        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-dark);">${act.title}</h3>
-        <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0.35rem 0;">${act.description}</p>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-dark);">${escapeHtml(act.title)}</h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0.35rem 0;">${escapeHtml(act.description || act.type || '')}</p>
         <div style="font-size: 0.82rem; color: var(--text-body); display: flex; gap: 1rem; flex-wrap: wrap;">
-          <span><i class="fa-regular fa-clock" style="color: var(--primary);"></i> ${formatDateTime(act.startDate)} - ${formatDateTime(act.endDate)}</span>
-          <span><i class="fa-solid fa-location-dot" style="color: var(--primary);"></i> ${act.location}</span>
+          <span><i class="fa-regular fa-clock" style="color: var(--primary);"></i> ${escapeHtml(dateDisplay)}</span>
+          <span><i class="fa-solid fa-location-dot" style="color: var(--primary);"></i> ${escapeHtml(act.location || '-')}</span>
         </div>
       </div>
       <div>
-        <button class="btn ${act.checkedIn ? 'btn-secondary' : 'btn-primary'}" onclick="checkInActivity('${act.activityId}')" ${act.checkedIn ? 'disabled' : ''}>
-          <i class="fa-solid ${act.checkedIn ? 'fa-circle-check' : 'fa-check'}"></i> 
-          ${act.checkedIn ? 'เช็คชื่อแล้ว' : 'กดเช็คชื่อเข้าร่วม'}
+        <button class="btn ${isChecked ? 'btn-secondary' : 'btn-primary'}" onclick="checkInActivity('${escapeHtml(actId)}')" ${isChecked ? 'disabled' : ''}>
+          <i class="fa-solid ${isChecked ? 'fa-circle-check' : 'fa-check'}"></i> 
+          ${isChecked ? 'เช็คชื่อแล้ว' : 'กดเช็คชื่อเข้าร่วม'}
         </button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function checkInActivity(actId) {
-  const act = activities.find(a => a.activityId === actId);
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนเช็คชื่อกิจกรรม', 'warning');
+    openModal('authModal');
+    return;
+  }
+  const act = activities.find(a => a.id === actId || a.activityId === actId);
   if (!act) return;
 
+  const resolvedActId = act.id || act.activityId;
   act.checkedIn = true;
   localStorage.setItem('khalifah_activities', JSON.stringify(activities));
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  const now = new Date();
+  const logEntry = {
+    id: 'ACTLOG-' + Date.now(),
+    studentId: cleanIdString(currentStudent.studentId),
+    studentName: currentStudent.fullName,
+    grade: currentStudent.grade || '-',
+    activityId: resolvedActId,
+    activityTitle: act.title,
+    checkInTimestamp: now.toISOString(),
+    formattedDate: now.toLocaleDateString('th-TH'),
+    formattedTime: now.toLocaleTimeString('th-TH')
+  };
+
+  const existingIdx = actLogs.findIndex(l => isIdMatch(l.studentId, currentStudent.studentId) && (l.activityId === resolvedActId || l.activityTitle === act.title));
+  if (existingIdx !== -1) {
+    actLogs[existingIdx] = logEntry;
+  } else {
+    actLogs.unshift(logEntry);
+  }
+  localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
+
   renderActivitiesList();
+  renderStudentScannedActivities();
+  renderAdminActivitiesTable();
+  if (typeof renderAdminLiveActivityFeed === 'function') renderAdminLiveActivityFeed();
   renderDashboardCharts();
 
-  syncRecordToGoogleSheet('checkInActivity', {
-    activityId: actId,
-    studentId: currentStudent.studentId,
-    studentName: currentStudent.fullName
-  });
+  syncRecordToGoogleSheet('activityCheckIn', logEntry);
 
   showToast(`เช็คชื่อเข้าร่วมกิจกรรม "${act.title}" สำเร็จ`, 'success');
 }
@@ -3687,6 +3768,13 @@ function updateStudentGrade() {
 // ----------------- AUTHENTICATION (STUDENT / ADMIN) ----------------- //
 
 function handleUserBadgeClick() {
+  if (currentAdmin) {
+    const roleLabel = currentAdmin.role === 'SuperAdmin' ? 'แอดมินสูงสุด' : (currentAdmin.role === 'EXECUTIVE' ? 'ผู้บริหาร' : 'อาจารย์');
+    if (confirm(`คุณกำลังอยู่ในโหมด${roleLabel} (${currentAdmin.fullName || currentAdmin.username})\nต้องการออกจากระบบใช่หรือไม่?`)) {
+      adminLogout();
+    }
+    return;
+  }
   if (currentStudent) {
     openStudentAccountModal();
   } else {
@@ -4061,14 +4149,6 @@ async function handleStudentLogin() {
   // Check if user is in pending registrations awaiting OTP verification
   const pendingList = getPendingRegistrations();
   const pendingMatch = pendingList.find(p => p.role === 'student' && isIdMatch(p.userId, studentIdInput) && p.status !== 'Verified');
-  if (pendingMatch && pendingMatch.status === 'PendingAdmin') {
-    const stuInList = allStudents.find(s => isIdMatch(s.studentId, studentIdInput));
-    if (!stuInList || stuInList.approvalStatus === 'PendingAdmin') {
-      openOtpVerifyModalForPending(pendingMatch);
-      showToast('บัญชีนี้อยู่ระหว่างรอการยืนยันรหัสสุ่มจากแอดมิน กรุณากรอกรหัสยืนยัน', 'info');
-      return;
-    }
-  }
 
   let found = allStudents.find(s => {
     const matchId = isIdMatch(s.studentId, studentIdInput);
@@ -4107,34 +4187,49 @@ async function handleStudentLogin() {
     }
   }
 
-  if (found) {
-    if (found.approvalStatus === 'PendingAdmin') {
-      const pItem = pendingList.find(p => isIdMatch(p.userId, found.studentId)) || {
-        reqId: 'REQ-' + Date.now(),
-        role: 'student',
-        userId: found.studentId,
-        fullName: found.fullName,
-        email: found.email || '',
-        phone: found.parentPhone,
-        gradeOrSubj: found.grade,
-        otpCode: found.otpCode || generateRandomAdminOtp(),
-        status: 'PendingAdmin'
-      };
-      openOtpVerifyModalForPending(pItem);
-      showToast('กรุณากรอกรหัสยืนยันจากแอดมินเพื่อเปิดใช้งานบัญชี', 'warning');
-      return;
-    }
+  // Strict OTP Gate: Applicant CANNOT log in until they enter the 6-digit OTP sent to their email by Admin
+  const isUnverifiedStudent = found && (
+    found.approvalStatus === 'PendingAdmin' ||
+    found.approvalStatus === 'AwaitingOtp' ||
+    found.status === 'PendingAdmin' ||
+    found.status === 'รอผู้สมัครกรอกรหัส OTP'
+  );
 
+  if (pendingMatch || isUnverifiedStudent) {
+    const pItem = pendingMatch || {
+      reqId: 'REQ-' + Date.now(),
+      role: 'student',
+      userId: found ? found.studentId : studentIdInput,
+      fullName: found ? found.fullName : studentIdInput,
+      email: found ? (found.email || '') : '',
+      phone: found ? found.parentPhone : cleanInputPhone,
+      gradeOrSubj: found ? found.grade : '',
+      otpCode: found && found.otpCode ? found.otpCode : generateRandomAdminOtp(),
+      status: (found && found.approvalStatus === 'AwaitingOtp') ? 'Approved' : 'PendingAdmin'
+    };
+    openOtpVerifyModalForPending(pItem);
+    if (pItem.status === 'Approved' || (found && found.approvalStatus === 'AwaitingOtp')) {
+      showToast('แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเข้าสู่ระบบ', 'warning');
+    } else {
+      showToast('ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
+    }
+    return;
+  }
+
+  if (found) {
     resetLoginFailures();
+    currentAdmin = null;
     currentStudent = found;
     localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+    document.body.classList.remove('auth-locked');
+    updateAdminUIVisibility(false);
     renderCurrentStudentProfile();
     renderDashboardCharts();
     renderTodayPrayerTable();
     renderActivitiesList();
     renderPrayerHistory();
-    document.body.classList.remove('auth-locked');
     closeModal('authModal');
+    switchView('dashboard');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
   } else {
     recordLoginFailure();
@@ -4163,7 +4258,7 @@ function handleStudentRegister() {
     return;
   }
 
-  const isDuplicate = allStudents.some(s => isIdMatch(s.studentId, studentId) && s.approvalStatus !== 'PendingAdmin');
+  const isDuplicate = allStudents.some(s => isIdMatch(s.studentId, studentId) && s.approvalStatus !== 'PendingAdmin' && s.approvalStatus !== 'AwaitingOtp');
   if (isDuplicate) {
     showToast('รหัสนักเรียนนี้มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้', 'error');
     return;
@@ -4232,10 +4327,10 @@ function handleStudentRegister() {
 
   // Open the Admin Random OTP Verification Modal immediately!
   openOtpVerifyModalForPending(pendingItem);
-  showToast('สร้างคำขอสมัครสำเร็จ! กรุณากรอกรหัสยืนยันจากแอดมิน (หรือรอรับทางอีเมลเมื่อแอดมินกดยินยอม)', 'info');
+  showToast('ส่งคำขอสมัครแล้ว! กรุณารอรับรหัสยืนยัน 6 หลักทางอีเมลเมื่อแอดมินกดอนุมัติ', 'info');
 }
 
-function handleTeacherLogin() {
+async function handleTeacherLogin() {
   if (!checkLoginRateLimit()) return;
 
   const rawUser = (document.getElementById('teacherLoginUser')?.value || '').trim();
@@ -4244,56 +4339,73 @@ function handleTeacherLogin() {
   const cleanPass = cleanIdString(rawPass);
 
   if (!cleanUser || !cleanPass) {
-    showToast('กรุณากรอกรหัสอาจารย์ (Username) และรหัสผ่าน', 'warning');
+    showToast('กรุณากรอกรหัสอาจารย์/ผู้บริหาร (Username) และรหัสผ่าน', 'warning');
     return;
   }
 
-  // Check if pending admin OTP verification
-  const pendingList = getPendingRegistrations();
-  const pendingMatch = pendingList.find(p => p.role === 'teacher' && isIdMatch(p.userId, cleanUser) && p.status !== 'Verified');
-  if (pendingMatch && pendingMatch.status === 'PendingAdmin') {
-    const subInList = subAdmins.find(s => isIdMatch(s.username, cleanUser));
-    if (!subInList || subInList.approvalStatus === 'PendingAdmin') {
-      openOtpVerifyModalForPending(pendingMatch);
-      showToast('บัญชีอาจารย์นี้อยู่ระหว่างรอการยืนยันรหัสสุ่มจากแอดมิน', 'info');
-      return;
-    }
-  }
-
-  const foundTeacher = subAdmins.find(s => {
+  let foundTeacher = subAdmins.find(s => {
     const matchUser = isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser));
     const matchPass = isIdMatch(s.password, cleanPass);
     return matchUser && matchPass;
   });
 
-  if (foundTeacher) {
-    if (foundTeacher.approvalStatus === 'PendingAdmin') {
-      const pItem = pendingList.find(p => isIdMatch(p.userId, foundTeacher.username)) || {
-        reqId: 'REQ-TCH-' + Date.now(),
-        role: 'teacher',
-        userId: foundTeacher.username,
-        fullName: foundTeacher.fullName,
-        email: foundTeacher.email || '',
-        phone: foundTeacher.phone || '',
-        gradeOrSubj: (foundTeacher.assignedSubjects || [foundTeacher.assignedSubject]).filter(Boolean).join(', '),
-        otpCode: foundTeacher.otpCode || generateRandomAdminOtp(),
-        status: 'PendingAdmin'
-      };
-      openOtpVerifyModalForPending(pItem);
-      showToast('กรุณากรอกรหัสยืนยันจากแอดมินเพื่อเปิดใช้งานบัญชีอาจารย์', 'warning');
-      return;
-    }
+  // If not found locally, sync subAdmins from Google Sheets so accounts added by Admin on another device work immediately
+  if (!foundTeacher && typeof fetchSubAdminsFromCloud === 'function') {
+    showToast('กำลังตรวจสอบบัญชีอาจารย์/ผู้บริหารจากฐานข้อมูลกลาง...', 'info');
+    await fetchSubAdminsFromCloud(false);
+    foundTeacher = subAdmins.find(s => {
+      const matchUser = isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser));
+      const matchPass = isIdMatch(s.password, cleanPass);
+      return matchUser && matchPass;
+    });
+  }
 
+  // Check if pending admin OTP verification
+  const pendingList = getPendingRegistrations();
+  const pendingMatch = pendingList.find(p => p.role === 'teacher' && isIdMatch(p.userId, cleanUser) && p.status !== 'Verified');
+  const isUnverifiedTeacher = foundTeacher && (
+    foundTeacher.approvalStatus === 'PendingAdmin' ||
+    foundTeacher.approvalStatus === 'AwaitingOtp' ||
+    foundTeacher.status === 'PendingAdmin' ||
+    foundTeacher.status === 'รอผู้สมัครกรอกรหัส OTP'
+  );
+
+  // If the account was directly created by Admin (approvalStatus === 'Verified'), allow login immediately
+  const isDirectAdminCreated = foundTeacher && (foundTeacher.approvalStatus === 'Verified' || foundTeacher.status === 'Active') && !isUnverifiedTeacher;
+
+  if ((pendingMatch || isUnverifiedTeacher) && !isDirectAdminCreated) {
+    const pItem = pendingMatch || {
+      reqId: 'REQ-TCH-' + Date.now(),
+      role: 'teacher',
+      userId: foundTeacher ? foundTeacher.username : cleanUser,
+      fullName: foundTeacher ? foundTeacher.fullName : cleanUser,
+      email: foundTeacher ? (foundTeacher.email || '') : '',
+      phone: foundTeacher ? (foundTeacher.phone || '') : '',
+      gradeOrSubj: foundTeacher ? (foundTeacher.assignedSubjects || [foundTeacher.assignedSubject]).filter(Boolean).join(', ') : '',
+      otpCode: foundTeacher && foundTeacher.otpCode ? foundTeacher.otpCode : generateRandomAdminOtp(),
+      status: (foundTeacher && foundTeacher.approvalStatus === 'AwaitingOtp') ? 'Approved' : 'PendingAdmin'
+    };
+    openOtpVerifyModalForPending(pItem);
+    if (pItem.status === 'Approved' || (foundTeacher && foundTeacher.approvalStatus === 'AwaitingOtp')) {
+      showToast('แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเปิดใช้งานบัญชี', 'warning');
+    } else {
+      showToast('ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
+    }
+    return;
+  }
+
+  if (foundTeacher) {
     resetLoginFailures();
     currentAdmin = foundTeacher;
     document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(true);
     closeModal('authModal');
-    switchView('teacher');
-    showToast(`ยินดีต้อนรับอาจารย์ ${foundTeacher.fullName || foundTeacher.username}`, 'success');
+    switchView(foundTeacher.role === 'SuperAdmin' ? 'admin' : 'teacher');
+    const roleWelcome = foundTeacher.role === 'EXECUTIVE' ? 'ผู้บริหาร' : 'อาจารย์';
+    showToast(`ยินดีต้อนรับ${roleWelcome} ${foundTeacher.fullName || foundTeacher.username}`, 'success');
   } else {
     recordLoginFailure();
-    showToast('รหัสอาจารย์ หรือ รหัสผ่านไม่ถูกต้อง', 'error');
+    showToast('รหัสประจำตัวอาจารย์/ผู้บริหาร หรือ รหัสผ่านไม่ถูกต้อง', 'error');
   }
 }
 
@@ -4317,7 +4429,7 @@ function handleTeacherRegister() {
     return;
   }
 
-  const isDup = subAdmins.some(s => isIdMatch(s.username, teacherId) && s.approvalStatus !== 'PendingAdmin');
+  const isDup = subAdmins.some(s => isIdMatch(s.username, teacherId) && s.approvalStatus !== 'PendingAdmin' && s.approvalStatus !== 'AwaitingOtp');
   if (isDup) {
     showToast('รหัสประจำตัวอาจารย์นี้มีอยู่ในระบบแล้ว', 'error');
     return;
@@ -4377,7 +4489,7 @@ function handleTeacherRegister() {
   renderSuperAdminOverviewKpis();
 
   openOtpVerifyModalForPending(pendingItem);
-  showToast('ส่งคำขอสมัครอาจารย์สำเร็จ! กรุณากรอกรหัสยืนยันจากแอดมิน (หรือรอรับทางอีเมลเมื่อแอดมินกดยินยอม)', 'info');
+  showToast('ส่งคำขอสมัครอาจารย์สำเร็จ! กรุณารอรับรหัสยืนยัน 6 หลักทางอีเมลเมื่อแอดมินกดอนุมัติ', 'info');
 }
 
 function handleInlineAdminLogin() {
@@ -4412,9 +4524,10 @@ function openOtpVerifyModalForPending(pendingItem) {
 
   if (summaryEl && pendingItem) {
     const roleBadge = pendingItem.role === 'teacher' ? 'อาจารย์ผู้สอน' : 'นักเรียน';
-    const statusText = pendingItem.status === 'Approved'
-      ? '<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> แอดมินกดยินยอมแล้ว (ส่งรหัสไปที่อีเมลแล้ว)</span>'
-      : '<span style="color: #b45309; font-weight: 700;"><i class="fa-solid fa-hourglass-half"></i> รอแอดมินกดยินยอม / กรอกรหัสยืนยัน</span>';
+    const isEmailSent = pendingItem.status === 'Approved' || pendingItem.status === 'approved' || pendingItem.status === 'Verified';
+    const statusText = isEmailSent
+      ? '<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-envelope-circle-check"></i> แอดมินอนุมัติและส่งรหัสไปที่อีเมลแล้ว (กรอกรหัส 6 หลักด้านล่างได้เลย)</span>'
+      : '<span style="color: #b45309; font-weight: 700;"><i class="fa-solid fa-hourglass-half"></i> รอแอดมินกดยินยอมและส่งรหัสยืนยันไปยังอีเมลของคุณ</span>';
 
     summaryEl.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
@@ -4440,7 +4553,7 @@ function openOtpVerifyModalPrompt(defaultRole = 'student') {
   if (lookupInput) lookupInput.value = '';
   if (codeInput) codeInput.value = '';
   if (summaryEl) {
-    summaryEl.innerHTML = `<div style="font-weight: 600; color: var(--text-dark);">กรอกรหัสประจำตัวที่สมัครไว้ และรหัสยืนยัน 6 หลักที่ได้รับจากอีเมลหรือแอดมิน</div>`;
+    summaryEl.innerHTML = `<div style="font-weight: 600; color: var(--text-dark);">กรอกรหัสประจำตัวที่สมัครไว้ และรหัสยืนยัน 6 หลักที่ได้รับจากอีเมลของแอดมิน</div>`;
   }
   openModal('otpVerifyModal');
 }
@@ -4451,7 +4564,7 @@ async function verifyRegistrationOtpCode() {
   const rawCode = cleanIdString(codeInput ? codeInput.value : '');
 
   if (!rawCode) {
-    showToast('กรุณากรอกรหัสยืนยัน 6 หลักจากแอดมินหรืออีเมล', 'warning');
+    showToast('กรุณากรอกรหัสยืนยัน 6 หลักที่ได้รับจากอีเมลของแอดมิน', 'warning');
     return;
   }
 
@@ -4476,7 +4589,7 @@ async function verifyRegistrationOtpCode() {
         let localMatch = pendingList.find(p => isIdMatch(p.userId, lookupId));
         if (localMatch) {
           if (cloudOtp) localMatch.otpCode = cloudOtp;
-          if (cloudStatus) localMatch.status = cloudStatus === 'approved' ? 'Approved' : cloudStatus;
+          if (cloudStatus) localMatch.status = (cloudStatus === 'approved' || cloudStatus === 'Approved') ? 'Approved' : cloudStatus;
         } else if (json.registration) {
           localMatch = {
             reqId: json.registration.reqId || json.registration.id || ('REQ-' + Date.now()),
@@ -4486,7 +4599,7 @@ async function verifyRegistrationOtpCode() {
             email: json.registration.email || '',
             gradeOrSubj: json.registration.gradeOrSubj || json.registration.detail || '',
             otpCode: cloudOtp,
-            status: cloudStatus === 'approved' ? 'Approved' : cloudStatus,
+            status: (cloudStatus === 'approved' || cloudStatus === 'Approved') ? 'Approved' : cloudStatus,
             payload: json.registration.payload || null
           };
           pendingList.unshift(localMatch);
@@ -4503,9 +4616,16 @@ async function verifyRegistrationOtpCode() {
     return;
   }
 
+  // Enforce that Admin must have clicked "ยินยอม & ส่งอีเมล" first
+  if (targetItem.status === 'PendingAdmin') {
+    openOtpVerifyModalForPending(targetItem);
+    showToast('บัญชียังอยู่ระหว่างรอแอดมินกดอนุมัติเพื่อส่งรหัสยืนยันทางอีเมล กรุณารอรับรหัสในอีเมลก่อน', 'warning');
+    return;
+  }
+
   if (!isIdMatch(rawCode, targetItem.otpCode)) {
     recordLoginFailure();
-    showToast('รหัสยืนยันไม่ถูกต้อง! กรุณาตรวจสอบรหัสสุ่มจากแอดมินหรือในอีเมลของคุณ', 'error');
+    showToast('รหัสยืนยัน 6 หลักไม่ถูกต้อง! กรุณาตรวจสอบรหัสที่แอดมินส่งให้ในอีเมลของคุณอีกครั้ง', 'error');
     return;
   }
 
@@ -4513,38 +4633,48 @@ async function verifyRegistrationOtpCode() {
   targetItem.status = 'Verified';
   savePendingRegistrations(pendingList);
 
+  // Notify Google Sheets that user has verified their OTP
+  syncRecordToGoogleSheet('verifyUserOtp', {
+    userId: targetItem.userId,
+    role: targetItem.role,
+    otpCode: rawCode
+  });
+
   if (targetItem.role === 'student') {
     const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, targetItem.userId));
     if (sIdx !== -1) {
       allStudents[sIdx].status = 'Active';
-      allStudents[sIdx].approvalStatus = 'Approved';
+      allStudents[sIdx].approvalStatus = 'Verified';
       currentStudent = allStudents[sIdx];
     } else if (targetItem.payload) {
       targetItem.payload.status = 'Active';
-      targetItem.payload.approvalStatus = 'Approved';
+      targetItem.payload.approvalStatus = 'Verified';
       allStudents.push(targetItem.payload);
       currentStudent = targetItem.payload;
     }
     localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
     localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
 
+    currentAdmin = null;
+    document.body.classList.remove('auth-locked');
+    updateAdminUIVisibility(false);
     renderCurrentStudentProfile();
     renderDashboardCharts();
-    document.body.classList.remove('auth-locked');
     closeModal('otpVerifyModal');
     closeModal('authModal');
+    switchView('dashboard');
     playSuccessSound();
-    showToast(`ยืนยันรหัสสำเร็จ! ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
+    showToast(`ยืนยันรหัสจากอีเมลสำเร็จ! ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
     syncRecordToGoogleSheet('registerStudent', currentStudent);
   } else if (targetItem.role === 'teacher') {
     const tIdx = subAdmins.findIndex(s => isIdMatch(s.username, targetItem.userId));
     if (tIdx !== -1) {
       subAdmins[tIdx].status = 'Active';
-      subAdmins[tIdx].approvalStatus = 'Approved';
+      subAdmins[tIdx].approvalStatus = 'Verified';
       currentAdmin = subAdmins[tIdx];
     } else if (targetItem.payload) {
       targetItem.payload.status = 'Active';
-      targetItem.payload.approvalStatus = 'Approved';
+      targetItem.payload.approvalStatus = 'Verified';
       subAdmins.push(targetItem.payload);
       currentAdmin = targetItem.payload;
     }
@@ -4573,7 +4703,7 @@ async function checkOtpApprovalStatus() {
   }
 
   const pendingList = getPendingRegistrations();
-  const localItem = pendingList.find(p => isIdMatch(p.userId, userId));
+  let localItem = pendingList.find(p => isIdMatch(p.userId, userId));
 
   // Check remote Google Sheet if configured
   let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
@@ -4582,9 +4712,24 @@ async function checkOtpApprovalStatus() {
       const resp = await fetch(`${url}?action=checkRegistrationStatus&userId=${encodeURIComponent(userId)}`);
       const json = await resp.json();
       if (json && json.success && json.registration) {
+        const normSt = (json.registration.status === 'approved' || json.registration.status === 'Approved') ? 'Approved' : (json.registration.status || 'PendingAdmin');
         if (localItem) {
-          localItem.status = json.registration.status || localItem.status;
+          localItem.status = normSt;
           if (json.registration.otpCode) localItem.otpCode = cleanIdString(json.registration.otpCode);
+          savePendingRegistrations(pendingList);
+        } else {
+          localItem = {
+            reqId: json.registration.reqId || json.registration.id || ('REQ-' + Date.now()),
+            role: json.registration.role || 'student',
+            userId: cleanIdString(json.registration.userId || userId),
+            fullName: json.registration.fullName || userId,
+            email: json.registration.email || '',
+            gradeOrSubj: json.registration.gradeOrSubj || json.registration.detail || '',
+            otpCode: cleanIdString(json.registration.otpCode || ''),
+            status: normSt,
+            payload: json.registration.payload || null
+          };
+          pendingList.unshift(localItem);
           savePendingRegistrations(pendingList);
         }
       }
@@ -4594,9 +4739,9 @@ async function checkOtpApprovalStatus() {
   if (localItem) {
     openOtpVerifyModalForPending(localItem);
     if (localItem.status === 'Approved' || localItem.status === 'Verified') {
-      showToast(`แอดมินกดยินยอมอนุมัติแล้ว! รหัสยืนยันถูกส่งไปที่อีเมล ${localItem.email} แล้ว`, 'success');
+      showToast(`แอดมินกดยินยอมอนุมัติแล้ว! รหัสยืนยัน 6 หลักถูกส่งไปที่อีเมล ${localItem.email} แล้ว กรุณานำมากรอกในช่องด้านล่าง`, 'success');
     } else {
-      showToast('ยังอยู่ระหว่างรอแอดมินกดยินยอม (ท่านสามารถแจ้งแอดมินให้กดอนุมัติได้ทันที)', 'info');
+      showToast('ยังอยู่ระหว่างรอแอดมินกดยินยอมเพื่อส่งรหัสยืนยันเข้าอีเมลของคุณ', 'info');
     }
   } else {
     showToast('ไม่พบคำขอสมัครของรหัสนี้ในระบบ', 'warning');
@@ -4613,13 +4758,20 @@ function toggleSubAdminField() {
     btn.innerText = 'เข้าสู่ระบบด้วยรหัสแอดมินสูงสุด (Master Admin)?';
   } else {
     group.style.display = 'none';
-    btn.innerText = 'เข้าสู่ระบบด้วยบัญชีอาจารย์ผู้สอน / แอดมินรอง?';
+    btn.innerText = 'เข้าสู่ระบบด้วยบัญชีอาจารย์ผู้สอน / ผู้บริหาร?';
   }
 }
 
 function updateAdminUIVisibility(isAuthenticated) {
   const isSuper = isAuthenticated && currentAdmin && currentAdmin.role === 'SuperAdmin';
   const isTeacherOrAdmin = isAuthenticated && !!currentAdmin;
+  const isTeacherOnly = isTeacherOrAdmin && !isSuper;
+  const isStudentMode = !isTeacherOrAdmin && !!currentStudent;
+
+  // Apply role isolation classes on body to hide Student navigation tabs when Admin or Teacher is logged in
+  document.body.classList.toggle('portal-mode-admin', !!isSuper);
+  document.body.classList.toggle('portal-mode-teacher', !!isTeacherOnly);
+  document.body.classList.toggle('portal-mode-student', !!isStudentMode);
 
   const navAdmin = document.getElementById('nav-admin');
   const mNavAdmin = document.getElementById('m-nav-admin');
@@ -4627,6 +4779,7 @@ function updateAdminUIVisibility(isAuthenticated) {
   const mNavTeacher = document.getElementById('m-nav-teacher');
   const btnSettings = document.getElementById('btnSettingsHeader');
   const btnTabLogo = document.getElementById('btnTabLogo');
+  const btnBackAdmin = document.getElementById('btnBackToAdminFromTeacher');
 
   if (navTeacher) navTeacher.style.display = isTeacherOrAdmin ? 'inline-flex' : 'none';
   if (mNavTeacher) mNavTeacher.style.display = isTeacherOrAdmin ? 'flex' : 'none';
@@ -4635,9 +4788,31 @@ function updateAdminUIVisibility(isAuthenticated) {
   if (mNavAdmin) mNavAdmin.style.display = isSuper ? 'flex' : 'none';
   if (btnSettings) btnSettings.style.display = isSuper ? 'flex' : 'none';
   if (btnTabLogo) btnTabLogo.style.display = isSuper ? 'inline-block' : 'none';
+  if (btnBackAdmin) btnBackAdmin.style.display = isSuper ? 'inline-flex' : 'none';
+
+  // Update top-right user badge for Admin / Teacher / Executive
+  const headerName = document.getElementById('headerUserName');
+  const headerSub = document.getElementById('headerUserSub');
+  const headerAvatar = document.getElementById('headerUserAvatar');
+  if (isSuper) {
+    if (headerName) headerName.innerText = 'Super Admin';
+    if (headerSub) headerSub.innerText = 'ผู้ดูแลระบบสูงสุด';
+    if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-user-shield"></i>';
+  } else if (isTeacherOnly && currentAdmin) {
+    const roleLabelMap = {
+      TEACHER: 'อาจารย์ผู้สอน',
+      EXECUTIVE: 'ผู้บริหารสถานศึกษา',
+      HOMEROOM: 'อาจารย์ประจำชั้น',
+      ACTIVITY: 'ฝ่ายกิจกรรม',
+      SubAdmin: 'ผู้ช่วยแอดมิน'
+    };
+    if (headerName) headerName.innerText = currentAdmin.fullName || currentAdmin.username;
+    if (headerSub) headerSub.innerText = roleLabelMap[currentAdmin.role] || 'อาจารย์ / บุคลากร';
+    if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i>';
+  }
 }
 
-function handleAdminLogin() {
+async function handleAdminLogin() {
   if (!checkLoginRateLimit()) return;
 
   const rawPass = (document.getElementById('adminPassInput')?.value || '').trim();
@@ -4650,15 +4825,21 @@ function handleAdminLogin() {
     document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(true);
     closeModal('adminAuthModal');
+    closeModal('authModal');
     switchView('admin');
     showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
     return;
   }
 
-  const foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
+  let foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
+  if (!foundSub && typeof fetchSubAdminsFromCloud === 'function') {
+    await fetchSubAdminsFromCloud(false);
+    foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
+  }
+
   if (foundSub) {
-    if (foundSub.approvalStatus === 'PendingAdmin') {
-      showToast('บัญชีอาจารย์นี้ยังไม่ได้รับการยืนยันรหัสจากแอดมินสูงสุด', 'warning');
+    if (foundSub.approvalStatus === 'PendingAdmin' || foundSub.approvalStatus === 'AwaitingOtp') {
+      showToast('บัญชีอาจารย์นี้ยังไม่ได้ป้อนรหัสยืนยัน 6 หลักที่ส่งไปยังอีเมล', 'warning');
       return;
     }
     resetLoginFailures();
@@ -4666,8 +4847,9 @@ function handleAdminLogin() {
     document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(true);
     closeModal('adminAuthModal');
+    closeModal('authModal');
     switchView(foundSub.role === 'SuperAdmin' ? 'admin' : 'teacher');
-    showToast(`ยินดีต้อนรับอาจารย์ ${foundSub.fullName || foundSub.username}`, 'success');
+    showToast(`ยินดีต้อนรับ ${foundSub.fullName || foundSub.username}`, 'success');
     return;
   }
 
@@ -4676,9 +4858,17 @@ function handleAdminLogin() {
 }
 
 function adminLogout() {
+  if (typeof stopAdminActivityLivePolling === 'function') stopAdminActivityLivePolling();
   currentAdmin = null;
   updateAdminUIVisibility(false);
-  switchView('dashboard');
+  renderCurrentStudentProfile();
+  if (!currentStudent) {
+    document.body.classList.add('auth-locked');
+    selectAuthRole('student');
+    openModal('authModal');
+  } else {
+    switchView('dashboard');
+  }
   showToast('ออกจากระบบผู้ดูแล/อาจารย์แล้ว', 'info');
 }
 
@@ -4693,7 +4883,11 @@ function handleBrandLogoClick() {
   if (brandClickCount === 1) {
     brandClickTimer = setTimeout(() => {
       brandClickCount = 0;
-      switchView('dashboard');
+      if (currentAdmin) {
+        switchView(currentAdmin.role === 'SuperAdmin' ? 'admin' : 'teacher');
+      } else {
+        switchView('dashboard');
+      }
     }, 600);
   } else if (brandClickCount >= 3) {
     clearTimeout(brandClickTimer);
@@ -4739,11 +4933,16 @@ function renderSuperAdminOverviewKpis() {
   const prayersCount = todayPrayers.length;
   const masterOtp = getOrInitAdminMasterOtp();
 
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
   if (kpiStd) kpiStd.innerText = `${activeStudentsCount} คน`;
   if (kpiTch) kpiTch.innerText = `${activeTeachersCount} ท่าน`;
   if (kpiPending) kpiPending.innerText = `${pendingList.length} รายการ`;
   if (kpiPrayers) kpiPrayers.innerText = `${prayersCount} รายการ`;
-  if (kpiActSub) kpiActSub.innerText = `กิจกรรมทั้งหมด ${activities.length} รายการ`;
+  if (kpiActSub) kpiActSub.innerText = `กิจกรรม ${activities.length} รายการ • สแกนเข้าแล้ว ${actLogs.length} ครั้ง`;
   if (liveCodeBadge) liveCodeBadge.innerText = masterOtp;
   if (masterOtpDisplay) masterOtpDisplay.innerText = masterOtp;
   if (badgePending) {
@@ -4753,7 +4952,7 @@ function renderSuperAdminOverviewKpis() {
 }
 
 function switchAdminTab(tabName, element) {
-  document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('#view-admin .admin-tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.admin-content-tab').forEach(tab => tab.style.display = 'none');
 
   if (element) element.classList.add('active');
@@ -4770,10 +4969,17 @@ function switchAdminTab(tabName, element) {
   } else if (tabName === 'subjects') {
     renderAdminSubjectsTable();
   } else if (tabName === 'subadmins') {
-    renderSubAdminsTable();
     populateGradingSubjectSelect();
+    if (typeof renderQuickSubAdminSubjectsChecklist === 'function') renderQuickSubAdminSubjectsChecklist([]);
+    if (typeof toggleQuickSubAdminSubjectField === 'function') toggleQuickSubAdminSubjectField();
+    renderSubAdminsTable();
+    if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(false);
   } else if (tabName === 'students') {
     renderAdminStudentsTable();
+  } else if (tabName === 'activities-admin') {
+    renderAdminActivitiesTable();
+    if (typeof renderAdminLiveActivityFeed === 'function') renderAdminLiveActivityFeed();
+    if (typeof fetchActivitiesAndLogsFromCloud === 'function') fetchActivitiesAndLogsFromCloud(false);
   }
 }
 
@@ -4850,10 +5056,12 @@ function renderPendingApprovalsTable(skipCloudFetch = false) {
       ? '<span class="activity-badge badge-active">อาจารย์ผู้สอน</span>'
       : '<span class="activity-badge badge-upcoming">นักเรียน</span>';
 
-    const isApproved = item.status === 'Approved' || item.status === 'approved' || item.status === 'Verified';
-    const statusBadge = isApproved
-      ? `<span class="activity-badge badge-active"><i class="fa-solid fa-check"></i> อนุมัติแล้ว</span>`
-      : `<span class="activity-badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;"><i class="fa-solid fa-clock"></i> รอแอดมินกดยินยอม</span>`;
+    let statusBadge = `<span class="activity-badge" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;"><i class="fa-solid fa-clock"></i> รอแอดมินกดส่งอีเมล</span>`;
+    if (item.status === 'Verified') {
+      statusBadge = `<span class="activity-badge badge-active"><i class="fa-solid fa-circle-check"></i> ยืนยันรหัส OTP แล้ว</span>`;
+    } else if (item.status === 'Approved' || item.status === 'approved') {
+      statusBadge = `<span class="activity-badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;"><i class="fa-solid fa-envelope-circle-check"></i> ส่งอีเมลแล้ว (รอผู้สมัครกรอกรหัส)</span>`;
+    }
 
     return `
       <tr>
@@ -4927,26 +5135,30 @@ async function adminApproveRegistration(reqId) {
   item.approvedAt = new Date().toISOString();
   savePendingRegistrations(list);
 
-  // Activate in local allStudents or subAdmins immediately
+  // Keep user in AwaitingOtp state until they actually type the 6-digit OTP sent to their email!
   if (item.role === 'student') {
     const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, item.userId));
     if (sIdx !== -1) {
-      allStudents[sIdx].status = 'Active';
-      allStudents[sIdx].approvalStatus = 'Approved';
+      allStudents[sIdx].status = 'รอผู้สมัครกรอกรหัส OTP';
+      allStudents[sIdx].approvalStatus = 'AwaitingOtp';
+      allStudents[sIdx].otpCode = item.otpCode;
     } else if (item.payload && Object.keys(item.payload).length > 0) {
-      item.payload.status = 'Active';
-      item.payload.approvalStatus = 'Approved';
+      item.payload.status = 'รอผู้สมัครกรอกรหัส OTP';
+      item.payload.approvalStatus = 'AwaitingOtp';
+      item.payload.otpCode = item.otpCode;
       allStudents.push(item.payload);
     }
     localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
   } else if (item.role === 'teacher') {
     const tIdx = subAdmins.findIndex(s => isIdMatch(s.username, item.userId));
     if (tIdx !== -1) {
-      subAdmins[tIdx].status = 'Active';
-      subAdmins[tIdx].approvalStatus = 'Approved';
+      subAdmins[tIdx].status = 'รอผู้สมัครกรอกรหัส OTP';
+      subAdmins[tIdx].approvalStatus = 'AwaitingOtp';
+      subAdmins[tIdx].otpCode = item.otpCode;
     } else if (item.payload && Object.keys(item.payload).length > 0) {
-      item.payload.status = 'Active';
-      item.payload.approvalStatus = 'Approved';
+      item.payload.status = 'รอผู้สมัครกรอกรหัส OTP';
+      item.payload.approvalStatus = 'AwaitingOtp';
+      item.payload.otpCode = item.otpCode;
       subAdmins.push(item.payload);
     }
     localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
@@ -4985,14 +5197,14 @@ async function adminApproveRegistration(reqId) {
     const resJson = await resp.json();
     playSuccessSound();
     if (resJson && resJson.emailSent) {
-      showToast(`ส่งอีเมลสำเร็จ! รหัสยืนยัน [${item.otpCode}] ถูกส่งไปที่ ${item.email} เรียบร้อยแล้ว`, 'success');
+      showToast(`ส่งอีเมลสำเร็จ! รหัสยืนยัน [${item.otpCode}] ถูกส่งไปที่ ${item.email} เรียบร้อยแล้ว (ผู้สมัครต้องนำรหัสนี้มากรอกจึงจะเข้าระบบได้)`, 'success');
     } else {
       console.warn('Email dispatch warning:', resJson);
-      showToast(`อนุมัติสำเร็จ (รหัส: ${item.otpCode}) แต่ Apps Script ยังไม่ได้รับอนุญาตสิทธิ์ส่งอีเมล (กรุณากด Run ฟังก์ชัน authorizeEmailPermission ใน Apps Script 1 ครั้ง)`, 'warning');
+      showToast(`อนุมัติแล้ว (รหัส: ${item.otpCode}) กรุณาตรวจสอบสิทธิ์ส่งอีเมลใน Apps Script`, 'warning');
     }
   } catch (err) {
     playSuccessSound();
-    showToast(`อนุมัติสำเร็จ! รหัสยืนยันของ ${item.fullName} คือ [${item.otpCode}]`, 'success');
+    showToast(`ส่งคำสั่งอนุมัติแล้ว! รหัสยืนยันของ ${item.fullName} คือ [${item.otpCode}]`, 'success');
   }
 }
 
@@ -5478,21 +5690,25 @@ function executeBatchPromotion() {
 // ----------------- CREATE ACTIVITY & FULL TEACHER / SUB-ADMIN CRUD ----------------- //
 
 function submitCreateActivity() {
-  const title = document.getElementById('actTitle').value.trim();
-  const desc = document.getElementById('actDesc').value.trim();
-  const startDate = document.getElementById('actStartDate').value;
-  const endDate = document.getElementById('actEndDate').value;
-  const loc = document.getElementById('actLocation').value.trim();
+  const title = document.getElementById('actTitle')?.value.trim() || '';
+  const desc = document.getElementById('actDesc')?.value.trim() || '';
+  const startDate = document.getElementById('actStartDate')?.value || '';
+  const endDate = document.getElementById('actEndDate')?.value || '';
+  const loc = document.getElementById('actLocation')?.value.trim() || '';
 
   if (!title || !startDate || !endDate) {
     showToast('กรุณากรอกชื่อกิจกรรมและวันเวลาให้ครบถ้วน', 'warning');
     return;
   }
 
+  const actId = 'ACT-' + Date.now().toString().slice(-6);
   const newAct = {
-    activityId: 'ACT-' + Date.now(),
+    id: actId,
+    activityId: actId,
     title: title,
     description: desc,
+    type: 'กิจกรรมหลัก',
+    date: startDate.split('T')[0],
     startDate: startDate,
     endDate: endDate,
     location: loc || 'มหาวิทยาลัยฟาฏอนี',
@@ -5506,6 +5722,8 @@ function submitCreateActivity() {
 
   closeModal('createActivityModal');
   renderActivitiesList();
+  renderAdminActivitiesTable();
+  if (typeof renderAdminLiveActivityFeed === 'function') renderAdminLiveActivityFeed();
   showToast('ประกาศกิจกรรมใหม่และส่งต่อถึงนักเรียนทุกคนแล้ว', 'success');
 
   syncRecordToGoogleSheet('createActivity', newAct);
@@ -5514,6 +5732,13 @@ function submitCreateActivity() {
 function toggleSubAdminSubjectField() {
   const roleSelect = document.getElementById('subRole');
   const group = document.getElementById('subSubjectGroup');
+  if (!roleSelect || !group) return;
+  group.style.display = (roleSelect.value === 'TEACHER' || roleSelect.value === 'TeacherAdmin') ? 'block' : 'none';
+}
+
+function toggleQuickSubAdminSubjectField() {
+  const roleSelect = document.getElementById('quickSubRole');
+  const group = document.getElementById('quickSubSubjectGroup');
   if (!roleSelect || !group) return;
   group.style.display = (roleSelect.value === 'TEACHER' || roleSelect.value === 'TeacherAdmin') ? 'block' : 'none';
 }
@@ -5533,11 +5758,141 @@ function renderSubAdminModalSubjectsChecklist(selectedIds = []) {
   }).join('');
 }
 
+function renderQuickSubAdminSubjectsChecklist(selectedIds = []) {
+  loadAppSubjects();
+  const container = document.getElementById('quickSubAssignedSubjectsChecklist');
+  if (!container) return;
+  container.innerHTML = appSubjects.map(s => {
+    const isChecked = selectedIds.includes(s.id);
+    return `
+      <label class="subject-checkbox-item">
+        <input type="checkbox" name="quickSubModalSubjChk" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''}>
+        <span>${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</span>
+      </label>
+    `;
+  }).join('');
+}
+
+function resetQuickAddSubAdminForm() {
+  if (document.getElementById('quickSubFullName')) document.getElementById('quickSubFullName').value = '';
+  if (document.getElementById('quickSubUsername')) document.getElementById('quickSubUsername').value = '';
+  if (document.getElementById('quickSubPassword')) document.getElementById('quickSubPassword').value = '';
+  if (document.getElementById('quickSubEmail')) document.getElementById('quickSubEmail').value = '';
+  if (document.getElementById('quickSubPhone')) document.getElementById('quickSubPhone').value = '';
+  if (document.getElementById('quickSubRole')) document.getElementById('quickSubRole').value = 'TEACHER';
+  renderQuickSubAdminSubjectsChecklist([]);
+  toggleQuickSubAdminSubjectField();
+}
+
+function submitQuickAddSubAdmin() {
+  loadAppSubjects();
+  const fullName = (document.getElementById('quickSubFullName')?.value || '').trim();
+  const username = cleanIdString(document.getElementById('quickSubUsername')?.value || '');
+  const pass = cleanIdString(document.getElementById('quickSubPassword')?.value || '');
+  const email = (document.getElementById('quickSubEmail')?.value || '').trim();
+  const phone = normalizePhone(document.getElementById('quickSubPhone')?.value || '');
+  const role = document.getElementById('quickSubRole')?.value || 'TEACHER';
+
+  if (!fullName || !username || !pass) {
+    showToast('กรุณากรอก ชื่อ-นามสกุล, รหัสผู้ใช้ (Username) และรหัสผ่าน ให้ครบถ้วน', 'warning');
+    return;
+  }
+
+  const checkedNodes = document.querySelectorAll('input[name="quickSubModalSubjChk"]:checked');
+  const selectedSubjects = Array.from(checkedNodes).map(cb => cb.value);
+  // If no subject checked or role is Executive/Homeroom, assign all subjects so they can access everything
+  const finalSubjects = selectedSubjects.length > 0 ? selectedSubjects : appSubjects.map(s => s.id);
+
+  const recordData = {
+    adminId: 'TCH-' + Date.now(),
+    username: username,
+    password: pass,
+    fullName: fullName,
+    email: email,
+    phone: phone,
+    role: role,
+    assignedSubject: finalSubjects[0] || '',
+    assignedSubjects: finalSubjects,
+    status: 'Active',
+    approvalStatus: 'Verified',
+    createdAt: new Date().toISOString().split('T')[0]
+  };
+
+  const dupIdx = subAdmins.findIndex(s => isIdMatch(s.username, username));
+  if (dupIdx !== -1) {
+    recordData.adminId = subAdmins[dupIdx].adminId || recordData.adminId;
+    subAdmins[dupIdx] = recordData;
+  } else {
+    subAdmins.unshift(recordData);
+  }
+
+  localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+  resetQuickAddSubAdminForm();
+  renderSubAdminsTable();
+  renderSuperAdminOverviewKpis();
+  playSuccessSound();
+
+  const roleText = role === 'EXECUTIVE' ? 'ผู้บริหาร' : 'อาจารย์';
+  showToast(`เพิ่มบัญชี${roleText} "${fullName}" (User: ${username}) สำเร็จ! สามารถล็อกอินเข้าใช้งานได้ทันที`, 'success');
+
+  syncRecordToGoogleSheet('addSubAdmin', recordData);
+}
+
+let isFetchingSubAdminsCloud = false;
+async function fetchSubAdminsFromCloud(showToastMsg = false) {
+  if (isFetchingSubAdminsCloud) return;
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (!url || url.includes('docs.google.com/spreadsheets')) return;
+  isFetchingSubAdminsCloud = true;
+  try {
+    const resp = await fetch(`${url}?action=getSubAdmins`);
+    const json = await resp.json();
+    if (json && json.success && Array.isArray(json.data)) {
+      json.data.forEach(remote => {
+        const u = cleanIdString(remote.username);
+        if (!u) return;
+        const existIdx = subAdmins.findIndex(s => isIdMatch(s.username, u));
+        const merged = {
+          adminId: remote.adminId || (existIdx !== -1 ? subAdmins[existIdx].adminId : ('TCH-' + Date.now())),
+          username: u,
+          password: cleanIdString(remote.password || (existIdx !== -1 ? subAdmins[existIdx].password : '')),
+          fullName: remote.fullName || (existIdx !== -1 ? subAdmins[existIdx].fullName : u),
+          email: remote.email || (existIdx !== -1 ? subAdmins[existIdx].email : ''),
+          phone: normalizePhone(remote.phone || (existIdx !== -1 ? subAdmins[existIdx].phone : '')),
+          role: remote.role || (existIdx !== -1 ? subAdmins[existIdx].role : 'TEACHER'),
+          assignedSubject: remote.assignedSubject || (existIdx !== -1 ? subAdmins[existIdx].assignedSubject : ''),
+          assignedSubjects: Array.isArray(remote.assignedSubjects) && remote.assignedSubjects.length > 0
+            ? remote.assignedSubjects
+            : (existIdx !== -1 && Array.isArray(subAdmins[existIdx].assignedSubjects) ? subAdmins[existIdx].assignedSubjects : []),
+          status: remote.status || 'Active',
+          approvalStatus: remote.approvalStatus || 'Verified',
+          createdAt: remote.createdAt || ''
+        };
+        if (existIdx !== -1) {
+          subAdmins[existIdx] = merged;
+        } else {
+          subAdmins.push(merged);
+        }
+      });
+      localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+      renderSubAdminsTable();
+      renderSuperAdminOverviewKpis();
+      if (showToastMsg) {
+        showToast(`ซิงค์รายชื่ออาจารย์และผู้บริหารจาก Google Sheet สำเร็จ (${subAdmins.length} ท่าน)`, 'success');
+      }
+    }
+  } catch (e) {
+    console.warn('fetchSubAdminsFromCloud warning:', e);
+  } finally {
+    isFetchingSubAdminsCloud = false;
+  }
+}
+
 function openAddSubAdminModal() {
   const origInput = document.getElementById('editSubAdminOriginalUser');
   const titleEl = document.getElementById('subAdminModalTitle');
   if (origInput) origInput.value = '';
-  if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-plus" style="color: var(--primary);"></i> เพิ่มบัญชีอาจารย์ผู้สอน / แอดมินรอง';
+  if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-user-plus" style="color: var(--primary);"></i> เพิ่มบัญชีอาจารย์ผู้สอน / ผู้บริหาร';
 
   if (document.getElementById('subFullName')) document.getElementById('subFullName').value = '';
   if (document.getElementById('subUsername')) document.getElementById('subUsername').value = '';
@@ -5562,7 +5917,7 @@ function openEditTeacherModal(username) {
   const origInput = document.getElementById('editSubAdminOriginalUser');
   const titleEl = document.getElementById('subAdminModalTitle');
   if (origInput) origInput.value = cleanIdString(t.username);
-  if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-user-pen" style="color: var(--primary);"></i> แก้ไขข้อมูลอาจารย์: ${escapeHtml(t.fullName)}`;
+  if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-user-pen" style="color: var(--primary);"></i> แก้ไขข้อมูลอาจารย์/ผู้บริหาร: ${escapeHtml(t.fullName)}`;
 
   if (document.getElementById('subFullName')) document.getElementById('subFullName').value = t.fullName || '';
   if (document.getElementById('subUsername')) document.getElementById('subUsername').value = cleanIdString(t.username);
@@ -5580,6 +5935,7 @@ function openEditTeacherModal(username) {
 }
 
 function submitAddSubAdmin() {
+  loadAppSubjects();
   const origUser = cleanIdString(document.getElementById('editSubAdminOriginalUser')?.value || '');
   const fullName = (document.getElementById('subFullName')?.value || '').trim();
   const username = cleanIdString(document.getElementById('subUsername')?.value || '');
@@ -5591,10 +5947,12 @@ function submitAddSubAdmin() {
   const checkedNodes = document.querySelectorAll('input[name="subModalSubjChk"]:checked');
   const selectedSubjects = Array.from(checkedNodes).map(cb => cb.value);
   const fallbackSubj = document.getElementById('subAssignedSubject')?.value || '';
-  const finalSubjects = selectedSubjects.length > 0 ? selectedSubjects : (fallbackSubj ? [fallbackSubj] : []);
+  const finalSubjects = selectedSubjects.length > 0
+    ? selectedSubjects
+    : (fallbackSubj ? [fallbackSubj] : appSubjects.map(s => s.id));
 
   if (!fullName || !username || !pass) {
-    showToast('กรุณากรอกชื่อ-นามสกุล รหัสอาจารย์ และรหัสผ่านให้ครบถ้วน', 'warning');
+    showToast('กรุณากรอกชื่อ-นามสกุล รหัสผู้ใช้ และรหัสผ่านให้ครบถ้วน', 'warning');
     return;
   }
 
@@ -5609,7 +5967,7 @@ function submitAddSubAdmin() {
     assignedSubject: finalSubjects[0] || '',
     assignedSubjects: finalSubjects,
     status: 'Active',
-    approvalStatus: 'Approved',
+    approvalStatus: 'Verified',
     createdAt: new Date().toISOString().split('T')[0]
   };
 
@@ -5639,7 +5997,8 @@ function submitAddSubAdmin() {
   closeModal('addSubAdminModal');
   renderSubAdminsTable();
   renderSuperAdminOverviewKpis();
-  showToast(`บันทึกข้อมูลอาจารย์ ${fullName} เรียบร้อยแล้ว`, 'success');
+  playSuccessSound();
+  showToast(`บันทึกข้อมูลบัญชี "${fullName}" เรียบร้อยแล้ว`, 'success');
 
   syncRecordToGoogleSheet('addSubAdmin', recordData);
 }
@@ -5651,34 +6010,51 @@ function renderSubAdminsTable() {
   renderSuperAdminOverviewKpis();
 
   if (subAdmins.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีรายชื่ออาจารย์ผู้สอนในระบบ (กด "+ เพิ่มบัญชีอาจารย์ใหม่" เพื่อสร้างได้ทันที)</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีรายชื่ออาจารย์หรือผู้บริหารในระบบ (สามารถกรอกฟอร์มเพิ่มด่วนด้านบนได้เลย)</td></tr>`;
     return;
   }
+
+  const roleMap = {
+    TEACHER: { label: 'อาจารย์ผู้สอน', bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+    EXECUTIVE: { label: 'ผู้บริหารสถานศึกษา', bg: '#f0fdf4', color: '#047857', border: '#a7f3d0' },
+    HOMEROOM: { label: 'อาจารย์ประจำชั้น', bg: '#fefce8', color: '#a16207', border: '#fde047' },
+    ACTIVITY: { label: 'ฝ่ายกิจกรรม', bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
+    SubAdmin: { label: 'ผู้ช่วยแอดมิน', bg: '#f1f5f9', color: '#334155', border: '#cbd5e1' }
+  };
 
   tbody.innerHTML = subAdmins.map(a => {
     const assignedIds = Array.isArray(a.assignedSubjects)
       ? a.assignedSubjects
       : (a.assignedSubject ? [a.assignedSubject] : []);
 
-    const subjNames = assignedIds.map(id => {
-      const s = appSubjects.find(x => x.id === id);
-      return s ? s.name : id;
-    }).filter(Boolean).join(', ') || 'ทุกวิชา';
+    const subjNames = (a.role === 'EXECUTIVE' || assignedIds.length === 0 || assignedIds.length >= appSubjects.length)
+      ? 'ทุกวิชา / ทั้งโรงเรียน'
+      : assignedIds.map(id => {
+          const s = appSubjects.find(x => x.id === id);
+          return s ? s.name : id;
+        }).filter(Boolean).join(', ');
 
+    const rInfo = roleMap[a.role] || roleMap.TEACHER;
+    const rolePill = `<span class="activity-badge" style="background:${rInfo.bg}; color:${rInfo.color}; border:1px solid ${rInfo.border}; margin-right:0.3rem;">${rInfo.label}</span>`;
     const subjBadge = `<span class="activity-badge badge-upcoming">${escapeHtml(subjNames)}</span>`;
-    const statusBadge = a.approvalStatus === 'PendingAdmin'
-      ? '<span class="activity-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">รอยืนยันรหัส</span>'
-      : '<span class="activity-badge badge-active">อนุมัติแล้ว</span>';
+
+    const isPending = a.approvalStatus === 'PendingAdmin' || a.approvalStatus === 'AwaitingOtp';
+    const statusBadge = isPending
+      ? '<span class="activity-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">รอผู้สมัครกรอก OTP</span>'
+      : '<span class="activity-badge badge-active"><i class="fa-solid fa-check"></i> พร้อมใช้งาน</span>';
 
     return `
       <tr>
-        <td><b>${escapeHtml(cleanIdString(a.username))}</b></td>
+        <td>
+          <b>${escapeHtml(cleanIdString(a.username))}</b>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">รหัสผ่าน: ${escapeHtml(cleanIdString(a.password))}</div>
+        </td>
         <td style="font-weight: 600;">${escapeHtml(a.fullName)}</td>
         <td>
           <div>${escapeHtml(a.email || '-')}</div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(a.phone || '')}</div>
         </td>
-        <td>${subjBadge}</td>
+        <td>${rolePill}${subjBadge}</td>
         <td>${statusBadge}</td>
         <td style="text-align: right; white-space: nowrap;">
           <button class="btn btn-primary btn-sm" style="padding: 0.25rem 0.55rem; font-size: 0.78rem; margin-right: 0.25rem;" onclick="openEditTeacherModal('${escapeHtml(cleanIdString(a.username))}')">
@@ -5694,12 +6070,14 @@ function renderSubAdminsTable() {
 }
 
 function deleteSubAdmin(username) {
-  if (!confirm(`ต้องการลบบัญชีอาจารย์ ${username} ใช่หรือไม่?`)) return;
-  subAdmins = subAdmins.filter(s => !isIdMatch(s.username, username));
+  const cleanU = cleanIdString(username);
+  if (!confirm(`ต้องการลบบัญชีอาจารย์/ผู้บริหาร (${cleanU}) ใช่หรือไม่?`)) return;
+  subAdmins = subAdmins.filter(s => !isIdMatch(s.username, cleanU));
   localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
   renderSubAdminsTable();
   renderSuperAdminOverviewKpis();
-  showToast('ลบบัญชีอาจารย์เรียบร้อยแล้ว', 'success');
+  showToast('ลบบัญชีเรียบร้อยแล้ว', 'success');
+  syncRecordToGoogleSheet('deleteSubAdmin', { username: cleanU });
 }
 
 // ----------------- TEACHER GRADING (1 - 4 SCALE) IN ADMIN & TEACHER PORTAL ----------------- //
@@ -5721,6 +6099,7 @@ function populateGradingSubjectSelect() {
     subSelect.innerHTML = options;
   }
   renderSubAdminModalSubjectsChecklist([]);
+  renderQuickSubAdminSubjectsChecklist([]);
 }
 
 function renderGradingStudentsTable() {
@@ -5835,30 +6214,53 @@ function saveTeacherGradingScores() {
   showToast(`บันทึกเกรดรายวิชา (ระดับ 1-4) ของนักเรียน ${updatedCount} คน และอัปเดตกราฟทักษะสำเร็จ!`, 'success');
 }
 
-// ----------------- DEDICATED TEACHER PORTAL (#view-teacher) ----------------- //
+// ----------------- DEDICATED TEACHER & EXECUTIVE PORTAL (#view-teacher) ----------------- //
 let teacherDailyAttendanceDraft = {}; // { [studentId]: 'present' | 'late' | 'leave' | 'absent' }
 
 function initTeacherPortalView() {
   loadAppSubjects();
   const titleEl = document.getElementById('teacherWelcomeTitle');
   const subEl = document.getElementById('teacherAssignedSubjectsSubtitle');
+  const rolePill = document.getElementById('teacherPortalRolePill');
   const dateInput = document.getElementById('teacherAttDateInput');
+  const kpiStd = document.getElementById('teacherKpiTotalStudents');
+  const kpiChecked = document.getElementById('teacherKpiCheckedToday');
+  const kpiSubj = document.getElementById('teacherKpiSubjectsCount');
 
+  const todayStr = new Date().toISOString().split('T')[0];
   if (dateInput && !dateInput.value) {
-    dateInput.value = new Date().toISOString().split('T')[0];
+    dateInput.value = todayStr;
   }
 
+  let savedLogs = {};
+  try {
+    savedLogs = JSON.parse(localStorage.getItem('khalifah_daily_attendance_logs') || '{}');
+  } catch (e) { savedLogs = {}; }
+  const checkedTodayCount = Object.keys(savedLogs[todayStr] || {}).length;
+
+  if (kpiStd) kpiStd.innerText = `${allStudents.length} คน`;
+  if (kpiChecked) kpiChecked.innerText = `${checkedTodayCount} คน`;
+
   if (currentAdmin) {
-    if (titleEl) titleEl.innerText = `ระบบอาจารย์ผู้สอน: ${currentAdmin.fullName || currentAdmin.username}`;
+    const isExec = currentAdmin.role === 'EXECUTIVE';
+    if (rolePill) {
+      rolePill.innerHTML = isExec
+        ? '<i class="fa-solid fa-user-tie"></i> EXECUTIVE PORTAL • ระบบผู้บริหารสถานศึกษา'
+        : '<i class="fa-solid fa-chalkboard-user"></i> TEACHER PORTAL • ระบบอาจารย์และวิชาการ';
+    }
+    if (titleEl) {
+      titleEl.innerText = `${isExec ? 'ระบบผู้บริหาร' : 'ระบบอาจารย์ผู้สอน'}: ${currentAdmin.fullName || currentAdmin.username}`;
+    }
     const assignedIds = Array.isArray(currentAdmin.assignedSubjects)
       ? currentAdmin.assignedSubjects
       : (currentAdmin.assignedSubject ? [currentAdmin.assignedSubject] : []);
-    const assignedSubjObjs = (currentAdmin.role === 'SuperAdmin' || assignedIds.length === 0)
+    const assignedSubjObjs = (currentAdmin.role === 'SuperAdmin' || isExec || assignedIds.length === 0)
       ? appSubjects
       : appSubjects.filter(s => assignedIds.includes(s.id));
 
     const names = assignedSubjObjs.map(s => s.name).join(', ');
-    if (subEl) subEl.innerText = `วิชาที่ได้รับมอบหมาย: ${names || 'ทุกวิชา'}`;
+    if (subEl) subEl.innerText = `วิชาที่รับผิดชอบ: ${names || 'ทุกวิชา'}`;
+    if (kpiSubj) kpiSubj.innerText = `${assignedSubjObjs.length} วิชา`;
 
     const portalSubjSel = document.getElementById('teacherPortalSubjectSelect');
     if (portalSubjSel) {
@@ -6948,7 +7350,7 @@ function tickQrScan() {
 }
 
 /**
- * ประมวลผลเมื่อสแกนพบ QR Code: สแกนซ้ำได้ ข้อมูลเวลาและวันที่จะถูกแทนที่ทันที
+ * ประมวลผลเมื่อสแกนพบ QR Code: สแกนซ้ำได้ ข้อมูลเวลาและวันที่จะถูกแทนที่ทันที + ซิงก์เรียลไทม์ไปฝั่งแอดมินและ Google Sheets
  */
 function handleQrCodeDetected(qrData) {
   if (!currentStudent) {
@@ -6971,10 +7373,11 @@ function handleQrCodeDetected(qrData) {
   }
 
   // Find or create in activities list
-  let act = activities.find(a => a.id === actId || a.title === actTitle);
+  let act = activities.find(a => (a.id === actId || a.activityId === actId || a.title === actTitle));
   if (!act) {
     act = {
       id: actId,
+      activityId: actId,
       title: actTitle,
       type: 'ทั่วไป',
       date: new Date().toISOString().split('T')[0],
@@ -6983,6 +7386,8 @@ function handleQrCodeDetected(qrData) {
     };
     activities.push(act);
   } else {
+    if (!act.id && act.activityId) act.id = act.activityId;
+    if (!act.activityId && act.id) act.activityId = act.id;
     act.checkedIn = true;
   }
 
@@ -6993,18 +7398,20 @@ function handleQrCodeDetected(qrData) {
   } catch (e) { actLogs = []; }
 
   const now = new Date();
-  const existingIndex = actLogs.findIndex(l => l.studentId === currentStudent.studentId && (l.activityId === act.id || l.activityTitle === act.title));
+  const resolvedActId = act.id || act.activityId || actId;
+  const existingIndex = actLogs.findIndex(l => isIdMatch(l.studentId, currentStudent.studentId) && (l.activityId === resolvedActId || l.activityTitle === act.title));
 
   const logEntry = {
     id: 'ACTLOG-' + Date.now(),
-    studentId: currentStudent.studentId,
+    studentId: cleanIdString(currentStudent.studentId),
     studentName: currentStudent.fullName,
-    grade: currentStudent.grade,
-    activityId: act.id,
+    grade: currentStudent.grade || '-',
+    activityId: resolvedActId,
     activityTitle: act.title,
     checkInTimestamp: now.toISOString(),
     formattedDate: now.toLocaleDateString('th-TH'),
-    formattedTime: now.toLocaleTimeString('th-TH')
+    formattedTime: now.toLocaleTimeString('th-TH'),
+    source: 'สแกน QR Code'
   };
 
   if (existingIndex !== -1) {
@@ -7039,7 +7446,10 @@ function handleQrCodeDetected(qrData) {
   if (modalStudent) modalStudent.innerText = `${currentStudent.fullName} (${currentStudent.studentId})`;
   openModal('activityScanResultModal');
 
+  renderActivitiesList();
   renderStudentScannedActivities();
+  renderAdminActivitiesTable();
+  renderAdminLiveActivityFeed();
   renderDashboardCharts();
   renderCurrentStudentProfile();
 
@@ -7063,7 +7473,7 @@ function renderStudentScannedActivities(filterDate = null) {
     actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
   } catch (e) { actLogs = []; }
 
-  let myLogs = actLogs.filter(l => l.studentId === currentStudent.studentId);
+  let myLogs = actLogs.filter(l => isIdMatch(l.studentId, currentStudent.studentId));
 
   // Filter by selected date if provided (e.g. YYYY-MM-DD)
   if (filterDate) {
@@ -7117,7 +7527,7 @@ function clearActDateFilter() {
   renderStudentScannedActivities(null);
 }
 
-// ----------------- ADMIN ACTIVITIES & QR CODE GENERATOR ----------------- //
+// ----------------- ADMIN ACTIVITIES & QR CODE GENERATOR + REAL-TIME LIVE FEED ----------------- //
 function adminCreateNewActivity() {
   const title = document.getElementById('newActTitle').value.trim();
   const type = document.getElementById('newActType').value;
@@ -7129,8 +7539,10 @@ function adminCreateNewActivity() {
     return;
   }
 
+  const actId = 'ACT-' + Date.now().toString().slice(-6);
   const newAct = {
-    id: 'ACT-' + Date.now().toString().slice(-6),
+    id: actId,
+    activityId: actId,
     title: title,
     type: type,
     location: location,
@@ -7142,7 +7554,9 @@ function adminCreateNewActivity() {
   localStorage.setItem('khalifah_activities', JSON.stringify(activities));
 
   document.getElementById('newActTitle').value = '';
+  renderActivitiesList();
   renderAdminActivitiesTable();
+  renderAdminLiveActivityFeed();
   showToast(`สร้างกิจกรรม "${title}" เรียบร้อยแล้ว`, 'success');
 
   // Open QR modal right away for printing
@@ -7152,8 +7566,9 @@ function adminCreateNewActivity() {
 }
 
 function openActivityQrModal(actId) {
-  const act = activities.find(a => a.id === actId);
+  const act = activities.find(a => (a.id === actId || a.activityId === actId));
   if (!act) return;
+  const resolvedId = act.id || act.activityId;
 
   const displayEl = document.getElementById('activityQrCodeDisplay');
   const titleEl = document.getElementById('activityQrName');
@@ -7166,7 +7581,7 @@ function openActivityQrModal(actId) {
     displayEl.innerHTML = '';
     if (window.QRCode) {
       new QRCode(displayEl, {
-        text: `KHALIFAH_ACT:${act.id}:${act.title}`,
+        text: `KHALIFAH_ACT:${resolvedId}:${act.title}`,
         width: 220,
         height: 220,
         colorDark: '#0284c7',
@@ -7190,13 +7605,14 @@ function adminManualCheckInStudent() {
   }
 
   const student = allStudents.find(s => isIdMatch(s.studentId, stdId));
-  const act = activities.find(a => a.id === actId);
+  const act = activities.find(a => (a.id === actId || a.activityId === actId));
 
   if (!act) {
     showToast('ไม่พบกิจกรรมที่เลือก', 'error');
     return;
   }
 
+  const resolvedActId = act.id || act.activityId;
   const resolvedStudentId = student ? cleanIdString(student.studentId) : stdId;
   const studentName = student ? student.fullName : ('นักเรียน (' + resolvedStudentId + ')');
   const studentGrade = student ? student.grade : '-';
@@ -7207,18 +7623,19 @@ function adminManualCheckInStudent() {
   } catch (e) { actLogs = []; }
 
   const now = new Date();
-  const existingIndex = actLogs.findIndex(l => isIdMatch(l.studentId, resolvedStudentId) && l.activityId === act.id);
+  const existingIndex = actLogs.findIndex(l => isIdMatch(l.studentId, resolvedStudentId) && (l.activityId === resolvedActId || l.activityTitle === act.title));
 
   const logEntry = {
     id: 'ACTLOG-' + Date.now(),
     studentId: resolvedStudentId,
     studentName: studentName,
     grade: studentGrade,
-    activityId: act.id,
+    activityId: resolvedActId,
     activityTitle: act.title,
     checkInTimestamp: now.toISOString(),
     formattedDate: now.toLocaleDateString('th-TH'),
-    formattedTime: now.toLocaleTimeString('th-TH')
+    formattedTime: now.toLocaleTimeString('th-TH'),
+    source: 'เช็คชื่อโดยแอดมิน'
   };
 
   if (existingIndex !== -1) {
@@ -7230,9 +7647,25 @@ function adminManualCheckInStudent() {
   localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
   document.getElementById('manualStudentIdInput').value = '';
   renderAdminActivitiesTable();
+  renderAdminLiveActivityFeed();
   showToast(`เช็คชื่อ ${studentName} เข้ากิจกรรม "${act.title}" เรียบร้อย!`, 'success');
 
   syncRecordToGoogleSheet('activityCheckIn', logEntry);
+}
+
+function adminDeleteActivity(actId) {
+  const act = activities.find(a => (a.id === actId || a.activityId === actId));
+  if (!confirm(`ยืนยันการลบกิจกรรม "${act ? act.title : actId}" ออกจากระบบและ Google Sheets?`)) return;
+
+  activities = activities.filter(a => (a.id !== actId && a.activityId !== actId));
+  localStorage.setItem('khalifah_activities', JSON.stringify(activities));
+
+  renderActivitiesList();
+  renderAdminActivitiesTable();
+  renderAdminLiveActivityFeed();
+  showToast('ลบกิจกรรมเรียบร้อยแล้ว', 'info');
+
+  syncRecordToGoogleSheet('deleteActivity', { activityId: actId });
 }
 
 let currentViewingActivityId = null;
@@ -7249,25 +7682,29 @@ function renderAdminActivitiesTable() {
   } catch (e) { actLogs = []; }
 
   tbody.innerHTML = activities.map(a => {
-    const participantsCount = actLogs.filter(l => l.activityId === a.id || l.activityTitle === a.title).length;
+    const actId = a.id || a.activityId;
+    const participantsCount = actLogs.filter(l => l.activityId === actId || l.activityTitle === a.title).length;
     return `
       <tr>
-        <td><b>${a.id}</b></td>
-        <td>${a.title}</td>
+        <td><b>${actId}</b></td>
+        <td style="font-weight: 600; color: var(--text-dark);">${a.title}</td>
         <td><span class="activity-badge badge-upcoming">${a.type || 'กิจกรรม'}</span></td>
         <td>${a.location || '-'}</td>
         <td>${a.date || '-'}</td>
         <td>
-          <span style="font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #bae6fd; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+          <span style="font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #bae6fd; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;" onclick="openActivityAttendeesModal('${actId}')">
             <i class="fa-solid fa-users"></i> ${participantsCount} คน
           </span>
         </td>
         <td style="text-align: right; white-space: nowrap;">
-          <button class="btn btn-secondary btn-sm" onclick="openActivityAttendeesModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.35rem;" title="ดูรายชื่อนักเรียนที่สแกนเข้าร่วม">
+          <button class="btn btn-secondary btn-sm" onclick="openActivityAttendeesModal('${actId}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.3rem;" title="ดูรายชื่อนักเรียนที่สแกนเข้าร่วม">
             <i class="fa-solid fa-users-viewfinder"></i> รายชื่อ (${participantsCount})
           </button>
-          <button class="btn btn-primary btn-sm" onclick="openActivityQrModal('${a.id}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem;">
+          <button class="btn btn-primary btn-sm" onclick="openActivityQrModal('${actId}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.3rem;">
             <i class="fa-solid fa-qrcode"></i> พิมพ์ QR
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="adminDeleteActivity('${actId}')" style="padding: 0.3rem 0.5rem; font-size: 0.78rem; color: #ef4444; border-color: #fecaca;" title="ลบกิจกรรม">
+            <i class="fa-solid fa-trash-can"></i>
           </button>
         </td>
       </tr>
@@ -7275,13 +7712,226 @@ function renderAdminActivitiesTable() {
   }).join('');
 
   if (selectEl) {
-    selectEl.innerHTML = activities.map(a => `<option value="${a.id}">${a.title} (${a.date})</option>`).join('');
+    selectEl.innerHTML = activities.map(a => {
+      const actId = a.id || a.activityId;
+      return `<option value="${actId}">${a.title} (${a.date || '-'})</option>`;
+    }).join('');
+  }
+}
+
+function renderAdminLiveActivityFeed() {
+  const tbody = document.getElementById('adminLiveActivityLogsTableBody');
+  const filterSelect = document.getElementById('liveFeedActivityFilter');
+  const countBadge = document.getElementById('liveScanCountBadge');
+  if (!tbody) return;
+
+  // Populate activity filter dropdown while preserving selection
+  if (filterSelect) {
+    const prevVal = filterSelect.value || 'ALL';
+    filterSelect.innerHTML = `<option value="ALL">ทุกกิจกรรม (ทั้งหมด)</option>` +
+      activities.map(a => {
+        const actId = a.id || a.activityId;
+        return `<option value="${actId}">${a.title}</option>`;
+      }).join('');
+    if ([...filterSelect.options].some(o => o.value === prevVal)) {
+      filterSelect.value = prevVal;
+    }
+  }
+
+  let actLogs = [];
+  try {
+    actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+  } catch (e) { actLogs = []; }
+
+  const selectedActId = filterSelect ? filterSelect.value : 'ALL';
+  let filteredLogs = [...actLogs];
+  if (selectedActId && selectedActId !== 'ALL') {
+    const targetAct = activities.find(a => (a.id === selectedActId || a.activityId === selectedActId));
+    filteredLogs = filteredLogs.filter(l => l.activityId === selectedActId || (targetAct && l.activityTitle === targetAct.title));
+  }
+
+  // Sort latest first
+  filteredLogs.sort((a, b) => {
+    const ta = a.checkInTimestamp ? new Date(a.checkInTimestamp).getTime() : 0;
+    const tb = b.checkInTimestamp ? new Date(b.checkInTimestamp).getTime() : 0;
+    return tb - ta;
+  });
+
+  if (countBadge) {
+    countBadge.innerHTML = `<i class="fa-solid fa-users"></i> สแกนแล้ว: ${filteredLogs.length} รายการ`;
+  }
+
+  if (filteredLogs.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+          <i class="fa-solid fa-satellite-dish" style="font-size: 1.35rem; color: #94a3b8; margin-bottom: 0.35rem; display: block;"></i>
+          กำลังรอรับข้อมูลสแกน QR Code จากนักเรียนแบบเรียลไทม์...
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filteredLogs.slice(0, 50).map(item => `
+    <tr>
+      <td><span style="font-weight: 700; color: #059669;"><i class="fa-regular fa-clock"></i> ${item.formattedTime || '-'}</span></td>
+      <td>${item.formattedDate || '-'}</td>
+      <td><b>${item.studentId || '-'}</b></td>
+      <td style="font-weight: 600; color: var(--text-dark);">${item.studentName || '-'}</td>
+      <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.76rem;">${item.grade || '-'}</span></td>
+      <td><span style="font-weight: 600; color: #0369a1;">${item.activityTitle || item.activityId || '-'}</span></td>
+      <td>
+        <span style="background: #dcfce7; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 9999px;">
+          <i class="fa-solid fa-qrcode"></i> ${item.source || 'สแกน QR สำเร็จ'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+let adminActivityPollingTimer = null;
+
+async function fetchActivitiesAndLogsFromCloud(showToastMsg = false) {
+  if (!gasWebAppUrl) {
+    renderAdminActivitiesTable();
+    renderAdminLiveActivityFeed();
+    return;
+  }
+
+  try {
+    const sep = gasWebAppUrl.includes('?') ? '&' : '?';
+    const [actRes, logsRes] = await Promise.all([
+      fetch(`${gasWebAppUrl}${sep}action=getActivities&_t=${Date.now()}`, { method: 'GET', redirect: 'follow' }).then(r => r.json()).catch(() => null),
+      fetch(`${gasWebAppUrl}${sep}action=getActivityLogs&_t=${Date.now()}`, { method: 'GET', redirect: 'follow' }).then(r => r.json()).catch(() => null)
+    ]);
+
+    // Merge activities from cloud
+    if (actRes && actRes.status === 'success' && Array.isArray(actRes.data)) {
+      let localActs = [...activities];
+      actRes.data.forEach(cloudAct => {
+        const cId = String(cloudAct.id || cloudAct.activityId || '').trim();
+        const cTitle = String(cloudAct.title || '').trim();
+        if (!cId && !cTitle) return;
+        const idx = localActs.findIndex(a => (cId && (a.id === cId || a.activityId === cId)) || (cTitle && a.title === cTitle));
+        const normalized = {
+          id: cId || ('ACT-' + Date.now().toString().slice(-6)),
+          activityId: cId || ('ACT-' + Date.now().toString().slice(-6)),
+          title: cTitle || 'กิจกรรม',
+          type: cloudAct.type || 'ทั่วไป',
+          location: cloudAct.location || 'มัสยิดอัลฮารอมัยน์',
+          date: cloudAct.date || new Date().toISOString().split('T')[0],
+          checkedIn: idx !== -1 ? Boolean(localActs[idx].checkedIn) : false
+        };
+        if (idx !== -1) {
+          localActs[idx] = { ...localActs[idx], ...normalized };
+        } else {
+          localActs.unshift(normalized);
+        }
+      });
+      activities = localActs;
+      localStorage.setItem('khalifah_activities', JSON.stringify(activities));
+    }
+
+    // Merge activity logs from cloud
+    if (logsRes && logsRes.status === 'success' && Array.isArray(logsRes.data)) {
+      let localLogs = [];
+      try {
+        localLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+      } catch (e) { localLogs = []; }
+
+      logsRes.data.forEach(cloudLog => {
+        const stdId = cleanIdString(cloudLog.studentId || '');
+        const actId = String(cloudLog.activityId || '').trim();
+        const actTitle = String(cloudLog.activityTitle || '').trim();
+        if (!stdId) return;
+
+        const existingIdx = localLogs.findIndex(l =>
+          isIdMatch(l.studentId, stdId) &&
+          ((actId && l.activityId === actId) || (actTitle && l.activityTitle === actTitle))
+        );
+
+        const mergedEntry = {
+          id: cloudLog.id || ('ACTLOG-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5)),
+          studentId: stdId,
+          studentName: cloudLog.studentName || ('นักเรียน (' + stdId + ')'),
+          grade: cloudLog.grade || '-',
+          activityId: actId || actTitle,
+          activityTitle: actTitle || actId || 'กิจกรรม',
+          checkInTimestamp: cloudLog.checkInTimestamp || new Date().toISOString(),
+          formattedDate: cloudLog.formattedDate || '-',
+          formattedTime: cloudLog.formattedTime || '-',
+          source: cloudLog.source || 'Google Sheets Sync'
+        };
+
+        if (existingIdx !== -1) {
+          localLogs[existingIdx] = { ...localLogs[existingIdx], ...mergedEntry };
+        } else {
+          localLogs.unshift(mergedEntry);
+        }
+      });
+
+      // Mark activities checkedIn for currentStudent if present in logs
+      if (currentStudent) {
+        activities.forEach(a => {
+          const aId = a.id || a.activityId;
+          const hasChecked = localLogs.some(l => isIdMatch(l.studentId, currentStudent.studentId) && (l.activityId === aId || l.activityTitle === a.title));
+          if (hasChecked) a.checkedIn = true;
+        });
+        localStorage.setItem('khalifah_activities', JSON.stringify(activities));
+      }
+
+      localStorage.setItem('khalifah_student_act_logs', JSON.stringify(localLogs));
+
+      // Refresh attendees modal if currently open
+      if (currentViewingActivityId) {
+        const act = activities.find(a => (a.id === currentViewingActivityId || a.activityId === currentViewingActivityId));
+        currentAttendeesList = localLogs.filter(l => l.activityId === currentViewingActivityId || (act && l.activityTitle === act.title));
+        renderAttendeesTable(currentAttendeesList);
+      }
+    }
+
+    renderActivitiesList();
+    renderStudentScannedActivities();
+    renderAdminActivitiesTable();
+    renderAdminLiveActivityFeed();
+    renderSuperAdminOverviewKpis();
+
+    if (showToastMsg) {
+      showToast('ซิงก์ข้อมูลกิจกรรมและผู้สแกน QR จาก Google Sheets ล่าสุดแล้ว', 'success');
+    }
+  } catch (err) {
+    console.warn('fetchActivitiesAndLogsFromCloud failed:', err);
+    if (showToastMsg) {
+      showToast('ไม่สามารถดึงข้อมูลกิจกรรมจาก Cloud ได้ ใช้ข้อมูลในเครื่องแทน', 'warning');
+    }
+  }
+}
+
+function syncActivitiesAndLogsNow(showToastMsg = false) {
+  fetchActivitiesAndLogsFromCloud(showToastMsg);
+}
+
+function startAdminActivityLivePolling() {
+  stopAdminActivityLivePolling();
+  adminActivityPollingTimer = setInterval(() => {
+    const adminView = document.getElementById('view-admin');
+    if (isAdminLoggedIn && adminView && adminView.classList.contains('active')) {
+      fetchActivitiesAndLogsFromCloud(false);
+    }
+  }, 5000);
+}
+
+function stopAdminActivityLivePolling() {
+  if (adminActivityPollingTimer) {
+    clearInterval(adminActivityPollingTimer);
+    adminActivityPollingTimer = null;
   }
 }
 
 function openActivityAttendeesModal(actId) {
   currentViewingActivityId = actId;
-  const act = activities.find(a => a.id === actId);
+  const act = activities.find(a => (a.id === actId || a.activityId === actId));
   const titleEl = document.getElementById('actAttendeesModalTitle');
   const subEl = document.getElementById('actAttendeesModalSubtitle');
   const searchInput = document.getElementById('attendeesSearchInput');
@@ -7302,6 +7952,9 @@ function openActivityAttendeesModal(actId) {
   currentAttendeesList = actLogs.filter(l => l.activityId === actId || (act && l.activityTitle === act.title));
   renderAttendeesTable(currentAttendeesList);
   openModal('activityAttendeesModal');
+
+  // Pull latest from Google Sheets in background
+  fetchActivitiesAndLogsFromCloud(false);
 }
 
 function renderAttendeesTable(list) {
@@ -7366,11 +8019,12 @@ function deleteActivityAttendee(logId) {
   localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
 
   if (currentViewingActivityId) {
-    const act = activities.find(a => a.id === currentViewingActivityId);
+    const act = activities.find(a => (a.id === currentViewingActivityId || a.activityId === currentViewingActivityId));
     currentAttendeesList = actLogs.filter(l => l.activityId === currentViewingActivityId || (act && l.activityTitle === act.title));
     renderAttendeesTable(currentAttendeesList);
   }
   renderAdminActivitiesTable();
+  renderAdminLiveActivityFeed();
   showToast('ลบรายการเช็คชื่อเรียบร้อยแล้ว', 'info');
 }
 
@@ -7379,7 +8033,7 @@ function exportAttendeesToExcel() {
     showToast('ไม่มีข้อมูลนักเรียนสำหรับส่งออก', 'warning');
     return;
   }
-  const act = activities.find(a => a.id === currentViewingActivityId);
+  const act = activities.find(a => (a.id === currentViewingActivityId || a.activityId === currentViewingActivityId));
   const actTitle = act ? act.title : 'Activity';
 
   const exportData = currentAttendeesList.map((item, idx) => ({

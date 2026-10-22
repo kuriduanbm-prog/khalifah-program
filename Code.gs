@@ -414,6 +414,9 @@ function doGet(e) {
       case 'getActivities':
         result = getActivities();
         break;
+      case 'getActivityLogs':
+        result = getActivityLogs(e.parameter.activityId);
+        break;
       case 'getSubAdmins':
         result = getSubAdmins();
         break;
@@ -485,6 +488,9 @@ function doPost(e) {
       case 'createActivity':
         result = createActivity(postData.data || postData);
         break;
+      case 'deleteActivity':
+        result = deleteActivity(postData.activityId || (postData.data && (postData.data.activityId || postData.data.id)));
+        break;
       case 'checkInActivity':
       case 'activityCheckIn':
         result = checkInActivity(postData.data || postData);
@@ -494,6 +500,9 @@ function doPost(e) {
         break;
       case 'addSubAdmin':
         result = addSubAdmin(postData.data || postData);
+        break;
+      case 'deleteSubAdmin':
+        result = deleteSubAdmin(postData.username || (postData.data && postData.data.username));
         break;
       case 'deleteStudent':
         result = deleteStudent(postData.studentId || (postData.data && postData.data.studentId));
@@ -515,6 +524,9 @@ function doPost(e) {
         break;
       case 'approveRegistrationAndSendEmail':
         result = approveRegistrationAndSendEmail(postData.data || postData);
+        break;
+      case 'verifyUserOtp':
+        result = verifyUserOtp(postData.data || postData);
         break;
       case 'updateStudentFull':
         result = updateStudentFull(postData.data || postData);
@@ -627,15 +639,9 @@ function registerStudent(data) {
   const cleanSid = cleanVal(data.studentId);
   const cleanBD = normalizeBirthDate(data.birthDate);
   const cleanPh = normalizePhone(data.parentPhone);
-
-  const rows = sheet.getDataRange().getValues();
-  for (let i = 1; i < rows.length; i++) {
-    if (isCodeMatch(rows[i][0], cleanSid)) {
-      return { success: false, message: 'รหัสนักเรียนนี้ได้ลงทะเบียนในระบบแล้ว' };
-    }
-  }
-
-  const registeredAt = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+  const statusThai = data.status === 'รอผู้สมัครกรอกรหัส OTP'
+    ? 'รอผู้สมัครกรอกรหัส OTP'
+    : formatStudentStatusThai(data.status || 'Active');
 
   const rawPhoto = data.avatarUrl || data.profilePhoto || '';
   let photoLink = '';
@@ -649,6 +655,46 @@ function registerStudent(data) {
     ? photoLink 
     : (rawPhoto && !rawPhoto.startsWith('data:image') && rawPhoto.length < 500 ? rawPhoto : 'รูปโปรไฟล์ในอุปกรณ์');
 
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (isCodeMatch(rows[i][0], cleanSid)) {
+      const rowNum = i + 1;
+      const existingRegDate = cleanVal(rows[i][6]) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+      const finalPhoto = (safePhotoRef && safePhotoRef !== 'รูปโปรไฟล์ในอุปกรณ์') ? safePhotoRef : (cleanVal(rows[i][8]) || safePhotoRef);
+      sheet.getRange(rowNum, 1, 1, 9).setValues([[
+        cleanSid,
+        data.fullName || rows[i][1] || '',
+        data.schoolName || rows[i][2] || '',
+        data.grade || rows[i][3] || '',
+        cleanBD || normalizeBirthDate(rows[i][4]),
+        cleanPh || normalizePhone(rows[i][5]),
+        existingRegDate,
+        statusThai,
+        finalPhoto
+      ]]);
+      sheet.getRange(rowNum, 1).setNumberFormat('@').setValue(cleanSid);
+      sheet.getRange(rowNum, 5).setNumberFormat('@').setValue(cleanBD || normalizeBirthDate(rows[i][4]));
+      sheet.getRange(rowNum, 6).setNumberFormat('@').setValue(cleanPh || normalizePhone(rows[i][5]));
+      return {
+        success: true,
+        updated: true,
+        message: 'อัปเดตข้อมูลนักเรียนสำเร็จเรียบร้อย',
+        student: {
+          studentId: cleanSid,
+          fullName: data.fullName || rows[i][1],
+          schoolName: data.schoolName || rows[i][2],
+          grade: data.grade || rows[i][3],
+          birthDate: cleanBD || normalizeBirthDate(rows[i][4]),
+          parentPhone: cleanPh || normalizePhone(rows[i][5]),
+          status: statusThai,
+          avatarUrl: photoLink || rawPhoto || rows[i][8]
+        }
+      };
+    }
+  }
+
+  const registeredAt = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+
   sheet.appendRow([
     cleanSid,
     data.fullName || '',
@@ -657,7 +703,7 @@ function registerStudent(data) {
     cleanBD,
     cleanPh,
     registeredAt,
-    formatStudentStatusThai(data.status || 'Active'),
+    statusThai,
     safePhotoRef
   ]);
 
@@ -969,41 +1015,109 @@ function createActivity(data) {
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ACTIVITIES);
-  const actId = 'ACT-' + new Date().getTime();
+  const actId = cleanVal(data.id || data.activityId || ('ACT-' + new Date().getTime()));
+  const title = cleanVal(data.title || 'กิจกรรม');
+  const desc = cleanVal(data.description || data.type || 'กิจกรรมทั่วไป');
+  const startDate = cleanVal(data.startDate || data.date || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd"));
+  const endDate = cleanVal(data.endDate || data.date || startDate);
+  const location = cleanVal(data.location || 'ลานกิจกรรมหลัก KHALIFAH');
+  const createdBy = cleanVal(data.createdBy || 'Admin');
+  const createdAt = cleanVal(data.createdAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
+
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (cleanVal(rows[i][0]) === actId) {
+      sheet.getRange(i + 1, 2, 1, 6).setValues([[title, desc, startDate, endDate, location, createdBy]]);
+      return { success: true, message: 'อัปเดตกิจกรรมเรียบร้อยแล้ว', activityId: actId, id: actId };
+    }
+  }
 
   sheet.appendRow([
     actId,
-    data.title,
-    data.description,
-    data.startDate,
-    data.endDate,
-    data.location,
-    data.createdBy || 'Admin',
-    Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"),
+    title,
+    desc,
+    startDate,
+    endDate,
+    location,
+    createdBy,
+    createdAt,
     0
   ]);
 
-  return { success: true, message: 'ประกาศกิจกรรมใหม่เรียบร้อยแล้ว', activityId: actId };
+  return { success: true, message: 'ประกาศกิจกรรมใหม่เรียบร้อยแล้ว', activityId: actId, id: actId };
+}
+
+function deleteActivity(activityId) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.ACTIVITIES);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานกิจกรรม' };
+  const targetId = cleanVal(activityId);
+  const rows = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (cleanVal(rows[i][0]) === targetId) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: 'ลบกิจกรรมเรียบร้อยแล้ว' };
+    }
+  }
+  return { success: false, message: 'ไม่พบรหัสกิจกรรม' };
 }
 
 function getActivities() {
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ACTIVITIES);
+  if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
 
   const results = [];
   for (let i = 1; i < rows.length; i++) {
+    const actId = cleanVal(rows[i][0]);
+    if (!actId) continue;
     results.push({
-      activityId: rows[i][0],
-      title: rows[i][1],
-      description: rows[i][2],
-      startDate: rows[i][3],
-      endDate: rows[i][4],
-      location: rows[i][5],
-      createdBy: rows[i][6],
-      createdAt: rows[i][7],
-      attendeesCount: rows[i][8]
+      id: actId,
+      activityId: actId,
+      title: cleanVal(rows[i][1]),
+      type: cleanVal(rows[i][2]) || 'กิจกรรมทั่วไป',
+      description: cleanVal(rows[i][2]) || 'กิจกรรมทั่วไป',
+      date: cleanVal(rows[i][3]),
+      startDate: cleanVal(rows[i][3]),
+      endDate: cleanVal(rows[i][4]),
+      location: cleanVal(rows[i][5]) || 'ลานกิจกรรมหลัก',
+      createdBy: cleanVal(rows[i][6]) || 'Admin',
+      createdAt: cleanVal(rows[i][7]),
+      attendeesCount: Number(rows[i][8]) || 0
+    });
+  }
+  return { success: true, data: results.reverse() };
+}
+
+function getActivityLogs(activityId) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheetLogs = ss.getSheetByName(SHEETS.ACTIVITY_LOGS);
+  if (!sheetLogs) return { success: true, data: [] };
+  const rows = sheetLogs.getDataRange().getValues();
+  const targetActId = cleanVal(activityId || '');
+
+  const results = [];
+  for (let i = 1; i < rows.length; i++) {
+    const rowActId = cleanVal(rows[i][1]);
+    if (targetActId && rowActId !== targetActId) continue;
+    const logId = cleanVal(rows[i][0]);
+    const sid = cleanVal(rows[i][3]);
+    if (!sid && !logId) continue;
+    results.push({
+      id: logId || ('ACTLOG-' + i),
+      logId: logId || ('ACTLOG-' + i),
+      activityId: rowActId,
+      activityTitle: cleanVal(rows[i][2]),
+      studentId: sid,
+      studentName: cleanVal(rows[i][4]),
+      grade: cleanVal(rows[i][5]),
+      formattedDate: cleanVal(rows[i][6]),
+      formattedTime: cleanVal(rows[i][7]),
+      checkInTimestamp: cleanVal(rows[i][8])
     });
   }
   return { success: true, data: results.reverse() };
@@ -1016,47 +1130,78 @@ function checkInActivity(data) {
   const sheetActivities = ss.getSheetByName(SHEETS.ACTIVITIES);
   const sheetLogs = ss.getSheetByName(SHEETS.ACTIVITY_LOGS);
 
-  const targetActId = String(data.activityId || '').trim();
-  const targetActTitle = String(data.activityTitle || data.title || '').trim();
+  const targetActId = cleanVal(data.activityId || '');
+  const targetActTitle = cleanVal(data.activityTitle || data.title || '');
+  const cleanSid = cleanVal(data.studentId || '-');
   let activityFoundTitle = targetActTitle;
+  let matchedActivityRow = -1;
 
-  // 1. อัปเดตยอดผู้เข้าร่วมในแผ่นงาน ACTIVITIES
   if (sheetActivities) {
-    const rows = sheetActivities.getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const rowActId = String(rows[i][0]).trim();
-      const rowActTitle = String(rows[i][1]).trim();
+    const actRows = sheetActivities.getDataRange().getValues();
+    for (let i = 1; i < actRows.length; i++) {
+      const rowActId = cleanVal(actRows[i][0]);
+      const rowActTitle = cleanVal(actRows[i][1]);
       if ((targetActId && rowActId === targetActId) || (targetActTitle && rowActTitle === targetActTitle)) {
-        const currentCount = Number(rows[i][8]) || 0;
-        sheetActivities.getRange(i + 1, 9).setValue(currentCount + 1);
-        activityFoundTitle = rowActTitle;
+        matchedActivityRow = i + 1;
+        activityFoundTitle = rowActTitle || targetActTitle;
         break;
       }
     }
   }
 
-  // 2. บันทึกประวัติการเข้าร่วมของนักเรียนลงในแผ่นงาน ACTIVITY_LOGS
-  if (sheetLogs) {
-    const logId = data.id || ('ACTLOG-' + new Date().getTime());
-    const now = new Date();
-    const dateStr = data.formattedDate || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
-    const timeStr = data.formattedTime || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
-    const timestamp = data.checkInTimestamp || now.toISOString();
+  let alreadyCheckedIn = false;
+  let totalForThisAct = 0;
 
-    sheetLogs.appendRow([
-      logId,
-      targetActId || '-',
-      activityFoundTitle || targetActTitle || 'กิจกรรมทั่วไป',
-      formatAsText(data.studentId || '-'),
-      data.studentName || '',
-      data.grade || '',
-      dateStr,
-      timeStr,
-      timestamp
-    ]);
+  if (sheetLogs) {
+    const logRows = sheetLogs.getDataRange().getValues();
+    for (let i = 1; i < logRows.length; i++) {
+      const rActId = cleanVal(logRows[i][1]);
+      const rActTitle = cleanVal(logRows[i][2]);
+      const rSid = cleanVal(logRows[i][3]);
+      const sameAct = (targetActId && rActId === targetActId) || (!targetActId && targetActTitle && rActTitle === targetActTitle);
+      if (sameAct) {
+        totalForThisAct++;
+        if (isCodeMatch(rSid, cleanSid)) {
+          alreadyCheckedIn = true;
+        }
+      }
+    }
+
+    if (!alreadyCheckedIn) {
+      const logId = cleanVal(data.id || ('ACTLOG-' + new Date().getTime()));
+      const now = new Date();
+      const dateStr = cleanVal(data.formattedDate || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd"));
+      const timeStr = cleanVal(data.formattedTime || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss"));
+      const timestamp = cleanVal(data.checkInTimestamp || now.toISOString());
+
+      sheetLogs.appendRow([
+        logId,
+        targetActId || '-',
+        activityFoundTitle || targetActTitle || 'กิจกรรมทั่วไป',
+        cleanSid,
+        cleanVal(data.studentName || ''),
+        cleanVal(data.grade || ''),
+        dateStr,
+        timeStr,
+        timestamp
+      ]);
+      const lastRow = sheetLogs.getLastRow();
+      sheetLogs.getRange(lastRow, 2).setNumberFormat('@').setValue(targetActId || '-');
+      sheetLogs.getRange(lastRow, 4).setNumberFormat('@').setValue(cleanSid);
+      totalForThisAct++;
+    }
   }
 
-  return { success: true, message: 'บันทึกการเข้าร่วมกิจกรรมลง Google Sheets สำเร็จ' };
+  if (sheetActivities && matchedActivityRow !== -1) {
+    sheetActivities.getRange(matchedActivityRow, 9).setValue(totalForThisAct);
+  }
+
+  return {
+    success: true,
+    alreadyCheckedIn: alreadyCheckedIn,
+    attendeesCount: totalForThisAct,
+    message: alreadyCheckedIn ? 'นักเรียนเช็คชื่อกิจกรรมนี้ไปแล้ว' : 'บันทึกการเข้าร่วมกิจกรรมลง Google Sheets สำเร็จ'
+  };
 }
 
 function verifyAdminLogin(password, username) {
@@ -1071,7 +1216,29 @@ function verifyAdminLogin(password, username) {
     for (let i = 1; i < rows.length; i++) {
       if (cleanVal(rows[i][1]).toLowerCase() === cleanVal(username).toLowerCase() && 
           isCodeMatch(rows[i][2], password)) {
-        return { success: true, role: rows[i][4], username: rows[i][1], fullName: rows[i][3] };
+        const approvalStatus = cleanVal(rows[i][9] || 'Verified');
+        if (approvalStatus === 'PendingAdmin' || approvalStatus === 'AwaitingOtp') {
+          return {
+            success: false,
+            requireOtp: true,
+            approvalStatus: approvalStatus,
+            message: 'บัญชียังไม่ได้ยืนยันรหัส OTP 6 หลักจากอีเมล'
+          };
+        }
+        let assignedSubjects = [];
+        try {
+          assignedSubjects = rows[i][8] ? JSON.parse(rows[i][8]) : [];
+        } catch (e) {}
+        return {
+          success: true,
+          role: cleanVal(rows[i][4]),
+          username: cleanVal(rows[i][1]),
+          fullName: cleanVal(rows[i][3]),
+          email: cleanVal(rows[i][6] || ''),
+          phone: normalizePhone(rows[i][7] || ''),
+          assignedSubjects: assignedSubjects,
+          approvalStatus: approvalStatus
+        };
       }
     }
   }
@@ -1080,40 +1247,100 @@ function verifyAdminLogin(password, username) {
 }
 
 function addSubAdmin(data) {
+  if (!data || !data.username) return { success: false, message: 'ไม่พบชื่อผู้ใช้งาน' };
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ADMINS);
-  const adminId = 'ADM-' + new Date().getTime();
-  const cleanPass = cleanVal(data.password);
+  const cleanUser = cleanVal(data.username);
+  const cleanPass = cleanVal(data.password || '');
+  const fullName = cleanVal(data.fullName || cleanUser);
+  const roleCode = cleanVal(data.role || 'TEACHER');
+  const email = cleanVal(data.email || '');
+  const phone = normalizePhone(data.phone || '');
+  const subjectsJson = JSON.stringify(Array.isArray(data.assignedSubjects) ? data.assignedSubjects : []);
+  const approvalStatus = cleanVal(data.approvalStatus || 'Verified');
+  const createdAt = cleanVal(data.createdAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
 
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (cleanVal(rows[i][1]).toLowerCase() === cleanUser.toLowerCase()) {
+      const rowNum = i + 1;
+      const existingId = cleanVal(rows[i][0]) || ('ADM-' + new Date().getTime());
+      const passToSave = cleanPass || cleanVal(rows[i][2]);
+      sheet.getRange(rowNum, 1, 1, 10).setValues([[
+        existingId, cleanUser, passToSave, fullName, roleCode, createdAt, email, phone, subjectsJson, approvalStatus
+      ]]);
+      sheet.getRange(rowNum, 2).setNumberFormat('@').setValue(cleanUser);
+      sheet.getRange(rowNum, 3).setNumberFormat('@').setValue(passToSave);
+      sheet.getRange(rowNum, 8).setNumberFormat('@').setValue(phone);
+      return { success: true, message: 'อัปเดตข้อมูลบัญชีบุคลากรสำเร็จ', adminId: existingId };
+    }
+  }
+
+  const adminId = cleanVal(data.id || data.adminId || ('ADM-' + new Date().getTime()));
   sheet.appendRow([
     adminId,
-    cleanVal(data.username),
+    cleanUser,
     cleanPass,
-    data.fullName,
-    data.role === 'SuperAdmin' ? 'ผู้ดูแลระบบสูงสุด' : 'ผู้ดูแลระบบ',
-    Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss")
+    fullName,
+    roleCode,
+    createdAt,
+    email,
+    phone,
+    subjectsJson,
+    approvalStatus
   ]);
 
   const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanUser);
   sheet.getRange(lastRow, 3).setNumberFormat('@').setValue(cleanPass);
+  sheet.getRange(lastRow, 8).setNumberFormat('@').setValue(phone);
 
-  return { success: true, message: 'เพิ่มผู้ดูแลระบบรองสำเร็จ' };
+  return { success: true, message: 'เพิ่มบัญชีอาจารย์/ผู้บริหารสำเร็จ', adminId: adminId };
+}
+
+function deleteSubAdmin(username) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.ADMINS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานผู้ดูแลระบบ' };
+  const targetUser = cleanVal(username).toLowerCase();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (cleanVal(rows[i][1]).toLowerCase() === targetUser) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: 'ลบบัญชีบุคลากรเรียบร้อยแล้ว' };
+    }
+  }
+  return { success: false, message: 'ไม่พบบัญชีที่ต้องการลบ' };
 }
 
 function getSubAdmins() {
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ADMINS);
+  if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
   const results = [];
   for (let i = 1; i < rows.length; i++) {
+    const uname = cleanVal(rows[i][1]);
+    if (!uname || uname.toLowerCase() === 'admin') continue;
+    let assignedSubjects = [];
+    try {
+      assignedSubjects = rows[i][8] ? JSON.parse(rows[i][8]) : [];
+    } catch (e) {}
     results.push({
+      id: cleanVal(rows[i][0]),
       adminId: cleanVal(rows[i][0]),
-      username: cleanVal(rows[i][1]),
-      fullName: rows[i][3],
-      role: rows[i][4],
-      createdAt: rows[i][5]
+      username: uname,
+      password: cleanVal(rows[i][2]),
+      fullName: cleanVal(rows[i][3]),
+      role: cleanVal(rows[i][4]) || 'TEACHER',
+      createdAt: cleanVal(rows[i][5]),
+      email: cleanVal(rows[i][6] || ''),
+      phone: normalizePhone(rows[i][7] || ''),
+      assignedSubjects: Array.isArray(assignedSubjects) ? assignedSubjects : [],
+      approvalStatus: cleanVal(rows[i][9] || 'Verified')
     });
   }
   return { success: true, data: results };
@@ -1508,13 +1735,14 @@ function approveRegistrationAndSendEmail(data) {
     }
   }
 
-  // บันทึกข้อมูลนักเรียนหรืออาจารย์ลงแผ่นงานหลักทันทีเมื่อแอดมินอนุมัติ
+  // บันทึกข้อมูลเบื้องต้นพร้อมสถานะ AwaitingOtp (ต้องรอผู้สมัครกรอกรหัส OTP 6 หลักจากอีเมลก่อนจึงจะเข้าสู่ระบบได้)
   try {
     if (data.payload) {
+      const pendingPayload = Object.assign({}, data.payload, { approvalStatus: 'AwaitingOtp', status: 'รอผู้สมัครกรอกรหัส OTP' });
       if (role === 'student') {
-        registerStudent(data.payload);
+        registerStudent(pendingPayload);
       } else if (role === 'teacher') {
-        addSubAdmin(data.payload);
+        addSubAdmin(pendingPayload);
       }
     }
   } catch (syncErr) {}
@@ -1582,6 +1810,85 @@ function approveRegistrationAndSendEmail(data) {
       ? 'อนุมัติและส่งรหัสยืนยัน (' + otpCode + ') ไปยังอีเมล ' + email + ' เรียบร้อยแล้ว'
       : 'อนุมัติเรียบร้อยแล้ว แต่ส่งอีเมลไม่สำเร็จ: ' + emailError
   };
+}
+
+/**
+ * ผู้สมัครกรอกรหัส OTP 6 หลักที่ได้รับทางอีเมลเพื่อเปิดใช้งานบัญชีอย่างสมบูรณ์ (Verified)
+ */
+function verifyUserOtp(data) {
+  const sheet = ensureApprovalsSheet();
+  const reqId = cleanVal(data.reqId || data.id || '');
+  const userId = cleanVal(data.userId || '');
+  const role = cleanVal(data.role || 'student');
+  const enteredOtp = cleanVal(data.otpCode || '');
+
+  if (!enteredOtp || enteredOtp.length !== 6) {
+    return { success: false, message: 'กรุณากรอกรหัสยืนยัน 6 หลักให้ครบถ้วน' };
+  }
+
+  const rows = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const rReqId = cleanVal(rows[i][0]);
+    const rRole = cleanVal(rows[i][1]);
+    const rUserId = cleanVal(rows[i][2]);
+    const rOtp = cleanVal(rows[i][6]);
+    const rStatus = cleanVal(rows[i][7]);
+
+    const matchUser = (reqId && rReqId === reqId) || (userId && isCodeMatch(rUserId, userId) && (!role || rRole === role));
+    if (matchUser) {
+      if (rStatus === 'PendingAdmin') {
+        return {
+          success: false,
+          status: 'PendingAdmin',
+          message: 'บัญชียังอยู่ระหว่างรอแอดมินกดอนุมัติและส่งรหัสยืนยันเข้าอีเมล กรุณารอรับอีเมลก่อน'
+        };
+      }
+      if (!isCodeMatch(rOtp, enteredOtp)) {
+        return {
+          success: false,
+          status: rStatus,
+          message: 'รหัสยืนยัน 6 หลักไม่ถูกต้อง กรุณาตรวจสอบรหัสในอีเมลของท่านอีกครั้ง'
+        };
+      }
+
+      // รหัสถูกต้องและแอดมินอนุมัติแล้ว -> เปลี่ยนสถานะเป็น Verified
+      sheet.getRange(i + 1, 8).setValue('Verified');
+
+      let payload = data.payload || {};
+      try {
+        if (!payload || Object.keys(payload).length === 0) {
+          payload = rows[i][9] ? JSON.parse(rows[i][9]) : {};
+        }
+      } catch (e) {}
+
+      try {
+        if (rRole === 'student') {
+          payload.studentId = payload.studentId || rUserId;
+          payload.fullName = payload.fullName || cleanVal(rows[i][3]);
+          payload.status = 'Active';
+          payload.approvalStatus = 'Verified';
+          registerStudent(payload);
+        } else if (rRole === 'teacher') {
+          payload.username = payload.username || rUserId;
+          payload.fullName = payload.fullName || cleanVal(rows[i][3]);
+          payload.email = payload.email || cleanVal(rows[i][4]);
+          payload.approvalStatus = 'Verified';
+          addSubAdmin(payload);
+        }
+      } catch (actErr) {}
+
+      return {
+        success: true,
+        status: 'Verified',
+        role: rRole,
+        userId: rUserId,
+        payload: payload,
+        message: 'ยืนยันรหัส OTP สำเร็จ บัญชีของท่านพร้อมใช้งานแล้ว'
+      };
+    }
+  }
+
+  return { success: false, message: 'ไม่พบรายการคำขอสมัครในระบบ' };
 }
 
 /**

@@ -5390,6 +5390,269 @@ body.auth-locked #adminAuthModal {
   cursor: pointer;
 }
 
+/* ==========================================================================
+   V4.4: STANDALONE OPAQUE LOGIN PORTAL, ROLE ISOLATION & BENTO BACK-OFFICE
+   ========================================================================== */
+
+/* 1. Standalone Opaque Login Screen (Hide All App Background When Locked) */
+body.auth-locked {
+  background-color: #f1f5f9 !important;
+  overflow: hidden !important;
+}
+
+body.auth-locked .app-header,
+body.auth-locked .main-wrapper,
+body.auth-locked .mobile-nav,
+body.auth-locked .app-footer,
+body.auth-locked #pwaInstallBanner {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.auth-locked #authModal {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background-color: #f8fafc !important;
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px) !important;
+  background-size: 22px 22px !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  z-index: 9900 !important;
+  padding: 1.25rem 1rem !important;
+  overflow-y: auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.auth-locked #authModal .auth-close-btn {
+  display: none !important;
+}
+
+.auth-portal-dialog {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
+
+.auth-portal-brand-banner {
+  background: #0f172a;
+  color: #ffffff;
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.auth-portal-emblem {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.auth-portal-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.auth-portal-brand-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  line-height: 1.25;
+}
+
+.auth-portal-brand-sub {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  margin-top: 0.1rem;
+}
+
+/* 2. Strict Role Portal Separation (Admin & Teacher Do Not See Student Nav Tabs) */
+body.portal-mode-admin #nav-dashboard,
+body.portal-mode-admin #nav-prayer,
+body.portal-mode-admin #nav-activities,
+body.portal-mode-admin #nav-hasanat,
+body.portal-mode-admin #nav-profile,
+body.portal-mode-admin #m-nav-dashboard,
+body.portal-mode-admin #m-nav-prayer,
+body.portal-mode-admin #m-nav-activities,
+body.portal-mode-admin #m-nav-hasanat,
+body.portal-mode-admin #m-nav-profile,
+body.portal-mode-teacher #nav-dashboard,
+body.portal-mode-teacher #nav-prayer,
+body.portal-mode-teacher #nav-activities,
+body.portal-mode-teacher #nav-hasanat,
+body.portal-mode-teacher #nav-profile,
+body.portal-mode-teacher #m-nav-dashboard,
+body.portal-mode-teacher #m-nav-prayer,
+body.portal-mode-teacher #m-nav-activities,
+body.portal-mode-teacher #m-nav-hasanat,
+body.portal-mode-teacher #m-nav-profile {
+  display: none !important;
+}
+
+body.portal-mode-admin .app-header,
+body.portal-mode-teacher .app-header {
+  border-bottom: 1px solid #cbd5e1;
+  background: #ffffff;
+}
+
+/* 3. Bento Back-Office Architecture (Admin & Teacher Views) */
+.bento-hero-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.bento-role-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.bento-portal-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #0f172a;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.16rem 0.55rem;
+  border-radius: 6px;
+}
+
+.live-sync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #16a34a;
+  display: inline-block;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+  animation: livePulseDot 1.8s infinite ease-in-out;
+}
+
+@keyframes livePulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.65; }
+}
+
+.bento-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+
+.bento-kpi-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.bento-kpi-card:hover {
+  border-color: #0f172a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.bento-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.bento-kpi-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.bento-kpi-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.84rem;
+}
+
+.bento-kpi-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  margin: 0.15rem 0;
+}
+
+.bento-kpi-foot {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.bento-form-card,
+.bento-live-feed-card {
+  border: 1.5px solid #94a3b8 !important;
+  background: #ffffff !important;
+}
+
+@media (max-width: 768px) {
+  .bento-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 
 
