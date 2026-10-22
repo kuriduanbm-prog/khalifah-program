@@ -6764,3 +6764,379 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   }
 }
 
+/* ==========================================================================
+   V5.9 UPGRADES: GLOBAL PHOTO VIEWER LIGHTBOX, MULTI-SELECT PRAYER NOTES,
+   REASON PRESETS (อุซุร/ประจำเดือน), AND MODERN BENTO GRID HASANAT PORTAL
+   ========================================================================== */
+
+/* 1. Global High-Res Photo Viewer / Lightbox */
+#globalPhotoViewerModal {
+  z-index: 10000;
+  background: rgba(2, 6, 23, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.photo-viewer-dialog {
+  animation: photoViewerZoomIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes photoViewerZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 2. Prayer Note Multi-Select Chips & Quick Reason Presets */
+.prayer-time-select-group {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.prayer-note-time-chip {
+  flex: 1;
+  min-width: 62px;
+  padding: 0.5rem 0.6rem;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.84rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.prayer-note-time-chip .chip-check-icon {
+  display: none;
+  font-size: 0.72rem;
+}
+
+.prayer-note-time-chip:hover {
+  background: #ffffff;
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+.prayer-note-time-chip.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.28);
+}
+
+.prayer-note-time-chip.active .chip-check-icon {
+  display: inline-flex;
+}
+
+.prayer-reason-presets-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.prayer-preset-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.16s ease;
+}
+
+.prayer-preset-btn:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.prayer-preset-btn.preset-menstruation {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(225, 29, 72, 0.08);
+}
+
+.prayer-preset-btn.preset-menstruation:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  color: #9f1239;
+}
+
+.prayer-preset-btn .preset-tag-hint {
+  font-size: 0.7rem;
+  opacity: 0.85;
+  font-weight: normal;
+}
+
+/* 3. Hasanat Bento Grid Architecture */
+.hasanat-bento-hero {
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.6rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.hasanat-hero-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.hasanat-hero-tag {
+  background: rgba(255, 255, 255, 0.1);
+  color: #38bdf8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.hasanat-hero-date-pill {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 0.74rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+}
+
+.hasanat-bento-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.hasanat-bento-desc {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.hasanat-hero-quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.hasanat-stat-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hasanat-stat-box:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+}
+
+.hasanat-stat-box .stat-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.hasanat-stat-box .stat-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.hasanat-stat-box .stat-lbl {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  display: block;
+}
+
+.hasanat-stat-box .stat-val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.hasanat-stat-box .stat-val small {
+  font-size: 0.72rem;
+  font-weight: normal;
+  color: #94a3b8;
+}
+
+.hasanat-stat-box .stat-sub-pill {
+  font-size: 0.68rem;
+  color: #38bdf8;
+  font-weight: 600;
+  margin-top: 0.15rem;
+  display: inline-block;
+}
+
+/* Bento Subnav 4-button Strip */
+.hasanat-bento-subnav {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+/* Bento Grid System */
+.hasanat-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.hasanat-bento-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.hasanat-bento-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.hasanat-bento-card .bento-card-inner {
+  padding: 1.25rem 1.35rem;
+}
+
+/* Bento Column Spans */
+.hasanat-bento-grid:not(.single-view) .bento-quran {
+  grid-column: span 7;
+}
+
+.hasanat-bento-grid:not(.single-view) .bento-sunnah {
+  grid-column: span 5;
+}
+
+.hasanat-bento-grid:not(.single-view) .bento-memorize {
+  grid-column: span 12;
+}
+
+/* When viewing a single pillar */
+.hasanat-bento-grid.single-view .hasanat-bento-card {
+  grid-column: span 12;
+  max-width: 820px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.bento-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.9rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.bento-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.bento-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.bento-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.bento-card-subtitle {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0.15rem 0 0 0;
+}
+
+.bento-pill-tag {
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+}
+
+/* Responsive adjustments for Bento */
+@media (max-width: 992px) {
+  .hasanat-bento-grid:not(.single-view) .bento-quran,
+  .hasanat-bento-grid:not(.single-view) .bento-sunnah,
+  .hasanat-bento-grid:not(.single-view) .bento-memorize {
+    grid-column: span 12;
+  }
+  .hasanat-hero-quick-stats {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .hasanat-bento-subnav {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+

@@ -127,6 +127,129 @@ function isPhoneMatch(p1, p2) {
   return false;
 }
 
+// ==================== GLOBAL DIRECT IMAGE & GOOGLE DRIVE CDN HELPERS ==================== //
+
+/**
+ * แปลงลิงก์รูปภาพ Google Drive ทุกรูปแบบให้เป็น Direct CDN (lh3.googleusercontent.com)
+ * เพื่อให้สามารถแสดงผลบนแท็ก <img> ได้ 100% โดยไม่ติด CORS หรือ X-Frame-Options
+ */
+function getDirectImageUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('data:image/')) return trimmed;
+
+  const drivePatterns = [
+    /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
+    /drive\.google\.com\/(?:open|uc|thumbnail)\?id=([a-zA-Z0-9_-]+)/i,
+    /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i
+  ];
+  for (const re of drivePatterns) {
+    const match = trimmed.match(re);
+    if (match && match[1]) {
+      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+    }
+  }
+  return trimmed;
+}
+
+function extractDriveFileId(url) {
+  if (!url || typeof url !== 'string') return null;
+  const drivePatterns = [
+    /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
+    /drive\.google\.com\/(?:open|uc|thumbnail)\?id=([a-zA-Z0-9_-]+)/i,
+    /lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i
+  ];
+  for (const re of drivePatterns) {
+    const match = url.match(re);
+    if (match && match[1]) return match[1];
+  }
+  return null;
+}
+
+let currentPhotoViewerData = { url: '', caption: '', fileId: null };
+
+function openPhotoViewerModal(imageUrl, caption = '', driveLink = null) {
+  const modal = document.getElementById('globalPhotoViewerModal');
+  const imgEl = document.getElementById('globalPhotoViewerImg');
+  const captionEl = document.getElementById('globalPhotoViewerCaption');
+  const driveBtn = document.getElementById('globalPhotoViewerDriveBtn');
+  const loaderEl = document.getElementById('globalPhotoViewerLoading');
+  if (!modal || !imgEl) return;
+
+  const directUrl = getDirectImageUrl(imageUrl);
+  const fileId = extractDriveFileId(imageUrl) || extractDriveFileId(driveLink);
+
+  currentPhotoViewerData = {
+    url: directUrl,
+    caption: caption || 'ภาพถ่ายหลักฐานในระบบ',
+    fileId: fileId
+  };
+
+  imgEl.src = '';
+  if (loaderEl) loaderEl.style.display = 'block';
+
+  imgEl.onload = () => {
+    if (loaderEl) loaderEl.style.display = 'none';
+  };
+  imgEl.onerror = () => {
+    if (loaderEl) loaderEl.style.display = 'none';
+    showToast('ไม่สามารถโหลดภาพต้นฉบับได้ ลิงก์อาจหมดอายุหรือถูกจำกัดสิทธิ์', 'warning');
+  };
+
+  imgEl.src = directUrl;
+
+  if (captionEl) {
+    captionEl.innerText = currentPhotoViewerData.caption;
+    captionEl.title = currentPhotoViewerData.caption;
+  }
+
+  if (driveBtn) {
+    if (fileId) {
+      driveBtn.href = `https://drive.google.com/file/d/${fileId}/view`;
+      driveBtn.style.display = 'inline-flex';
+    } else {
+      driveBtn.style.display = 'none';
+    }
+  }
+
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePhotoViewerModal() {
+  const modal = document.getElementById('globalPhotoViewerModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+  document.body.style.overflow = '';
+}
+
+function downloadCurrentPhotoViewerImg() {
+  if (!currentPhotoViewerData.url) {
+    showToast('ไม่มีภาพที่จะดาวน์โหลด', 'warning');
+    return;
+  }
+
+  const directUrl = currentPhotoViewerData.url;
+  const a = document.createElement('a');
+  a.href = directUrl;
+  a.download = `photo_${Date.now()}.jpg`;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('เริ่มดาวน์โหลดภาพแล้ว', 'success');
+}
+
+function openPhotoViewerModalFromDetail() {
+  const pPhoto = document.getElementById('modalPrayerPhoto');
+  if (!pPhoto || !pPhoto.src) return;
+  const fullSrc = pPhoto.getAttribute('data-full-src') || pPhoto.src;
+  const caption = pPhoto.getAttribute('data-caption') || 'ภาพถ่ายยืนยันการเช็คชื่อละหมาด';
+  openPhotoViewerModal(fullSrc, caption);
+}
+
 // ==================== PRAYER HISTORY DETAIL MODAL & LOCATION FIXES ==================== //
 
 function openPrayerHistoryDetailModal(logId) {
@@ -196,9 +319,14 @@ function openPrayerHistoryDetailModal(logId) {
     }
   }
 
-  const photoSrc = record.photo || record.photoUrl;
-  if (photoSrc && photoSrc.length > 50) {
-    if (pPhoto) pPhoto.src = photoSrc;
+  const rawPhoto = record.photo || record.photoUrl || record.photoBase64;
+  const photoSrc = getDirectImageUrl(rawPhoto);
+  if (photoSrc && photoSrc.length > 10) {
+    if (pPhoto) {
+      pPhoto.src = photoSrc;
+      pPhoto.setAttribute('data-full-src', photoSrc);
+      pPhoto.setAttribute('data-caption', `${record.studentName || 'นักเรียน'} - ละหมาด${record.prayerName || record.prayerTime || ''} (${record.date || ''} ${record.time || ''})`);
+    }
     if (pPhotoWrap) pPhotoWrap.style.display = 'block';
   } else {
     if (pPhotoWrap) pPhotoWrap.style.display = 'none';
@@ -207,41 +335,59 @@ function openPrayerHistoryDetailModal(logId) {
   openModal('prayerDetailModal');
 }
 
-// ----------------- ENHANCED HASANAT INTERACTIVE CONTROLS ----------------- //
+// ----------------- ENHANCED HASANAT BENTO & INTERACTIVE CONTROLS ----------------- //
 
 function switchHasanatSubTab(tabName) {
-  const tabs = ['quran', 'memorize', 'sunnah'];
-  tabs.forEach(t => {
-    const content = document.getElementById(`subtab-${t}`);
-    if (content) {
-      content.style.display = (t === tabName) ? 'block' : 'none';
-    }
-  });
-
+  const tabs = ['quran', 'sunnah', 'memorize'];
   const btnMap = {
+    'all': 'btnSubHasanatAll',
     'quran': 'btnSubHasanatQuran',
-    'memorize': 'btnSubHasanatMemorize',
-    'sunnah': 'btnSubHasanatSunnah'
+    'sunnah': 'btnSubHasanatSunnah',
+    'memorize': 'btnSubHasanatMemorize'
   };
 
+  const activeTab = tabName || 'all';
+
+  // Toggle active class on subnav buttons
   Object.keys(btnMap).forEach(k => {
     const btn = document.getElementById(btnMap[k]);
     if (btn) {
-      if (k === tabName) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
+      btn.classList.toggle('active', k === activeTab);
     }
   });
 
-  if (tabName === 'memorize') {
+  const bentoGrid = document.getElementById('hasanatBentoGrid');
+  if (bentoGrid) {
+    if (activeTab === 'all') {
+      bentoGrid.classList.remove('single-view');
+    } else {
+      bentoGrid.classList.add('single-view');
+    }
+  }
+
+  tabs.forEach(t => {
+    const content = document.getElementById(`subtab-${t}`);
+    if (content) {
+      content.style.display = (activeTab === 'all' || activeTab === t) ? 'block' : 'none';
+    }
+  });
+
+  if (activeTab === 'memorize' || activeTab === 'all') {
     if (typeof renderSurahChecklist === 'function') {
       const searchInput = document.getElementById('searchSurahInput');
       renderSurahChecklist(searchInput ? searchInput.value : '');
     }
-  } else if (tabName === 'sunnah') {
+  }
+  if (activeTab === 'sunnah' || activeTab === 'all') {
     if (typeof calculateDailySunnahRakaat === 'function') calculateDailySunnahRakaat(false);
+  }
+}
+
+function focusHasanatSection(sectionName) {
+  switchHasanatSubTab(sectionName);
+  const target = document.getElementById(`subtab-${sectionName}`);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -750,6 +896,18 @@ function initHasanatView() {
   });
 
   calculateDailySunnahRakaat(false);
+
+  // Ensure Surah checklist is populated when in Bento mode
+  if (typeof renderSurahChecklist === 'function') {
+    const searchInput = document.getElementById('searchSurahInput');
+    renderSurahChecklist(searchInput ? searchInput.value : '');
+  }
+
+  // Update Hero tag with current active date
+  const heroDateTag = document.getElementById('hasanatHeroDateTag');
+  if (heroDateTag) {
+    heroDateTag.innerText = (hasanatSelectedDate === todayStr) ? 'บันทึกความดีวันนี้' : `บันทึกวันที่ ${hasanatSelectedDate}`;
+  }
 }
 
 function renderHasanatStarsShowcase(stars, currentPage, khatamCount = 0) {
@@ -1526,12 +1684,14 @@ function renderPrayerHistory(filterDate = null) {
     if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
 
     const cardId = p.id || p.logId || ('PRY-' + idx);
-    const photoSrc = p.photo || p.photoUrl;
+    const rawPhoto = p.photo || p.photoUrl || p.photoBase64;
+    const directPhoto = getDirectImageUrl(rawPhoto);
+    const hasPhoto = !!(directPhoto && directPhoto.length > 10);
 
     return `
       <div class="prayer-history-item prayer-history-card-clickable" onclick="openPrayerHistoryDetailModal('${cardId}')" title="แตะเพื่อดูรายละเอียดเต็มและพิกัดแผนที่" style="margin-bottom: 0.65rem;">
         <div style="display: flex; align-items: center; gap: 0.85rem; flex: 1; min-width: 220px;">
-          ${(photoSrc && photoSrc.length > 50) ? `<img src="${photoSrc}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light);">` : `<div style="width: 50px; height: 50px; border-radius: var(--radius-md); background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 1.2rem;"><i class="fa-solid fa-mosque"></i></div>`}
+          ${hasPhoto ? `<img src="${directPhoto}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light);">` : `<div style="width: 50px; height: 50px; border-radius: var(--radius-md); background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 1.2rem;"><i class="fa-solid fa-mosque"></i></div>`}
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
               <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">เวลา: ${p.prayerName || p.prayerTime}</span>
@@ -2974,6 +3134,7 @@ function appendPrayerNote(text) {
   showToast(`เพิ่มหมายเหตุ: "${text}"`, 'info');
 }
 
+let selectedPrayerNoteTimeSlots = [];
 let selectedPrayerNoteTimeSlot = null;
 
 function togglePrayerNotesCollapse(forceState = null) {
@@ -2999,10 +3160,11 @@ function togglePrayerNotesCollapse(forceState = null) {
   }
 }
 
-function selectPrayerNoteTime(time) {
-  selectedPrayerNoteTimeSlot = time;
-  document.querySelectorAll('.prayer-note-time-chip').forEach(chip => {
-    if (chip.getAttribute('data-time') === time) {
+function updatePrayerNoteChipsUI() {
+  const chips = document.querySelectorAll('.prayer-note-time-chip');
+  chips.forEach(chip => {
+    const t = chip.getAttribute('data-time');
+    if (selectedPrayerNoteTimeSlots.includes(t)) {
       chip.classList.add('active');
     } else {
       chip.classList.remove('active');
@@ -3011,7 +3173,81 @@ function selectPrayerNoteTime(time) {
 
   const selectedTextEl = document.getElementById('prayerNoteTimeSelectedText');
   if (selectedTextEl) {
-    selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check"></i> เลือก: ${time}</span>`;
+    if (selectedPrayerNoteTimeSlots.length === 0) {
+      selectedTextEl.innerHTML = `* บังคับเลือกเวลา (เลือกได้หลายเวลา)`;
+      selectedTextEl.style.color = '#ef4444';
+    } else if (selectedPrayerNoteTimeSlots.length === 5) {
+      selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check-double"></i> เลือกครบ 5 เวลา (ทุกเวลา)</span>`;
+      selectedTextEl.style.color = '#0284c7';
+    } else {
+      selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check"></i> เลือก ${selectedPrayerNoteTimeSlots.length} เวลา: ${selectedPrayerNoteTimeSlots.join(', ')}</span>`;
+      selectedTextEl.style.color = '#0284c7';
+    }
+  }
+}
+
+function togglePrayerNoteTime(time) {
+  const ALL_PRAYERS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+  if (!time) return;
+
+  const idx = selectedPrayerNoteTimeSlots.indexOf(time);
+  if (idx > -1) {
+    selectedPrayerNoteTimeSlots.splice(idx, 1);
+  } else {
+    selectedPrayerNoteTimeSlots.push(time);
+  }
+
+  // Sort them in canonical order
+  selectedPrayerNoteTimeSlots.sort((a, b) => ALL_PRAYERS.indexOf(a) - ALL_PRAYERS.indexOf(b));
+  selectedPrayerNoteTimeSlot = selectedPrayerNoteTimeSlots[0] || null;
+
+  updatePrayerNoteChipsUI();
+}
+
+function selectAllPrayerNoteTimes(selectAll = true) {
+  const ALL_PRAYERS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+  if (selectAll) {
+    selectedPrayerNoteTimeSlots = [...ALL_PRAYERS];
+  } else {
+    selectedPrayerNoteTimeSlots = [];
+  }
+  selectedPrayerNoteTimeSlot = selectedPrayerNoteTimeSlots[0] || null;
+  updatePrayerNoteChipsUI();
+}
+
+function selectPrayerNoteTime(time) {
+  // Single-select wrapper for backwards compatibility
+  if (time) {
+    selectedPrayerNoteTimeSlots = [time];
+    selectedPrayerNoteTimeSlot = time;
+  } else {
+    selectedPrayerNoteTimeSlots = [];
+    selectedPrayerNoteTimeSlot = null;
+  }
+  updatePrayerNoteChipsUI();
+}
+
+function applyPrayerNotePreset(reasonKey) {
+  const noteInput = document.getElementById('prayerNoteInput');
+  if (reasonKey === 'menstruation') {
+    selectAllPrayerNoteTimes(true);
+    if (noteInput) noteInput.value = 'มีประจำเดือน / อุซุรทางศาสนา';
+    showToast('เลือกเวลาละหมาดครบ 5 เวลา และตั้งสถานะ "มีประจำเดือน / อุซุร" เรียบร้อยแล้ว สามารถกดบันทึกได้ทันที', 'info');
+  } else if (reasonKey === 'sick') {
+    if (selectedPrayerNoteTimeSlots.length === 0) {
+      selectAllPrayerNoteTimes(true);
+    }
+    if (noteInput) noteInput.value = 'ลาป่วย / มีไข้';
+    showToast('ตั้งค่าหมายเหตุ "ลาป่วย / มีไข้" เรียบร้อยแล้ว', 'info');
+  } else if (reasonKey === 'travel') {
+    if (noteInput) noteInput.value = 'กำลังเดินทาง (มุซาฟิร)';
+    showToast('ตั้งค่าหมายเหตุ "กำลังเดินทาง (มุซาฟิร)" เรียบร้อยแล้ว', 'info');
+  } else if (reasonKey === 'home') {
+    if (noteInput) noteInput.value = 'ละหมาดที่บ้าน';
+    showToast('ตั้งค่าหมายเหตุ "ละหมาดที่บ้าน" เรียบร้อยแล้ว', 'info');
+  } else if (reasonKey === 'jamaah') {
+    if (noteInput) noteInput.value = 'ญะมาอะฮ์แถวแรก';
+    showToast('ตั้งค่าหมายเหตุ "ญะมาอะฮ์แถวแรก" เรียบร้อยแล้ว', 'info');
   }
 }
 
@@ -3022,9 +3258,9 @@ async function savePrayerNoteOnly() {
     return;
   }
 
-  if (!selectedPrayerNoteTimeSlot) {
+  if (selectedPrayerNoteTimeSlots.length === 0) {
     if (typeof togglePrayerNotesCollapse === 'function') togglePrayerNotesCollapse(true);
-    showToast('⚠️ กรุณาเลือกเวลาละหมาดก่อนบันทึกหมายเหตุ (ซุบฮิ, ซุฮริ, อัศรฺ, มัฆริบ, อีชาอ์)', 'warning');
+    showToast('⚠️ กรุณาเลือกเวลาละหมาดอย่างน้อย 1 เวลา (ซุบฮิ, ซุฮริ, อัศรฺ, มัฆริบ, อีชาอ์)', 'warning');
     const groupEl = document.querySelector('.prayer-time-select-group');
     if (groupEl) {
       groupEl.style.outline = '2px solid #ef4444';
@@ -3035,9 +3271,13 @@ async function savePrayerNoteOnly() {
     return;
   }
 
-  // Anti-cheating check: enforce fresh GPS check before recording note
+  const noteInput = document.getElementById('prayerNoteInput');
+  const prayerNote = noteInput ? noteInput.value.trim() : '';
+  const isExcused = prayerNote.includes('ประจำเดือน') || prayerNote.includes('อุซุร') || prayerNote.includes('ป่วย');
+
+  // Anti-cheating check: enforce fresh GPS check before recording note (unless excused)
   const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
-  if (!isGpsValid) {
+  if (!isGpsValid && !isExcused) {
     showToast('📍 กำลังตรวจสอบพิกัด GPS สดใหม่ก่อนบันทึกหมายเหตุ...', 'info');
     try {
       await fetchFreshPrayerLocation();
@@ -3047,90 +3287,102 @@ async function savePrayerNoteOnly() {
     }
   }
 
-  const pTime = selectedPrayerNoteTimeSlot;
-  const noteInput = document.getElementById('prayerNoteInput');
-  const prayerNote = noteInput ? noteInput.value.trim() : '';
-
-  const prayerStatus = prayerNote ? `ตรงเวลา (${prayerNote})` : 'ตรงเวลา';
-  const locName = (verifiedLocation && verifiedLocation.locationName) ? verifiedLocation.locationName : 'มัสยิด / สถานที่ละหมาด';
-
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
   const timeStr = now.toLocaleTimeString('th-TH');
 
-  const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerTime === pTime || p.prayerName === pTime) && p.date === dateStr);
-
-  const logId = existingIdx !== -1 ? (todayPrayers[existingIdx].logId || todayPrayers[existingIdx].id) : ('PRY-' + Date.now());
   const lat = verifiedLocation ? verifiedLocation.lat : 6.78652;
   const lng = verifiedLocation ? verifiedLocation.lng : 101.24641;
   const isWithin = verifiedLocation ? verifiedLocation.isWithinZone : false;
+  const locName = (verifiedLocation && verifiedLocation.locationName) ? verifiedLocation.locationName : (isExcused ? 'บันทึกสถานะพิเศษ (อุซุร/ลาป่วย)' : 'มัสยิด / สถานที่ละหมาด');
   const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-
-  const prayerRecord = {
-    id: logId,
-    logId: logId,
-    studentId: currentStudent.studentId,
-    studentName: currentStudent.fullName,
-    grade: currentStudent.grade,
-    prayerTime: pTime,
-    prayerName: pTime,
-    status: prayerStatus,
-    note: prayerNote,
-    timestamp: now.toISOString(),
-    date: dateStr,
-    time: timeStr,
-    latitude: lat,
-    longitude: lng,
-    lat: lat,
-    lng: lng,
-    locationName: locName,
-    distanceMeters: verifiedLocation ? verifiedLocation.distanceMeters : 0,
-    isWithinZone: isWithin,
-    photo: existingIdx !== -1 ? (todayPrayers[existingIdx].photo || todayPrayers[existingIdx].photoUrl) : '',
-    photoUrl: existingIdx !== -1 ? todayPrayers[existingIdx].photoUrl : '',
-    photoBase64: existingIdx !== -1 ? (todayPrayers[existingIdx].photoBase64 || todayPrayers[existingIdx].photo) : '',
-    mapUrl: mapUrl
-  };
-
-  if (existingIdx !== -1) {
-    todayPrayers[existingIdx] = prayerRecord;
-  } else {
-    todayPrayers.unshift(prayerRecord);
-  }
-
-  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
 
   let historyList = [];
   try {
     historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
   } catch (e) { historyList = []; }
-  const histIdx = historyList.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerTime === pTime || p.prayerName === pTime) && p.date === dateStr);
-  if (histIdx !== -1) {
-    historyList[histIdx] = prayerRecord;
-  } else {
-    historyList.unshift(prayerRecord);
+
+  const savedTimes = [];
+
+  for (const pTime of selectedPrayerNoteTimeSlots) {
+    let prayerStatus = 'ตรงเวลา';
+    if (prayerNote) {
+      if (prayerNote.includes('ประจำเดือน') || prayerNote.includes('อุซุร')) {
+        prayerStatus = 'อุซุร (มีประจำเดือน)';
+      } else if (prayerNote.includes('ป่วย')) {
+        prayerStatus = 'ลาป่วย';
+      } else {
+        prayerStatus = `ตรงเวลา (${prayerNote})`;
+      }
+    }
+
+    const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerTime === pTime || p.prayerName === pTime) && p.date === dateStr);
+    const logId = existingIdx !== -1 ? (todayPrayers[existingIdx].logId || todayPrayers[existingIdx].id) : ('PRY-' + Date.now() + '-' + pTime);
+
+    const prayerRecord = {
+      id: logId,
+      logId: logId,
+      studentId: currentStudent.studentId,
+      studentName: currentStudent.fullName,
+      grade: currentStudent.grade,
+      prayerTime: pTime,
+      prayerName: pTime,
+      status: prayerStatus,
+      note: prayerNote,
+      timestamp: now.toISOString(),
+      date: dateStr,
+      time: timeStr,
+      latitude: lat,
+      longitude: lng,
+      lat: lat,
+      lng: lng,
+      locationName: locName,
+      distanceMeters: verifiedLocation ? verifiedLocation.distanceMeters : 0,
+      isWithinZone: isWithin,
+      photo: existingIdx !== -1 ? (todayPrayers[existingIdx].photo || todayPrayers[existingIdx].photoUrl) : '',
+      photoUrl: existingIdx !== -1 ? todayPrayers[existingIdx].photoUrl : '',
+      photoBase64: existingIdx !== -1 ? (todayPrayers[existingIdx].photoBase64 || todayPrayers[existingIdx].photo) : '',
+      mapUrl: mapUrl
+    };
+
+    if (existingIdx !== -1) {
+      todayPrayers[existingIdx] = prayerRecord;
+    } else {
+      todayPrayers.unshift(prayerRecord);
+    }
+
+    const histIdx = historyList.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerTime === pTime || p.prayerName === pTime) && p.date === dateStr);
+    if (histIdx !== -1) {
+      historyList[histIdx] = prayerRecord;
+    } else {
+      historyList.unshift(prayerRecord);
+    }
+
+    const prayerCard = document.getElementById(`ptime-${pTime}`);
+    if (prayerCard) {
+      prayerCard.classList.add('done');
+      const statusSpan = document.getElementById(`pstatus-${pTime}`);
+      if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
+    }
+
+    syncRecordToGoogleSheet('recordPrayer', prayerRecord);
+    savedTimes.push(pTime);
   }
+
+  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
   localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList));
 
-  const prayerCard = document.getElementById(`ptime-${pTime}`);
-  if (prayerCard) {
-    prayerCard.classList.add('done');
-    const statusSpan = document.getElementById(`pstatus-${pTime}`);
-    if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
-  }
-
-  // Clear note input after saving and collapse the section
+  // Clear inputs and collapse
   if (noteInput) noteInput.value = '';
+  selectAllPrayerNoteTimes(false);
   if (typeof togglePrayerNotesCollapse === 'function') togglePrayerNotesCollapse(false);
 
   renderTodayPrayerTable();
   renderPrayerHistory();
   renderDashboardCharts();
 
-  syncRecordToGoogleSheet('recordPrayer', prayerRecord);
-
   playSuccessSound();
-  showToast(`บันทึกหมายเหตุการละหมาดเวลา ${pTime} เรียบร้อยแล้ว (บันทึกลงฐานข้อมูลแล้ว)`, 'success');
+  showToast(`บันทึกหมายเหตุการละหมาด ${savedTimes.length} เวลา (${savedTimes.join(', ')}) เรียบร้อยแล้ว!`, 'success');
 }
 
 
@@ -3161,7 +3413,8 @@ function renderTodayPrayerTable() {
     ` : '';
 
     const recId = p.logId || p.id;
-    const hasPhoto = (p.photo || p.photoUrl);
+    const rawPhoto = p.photo || p.photoUrl || p.photoBase64;
+    const hasPhoto = !!(rawPhoto && rawPhoto.length > 10);
 
     return `
       <tr>
@@ -3189,15 +3442,23 @@ function renderTodayPrayerTable() {
 }
 
 function viewPrayerPhoto(logId) {
-  const record = todayPrayers.find(p => (p.logId === logId || p.id === logId));
-  const photo = record ? (record.photoUrl || record.photo) : null;
+  let record = todayPrayers.find(p => (p.logId === logId || p.id === logId));
+  if (!record) {
+    let historyList = [];
+    try {
+      historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+    } catch (e) { historyList = []; }
+    record = historyList.find(p => (p.logId === logId || p.id === logId));
+  }
+  const rawPhoto = record ? (record.photoUrl || record.photo || record.photoBase64) : null;
+  const photo = getDirectImageUrl(rawPhoto);
   if (!photo) {
     showToast('ไม่มีรูปถ่ายสำหรับรายการนี้', 'info');
     return;
   }
 
-  const w = window.open('');
-  w.document.write(`<img src="${photo}" style="max-width:100%; height:auto; display:block; margin:auto;" />`);
+  const caption = `${record.studentName || 'นักเรียน'} - ละหมาด${record.prayerName || record.prayerTime || ''} (${record.date || ''} ${record.time || ''})`;
+  openPhotoViewerModal(photo, caption, photo);
 }
 
 // ----------------- ACTIVITIES ----------------- //
@@ -3786,8 +4047,9 @@ function renderCurrentStudentProfile() {
   if (headerRole) headerRole.innerText = currentStudent.grade;
   
   if (headerAvatar) {
-    if (currentStudent.avatarUrl) {
-      headerAvatar.innerHTML = `<img src="${currentStudent.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+    const directAv = getDirectImageUrl(currentStudent.avatarUrl);
+    if (directAv) {
+      headerAvatar.innerHTML = `<img src="${directAv}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
     } else {
       headerAvatar.innerText = currentStudent.fullName.charAt(currentStudent.fullName.startsWith('นาย') ? 3 : (currentStudent.fullName.startsWith('นางสาว') ? 6 : 0));
     }
@@ -3795,8 +4057,9 @@ function renderCurrentStudentProfile() {
 
   const bannerAvatar = document.getElementById('dashBannerAvatar');
   if (bannerAvatar) {
-    if (currentStudent.avatarUrl) {
-      bannerAvatar.innerHTML = `<img src="${currentStudent.avatarUrl}" alt="${currentStudent.fullName}">`;
+    const directAv = getDirectImageUrl(currentStudent.avatarUrl);
+    if (directAv) {
+      bannerAvatar.innerHTML = `<img src="${directAv}" alt="${currentStudent.fullName}">`;
     } else {
       const initial = currentStudent.fullName.charAt(currentStudent.fullName.startsWith('นาย') ? 3 : (currentStudent.fullName.startsWith('นางสาว') ? 6 : 0)) || 'น';
       bannerAvatar.innerHTML = `<span style="font-weight: 700; color: #ffffff;">${initial}</span>`;
@@ -3860,8 +4123,9 @@ function renderCurrentStudentProfile() {
   if (profStatusBadge) profStatusBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${statusText}`;
 
   if (profAvatar) {
-    if (currentStudent.avatarUrl) {
-      profAvatar.innerHTML = `<img src="${currentStudent.avatarUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    const directAv = getDirectImageUrl(currentStudent.avatarUrl);
+    if (directAv) {
+      profAvatar.innerHTML = `<img src="${directAv}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;cursor:pointer;" onclick="openPhotoViewerModal('${directAv}', '${escapeHtml(currentStudent.fullName || 'นักเรียน')}')" title="แตะเพื่อดูรูปโปรไฟล์ขนาดเต็ม">`;
     } else {
       profAvatar.innerText = headerAvatar ? headerAvatar.innerText : 'น';
     }
@@ -6830,7 +7094,7 @@ function renderGradingStudentsTable() {
         <td><b>${escapeHtml(sId)}</b></td>
         <td>
           <div style="display: flex; align-items: center; gap: 0.65rem;">
-            ${s.avatarUrl ? `<img src="${s.avatarUrl}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0f172a; font-size: 0.8rem;">${escapeHtml((s.fullName || 'น').charAt(0))}</div>`}
+            ${s.avatarUrl ? `<img src="${getDirectImageUrl(s.avatarUrl)}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; cursor: pointer;" onclick="openPhotoViewerModal('${getDirectImageUrl(s.avatarUrl)}', '${escapeHtml(s.fullName || 'นักเรียน')}')" title="คลิกดูรูปขยาย">` : `<div style="width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #0f172a; font-size: 0.8rem;">${escapeHtml((s.fullName || 'น').charAt(0))}</div>`}
             <div>
               <div style="font-weight: 600; color: var(--text-dark);">${escapeHtml(s.fullName)}</div>
               <div style="font-size: 0.76rem; color: var(--text-muted);">GPAX ปัจจุบัน: ${escapeHtml(recalculateStudentGpa(s))}</div>
@@ -9887,8 +10151,9 @@ function renderAdminStudentPrayerHistory() {
   if (elGrade) elGrade.innerText = student.grade || '-';
   if (elPhone) elPhone.innerText = student.parentPhone || '-';
   if (elAvatar) {
-    if (student.avatarUrl) {
-      elAvatar.innerHTML = `<img src="${student.avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+    const directAv = getDirectImageUrl(student.avatarUrl);
+    if (directAv) {
+      elAvatar.innerHTML = `<img src="${directAv}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; cursor: pointer;" onclick="openPhotoViewerModal('${directAv}', '${escapeHtml(student.fullName || 'นักเรียน')}')" title="คลิกดูรูปขยาย">`;
     } else {
       elAvatar.innerText = (student.fullName || 'S').trim().slice(0, 1);
     }
@@ -9961,7 +10226,8 @@ function renderAdminStudentPrayerHistory() {
 
   tbody.innerHTML = displayedLogs.map((p, idx) => {
     const rawPhoto = p.photo || p.photoUrl || p.photoBase64 || '';
-    const hasPhoto = rawPhoto && rawPhoto.length > 50;
+    const directPhoto = getDirectImageUrl(rawPhoto);
+    const hasPhoto = !!(directPhoto && directPhoto.length > 10);
     const slotKey = normalizePrayerSlotKey(p.prayerName || p.prayerTime);
     const slotMeta = CANONICAL_PRAYERS.find(s => s.key === slotKey) || { icon: '🕌', label: p.prayerName || p.prayerTime || '-' };
     const logId = p.id || p.logId || '';
@@ -9989,7 +10255,7 @@ function renderAdminStudentPrayerHistory() {
         </td>
         <td style="text-align: center;">
           ${hasPhoto ? `
-            <img src="${rawPhoto}" class="prayer-photo-thumb" onclick="openPrayerHistoryDetailModal('${logId}')" title="คลิกดูรูปขยายและรายละเอียด">
+            <img src="${directPhoto}" class="prayer-photo-thumb" onclick="openPhotoViewerModal('${directPhoto}', '${escapeHtml(p.studentName || 'นักเรียน')} - ละหมาด${escapeHtml(p.prayerName || p.prayerTime || '')} (${p.date || ''})')" title="คลิกดูรูปขยายเต็มจอ">
           ` : `
             <span style="font-size: 0.74rem; color: #94a3b8;"><i class="fa-solid fa-camera-slash"></i> ไม่มีภาพ</span>
           `}

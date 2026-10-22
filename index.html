@@ -577,29 +577,75 @@
             </div>
 
             <!-- Mandatory Prayer Time Selection Chips (5 Waqt) -->
+            <!-- Mandatory Prayer Time Selection Chips (Multi-Selectable 5 Waqt) -->
+            <div style="margin-bottom: 0.85rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; gap: 0.4rem;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0; display: flex; align-items: center; gap: 0.35rem;">
+                  <i class="fa-solid fa-clock" style="color: var(--primary);"></i> 1. เลือกเวลาละหมาด <span style="color: #ef4444;">* (เลือกได้หลายเวลาพร้อมกัน)</span>
+                </label>
+                <div style="display: flex; gap: 0.35rem;">
+                  <button type="button" class="btn-minimal-pill" onclick="selectAllPrayerNoteTimes(true)" style="padding: 0.2rem 0.6rem; font-size: 0.72rem;" title="เลือกทั้ง 5 เวลาพร้อมกัน">
+                    <i class="fa-solid fa-check-double"></i> เลือกครบ 5 เวลา
+                  </button>
+                  <button type="button" class="btn-minimal-pill" onclick="selectAllPrayerNoteTimes(false)" style="padding: 0.2rem 0.6rem; font-size: 0.72rem;" title="ล้างการเลือกทั้งหมด">
+                    ล้าง
+                  </button>
+                </div>
+              </div>
+              <div class="prayer-time-select-group">
+                <button type="button" class="prayer-note-time-chip" data-time="ซุบฮิ" onclick="togglePrayerNoteTime('ซุบฮิ')">
+                  <span class="chip-check-icon"><i class="fa-solid fa-check"></i></span> ซุบฮิ
+                </button>
+                <button type="button" class="prayer-note-time-chip" data-time="ซุฮริ" onclick="togglePrayerNoteTime('ซุฮริ')">
+                  <span class="chip-check-icon"><i class="fa-solid fa-check"></i></span> ซุฮริ
+                </button>
+                <button type="button" class="prayer-note-time-chip" data-time="อัศรฺ" onclick="togglePrayerNoteTime('อัศรฺ')">
+                  <span class="chip-check-icon"><i class="fa-solid fa-check"></i></span> อัศรฺ
+                </button>
+                <button type="button" class="prayer-note-time-chip" data-time="มัฆริบ" onclick="togglePrayerNoteTime('มัฆริบ')">
+                  <span class="chip-check-icon"><i class="fa-solid fa-check"></i></span> มัฆริบ
+                </button>
+                <button type="button" class="prayer-note-time-chip" data-time="อีชาอ์" onclick="togglePrayerNoteTime('อีชาอ์')">
+                  <span class="chip-check-icon"><i class="fa-solid fa-check"></i></span> อีชาอ์
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Reason Presets (Including Menstruation) -->
             <div style="margin-bottom: 0.85rem;">
               <label class="form-label" style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem; display: block;">
-                <i class="fa-solid fa-clock" style="color: var(--primary);"></i> 1. เลือกเวลาละหมาด <span style="color: #ef4444;">* (บังคับเลือกก่อนบันทึก)</span>
+                <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> ทางลัดเหตุผลด่วน (แตะเพื่อกรอกและตั้งเวลาอัตโนมัติ):
               </label>
-              <div class="prayer-time-select-group">
-                <button type="button" class="prayer-note-time-chip" data-time="ซุบฮิ" onclick="selectPrayerNoteTime('ซุบฮิ')">ซุบฮิ</button>
-                <button type="button" class="prayer-note-time-chip" data-time="ซุฮริ" onclick="selectPrayerNoteTime('ซุฮริ')">ซุฮริ</button>
-                <button type="button" class="prayer-note-time-chip" data-time="อัศรฺ" onclick="selectPrayerNoteTime('อัศรฺ')">อัศรฺ</button>
-                <button type="button" class="prayer-note-time-chip" data-time="มัฆริบ" onclick="selectPrayerNoteTime('มัฆริบ')">มัฆริบ</button>
-                <button type="button" class="prayer-note-time-chip" data-time="อีชาอ์" onclick="selectPrayerNoteTime('อีชาอ์')">อีชาอ์</button>
+              <div class="prayer-reason-presets-grid">
+                <button type="button" class="prayer-preset-btn preset-menstruation" onclick="applyPrayerNotePreset('menstruation')" title="เลือกครบ 5 เวลาและบันทึกสถานะอุซุรประจำเดือนอัตโนมัติ">
+                  <span>🌸 มีประจำเดือน / อุซุร</span>
+                  <small class="preset-tag-hint">เลือกทั้ง 5 เวลาอัตโนมัติ</small>
+                </button>
+                <button type="button" class="prayer-preset-btn" onclick="applyPrayerNotePreset('sick')">
+                  <span>🤒 ลาป่วย / มีไข้</span>
+                </button>
+                <button type="button" class="prayer-preset-btn" onclick="applyPrayerNotePreset('travel')">
+                  <span>🚗 กำลังเดินทาง (มุซาฟิร)</span>
+                </button>
+                <button type="button" class="prayer-preset-btn" onclick="applyPrayerNotePreset('home')">
+                  <span>🏠 ละหมาดที่บ้าน</span>
+                </button>
+                <button type="button" class="prayer-preset-btn" onclick="applyPrayerNotePreset('jamaah')">
+                  <span>🕌 ญะมาอะฮ์แถวแรก</span>
+                </button>
               </div>
             </div>
 
             <div style="margin-bottom: 1rem;">
               <label class="form-label" style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem; display: block;">
-                <i class="fa-solid fa-pen" style="color: var(--primary);"></i> 2. กรอกหมายเหตุเพิ่มเติมด้วยตนเอง
+                <i class="fa-solid fa-pen" style="color: var(--primary);"></i> 2. กรอกหมายเหตุเพิ่มเติมด้วยตนเอง (หรือแก้ไขข้อความจากทางลัด)
               </label>
-              <input type="text" class="form-control" id="prayerNoteInput" placeholder="กรอกหมายเหตุด้วยตนเอง เช่น ญะมาอะฮ์แถวแรก, ละหมาดที่บ้าน, ลาป่วย, กำลังเดินทาง..." style="font-size: 0.85rem; padding: 0.45rem 0.65rem; height: 40px;">
+              <input type="text" class="form-control" id="prayerNoteInput" placeholder="กรอกหมายเหตุด้วยตนเอง เช่น อุซุรทางศาสนา, ลาป่วย, ญะมาอะฮ์แถวแรก..." style="font-size: 0.85rem; padding: 0.45rem 0.65rem; height: 40px;">
             </div>
 
             <!-- Standalone Note Save Button -->
             <button type="button" class="btn btn-primary btn-block" onclick="savePrayerNoteOnly()" style="font-weight: 600; padding: 0.75rem; font-size: 0.9rem; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28);">
-              <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลหมายเหตุละหมาด
+              <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลหมายเหตุละหมาด (เวลาที่เลือก)
             </button>
           </div>
         </div>
@@ -725,45 +771,49 @@
     
     <!-- ==================== VIEW: HASANAT & GOOD DEEDS (ผลบุญ) ==================== -->
     <section id="view-hasanat" class="view-section">
-      <!-- Minimal Clean Hero Card with Integrated 3-Pillar Overview -->
-      <div class="hasanat-hero-card minimal-clean-hero">
-        <div class="hasanat-hero-top">
-          <div class="hasanat-hero-icon-box">
-            <i class="fa-solid fa-hands-praying"></i>
+      <!-- Modern Bento Hero Banner -->
+      <div class="hasanat-bento-hero">
+        <div class="hasanat-hero-main">
+          <div class="hasanat-hero-badge-row">
+            <span class="hasanat-hero-tag"><i class="fa-solid fa-sparkles"></i> Good Deeds Portal</span>
+            <span class="hasanat-hero-date-pill" id="hasanatHeroDateTag">บันทึกความดีประจำวัน</span>
           </div>
-          <div style="flex: 1;">
-            <h2 class="hasanat-hero-title">บันทึกผลบุญประจำวัน (Hasanat)</h2>
-            <p class="hasanat-hero-desc">ติดตามการอ่านอัลกุรอาน การท่องจำ 114 ซูเราะห์ และการละหมาดสุนัตอย่างเป็นระบบ</p>
-          </div>
+          <h2 class="hasanat-bento-title">สะสมผลบุญประจำวัน (Hasanat)</h2>
+          <p class="hasanat-bento-desc">บันทึก 3 เสาหลักแห่งคุณธรรม: การอ่านอัลกุรอาน 604 หน้า, ท่องจำ 114 ซูเราะห์ และละหมาดสุนัต 12 ร็อกอะฮ์</p>
         </div>
 
-        <!-- Quick 3-Pillar Overview Strip -->
-        <div class="hasanat-overview-strip">
-          <div class="hasanat-ov-item" onclick="switchHasanatSubTab('quran')">
-            <div class="ov-top">
-              <span class="ov-label"><i class="fa-solid fa-book-open"></i> อ่านอัลกุรอาน</span>
-              <span class="ov-badge" id="ovQuranJuzPill">0/30 ยุซ</span>
+        <!-- 3 Quick KPI Stat Badges in Bento Hero -->
+        <div class="hasanat-hero-quick-stats">
+          <div class="hasanat-stat-box" onclick="switchHasanatSubTab('quran')" title="คลิกเพื่อดูหมวดอ่านอัลกุรอาน">
+            <div class="stat-ico"><i class="fa-solid fa-book-quran"></i></div>
+            <div class="stat-body">
+              <span class="stat-lbl">อ่านอัลกุรอาน</span>
+              <div class="stat-val"><span id="ovQuranPageVal">0</span> <small>/ 604 หน้า</small></div>
+              <span class="stat-sub-pill" id="ovQuranJuzPill">0/30 ยุซ</span>
             </div>
-            <div class="ov-val"><span id="ovQuranPageVal">0</span> <small>/ 604 หน้า</small></div>
           </div>
-          <div class="hasanat-ov-item" onclick="switchHasanatSubTab('memorize')">
-            <div class="ov-top">
-              <span class="ov-label"><i class="fa-solid fa-bookmark"></i> ท่องจำซูเราะห์</span>
-              <span class="ov-badge" id="ovMemPctPill">0%</span>
+
+          <div class="hasanat-stat-box" onclick="switchHasanatSubTab('memorize')" title="คลิกเพื่อดูหมวดท่องจำ 114 ซูเราะห์">
+            <div class="stat-ico"><i class="fa-solid fa-bookmark"></i></div>
+            <div class="stat-body">
+              <span class="stat-lbl">ท่องจำซูเราะห์</span>
+              <div class="stat-val"><span id="ovMemCountVal">0</span> <small>/ 114</small></div>
+              <span class="stat-sub-pill" id="ovMemPctPill">0%</span>
             </div>
-            <div class="ov-val"><span id="ovMemCountVal">0</span> <small>/ 114 ซูเราะห์</small></div>
           </div>
-          <div class="hasanat-ov-item" onclick="switchHasanatSubTab('sunnah')">
-            <div class="ov-top">
-              <span class="ov-label"><i class="fa-solid fa-person-praying"></i> ละหมาดสุนัต</span>
-              <span class="ov-badge" id="ovSunnahGoalPill">เป้า 12</span>
+
+          <div class="hasanat-stat-box" onclick="switchHasanatSubTab('sunnah')" title="คลิกเพื่อดูหมวดละหมาดสุนัต">
+            <div class="stat-ico"><i class="fa-solid fa-person-praying"></i></div>
+            <div class="stat-body">
+              <span class="stat-lbl">ละหมาดสุนัต</span>
+              <div class="stat-val"><span id="ovSunnahVal">0</span> <small>ร็อกอะฮ์</small></div>
+              <span class="stat-sub-pill" id="ovSunnahGoalPill">เป้า 12</span>
             </div>
-            <div class="ov-val"><span id="ovSunnahVal">0</span> <small>ร็อกอะฮ์</small></div>
           </div>
         </div>
       </div>
 
-      <!-- Minimalist Date Navigator (Monochrome Icons & Comfortable Size) -->
+      <!-- Minimalist Date Navigator -->
       <div class="hasanat-date-nav-bar minimal-date-nav">
         <button type="button" class="btn-hasanat-date-step" onclick="shiftHasanatDate(-1)" title="วันก่อนหน้า">
           <i class="fa-solid fa-chevron-left"></i>
@@ -785,415 +835,419 @@
         </button>
       </div>
 
-      <!-- Minimalist Segmented Tabs (Monochrome Icons) -->
-      <div class="hasanat-subnav minimal-subnav">
-        <button class="hasanat-subnav-btn active" id="btnSubHasanatQuran" onclick="switchHasanatSubTab('quran')">
+      <!-- Bento View Mode Segmented Controls -->
+      <div class="hasanat-subnav minimal-subnav hasanat-bento-subnav">
+        <button class="hasanat-subnav-btn active" id="btnSubHasanatAll" onclick="switchHasanatSubTab('all')" title="แสดงครบทั้ง 3 เสาหลักในหน้าเดียว">
+          <div class="tab-top-row"><i class="fa-solid fa-border-all"></i> <span>ภาพรวม Bento ทั้งหมด</span></div>
+          <span class="tab-badge-pill">3 เสาหลัก</span>
+        </button>
+        <button class="hasanat-subnav-btn" id="btnSubHasanatQuran" onclick="switchHasanatSubTab('quran')" title="แสดงเฉพาะหมวดอ่านอัลกุรอาน">
           <div class="tab-top-row"><i class="fa-solid fa-book-quran"></i> <span>1. อ่านอัลกุรอาน</span></div>
           <span class="tab-badge-pill" id="navHasanatQuranBadge">0 ยุซ</span>
         </button>
-        <button class="hasanat-subnav-btn" id="btnSubHasanatMemorize" onclick="switchHasanatSubTab('memorize')">
-          <div class="tab-top-row"><i class="fa-solid fa-list-check"></i> <span>2. ท่องจำซูเราะห์</span></div>
-          <span class="tab-badge-pill" id="navHasanatMemBadge">0 / 114</span>
-        </button>
-        <button class="hasanat-subnav-btn" id="btnSubHasanatSunnah" onclick="switchHasanatSubTab('sunnah')">
-          <div class="tab-top-row"><i class="fa-solid fa-person-praying"></i> <span>3. ละหมาดสุนัต</span></div>
+        <button class="hasanat-subnav-btn" id="btnSubHasanatSunnah" onclick="switchHasanatSubTab('sunnah')" title="แสดงเฉพาะหมวดละหมาดสุนัต">
+          <div class="tab-top-row"><i class="fa-solid fa-person-praying"></i> <span>2. ละหมาดสุนัต</span></div>
           <span class="tab-badge-pill" id="navHasanatSunnahBadge">0 ร็อกอะฮ์</span>
+        </button>
+        <button class="hasanat-subnav-btn" id="btnSubHasanatMemorize" onclick="switchHasanatSubTab('memorize')" title="แสดงเฉพาะหมวดท่องจำ 114 ซูเราะห์">
+          <div class="tab-top-row"><i class="fa-solid fa-list-check"></i> <span>3. ท่องจำซูเราะห์</span></div>
+          <span class="tab-badge-pill" id="navHasanatMemBadge">0 / 114</span>
         </button>
       </div>
 
-      <!-- ==================== SUBTAB 1: QURAN READING (MINIMALIST & CLEAN) ==================== -->
-      <div id="subtab-quran" class="hasanat-subcontent">
-        <div class="card quran-minimal-card" style="max-width: 680px; margin: 0 auto 1.5rem auto;">
-          
-          <!-- Minimalist KPI Header Box -->
-          <div class="quran-minimal-kpi-card">
-            <div class="kpi-header-row">
-              <div>
-                <span class="kpi-section-label">ความคืบหน้าการอ่านอัลกุรอาน</span>
-                <div class="kpi-main-page-row">
-                  <span class="kpi-big-num" id="kpiQuranPageText">0</span>
-                  <span class="kpi-sub-label">/ 604 หน้า</span>
+      <!-- Bento Grid Container: 3 Cards Organized in Modern Human-Crafted Grid -->
+      <div class="hasanat-bento-grid" id="hasanatBentoGrid">
+        
+        <!-- BENTO CARD 1: QURAN READING (TILAWAH) -->
+        <div id="subtab-quran" class="hasanat-bento-card bento-quran">
+          <div class="bento-card-inner">
+            <div class="bento-card-header">
+              <div class="bento-header-left">
+                <div class="bento-header-icon"><i class="fa-solid fa-book-open"></i></div>
+                <div>
+                  <h3 class="bento-card-title">1. อ่านอัลกุรอาน (Tilawah)</h3>
+                  <p class="bento-card-subtitle">ความคืบหน้ารายวันสู่การค็อตมุลกุรอาน (604 หน้า / 30 ยุซ)</p>
                 </div>
               </div>
-              <div class="kpi-right-meta">
-                <span class="kpi-pill-badge" id="hasanatQuranPercentText">0.0%</span>
-                <div class="kpi-juz-tag" id="hasanatJuzBadge">ยุซที่ 1</div>
-              </div>
+              <span class="bento-pill-tag" id="hasanatJuzBadge">ยุซที่ 1</span>
             </div>
 
-            <!-- Sleek Minimal Progress Track -->
-            <div class="minimal-progress-track">
-              <div id="hasanatQuranProgressBar" class="minimal-progress-fill" style="width: 0%;"></div>
-            </div>
-
-            <div class="minimal-progress-legend">
-              <span>หน้า 1</span>
-              <span id="quranRemainingPagesText">เหลืออีก 604 หน้า</span>
-              <span>หน้า 604 (คัตม์)</span>
-            </div>
-
-            <!-- Interactive Minimal Range Slider -->
-            <div class="quran-slider-control-box">
-              <div class="slider-header-row">
-                <label for="quranPageSlider" class="slider-hint-lbl">เลื่อนเพื่อเปลี่ยนหน้าอย่างรวดเร็ว</label>
-                <span class="slider-val-tag" id="sliderLiveVal">หน้า 0</span>
-              </div>
-              <input type="range" id="quranPageSlider" min="0" max="604" value="0" oninput="onQuranSliderChange(this.value)" class="quran-range-slider">
-            </div>
-
-            <!-- Quick Step Pills (Monochrome Outline) -->
-            <div class="quran-quick-stepper-grid">
-              <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(1)">+1 หน้า</button>
-              <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(5)">+5 หน้า</button>
-              <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(10)">+10 หน้า</button>
-              <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(20)">+1 ยุซ</button>
-            </div>
-          </div>
-
-          <!-- Minimal 30-Juz Progress Overview -->
-          <div class="juz-minimal-overview-card">
-            <div class="juz-overview-header">
-              <span class="juz-overview-title"><i class="fa-solid fa-chart-simple"></i> ตารางความคืบหน้า 30 ยุซ</span>
-              <span class="juz-overview-counter" id="juzCompletedOverviewText">อ่านจบแล้ว 0 / 30 ยุซ</span>
-            </div>
-            <div class="juz-grid-container" id="juzMinimalGrid">
-              <!-- 30 Juz Minimal Blocks Generated via app.js -->
-            </div>
-            <div class="juz-overview-footnote">
-              <span>● ช่องทึบ = อ่านผ่านแล้ว</span>
-              <span>○ ช่องขอบ = ยุซปัจจุบัน</span>
-            </div>
-          </div>
-
-          <!-- Hidden elements for app.js backwards-compatibility -->
-          <div id="kpiQuranJuzText" style="display: none;">0</div>
-          <div id="hasanatStarsShowcase" style="display: none;"></div>
-
-          <!-- Section 1: Daily Reading Stepper -->
-          <div class="quran-input-section minimal-input-section">
-            <div class="quran-section-header">
-              <div class="quran-sec-title">
-                <i class="fa-solid fa-calendar-day"></i>
-                <span>หน้าที่อ่านได้เฉพาะในวันที่เลือก</span>
-              </div>
-              <span class="quran-date-badge" id="quranActiveDateNote">ของวันนี้</span>
-            </div>
-
-            <div class="quran-daily-stepper-box">
-              <div class="quran-stepper-row">
-                <span class="quran-stepper-lbl">จำนวนหน้าที่อ่านเพิ่มวันนี้:</span>
-                <div class="quran-page-input-wrap">
-                  <button type="button" class="btn-quran-step" onclick="adjustPagesToday(-1)">-</button>
-                  <input type="number" id="quranPagesTodayInput" class="form-control quran-big-input" min="0" max="604" placeholder="0" oninput="onPagesTodayInputChange()">
-                  <button type="button" class="btn-quran-step" onclick="adjustPagesToday(1)">+</button>
-                  <span class="quran-unit-lbl">หน้า</span>
+            <!-- KPI & Progress Bar -->
+            <div class="quran-minimal-kpi-card" style="margin-bottom: 1rem;">
+              <div class="kpi-header-row">
+                <div>
+                  <span class="kpi-section-label">อ่านถึงหน้าที่</span>
+                  <div class="kpi-main-page-row">
+                    <span class="kpi-big-num" id="kpiQuranPageText">0</span>
+                    <span class="kpi-sub-label">/ 604 หน้า</span>
+                  </div>
                 </div>
+                <div class="kpi-right-meta">
+                  <span class="kpi-pill-badge" id="hasanatQuranPercentText">0.0%</span>
+                </div>
+              </div>
+
+              <div class="minimal-progress-track">
+                <div id="hasanatQuranProgressBar" class="minimal-progress-fill" style="width: 0%;"></div>
+              </div>
+
+              <div class="minimal-progress-legend">
+                <span>หน้า 1</span>
+                <span id="quranRemainingPagesText">เหลืออีก 604 หน้า</span>
+                <span>หน้า 604 (จบเล่ม)</span>
+              </div>
+
+              <!-- Interactive Slider -->
+              <div class="quran-slider-control-box">
+                <div class="slider-header-row">
+                  <label for="quranPageSlider" class="slider-hint-lbl">เลื่อนเพื่อปรับหน้าอย่างรวดเร็ว</label>
+                  <span class="slider-val-tag" id="sliderLiveVal">หน้า 0</span>
+                </div>
+                <input type="range" id="quranPageSlider" min="0" max="604" value="0" oninput="onQuranSliderChange(this.value)" class="quran-range-slider">
               </div>
 
               <!-- Quick Step Pills -->
-              <div class="quran-quick-pills">
-                <button type="button" class="quran-pill-step" onclick="adjustPagesToday(1)">+1 หน้า</button>
-                <button type="button" class="quran-pill-step" onclick="adjustPagesToday(5)">+5 หน้า</button>
-                <button type="button" class="quran-pill-step" onclick="adjustPagesToday(10)">+10 หน้า</button>
-                <button type="button" class="quran-pill-step" onclick="adjustPagesToday(20)">+1 ยุซ (20 หน้า)</button>
-                <button type="button" class="quran-pill-clear" onclick="setPagesToday(0)">ล้าง</button>
+              <div class="quran-quick-stepper-grid">
+                <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(1)">+1 หน้า</button>
+                <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(5)">+5 หน้า</button>
+                <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(10)">+10 หน้า</button>
+                <button type="button" class="btn-minimal-pill" onclick="adjustCurrentPageDirect(20)">+1 ยุซ</button>
               </div>
             </div>
 
-            <!-- Page Bookmarking (Clean & Minimalist Full-Width) -->
-            <div class="quran-bookmark-box">
-              <label class="form-label bookmark-label">
-                <span><i class="fa-solid fa-bookmark"></i> อ่านถึงหน้าที่ (1 - 604) <span class="required">*</span></span>
-                <span class="bookmark-sub">(กุรอานมาตรฐานมี 604 หน้า)</span>
-              </label>
-              <input type="number" id="quranCurrentPageInput" class="form-control bookmark-input" min="1" max="604" placeholder="เช่น 45" oninput="autoCalculateJuzFromPage()">
-              <input type="hidden" id="quranJuzCompletedInput" value="0">
+            <!-- 30 Juz Visual Block Grid -->
+            <div class="juz-minimal-overview-card" style="margin-bottom: 1rem;">
+              <div class="juz-overview-header">
+                <span class="juz-overview-title"><i class="fa-solid fa-chart-simple"></i> ตารางความคืบหน้า 30 ยุซ</span>
+                <span class="juz-overview-counter" id="juzCompletedOverviewText">อ่านจบแล้ว 0 / 30 ยุซ</span>
+              </div>
+              <div class="juz-grid-container" id="juzMinimalGrid">
+                <!-- 30 Juz Minimal Blocks Generated via app.js -->
+              </div>
+              <div class="juz-overview-footnote">
+                <span>● ช่องทึบ = อ่านผ่านแล้ว</span>
+                <span>○ ช่องขอบ = ยุซปัจจุบัน</span>
+              </div>
             </div>
-          </div>
 
-          <!-- Section 2: Khatam 30-Juz Counter (Minimalist Clean Card) -->
-          <div class="khatam-counter-card minimal-khatam-card">
-            <div class="khatam-top-row">
-              <div style="display: flex; align-items: center; gap: 0.65rem;">
-                <div class="khatam-crown-icon">
-                  <i class="fa-solid fa-crown"></i>
+            <!-- Hidden elements for app.js backwards-compatibility -->
+            <div id="kpiQuranJuzText" style="display: none;">0</div>
+            <div id="hasanatStarsShowcase" style="display: none;"></div>
+
+            <!-- Daily Reading Stepper -->
+            <div class="quran-input-section minimal-input-section" style="margin-bottom: 1rem;">
+              <div class="quran-section-header">
+                <div class="quran-sec-title">
+                  <i class="fa-solid fa-calendar-day"></i>
+                  <span>หน้าที่อ่านได้เฉพาะในวันที่เลือก</span>
                 </div>
-                <div>
-                  <div class="khatam-title-text">ค็อตมุลกุรอาน (อ่านจบครบ 30 ยุซ)</div>
-                  <div class="khatam-sub-text">บันทึกจำนวนครั้งที่อ่านจบสมบูรณ์ทั้งเล่ม</div>
+                <span class="quran-date-badge" id="quranActiveDateNote">ของวันนี้</span>
+              </div>
+
+              <div class="quran-daily-stepper-box">
+                <div class="quran-stepper-row">
+                  <span class="quran-stepper-lbl">จำนวนหน้าที่อ่านเพิ่มวันนี้:</span>
+                  <div class="quran-page-input-wrap">
+                    <button type="button" class="btn-quran-step" onclick="adjustPagesToday(-1)">-</button>
+                    <input type="number" id="quranPagesTodayInput" class="form-control quran-big-input" min="0" max="604" placeholder="0" oninput="onPagesTodayInputChange()">
+                    <button type="button" class="btn-quran-step" onclick="adjustPagesToday(1)">+</button>
+                    <span class="quran-unit-lbl">หน้า</span>
+                  </div>
+                </div>
+
+                <div class="quran-quick-pills">
+                  <button type="button" class="quran-pill-step" onclick="adjustPagesToday(1)">+1 หน้า</button>
+                  <button type="button" class="quran-pill-step" onclick="adjustPagesToday(5)">+5 หน้า</button>
+                  <button type="button" class="quran-pill-step" onclick="adjustPagesToday(10)">+10 หน้า</button>
+                  <button type="button" class="quran-pill-step" onclick="adjustPagesToday(20)">+1 ยุซ</button>
+                  <button type="button" class="quran-pill-clear" onclick="setPagesToday(0)">ล้าง</button>
                 </div>
               </div>
-              <span class="khatam-display-pill" id="quranKhatamDisplayBadge">
-                0 ครั้ง
-              </span>
+
+              <!-- Page Bookmarking -->
+              <div class="quran-bookmark-box">
+                <label class="form-label bookmark-label">
+                  <span><i class="fa-solid fa-bookmark"></i> อ่านถึงหน้าที่ (1 - 604) <span class="required">*</span></span>
+                  <span class="bookmark-sub">(กุรอานมาตรฐานมี 604 หน้า)</span>
+                </label>
+                <input type="number" id="quranCurrentPageInput" class="form-control bookmark-input" min="1" max="604" placeholder="เช่น 45" oninput="autoCalculateJuzFromPage()">
+                <input type="hidden" id="quranJuzCompletedInput" value="0">
+              </div>
             </div>
 
-            <div class="khatam-stepper-control">
-              <div class="khatam-stepper-left">
-                <button type="button" class="btn-khatam-step minus" onclick="adjustKhatamCount(-1)" title="ลดจำนวน" aria-label="ลดจำนวน">
-                  <i class="fa-solid fa-minus"></i>
+            <!-- Khatam Counter -->
+            <div class="khatam-counter-card minimal-khatam-card" style="margin-bottom: 1rem;">
+              <div class="khatam-top-row">
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  <div class="khatam-crown-icon">
+                    <i class="fa-solid fa-crown"></i>
+                  </div>
+                  <div>
+                    <div class="khatam-title-text">ค็อตมุลกุรอาน (อ่านจบครบ 30 ยุซ)</div>
+                    <div class="khatam-sub-text">บันทึกจำนวนครั้งที่อ่านจบสมบูรณ์ทั้งเล่ม</div>
+                  </div>
+                </div>
+                <span class="khatam-display-pill" id="quranKhatamDisplayBadge">
+                  0 ครั้ง
+                </span>
+              </div>
+
+              <div class="khatam-stepper-control">
+                <div class="khatam-stepper-left">
+                  <button type="button" class="btn-khatam-step minus" onclick="adjustKhatamCount(-1)" title="ลดจำนวน" aria-label="ลดจำนวน">
+                    <i class="fa-solid fa-minus"></i>
+                  </button>
+                  <div class="khatam-display-wrap">
+                    <input type="number" id="quranKhatamCountInput" class="form-control khatam-num-input" min="0" max="100" placeholder="0" value="0" oninput="onKhatamInputChange()">
+                    <span class="khatam-unit-label">ครั้ง</span>
+                  </div>
+                  <button type="button" class="btn-khatam-step plus" onclick="adjustKhatamCount(1)" title="เพิ่มจำนวน" aria-label="เพิ่มจำนวน">
+                    <i class="fa-solid fa-plus"></i>
+                  </button>
+                </div>
+                <button type="button" class="btn-khatam-add-one" onclick="adjustKhatamCount(1)">
+                  <i class="fa-solid fa-plus"></i> จบ 30 ยุซ 1 ครั้ง
                 </button>
-                <div class="khatam-display-wrap">
-                  <input type="number" id="quranKhatamCountInput" class="form-control khatam-num-input" min="0" max="100" placeholder="0" value="0" oninput="onKhatamInputChange()">
-                  <span class="khatam-unit-label">ครั้ง</span>
-                </div>
-                <button type="button" class="btn-khatam-step plus" onclick="adjustKhatamCount(1)" title="เพิ่มจำนวน" aria-label="เพิ่มจำนวน">
-                  <i class="fa-solid fa-plus"></i>
-                </button>
               </div>
-              <button type="button" class="btn-khatam-add-one" onclick="adjustKhatamCount(1)">
-                <i class="fa-solid fa-plus"></i> จบ 30 ยุซ 1 ครั้ง
-              </button>
-            </div>
-            <div id="kpiQuranKhatamText" style="display: none;">0</div>
+              <div id="kpiQuranKhatamText" style="display: none;">0</div>
 
-            <!-- Sincerity Reminder (Quiet Minimalist Note) -->
-            <div class="quran-ikhlas-notice">
-              <i class="fa-solid fa-heart"></i>
-              <span><strong>ความอิคลาส:</strong> เพื่อเตือนตนเองและกระตุ้นการอ่านอัลกุรอานอย่างสม่ำเสมอ เพื่อความโปรดปรานของอัลลอฮ์ ﷻ</span>
-            </div>
-          </div>
-
-          <!-- Save Button (Clean Slate) -->
-          <button class="btn btn-primary btn-block btn-lg btn-minimal-save" onclick="saveQuranReadingLog()">
-            <i class="fa-solid fa-floppy-disk"></i> บันทึกผลการอ่านอัลกุรอาน
-          </button>
-        </div>
-      </div>
-
-      <!-- ==================== SUBTAB 2: QURAN MEMORIZATION (TAHFIDZ) ==================== -->
-      <div id="subtab-memorize" class="hasanat-subcontent" style="display: none;">
-        <div class="card quran-minimal-card" style="max-width: 760px; margin: 0 auto 1.5rem auto;">
-          <div class="card-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 0.9rem; margin-bottom: 1rem;">
-            <div>
-              <div class="card-title" style="font-size: 1.05rem;">
-                <i class="fa-solid fa-list-check" style="color: #334155;"></i> สารบัญการท่องจำอัลกุรอาน (114 ซูเราะห์)
+              <div class="quran-ikhlas-notice">
+                <i class="fa-solid fa-heart"></i>
+                <span><strong>ความอิคลาส:</strong> เพื่อเตือนตนเองและกระตุ้นการอ่านอัลกุรอานอย่างสม่ำเสมอ เพื่อความโปรดปรานของอัลลอฮ์ ﷻ</span>
               </div>
-              <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.2rem 0 0 0;">
-                แตะที่ชื่อซูเราะห์เพื่อติ๊กบันทึกซูเราะห์ที่ท่องจำได้แล้ว
-              </p>
-            </div>
-            <span class="badge-sub" style="background: #f8fafc; color: #0f172a; border: 1px solid #e2e8f0; font-size: 0.82rem; font-weight: 600;" id="memorizedSurahsBadge">
-              ท่องจำได้ 0 / 114 ซูเราะห์
-            </span>
-          </div>
-
-          <!-- Minimalist Memorization Progress Bar -->
-          <div class="quran-minimal-kpi-card" style="margin-bottom: 1rem; padding: 0.9rem 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; font-size: 0.8rem; font-weight: 600; color: #334155;">
-              <span>ความก้าวหน้าการท่องจำทั้งหมด</span>
-              <span id="memorizedPercentLabel">0.0% (0 / 114 ซูเราะห์)</span>
-            </div>
-            <div class="minimal-progress-track">
-              <div id="memorizedProgressBarFill" class="minimal-progress-fill" style="width: 0%;"></div>
-            </div>
-          </div>
-
-          <!-- Category Filter Tabs & Minimal Sort Control -->
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.85rem;">
-            <!-- Category Pills -->
-            <div class="surah-category-tabs" style="margin-bottom: 0;">
-              <button type="button" class="surah-cat-tab active" id="tabCatAll" onclick="setSurahCategoryFilter('all')">ทั้งหมด 114</button>
-              <button type="button" class="surah-cat-tab" id="tabCatJuzAmma" onclick="setSurahCategoryFilter('juzAmma')">ยุซอัมมา (78-114)</button>
-              <button type="button" class="surah-cat-tab" id="tabCatPopular" onclick="setSurahCategoryFilter('popular')">ซูเราะห์สำคัญ</button>
-              <button type="button" class="surah-cat-tab" id="tabCatMemorized" onclick="setSurahCategoryFilter('memorized')">ที่ท่องจำแล้ว</button>
             </div>
 
-            <!-- Minimalist Juz Sort Order Selector (1-30 vs 30-1) -->
-            <div style="display: inline-flex; background: #f1f5f9; border-radius: var(--radius-md); padding: 3px; border: 1px solid #e2e8f0; gap: 2px;">
-              <button type="button" class="btn-juz-sort active" id="btnSortJuzAsc" onclick="setSurahSortOrder('juz-asc')" title="จัดเรียงตามลำดับ ยุซ 1 ถึง 30">
-                <i class="fa-solid fa-arrow-down-1-9"></i> ยุซ 1 ➔ 30
-              </button>
-              <button type="button" class="btn-juz-sort" id="btnSortJuzDesc" onclick="setSurahSortOrder('juz-desc')" title="จัดเรียงย้อนกลับ ยุซ 30 ถึง 1 (เริ่มจากยุซอัมมา)">
-                <i class="fa-solid fa-arrow-up-9-1"></i> ยุซ 30 ➔ 1
-              </button>
-            </div>
-          </div>
-
-          <!-- Minimal Search & Quick Actions -->
-          <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 220px; position: relative;">
-              <input type="text" id="searchSurahInput" class="form-control" placeholder="ค้นหาชื่อซูเราะห์ หรือ ลำดับที่ (เช่น 1, 36, ยาซีน, อัลกะฮ์ฟิ)..." oninput="filterSurahsList(this.value)" style="padding-left: 2.2rem; height: 38px; border-radius: var(--radius-md); font-size: 0.85rem;">
-              <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
-            </div>
-            <div style="display: flex; gap: 0.35rem;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllSurahsInCurrentCategory(true)" style="padding: 0.38rem 0.75rem; font-size: 0.78rem; border-radius: var(--radius-md);" title="เลือกทั้งหมดในหมวดนี้">
-                <i class="fa-solid fa-check-double"></i> เลือกทั้งหมวด
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllSurahsInCurrentCategory(false)" style="padding: 0.38rem 0.75rem; font-size: 0.78rem; border-radius: var(--radius-md);" title="ล้างการเลือกในหมวดนี้">
-                <i class="fa-solid fa-rotate-left"></i> ล้างหมวดนี้
-              </button>
-            </div>
-          </div>
-
-          <!-- Surah Checklist Grid -->
-          <div class="surah-list-container" id="surahListContainer">
-            <!-- 114 Surahs generated dynamically via app.js -->
-          </div>
-
-          <div style="margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
-            <span style="font-size: 0.8rem; color: var(--text-muted);" id="surahCurrentCategoryNote">แสดงทั้ง 114 ซูเราะห์</span>
-            <button class="btn btn-primary btn-minimal-save" onclick="saveSurahMemorizationLog()" style="padding: 0.65rem 1.5rem; width: auto;">
-              <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลการท่องจำ
+            <button class="btn btn-primary btn-block btn-lg btn-minimal-save" onclick="saveQuranReadingLog()">
+              <i class="fa-solid fa-floppy-disk"></i> บันทึกผลการอ่านอัลกุรอาน
             </button>
           </div>
         </div>
-      </div>
 
-      <!-- ==================== SUBTAB 3: DAILY SUNNAH PRAYERS ==================== -->
-      <div id="subtab-sunnah" class="hasanat-subcontent" style="display: none;">
-        <div class="card quran-minimal-card" style="max-width: 680px; margin: 0 auto 1.5rem auto;">
-          <div class="card-header" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 0.9rem; margin-bottom: 1rem;">
-            <div>
-              <div class="card-title" style="font-size: 1.05rem;">
-                <i class="fa-solid fa-person-praying" style="color: #334155;"></i> บันทึกละหมาดสุนัตประจำวัน
-              </div>
-              <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.2rem 0 0 0;">
-                สุนัตร่อวาติบ (ก่อน-หลังฟัรฎู), ละหมาดดุฮา, ละหมาดวิเตร และตะฮัจญุด
-              </p>
-            </div>
-            <span class="badge-sub" style="background: #f8fafc; color: #0f172a; border: 1px solid #e2e8f0; font-weight: 600;" id="todayTotalSunnahRakaatBadge">
-              วันนี้ละหมาดสุนัตแล้ว 0 ร็อกอะฮ์
-            </span>
-          </div>
-
-          <!-- Minimalist Sunnah Counter Showcase Card -->
-          <div class="quran-minimal-kpi-card" style="margin-bottom: 1rem;">
-            <div class="kpi-header-row">
-              <div>
-                <span class="kpi-section-label">ยอดรวมละหมาดสุนัตในวันที่เลือก</span>
-                <div class="kpi-main-page-row">
-                  <span class="kpi-big-num" id="liveSunnahTotalNum">0</span>
-                  <span class="kpi-sub-label">ร็อกอะฮ์</span>
+        <!-- BENTO CARD 2: DAILY SUNNAH PRAYERS -->
+        <div id="subtab-sunnah" class="hasanat-bento-card bento-sunnah">
+          <div class="bento-card-inner">
+            <div class="bento-card-header">
+              <div class="bento-header-left">
+                <div class="bento-header-icon"><i class="fa-solid fa-person-praying"></i></div>
+                <div>
+                  <h3 class="bento-card-title">2. ละหมาดสุนัตประจำวัน (Sunnah)</h3>
+                  <p class="bento-card-subtitle">สุนัตร่อวาติบ, ละหมาดดุฮา, ละหมาดวิเตร และตะฮัจญุด</p>
                 </div>
               </div>
-              <div class="kpi-right-meta">
-                <span class="kpi-pill-badge" id="sunnahGoalStatusBadge">เป้าหมาย 12 ร็อกอะฮ์/วัน</span>
+              <span class="bento-pill-tag" id="todayTotalSunnahRakaatBadge">0 ร็อกอะฮ์</span>
+            </div>
+
+            <!-- Sunnah KPI Summary Card -->
+            <div class="quran-minimal-kpi-card" style="margin-bottom: 1rem;">
+              <div class="kpi-header-row">
+                <div>
+                  <span class="kpi-section-label">ยอดรวมละหมาดสุนัตวันนี้</span>
+                  <div class="kpi-main-page-row">
+                    <span class="kpi-big-num" id="liveSunnahTotalNum">0</span>
+                    <span class="kpi-sub-label">ร็อกอะฮ์</span>
+                  </div>
+                </div>
+                <div class="kpi-right-meta">
+                  <span class="kpi-pill-badge" id="sunnahGoalStatusBadge">เป้า 12 ร็อกอะฮ์/วัน</span>
+                </div>
+              </div>
+              <div class="minimal-progress-track" style="margin: 0.65rem 0 0.5rem 0;">
+                <div id="sunnahGoalProgressBar" class="minimal-progress-fill" style="width: 0%;"></div>
+              </div>
+              <div style="font-size: 0.76rem; color: #64748b; line-height: 1.45;">
+                "ผู้ใดละหมาดสุนัต 12 ร็อกอะฮ์ในวันหนึ่งคืนหนึ่ง อัลลอฮ์จะทรงสร้างบ้านหลังหนึ่งให้แก่เขาในสวรรค์" (ศอฮีฮ์มุสลิม)
               </div>
             </div>
-            <div class="minimal-progress-track" style="margin: 0.65rem 0 0.5rem 0;">
-              <div id="sunnahGoalProgressBar" class="minimal-progress-fill" style="width: 0%;"></div>
+
+            <!-- Category 1: Sunnah Rawatib -->
+            <div class="sunnah-category-box">
+              <div class="sunnah-category-title" style="align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <span><i class="fa-regular fa-clock" style="color: #475569;"></i> 1. สุนัตร่อวาติบ (ก่อน-หลังฟัรฎู)</span>
+                <div style="display: flex; gap: 0.35rem;">
+                  <button type="button" class="btn-minimal-pill" style="padding: 0.2rem 0.55rem; font-size: 0.72rem;" onclick="toggleAllRawatib(true)">ติ๊กครบทั้งหมด</button>
+                  <button type="button" class="btn-minimal-pill" style="padding: 0.2rem 0.55rem; font-size: 0.72rem;" onclick="toggleAllRawatib(false)">ล้าง</button>
+                </div>
+              </div>
+
+              <!-- Subh -->
+              <label class="sunnah-item-row" id="row-rawatib-subhBefore">
+                <span><strong>ก่อนซุบฮิ</strong> (2 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัดเน้นย้ำ</span></span>
+                <input type="checkbox" id="chk-rawatib-subhBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
+              </label>
+
+              <!-- Dhuhr -->
+              <label class="sunnah-item-row" id="row-rawatib-dhuhrBefore">
+                <span><strong>ก่อนซุฮริ</strong> (2 หรือ 4 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัด</span></span>
+                <input type="checkbox" id="chk-rawatib-dhuhrBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
+              </label>
+              <label class="sunnah-item-row" id="row-rawatib-dhuhrAfter">
+                <span><strong>หลังซุฮริ</strong> (2 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัด</span></span>
+                <input type="checkbox" id="chk-rawatib-dhuhrAfter" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
+              </label>
+
+              <!-- Asr -->
+              <label class="sunnah-item-row" id="row-rawatib-asrBefore">
+                <span><strong>ก่อนอัศรฺ</strong> (2 หรือ 4 ร็อกอะฮ์)</span>
+                <input type="checkbox" id="chk-rawatib-asrBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
+              </label>
+
+              <!-- Maghrib -->
+              <label class="sunnah-item-row" id="row-rawatib-maghribBefore">
+                <span><strong>ก่อนมัฆริบ</strong> (2 ร็อกอะฮ์)</span>
+                <input type="checkbox" id="chk-rawatib-maghribBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
+              </label>
+              <label class="sunnah-item-row" id="row-rawatib-maghribAfter">
+                <span><strong>หลังมัฆริบ</strong> (2 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัด</span></span>
+                <input type="checkbox" id="chk-rawatib-maghribAfter" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
+              </label>
+
+              <!-- Isha -->
+              <label class="sunnah-item-row" id="row-rawatib-ishaBefore">
+                <span><strong>ก่อนอีชาอ์</strong> (2 ร็อกอะฮ์)</span>
+                <input type="checkbox" id="chk-rawatib-ishaBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
+              </label>
+              <label class="sunnah-item-row" id="row-rawatib-ishaAfter">
+                <span><strong>หลังอีชาอ์</strong> (2 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัด</span></span>
+                <input type="checkbox" id="chk-rawatib-ishaAfter" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
+              </label>
             </div>
-            <div style="font-size: 0.76rem; color: #64748b; line-height: 1.45;">
-              "ผู้ใดละหมาดสุนัต 12 ร็อกอะฮ์ในวันหนึ่งคืนหนึ่ง อัลลอฮ์จะทรงสร้างบ้านหลังหนึ่งให้แก่เขาในสวรรค์" (ศอฮีฮ์มุสลิม)
+
+            <!-- Category 2: Duha Prayer -->
+            <div class="sunnah-category-box">
+              <div class="sunnah-category-title">
+                <span><i class="fa-regular fa-sun" style="color: #475569;"></i> 2. ละหมาดสุนัตดุฮา (ช่วงสาย)</span>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="font-size: 0.85rem; font-weight: 600; color: #334155;">
+                  จำนวนร็อกอะฮ์:
+                </div>
+                <div class="sunnah-pills-group" id="pillsGroupDuha">
+                  <button type="button" class="sunnah-pill-btn active" data-val="0" onclick="selectSunnahPill('duha', 0)">0</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="2" onclick="selectSunnahPill('duha', 2)">2 ร็อกอะฮ์</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="4" onclick="selectSunnahPill('duha', 4)">4 ร็อกอะฮ์</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="6" onclick="selectSunnahPill('duha', 6)">6 ร็อกอะฮ์</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="8" onclick="selectSunnahPill('duha', 8)">8 ร็อกอะฮ์</button>
+                </div>
+                <input type="hidden" id="selDuhaRakaat" value="0">
+              </div>
             </div>
+
+            <!-- Category 3: Night Prayers (Tahajjud & Witr) -->
+            <div class="sunnah-category-box">
+              <div class="sunnah-category-title">
+                <span><i class="fa-regular fa-moon" style="color: #475569;"></i> 3. ละหมาดยามค่ำคืน (วิเตร และ ตะฮัจญุด)</span>
+              </div>
+              
+              <div style="padding: 0.55rem 0.1rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                  <strong style="font-size: 0.86rem; color: #1e293b;">ละหมาดวิเตร</strong>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">ปิดท้ายค่ำคืน (จำนวนคี่)</div>
+                </div>
+                <div class="sunnah-pills-group" id="pillsGroupWitr">
+                  <button type="button" class="sunnah-pill-btn" data-val="0" onclick="selectSunnahPill('witr', 0)">0</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="1" onclick="selectSunnahPill('witr', 1)">1 ร็อกอะฮ์</button>
+                  <button type="button" class="sunnah-pill-btn active" data-val="3" onclick="selectSunnahPill('witr', 3)">3 ร็อกอะฮ์</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="5" onclick="selectSunnahPill('witr', 5)">5 ร็อกอะฮ์</button>
+                </div>
+                <input type="hidden" id="selWitrRakaat" value="3">
+              </div>
+
+              <div style="padding: 0.55rem 0.1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                  <strong style="font-size: 0.86rem; color: #1e293b;">ละหมาดตะฮัจญุด</strong>
+                  <div style="font-size: 0.74rem; color: var(--text-muted);">ละหมาดยามดึกหลังตื่นนอน</div>
+                </div>
+                <div class="sunnah-pills-group" id="pillsGroupTahajjud">
+                  <button type="button" class="sunnah-pill-btn active" data-val="0" onclick="selectSunnahPill('tahajjud', 0)">0</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="2" onclick="selectSunnahPill('tahajjud', 2)">2 ร็อกอะฮ์</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="4" onclick="selectSunnahPill('tahajjud', 4)">4 ร็อกอะฮ์</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="6" onclick="selectSunnahPill('tahajjud', 6)">6 ร็อกอะฮ์</button>
+                  <button type="button" class="sunnah-pill-btn" data-val="8" onclick="selectSunnahPill('tahajjud', 8)">8 ร็อกอะฮ์</button>
+                </div>
+                <input type="hidden" id="selTahajjudRakaat" value="0">
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block btn-lg btn-minimal-save" onclick="saveDailySunnahPrayersLog()">
+              <i class="fa-solid fa-floppy-disk"></i> บันทึกการละหมาดสุนัตประจำวัน
+            </button>
           </div>
-
-          <!-- Category 1: Sunnah Rawatib -->
-          <div class="sunnah-category-box">
-            <div class="sunnah-category-title" style="align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-              <span><i class="fa-regular fa-clock" style="color: #475569;"></i> 1. สุนัตร่อวาติบ (ก่อน-หลังละหมาดฟัรฎู 5 เวลา)</span>
-              <div style="display: flex; gap: 0.35rem;">
-                <button type="button" class="btn-minimal-pill" style="padding: 0.2rem 0.55rem; font-size: 0.72rem;" onclick="toggleAllRawatib(true)">ติ๊กครบทั้งหมด</button>
-                <button type="button" class="btn-minimal-pill" style="padding: 0.2rem 0.55rem; font-size: 0.72rem;" onclick="toggleAllRawatib(false)">ล้าง</button>
-              </div>
-            </div>
-
-            <!-- Subh -->
-            <label class="sunnah-item-row" id="row-rawatib-subhBefore">
-              <span><strong>ก่อนซุบฮิ</strong> (2 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัดเน้นย้ำ</span></span>
-              <input type="checkbox" id="chk-rawatib-subhBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
-            </label>
-
-            <!-- Dhuhr -->
-            <label class="sunnah-item-row" id="row-rawatib-dhuhrBefore">
-              <span><strong>ก่อนซุฮริ</strong> (2 หรือ 4 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัด</span></span>
-              <input type="checkbox" id="chk-rawatib-dhuhrBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
-            </label>
-            <label class="sunnah-item-row" id="row-rawatib-dhuhrAfter">
-              <span><strong>หลังซุฮริ</strong> (2 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัด</span></span>
-              <input type="checkbox" id="chk-rawatib-dhuhrAfter" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
-            </label>
-
-            <!-- Asr -->
-            <label class="sunnah-item-row" id="row-rawatib-asrBefore">
-              <span><strong>ก่อนอัศรฺ</strong> (2 หรือ 4 ร็อกอะฮ์)</span>
-              <input type="checkbox" id="chk-rawatib-asrBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
-            </label>
-
-            <!-- Maghrib -->
-            <label class="sunnah-item-row" id="row-rawatib-maghribBefore">
-              <span><strong>ก่อนมัฆริบ</strong> (2 ร็อกอะฮ์)</span>
-              <input type="checkbox" id="chk-rawatib-maghribBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
-            </label>
-            <label class="sunnah-item-row" id="row-rawatib-maghribAfter">
-              <span><strong>หลังมัฆริบ</strong> (2 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัด</span></span>
-              <input type="checkbox" id="chk-rawatib-maghribAfter" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
-            </label>
-
-            <!-- Isha -->
-            <label class="sunnah-item-row" id="row-rawatib-ishaBefore">
-              <span><strong>ก่อนอีชาอ์</strong> (2 ร็อกอะฮ์)</span>
-              <input type="checkbox" id="chk-rawatib-ishaBefore" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
-            </label>
-            <label class="sunnah-item-row" id="row-rawatib-ishaAfter">
-              <span><strong>หลังอีชาอ์</strong> (2 ร็อกอะฮ์) <span class="sunnah-muakkad-tag">มุอักกัด</span></span>
-              <input type="checkbox" id="chk-rawatib-ishaAfter" onchange="calculateDailySunnahRakaat()" style="width: 18px; height: 18px; accent-color: #0f172a;">
-            </label>
-          </div>
-
-          <!-- Category 2: Duha Prayer -->
-          <div class="sunnah-category-box">
-            <div class="sunnah-category-title">
-              <span><i class="fa-regular fa-sun" style="color: #475569;"></i> 2. ละหมาดสุนัตดุฮา (Salat ad-Duha)</span>
-              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">ช่วงสาย</span>
-            </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.1rem; flex-wrap: wrap; gap: 0.5rem;">
-              <div style="font-size: 0.85rem; font-weight: 600; color: #334155;">
-                จำนวนร็อกอะฮ์:
-              </div>
-              <div class="sunnah-pills-group" id="pillsGroupDuha">
-                <button type="button" class="sunnah-pill-btn active" data-val="0" onclick="selectSunnahPill('duha', 0)">0</button>
-                <button type="button" class="sunnah-pill-btn" data-val="2" onclick="selectSunnahPill('duha', 2)">2 ร็อกอะฮ์</button>
-                <button type="button" class="sunnah-pill-btn" data-val="4" onclick="selectSunnahPill('duha', 4)">4 ร็อกอะฮ์</button>
-                <button type="button" class="sunnah-pill-btn" data-val="6" onclick="selectSunnahPill('duha', 6)">6 ร็อกอะฮ์</button>
-                <button type="button" class="sunnah-pill-btn" data-val="8" onclick="selectSunnahPill('duha', 8)">8 ร็อกอะฮ์</button>
-              </div>
-              <input type="hidden" id="selDuhaRakaat" value="0">
-            </div>
-          </div>
-
-          <!-- Category 3: Night Prayers (Tahajjud & Witr) -->
-          <div class="sunnah-category-box">
-            <div class="sunnah-category-title">
-              <span><i class="fa-regular fa-moon" style="color: #475569;"></i> 3. ละหมาดยามค่ำคืน (วิเตร และ ตะฮัจญุด)</span>
-              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">กิยามุลลัยล์</span>
-            </div>
-            
-            <div style="padding: 0.55rem 0.1rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-              <div>
-                <strong style="font-size: 0.86rem; color: #1e293b;">ละหมาดวิเตร</strong>
-                <div style="font-size: 0.74rem; color: var(--text-muted);">ปิดท้ายค่ำคืน (จำนวนคี่)</div>
-              </div>
-              <div class="sunnah-pills-group" id="pillsGroupWitr">
-                <button type="button" class="sunnah-pill-btn" data-val="0" onclick="selectSunnahPill('witr', 0)">0</button>
-                <button type="button" class="sunnah-pill-btn" data-val="1" onclick="selectSunnahPill('witr', 1)">1 ร็อกอะฮ์</button>
-                <button type="button" class="sunnah-pill-btn active" data-val="3" onclick="selectSunnahPill('witr', 3)">3 ร็อกอะฮ์</button>
-                <button type="button" class="sunnah-pill-btn" data-val="5" onclick="selectSunnahPill('witr', 5)">5 ร็อกอะฮ์</button>
-              </div>
-              <input type="hidden" id="selWitrRakaat" value="3">
-            </div>
-
-            <div style="padding: 0.55rem 0.1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-              <div>
-                <strong style="font-size: 0.86rem; color: #1e293b;">ละหมาดตะฮัจญุด</strong>
-                <div style="font-size: 0.74rem; color: var(--text-muted);">ละหมาดยามดึกหลังตื่นนอน</div>
-              </div>
-              <div class="sunnah-pills-group" id="pillsGroupTahajjud">
-                <button type="button" class="sunnah-pill-btn active" data-val="0" onclick="selectSunnahPill('tahajjud', 0)">0</button>
-                <button type="button" class="sunnah-pill-btn" data-val="2" onclick="selectSunnahPill('tahajjud', 2)">2 ร็อกอะฮ์</button>
-                <button type="button" class="sunnah-pill-btn" data-val="4" onclick="selectSunnahPill('tahajjud', 4)">4 ร็อกอะฮ์</button>
-                <button type="button" class="sunnah-pill-btn" data-val="6" onclick="selectSunnahPill('tahajjud', 6)">6 ร็อกอะฮ์</button>
-                <button type="button" class="sunnah-pill-btn" data-val="8" onclick="selectSunnahPill('tahajjud', 8)">8 ร็อกอะฮ์</button>
-              </div>
-              <input type="hidden" id="selTahajjudRakaat" value="0">
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-block btn-lg btn-minimal-save" onclick="saveDailySunnahPrayersLog()">
-            <i class="fa-solid fa-floppy-disk"></i> บันทึกการละหมาดสุนัตประจำวัน
-          </button>
         </div>
+
+        <!-- BENTO CARD 3: QURAN MEMORIZATION (TAHFIDZ 114 SURAHS) -->
+        <div id="subtab-memorize" class="hasanat-bento-card bento-memorize">
+          <div class="bento-card-inner">
+            <div class="bento-card-header">
+              <div class="bento-header-left">
+                <div class="bento-header-icon"><i class="fa-solid fa-list-check"></i></div>
+                <div>
+                  <h3 class="bento-card-title">3. สารบัญการท่องจำอัลกุรอาน (114 ซูเราะห์)</h3>
+                  <p class="bento-card-subtitle">แตะที่ชื่อซูเราะห์เพื่อติ๊กบันทึกซูเราะห์ที่ท่องจำได้แล้ว</p>
+                </div>
+              </div>
+              <span class="bento-pill-tag" id="memorizedSurahsBadge">0 / 114 ซูเราะห์</span>
+            </div>
+
+            <!-- Memorization Progress Bar -->
+            <div class="quran-minimal-kpi-card" style="margin-bottom: 1rem; padding: 0.9rem 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; font-size: 0.8rem; font-weight: 600; color: #334155;">
+                <span>ความก้าวหน้าการท่องจำทั้งหมด</span>
+                <span id="memorizedPercentLabel">0.0% (0 / 114 ซูเราะห์)</span>
+              </div>
+              <div class="minimal-progress-track">
+                <div id="memorizedProgressBarFill" class="minimal-progress-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Category Filter Tabs & Minimal Sort Control -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.85rem;">
+              <div class="surah-category-tabs" style="margin-bottom: 0;">
+                <button type="button" class="surah-cat-tab active" id="tabCatAll" onclick="setSurahCategoryFilter('all')">ทั้งหมด 114</button>
+                <button type="button" class="surah-cat-tab" id="tabCatJuzAmma" onclick="setSurahCategoryFilter('juzAmma')">ยุซอัมมา (78-114)</button>
+                <button type="button" class="surah-cat-tab" id="tabCatPopular" onclick="setSurahCategoryFilter('popular')">ซูเราะห์สำคัญ</button>
+                <button type="button" class="surah-cat-tab" id="tabCatMemorized" onclick="setSurahCategoryFilter('memorized')">ที่ท่องจำแล้ว</button>
+              </div>
+
+              <div style="display: inline-flex; background: #f1f5f9; border-radius: var(--radius-md); padding: 3px; border: 1px solid #e2e8f0; gap: 2px;">
+                <button type="button" class="btn-juz-sort active" id="btnSortJuzAsc" onclick="setSurahSortOrder('juz-asc')" title="จัดเรียงตามลำดับ ยุซ 1 ถึง 30">
+                  <i class="fa-solid fa-arrow-down-1-9"></i> ยุซ 1 ➔ 30
+                </button>
+                <button type="button" class="btn-juz-sort" id="btnSortJuzDesc" onclick="setSurahSortOrder('juz-desc')" title="จัดเรียงย้อนกลับ ยุซ 30 ถึง 1">
+                  <i class="fa-solid fa-arrow-up-9-1"></i> ยุซ 30 ➔ 1
+                </button>
+              </div>
+            </div>
+
+            <!-- Minimal Search & Quick Actions -->
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 220px; position: relative;">
+                <input type="text" id="searchSurahInput" class="form-control" placeholder="ค้นหาชื่อซูเราะห์ หรือ ลำดับที่ (เช่น 1, 36, ยาซีน, อัลกะฮ์ฟิ)..." oninput="filterSurahsList(this.value)" style="padding-left: 2.2rem; height: 38px; border-radius: var(--radius-md); font-size: 0.85rem;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem;"></i>
+              </div>
+              <div style="display: flex; gap: 0.35rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllSurahsInCurrentCategory(true)" style="padding: 0.38rem 0.75rem; font-size: 0.78rem; border-radius: var(--radius-md);" title="เลือกทั้งหมดในหมวดนี้">
+                  <i class="fa-solid fa-check-double"></i> เลือกทั้งหมวด
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllSurahsInCurrentCategory(false)" style="padding: 0.38rem 0.75rem; font-size: 0.78rem; border-radius: var(--radius-md);" title="ล้างการเลือกในหมวดนี้">
+                  <i class="fa-solid fa-rotate-left"></i> ล้างหมวดนี้
+                </button>
+              </div>
+            </div>
+
+            <!-- Surah Checklist Grid -->
+            <div class="surah-list-container" id="surahListContainer">
+              <!-- 114 Surahs generated dynamically via app.js -->
+            </div>
+
+            <div style="margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);" id="surahCurrentCategoryNote">แสดงทั้ง 114 ซูเราะห์</span>
+              <button class="btn btn-primary btn-minimal-save" onclick="saveSurahMemorizationLog()" style="padding: 0.65rem 1.5rem; width: auto;">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลการท่องจำ
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -2819,8 +2873,11 @@
       </div>
       <div class="modal-body" style="padding-top: 0.75rem;">
         <!-- Photo display -->
-        <div style="text-align: center; margin-bottom: 1rem;" id="modalPrayerPhotoWrapper">
-          <img id="modalPrayerPhoto" src="" alt="ภาพถ่ายพยาน" style="width: 100%; max-height: 260px; object-fit: cover; border-radius: var(--radius-md); border: 2px solid var(--border-light); box-shadow: var(--shadow-sm);">
+        <div style="text-align: center; margin-bottom: 1rem; cursor: pointer;" id="modalPrayerPhotoWrapper" onclick="openPhotoViewerModalFromDetail()" title="คลิกเพื่อดูรูปขนาดเต็ม">
+          <img id="modalPrayerPhoto" src="" alt="ภาพถ่ายพยาน" style="width: 100%; max-height: 260px; object-fit: cover; border-radius: var(--radius-md); border: 2px solid var(--border-light); box-shadow: var(--shadow-sm); transition: transform 0.2s ease;">
+          <div style="font-size: 0.76rem; color: var(--primary); margin-top: 0.4rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.35rem;">
+            <i class="fa-solid fa-magnifying-glass-plus"></i> คลิกเพื่อเปิดดูรูปขนาดเต็ม / เปิดใน Drive
+          </div>
         </div>
 
         <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
@@ -3614,10 +3671,52 @@
   </div>
 
 
+  <!-- Modal: Global High-Res Photo Viewer / Lightbox (Zero popup-blocker, Google Drive CDN & Download Support) -->
+  <div class="modal-overlay" id="globalPhotoViewerModal" onclick="if(event.target===this)closePhotoViewerModal()">
+    <div class="modal-dialog photo-viewer-dialog" style="max-width: 620px; width: 92vw; padding: 0; overflow: hidden; border-radius: 16px; background: #0b1120; border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);">
+      <!-- Viewer Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.25rem; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); color: #f8fafc;">
+        <div style="display: flex; align-items: center; gap: 0.6rem; font-weight: 600; font-size: 0.95rem;">
+          <i class="fa-solid fa-image" style="color: #38bdf8;"></i>
+          <span id="globalPhotoViewerTitle">ภาพถ่ายหลักฐานในระบบ</span>
+        </div>
+        <button type="button" class="btn-icon" onclick="closePhotoViewerModal()" style="color: #94a3b8; background: transparent; border: none; font-size: 1.15rem; cursor: pointer; padding: 0.25rem 0.5rem;" title="ปิดหน้าต่าง">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Viewer Body / Image Canvas -->
+      <div style="position: relative; background: #020617; min-height: 220px; max-height: 68vh; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0.65rem;">
+        <div id="globalPhotoViewerLoading" style="display: none; position: absolute; color: #94a3b8; font-size: 0.9rem;">
+          <i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดภาพความละเอียดสูง...
+        </div>
+        <img id="globalPhotoViewerImg" src="" alt="ภาพถ่ายขยาย" style="max-width: 100%; max-height: 65vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+      </div>
+
+      <!-- Caption & Actions Footer -->
+      <div style="padding: 0.85rem 1.25rem; background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.65rem;">
+        <div style="font-size: 0.82rem; color: #cbd5e1; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="globalPhotoViewerCaption">
+          -
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <a id="globalPhotoViewerDriveBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display: none; font-size: 0.78rem; padding: 0.35rem 0.7rem; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #f8fafc;">
+            <i class="fa-brands fa-google-drive" style="color: #34d399;"></i> เปิดใน Drive
+          </a>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="downloadCurrentPhotoViewerImg()" style="font-size: 0.78rem; padding: 0.35rem 0.7rem; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #f8fafc;">
+            <i class="fa-solid fa-download"></i> ดาวน์โหลด
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="closePhotoViewerModal()" style="font-size: 0.78rem; padding: 0.35rem 0.85rem;">
+            ปิด
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=5.4"></script>
+  <script src="app.js?v=5.9"></script>
 </body>
 </html>

@@ -1728,7 +1728,8 @@ function recordPrayer(data) {
       const blob = Utilities.newBlob(bytes, contentType, `${studentIdClean}_${pTimeClean}_${dateStr}_${logId}.jpg`);
       const file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      photoRef = file.getUrl();
+      const fileId = file.getId();
+      photoRef = `https://lh3.googleusercontent.com/d/${fileId}`;
     } catch (err) {
       Logger.log('Drive prayer photo error: ' + err.message);
       photoRef = 'รูปถ่ายยืนยันในเครื่อง (Local Snapshot)';
@@ -2707,7 +2708,7 @@ function updateAppLogo(logoBase64) {
         file = folder.createFile(Utilities.newBlob(bytes, contentType, fileName));
       }
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      logoUrl = file.getUrl();
+      logoUrl = `https://lh3.googleusercontent.com/d/${file.getId()}`;
     } catch (err) {
       Logger.log('Drive logo save error: ' + err.message);
       if (logoBase64.length > 5000) {
@@ -2759,7 +2760,7 @@ function saveStudentPhotoToDrive(studentId, photoBase64) {
       file = folder.createFile(Utilities.newBlob(bytes, contentType, fileName));
     }
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return file.getUrl();
+    return `https://lh3.googleusercontent.com/d/${file.getId()}`;
   } catch (err) {
     Logger.log('saveStudentPhotoToDrive error: ' + err.message);
     return 'Stored locally on device';
