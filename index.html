@@ -1659,8 +1659,8 @@
         <div class="card" style="margin-bottom: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.1rem;">
             <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; flex: 1;">
-              <input type="text" class="form-control" id="searchStudentInput" placeholder="ค้นหาด้วยชื่อ-สกุล, รหัสนักเรียน, เบอร์โทร หรืออีเมล..." style="max-width: 340px;" oninput="filterAdminStudents()">
-              <select class="form-control" id="filterGradeSelect" style="max-width: 190px;" onchange="filterAdminStudents()">
+              <input type="text" class="form-control" id="searchStudentInput" placeholder="ค้นหาด้วยชื่อ-สกุล, รหัสนักเรียน, เบอร์โทร หรืออีเมล..." style="max-width: 320px;" oninput="filterAdminStudents()">
+              <select class="form-control" id="filterGradeSelect" style="max-width: 170px;" onchange="filterAdminStudents()">
                 <option value="">ทุกระดับชั้น (ม.1 - ม.6)</option>
                 <option value="มัธยมศึกษาปีที่ 1">ม.1</option>
                 <option value="มัธยมศึกษาปีที่ 2">ม.2</option>
@@ -1668,6 +1668,13 @@
                 <option value="มัธยมศึกษาปีที่ 4">ม.4</option>
                 <option value="มัธยมศึกษาปีที่ 5">ม.5</option>
                 <option value="มัธยมศึกษาปีที่ 6">ม.6</option>
+              </select>
+              <select class="form-control" id="filterStatusSelect" style="max-width: 195px;" onchange="filterAdminStudents()">
+                <option value="">ทุกสถานะนักเรียน</option>
+                <option value="ปกติ (กำลังศึกษา)">ปกติ (กำลังศึกษา)</option>
+                <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
+                <option value="ลาออก">ลาออก</option>
+                <option value="พักการเรียน">พักการเรียน</option>
               </select>
             </div>
             <button type="button" class="btn btn-primary btn-sm" onclick="openAdminEditStudentModal(null)">
@@ -1682,6 +1689,7 @@
                   <th>รหัสนักเรียน</th>
                   <th>ชื่อ - นามสกุล</th>
                   <th>ระดับชั้น</th>
+                  <th>สถานะนักเรียน</th>
                   <th>เบอร์โทร / อีเมล</th>
                   <th>มาเรียน</th>
                   <th>ละหมาด</th>
@@ -3181,6 +3189,9 @@
 
           <!-- Force Sync & Thai Upgrade Buttons -->
           <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="triggerOrganizeGoogleSheets()" style="color: #047857; border-color: #a7f3d0; background: #ecfdf5; width: 100%; font-weight: 600;">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> จัดระเบียบ Google Sheets ทันที (เรียงแท็บ แยกอาจารย์/แอดมิน ใส่ Dropdown)
+            </button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="syncAllDataFromCloud(true)" style="color: #4338ca; border-color: #c7d2fe; background: #eef2ff; width: 100%; font-weight: 600;">
               <i class="fa-solid fa-cloud-arrow-down"></i> ดึงและซิงค์ฐานข้อมูลสดจาก Google Sheets มายังเว็บแอป
             </button>

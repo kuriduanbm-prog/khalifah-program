@@ -5592,6 +5592,54 @@ function adminRejectRegistration(reqId) {
   });
 }
 
+function formatThaiDateShort(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+    }
+  } catch (e) {}
+  return String(dateStr);
+}
+
+function getStudentStatusBadgeHtml(status, effectiveDate) {
+  const s = String(status || 'ปกติ (กำลังศึกษา)').trim();
+  const dateFormatted = effectiveDate ? formatThaiDateShort(effectiveDate) : '';
+  const dateSuffix = dateFormatted ? `<span class="badge-status-effective-date"><i class="fa-regular fa-calendar-check"></i> ณ ${escapeHtml(dateFormatted)}</span>` : '';
+
+  if (s === 'สำเร็จการศึกษา' || s.includes('สำเร็จ')) {
+    return `
+      <div>
+        <span class="activity-badge badge-status-graduated"><i class="fa-solid fa-graduation-cap"></i> สำเร็จการศึกษา</span>
+        ${dateSuffix}
+      </div>
+    `;
+  }
+  if (s === 'ลาออก' || s.includes('ลาออก')) {
+    return `
+      <div>
+        <span class="activity-badge badge-status-resigned"><i class="fa-solid fa-user-xmark"></i> ลาออก</span>
+        ${dateSuffix}
+      </div>
+    `;
+  }
+  if (s === 'พักการเรียน' || s.includes('พัก')) {
+    return `
+      <div>
+        <span class="activity-badge badge-status-suspended"><i class="fa-solid fa-pause"></i> พักการเรียน</span>
+        ${dateSuffix}
+      </div>
+    `;
+  }
+  return `
+    <div>
+      <span class="activity-badge badge-status-normal"><i class="fa-solid fa-check"></i> ปกติ</span>
+      ${dateSuffix}
+    </div>
+  `;
+}
+
 function renderAdminStudentsTable(filteredList = null) {
   const tbody = document.getElementById('adminStudentsTableBody');
   if (!tbody) return;
@@ -5602,7 +5650,7 @@ function renderAdminStudentsTable(filteredList = null) {
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-muted);">
           ยังไม่มีรายชื่อนักเรียนในระบบ (สามารถกดปุ่ม "+ เพิ่มนักเรียนใหม่" ด้านบนได้เลย)
         </td>
       </tr>
@@ -5627,6 +5675,7 @@ function renderAdminStudentsTable(filteredList = null) {
         <div style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(s.schoolName || '')}</div>
       </td>
       <td><span class="activity-badge badge-upcoming">${escapeHtml(s.grade)}</span></td>
+      <td>${getStudentStatusBadgeHtml(s.status, s.statusEffectiveDate || s.statusDate)}</td>
       <td>
         <div style="font-weight: 600; color: #0f172a;">${escapeHtml(sPhone || '-')}</div>
         <div style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(s.email || '-')}</div>
@@ -5670,6 +5719,7 @@ function filterAdminStudents() {
   const searchClean = cleanIdString(rawSearch).toLowerCase();
   const searchWithoutZero = searchClean.replace(/^0+/, '');
   const grade = document.getElementById('filterGradeSelect')?.value;
+  const statusFilter = document.getElementById('filterStatusSelect')?.value;
 
   const filtered = allStudents.filter(s => {
     const sId = cleanIdString(s.studentId).toLowerCase();
@@ -5682,7 +5732,18 @@ function filterAdminStudents() {
     const matchPhone = sPhone.includes(searchClean) || (searchWithoutZero && sPhoneWithoutZero.includes(searchWithoutZero));
     const matchSearch = !rawSearch || matchName || matchId || matchPhone;
     const matchGrade = !grade || s.grade === grade;
-    return matchSearch && matchGrade;
+
+    let matchStatus = true;
+    if (statusFilter) {
+      const curSt = String(s.status || 'ปกติ (กำลังศึกษา)');
+      if (statusFilter === 'ปกติ (กำลังศึกษา)') {
+        matchStatus = (curSt === 'ปกติ (กำลังศึกษา)' || curSt === 'Active' || curSt === 'ปกติ');
+      } else {
+        matchStatus = curSt.includes(statusFilter);
+      }
+    }
+
+    return matchSearch && matchGrade && matchStatus;
   });
 
   renderAdminStudentsTable(filtered);
@@ -5723,6 +5784,9 @@ function viewStudentDetails(studentId) {
   currentAdminEditingStudentOriginalId = cleanId;
   const cleanPhone = normalizePhone(student.parentPhone);
   const cleanBD = normalizeBirthDate(student.birthDate);
+  const curStatus = student.status || 'ปกติ (กำลังศึกษา)';
+  const curStatusDate = student.statusEffectiveDate || student.statusDate || '';
+  const curStatusNote = student.statusNote || '';
 
   const title = document.getElementById('studentDetailTitle');
   const content = document.getElementById('studentDetailContent');
@@ -5809,12 +5873,21 @@ function viewStudentDetails(studentId) {
           <input type="text" class="form-control" id="adminEditStdBirthDate" value="${escapeHtml(cleanBD)}" style="height: 36px; font-size: 0.85rem;">
         </div>
         <div>
-          <label class="form-label" style="font-size: 0.76rem;">สถานะบัญชี</label>
-          <select class="form-control" id="adminEditStdStatus" style="height: 36px; font-size: 0.85rem;">
-            <option value="Active" ${student.status === 'Active' ? 'selected' : ''}>Active (ปกติ)</option>
-            <option value="PendingAdmin" ${student.status === 'PendingAdmin' ? 'selected' : ''}>PendingAdmin (รอยืนยัน)</option>
-            <option value="Suspended" ${student.status === 'Suspended' ? 'selected' : ''}>Suspended (ระงับชั่วคราว)</option>
+          <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0f172a;">สถานะทางการศึกษา</label>
+          <select class="form-control" id="adminEditStdStatus" style="height: 36px; font-size: 0.85rem; font-weight: 600;">
+            <option value="ปกติ (กำลังศึกษา)" ${(curStatus === 'ปกติ (กำลังศึกษา)' || curStatus === 'Active' || curStatus === 'ปกติ') ? 'selected' : ''}>ปกติ (กำลังศึกษา)</option>
+            <option value="สำเร็จการศึกษา" ${(curStatus === 'สำเร็จการศึกษา' || curStatus === 'Graduated') ? 'selected' : ''}>สำเร็จการศึกษา</option>
+            <option value="ลาออก" ${(curStatus === 'ลาออก' || curStatus === 'Resigned') ? 'selected' : ''}>ลาออก</option>
+            <option value="พักการเรียน" ${(curStatus === 'พักการเรียน' || curStatus === 'Suspended') ? 'selected' : ''}>พักการเรียน</option>
           </select>
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0f172a;">มีผล ณ วันที่ (วันเดือนปี)</label>
+          <input type="date" class="form-control" id="adminEditStdStatusDate" value="${escapeHtml(curStatusDate)}" style="height: 36px; font-size: 0.85rem;">
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label class="form-label" style="font-size: 0.76rem; font-weight: 700; color: #0f172a;">เหตุผล / หมายเหตุสถานะ</label>
+          <input type="text" class="form-control" id="adminEditStdStatusNote" value="${escapeHtml(curStatusNote)}" placeholder="เช่น สำเร็จการศึกษาประจำปีการศึกษา 2568, ลาออกเนื่องจากย้ายสถานศึกษา" style="height: 36px; font-size: 0.85rem;">
         </div>
       </div>
     </div>
@@ -5921,7 +5994,11 @@ function saveAdminStudentDeepEdit() {
   const newPhone = normalizePhone(document.getElementById('adminEditStdPhone')?.value || '');
   const newEmail = (document.getElementById('adminEditStdEmail')?.value || '').trim();
   const newBD = normalizeBirthDate(document.getElementById('adminEditStdBirthDate')?.value || '');
-  const newStatus = document.getElementById('adminEditStdStatus')?.value || 'Active';
+  const oldStatus = student.status || 'ปกติ (กำลังศึกษา)';
+  const newStatus = document.getElementById('adminEditStdStatus')?.value || 'ปกติ (กำลังศึกษา)';
+  const newStatusDate = document.getElementById('adminEditStdStatusDate')?.value || '';
+  const newStatusNote = (document.getElementById('adminEditStdStatusNote')?.value || '').trim();
+  const statusChanged = (oldStatus !== newStatus) || (student.statusEffectiveDate !== newStatusDate) || (student.statusNote !== newStatusNote);
 
   student.studentId = newId;
   student.fullName = newName || student.fullName;
@@ -5931,7 +6008,10 @@ function saveAdminStudentDeepEdit() {
   student.email = newEmail;
   student.birthDate = newBD;
   student.status = newStatus;
-  if (newStatus === 'Active') student.approvalStatus = 'Approved';
+  student.statusEffectiveDate = newStatusDate;
+  student.statusDate = newStatusDate;
+  student.statusNote = newStatusNote;
+  if (newStatus === 'ปกติ (กำลังศึกษา)' || newStatus === 'Active') student.approvalStatus = 'Approved';
 
   student.attendance = {
     present: Math.max(0, parseInt(document.getElementById('adminEditAttPresent')?.value || 0, 10)),
@@ -5985,6 +6065,18 @@ function saveAdminStudentDeepEdit() {
   showToast(`บันทึกการแก้ไขข้อมูลของ ${student.fullName} (${newId}) เรียบร้อยแล้ว`, 'success');
 
   syncRecordToGoogleSheet('updateStudentFull', student);
+  if (statusChanged) {
+    syncRecordToGoogleSheet('updateStudentStatus', {
+      studentId: newId,
+      oldStatus: oldStatus,
+      newStatus: newStatus,
+      status: newStatus,
+      statusEffectiveDate: newStatusDate,
+      statusDate: newStatusDate,
+      statusNote: newStatusNote,
+      adminUser: (currentAdmin && (currentAdmin.fullName || currentAdmin.username)) || 'Admin'
+    });
+  }
 }
 
 function adminDeleteStudentPrayerRecord(studentId, logId) {
@@ -6035,23 +6127,38 @@ function executeBatchPromotion() {
     return;
   }
 
+  const isGraduating = (toGrade === 'สำเร็จการศึกษา' || String(toGrade).includes('สำเร็จ'));
+  const todayStr = new Date().toISOString().substring(0, 10);
   let count = 0;
+
   allStudents.forEach(s => {
     if (s.grade === fromGrade) {
       s.grade = toGrade;
+      if (isGraduating) {
+        s.status = 'สำเร็จการศึกษา';
+        s.statusEffectiveDate = todayStr;
+        s.statusDate = todayStr;
+        s.statusNote = 'สำเร็จการศึกษาจากการเลื่อนระดับชั้น';
+      }
       count++;
     }
   });
 
   if (currentStudent && currentStudent.grade === fromGrade) {
     currentStudent.grade = toGrade;
+    if (isGraduating) {
+      currentStudent.status = 'สำเร็จการศึกษา';
+      currentStudent.statusEffectiveDate = todayStr;
+      currentStudent.statusDate = todayStr;
+      currentStudent.statusNote = 'สำเร็จการศึกษาจากการเลื่อนระดับชั้น';
+    }
     localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
     renderCurrentStudentProfile();
   }
 
   localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
   renderAdminStudentsTable();
-  showToast(`เลื่อนชั้นปีนักเรียนจาก ${fromGrade} ➔ ${toGrade} สำเร็จจำนวน ${count} คน`, 'success');
+  showToast(`เลื่อนชั้นปีนักเรียนจาก ${fromGrade} ➔ ${toGrade} สำเร็จจำนวน ${count} คน` + (isGraduating ? ' พร้อมบันทึกสถานะ "สำเร็จการศึกษา"' : ''), 'success');
 
   syncRecordToGoogleSheet('batchPromote', { fromGrade, toGrade });
 }
@@ -7389,6 +7496,31 @@ async function forceSyncAllToGoogleSheet() {
     showToast(`ซิงค์สำเร็จ! ส่งข้อมูลนักเรียน ${allStudents.length} คน, อาจารย์ ${subAdmins.length} ท่าน, กิจกรรม ${activities.length} รายการ, ละหมาด ${historyList.length} รายการ, ผลบุญ ${hasanatArray.length} รายการ ลง Google Sheet แล้ว`, 'success');
   } catch (err) {
     showToast('เกิดข้อผิดพลาดในการซิงค์: ' + err.message, 'error');
+  }
+}
+
+async function triggerOrganizeGoogleSheets() {
+  let url = gasApiUrl || document.getElementById('gasApiUrlInput')?.value.trim() || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (!url || url.includes('docs.google.com/spreadsheets')) {
+    url = DEFAULT_GAS_API_URL;
+  }
+  if (!url) {
+    showToast('กรุณาระบุ Web App URL ในหน้าต่างตั้งค่าก่อนดำเนินการ', 'warning');
+    openModal('settingsModal');
+    return;
+  }
+  showToast('กำลังจัดระเบียบ Google Sheets (เรียงแท็บ แยกอาจารย์/แอดมิน ใส่ Dropdown)...', 'info');
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'organizeGoogleSheets' })
+    });
+    playSuccessSound();
+    showToast('จัดระเบียบ Google Sheets เรียบร้อยแล้ว! แท็บและข้อมูลถูกแยกหมวดหมู่อย่างสวยงาม', 'success');
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาดในการจัดระเบียบชีต: ' + err.message, 'error');
   }
 }
 
