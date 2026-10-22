@@ -4591,6 +4591,7 @@ body.auth-locked #adminAuthModal.open,
 }
 
 .prayer-autodetect-banner {
+  display: none !important;
   background: #f8fafc;
   border: 1px solid #cbd5e1;
   border-radius: var(--radius-md);
