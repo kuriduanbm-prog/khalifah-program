@@ -1899,6 +1899,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderDashboardQuranStars();
   initHasanatView();
   renderPrayerHistory();
+  initCalendar();
   initExportDateDefaults();
   enforceMandatoryLogin();
 
@@ -2106,6 +2107,7 @@ function switchView(viewName) {
   if (viewName === 'dashboard') {
     renderDashboardCharts();
     renderDashboardQuranStars();
+    if (typeof renderCalendar === 'function') renderCalendar('dash');
   } else if (viewName === 'hasanat') {
     initHasanatView();
   } else if (viewName === 'prayer') {
@@ -2141,6 +2143,7 @@ function switchView(viewName) {
     if (typeof fetchActivitiesAndLogsFromCloud === 'function') fetchActivitiesAndLogsFromCloud(false);
     if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(false);
     if (typeof startAdminActivityLivePolling === 'function') startAdminActivityLivePolling();
+    if (typeof renderCalendar === 'function') renderCalendar('admin');
   }
 
   if (viewName !== 'admin') {
@@ -5483,6 +5486,10 @@ function updateAdminUIVisibility(isAuthenticated) {
   if (btnTabLogo) btnTabLogo.style.display = isSuper ? 'inline-block' : 'none';
   if (btnBackAdmin) btnBackAdmin.style.display = isSuper ? 'inline-flex' : 'none';
 
+  const btnDashAdd = document.getElementById('btnDashCalAddEvent');
+  if (btnDashAdd) btnDashAdd.style.display = isTeacherOrAdmin ? 'inline-flex' : 'none';
+  if (typeof renderCalendar === 'function') renderCalendar('all');
+
   // Update top-right user badge for Admin / Teacher / Executive
   const headerName = document.getElementById('headerUserName');
   const headerSub = document.getElementById('headerUserSub');
@@ -5714,6 +5721,8 @@ function switchAdminTab(tabName, element) {
   } else if (tabName === 'prayers-monitor') {
     if (typeof initAdminPrayerDashboard === 'function') initAdminPrayerDashboard();
     if (typeof fetchPrayersFromCloud === 'function') fetchPrayersFromCloud();
+  } else if (tabName === 'calendar-admin') {
+    if (typeof renderCalendar === 'function') renderCalendar('admin');
   }
 }
 
@@ -7241,26 +7250,34 @@ function initTeacherPortalView() {
 
   renderTeacherAttendanceTable();
   renderTeacherGradesPortalTable();
+  if (typeof renderCalendar === 'function') renderCalendar('teacher');
 }
 
 function switchTeacherPortalTab(tabName, btnEl) {
-  document.querySelectorAll('#view-teacher .admin-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#view-teacher .admin-tab-btn, #view-teacher .hasanat-subnav-btn').forEach(b => b.classList.remove('active'));
   if (btnEl) {
     btnEl.classList.add('active');
   } else {
-    const fallbackBtn = document.getElementById(tabName === 'attendance' ? 'btnTeacherTabAtt' : 'btnTeacherTabGrade');
+    let fallbackId = 'btnTeacherTabAtt';
+    if (tabName === 'grades') fallbackId = 'btnTeacherTabGrade';
+    else if (tabName === 'calendar') fallbackId = 'btnTeacherTabCal';
+    const fallbackBtn = document.getElementById(fallbackId);
     if (fallbackBtn) fallbackBtn.classList.add('active');
   }
 
   const tabAtt = document.getElementById('teacher-tab-attendance');
   const tabGrd = document.getElementById('teacher-tab-grades');
+  const tabCal = document.getElementById('teacher-tab-calendar');
   if (tabAtt) tabAtt.style.display = (tabName === 'attendance') ? 'block' : 'none';
   if (tabGrd) tabGrd.style.display = (tabName === 'grades') ? 'block' : 'none';
+  if (tabCal) tabCal.style.display = (tabName === 'calendar') ? 'block' : 'none';
 
   if (tabName === 'attendance') {
     renderTeacherAttendanceTable();
-  } else {
+  } else if (tabName === 'grades') {
     renderTeacherGradesPortalTable();
+  } else if (tabName === 'calendar') {
+    if (typeof renderCalendar === 'function') renderCalendar('teacher');
   }
 }
 
@@ -9119,7 +9136,7 @@ async function syncAllDataFromCloud(showToastMsg = false) {
 
     // หาก endpoint รวมยังไม่พร้อม ให้ดึงแบบขนานจากทุก endpoint เดิม
     if (!db) {
-      const [stdRes, admRes, pendRes, actRes, logsRes, pryRes, attRes, hasRes, grdRes, setRes] = await Promise.all([
+      const [stdRes, admRes, pendRes, actRes, logsRes, pryRes, attRes, hasRes, grdRes, setRes, calRes] = await Promise.all([
         fetch(`${url}${sep}action=getAllStudents&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
         fetch(`${url}${sep}action=getSubAdmins&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
         fetch(`${url}${sep}action=getPendingRegistrations&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
@@ -9129,7 +9146,8 @@ async function syncAllDataFromCloud(showToastMsg = false) {
         fetch(`${url}${sep}action=getAttendance&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
         fetch(`${url}${sep}action=getHasanat&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
         fetch(`${url}${sep}action=getSubjectGrades&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
-        fetch(`${url}${sep}action=getSettings&_t=${Date.now()}`).then(r => r.json()).catch(() => null)
+        fetch(`${url}${sep}action=getSettings&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getCalendarEvents&_t=${Date.now()}`).then(r => r.json()).catch(() => null)
       ]);
       db = {
         students: stdRes && stdRes.data ? stdRes.data : [],
@@ -9141,6 +9159,7 @@ async function syncAllDataFromCloud(showToastMsg = false) {
         attendance: attRes && attRes.data ? attRes.data : [],
         hasanat: hasRes && hasRes.data ? hasRes.data : [],
         subjectGrades: grdRes && grdRes.data ? grdRes.data : [],
+        calendarEvents: calRes && calRes.data ? calRes.data : [],
         settings: setRes && setRes.data ? setRes.data : {}
       };
     }
@@ -9258,9 +9277,16 @@ async function syncAllDataFromCloud(showToastMsg = false) {
       }
     }
 
+    // 8. ซิงค์ปฏิทินกิจกรรม (Calendar Events)
+    if (Array.isArray(db.calendarEvents) && db.calendarEvents.length > 0) {
+      calendarEvents = db.calendarEvents;
+      localStorage.setItem('khalifah_calendar_events', JSON.stringify(calendarEvents));
+    }
+
     // อัปเดตการแสดงผลหน้าจอทั้งหมด
     renderCurrentStudentProfile();
     renderDashboardCharts();
+    if (typeof renderCalendar === 'function') renderCalendar('all');
     renderActivitiesList();
     renderTodayPrayerTable();
     renderPrayerHistory();

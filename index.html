@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=5.4">
+  <link rel="stylesheet" href="style.css?v=6.0">
 </head>
 <body class="auth-locked">
 
@@ -265,6 +265,85 @@
       </div>
 
       
+      <!-- Minimalist School Calendar Section (Student & School View) -->
+      <div class="calendar-bento-container" id="dashCalendarSection" style="margin-bottom: 1.5rem;">
+        <div class="card cal-card-wrapper">
+          <div class="card-header cal-card-header">
+            <div class="cal-header-title-group">
+              <div class="card-title">
+                <i class="fa-solid fa-calendar-days" style="color: var(--primary);"></i> ปฏิทินกิจกรรมโรงเรียน
+              </div>
+              <div class="card-subtitle">
+                ติดตามกำหนดการกิจกรรม วันสอบ ละหมาด และวันสำคัญของโรงเรียน
+              </div>
+            </div>
+            
+            <div class="cal-controls-toolbar">
+              <div class="cal-select-group">
+                <select id="calMonthSelect-dash" class="cal-select cal-select-month" onchange="onCalendarSelectChange('dash')">
+                  <!-- Injected via JS -->
+                </select>
+                <select id="calYearSelect-dash" class="cal-select cal-select-year" onchange="onCalendarSelectChange('dash')">
+                  <!-- Injected via JS -->
+                </select>
+              </div>
+              
+              <div class="cal-btn-group">
+                <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(-1, 'dash')" title="เดือนก่อนหน้า">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button type="button" class="btn-cal-today" onclick="resetCalendarToToday('dash')">
+                  <i class="fa-solid fa-clock-rotate-left"></i> วันนี้
+                </button>
+                <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(1, 'dash')" title="เดือนถัดไป">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+
+              <!-- Only visible to Admin/Teacher/Executive -->
+              <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnDashCalAddEvent" onclick="openCalendarEventModal()" style="display: none;">
+                <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรม
+              </button>
+            </div>
+          </div>
+
+          <div class="cal-card-body">
+            <div class="cal-grid-layout">
+              <!-- Left: Month Matrix -->
+              <div class="cal-matrix-col">
+                <div class="cal-weekdays-row">
+                  <div class="cal-weekday cal-sun">อา.</div>
+                  <div class="cal-weekday">จ.</div>
+                  <div class="cal-weekday">อ.</div>
+                  <div class="cal-weekday">พ.</div>
+                  <div class="cal-weekday">พฤ.</div>
+                  <div class="cal-weekday cal-fri">ศ.</div>
+                  <div class="cal-weekday">ส.</div>
+                </div>
+                <div class="cal-days-grid" id="calDaysGrid-dash">
+                  <!-- Injected via app.js -->
+                </div>
+              </div>
+
+              <!-- Right: Selected Date & Agenda Column -->
+              <div class="cal-agenda-col">
+                <div class="cal-agenda-header">
+                  <div class="cal-agenda-date" id="calAgendaDate-dash">
+                    <span class="cal-agenda-day-name">-</span>
+                    <span class="cal-agenda-full-date">-</span>
+                  </div>
+                  <span class="cal-agenda-count-badge" id="calAgendaBadge-dash">0 กิจกรรม</span>
+                </div>
+                
+                <div class="cal-agenda-items-container" id="calAgendaList-dash">
+                  <!-- Injected via app.js -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Dashboard Filter by Grade / Year Level -->
       <div class="dash-filter-container">
         <div class="dash-filter-label">
@@ -1459,6 +1538,10 @@
           <div class="tab-top-row"><i class="fa-solid fa-graduation-cap"></i> <span>2. กรอกเกรดรายวิชา (1 – 4)</span></div>
           <span class="tab-badge-pill" id="teacherGradesSubjBadge">เชื่อมกราฟทักษะ</span>
         </button>
+        <button class="hasanat-subnav-btn" id="btnTeacherTabCal" onclick="switchTeacherTab('calendar')">
+          <div class="tab-top-row"><i class="fa-solid fa-calendar-days"></i> <span>3. ปฏิทินกิจกรรมโรงเรียน</span></div>
+          <span class="tab-badge-pill" id="teacherCalBadge">จัดการกิจกรรม</span>
+        </button>
       </div>
 
       <!-- Teacher Subtab 1: Daily Student Attendance Check -->
@@ -1583,8 +1666,87 @@
               </thead>
               <tbody id="teacherPortalGradesTableBody">
                 <!-- Injected via app.js -->
-              </tbody>
-            </table>
+                          </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teacher Subtab 3: School Calendar Management -->
+      <div id="teacher-tab-calendar" class="teacher-subcontent" style="display: none;">
+        <div class="calendar-bento-container" id="teacherCalendarSection" style="margin-bottom: 1.5rem;">
+          <div class="card cal-card-wrapper">
+            <div class="card-header cal-card-header">
+              <div class="cal-header-title-group">
+                <div class="card-title">
+                  <i class="fa-solid fa-calendar-days" style="color: var(--primary);"></i> ปฏิทินกิจกรรมและกำหนดการโรงเรียน
+                </div>
+                <div class="card-subtitle">
+                  อาจารย์และผู้บริหารสามารถเพิ่ม แก้ไข กำหนดการ และเลือกว่าจะให้แสดงกับ "นักเรียน", "อาจารย์" หรือ "ทุกคน"
+                </div>
+              </div>
+              
+              <div class="cal-controls-toolbar">
+                <div class="cal-select-group">
+                  <select id="calMonthSelect-teacher" class="cal-select cal-select-month" onchange="onCalendarSelectChange('teacher')">
+                    <!-- Injected via JS -->
+                  </select>
+                  <select id="calYearSelect-teacher" class="cal-select cal-select-year" onchange="onCalendarSelectChange('teacher')">
+                    <!-- Injected via JS -->
+                  </select>
+                </div>
+                
+                <div class="cal-btn-group">
+                  <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(-1, 'teacher')" title="เดือนก่อนหน้า">
+                    <i class="fa-solid fa-chevron-left"></i>
+                  </button>
+                  <button type="button" class="btn-cal-today" onclick="resetCalendarToToday('teacher')">
+                    <i class="fa-solid fa-clock-rotate-left"></i> วันนี้
+                  </button>
+                  <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(1, 'teacher')" title="เดือนถัดไป">
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnTeacherCalAddEvent" onclick="openCalendarEventModal()">
+                  <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมใหม่
+                </button>
+              </div>
+            </div>
+
+            <div class="cal-card-body">
+              <div class="cal-grid-layout">
+                <!-- Left: Month Matrix -->
+                <div class="cal-matrix-col">
+                  <div class="cal-weekdays-row">
+                    <div class="cal-weekday cal-sun">อา.</div>
+                    <div class="cal-weekday">จ.</div>
+                    <div class="cal-weekday">อ.</div>
+                    <div class="cal-weekday">พ.</div>
+                    <div class="cal-weekday">พฤ.</div>
+                    <div class="cal-weekday cal-fri">ศ.</div>
+                    <div class="cal-weekday">ส.</div>
+                  </div>
+                  <div class="cal-days-grid" id="calDaysGrid-teacher">
+                    <!-- Injected via app.js -->
+                  </div>
+                </div>
+
+                <!-- Right: Selected Date & Agenda Column -->
+                <div class="cal-agenda-col">
+                  <div class="cal-agenda-header">
+                    <div class="cal-agenda-date" id="calAgendaDate-teacher">
+                      <span class="cal-agenda-day-name">-</span>
+                      <span class="cal-agenda-full-date">-</span>
+                    </div>
+                    <span class="cal-agenda-count-badge" id="calAgendaBadge-teacher">0 กิจกรรม</span>
+                  </div>
+                  
+                  <div class="cal-agenda-items-container" id="calAgendaList-teacher">
+                    <!-- Injected via app.js -->
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1690,6 +1852,9 @@
         </button>
         <button class="admin-tab-btn" onclick="switchAdminTab('activities-admin', this)" id="btnTabActivitiesAdmin">
           <i class="fa-solid fa-qrcode"></i> กิจกรรม & สแกน QR เรียลไทม์
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('calendar-admin', this)" id="btnTabCalendarAdmin">
+          <i class="fa-solid fa-calendar-days"></i> ปฏิทินกิจกรรมโรงเรียน
         </button>
         <button class="admin-tab-btn" onclick="switchAdminTab('promote', this)">
           <i class="fa-solid fa-graduation-cap"></i> เลื่อนชั้นยกห้อง
@@ -2542,6 +2707,85 @@
             <button class="btn btn-secondary" onclick="resetToDefaultLogo()">
               <i class="fa-solid fa-rotate-left"></i> คืนค่าโลโก้เริ่มต้น
             </button>
+          </div>
+        </div>
+      </div>
+          <!-- Admin Tab: Calendar Management -->
+      <div id="admin-tab-calendar-admin" class="admin-content-tab" style="display: none;">
+        <div class="calendar-bento-container" id="adminCalendarSection" style="margin-bottom: 1.5rem;">
+          <div class="card cal-card-wrapper">
+            <div class="card-header cal-card-header">
+              <div class="cal-header-title-group">
+                <div class="card-title">
+                  <i class="fa-solid fa-calendar-days" style="color: var(--primary);"></i> ปฏิทินกิจกรรมโรงเรียน (Super Admin)
+                </div>
+                <div class="card-subtitle">
+                  แอดมินสามารถเพิ่ม แก้ไข กำหนดการ และเลือกว่าจะให้แสดงกับ "นักเรียน", "อาจารย์" หรือ "ทุกคน"
+                </div>
+              </div>
+              
+              <div class="cal-controls-toolbar">
+                <div class="cal-select-group">
+                  <select id="calMonthSelect-admin" class="cal-select cal-select-month" onchange="onCalendarSelectChange('admin')">
+                    <!-- Injected via JS -->
+                  </select>
+                  <select id="calYearSelect-admin" class="cal-select cal-select-year" onchange="onCalendarSelectChange('admin')">
+                    <!-- Injected via JS -->
+                  </select>
+                </div>
+                
+                <div class="cal-btn-group">
+                  <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(-1, 'admin')" title="เดือนก่อนหน้า">
+                    <i class="fa-solid fa-chevron-left"></i>
+                  </button>
+                  <button type="button" class="btn-cal-today" onclick="resetCalendarToToday('admin')">
+                    <i class="fa-solid fa-clock-rotate-left"></i> วันนี้
+                  </button>
+                  <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(1, 'admin')" title="เดือนถัดไป">
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnAdminCalAddEvent" onclick="openCalendarEventModal()">
+                  <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมใหม่
+                </button>
+              </div>
+            </div>
+
+            <div class="cal-card-body">
+              <div class="cal-grid-layout">
+                <!-- Left: Month Matrix -->
+                <div class="cal-matrix-col">
+                  <div class="cal-weekdays-row">
+                    <div class="cal-weekday cal-sun">อา.</div>
+                    <div class="cal-weekday">จ.</div>
+                    <div class="cal-weekday">อ.</div>
+                    <div class="cal-weekday">พ.</div>
+                    <div class="cal-weekday">พฤ.</div>
+                    <div class="cal-weekday cal-fri">ศ.</div>
+                    <div class="cal-weekday">ส.</div>
+                  </div>
+                  <div class="cal-days-grid" id="calDaysGrid-admin">
+                    <!-- Injected via app.js -->
+                  </div>
+                </div>
+
+                <!-- Right: Selected Date & Agenda Column -->
+                <div class="cal-agenda-col">
+                  <div class="cal-agenda-header">
+                    <div class="cal-agenda-date" id="calAgendaDate-admin">
+                      <span class="cal-agenda-day-name">-</span>
+                      <span class="cal-agenda-full-date">-</span>
+                    </div>
+                    <span class="cal-agenda-count-badge" id="calAgendaBadge-admin">0 กิจกรรม</span>
+                  </div>
+                  
+                  <div class="cal-agenda-items-container" id="calAgendaList-admin">
+                    <!-- Injected via app.js -->
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -3713,10 +3957,171 @@
     </div>
   </div>
 
+    <!-- Modal: Calendar Event Detail Viewer (Accessible to Students & Staff) -->
+  <div class="modal-overlay" id="calendarEventDetailModal" onclick="if(event.target===this)closeModal('calendarEventDetailModal')">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header" style="align-items: flex-start;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.4rem;">
+            <span class="cal-category-pill" id="calDetailCatPill">กิจกรรมทั่วไป</span>
+            <span class="cal-target-pill" id="calDetailTargetPill">ทุกคน</span>
+          </div>
+          <h3 id="calDetailTitle" style="font-size: 1.18rem; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.35;">
+            -
+          </h3>
+        </div>
+        <button type="button" class="btn-icon" onclick="closeModal('calendarEventDetailModal')" title="ปิดหน้าต่าง">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <div class="cal-detail-info-grid">
+          <div class="cal-detail-info-item">
+            <div class="cal-detail-icon"><i class="fa-regular fa-calendar"></i></div>
+            <div class="cal-detail-text">
+              <span class="cal-detail-label">วันที่จัดกิจกรรม</span>
+              <span class="cal-detail-val" id="calDetailDates">-</span>
+            </div>
+          </div>
+          <div class="cal-detail-info-item">
+            <div class="cal-detail-icon"><i class="fa-regular fa-clock"></i></div>
+            <div class="cal-detail-text">
+              <span class="cal-detail-label">เวลา</span>
+              <span class="cal-detail-val" id="calDetailTime">-</span>
+            </div>
+          </div>
+          <div class="cal-detail-info-item" style="grid-column: 1 / -1;">
+            <div class="cal-detail-icon"><i class="fa-solid fa-location-dot"></i></div>
+            <div class="cal-detail-text">
+              <span class="cal-detail-label">สถานที่</span>
+              <span class="cal-detail-val" id="calDetailLocation">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cal-detail-desc-card">
+          <div class="cal-detail-desc-title"><i class="fa-solid fa-circle-info"></i> รายละเอียดกิจกรรม</div>
+          <div class="cal-detail-desc-content" id="calDetailDescription">-</div>
+        </div>
+
+        <div class="cal-detail-footer-meta" id="calDetailMeta">
+          บันทึกโดย: - • อัปเดตล่าสุด: -
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+        <div id="calDetailAdminActions" style="display: flex; gap: 0.5rem;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCalDetailEdit" onclick="editEventFromDetail()">
+            <i class="fa-solid fa-pen-to-square"></i> แก้ไข
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" id="btnCalDetailDelete" onclick="deleteEventFromDetail()" style="color: #dc2626; border-color: #fecaca; background: #fef2f2;">
+            <i class="fa-solid fa-trash-can"></i> ลบกิจกรรม
+          </button>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('calendarEventDetailModal')">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Calendar Event Add / Edit Form (Admin, Executive, Teacher Only) -->
+  <div class="modal-overlay" id="calendarEventModal" onclick="if(event.target===this)closeModal('calendarEventModal')">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-dark);">
+          <i class="fa-solid fa-calendar-plus" style="color: var(--primary);"></i> <span id="calModalTitle">เพิ่มกิจกรรมใหม่ในปฏิทิน</span>
+        </div>
+        <button type="button" class="btn-icon" onclick="closeModal('calendarEventModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <input type="hidden" id="calFormEventId">
+
+        <div class="form-group" style="margin-bottom: 0.9rem;">
+          <label class="form-label" style="font-weight: 600;">ชื่อกิจกรรม / กำหนดการ <span style="color: var(--danger);">*</span></label>
+          <input type="text" id="calFormTitle" class="form-control" placeholder="เช่น การสอบกลางภาคเรียนที่ 1, ละหมาดวันศุกร์ (ญุมอะฮ์)" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.9rem;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" style="font-weight: 600;">หมวดหมู่กิจกรรม</label>
+            <select id="calFormCategory" class="form-control">
+              <option value="กิจกรรมทั่วไป">กิจกรรมทั่วไป</option>
+              <option value="การเรียนการสอน">การเรียนการสอน</option>
+              <option value="การสอบ / ประเมินผล">การสอบ / ประเมินผล</option>
+              <option value="ละหมาด / ศาสนกิจ">ละหมาด / ศาสนกิจ</option>
+              <option value="วันหยุด / ปิดภาคเรียน">วันหยุด / ปิดภาคเรียน</option>
+              <option value="ประชุม / สัมมนา">ประชุม / สัมมนา</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" style="font-weight: 600; color: #0f172a;">
+              กลุ่มเป้าหมาย (สิทธิ์การเห็น) <span style="color: var(--danger);">*</span>
+            </label>
+            <select id="calFormTarget" class="form-control" style="font-weight: 600; background: #f8fafc;">
+              <option value="all">🌐 ทุกคน (นักเรียนและอาจารย์)</option>
+              <option value="students">🎓 เฉพาะนักเรียน</option>
+              <option value="teachers">🔒 เฉพาะอาจารย์และผู้บริหาร</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.9rem;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label"><i class="fa-regular fa-calendar-plus"></i> วันที่เริ่มต้น <span style="color: var(--danger);">*</span></label>
+            <input type="date" id="calFormStartDate" class="form-control" required>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label"><i class="fa-regular fa-calendar-check"></i> วันที่สิ้นสุด</label>
+            <input type="date" id="calFormEndDate" class="form-control" placeholder="หากวันเดียวไม่ต้องกรอก">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.45rem;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label"><i class="fa-regular fa-clock"></i> เวลาเริ่มต้น</label>
+            <input type="time" id="calFormStartTime" class="form-control">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label"><i class="fa-regular fa-clock"></i> เวลาสิ้นสุด</label>
+            <input type="time" id="calFormEndTime" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-check" style="margin-bottom: 0.9rem;">
+          <label style="display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.82rem; cursor: pointer; color: var(--text-muted);">
+            <input type="checkbox" id="calFormAllDay" onchange="toggleCalAllDay(this.checked)">
+            <span>กิจกรรมตลอดทั้งวัน (ไม่ระบุเวลาเจาะจง)</span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.9rem;">
+          <label class="form-label"><i class="fa-solid fa-location-dot"></i> สถานที่จัดกิจกรรม</label>
+          <input type="text" id="calFormLocation" class="form-control" placeholder="เช่น หอประชุมใหญ่ KHALIFAH, อาคารเรียน 1">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label"><i class="fa-solid fa-align-left"></i> รายละเอียดกิจกรรม / สิ่งที่ต้องเตรียม</label>
+          <textarea id="calFormDescription" class="form-control" rows="3" placeholder="ระบุรายละเอียดเพิ่มเติม กำหนดการ หรือสิ่งที่ต้องเตรียม..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: flex-end; gap: 0.5rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('calendarEventModal')">ยกเลิก</button>
+        <button type="button" class="btn btn-primary" id="btnSaveCalEvent" onclick="saveCalendarEventForm()">
+          <i class="fa-solid fa-floppy-disk"></i> บันทึกลง Google Sheets
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=5.9"></script>
+  <script src="app.js?v=6.0"></script>
 </body>
 </html>

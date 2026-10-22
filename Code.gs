@@ -49,7 +49,8 @@ const SHEETS = {
   GRADES: 'ผลการเรียนรายวิชา',
   HASANAT: 'บันทึกผลบุญ',
   APPROVALS: 'รายการรออนุมัติสมัคร',
-  SETTINGS: 'การตั้งค่า'
+  SETTINGS: 'การตั้งค่า',
+  CALENDAR: 'ปฏิทินกิจกรรม'
 };
 
 // ลำดับแท็บมาตรฐานใน Google Sheets เพื่อความสะอาด เป็นหมวดหมู่ และค้นหาง่าย
@@ -65,7 +66,8 @@ const SHEET_ORDER = [
   SHEETS.GRADES,         // 9. ผลการเรียนรายวิชา
   SHEETS.HASANAT,        // 10. บันทึกผลบุญ
   SHEETS.APPROVALS,      // 11. รายการรออนุมัติสมัคร
-  SHEETS.SETTINGS        // 12. การตั้งค่า
+  SHEETS.SETTINGS,       // 12. การตั้งค่า
+  SHEETS.CALENDAR        // 13. ปฏิทินกิจกรรม
 ];
 
 // ชื่อแผ่นงานเดิมภาษาอังกฤษ / ชื่อเดิม (สำหรับแปลงของเดิมให้เป็นโครงสร้างใหม่เป็นระเบียบอัตโนมัติ)
@@ -81,7 +83,8 @@ const LEGACY_SHEETS = {
   SETTINGS: ['Settings', 'settings', 'Setting'],
   HASANAT: ['HasanatLogs', 'hasanatlogs', 'Hasanat_Logs', 'Hasanat', 'ผลบุญ'],
   GRADES: ['Grades', 'grades', 'SubjectGrades', 'ผลการเรียน'],
-  APPROVALS: ['Approvals', 'approvals', 'PendingApprovals']
+  APPROVALS: ['Approvals', 'approvals', 'PendingApprovals'],
+  CALENDAR: ['CalendarEvents', 'calendarevents', 'Calendar', 'ปฏิทิน', 'กิจกรรมปฏิทิน', 'ปฏิทินโรงเรียน']
 };
 
 // หัวคอลัมน์ภาษาไทยมาตรฐานสำหรับแต่ละแผ่นงาน
@@ -138,6 +141,10 @@ const HEADERS = {
   APPROVALS: [
     'รหัสคำขอ', 'ประเภทผู้ใช้', 'รหัสประจำตัว', 'ชื่อ-นามสกุล', 'อีเมล',
     'รายละเอียดเพิ่มเติม', 'รหัสยืนยันสุ่ม (OTP)', 'สถานะ', 'เวลาที่สมัคร', 'ข้อมูล JSON'
+  ],
+  CALENDAR: [
+    'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'วันที่เริ่มต้น', 'วันที่สิ้นสุด', 'เวลาเริ่มต้น', 'เวลาสิ้นสุด',
+    'สถานที่', 'หมวดหมู่', 'กลุ่มเป้าหมาย', 'รายละเอียด', 'ผู้สร้าง', 'อัปเดตล่าสุด'
   ]
 };
 
@@ -322,6 +329,16 @@ function initializeSheets() {
     sheetSettings.getRange(3, 2).setNumberFormat('@').setValue(MASTER_ADMIN_PASS);
   }
 
+  // 13. ปฏิทินกิจกรรม
+  const sheetCal = getOrCreateSheetSmart(ss, 'CALENDAR', HEADERS.CALENDAR, '#0284c7');
+  try {
+    sheetCal.getRange('A:A').setNumberFormat('@');
+    sheetCal.getRange('C:C').setNumberFormat('@');
+    sheetCal.getRange('D:D').setNumberFormat('@');
+    sheetCal.getRange('E:E').setNumberFormat('@');
+    sheetCal.getRange('F:F').setNumberFormat('@');
+  } catch (fmtErr) {}
+
   // อพยพข้อมูลจากชีตเดิมแบบแยกตารางอาจารย์และแอดมิน
   migrateLegacyAdminsAndTeachers(ss);
 
@@ -462,6 +479,24 @@ function applySheetFormattingAndValidations(ss) {
         'มาสาย',
         'ลา/มีเหตุจำเป็น',
         'ขาด'
+      ]);
+    }
+
+    // 7. ปฏิทินกิจกรรม: Dropdown หมวดหมู่ (Col 8) และ กลุ่มเป้าหมาย (Col 9)
+    const sheetCal = ss.getSheetByName(SHEETS.CALENDAR);
+    if (sheetCal) {
+      applyListValidation(sheetCal, 2, 8, Math.max(100, sheetCal.getMaxRows() - 1), [
+        'กิจกรรมทั่วไป',
+        'การเรียนการสอน',
+        'การสอบ / ประเมินผล',
+        'ละหมาด / ศาสนกิจ',
+        'วันหยุด / ปิดภาคเรียน',
+        'ประชุม / สัมมนา'
+      ]);
+      applyListValidation(sheetCal, 2, 9, Math.max(100, sheetCal.getMaxRows() - 1), [
+        'ทุกคน (นักเรียนและอาจารย์)',
+        'เฉพาะนักเรียน',
+        'เฉพาะอาจารย์และผู้บริหาร'
       ]);
     }
   } catch (err) {
@@ -785,6 +820,10 @@ function doGet(e) {
       case 'getSettings':
         result = getSettings();
         break;
+      case 'getCalendarEvents':
+      case 'getCalendar':
+        result = getCalendarEvents(e.parameter.role || e.parameter.userRole);
+        break;
       case 'getFullDatabase':
         result = getFullDatabase();
         break;
@@ -916,6 +955,12 @@ function doPost(e) {
         break;
       case 'updateStudentStatus':
         result = updateStudentStatus(postData.data || postData);
+        break;
+      case 'saveCalendarEvent':
+        result = saveCalendarEvent(postData.data || postData);
+        break;
+      case 'deleteCalendarEvent':
+        result = deleteCalendarEvent(postData.data || postData);
         break;
       case 'getStatusLogs':
         result = getStatusLogs(postData.studentId || (postData.data && postData.data.studentId));
@@ -3518,6 +3563,227 @@ function getSettings() {
 }
 
 /**
+ * -------------------------------------------------------------
+ * ระบบปฏิทินกิจกรรมโรงเรียน (CALENDAR EVENTS)
+ * รองรับการเลือกกลุ่มเป้าหมาย (ทุกคน, เฉพาะนักเรียน, เฉพาะอาจารย์/ผู้บริหาร)
+ * ซิงค์กับชีต 'ปฏิทินกิจกรรม'
+ * -------------------------------------------------------------
+ */
+
+function normalizeTargetAudience(val) {
+  if (!val) return 'all';
+  const s = String(val).toLowerCase().trim();
+  if (s === 'students' || s === 'student' || s.includes('เฉพาะนักเรียน') || s === 'นักเรียน') {
+    return 'students';
+  }
+  if (s === 'teachers' || s === 'teacher' || s.includes('เฉพาะอาจารย์') || s.includes('ผู้บริหาร') || s === 'อาจารย์') {
+    return 'teachers';
+  }
+  return 'all';
+}
+
+function formatTargetAudienceThai(val) {
+  const norm = normalizeTargetAudience(val);
+  if (norm === 'students') return 'เฉพาะนักเรียน';
+  if (norm === 'teachers') return 'เฉพาะอาจารย์และผู้บริหาร';
+  return 'ทุกคน (นักเรียนและอาจารย์)';
+}
+
+function getCalendarEvents(userRole) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.CALENDAR);
+  if (!sheet || sheet.getLastRow() <= 1) return { success: true, data: [] };
+
+  const rows = sheet.getDataRange().getValues();
+  const results = [];
+  const isStudent = (userRole === 'STUDENT' || userRole === 'student' || userRole === 'นักเรียน');
+
+  for (let i = 1; i < rows.length; i++) {
+    const id = cleanVal(rows[i][0]);
+    if (!id) continue;
+    const title = cleanVal(rows[i][1]);
+    const startDate = formatSheetDate(rows[i][2]) || cleanVal(rows[i][2]);
+    const endDate = formatSheetDate(rows[i][3]) || startDate;
+    const startTime = cleanVal(rows[i][4]);
+    const endTime = cleanVal(rows[i][5]);
+    const location = cleanVal(rows[i][6]);
+    const category = cleanVal(rows[i][7]) || 'กิจกรรมทั่วไป';
+    const targetAudienceRaw = cleanVal(rows[i][8]);
+    const targetAudience = normalizeTargetAudience(targetAudienceRaw);
+    const description = cleanVal(rows[i][9]);
+    const createdBy = cleanVal(rows[i][10]);
+    const updatedAt = cleanVal(rows[i][11]);
+
+    // หากผู้เรียกเป็นนักเรียน และกิจกรรมนี้มีกลุ่มเป้าหมายเฉพาะอาจารย์/ผู้บริหาร จะไม่ส่งข้อมูลให้
+    if (isStudent && targetAudience === 'teachers') {
+      continue;
+    }
+
+    results.push({
+      id: id,
+      title: title,
+      startDate: startDate,
+      endDate: endDate,
+      startTime: startTime,
+      endTime: endTime,
+      location: location,
+      category: category,
+      targetAudience: targetAudience,
+      targetAudienceLabel: formatTargetAudienceThai(targetAudience),
+      description: description,
+      createdBy: createdBy,
+      updatedAt: updatedAt
+    });
+  }
+
+  // เรียงลำดับตามวันที่เริ่มต้น
+  results.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+
+  return { success: true, data: results };
+}
+
+function saveCalendarEvent(data) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.CALENDAR);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานปฏิทินกิจกรรม' };
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return { success: false, message: 'ระบบกำลังมีผู้ใช้งานพร้อมกันจำนวนมาก กรุณาลองใหม่อีกครั้ง' };
+  }
+
+  try {
+    const eventId = cleanVal(data.id || data.eventId || ('CAL-' + new Date().getTime()));
+    const title = cleanVal(data.title || 'กิจกรรมปฏิทิน');
+    const startDate = formatSheetDate(data.startDate || data.date) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+    const endDate = formatSheetDate(data.endDate || data.date) || startDate;
+    const startTime = cleanVal(data.startTime || '');
+    const endTime = cleanVal(data.endTime || '');
+    const location = cleanVal(data.location || '');
+    const category = cleanVal(data.category || 'กิจกรรมทั่วไป');
+    const targetAudience = normalizeTargetAudience(data.targetAudience);
+    const targetAudienceLabel = formatTargetAudienceThai(targetAudience);
+    const description = cleanVal(data.description || '');
+    const createdBy = cleanVal(data.createdBy || 'ผู้ดูแลระบบ');
+    const updatedAt = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+
+    const rows = sheet.getDataRange().getValues();
+    let updated = false;
+
+    for (let i = 1; i < rows.length; i++) {
+      if (cleanVal(rows[i][0]) === eventId) {
+        sheet.getRange(i + 1, 2, 1, 11).setValues([[
+          title,
+          startDate,
+          endDate,
+          startTime,
+          endTime,
+          location,
+          category,
+          targetAudienceLabel,
+          description,
+          createdBy,
+          updatedAt
+        ]]);
+        sheet.getRange(i + 1, 3).setNumberFormat('@');
+        sheet.getRange(i + 1, 4).setNumberFormat('@');
+        sheet.getRange(i + 1, 5).setNumberFormat('@');
+        sheet.getRange(i + 1, 6).setNumberFormat('@');
+        updated = true;
+        break;
+      }
+    }
+
+    if (!updated) {
+      sheet.appendRow([
+        eventId,
+        title,
+        startDate,
+        endDate,
+        startTime,
+        endTime,
+        location,
+        category,
+        targetAudienceLabel,
+        description,
+        createdBy,
+        updatedAt
+      ]);
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow, 1).setNumberFormat('@');
+      sheet.getRange(lastRow, 3).setNumberFormat('@');
+      sheet.getRange(lastRow, 4).setNumberFormat('@');
+      sheet.getRange(lastRow, 5).setNumberFormat('@');
+      sheet.getRange(lastRow, 6).setNumberFormat('@');
+    }
+
+    SpreadsheetApp.flush();
+    return {
+      success: true,
+      message: updated ? 'แก้ไขกิจกรรมปฏิทินเรียบร้อยแล้ว' : 'บันทึกกิจกรรมปฏิทินลง Google Sheets สำเร็จ',
+      id: eventId,
+      eventId: eventId,
+      event: {
+        id: eventId,
+        title: title,
+        startDate: startDate,
+        endDate: endDate,
+        startTime: startTime,
+        endTime: endTime,
+        location: location,
+        category: category,
+        targetAudience: targetAudience,
+        targetAudienceLabel: targetAudienceLabel,
+        description: description,
+        createdBy: createdBy,
+        updatedAt: updatedAt
+      }
+    };
+  } catch (err) {
+    return { success: false, message: 'เกิดข้อผิดพลาดในการบันทึกปฏิทิน: ' + err.message };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+function deleteCalendarEvent(data) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.CALENDAR);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานปฏิทินกิจกรรม' };
+
+  const eventId = cleanVal(typeof data === 'string' ? data : (data.id || data.eventId));
+  if (!eventId) return { success: false, message: 'ไม่พบรหัสกิจกรรมที่ต้องการลบ' };
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return { success: false, message: 'ระบบกำลังมีผู้ใช้งานพร้อมกันจำนวนมาก' };
+  }
+
+  try {
+    const rows = sheet.getDataRange().getValues();
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (cleanVal(rows[i][0]) === eventId) {
+        sheet.deleteRow(i + 1);
+        SpreadsheetApp.flush();
+        return { success: true, message: 'ลบกิจกรรมออกจากปฏิทินเรียบร้อยแล้ว', id: eventId };
+      }
+    }
+    return { success: false, message: 'ไม่พบกิจกรรมรหัส ' + eventId + ' ในฐานข้อมูล' };
+  } catch (err) {
+    return { success: false, message: 'เกิดข้อผิดพลาดในการลบกิจกรรม: ' + err.message };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
  * ดึงข้อมูลทุกตารางจาก Google Sheets ในครั้งเดียว เพื่อให้เว็บแอปซิงค์ฐานข้อมูลล่าสุดแบบเรียลไทม์ 100%
  */
 function getFullDatabase() {
@@ -3537,6 +3803,7 @@ function getFullDatabase() {
     attendance: getAttendance().data || [],
     hasanat: getHasanat().data || [],
     subjectGrades: getSubjectGrades().data || [],
+    calendarEvents: getCalendarEvents().data || [],
     settings: getSettings().data || {}
   };
 }
