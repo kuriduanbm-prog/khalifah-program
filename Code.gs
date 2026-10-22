@@ -383,7 +383,7 @@ function applySheetFormattingAndValidations(ss) {
     // 1. รายชื่อนักเรียน: Dropdown สถานะนักเรียน (Col 8)
     const sheetStudents = ss.getSheetByName(SHEETS.STUDENTS);
     if (sheetStudents) {
-      applyListValidation(sheetStudents, 2, 8, Math.max(100, sheetStudents.getMaxRows() - 1), [
+      applyListValidation(sheetStudents, 2, 8, Math.max(500, sheetStudents.getMaxRows() - 1), [
         'ปกติ (กำลังศึกษา)',
         'สำเร็จการศึกษา',
         'ลาออก',
@@ -2556,7 +2556,16 @@ function updateStudentStatus(data) {
       sheet.getRange(rowNum, 15).setNumberFormat('@').setValue(effectiveDate);
       sheet.getRange(rowNum, 16).setValue(note);
 
+      // ใส่ Dropdown Validation ให้เซลล์สถานะนี้โดยตรงเพื่อความสวยงามใน Google Sheets
+      applyListValidation(sheet, rowNum, 8, 1, [
+        'ปกติ (กำลังศึกษา)',
+        'สำเร็จการศึกษา',
+        'ลาออก',
+        'พักการเรียน'
+      ]);
+
       logStudentStatusChange(targetId, studentName, grade, oldStatus, newStatus, effectiveDate, note, adminUser);
+      SpreadsheetApp.flush(); // บันทึกลง Google Sheets ทันที ไม่ค้างในแคช
 
       return {
         success: true,

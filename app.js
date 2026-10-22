@@ -5788,7 +5788,14 @@ function renderAdminStudentsTable(filteredList = null) {
         <div style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(s.schoolName || '')}</div>
       </td>
       <td><span class="activity-badge badge-upcoming">${escapeHtml(s.grade)}</span></td>
-      <td>${getStudentStatusBadgeHtml(s.status, s.statusEffectiveDate || s.statusDate)}</td>
+      <td>
+        <div style="display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start;">
+          ${getStudentStatusBadgeHtml(s.status, s.statusEffectiveDate || s.statusDate)}
+          <button type="button" class="btn btn-secondary btn-sm" onclick="openStudentQuickStatusModal('${escapeHtml(sId)}')" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.04);" title="คลิกเพื่อปรับสถานะนักเรียนในระบบ">
+            <i class="fa-solid fa-user-pen" style="color: #0284c7;"></i> ปรับสถานะ
+          </button>
+        </div>
+      </td>
       <td>
         <div style="font-weight: 600; color: #0f172a;">${escapeHtml(sPhone || '-')}</div>
         <div style="font-size: 0.74rem; color: var(--text-muted);">${escapeHtml(s.email || '-')}</div>
@@ -5824,6 +5831,102 @@ function openAdminEditStudentModal(studentId = null) {
   } else {
     viewStudentDetails(studentId);
   }
+}
+
+function openStudentQuickStatusModal(studentId) {
+  const student = allStudents.find(s => isIdMatch(s.studentId, studentId));
+  if (!student) {
+    showToast('ไม่พบข้อมูลนักเรียน', 'warning');
+    return;
+  }
+
+  const cleanId = cleanIdString(student.studentId);
+  const nameEl = document.getElementById('quickStatusStudentName');
+  const idEl = document.getElementById('quickStatusStudentIdDisplay');
+  const gradeEl = document.getElementById('quickStatusStudentGradeDisplay');
+  const currentBadgeEl = document.getElementById('quickStatusCurrentBadge');
+  const hiddenId = document.getElementById('quickStatusStudentId');
+  const selectEl = document.getElementById('quickStatusSelect');
+  const dateEl = document.getElementById('quickStatusEffectiveDate');
+  const noteEl = document.getElementById('quickStatusNote');
+
+  if (hiddenId) hiddenId.value = cleanId;
+  if (nameEl) nameEl.innerText = student.fullName || cleanId;
+  if (idEl) idEl.innerText = cleanId;
+  if (gradeEl) gradeEl.innerText = student.grade || '-';
+
+  const curStatus = student.status || 'ปกติ (กำลังศึกษา)';
+  const curDate = student.statusEffectiveDate || student.statusDate || new Date().toISOString().split('T')[0];
+  const curNote = student.statusNote || '';
+
+  if (currentBadgeEl) {
+    currentBadgeEl.innerHTML = getStudentStatusBadgeHtml(curStatus, curDate);
+  }
+  if (selectEl) {
+    selectEl.value = (curStatus === 'Active' || curStatus === 'ปกติ') ? 'ปกติ (กำลังศึกษา)' : curStatus;
+  }
+  if (dateEl) dateEl.value = curDate;
+  if (noteEl) noteEl.value = curNote;
+
+  openModal('studentQuickStatusModal');
+}
+
+async function submitQuickStudentStatusChange() {
+  const hiddenId = document.getElementById('quickStatusStudentId');
+  const selectEl = document.getElementById('quickStatusSelect');
+  const dateEl = document.getElementById('quickStatusEffectiveDate');
+  const noteEl = document.getElementById('quickStatusNote');
+
+  if (!hiddenId || !hiddenId.value) return;
+  const targetId = hiddenId.value;
+  const newStatus = selectEl ? selectEl.value : 'ปกติ (กำลังศึกษา)';
+  const effectiveDate = (dateEl && dateEl.value) ? dateEl.value : new Date().toISOString().split('T')[0];
+  const note = noteEl ? noteEl.value.trim() : '';
+
+  const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, targetId));
+  if (sIdx === -1) {
+    showToast('ไม่พบข้อมูลนักเรียนในระบบ', 'warning');
+    return;
+  }
+
+  const student = allStudents[sIdx];
+  const oldStatus = student.status || 'ปกติ (กำลังศึกษา)';
+  student.status = newStatus;
+  student.statusEffectiveDate = effectiveDate;
+  student.statusDate = effectiveDate;
+  student.statusNote = note;
+
+  allStudents[sIdx] = student;
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+
+  if (currentStudent && isIdMatch(currentStudent.studentId, targetId)) {
+    currentStudent.status = newStatus;
+    currentStudent.statusEffectiveDate = effectiveDate;
+    currentStudent.statusDate = effectiveDate;
+    currentStudent.statusNote = note;
+    localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+    renderCurrentStudentProfile();
+  }
+
+  renderAdminStudentsTable();
+  renderSuperAdminOverviewKpis();
+  if (typeof renderTeacherAttendanceTable === 'function') renderTeacherAttendanceTable();
+  if (typeof renderTeacherGradesPortalTable === 'function') renderTeacherGradesPortalTable();
+
+  closeModal('studentQuickStatusModal');
+  playSuccessSound();
+  showToast(`อัปเดตสถานะของ ${student.fullName} เป็น "${newStatus}" เรียบร้อยแล้ว (กำลังบันทึกลง Google Sheets)`, 'success');
+
+  syncRecordToGoogleSheet('updateStudentStatus', {
+    studentId: targetId,
+    oldStatus: oldStatus,
+    newStatus: newStatus,
+    status: newStatus,
+    statusEffectiveDate: effectiveDate,
+    statusDate: effectiveDate,
+    statusNote: note,
+    adminUser: (currentAdmin && (currentAdmin.fullName || currentAdmin.username)) || 'SuperAdmin'
+  });
 }
 
 function filterAdminStudents() {
@@ -6950,6 +7053,7 @@ function renderTeacherAttendanceTable() {
         <td><b>${escapeHtml(sId)}</b></td>
         <td style="font-weight: 600;">${escapeHtml(s.fullName)}</td>
         <td><span class="activity-badge badge-upcoming">${escapeHtml(s.grade)}</span></td>
+        <td style="text-align: center;">${getStudentStatusBadgeHtml(s.status, s.statusEffectiveDate || s.statusDate)}</td>
         <td style="text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
           มา <b>${att.present || 0}</b> • สาย ${att.late || 0} • ลา ${att.leave || 0} • ขาด ${att.absent || 0}
         </td>
@@ -7107,6 +7211,7 @@ function renderTeacherGradesPortalTable() {
           <div style="font-size: 0.75rem; color: var(--text-muted);">GPAX: ${escapeHtml(recalculateStudentGpa(s))}</div>
         </td>
         <td><span class="badge-sub">${escapeHtml(s.grade)}</span></td>
+        <td style="text-align: center;">${getStudentStatusBadgeHtml(s.status, s.statusEffectiveDate || s.statusDate)}</td>
         <td style="text-align: center;">
           <select class="grade-select-pill teacher-portal-grade-input" data-student-id="${escapeHtml(sId)}">
             ${gradeChoices.map(g => `<option value="${g}" ${g === curGradeVal ? 'selected' : ''}>${g === 0 ? '0 (รอผล)' : 'เกรด ' + g}</option>`).join('')}
