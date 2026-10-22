@@ -6194,8 +6194,13 @@ body.staff-monitor-active .app-header,
 body.staff-monitor-active .mobile-nav,
 body.staff-monitor-active .app-footer,
 body.staff-monitor-active .auth-modal,
-body.staff-monitor-active #authModal {
+body.staff-monitor-active #authModal,
+body.staff-monitor-active #adminAuthModal,
+body.staff-monitor-active #otpVerifyModal,
+body.staff-monitor-active .modal.open:not(#activityQrModal):not(#activityAttendeesModal) {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 body.staff-monitor-active {
@@ -6204,6 +6209,10 @@ body.staff-monitor-active {
 }
 
 body.staff-monitor-active .main-wrapper {
+  display: block !important;
+  visibility: visible !important;
+  filter: none !important;
+  pointer-events: auto !important;
   padding: 0 !important;
   margin: 0 !important;
   max-width: 100% !important;
@@ -6215,6 +6224,10 @@ body.staff-monitor-active #view-staff-monitor {
   display: block !important;
   opacity: 1 !important;
   visibility: visible !important;
+}
+
+body.staff-monitor-active .view-section:not(#view-staff-monitor) {
+  display: none !important;
 }
 
 /* Staff Kiosk Top Navigation Bar */

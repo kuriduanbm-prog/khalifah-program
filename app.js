@@ -1883,11 +1883,17 @@ function switchView(viewName) {
   if (viewName === 'staff-monitor') {
     isStaffMonitorMode = true;
     document.body.classList.add('staff-monitor-active');
+    document.body.classList.remove('auth-locked');
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     const staffSec = document.getElementById('view-staff-monitor');
     if (staffSec) staffSec.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
+
+  // Clear kiosk mode state when navigating to standard views
+  document.body.classList.remove('staff-monitor-active');
+  isStaffMonitorMode = false;
 
   // Enforce login before switching views
   if (!currentStudent && !currentAdmin) {
@@ -7650,6 +7656,14 @@ async function syncRecordToGoogleSheet(action, data) {
     if (action === 'registerStudent') {
       showToast('✓ บันทึกข้อมูลนักเรียนลง Google Sheet เรียบร้อยแล้ว', 'success');
     }
+    if (action === 'activityCheckIn') {
+      // Re-fetch attendee list from cloud to refresh UI
+      setTimeout(() => {
+        if (typeof fetchActivitiesAndLogsFromCloud === 'function') {
+          fetchActivitiesAndLogsFromCloud(false);
+        }
+      }, 600);
+    }
   } catch (err) {
     console.warn(`Sync ${action} failed:`, err);
     if (action === 'registerStudent') {
@@ -9004,6 +9018,9 @@ async function fetchActivitiesAndLogsFromCloud(showToastMsg = false) {
     renderAdminActivitiesTable();
     renderAdminLiveActivityFeed();
     renderSuperAdminOverviewKpis();
+    if (typeof renderStaffKioskMonitor === 'function' && (isStaffMonitorMode || staffMonitorActiveActId)) {
+      renderStaffKioskMonitor();
+    }
 
     if (showToastMsg) {
       showToast('ซิงก์ข้อมูลกิจกรรมและผู้สแกน QR จาก Google Sheets ล่าสุดแล้ว', 'success');
@@ -9029,8 +9046,9 @@ function startAdminActivityLivePolling(intervalMs = 2500) {
     const adminView = document.getElementById('view-admin');
     const isActModalOpen = currentViewingActivityId !== null;
     const isAdminViewActive = !!currentAdmin && adminView && adminView.classList.contains('active');
+    const isStaffKioskActive = isStaffMonitorMode || document.body.classList.contains('staff-monitor-active');
 
-    if (isAdminViewActive || isActModalOpen) {
+    if (isAdminViewActive || isActModalOpen || isStaffKioskActive) {
       isActivityPollingBusy = true;
       try {
         await fetchActivitiesAndLogsFromCloud(false);
@@ -9996,6 +10014,7 @@ async function fetchPrayersFromCloud() {
 let isStaffMonitorMode = false;
 let staffMonitorActiveActId = null;
 let isStaffSoundEnabled = true;
+let lastStaffKioskCount = -1;
 
 function checkStaffMonitorUrlParams() {
   let targetActId = null;
@@ -10176,6 +10195,12 @@ function renderStaffKioskMonitor(highlightStudentId = null) {
   if (totalCountEl) {
     totalCountEl.innerHTML = `${logs.length} <span style="font-size: 0.95rem; font-weight: 600; color: var(--text-muted);">คน</span>`;
   }
+
+  // Play pleasant ding sound if new scan arrived
+  if (lastStaffKioskCount !== -1 && logs.length > lastStaffKioskCount) {
+    if (typeof playStaffScanDingSound === 'function') playStaffScanDingSound();
+  }
+  lastStaffKioskCount = logs.length;
 
   // Update latest scanned student
   if (latestNameEl) {
@@ -10369,12 +10394,49 @@ function copyCurrentModalStaffLink() {
 
 function openStaffMonitorStandalone(actId) {
   const targetId = actId || staffMonitorActiveActId || (activities[0] ? (activities[0].id || activities[0].activityId) : '');
-  const url = `${window.location.pathname}?monitor=${encodeURIComponent(targetId)}`;
-  window.open(url, '_blank');
+  if (!targetId) {
+    showToast('ไม่พบกิจกรรมที่ต้องการเปิดมอนิเตอร์', 'warning');
+    return;
+  }
+  // 1. Switch to staff-monitor view in current tab seamlessly (zero popup blocker issues!)
+  switchView('staff-monitor');
+  initStaffMonitor(targetId);
+  showToast('เปิดหน้าจอมอนิเตอร์ Kiosk สำเร็จ (กดปุ่ม "กลับหน้าแอดมิน" ด้านบนเมื่อต้องการออก)', 'info');
 }
 
 function openCurrentModalStandaloneKiosk() {
   openStaffMonitorStandalone(currentViewingActivityId);
+}
+
+function openStaffMonitorInNewTab(actId) {
+  const targetId = actId || staffMonitorActiveActId || (activities[0] ? (activities[0].id || activities[0].activityId) : '');
+  const url = `${window.location.origin}${window.location.pathname}?monitor=${encodeURIComponent(targetId)}`;
+  const win = window.open(url, '_blank');
+  if (!win) {
+    showToast('เบราว์เซอร์บล็อกป๊อปอัป กรุณากดปุ่ม "แชร์ลิงก์" เพื่อคัดลอกลิงก์ไปเปิดในแท็บใหม่แทนได้ครับ', 'warning');
+  }
+}
+
+function exitStaffKioskToAdmin() {
+  document.body.classList.remove('staff-monitor-active');
+  isStaffMonitorMode = false;
+  
+  // Clean URL parameters
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('monitor');
+    url.searchParams.delete('staff_monitor');
+    window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+  } catch (e) {}
+
+  if (currentAdmin) {
+    switchView(currentAdmin.role === 'SuperAdmin' ? 'admin' : 'teacher');
+  } else if (currentStudent) {
+    switchView('dashboard');
+  } else {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    enforceMandatoryLogin();
+  }
 }
 
 function printCurrentStaffQr() {

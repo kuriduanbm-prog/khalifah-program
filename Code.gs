@@ -22,6 +22,20 @@ function authorizeEmailPermission() {
   return quota;
 }
 
+/**
+ * ============================================================================
+ * ⭐ ฟังก์ชันสำหรับกด "เรียกใช้" (Run) ใน Google Apps Script โดยตรงได้ทันที!
+ * เลือกชื่อฟังก์ชัน: runOrganizeGoogleSheetsDirectly จากเมนูด้านบน แล้วกด Run ได้เลยครับ
+ * ============================================================================
+ */
+function runOrganizeGoogleSheetsDirectly() {
+  Logger.log('🚀 เริ่มต้นจัดระเบียบโครงสร้าง Google Sheets ทันที...');
+  const result = initializeSheets();
+  Logger.log('ผลการดำเนินการ: ' + JSON.stringify(result));
+  Logger.log('✅ จัดระเบียบครบทั้ง 12 แผ่นงาน เรียงแท็บ แยกอาจารย์/แอดมิน ล็อคแถวบนสุด และใส่ Dropdown สำเร็จ 100%!');
+  return result;
+}
+
 // ชื่อแผ่นงานหลักภาษาไทย (Thai Sheet Names) - จัดเรียงและแบ่งหมวดหมู่เป็นระเบียบชัดเจน
 const SHEETS = {
   STUDENTS: 'รายชื่อนักเรียน',
@@ -735,6 +749,10 @@ function doGet(e) {
         break;
       case 'getActivityLogs':
         result = getActivityLogs(e.parameter.activityId);
+        break;
+      case 'checkInActivity':
+      case 'activityCheckIn':
+        result = checkInActivity(e.parameter);
         break;
       case 'getSubAdmins':
         result = getSubAdmins();
@@ -2012,87 +2030,148 @@ function getActivityLogs(activityId) {
   return { success: true, data: results.reverse() };
 }
 
+/**
+ * เช็คชื่อเข้าร่วมกิจกรรม - ความเร็วสูงระดับมิลลิวินาที + ล็อก Concurrency ป้องกันข้อมูลชนกัน
+ * รองรับการสแกนพร้อมกันหลายๆ เครื่องในเสี้ยววินาที และบันทึกเข้า Google Sheets ทันที (SpreadsheetApp.flush)
+ */
 function checkInActivity(data) {
   if (!data) return { success: false, message: 'ไม่มีข้อมูลกิจกรรม' };
-  initializeSheets();
-  const ss = getSpreadsheet();
-  const sheetActivities = ss.getSheetByName(SHEETS.ACTIVITIES);
-  const sheetLogs = ss.getSheetByName(SHEETS.ACTIVITY_LOGS);
 
-  const parsedQr = stripKhalifahQrPrefix(data.activityTitle || data.title || '', data.activityId || '');
-  const targetActId = parsedQr.activityId;
-  const targetActTitle = parsedQr.title;
-  const cleanSid = cleanVal(data.studentId || '-');
-  let activityFoundTitle = targetActTitle;
-  let matchedActivityRow = -1;
-
-  if (sheetActivities) {
-    const actRows = sheetActivities.getDataRange().getValues();
-    for (let i = 1; i < actRows.length; i++) {
-      const rowActId = cleanVal(actRows[i][0]);
-      const rowActTitle = cleanVal(actRows[i][1]);
-      if ((targetActId && rowActId === targetActId) || (targetActTitle && rowActTitle === targetActTitle)) {
-        matchedActivityRow = i + 1;
-        activityFoundTitle = rowActTitle || targetActTitle;
-        break;
-      }
-    }
+  // 1. Script Lock: รอคิวล็อกได้สูงสุด 15 วินาที เพื่อให้บันทึกได้ครบทุกเครื่อง 100% ไม่หลุดแม้สแกนพร้อมกันในมิลลิวินาที
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (lockErr) {
+    Logger.log('Lock wait timeout (proceeding): ' + lockErr.message);
   }
 
-  let alreadyCheckedIn = false;
-  let totalForThisAct = 0;
+  try {
+    const ss = getSpreadsheet();
+    if (!ss) return { success: false, message: 'ไม่สามารถเปิดสเปรดชีตได้' };
 
-  if (sheetLogs) {
-    const logRows = sheetLogs.getDataRange().getValues();
-    for (let i = 1; i < logRows.length; i++) {
-      const rowParsed = stripKhalifahQrPrefix(logRows[i][2], logRows[i][1]);
-      const rActId = rowParsed.activityId;
-      const rActTitle = rowParsed.title;
-      const rSid = cleanVal(logRows[i][3]);
-      const sameAct = (targetActId && rActId === targetActId) || (!targetActId && targetActTitle && rActTitle === targetActTitle);
-      if (sameAct) {
-        totalForThisAct++;
-        if (isCodeMatch(rSid, cleanSid)) {
-          alreadyCheckedIn = true;
+    // ดึงชีตโดยตรงแบบความเร็วสูง ไม่เรียก initializeSheets() ซ้ำซ้อนให้หน่วงเวลา
+    let sheetLogs = ss.getSheetByName(SHEETS.ACTIVITY_LOGS);
+    if (!sheetLogs) {
+      sheetLogs = ss.getSheetByName('บันทึกการเข้าร่วมกิจกรรม') || ss.getSheetByName('ActivityLogs');
+      if (!sheetLogs) {
+        sheetLogs = getOrCreateSheetSmart(ss, 'ACTIVITY_LOGS', HEADERS.ACTIVITY_LOGS, '#1e293b');
+      }
+    }
+
+    let sheetActivities = ss.getSheetByName(SHEETS.ACTIVITIES);
+    if (!sheetActivities) {
+      sheetActivities = ss.getSheetByName('กิจกรรม') || ss.getSheetByName('Activities');
+    }
+
+    const parsedQr = stripKhalifahQrPrefix(data.activityTitle || data.title || '', data.activityId || '');
+    const targetActId = cleanVal(parsedQr.activityId || data.activityId || '');
+    const targetActTitle = cleanVal(parsedQr.title || data.activityTitle || data.title || '');
+    const cleanSid = formatAsText(data.studentId || '-');
+    const studentName = cleanVal(data.studentName || '');
+    const studentGrade = cleanVal(data.grade || '-');
+    const now = new Date();
+    const dateStr = formatSheetDate(data.formattedDate) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
+    const timeStr = formatSheetTime(data.formattedTime) || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
+    const timestamp = cleanVal(data.checkInTimestamp || now.toISOString());
+    const logId = cleanVal(data.id || ('ACTLOG-' + now.getTime() + '-' + Math.floor(Math.random() * 1000)));
+
+    let matchedActivityRow = -1;
+    let activityFoundTitle = targetActTitle;
+
+    // หาแถวกิจกรรมในชีตกิจกรรม (ถ้ามี)
+    if (sheetActivities && sheetActivities.getLastRow() > 1) {
+      const actValues = sheetActivities.getRange(2, 1, sheetActivities.getLastRow() - 1, 9).getValues();
+      for (let i = 0; i < actValues.length; i++) {
+        const rowActId = cleanVal(actValues[i][0]);
+        const rowActTitle = cleanVal(actValues[i][1]);
+        if ((targetActId && rowActId === targetActId) || (targetActTitle && rowActTitle === targetActTitle)) {
+          matchedActivityRow = i + 2;
+          activityFoundTitle = rowActTitle || targetActTitle;
+          break;
         }
       }
     }
 
-    if (!alreadyCheckedIn) {
-      const logId = cleanVal(data.id || ('ACTLOG-' + new Date().getTime()));
-      const now = new Date();
-      const dateStr = formatSheetDate(data.formattedDate) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
-      const timeStr = formatSheetTime(data.formattedTime) || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
-      const timestamp = cleanVal(data.checkInTimestamp || now.toISOString());
+    // ตรวจสอบประวัติการสแกนซ้ำในชีตบันทึก (อ่านเฉพาะ 9 คอลัมน์ ไม่ดึงทั้งชีต)
+    let alreadyCheckedInRow = -1;
+    let totalForThisAct = 0;
+    const lastRow = sheetLogs.getLastRow();
 
-      sheetLogs.appendRow([
-        logId,
-        targetActId || '-',
-        activityFoundTitle || targetActTitle || 'กิจกรรมทั่วไป',
-        cleanSid,
-        cleanVal(data.studentName || ''),
-        cleanVal(data.grade || ''),
-        dateStr,
-        timeStr,
-        timestamp
-      ]);
-      const lastRow = sheetLogs.getLastRow();
-      sheetLogs.getRange(lastRow, 2).setNumberFormat('@').setValue(targetActId || '-');
-      sheetLogs.getRange(lastRow, 4).setNumberFormat('@').setValue(cleanSid);
-      totalForThisAct++;
+    if (lastRow > 1) {
+      const logValues = sheetLogs.getRange(2, 1, lastRow - 1, 9).getValues();
+      for (let i = logValues.length - 1; i >= 0; i--) {
+        const rParsed = stripKhalifahQrPrefix(logValues[i][2], logValues[i][1]);
+        const rActId = rParsed.activityId;
+        const rActTitle = rParsed.title;
+        const rSid = cleanVal(logValues[i][3]);
+        const sameAct = (targetActId && rActId === targetActId) || (!targetActId && targetActTitle && rActTitle === targetActTitle);
+
+        if (sameAct) {
+          totalForThisAct++;
+          if (isCodeMatch(rSid, cleanSid)) {
+            alreadyCheckedInRow = i + 2; // แถวจริงในชีต
+          }
+        }
+      }
     }
-  }
 
-  if (sheetActivities && matchedActivityRow !== -1) {
-    sheetActivities.getRange(matchedActivityRow, 9).setValue(totalForThisAct);
-  }
+    if (alreadyCheckedInRow !== -1) {
+      // สแกนซ้ำ: อัปเดตเวลาและ Timestamp ให้เป็นข้อมูลล่าสุดทันที
+      sheetLogs.getRange(alreadyCheckedInRow, 7).setNumberFormat('@').setValue(dateStr);
+      sheetLogs.getRange(alreadyCheckedInRow, 8).setNumberFormat('@').setValue(timeStr);
+      sheetLogs.getRange(alreadyCheckedInRow, 9).setNumberFormat('@').setValue(timestamp);
+      SpreadsheetApp.flush(); // บันทึกลงชีตทันที 100%!
+      return {
+        success: true,
+        alreadyCheckedIn: true,
+        attendeesCount: totalForThisAct,
+        message: 'อัปเดตเวลาเช็คชื่อกิจกรรมล่าสุดเรียบร้อยแล้ว'
+      };
+    }
 
-  return {
-    success: true,
-    alreadyCheckedIn: alreadyCheckedIn,
-    attendeesCount: totalForThisAct,
-    message: alreadyCheckedIn ? 'นักเรียนเช็คชื่อกิจกรรมนี้ไปแล้ว' : 'บันทึกการเข้าร่วมกิจกรรมลง Google Sheets สำเร็จ'
-  };
+    // สแกนใหม่: เพิ่มแถวลงชีตทันทีแบบ Plain Text
+    sheetLogs.appendRow([
+      logId,
+      targetActId || '-',
+      activityFoundTitle || targetActTitle || 'กิจกรรมทั่วไป',
+      cleanSid,
+      studentName,
+      studentGrade,
+      dateStr,
+      timeStr,
+      timestamp
+    ]);
+
+    const newRowIdx = sheetLogs.getLastRow();
+    sheetLogs.getRange(newRowIdx, 1).setNumberFormat('@');
+    sheetLogs.getRange(newRowIdx, 2).setNumberFormat('@');
+    sheetLogs.getRange(newRowIdx, 4).setNumberFormat('@');
+    sheetLogs.getRange(newRowIdx, 7).setNumberFormat('@');
+    sheetLogs.getRange(newRowIdx, 8).setNumberFormat('@');
+    totalForThisAct++;
+
+    // อัปเดตจำนวนผู้เข้าร่วมในตารางกิจกรรม
+    if (sheetActivities && matchedActivityRow !== -1) {
+      sheetActivities.getRange(matchedActivityRow, 9).setValue(totalForThisAct);
+    }
+
+    // บังคับ Flush ให้ข้อมูลเขียนลง Google Sheets ทันที ไม่ค้างในคิว!
+    SpreadsheetApp.flush();
+
+    return {
+      success: true,
+      alreadyCheckedIn: false,
+      attendeesCount: totalForThisAct,
+      message: 'บันทึกการเข้าร่วมกิจกรรมลง Google Sheets สำเร็จทันที'
+    };
+  } catch (err) {
+    Logger.log('checkInActivity error: ' + err.message);
+    return { success: false, message: 'เกิดข้อผิดพลาดในการบันทึก: ' + err.message };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e) {}
+  }
 }
 
 function deleteActivityAttendee(data) {

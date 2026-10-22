@@ -1528,6 +1528,9 @@
             </div>
           </div>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="triggerOrganizeGoogleSheets()" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; font-weight: 700; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);" title="จัดระเบียบ 12 แผ่นงาน เรียงแท็บ จัดฟอร์แมต และหัวตารางทั้งหมดบน Google Sheets ทันที">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> จัดระเบียบ Google Sheets ทันที
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="switchView('teacher')">
               <i class="fa-solid fa-chalkboard-user"></i> โหมดเช็คชื่อ/กรอกเกรดอาจารย์
             </button>
@@ -2498,6 +2501,14 @@
 
           <button class="btn btn-primary btn-sm staff-header-btn" id="btnStaffFullscreen" onclick="toggleStaffFullscreen()" title="เปิดโหมดเต็มจอสำหรับขึ้นจอโปรเจกเตอร์หรือสมาร์ททีวี">
             <i class="fa-solid fa-expand"></i> <span class="d-none-sm" id="staffFullscreenBtnText">เต็มจอ</span>
+          </button>
+
+          <button class="btn btn-secondary btn-sm staff-header-btn" id="btnBackToAdminFromKiosk" onclick="exitStaffKioskToAdmin()" style="font-weight: 700; color: #0284c7; border-color: #bae6fd; background: #f0f9ff;" title="กลับไปยังหน้าจัดการแอดมินหรือหน้าหลัก">
+            <i class="fa-solid fa-arrow-left"></i> <span class="d-none-sm">กลับหน้าแอดมิน</span>
+          </button>
+
+          <button class="btn btn-secondary btn-sm staff-header-btn" onclick="openStaffMonitorInNewTab()" title="เปิดหน้าจอนี้ในแท็บหรือหน้าต่างใหม่ (โหมดจอแยก)">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> <span class="d-none-sm">เปิดแท็บใหม่</span>
           </button>
 
           <button class="btn btn-secondary btn-sm staff-header-btn" onclick="copyStaffCurrentLink()" title="คัดลอกลิงก์จอนี้สำหรับแชร์ให้สตาฟคนอื่น">
