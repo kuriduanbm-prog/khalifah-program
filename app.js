@@ -7453,6 +7453,9 @@ function closeModal(modalId) {
     showToast('กรุณาเข้าสู่ระบบก่อนเริ่มใช้งานแอปพลิเคชัน', 'warning');
     return;
   }
+  if (modalId === 'activityAttendeesModal') {
+    currentViewingActivityId = null;
+  }
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.remove('open');
 }
@@ -7629,14 +7632,125 @@ function dismissPwaBanner() {
   localStorage.setItem('khalifah_pwa_dismissed', 'true');
 }
 
-// ----------------- ACTIVITIES LIVE QR CODE SCANNER (STUDENT VIEW) ----------------- //
+// ----------------- ACTIVITIES LIVE QR CODE SCANNER & INSTANT BROADCAST ----------------- //
+let khalifahActivityBroadcast = null;
+try {
+  if (typeof BroadcastChannel !== 'undefined') {
+    khalifahActivityBroadcast = new BroadcastChannel('khalifah_activity_channel');
+    khalifahActivityBroadcast.onmessage = (event) => {
+      if (event.data && event.data.type === 'ACTIVITY_CHECK_IN') {
+        const incomingLog = event.data.log;
+        if (incomingLog) {
+          let actLogs = [];
+          try {
+            actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+          } catch (e) { actLogs = []; }
+          const existingIdx = actLogs.findIndex(l => isIdMatch(l.studentId, incomingLog.studentId) && (l.activityId === incomingLog.activityId || l.activityTitle === incomingLog.activityTitle));
+          if (existingIdx !== -1) {
+            actLogs[existingIdx] = incomingLog;
+          } else {
+            actLogs.unshift(incomingLog);
+          }
+          localStorage.setItem('khalifah_student_act_logs', JSON.stringify(actLogs));
+
+          // Immediate live re-render on admin and student screens
+          if (typeof renderAdminActivitiesTable === 'function') renderAdminActivitiesTable();
+          if (typeof renderAdminLiveActivityFeed === 'function') renderAdminLiveActivityFeed();
+          if (typeof renderStudentScannedActivities === 'function') renderStudentScannedActivities();
+          if (typeof renderActivitiesList === 'function') renderActivitiesList();
+
+          if (currentViewingActivityId) {
+            const act = activities.find(a => (a.id === currentViewingActivityId || a.activityId === currentViewingActivityId));
+            currentAttendeesList = actLogs.filter(l => l.activityId === currentViewingActivityId || (act && l.activityTitle === act.title));
+            if (typeof renderAttendeesTable === 'function') renderAttendeesTable(currentAttendeesList);
+          }
+        }
+      }
+    };
+  }
+} catch (e) {
+  console.warn('BroadcastChannel init error:', e);
+}
+
+// Fallback storage listener for cross-tab synchronization
+window.addEventListener('storage', (e) => {
+  if (e.key === 'khalifah_student_act_logs' || e.key === 'khalifah_activity_sync_signal') {
+    if (typeof renderAdminActivitiesTable === 'function') renderAdminActivitiesTable();
+    if (typeof renderAdminLiveActivityFeed === 'function') renderAdminLiveActivityFeed();
+    if (typeof renderStudentScannedActivities === 'function') renderStudentScannedActivities();
+    if (typeof renderActivitiesList === 'function') renderActivitiesList();
+    if (currentViewingActivityId) {
+      let actLogs = [];
+      try {
+        actLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
+      } catch (err) { actLogs = []; }
+      const act = activities.find(a => (a.id === currentViewingActivityId || a.activityId === currentViewingActivityId));
+      currentAttendeesList = actLogs.filter(l => l.activityId === currentViewingActivityId || (act && l.activityTitle === act.title));
+      if (typeof renderAttendeesTable === 'function') renderAttendeesTable(currentAttendeesList);
+    }
+  }
+});
+
 let qrScannerStream = null;
 let qrScanAnimationId = null;
 let qrFacingMode = 'environment'; // Default back camera for QR code scanning
 let lastScannedQrCode = '';
 let qrCooldownTimer = null;
+let isStudentCameraLocked = false;
+let currentStudentActivityMode = 'scanner'; // 'scanner' or 'history'
+
+function setStudentActivityMode(mode) {
+  currentStudentActivityMode = mode;
+  const btnScanner = document.getElementById('btnStudentActScanner');
+  const btnHistory = document.getElementById('btnStudentActHistory');
+  const secScanner = document.getElementById('studentScannerSection');
+  const secHistory = document.getElementById('studentHistorySection');
+
+  if (btnScanner) btnScanner.classList.toggle('active', mode === 'scanner');
+  if (btnHistory) btnHistory.classList.toggle('active', mode === 'history');
+
+  if (mode === 'history') {
+    // ปิดกล้องและหยุดระบบสแกนทันทีเมื่อดูประวัติ ป้องกันการเผลอสแกน
+    stopQrScanner();
+    if (secScanner) secScanner.style.display = 'none';
+    if (secHistory) secHistory.style.display = 'block';
+    renderStudentScannedActivities();
+  } else {
+    // สลับกลับมาหน้าสแกน
+    if (secHistory) secHistory.style.display = 'none';
+    if (secScanner) secScanner.style.display = 'block';
+    if (!isStudentCameraLocked) {
+      startQrScanner();
+    }
+  }
+}
+
+function toggleQrScannerLock(forceLock = null) {
+  if (forceLock !== null) {
+    isStudentCameraLocked = forceLock;
+  } else {
+    isStudentCameraLocked = !isStudentCameraLocked;
+  }
+
+  const overlay = document.getElementById('qrCameraLockedOverlay');
+  const btn = document.getElementById('btnToggleCameraLock');
+
+  if (isStudentCameraLocked) {
+    stopQrScanner();
+    if (overlay) overlay.style.display = 'flex';
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-unlock"></i> <span>ปลดล็อคกล้อง</span>';
+    showToast('ล็อคกล้องสแกนชั่วคราวแล้ว เพื่อป้องกันการเผลอสแกนสิ่งอื่น', 'info');
+  } else {
+    if (overlay) overlay.style.display = 'none';
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-lock"></i> <span>ล็อคกล้องชั่วคราว</span>';
+    startQrScanner();
+    showToast('เปิดกล้องพร้อมสแกน QR Code แล้ว', 'success');
+  }
+}
 
 async function startQrScanner() {
+  if (currentStudentActivityMode === 'history' || isStudentCameraLocked) return;
+
   const video = document.getElementById('qrScannerVideo');
   const feedback = document.getElementById('qrScanFeedback');
   if (!video) return;
@@ -7726,8 +7840,17 @@ function stopQrScanner() {
     qrScanAnimationId = null;
   }
   if (qrScannerStream) {
-    qrScannerStream.getTracks().forEach(t => t.stop());
+    try {
+      qrScannerStream.getTracks().forEach(t => t.stop());
+    } catch (e) {}
     qrScannerStream = null;
+  }
+  const video = document.getElementById('qrScannerVideo');
+  if (video) {
+    try {
+      video.pause();
+      video.srcObject = null;
+    } catch (e) {}
   }
 }
 
@@ -7870,6 +7993,19 @@ function handleQrCodeDetected(qrData) {
   renderDashboardCharts();
   renderCurrentStudentProfile();
 
+  // Instant local broadcast to admin devices & open windows (0ms delay)
+  if (khalifahActivityBroadcast) {
+    try {
+      khalifahActivityBroadcast.postMessage({
+        type: 'ACTIVITY_CHECK_IN',
+        log: logEntry
+      });
+    } catch (e) {}
+  }
+  try {
+    localStorage.setItem('khalifah_activity_sync_signal', Date.now().toString());
+  } catch (e) {}
+
   // Sync to Google Sheets
   syncRecordToGoogleSheet('activityCheckIn', logEntry);
 }
@@ -7945,6 +8081,80 @@ function clearActDateFilter() {
 }
 
 // ----------------- ADMIN ACTIVITIES & QR CODE GENERATOR + REAL-TIME LIVE FEED ----------------- //
+let isAdminLiveFeedExpanded = false;
+
+function toggleAdminLiveFeedCard(forceState = null) {
+  const card = document.getElementById('adminLiveFeedCard');
+  const body = document.getElementById('adminLiveFeedBodyContainer');
+  const icon = document.getElementById('toggleLiveFeedIcon');
+  const text = document.getElementById('toggleLiveFeedText');
+
+  if (forceState !== null) {
+    isAdminLiveFeedExpanded = forceState;
+  } else {
+    isAdminLiveFeedExpanded = !isAdminLiveFeedExpanded;
+  }
+
+  if (isAdminLiveFeedExpanded) {
+    if (card) card.classList.remove('collapsed');
+    if (body) body.style.display = 'block';
+    if (icon) icon.className = 'fa-solid fa-chevron-up';
+    if (text) text.innerText = 'ย่อเก็บมอนิเตอร์';
+    renderAdminLiveActivityFeed();
+  } else {
+    if (card) card.classList.add('collapsed');
+    if (body) body.style.display = 'none';
+    if (icon) icon.className = 'fa-solid fa-chevron-down';
+    if (text) text.innerText = 'เปิดมอนิเตอร์รวม';
+  }
+}
+
+function adminQuickFillActivity(presetKey) {
+  const presets = {
+    halaqah: {
+      title: 'กิจกรรมหะลาเกาะฮฺตัซกียะฮฺยามเช้า',
+      type: 'หะลาเกาะฮฺ',
+      location: 'มัสยิดอัลฮารอมัยน์'
+    },
+    qiyam: {
+      title: 'กิจกรรมละหมาดกียามุลลัยลฺประจำสัปดาห์',
+      type: 'กียาม',
+      location: 'มัสยิดอัลฮารอมัยน์'
+    },
+    jumaah: {
+      title: 'ละหมาดวันศุกร์ (ญุมอะฮฺ)',
+      type: 'ศาสนา',
+      location: 'มัสยิดอัลฮารอมัยน์'
+    },
+    lecture: {
+      title: 'บรรยายธรรมและข้อคิดอิสลาม',
+      type: 'วิชาการ',
+      location: 'หอประชุมใหญ่'
+    },
+    volunteer: {
+      title: 'กิจกรรมจิตอาสาพัฒนาสถาบัน',
+      type: 'จิตอาสา',
+      location: 'บริเวณมัสยิดและสถาบัน'
+    }
+  };
+
+  const preset = presets[presetKey];
+  if (!preset) return;
+
+  const titleEl = document.getElementById('newActTitle');
+  const typeEl = document.getElementById('newActType');
+  const locEl = document.getElementById('newActLocation');
+  const dateEl = document.getElementById('newActDate');
+
+  if (titleEl) titleEl.value = preset.title;
+  if (typeEl) typeEl.value = preset.type;
+  if (locEl) locEl.value = preset.location;
+  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+
+  showToast(`เลือกเทมเพลต "${preset.title}" แล้ว สามารถกด "บันทึกกิจกรรม" ได้ทันที`, 'info');
+  if (titleEl) titleEl.focus();
+}
+
 function adminCreateNewActivity() {
   const title = document.getElementById('newActTitle').value.trim();
   const type = document.getElementById('newActType').value;
@@ -7978,6 +8188,12 @@ function adminCreateNewActivity() {
 
   // Open QR modal right away for printing
   openActivityQrModal(newAct.id);
+
+  if (khalifahActivityBroadcast) {
+    try {
+      khalifahActivityBroadcast.postMessage({ type: 'ACTIVITY_CREATED', activity: newAct });
+    } catch (e) {}
+  }
 
   syncRecordToGoogleSheet('createActivity', newAct);
 }
@@ -8067,6 +8283,16 @@ function adminManualCheckInStudent() {
   renderAdminLiveActivityFeed();
   showToast(`เช็คชื่อ ${studentName} เข้ากิจกรรม "${act.title}" เรียบร้อย!`, 'success');
 
+  // Broadcast instant sync
+  if (khalifahActivityBroadcast) {
+    try {
+      khalifahActivityBroadcast.postMessage({ type: 'ACTIVITY_CHECK_IN', log: logEntry });
+    } catch (e) {}
+  }
+  try {
+    localStorage.setItem('khalifah_activity_sync_signal', Date.now().toString());
+  } catch (e) {}
+
   syncRecordToGoogleSheet('activityCheckIn', logEntry);
 }
 
@@ -8109,18 +8335,18 @@ function renderAdminActivitiesTable() {
         <td>${a.location || '-'}</td>
         <td>${a.date || '-'}</td>
         <td>
-          <span style="font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #bae6fd; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;" onclick="openActivityAttendeesModal('${actId}')">
-            <i class="fa-solid fa-users"></i> ${participantsCount} คน
+          <span style="font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 0.25rem 0.65rem; border-radius: 9999px; border: 1px solid #bae6fd; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;" onclick="openActivityAttendeesModal('${actId}')" title="คลิกเพื่อเปิดมอนิเตอร์สดเฉพาะกิจกรรมนี้">
+            <i class="fa-solid fa-tower-broadcast"></i> ${participantsCount} คน
           </span>
         </td>
         <td style="text-align: right; white-space: nowrap;">
-          <button class="btn btn-secondary btn-sm" onclick="openActivityAttendeesModal('${actId}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.3rem;" title="ดูรายชื่อนักเรียนที่สแกนเข้าร่วม">
-            <i class="fa-solid fa-users-viewfinder"></i> รายชื่อ (${participantsCount})
+          <button class="btn btn-primary btn-sm" onclick="openActivityAttendeesModal('${actId}')" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; margin-right: 0.3rem; font-weight: 600;" title="เปิดดูมอนิเตอร์สดและรายชื่อผู้สแกนกิจกรรมนี้">
+            <i class="fa-solid fa-tower-broadcast"></i> เปิดมอนิเตอร์สด (${participantsCount})
           </button>
-          <button class="btn btn-primary btn-sm" onclick="openActivityQrModal('${actId}')" style="padding: 0.3rem 0.65rem; font-size: 0.78rem; margin-right: 0.3rem;">
+          <button class="btn btn-secondary btn-sm" onclick="openActivityQrModal('${actId}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; margin-right: 0.3rem;" title="แสดง QR Code สำหรับให้นักเรียนสแกน">
             <i class="fa-solid fa-qrcode"></i> พิมพ์ QR
           </button>
-          <button class="btn btn-outline btn-sm" onclick="adminDeleteActivity('${actId}')" style="padding: 0.3rem 0.5rem; font-size: 0.78rem; color: #ef4444; border-color: #fecaca;" title="ลบกิจกรรม">
+          <button class="btn btn-outline btn-sm" onclick="adminDeleteActivity('${actId}')" style="padding: 0.35rem 0.55rem; font-size: 0.8rem; color: #ef4444; border-color: #fecaca;" title="ลบกิจกรรม">
             <i class="fa-solid fa-trash-can"></i>
           </button>
         </td>
@@ -8139,7 +8365,7 @@ function renderAdminActivitiesTable() {
 function renderAdminLiveActivityFeed() {
   const tbody = document.getElementById('adminLiveActivityLogsTableBody');
   const filterSelect = document.getElementById('liveFeedActivityFilter');
-  const countBadge = document.getElementById('liveScanCountBadge');
+  const countBadge = document.getElementById('adminLiveFeedCountBadge') || document.getElementById('liveScanCountBadge');
   if (!tbody) return;
 
   // Populate activity filter dropdown while preserving selection
@@ -8190,16 +8416,19 @@ function renderAdminLiveActivityFeed() {
     return;
   }
 
-  tbody.innerHTML = filteredLogs.slice(0, 50).map(item => `
+  tbody.innerHTML = filteredLogs.slice(0, 50).map((item, idx) => `
     <tr>
-      <td><span style="font-weight: 700; color: #0284c7;"><i class="fa-regular fa-clock"></i> ${item.formattedTime || '-'}</span></td>
-      <td>${item.formattedDate || '-'}</td>
+      <td style="text-align: center; color: var(--text-muted); font-weight: 600;">${idx + 1}</td>
+      <td>
+        <span style="font-weight: 700; color: #0284c7;"><i class="fa-regular fa-clock"></i> ${item.formattedTime || '-'}</span>
+        <span style="font-size: 0.73rem; color: var(--text-muted); margin-left: 0.25rem;">(${item.formattedDate || '-'})</span>
+      </td>
       <td><b>${item.studentId || '-'}</b></td>
       <td style="font-weight: 600; color: var(--text-dark);">${item.studentName || '-'}</td>
       <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.76rem;">${item.grade || '-'}</span></td>
       <td><span style="font-weight: 600; color: #0369a1;">${item.activityTitle || item.activityId || '-'}</span></td>
-      <td>
-        <span style="background: #dcfce7; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 9999px;">
+      <td style="text-align: right;">
+        <span style="background: #dcfce7; color: #166534; font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.25rem;">
           <i class="fa-solid fa-qrcode"></i> ${item.source || 'สแกน QR สำเร็จ'}
         </span>
       </td>
@@ -8420,10 +8649,20 @@ async function fetchActivitiesAndLogsFromCloud(showToastMsg = false) {
 
   try {
     const sep = url.includes('?') ? '&' : '?';
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
+
+    const fetchOptions = {
+      method: 'GET',
+      redirect: 'follow',
+      ...(controller ? { signal: controller.signal } : {})
+    };
+
     const [actRes, logsRes] = await Promise.all([
-      fetch(`${url}${sep}action=getActivities&_t=${Date.now()}`, { method: 'GET', redirect: 'follow' }).then(r => r.json()).catch(() => null),
-      fetch(`${url}${sep}action=getActivityLogs&_t=${Date.now()}`, { method: 'GET', redirect: 'follow' }).then(r => r.json()).catch(() => null)
+      fetch(`${url}${sep}action=getActivities&_t=${Date.now()}`, fetchOptions).then(r => r.json()).catch(() => null),
+      fetch(`${url}${sep}action=getActivityLogs&_t=${Date.now()}`, fetchOptions).then(r => r.json()).catch(() => null)
     ]);
+    if (timeoutId) clearTimeout(timeoutId);
 
     // Merge activities from cloud
     if (actRes && (actRes.success || actRes.status === 'success') && Array.isArray(actRes.data)) {
@@ -8537,14 +8776,25 @@ function syncActivitiesAndLogsNow(showToastMsg = false) {
   fetchActivitiesAndLogsFromCloud(showToastMsg);
 }
 
-function startAdminActivityLivePolling() {
+let isActivityPollingBusy = false;
+
+function startAdminActivityLivePolling(intervalMs = 2500) {
   stopAdminActivityLivePolling();
-  adminActivityPollingTimer = setInterval(() => {
+  adminActivityPollingTimer = setInterval(async () => {
+    if (isActivityPollingBusy) return;
     const adminView = document.getElementById('view-admin');
-    if (!!currentAdmin && adminView && adminView.classList.contains('active')) {
-      fetchActivitiesAndLogsFromCloud(false);
+    const isActModalOpen = currentViewingActivityId !== null;
+    const isAdminViewActive = !!currentAdmin && adminView && adminView.classList.contains('active');
+
+    if (isAdminViewActive || isActModalOpen) {
+      isActivityPollingBusy = true;
+      try {
+        await fetchActivitiesAndLogsFromCloud(false);
+      } finally {
+        isActivityPollingBusy = false;
+      }
     }
-  }, 5000);
+  }, intervalMs);
 }
 
 function stopAdminActivityLivePolling() {
@@ -8562,10 +8812,10 @@ function openActivityAttendeesModal(actId) {
   const searchInput = document.getElementById('attendeesSearchInput');
 
   if (titleEl) {
-    titleEl.innerHTML = `<i class="fa-solid fa-users-viewfinder" style="color: var(--primary);"></i> รายชื่อผู้เข้าร่วมกิจกรรม`;
+    titleEl.innerHTML = `<i class="fa-solid fa-tower-broadcast" style="color: var(--primary);"></i> มอนิเตอร์ผู้สแกน: ${act ? act.title : actId}`;
   }
   if (subEl) {
-    subEl.innerText = `กิจกรรม: ${act ? act.title : actId} | วันที่: ${act ? act.date : '-'}`;
+    subEl.innerText = `ประเภท: ${act ? act.type : '-'} | วันที่: ${act ? act.date : '-'} | สถานที่: ${act ? act.location : '-'}`;
   }
   if (searchInput) searchInput.value = '';
 
@@ -8578,7 +8828,10 @@ function openActivityAttendeesModal(actId) {
   renderAttendeesTable(currentAttendeesList);
   openModal('activityAttendeesModal');
 
-  // Pull latest from Google Sheets in background
+  // Start fast live polling while modal is open (2.5s)
+  startAdminActivityLivePolling(2500);
+
+  // Pull latest from Google Sheets in background immediately
   fetchActivitiesAndLogsFromCloud(false);
 }
 

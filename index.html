@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=4.9">
+  <link rel="stylesheet" href="style.css?v=5.0">
 </head>
 <body class="auth-locked">
 
@@ -594,43 +594,90 @@
     <section id="view-activities" class="view-section">
       <div class="card" style="max-width: 620px; margin: 0 auto 1.5rem auto; padding: 1.25rem 1rem;">
         
-        <div style="text-align: center; margin-bottom: 0.85rem;">
-          <h2 style="font-size: 1.2rem; font-weight: 700; color: var(--text-dark); margin: 0; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
-            <i class="fa-solid fa-qrcode" style="color: var(--primary);"></i> สแกน QR Code เช็คชื่อกิจกรรม
-          </h2>
-          <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0.25rem 0 0 0;">
-            ส่องกล้องไปยังคิวอาร์โค้ดของกิจกรรมเพื่อเช็คชื่อ (สแกนซ้ำเพื่ออัปเดตเวลาล่าสุดได้)
-          </p>
+        <!-- Mode Switcher: สแกน QR Code vs ประวัติการเข้าร่วมกิจกรรม -->
+        <div class="student-act-segment-bar" id="studentActSegmentBar">
+          <button type="button" class="student-act-seg-btn active" id="btnStudentActScanner" onclick="setStudentActivityMode('scanner')">
+            <i class="fa-solid fa-camera"></i>
+            <span>สแกน QR Code</span>
+          </button>
+          <button type="button" class="student-act-seg-btn" id="btnStudentActHistory" onclick="setStudentActivityMode('history')">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>ประวัติการสแกนของฉัน</span>
+            <span class="badge-sub" id="scannedActivitiesCountBadge">0</span>
+          </button>
         </div>
 
-        <!-- Live Camera QR Code Scanner Box -->
-        <div class="qr-scanner-box">
-          <video id="qrScannerVideo" playsinline autoplay muted></video>
-          <canvas id="qrScannerCanvas" style="display: none;"></canvas>
-          <div class="qr-target-frame"></div>
-        </div>
-
-        <div id="qrScanFeedback" class="qr-feedback">
-          <i class="fa-solid fa-magnifying-glass"></i> <span>กำลังเปิดกล้องหลังค้นหา QR Code กิจกรรม...</span>
-        </div>
-        <div style="display: flex; gap: 0.5rem; justify-content: center; margin: 0.6rem 0 1rem 0; flex-wrap: wrap;">
-          <label for="inputQrImage" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; padding: 0.45rem 1rem;">
-            <i class="fa-solid fa-image"></i> เลือกรูป QR จากเครื่อง
-          </label>
-          <input type="file" id="inputQrImage" accept="image/*" style="display: none;" onchange="handleQrImageUpload(event)">
-        </div>
-
-        <!-- Scanned Activities History of current student -->
-        <div style="margin-top: 1.25rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
-            <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text-dark); margin: 0;">
-              <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการเข้าร่วมกิจกรรมของฉัน
-            </h3>
-            <div style="display: flex; align-items: center; gap: 0.4rem;">
-              <input type="date" id="filterActDate" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.82rem; height: 32px; width: auto;" onchange="filterStudentActivitiesByDate()" title="เลือกวันเดือนปีเพื่อดูกิจกรรม">
-              <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; height: 32px; font-size: 0.8rem;" onclick="clearActDateFilter()" title="แสดงทั้งหมด">ทั้งหมด</button>
-              <span class="badge-sub" id="scannedActivitiesCountBadge">0 กิจกรรม</span>
+        <!-- Section 1: Live QR Scanner -->
+        <div id="studentScannerSection">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-dark); margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+                <i class="fa-solid fa-qrcode" style="color: var(--primary);"></i> สแกน QR Code กิจกรรม
+              </h2>
+              <p style="color: var(--text-muted); font-size: 0.78rem; margin: 0.15rem 0 0 0;">
+                ส่องกล้องไปยังคิวอาร์โค้ดของกิจกรรมเพื่อเช็คชื่อ
+              </p>
             </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnToggleCameraLock" onclick="toggleQrScannerLock()" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">
+              <i class="fa-solid fa-lock"></i> <span>ล็อคกล้องชั่วคราว</span>
+            </button>
+          </div>
+
+          <!-- Live Camera QR Code Scanner Box -->
+          <div class="qr-scanner-box" id="qrScannerBoxContainer">
+            <video id="qrScannerVideo" playsinline autoplay muted></video>
+            <canvas id="qrScannerCanvas" style="display: none;"></canvas>
+            <div class="qr-target-frame"></div>
+            <!-- Lock Overlay -->
+            <div id="qrCameraLockedOverlay" class="qr-camera-locked-overlay" style="display: none;">
+              <i class="fa-solid fa-shield-halved" style="font-size: 2.2rem; color: #38bdf8; margin-bottom: 0.5rem;"></i>
+              <div style="font-weight: 700; color: #ffffff; font-size: 1rem;">กล้องถูกล็อคอยู่</div>
+              <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 0.25rem; margin-bottom: 0.85rem;">ระบบหยุดสแกนชั่วคราว เพื่อป้องกันการเผลอสแกน</div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="toggleQrScannerLock(false)">
+                <i class="fa-solid fa-unlock"></i> แตะเพื่อปลดล็อคกล้อง
+              </button>
+            </div>
+          </div>
+
+          <div id="qrScanFeedback" class="qr-feedback">
+            <i class="fa-solid fa-magnifying-glass"></i> <span>กำลังเปิดกล้องหลังค้นหา QR Code กิจกรรม...</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; justify-content: center; margin: 0.6rem 0 0.85rem 0; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="switchQrCameraFacing()">
+              <i class="fa-solid fa-camera-rotate"></i> สลับกล้องหน้า/หลัง
+            </button>
+            <label for="inputQrImage" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">
+              <i class="fa-solid fa-image"></i> เลือกรูป QR จากเครื่อง
+            </label>
+            <input type="file" id="inputQrImage" accept="image/*" style="display: none;" onchange="handleQrImageUpload(event)">
+          </div>
+
+          <div style="text-align: center; margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border-light);">
+            <button type="button" class="btn btn-outline btn-sm" onclick="setStudentActivityMode('history')" style="color: var(--primary); font-weight: 600;">
+              <i class="fa-solid fa-clock-rotate-left"></i> ดูประวัติการสแกนกิจกรรมทั้งหมด (หยุดกล้องทันที)
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 2: Student Activity History (Camera completely OFF) -->
+        <div id="studentHistorySection" style="display: none;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--border-light);">
+            <div>
+              <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-dark); margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+                <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i> ประวัติการเข้าร่วมกิจกรรมของฉัน
+              </h3>
+              <div style="font-size: 0.78rem; color: #10b981; margin-top: 0.15rem; font-weight: 600;">
+                <i class="fa-solid fa-shield-check"></i> กล้องสแกนหยุดทำงานแล้ว ปลอดภัย ไม่เผลอสแกน
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="setStudentActivityMode('scanner')">
+              <i class="fa-solid fa-camera"></i> เปิดกล้องสแกน QR
+            </button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
+            <input type="date" id="filterActDate" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.82rem; height: 34px; width: auto;" onchange="filterStudentActivitiesByDate()" title="เลือกวันเดือนปีเพื่อดูกิจกรรม">
+            <button type="button" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.6rem; height: 34px; font-size: 0.8rem;" onclick="clearActDateFilter()" title="แสดงทั้งหมด">ทั้งหมด</button>
           </div>
 
           <div id="studentScannedActivitiesList">
@@ -1953,49 +2000,58 @@
 
       <!-- Admin Tab 6: Activities & Real-Time QR Code Manager -->
       <div id="admin-tab-activities-admin" class="admin-content-tab" style="display: none;">
-        <!-- Bento Card A: Live Real-Time Student QR Scan Feed (Synced with Google Sheets) -->
-        <div class="card bento-live-feed-card" style="margin-bottom: 1.25rem;">
-          <div class="card-header" style="flex-wrap: wrap; gap: 0.8rem;">
+        <!-- Bento Card A: Live Real-Time Student QR Scan Feed (Synced with Google Sheets) - Collapsible -->
+        <div class="card bento-live-feed-card collapsed" id="adminLiveFeedCard" style="margin-bottom: 1.15rem;">
+          <div class="card-header" style="flex-wrap: wrap; gap: 0.8rem; cursor: pointer;" onclick="toggleAdminLiveFeedCard()">
             <div>
               <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
-                <div class="card-title" style="margin: 0;">
-                  <i class="fa-solid fa-tower-broadcast"></i> มอนิเตอร์ผู้สแกน QR Code เข้ากิจกรรมแบบเรียลไทม์ (Real-Time Feed)
+                <div class="card-title" style="margin: 0; display: flex; align-items: center; gap: 0.45rem;">
+                  <i class="fa-solid fa-tower-broadcast" style="color: var(--primary);"></i> มอนิเตอร์ผู้สแกน QR Code ทุกกิจกรรมแบบเรียลไทม์
                 </div>
                 <span class="live-sync-pill" id="adminLiveQrSyncPill">
-                  <span class="pulse-dot"></span> ซิงค์อัตโนมัติกับ Google Sheets
+                  <span class="pulse-dot"></span> ซิงค์สด
                 </span>
+                <span class="badge-sub" id="adminLiveFeedCountBadge" style="font-size: 0.78rem;">สแกนแล้ว 0 รายการ</span>
               </div>
-              <div class="card-subtitle" style="margin-top: 0.25rem;">
-                เมื่อนักเรียนสแกน QR Code กิจกรรมจากมือถือ รายชื่อและเวลาจะปรากฏที่นี่และบันทึกลงแผ่นงาน <b>"บันทึกการเข้าร่วมกิจกรรม"</b> ใน Google Sheets ทันที
+              <div class="card-subtitle" style="margin-top: 0.2rem;">
+                คลิกเพื่อเปิด/ปิดดูตารางสตรีมผู้สแกนทุกกิจกรรมแบบรวม (หรือคลิก "เปิดมอนิเตอร์สด" ในแต่ละกิจกรรมด้านล่าง)
               </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
-              <select class="form-control" id="liveFeedActivityFilter" style="min-width: 220px; height: 36px; font-size: 0.82rem;" onchange="renderAdminLiveActivityFeed()">
+            <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;" onclick="event.stopPropagation()">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnToggleLiveFeed" onclick="toggleAdminLiveFeedCard()">
+                <i class="fa-solid fa-chevron-down" id="toggleLiveFeedIcon"></i> <span id="toggleLiveFeedText">เปิดมอนิเตอร์รวม</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="adminLiveFeedBodyContainer" style="display: none; padding-top: 0.5rem; border-top: 1px solid var(--border-light); margin-top: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <select class="form-control" id="liveFeedActivityFilter" style="min-width: 240px; height: 36px; font-size: 0.82rem;" onchange="renderAdminLiveActivityFeed()">
                 <option value="ALL">ทุกกิจกรรม (แสดงผู้สแกนล่าสุดทั้งหมด)</option>
               </select>
               <button type="button" class="btn btn-secondary btn-sm" onclick="syncActivitiesAndLogsNow(true)">
                 <i class="fa-solid fa-rotate"></i> รีเฟรชข้อมูลทันที
               </button>
             </div>
-          </div>
 
-          <div class="table-responsive" style="max-height: 340px; overflow-y: auto;">
-            <table class="custom-table" id="adminLiveActivityLogsTable">
-              <thead>
-                <tr>
-                  <th style="width: 55px; text-align: center;">ลำดับ</th>
-                  <th>เวลาที่สแกน</th>
-                  <th>รหัสนักเรียน</th>
-                  <th>ชื่อ - นามสกุล</th>
-                  <th>ระดับชั้น</th>
-                  <th>กิจกรรมที่สแกน</th>
-                  <th style="text-align: right;">สถานะซิงค์</th>
-                </tr>
-              </thead>
-              <tbody id="adminLiveActivityLogsTableBody">
-                <!-- Injected in real-time via app.js -->
-              </tbody>
-            </table>
+            <div class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+              <table class="custom-table" id="adminLiveActivityLogsTable">
+                <thead>
+                  <tr>
+                    <th style="width: 55px; text-align: center;">ลำดับ</th>
+                    <th>เวลาที่สแกน</th>
+                    <th>รหัสนักเรียน</th>
+                    <th>ชื่อ - นามสกุล</th>
+                    <th>ระดับชั้น</th>
+                    <th>กิจกรรมที่สแกน</th>
+                    <th style="text-align: right;">สถานะซิงค์</th>
+                  </tr>
+                </thead>
+                <tbody id="adminLiveActivityLogsTableBody">
+                  <!-- Injected in real-time via app.js -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -2012,15 +2068,26 @@
             </div>
           </div>
 
-          <!-- Create New Activity Form -->
+          <!-- Create New Activity Form with Quick 1-Click Presets -->
           <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
-            <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text-dark);">
-              <i class="fa-solid fa-plus-circle" style="color: var(--primary);"></i> สร้างกิจกรรมใหม่ (ซิงค์เข้าเครื่องนักเรียนทุกคนทันที)
-            </h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <h4 style="font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-dark);">
+                <i class="fa-solid fa-plus-circle" style="color: var(--primary);"></i> สร้างกิจกรรมใหม่ (ซิงค์เข้าเครื่องนักเรียนทุกคนทันที)
+              </h4>
+              <!-- Quick Preset Template Buttons -->
+              <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 0.15rem;">เทมเพลตด่วน:</span>
+                <button type="button" class="btn-preset-act" onclick="adminQuickFillActivity('halaqah')"><i class="fa-solid fa-mosque"></i> หะลาเกาะฮฺ</button>
+                <button type="button" class="btn-preset-act" onclick="adminQuickFillActivity('qiyam')"><i class="fa-solid fa-moon"></i> กียามุลลัยลฺ</button>
+                <button type="button" class="btn-preset-act" onclick="adminQuickFillActivity('jumaah')"><i class="fa-solid fa-kaaba"></i> ละหมาดศุกร์</button>
+                <button type="button" class="btn-preset-act" onclick="adminQuickFillActivity('lecture')"><i class="fa-solid fa-book-open"></i> บรรยายธรรม</button>
+                <button type="button" class="btn-preset-act" onclick="adminQuickFillActivity('volunteer')"><i class="fa-solid fa-hand-holding-heart"></i> จิตอาสา</button>
+              </div>
+            </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; margin-bottom: 0.85rem;">
               <div class="form-group" style="margin: 0;">
                 <label class="form-label">ชื่อกิจกรรม <span class="required">*</span></label>
-                <input type="text" class="form-control" id="newActTitle" placeholder="เช่น กิจกรรมหะลาเกาะฮฺประจำสัปดาห์">
+                <input type="text" class="form-control" id="newActTitle" placeholder="เช่น กิจกรรมหะลาเกาะฮฺประจำสัปดาห์" onkeypress="if(event.key==='Enter') adminCreateNewActivity()">
               </div>
               <div class="form-group" style="margin: 0;">
                 <label class="form-label">ประเภทกิจกรรม</label>
@@ -2041,8 +2108,8 @@
                 <input type="date" class="form-control" id="newActDate">
               </div>
             </div>
-            <button class="btn btn-primary" onclick="adminCreateNewActivity()">
-              <i class="fa-solid fa-qrcode"></i> บันทึกกิจกรรมและสร้าง QR Code ทันที
+            <button class="btn btn-primary" id="btnAdminCreateAct" onclick="adminCreateNewActivity()">
+              <i class="fa-solid fa-qrcode"></i> บันทึกกิจกรรมและเปิด QR Code ทันที
             </button>
           </div>
 
@@ -2917,8 +2984,11 @@
     <div class="modal-dialog" style="max-width: 760px;">
       <div class="modal-header">
         <div>
-          <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-dark);" id="actAttendeesModalTitle">
-            <i class="fa-solid fa-users-viewfinder" style="color: var(--primary);"></i> รายชื่อนักเรียนที่เข้าร่วมกิจกรรม
+          <div style="display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;">
+            <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-dark);" id="actAttendeesModalTitle">
+              <i class="fa-solid fa-tower-broadcast" style="color: var(--primary);"></i> มอนิเตอร์ผู้สแกนกิจกรรมแบบเรียลไทม์
+            </div>
+            <span class="live-sync-pill"><span class="pulse-dot"></span> มอนิเตอร์สด</span>
           </div>
           <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;" id="actAttendeesModalSubtitle">
             กิจกรรม: -
@@ -2931,13 +3001,18 @@
       <div class="modal-body" style="padding: 1rem 1.25rem;">
         <!-- Search and Export Toolbar -->
         <div style="display: flex; gap: 0.5rem; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap;">
-          <div style="position: relative; flex: 1; min-width: 220px;">
+          <div style="position: relative; flex: 1; min-width: 200px;">
             <input type="text" id="attendeesSearchInput" class="form-control" placeholder="ค้นหาชื่อ หรือ รหัสนักเรียน..." oninput="filterAttendeesList(this.value)" style="padding-left: 2.2rem; height: 38px; font-size: 0.85rem;">
             <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="exportAttendeesToExcel()" style="white-space: nowrap; height: 38px; font-size: 0.82rem; font-weight: 600;">
-            <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> ส่งออก Excel
-          </button>
+          <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="fetchActivitiesAndLogsFromCloud(true)" style="white-space: nowrap; height: 38px; font-size: 0.82rem; font-weight: 600;">
+              <i class="fa-solid fa-rotate"></i> รีเฟรชสด
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="exportAttendeesToExcel()" style="white-space: nowrap; height: 38px; font-size: 0.82rem; font-weight: 600;">
+              <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> ส่งออก Excel
+            </button>
+          </div>
         </div>
 
         <!-- Attendees Table -->
@@ -2974,6 +3049,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=4.9"></script>
+  <script src="app.js?v=5.0"></script>
 </body>
 </html>
