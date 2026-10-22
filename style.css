@@ -1125,6 +1125,8 @@ html, body {
   opacity: 0;
   visibility: hidden;
   transition: var(--transition);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-overlay.open {
@@ -1138,10 +1140,14 @@ html, body {
   max-width: 580px;
   width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   transform: translateY(20px);
   transition: var(--transition);
+  margin: auto;
 }
 
 .modal-overlay.open .modal-dialog {
@@ -1154,10 +1160,15 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .modal-body {
   padding: 1.6rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  flex: 1 1 auto;
 }
 
 .modal-footer {
@@ -1168,6 +1179,7 @@ html, body {
   gap: 0.75rem;
   background: #f8fafc;
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  flex-shrink: 0;
 }
 
 /* Toasts / Notifications */
@@ -1385,11 +1397,26 @@ html, body {
     min-width: 52px;
   }
   .mobile-nav-item.active {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: #f0f9ff;
+    color: var(--primary);
     box-shadow: none;
     outline: none !important;
     border: none !important;
+  }
+  .modal-overlay {
+    padding: 0.5rem;
+    align-items: flex-start;
+  }
+  .modal-dialog {
+    max-height: calc(100dvh - 1rem);
+    margin: 0.25rem auto;
+    border-radius: 16px;
+  }
+  .modal-body {
+    padding: 1.1rem 0.9rem 1.75rem 0.9rem;
+  }
+  .form-control, input[type="text"], input[type="tel"], input[type="password"], input[type="email"], select, textarea {
+    font-size: 16px !important;
   }
   .header-container {
     padding: 0.45rem 0.75rem;
@@ -5425,9 +5452,10 @@ body.auth-locked #authModal {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   z-index: 9900 !important;
-  padding: 1.25rem 1rem !important;
+  padding: 1rem 0.75rem !important;
   overflow-y: auto !important;
-  align-items: center !important;
+  -webkit-overflow-scrolling: touch !important;
+  align-items: flex-start !important;
   justify-content: center !important;
 }
 
@@ -5439,8 +5467,102 @@ body.auth-locked #authModal .auth-close-btn {
   border: 1px solid #cbd5e1 !important;
   border-radius: 16px !important;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04) !important;
-  overflow: hidden !important;
   background: #ffffff !important;
+  max-height: calc(100dvh - 2rem) !important;
+  max-height: calc(100vh - 2rem);
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  margin: auto !important;
+  width: 100% !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-portal-dialog .auth-portal-brand-banner,
+.auth-portal-dialog .modal-header {
+  flex-shrink: 0 !important;
+}
+
+.auth-portal-dialog .modal-body {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  flex: 1 1 auto !important;
+  padding: 1.25rem 1.15rem !important;
+}
+
+@media (max-width: 640px) {
+  body.auth-locked #authModal {
+    padding: 0.5rem 0.35rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) 0.35rem !important;
+    align-items: flex-start !important;
+  }
+
+  .auth-portal-dialog {
+    max-height: calc(100dvh - 0.75rem) !important;
+    max-height: calc(100vh - 0.75rem);
+    margin: 0.25rem auto !important;
+    border-radius: 14px !important;
+  }
+
+  .auth-portal-dialog .modal-body {
+    padding: 0.95rem 0.8rem 2.2rem 0.8rem !important;
+    max-height: calc(100dvh - 105px) !important;
+  }
+
+  .auth-portal-brand-banner {
+    padding: 0.85rem 0.95rem !important;
+  }
+
+  .auth-portal-brand-title {
+    font-size: 1.05rem !important;
+  }
+
+  .auth-portal-brand-sub {
+    font-size: 0.72rem !important;
+  }
+}
+
+/* ==================== LOGIN ANIMATIONS & INTERACTIVE FEEDBACK ==================== */
+@keyframes loginShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.shake-error {
+  animation: loginShake 0.42s ease-in-out !important;
+}
+
+.form-control.is-invalid {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.16) !important;
+}
+
+.btn-loading {
+  position: relative !important;
+  pointer-events: none !important;
+  opacity: 0.88 !important;
+}
+
+.btn-loading i.fa-spin {
+  margin-right: 0.45rem;
+}
+
+.auth-field-error-msg {
+  color: #dc2626;
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  animation: authFadeIn 0.22s ease-out;
+}
+
+@keyframes authFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .auth-portal-brand-banner {

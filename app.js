@@ -1746,6 +1746,21 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.location.hash === '#admin') {
     openModal('adminAuthModal');
   }
+
+  // Mobile Stability: Release hardware camera streams when app is backgrounded or tab hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (typeof stopCameraStream === 'function') stopCameraStream();
+      if (typeof stopQrScanner === 'function') stopQrScanner();
+    }
+  });
+
+  // Mobile Stability: Smooth Chart.js re-render on orientation change
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      if (typeof renderDashboardCharts === 'function') renderDashboardCharts();
+    }, 250);
+  });
 });
 
 function loadStoredData() {
@@ -3987,6 +4002,8 @@ function toggleAuthForm(formType) {
     if (regSection) regSection.style.display = 'none';
     if (title) title.innerHTML = '<i class="fa-solid fa-user-graduate" style="color: var(--primary);"></i> เข้าสู่ระบบนักเรียน';
   }
+  const modalBody = document.querySelector('#authModal .modal-body');
+  if (modalBody) modalBody.scrollTop = 0;
 }
 
 function toggleTeacherAuthForm(formType) {
@@ -4005,6 +4022,8 @@ function toggleTeacherAuthForm(formType) {
     if (regSec) regSec.style.display = 'none';
     if (title) title.innerHTML = '<i class="fa-solid fa-chalkboard-user" style="color: var(--primary);"></i> เข้าสู่ระบบอาจารย์ผู้สอน';
   }
+  const modalBody = document.querySelector('#authModal .modal-body');
+  if (modalBody) modalBody.scrollTop = 0;
 }
 
 function populateTeacherRegisterSubjectsChecklist() {
@@ -4140,66 +4159,172 @@ function resetBirthDatePicker() {
   if (summaryBadge) summaryBadge.style.display = 'none';
 }
 
-async function handleStudentLogin() {
-  if (!checkLoginRateLimit()) return;
+// ----------------- AUTHENTICATION ANIMATIONS & INSTANT VALIDATION ----------------- //
 
-  const rawParentPhone = (document.getElementById('loginParentPhone')?.value || '').trim();
-  const rawStudentId = (document.getElementById('loginStudentId')?.value || '').trim();
-
-  const studentIdInput = cleanIdString(rawStudentId);
-  const parentPhoneInput = normalizePhone(rawParentPhone);
-
-  if (!rawParentPhone || !rawStudentId) {
-    showToast('กรุณากรอกเบอร์โทรศัพท์ผู้ปกครอง (User) และรหัสนักเรียน (รหัสผ่าน)', 'warning');
-    return;
+function setButtonLoading(btn, isLoading, loadingText = 'กำลังตรวจสอบ...', successText = null) {
+  if (!btn) return;
+  if (isLoading) {
+    if (!btn.dataset.originalHtml) {
+      btn.dataset.originalHtml = btn.innerHTML;
+    }
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${loadingText}`;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+    if (successText) {
+      btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${successText}`;
+    } else if (btn.dataset.originalHtml) {
+      btn.innerHTML = btn.dataset.originalHtml;
+    }
   }
+}
 
-  const cleanInputPhone = parentPhoneInput;
+function triggerAuthError(inputElement, errorMessage, containerElement = null) {
+  if (inputElement) {
+    inputElement.classList.add('is-invalid');
+    try { inputElement.focus(); } catch (e) {}
 
-  // Check if user is in pending registrations awaiting OTP verification
-  const pendingList = getPendingRegistrations();
-  const pendingMatch = pendingList.find(p => p.role === 'student' && isIdMatch(p.userId, studentIdInput) && p.status !== 'Verified');
-
-  // ตรวจสอบกับฐานข้อมูล Google Sheets เป็นหลักแบบเรียลไทม์ (Strict Live Database Verification)
-  let found = null;
-  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
-  if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
-
-  if (url && navigator.onLine) {
-    showToast('กำลังตรวจสอบข้อมูลกับฐานข้อมูล Google Sheets...', 'info');
-    try {
-      const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentIdInput)}&parentPhone=${encodeURIComponent(cleanInputPhone)}&_t=${Date.now()}`);
-      const json = await resp.json();
-      if (json && json.success && json.student) {
-        found = json.student;
-        found.studentId = cleanIdString(found.studentId);
-        found.parentPhone = normalizePhone(found.parentPhone);
-        if (found.birthDate) found.birthDate = normalizeBirthDate(found.birthDate);
-
-        // อัปเดตข้อมูลนักเรียนล่าสุดลงในรายการแคช
-        const existIdx = allStudents.findIndex(s => isIdMatch(s.studentId, studentIdInput));
-        if (existIdx !== -1) {
-          allStudents[existIdx] = { ...allStudents[existIdx], ...found };
-        } else {
-          allStudents.push(found);
-        }
-        localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+    const handleInput = () => {
+      inputElement.classList.remove('is-invalid');
+      inputElement.removeEventListener('input', handleInput);
+      const parent = inputElement.parentElement;
+      if (parent) {
+        const errEl = parent.querySelector('.auth-field-error-msg');
+        if (errEl) errEl.remove();
       }
-    } catch (e) {
-      console.warn('Live student lookup failed, falling back to local cache:', e);
+    };
+    inputElement.addEventListener('input', handleInput);
+
+    const parent = inputElement.parentElement;
+    if (parent) {
+      let errEl = parent.querySelector('.auth-field-error-msg');
+      if (!errEl) {
+        errEl = document.createElement('div');
+        errEl.className = 'auth-field-error-msg';
+        parent.appendChild(errEl);
+      }
+      errEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${errorMessage}`;
     }
   }
 
-  // หากไม่มีเน็ตหรือต่อฐานข้อมูลไม่ได้ชั่วคราว ให้ค้นหาจากแคชในเครื่อง
-  if (!found) {
-    found = allStudents.find(s => {
-      const matchId = isIdMatch(s.studentId, studentIdInput);
-      const matchPhone = isPhoneMatch(s.parentPhone, cleanInputPhone) || isPhoneMatch(s.parentPhone, rawParentPhone);
-      return matchId && matchPhone;
-    });
+  const shakeTarget = containerElement || inputElement?.closest('.auth-portal-dialog') || inputElement?.closest('.modal-dialog');
+  if (shakeTarget) {
+    shakeTarget.classList.remove('shake-error');
+    void shakeTarget.offsetWidth; // Force CSS reflow
+    shakeTarget.classList.add('shake-error');
+    setTimeout(() => shakeTarget.classList.remove('shake-error'), 450);
   }
 
-  // Strict OTP Gate: Applicant CANNOT log in until they enter the 6-digit OTP sent to their email by Admin
+  showToast(errorMessage, 'error');
+}
+
+async function handleStudentLogin() {
+  if (!checkLoginRateLimit()) return;
+
+  const phoneEl = document.getElementById('loginParentPhone');
+  const passEl = document.getElementById('loginStudentId');
+  const btn = document.getElementById('btnStudentLogin') || document.querySelector('#loginFormSection button.btn-primary');
+
+  const rawParentPhone = (phoneEl?.value || '').trim();
+  const rawStudentId = (passEl?.value || '').trim();
+
+  // Clear previous inline errors
+  document.querySelectorAll('#loginFormSection .auth-field-error-msg').forEach(el => el.remove());
+  phoneEl?.classList.remove('is-invalid');
+  passEl?.classList.remove('is-invalid');
+
+  if (!rawParentPhone) {
+    triggerAuthError(phoneEl, 'กรุณากรอกเบอร์โทรศัพท์ผู้ปกครอง (User)');
+    return;
+  }
+  if (!rawStudentId) {
+    triggerAuthError(passEl, 'กรุณากรอกรหัสนักเรียน (รหัสผ่าน)');
+    return;
+  }
+
+  const studentIdInput = cleanIdString(rawStudentId);
+  const cleanInputPhone = normalizePhone(rawParentPhone);
+
+  setButtonLoading(btn, true, 'กำลังตรวจสอบข้อมูล...');
+
+  // 1. Instant check in memory (allStudents)
+  const studentByPhone = allStudents.find(s => isPhoneMatch(s.parentPhone, cleanInputPhone) || isPhoneMatch(s.parentPhone, rawParentPhone));
+  const studentById = allStudents.find(s => isIdMatch(s.studentId, studentIdInput));
+
+  let found = null;
+
+  if (studentByPhone && studentById && isIdMatch(studentByPhone.studentId, studentById.studentId)) {
+    // Exact match found!
+    found = studentByPhone;
+  } else if (studentByPhone && !studentById) {
+    // Phone exists, but student ID (password) does NOT match any student!
+    setButtonLoading(btn, false);
+    recordLoginFailure();
+    triggerAuthError(passEl, 'รหัสนักเรียน (รหัสผ่าน) ไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
+    return;
+  } else if (studentByPhone && studentById && !isIdMatch(studentByPhone.studentId, studentById.studentId)) {
+    // Phone and ID belong to different students!
+    setButtonLoading(btn, false);
+    recordLoginFailure();
+    triggerAuthError(passEl, 'รหัสนักเรียน (รหัสผ่าน) ไม่ถูกต้องสำหรับเบอร์โทรศัพท์นี้');
+    return;
+  } else if (!studentByPhone && studentById) {
+    // Student ID exists, but parent phone is wrong!
+    setButtonLoading(btn, false);
+    recordLoginFailure();
+    triggerAuthError(phoneEl, 'เบอร์โทรศัพท์ผู้ปกครอง (User) ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+    return;
+  }
+
+  // 2. If neither exists in local cache, do a fast live check with 2.5s strict timeout
+  if (!found && navigator.onLine) {
+    let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+    if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
+
+    if (url) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+        const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentIdInput)}&parentPhone=${encodeURIComponent(cleanInputPhone)}&_t=${Date.now()}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const json = await resp.json();
+        if (json && json.success && json.student) {
+          found = json.student;
+          found.studentId = cleanIdString(found.studentId);
+          found.parentPhone = normalizePhone(found.parentPhone);
+          if (found.birthDate) found.birthDate = normalizeBirthDate(found.birthDate);
+
+          const existIdx = allStudents.findIndex(s => isIdMatch(s.studentId, studentIdInput));
+          if (existIdx !== -1) {
+            allStudents[existIdx] = { ...allStudents[existIdx], ...found };
+          } else {
+            allStudents.push(found);
+          }
+          localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+        }
+      } catch (e) {
+        // Fast abort or network fail
+      }
+    }
+  }
+
+  // 3. If STILL not found: account definitely does not exist
+  if (!found) {
+    setButtonLoading(btn, false);
+    recordLoginFailure();
+    triggerAuthError(phoneEl, 'ไม่พบข้อมูลบัญชีนี้ในระบบ กรุณาตรวจสอบเบอร์โทรศัพท์หรือสมัครบัญชีใหม่');
+    return;
+  }
+
+  // 4. Strict OTP Gate
+  const pendingList = getPendingRegistrations();
+  const pendingMatch = pendingList.find(p => p.role === 'student' && isIdMatch(p.userId, studentIdInput) && p.status !== 'Verified');
   const isUnverifiedStudent = found && (
     found.approvalStatus === 'PendingAdmin' ||
     found.approvalStatus === 'AwaitingOtp' ||
@@ -4208,6 +4333,7 @@ async function handleStudentLogin() {
   );
 
   if (pendingMatch || isUnverifiedStudent) {
+    setButtonLoading(btn, false);
     const pItem = pendingMatch || {
       reqId: 'REQ-' + Date.now(),
       role: 'student',
@@ -4228,11 +4354,14 @@ async function handleStudentLogin() {
     return;
   }
 
-  if (found) {
-    resetLoginFailures();
-    currentAdmin = null;
-    currentStudent = found;
-    localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+  // 5. Successful Login!
+  setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
+  resetLoginFailures();
+  currentAdmin = null;
+  currentStudent = found;
+  localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+
+  setTimeout(() => {
     document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(false);
     renderCurrentStudentProfile();
@@ -4243,10 +4372,7 @@ async function handleStudentLogin() {
     closeModal('authModal');
     switchView('dashboard');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
-  } else {
-    recordLoginFailure();
-    showToast('เบอร์โทรศัพท์ผู้ปกครอง (User) หรือรหัสนักเรียน (รหัสผ่าน) ไม่ถูกต้อง', 'error');
-  }
+  }, 250);
 }
 
 function handleStudentRegister() {
@@ -4345,28 +4471,60 @@ function handleStudentRegister() {
 async function handleTeacherLogin() {
   if (!checkLoginRateLimit()) return;
 
-  const rawUser = (document.getElementById('teacherLoginUser')?.value || '').trim();
-  const rawPass = (document.getElementById('teacherLoginPass')?.value || '').trim();
-  const cleanUser = cleanIdString(rawUser);
-  const cleanPass = cleanIdString(rawPass);
+  const userEl = document.getElementById('teacherLoginUser');
+  const passEl = document.getElementById('teacherLoginPass');
+  const btn = document.getElementById('btnTeacherLogin') || document.querySelector('#teacherLoginSection button.btn-primary');
 
-  if (!cleanUser || !cleanPass) {
-    showToast('กรุณากรอกรหัสอาจารย์/ผู้บริหาร (Username) และรหัสผ่าน', 'warning');
+  const rawUser = (userEl?.value || '').trim();
+  const rawPass = (passEl?.value || '').trim();
+
+  // Clear previous inline errors
+  document.querySelectorAll('#teacherLoginSection .auth-field-error-msg').forEach(el => el.remove());
+  userEl?.classList.remove('is-invalid');
+  passEl?.classList.remove('is-invalid');
+
+  if (!rawUser) {
+    triggerAuthError(userEl, 'กรุณากรอกรหัสอาจารย์ / ชื่อผู้ใช้ (Username)');
+    return;
+  }
+  if (!rawPass) {
+    triggerAuthError(passEl, 'กรุณากรอกรหัสผ่านอาจารย์ (Password)');
     return;
   }
 
-  // ซิงค์รายชื่ออาจารย์จาก Google Sheets เพื่อความสดใหม่ล่าสุดเสมอ
-  if (navigator.onLine && typeof fetchSubAdminsFromCloud === 'function') {
-    await fetchSubAdminsFromCloud(false);
+  const cleanUser = cleanIdString(rawUser);
+  const cleanPass = cleanIdString(rawPass);
+
+  setButtonLoading(btn, true, 'กำลังตรวจสอบข้อมูล...');
+
+  // 1. Instant check against subAdmins in memory
+  let teacherByUser = subAdmins.find(s => isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser)));
+
+  // Fast check cloud if not found locally
+  if (!teacherByUser && navigator.onLine && typeof fetchSubAdminsFromCloud === 'function') {
+    try {
+      await fetchSubAdminsFromCloud(false);
+      teacherByUser = subAdmins.find(s => isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser)));
+    } catch (e) {}
   }
 
-  let foundTeacher = subAdmins.find(s => {
-    const matchUser = isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser));
-    const matchPass = isIdMatch(s.password, cleanPass);
-    return matchUser && matchPass;
-  });
+  if (!teacherByUser) {
+    setButtonLoading(btn, false);
+    recordLoginFailure();
+    triggerAuthError(userEl, 'ไม่พบบัญชีอาจารย์/ผู้บริหารนี้ในระบบ กรุณาตรวจสอบชื่อผู้ใช้หรือสมัครบัญชีใหม่');
+    return;
+  }
 
-  // Check if pending admin OTP verification
+  // Check password
+  if (!isIdMatch(teacherByUser.password, cleanPass)) {
+    setButtonLoading(btn, false);
+    recordLoginFailure();
+    triggerAuthError(passEl, 'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
+    return;
+  }
+
+  // Check OTP / approval status
+  const foundTeacher = teacherByUser;
   const pendingList = getPendingRegistrations();
   const pendingMatch = pendingList.find(p => p.role === 'teacher' && isIdMatch(p.userId, cleanUser) && p.status !== 'Verified');
   const isUnverifiedTeacher = foundTeacher && (
@@ -4375,11 +4533,10 @@ async function handleTeacherLogin() {
     foundTeacher.status === 'PendingAdmin' ||
     foundTeacher.status === 'รอผู้สมัครกรอกรหัส OTP'
   );
-
-  // If the account was directly created by Admin (approvalStatus === 'Verified'), allow login immediately
   const isDirectAdminCreated = foundTeacher && (foundTeacher.approvalStatus === 'Verified' || foundTeacher.status === 'Active') && !isUnverifiedTeacher;
 
   if ((pendingMatch || isUnverifiedTeacher) && !isDirectAdminCreated) {
+    setButtonLoading(btn, false);
     const pItem = pendingMatch || {
       reqId: 'REQ-TCH-' + Date.now(),
       role: 'teacher',
@@ -4400,19 +4557,20 @@ async function handleTeacherLogin() {
     return;
   }
 
-  if (foundTeacher) {
-    resetLoginFailures();
-    currentAdmin = foundTeacher;
+  // Successful Login
+  setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
+  resetLoginFailures();
+  currentAdmin = foundTeacher;
+  localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+
+  setTimeout(() => {
     document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(true);
     closeModal('authModal');
     switchView(foundTeacher.role === 'SuperAdmin' ? 'admin' : 'teacher');
     const roleWelcome = foundTeacher.role === 'EXECUTIVE' ? 'ผู้บริหาร' : 'อาจารย์';
     showToast(`ยินดีต้อนรับ${roleWelcome} ${foundTeacher.fullName || foundTeacher.username}`, 'success');
-  } else {
-    recordLoginFailure();
-    showToast('รหัสประจำตัวอาจารย์/ผู้บริหาร หรือ รหัสผ่านไม่ถูกต้อง', 'error');
-  }
+  }, 250);
 }
 
 function handleTeacherRegister() {
@@ -4500,20 +4658,37 @@ function handleTeacherRegister() {
 
 function handleInlineAdminLogin() {
   if (!checkLoginRateLimit()) return;
-  const rawPass = (document.getElementById('inlineAdminPassInput')?.value || '').trim();
+  const passEl = document.getElementById('inlineAdminPassInput');
+  const btn = document.getElementById('btnInlineAdminLogin') || document.querySelector('#authAdminContainer button.btn-primary');
+
+  const rawPass = (passEl?.value || '').trim();
+  passEl?.classList.remove('is-invalid');
+  document.querySelectorAll('#authAdminContainer .auth-field-error-msg').forEach(el => el.remove());
+
+  if (!rawPass) {
+    triggerAuthError(passEl, 'กรุณากรอกรหัสแอดมินสูงสุด (Master Code)');
+    return;
+  }
+
   const pass = cleanIdString(rawPass);
+  setButtonLoading(btn, true, 'กำลังตรวจสอบสิทธิ์...');
 
   if (isIdMatch(pass, MASTER_ADMIN_PASS)) {
+    setButtonLoading(btn, false, null, 'ยืนยันสิทธิ์สำเร็จ!');
     resetLoginFailures();
     currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
-    document.body.classList.remove('auth-locked');
-    updateAdminUIVisibility(true);
-    closeModal('authModal');
-    switchView('admin');
-    showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
+    localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+    setTimeout(() => {
+      document.body.classList.remove('auth-locked');
+      updateAdminUIVisibility(true);
+      closeModal('authModal');
+      switchView('admin');
+      showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
+    }, 250);
   } else {
+    setButtonLoading(btn, false);
     recordLoginFailure();
-    showToast('รหัสแอดมินสูงสุดไม่ถูกต้อง', 'error');
+    triggerAuthError(passEl, 'รหัสแอดมินสูงสุดไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
   }
 }
 
@@ -4821,46 +4996,84 @@ function updateAdminUIVisibility(isAuthenticated) {
 async function handleAdminLogin() {
   if (!checkLoginRateLimit()) return;
 
-  const rawPass = (document.getElementById('adminPassInput')?.value || '').trim();
-  const pass = cleanIdString(rawPass);
-  const user = cleanIdString((document.getElementById('subAdminUserInput')?.value || '').trim());
+  const passEl = document.getElementById('adminPassInput');
+  const userEl = document.getElementById('subAdminUserInput');
+  const btn = document.getElementById('btnAdminModalLogin') || document.querySelector('#adminAuthModal button.btn-primary');
 
-  if (isIdMatch(pass, MASTER_ADMIN_PASS) && !user) {
-    resetLoginFailures();
-    currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
-    document.body.classList.remove('auth-locked');
-    updateAdminUIVisibility(true);
-    closeModal('adminAuthModal');
-    closeModal('authModal');
-    switchView('admin');
-    showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
+  const rawPass = (passEl?.value || '').trim();
+  const pass = cleanIdString(rawPass);
+  const user = cleanIdString((userEl?.value || '').trim());
+
+  passEl?.classList.remove('is-invalid');
+  userEl?.classList.remove('is-invalid');
+  document.querySelectorAll('#adminAuthModal .auth-field-error-msg').forEach(el => el.remove());
+
+  if (!rawPass) {
+    triggerAuthError(passEl, 'กรุณากรอกรหัสผ่าน');
     return;
   }
 
+  setButtonLoading(btn, true, 'กำลังตรวจสอบสิทธิ์...');
+
+  if (isIdMatch(pass, MASTER_ADMIN_PASS) && !user) {
+    setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
+    resetLoginFailures();
+    currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
+    localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+    setTimeout(() => {
+      document.body.classList.remove('auth-locked');
+      updateAdminUIVisibility(true);
+      closeModal('adminAuthModal');
+      closeModal('authModal');
+      switchView('admin');
+      showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
+    }, 250);
+    return;
+  }
+
+  // Check subAdmins
   let foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
   if (!foundSub && typeof fetchSubAdminsFromCloud === 'function') {
-    await fetchSubAdminsFromCloud(false);
-    foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
+    try {
+      await fetchSubAdminsFromCloud(false);
+      foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
+    } catch (e) {}
   }
 
   if (foundSub) {
     if (foundSub.approvalStatus === 'PendingAdmin' || foundSub.approvalStatus === 'AwaitingOtp') {
+      setButtonLoading(btn, false);
       showToast('บัญชีอาจารย์นี้ยังไม่ได้ป้อนรหัสยืนยัน 6 หลักที่ส่งไปยังอีเมล', 'warning');
       return;
     }
+    setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
     resetLoginFailures();
     currentAdmin = foundSub;
-    document.body.classList.remove('auth-locked');
-    updateAdminUIVisibility(true);
-    closeModal('adminAuthModal');
-    closeModal('authModal');
-    switchView(foundSub.role === 'SuperAdmin' ? 'admin' : 'teacher');
-    showToast(`ยินดีต้อนรับ ${foundSub.fullName || foundSub.username}`, 'success');
+    localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+    setTimeout(() => {
+      document.body.classList.remove('auth-locked');
+      updateAdminUIVisibility(true);
+      closeModal('adminAuthModal');
+      closeModal('authModal');
+      switchView(foundSub.role === 'SuperAdmin' ? 'admin' : 'teacher');
+      showToast(`ยินดีต้อนรับ ${foundSub.fullName || foundSub.username}`, 'success');
+    }, 250);
     return;
   }
 
+  setButtonLoading(btn, false);
   recordLoginFailure();
-  showToast('รหัสผ่านหรือบัญชีผู้ดูแลระบบไม่ถูกต้อง', 'error');
+
+  if (user) {
+    const userExists = subAdmins.some(s => isIdMatch(s.username, user) || (s.phone && isPhoneMatch(s.phone, user)));
+    if (userExists) {
+      triggerAuthError(passEl, 'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
+    } else {
+      triggerAuthError(userEl, 'ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาตรวจสอบรหัสอาจารย์หรือชื่อผู้ใช้');
+    }
+  } else {
+    triggerAuthError(passEl, 'รหัสผ่านหลักไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
+  }
 }
 
 function adminLogout() {
