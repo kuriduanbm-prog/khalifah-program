@@ -2976,6 +2976,29 @@ function appendPrayerNote(text) {
 
 let selectedPrayerNoteTimeSlot = null;
 
+function togglePrayerNotesCollapse(forceState = null) {
+  const card = document.getElementById('prayerNotesCard');
+  const body = document.getElementById('prayerNotesCollapseBody');
+  const chevron = document.getElementById('prayerNotesChevron');
+  const header = document.getElementById('prayerNotesHeader');
+  if (!body) return;
+
+  const isCurrentlyOpen = body.style.display !== 'none';
+  const shouldOpen = forceState !== null ? forceState : !isCurrentlyOpen;
+
+  if (shouldOpen) {
+    body.style.display = 'block';
+    if (card) card.classList.add('is-open');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+    if (header) header.setAttribute('aria-expanded', 'true');
+  } else {
+    body.style.display = 'none';
+    if (card) card.classList.remove('is-open');
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    if (header) header.setAttribute('aria-expanded', 'false');
+  }
+}
+
 function selectPrayerNoteTime(time) {
   selectedPrayerNoteTimeSlot = time;
   document.querySelectorAll('.prayer-note-time-chip').forEach(chip => {
@@ -3000,6 +3023,7 @@ async function savePrayerNoteOnly() {
   }
 
   if (!selectedPrayerNoteTimeSlot) {
+    if (typeof togglePrayerNotesCollapse === 'function') togglePrayerNotesCollapse(true);
     showToast('⚠️ กรุณาเลือกเวลาละหมาดก่อนบันทึกหมายเหตุ (ซุบฮิ, ซุฮริ, อัศรฺ, มัฆริบ, อีชาอ์)', 'warning');
     const groupEl = document.querySelector('.prayer-time-select-group');
     if (groupEl) {
@@ -3095,8 +3119,9 @@ async function savePrayerNoteOnly() {
     if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
   }
 
-  // Clear note input after saving
+  // Clear note input after saving and collapse the section
   if (noteInput) noteInput.value = '';
+  if (typeof togglePrayerNotesCollapse === 'function') togglePrayerNotesCollapse(false);
 
   renderTodayPrayerTable();
   renderPrayerHistory();
