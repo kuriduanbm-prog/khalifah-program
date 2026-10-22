@@ -3955,6 +3955,22 @@ function generateRandomAdminOtp() {
   return String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
 }
 
+function syncAuthModeSegmentBar(mode) {
+  const btnLogin = document.getElementById('authModeBtnLogin');
+  const btnRegister = document.getElementById('authModeBtnRegister');
+  if (btnLogin) btnLogin.classList.toggle('active', mode === 'login');
+  if (btnRegister) btnRegister.classList.toggle('active', mode === 'register');
+}
+
+function handleAuthModeSegmentChange(mode) {
+  syncAuthModeSegmentBar(mode);
+  if (currentAuthRole === 'teacher') {
+    toggleTeacherAuthForm(mode === 'register' ? 'register' : 'login');
+  } else {
+    toggleAuthForm(mode === 'register' ? 'register' : 'login');
+  }
+}
+
 function selectAuthRole(role) {
   currentAuthRole = role;
   const btnStd = document.getElementById('authRoleBtnStudent');
@@ -3973,6 +3989,22 @@ function selectAuthRole(role) {
   if (tchBox) tchBox.style.display = (role === 'teacher') ? 'block' : 'none';
   if (admBox) admBox.style.display = (role === 'admin') ? 'block' : 'none';
 
+  const segBar = document.getElementById('authModeSegmentBar');
+  if (segBar) {
+    segBar.style.display = (role === 'admin') ? 'none' : 'flex';
+  }
+
+  // Sync segment bar active state based on which form is currently visible
+  if (role === 'student') {
+    const regSection = document.getElementById('registerFormSection');
+    const isRegister = regSection && regSection.style.display !== 'none';
+    syncAuthModeSegmentBar(isRegister ? 'register' : 'login');
+  } else if (role === 'teacher') {
+    const regSection = document.getElementById('teacherRegisterSection');
+    const isRegister = regSection && regSection.style.display !== 'none';
+    syncAuthModeSegmentBar(isRegister ? 'register' : 'login');
+  }
+
   const title = document.getElementById('authModalTitle');
   if (title) {
     if (role === 'student') {
@@ -3988,6 +4020,7 @@ function selectAuthRole(role) {
 
 function toggleAuthForm(formType) {
   selectAuthRole('student');
+  syncAuthModeSegmentBar(formType === 'register' ? 'register' : 'login');
   const loginSection = document.getElementById('loginFormSection');
   const regSection = document.getElementById('registerFormSection');
   const title = document.getElementById('authModalTitle');
@@ -4008,6 +4041,7 @@ function toggleAuthForm(formType) {
 
 function toggleTeacherAuthForm(formType) {
   selectAuthRole('teacher');
+  syncAuthModeSegmentBar(formType === 'register' ? 'register' : 'login');
   const loginSec = document.getElementById('teacherLoginSection');
   const regSec = document.getElementById('teacherRegisterSection');
   const title = document.getElementById('authModalTitle');
@@ -4081,7 +4115,6 @@ function syncBirthDatePicker() {
   const previewText = document.getElementById('birthDatePreviewText');
   const codeBadge = document.getElementById('birthDateCodeBadge');
   const defaultHint = document.getElementById('birthDateDefaultHint');
-  const summaryBadge = document.getElementById('birthDateSummaryBadge');
 
   if (!daySelect || !monthSelect || !yearSelect || !hiddenInput) return;
 
@@ -4129,15 +4162,10 @@ function syncBirthDatePicker() {
     }
     if (pill) pill.style.display = 'inline-flex';
     if (defaultHint) defaultHint.style.display = 'none';
-    if (summaryBadge) {
-      summaryBadge.textContent = `อายุ ${ageYears} ปี`;
-      summaryBadge.style.display = 'inline-block';
-    }
   } else {
     hiddenInput.value = '';
     if (pill) pill.style.display = 'none';
     if (defaultHint) defaultHint.style.display = 'flex';
-    if (summaryBadge) summaryBadge.style.display = 'none';
   }
 }
 
@@ -4148,7 +4176,6 @@ function resetBirthDatePicker() {
   const hiddenInput = document.getElementById('regBirthDate');
   const pill = document.getElementById('birthDateSelectedPill');
   const defaultHint = document.getElementById('birthDateDefaultHint');
-  const summaryBadge = document.getElementById('birthDateSummaryBadge');
 
   if (daySelect) { daySelect.value = ''; daySelect.classList.remove('selected'); }
   if (monthSelect) { monthSelect.value = ''; monthSelect.classList.remove('selected'); }
@@ -4156,7 +4183,6 @@ function resetBirthDatePicker() {
   if (hiddenInput) hiddenInput.value = '';
   if (pill) pill.style.display = 'none';
   if (defaultHint) defaultHint.style.display = 'flex';
-  if (summaryBadge) summaryBadge.style.display = 'none';
 }
 
 // ----------------- AUTHENTICATION ANIMATIONS & INSTANT VALIDATION ----------------- //
@@ -4376,31 +4402,88 @@ async function handleStudentLogin() {
 }
 
 function handleStudentRegister() {
-  const studentId = cleanIdString(document.getElementById('regStudentId')?.value || '');
-  const fullName = (document.getElementById('regFullName')?.value || '').trim();
-  const email = (document.getElementById('regStudentEmail')?.value || '').trim();
-  const schoolName = (document.getElementById('regSchoolName')?.value || '').trim();
-  const grade = document.getElementById('regGrade')?.value || 'มัธยมศึกษาปีที่ 1';
+  const studentIdInput = document.getElementById('regStudentId');
+  const fullNameInput = document.getElementById('regFullName');
+  const emailInput = document.getElementById('regStudentEmail');
+  const schoolNameInput = document.getElementById('regSchoolName');
+  const gradeInput = document.getElementById('regGrade');
+  const birthDayInput = document.getElementById('regBirthDay');
+  const birthMonthInput = document.getElementById('regBirthMonth');
+  const birthYearInput = document.getElementById('regBirthYear');
+  const parentPhoneInput = document.getElementById('regParentPhone');
+  const btn = document.getElementById('btnStudentRegister') || document.querySelector('#registerFormSection button.btn-primary');
+
+  // Clear existing errors
+  document.querySelectorAll('#registerFormSection .auth-field-error-msg').forEach(el => el.remove());
+  document.querySelectorAll('#registerFormSection .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+  const studentId = cleanIdString(studentIdInput?.value || '');
+  const fullName = (fullNameInput?.value || '').trim();
+  const email = (emailInput?.value || '').trim();
+  const schoolName = (schoolNameInput?.value || '').trim();
+  const grade = gradeInput?.value || 'มัธยมศึกษาปีที่ 1';
   const rawBirthDate = (document.getElementById('regBirthDate')?.value || '').trim();
   const birthDate = normalizeBirthDate(rawBirthDate);
-  const parentPhone = normalizePhone(document.getElementById('regParentPhone')?.value || '');
+  const parentPhone = normalizePhone(parentPhoneInput?.value || '');
 
-  if (!studentId || !fullName || !email || !schoolName || !birthDate || !parentPhone) {
-    showToast('กรุณากรอกข้อมูลให้ครบถ้วน รวมถึงอีเมลสำหรับรับรหัสยืนยัน และวันเดือนปีเกิด', 'warning');
+  // Step-by-step validations with clear messages and auto-scroll
+  if (!studentId) {
+    triggerAuthError(studentIdInput, 'กรุณากรอกเลขประจำตัวนักเรียน');
+    try { studentIdInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
     return;
   }
 
-  const cleanBD = birthDate.replace(/[^0-9]/g, '');
-  if (cleanBD.length !== 8) {
-    showToast('กรุณาเลือกวัน เดือน และปี พ.ศ. เกิดให้ครบถ้วน', 'warning');
+  if (!fullName) {
+    triggerAuthError(fullNameInput, 'กรุณากรอกชื่อ - นามสกุลนักเรียน');
+    try { fullNameInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+
+  if (!email) {
+    triggerAuthError(emailInput, 'กรุณากรอกอีเมลสำหรับรับรหัสยืนยันจากแอดมิน');
+    try { emailInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    triggerAuthError(emailInput, 'รูปแบบอีเมลไม่ถูกต้อง เช่น student@example.com');
+    try { emailInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+
+  if (!schoolName) {
+    triggerAuthError(schoolNameInput, 'กรุณากรอกชื่อโรงเรียนเดิม หรือสถานศึกษา');
+    try { schoolNameInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+
+  const cleanBD = birthDate ? birthDate.replace(/[^0-9]/g, '') : '';
+  if (!cleanBD || cleanBD.length !== 8) {
+    const targetInput = (!birthDayInput?.value) ? birthDayInput : (!birthMonthInput?.value ? birthMonthInput : birthYearInput);
+    triggerAuthError(targetInput, 'กรุณาเลือกวัน เดือน และปี พ.ศ. เกิดให้ครบถ้วน');
+    try { targetInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+
+  if (!parentPhone) {
+    triggerAuthError(parentPhoneInput, 'กรุณากรอกเบอร์โทรศัพท์ผู้ปกครอง (ใช้เป็น User เข้าสู่ระบบ)');
+    try { parentPhoneInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+  const cleanPhone = parentPhone.replace(/[^0-9]/g, '');
+  if (cleanPhone.length < 9 || cleanPhone.length > 10) {
+    triggerAuthError(parentPhoneInput, 'เบอร์โทรศัพท์ควรเป็นตัวเลข 9-10 หลัก');
+    try { parentPhoneInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
     return;
   }
 
   const isDuplicate = allStudents.some(s => isIdMatch(s.studentId, studentId) && s.approvalStatus !== 'PendingAdmin' && s.approvalStatus !== 'AwaitingOtp');
   if (isDuplicate) {
-    showToast('รหัสนักเรียนนี้มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้', 'error');
+    triggerAuthError(studentIdInput, 'รหัสนักเรียนนี้มีอยู่ในระบบแล้ว ไม่สามารถลงทะเบียนซ้ำได้');
+    try { studentIdInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
     return;
   }
+
+  setButtonLoading(btn, true, 'กำลังส่งคำขอสมัคร...');
 
   // Generate Dynamic Random 6-Digit Admin Verification Code
   const otpCode = generateRandomAdminOtp();
@@ -4463,9 +4546,12 @@ function handleStudentRegister() {
   renderPendingApprovalsTable();
   renderSuperAdminOverviewKpis();
 
-  // Open the Admin Random OTP Verification Modal immediately!
-  openOtpVerifyModalForPending(pendingItem);
-  showToast('ส่งคำขอสมัครแล้ว! กรุณารอรับรหัสยืนยัน 6 หลักทางอีเมลเมื่อแอดมินกดอนุมัติ', 'info');
+  setTimeout(() => {
+    setButtonLoading(btn, false);
+    // Open the Admin Random OTP Verification Modal immediately in foreground!
+    openOtpVerifyModalForPending(pendingItem);
+    showToast('ส่งคำขอสมัครแล้ว! กรุณารอรับรหัสยืนยัน 6 หลักทางอีเมลเมื่อแอดมินกดอนุมัติ', 'info');
+  }, 350);
 }
 
 async function handleTeacherLogin() {
@@ -4574,30 +4660,76 @@ async function handleTeacherLogin() {
 }
 
 function handleTeacherRegister() {
-  const teacherId = cleanIdString(document.getElementById('regTeacherId')?.value || '');
-  const teacherPass = cleanIdString(document.getElementById('regTeacherPass')?.value || '');
-  const fullName = (document.getElementById('regTeacherName')?.value || '').trim();
-  const email = (document.getElementById('regTeacherEmail')?.value || '').trim();
-  const phone = normalizePhone(document.getElementById('regTeacherPhone')?.value || '');
+  const teacherIdInput = document.getElementById('regTeacherId');
+  const teacherPassInput = document.getElementById('regTeacherPass');
+  const fullNameInput = document.getElementById('regTeacherName');
+  const emailInput = document.getElementById('regTeacherEmail');
+  const phoneInput = document.getElementById('regTeacherPhone');
+  const subjectsContainer = document.getElementById('regTeacherSubjectsChecklist');
+  const btn = document.getElementById('btnTeacherRegister') || document.querySelector('#teacherRegisterSection button.btn-primary');
+
+  // Clear previous errors
+  document.querySelectorAll('#teacherRegisterSection .auth-field-error-msg').forEach(el => el.remove());
+  document.querySelectorAll('#teacherRegisterSection .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+  const teacherId = cleanIdString(teacherIdInput?.value || '');
+  const teacherPass = cleanIdString(teacherPassInput?.value || '');
+  const fullName = (fullNameInput?.value || '').trim();
+  const email = (emailInput?.value || '').trim();
+  const phone = normalizePhone(phoneInput?.value || '');
 
   const checkedNodes = document.querySelectorAll('input[name="regTeacherSubjChk"]:checked');
   const selectedSubjects = Array.from(checkedNodes).map(cb => cb.value);
 
-  if (!teacherId || !teacherPass || !fullName || !email || !phone) {
-    showToast('กรุณากรอกรหัสอาจารย์ รหัสผ่าน ชื่อ-นามสกุล อีเมล และเบอร์โทรศัพท์ให้ครบถ้วน', 'warning');
+  if (!teacherId) {
+    triggerAuthError(teacherIdInput, 'กรุณากรอกรหัสประจำตัวอาจารย์ / Username');
+    try { teacherIdInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+
+  if (!teacherPass) {
+    triggerAuthError(teacherPassInput, 'กรุณากำหนดรหัสผ่านเข้าสู่ระบบ');
+    try { teacherPassInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+
+  if (!fullName) {
+    triggerAuthError(fullNameInput, 'กรุณากรอกชื่อ - นามสกุลอาจารย์');
+    try { fullNameInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+
+  if (!email) {
+    triggerAuthError(emailInput, 'กรุณากรอกอีเมลสำหรับรับรหัสยืนยันอัตโนมัติ');
+    try { emailInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    triggerAuthError(emailInput, 'รูปแบบอีเมลไม่ถูกต้อง เช่น teacher@example.com');
+    try { emailInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    return;
+  }
+
+  if (!phone) {
+    triggerAuthError(phoneInput, 'กรุณากรอกเบอร์โทรศัพท์ติดต่อ');
+    try { phoneInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
     return;
   }
 
   if (selectedSubjects.length === 0) {
-    showToast('กรุณาเลือกรายวิชาที่รับผิดชอบสอนอย่างน้อย 1 วิชา', 'warning');
+    triggerAuthError(subjectsContainer, 'กรุณาเลือกรายวิชาที่รับผิดชอบสอนอย่างน้อย 1 วิชา');
+    try { subjectsContainer?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
     return;
   }
 
   const isDup = subAdmins.some(s => isIdMatch(s.username, teacherId) && s.approvalStatus !== 'PendingAdmin' && s.approvalStatus !== 'AwaitingOtp');
   if (isDup) {
-    showToast('รหัสประจำตัวอาจารย์นี้มีอยู่ในระบบแล้ว', 'error');
+    triggerAuthError(teacherIdInput, 'รหัสประจำตัวอาจารย์นี้มีอยู่ในระบบแล้ว');
+    try { teacherIdInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
     return;
   }
+
+  setButtonLoading(btn, true, 'กำลังส่งคำขอสมัครอาจารย์...');
 
   loadAppSubjects();
   const otpCode = generateRandomAdminOtp();
@@ -4652,8 +4784,11 @@ function handleTeacherRegister() {
   renderPendingApprovalsTable();
   renderSuperAdminOverviewKpis();
 
-  openOtpVerifyModalForPending(pendingItem);
-  showToast('ส่งคำขอสมัครอาจารย์สำเร็จ! กรุณารอรับรหัสยืนยัน 6 หลักทางอีเมลเมื่อแอดมินกดอนุมัติ', 'info');
+  setTimeout(() => {
+    setButtonLoading(btn, false);
+    openOtpVerifyModalForPending(pendingItem);
+    showToast('ส่งคำขอสมัครอาจารย์สำเร็จ! กรุณารอรับรหัสยืนยัน 6 หลักทางอีเมลเมื่อแอดมินกดอนุมัติ', 'info');
+  }, 350);
 }
 
 function handleInlineAdminLogin() {

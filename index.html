@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=4.7">
+  <link rel="stylesheet" href="style.css?v=4.8">
 </head>
 <body class="auth-locked">
 
@@ -2375,6 +2375,18 @@
           </button>
         </div>
 
+        <!-- Mode Switcher: เข้าสู่ระบบ (Login) vs สมัครสมาชิกใหม่ (Register) -->
+        <div class="auth-mode-segment-bar" id="authModeSegmentBar">
+          <button type="button" class="auth-mode-seg-btn active" id="authModeBtnLogin" onclick="handleAuthModeSegmentChange('login')">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>เข้าสู่ระบบ</span>
+          </button>
+          <button type="button" class="auth-mode-seg-btn" id="authModeBtnRegister" onclick="handleAuthModeSegmentChange('register')">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>สมัครสมาชิกใหม่</span>
+          </button>
+        </div>
+
         <!-- ================= ROLE 1: STUDENT ================= -->
         <div id="authStudentContainer">
           <!-- Student Login Form (User = Parent Phone, Password = Student ID) -->
@@ -2398,7 +2410,7 @@
             </button>
 
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--border-light); font-size: 0.84rem;">
-              <span>ยังไม่มีบัญชี? <a href="javascript:void(0)" onclick="toggleAuthForm('register')" style="color: var(--text-dark); font-weight: 700; text-decoration: underline;">สร้างบัญชีนักเรียนใหม่</a></span>
+              <span>ยังไม่มีบัญชี? <a href="javascript:void(0)" onclick="handleAuthModeSegmentChange('register')" style="color: var(--primary); font-weight: 700; text-decoration: underline;">สมัครลงทะเบียนนักเรียนใหม่</a></span>
               <a href="javascript:void(0)" onclick="openOtpVerifyModalPrompt('student')" style="color: var(--text-secondary); font-weight: 600;">
                 <i class="fa-solid fa-key"></i> กรอกรหัสยืนยันแอดมิน
               </a>
@@ -2455,7 +2467,6 @@
             <div class="form-group">
               <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
                 <span><i class="fa-regular fa-calendar-days" style="margin-right: 0.25rem;"></i> วันเดือนปีเกิด (พ.ศ.) <span class="required">*</span></span>
-                <span id="birthDateSummaryBadge" style="display: none; font-size: 0.74rem; color: var(--text-dark); background: #f1f5f9; padding: 0.15rem 0.55rem; border-radius: 999px; font-weight: 600;"></span>
               </label>
               
               <div class="birthdate-picker-row">
@@ -2504,11 +2515,11 @@
               <label class="form-label">เบอร์โทรศัพท์ผู้ปกครอง <span class="required">* (ใช้เป็น User เข้าสู่ระบบ)</span></label>
               <input type="tel" class="form-control" id="regParentPhone" placeholder="เช่น 0812345678">
             </div>
-            <button class="btn btn-primary btn-block btn-lg" onclick="handleStudentRegister()">
+            <button class="btn btn-primary btn-block btn-lg" id="btnStudentRegister" onclick="handleStudentRegister()">
               <i class="fa-solid fa-user-plus"></i> ส่งคำขอสมัครและรับรหัสยืนยัน
             </button>
             <div style="text-align: center; margin-top: 1.1rem; font-size: 0.85rem;">
-              มีบัญชีอยู่แล้ว? <a href="javascript:void(0)" onclick="toggleAuthForm('login')" style="color: var(--text-dark); font-weight: 700; text-decoration: underline;">เข้าสู่ระบบนักเรียน</a>
+              มีบัญชีอยู่แล้ว? <a href="javascript:void(0)" onclick="handleAuthModeSegmentChange('login')" style="color: var(--primary); font-weight: 700; text-decoration: underline;">เข้าสู่ระบบนักเรียน</a>
             </div>
           </div>
         </div>
@@ -2530,7 +2541,7 @@
             </button>
 
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--border-light); font-size: 0.84rem;">
-              <span>ยังไม่มีบัญชีอาจารย์? <a href="javascript:void(0)" onclick="toggleTeacherAuthForm('register')" style="color: var(--text-dark); font-weight: 700; text-decoration: underline;">สมัครบัญชีอาจารย์ใหม่</a></span>
+              <span>ยังไม่มีบัญชีอาจารย์? <a href="javascript:void(0)" onclick="handleAuthModeSegmentChange('register')" style="color: var(--primary); font-weight: 700; text-decoration: underline;">สมัครบัญชีอาจารย์ใหม่</a></span>
               <a href="javascript:void(0)" onclick="openOtpVerifyModalPrompt('teacher')" style="color: var(--text-secondary); font-weight: 600;">
                 <i class="fa-solid fa-key"></i> กรอกรหัสยืนยันแอดมิน
               </a>
@@ -2568,11 +2579,11 @@
                 <!-- Populated dynamically from subjectList -->
               </div>
             </div>
-            <button class="btn btn-primary btn-block btn-lg" onclick="handleTeacherRegister()">
+            <button class="btn btn-primary btn-block btn-lg" id="btnTeacherRegister" onclick="handleTeacherRegister()">
               <i class="fa-solid fa-user-check"></i> ส่งคำขอสมัครอาจารย์และรับรหัสยืนยัน
             </button>
             <div style="text-align: center; margin-top: 1.1rem; font-size: 0.85rem;">
-              มีบัญชีอาจารย์แล้ว? <a href="javascript:void(0)" onclick="toggleTeacherAuthForm('login')" style="color: var(--text-dark); font-weight: 700; text-decoration: underline;">เข้าสู่ระบบอาจารย์</a>
+              มีบัญชีอาจารย์แล้ว? <a href="javascript:void(0)" onclick="handleAuthModeSegmentChange('login')" style="color: var(--primary); font-weight: 700; text-decoration: underline;">เข้าสู่ระบบอาจารย์</a>
             </div>
           </div>
         </div>
@@ -2967,6 +2978,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=4.7"></script>
+  <script src="app.js?v=4.8"></script>
 </body>
 </html>
