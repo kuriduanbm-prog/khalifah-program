@@ -5334,6 +5334,9 @@ function switchAdminTab(tabName, element) {
     renderAdminActivitiesTable();
     if (typeof renderAdminLiveActivityFeed === 'function') renderAdminLiveActivityFeed();
     if (typeof fetchActivitiesAndLogsFromCloud === 'function') fetchActivitiesAndLogsFromCloud(false);
+  } else if (tabName === 'prayers-monitor') {
+    if (typeof initAdminPrayerDashboard === 'function') initAdminPrayerDashboard();
+    if (typeof fetchPrayersFromCloud === 'function') fetchPrayersFromCloud();
   }
 }
 
@@ -7689,6 +7692,17 @@ window.addEventListener('storage', (e) => {
       if (typeof renderAttendeesTable === 'function') renderAttendeesTable(currentAttendeesList);
     }
   }
+
+  if (e.key === 'khalifah_prayer_history' || e.key === 'khalifah_today_prayers' || e.key === 'khalifah_prayer_sync_signal') {
+    const tab = document.getElementById('admin-tab-prayers-monitor');
+    if (tab && tab.style.display !== 'none') {
+      if (currentAdminPrayerMode === 'daily') {
+        if (typeof renderAdminPrayerDailyDashboard === 'function') renderAdminPrayerDailyDashboard();
+      } else {
+        if (typeof renderAdminStudentPrayerHistory === 'function') renderAdminStudentPrayerHistory();
+      }
+    }
+  }
 });
 
 let qrScannerStream = null;
@@ -9055,6 +9069,676 @@ function closeCameraSlideToast() {
   const toast = document.getElementById('cameraSuccessSlideToast');
   if (toast) {
     toast.classList.remove('show');
+  }
+}
+
+// ==========================================================================
+// ADMIN PRAYER DASHBOARD & MONITORING ENGINE (DAILY & INDIVIDUAL)
+// ==========================================================================
+
+const CANONICAL_PRAYERS = [
+  { key: 'ซุบฮิ', label: 'ซุบฮิ', icon: '🌅', range: '04:45 - 06:25 น.' },
+  { key: 'ซุฮริ', label: 'ซุฮริ', icon: '☀️', range: '12:10 - 15:15 น.' },
+  { key: 'อัศรฺ', label: 'อัศรฺ', icon: '🌤️', range: '15:20 - 18:05 น.' },
+  { key: 'มัฆริบ', label: 'มัฆริบ', icon: '🌇', range: '18:10 - 19:25 น.' },
+  { key: 'อีชาอ์', label: 'อีชาอ์', icon: '🌙', range: '19:30 - 23:59 น.' }
+];
+
+let currentAdminPrayerMode = 'daily'; // 'daily' or 'individual'
+let cachedDailyStudentPrayerMap = {};
+let cachedDailyFilteredStudents = [];
+let cachedIndividualStudentRecords = [];
+
+function normalizePrayerSlotKey(name) {
+  if (!name) return '';
+  const s = String(name).trim();
+  if (s.includes('ซุบฮิ') || s.toLowerCase().includes('subh') || s.toLowerCase().includes('fajr')) return 'ซุบฮิ';
+  if (s.includes('ซุฮริ') || s.toLowerCase().includes('zuhr') || s.toLowerCase().includes('dhuhr')) return 'ซุฮริ';
+  if (s.includes('อัศร') || s.toLowerCase().includes('asr')) return 'อัศรฺ';
+  if (s.includes('มัฆริบ') || s.toLowerCase().includes('maghrib')) return 'มัฆริบ';
+  if (s.includes('อีชา') || s.includes('อิชา') || s.toLowerCase().includes('isha')) return 'อีชาอ์';
+  return s;
+}
+
+function getAllCombinedPrayerHistory() {
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+
+  let todayList = [];
+  try {
+    todayList = JSON.parse(localStorage.getItem('khalifah_today_prayers') || '[]');
+  } catch (e) { todayList = []; }
+
+  const map = {};
+  historyList.forEach(p => {
+    if (!p) return;
+    const sid = cleanIdString(p.studentId || '');
+    const slot = normalizePrayerSlotKey(p.prayerName || p.prayerTime || '');
+    const date = p.date || '';
+    if (sid && slot && date) {
+      map[`${sid}_${slot}_${date}`] = p;
+    }
+  });
+
+  todayList.forEach(p => {
+    if (!p) return;
+    const sid = cleanIdString(p.studentId || '');
+    const slot = normalizePrayerSlotKey(p.prayerName || p.prayerTime || '');
+    const date = p.date || '';
+    if (sid && slot && date) {
+      const k = `${sid}_${slot}_${date}`;
+      if (!map[k]) map[k] = p;
+    }
+  });
+
+  return Object.values(map);
+}
+
+function setAdminPrayerMode(mode) {
+  currentAdminPrayerMode = mode;
+  const btnDaily = document.getElementById('btnPrayerModeDaily');
+  const btnIndiv = document.getElementById('btnPrayerModeIndividual');
+  const secDaily = document.getElementById('adminPrayerDailySection');
+  const secIndiv = document.getElementById('adminPrayerIndividualSection');
+
+  if (btnDaily) btnDaily.classList.toggle('active', mode === 'daily');
+  if (btnIndiv) btnIndiv.classList.toggle('active', mode === 'individual');
+
+  if (mode === 'daily') {
+    if (secDaily) secDaily.style.display = 'block';
+    if (secIndiv) secIndiv.style.display = 'none';
+    renderAdminPrayerDailyDashboard();
+  } else {
+    if (secDaily) secDaily.style.display = 'none';
+    if (secIndiv) secIndiv.style.display = 'block';
+    populateAdminPrayerStudentSelect();
+    renderAdminStudentPrayerHistory();
+  }
+}
+
+function adminPrayerChangeDate(offsetDays) {
+  const dateInput = document.getElementById('adminPrayerDateSelect');
+  if (!dateInput) return;
+  let curVal = dateInput.value;
+  let d = curVal ? new Date(curVal + 'T00:00:00') : new Date();
+  if (isNaN(d.getTime())) d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  dateInput.value = d.toISOString().split('T')[0];
+  renderAdminPrayerDailyDashboard();
+}
+
+function adminPrayerSetToday() {
+  const dateInput = document.getElementById('adminPrayerDateSelect');
+  if (!dateInput) return;
+  dateInput.value = new Date().toISOString().split('T')[0];
+  renderAdminPrayerDailyDashboard();
+}
+
+function initAdminPrayerDashboard() {
+  const dateInput = document.getElementById('adminPrayerDateSelect');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+
+  // Populate grade dropdown
+  const gradeSelect = document.getElementById('adminPrayerGradeFilter');
+  if (gradeSelect) {
+    const prevGrade = gradeSelect.value || 'ALL';
+    const grades = Array.from(new Set(allStudents.map(s => s.grade).filter(Boolean))).sort();
+    gradeSelect.innerHTML = `<option value="ALL">ทุกระดับชั้นปี (${allStudents.length} คน)</option>` +
+      grades.map(g => {
+        const count = allStudents.filter(s => s.grade === g).length;
+        return `<option value="${g}">${g} (${count} คน)</option>`;
+      }).join('');
+    if ([...gradeSelect.options].some(o => o.value === prevGrade)) {
+      gradeSelect.value = prevGrade;
+    }
+  }
+
+  populateAdminPrayerStudentSelect();
+
+  if (currentAdminPrayerMode === 'daily') {
+    renderAdminPrayerDailyDashboard();
+  } else {
+    renderAdminStudentPrayerHistory();
+  }
+}
+
+function populateAdminPrayerStudentSelect() {
+  const stdSelect = document.getElementById('adminPrayerStudentSelect');
+  if (!stdSelect) return;
+  const prevVal = stdSelect.value;
+  const sorted = [...allStudents].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '', 'th'));
+  stdSelect.innerHTML = `<option value="">-- กรุณาเลือกนักเรียนเพื่อดูประวัติ (${sorted.length} คน) --</option>` +
+    sorted.map(s => {
+      const sid = cleanIdString(s.studentId);
+      return `<option value="${sid}">[${s.grade || '-'}] ${s.fullName} (${sid})</option>`;
+    }).join('');
+  if (prevVal && [...stdSelect.options].some(o => o.value === prevVal)) {
+    stdSelect.value = prevVal;
+  }
+}
+
+function renderAdminPrayerDailyDashboard() {
+  const dateInput = document.getElementById('adminPrayerDateSelect');
+  const gradeSelect = document.getElementById('adminPrayerGradeFilter');
+  const slotsContainer = document.getElementById('adminPrayerSlotsGridContainer');
+  const dateDisplay = document.getElementById('dailyPrayerDateDisplay');
+
+  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+  const selectedGrade = gradeSelect ? gradeSelect.value : 'ALL';
+
+  if (dateDisplay) {
+    const d = new Date(selectedDate + 'T00:00:00');
+    dateDisplay.innerHTML = `<i class="fa-regular fa-calendar-check" style="color: #0284c7;"></i> ${d.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+  }
+
+  // Filter students by grade
+  let targetStudents = [...allStudents];
+  if (selectedGrade !== 'ALL') {
+    targetStudents = targetStudents.filter(s => s.grade === selectedGrade);
+  }
+  cachedDailyFilteredStudents = targetStudents;
+
+  // Retrieve matching prayer logs
+  const allPrayers = getAllCombinedPrayerHistory();
+  const dailyPrayers = allPrayers.filter(p => p.date === selectedDate);
+
+  // Group by student
+  const studentMap = {};
+  targetStudents.forEach(s => {
+    const sid = cleanIdString(s.studentId);
+    studentMap[sid] = {};
+  });
+
+  dailyPrayers.forEach(p => {
+    const sid = cleanIdString(p.studentId || '');
+    if (studentMap[sid]) {
+      const slot = normalizePrayerSlotKey(p.prayerName || p.prayerTime || '');
+      if (slot) studentMap[sid][slot] = p;
+    }
+  });
+  cachedDailyStudentPrayerMap = studentMap;
+
+  // Top KPI calculations
+  const totalStd = targetStudents.length;
+  let countFull = 0;
+  let countPartial = 0;
+  let countZero = 0;
+
+  targetStudents.forEach(s => {
+    const sid = cleanIdString(s.studentId);
+    const slotsDone = Object.keys(studentMap[sid] || {}).length;
+    if (slotsDone === 5) countFull++;
+    else if (slotsDone > 0) countPartial++;
+    else countZero++;
+  });
+
+  const fullPct = totalStd > 0 ? Math.round((countFull / totalStd) * 100) : 0;
+  const partialPct = totalStd > 0 ? Math.round((countPartial / totalStd) * 100) : 0;
+  const zeroPct = totalStd > 0 ? Math.round((countZero / totalStd) * 100) : 0;
+
+  const elTotal = document.getElementById('dailyKpiTotalStudents');
+  const elGradeLbl = document.getElementById('dailyKpiGradeLabel');
+  const elFullCount = document.getElementById('dailyKpiFullCount');
+  const elFullPct = document.getElementById('dailyKpiFullPct');
+  const elPartCount = document.getElementById('dailyKpiPartialCount');
+  const elPartPct = document.getElementById('dailyKpiPartialPct');
+  const elZeroCount = document.getElementById('dailyKpiZeroCount');
+  const elZeroPct = document.getElementById('dailyKpiZeroPct');
+
+  if (elTotal) elTotal.innerText = `${totalStd} คน`;
+  if (elGradeLbl) elGradeLbl.innerText = selectedGrade === 'ALL' ? 'ทุกระดับชั้นปี' : `ระดับชั้น ${selectedGrade}`;
+  if (elFullCount) elFullCount.innerText = `${countFull} คน`;
+  if (elFullPct) elFullPct.innerText = `${fullPct}%`;
+  if (elPartCount) elPartCount.innerText = `${countPartial} คน`;
+  if (elPartPct) elPartPct.innerText = `${partialPct}%`;
+  if (elZeroCount) elZeroCount.innerText = `${countZero} คน`;
+  if (elZeroPct) elZeroPct.innerText = `${zeroPct}%`;
+
+  // Render 5 Prayer Breakdown Slot Cards
+  if (slotsContainer) {
+    slotsContainer.innerHTML = CANONICAL_PRAYERS.map(slot => {
+      let slotChecked = 0;
+      let slotOntime = 0;
+      let slotLate = 0;
+
+      targetStudents.forEach(s => {
+        const sid = cleanIdString(s.studentId);
+        const record = studentMap[sid] ? studentMap[sid][slot.key] : null;
+        if (record) {
+          slotChecked++;
+          const st = record.status || '';
+          if (st.includes('สาย')) slotLate++;
+          else slotOntime++;
+        }
+      });
+
+      const slotPct = totalStd > 0 ? Math.round((slotChecked / totalStd) * 100) : 0;
+      const barColor = slotPct >= 80 ? '#10b981' : (slotPct >= 50 ? '#0284c7' : '#f59e0b');
+
+      return `
+        <div class="prayer-slot-card">
+          <div class="prayer-slot-header">
+            <span class="prayer-slot-name">${slot.icon} ${slot.label}</span>
+            <span class="prayer-slot-time-range">${slot.range}</span>
+          </div>
+          <div class="prayer-slot-count" style="color: ${barColor};">
+            ${slotChecked} <span style="font-size: 0.82rem; font-weight: 600; color: #64748b;">/ ${totalStd} คน (${slotPct}%)</span>
+          </div>
+          <div class="prayer-slot-bar-track">
+            <div class="prayer-slot-bar-fill" style="width: ${slotPct}%; background: ${barColor};"></div>
+          </div>
+          <div class="prayer-slot-footer">
+            <span style="color: #16a34a;"><i class="fa-solid fa-check"></i> ตรงเวลา: ${slotOntime}</span>
+            <span style="color: #b45309;"><i class="fa-solid fa-clock"></i> สาย: ${slotLate}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  renderAdminPrayerDailyTable();
+}
+
+function renderAdminPrayerDailyTable() {
+  const tbody = document.getElementById('adminDailyPrayerMatrixTableBody');
+  const searchInput = document.getElementById('adminPrayerSearchInput');
+  const countBadge = document.getElementById('dailyTableTotalBadge');
+  if (!tbody) return;
+
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  let filtered = [...cachedDailyFilteredStudents];
+  if (query) {
+    filtered = filtered.filter(s =>
+      (s.fullName && s.fullName.toLowerCase().includes(query)) ||
+      (s.studentId && s.studentId.toLowerCase().includes(query)) ||
+      (s.grade && s.grade.toLowerCase().includes(query))
+    );
+  }
+
+  if (countBadge) {
+    countBadge.innerText = `แสดง ${filtered.length} คน จากทั้งหมด ${cachedDailyFilteredStudents.length} คน`;
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          <i class="fa-solid fa-user-xmark" style="font-size: 1.6rem; color: #cbd5e1; margin-bottom: 0.4rem; display: block;"></i>
+          ไม่พบข้อมูลนักเรียนที่ตรงกับเงื่อนไขการค้นหา
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((s, idx) => {
+    const sid = cleanIdString(s.studentId);
+    const prayers = cachedDailyStudentPrayerMap[sid] || {};
+    const completedCount = Object.keys(prayers).length;
+
+    let scoreBadge = '';
+    if (completedCount === 5) {
+      scoreBadge = '<span style="background: #dcfce7; color: #15803d; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 9999px; font-size: 0.76rem; border: 1px solid #bbf7d0;">5 / 5 ครบ</span>';
+    } else if (completedCount > 0) {
+      scoreBadge = `<span style="background: #fef3c7; color: #b45309; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 9999px; font-size: 0.76rem; border: 1px solid #fde68a;">${completedCount} / 5</span>`;
+    } else {
+      scoreBadge = '<span style="background: #f1f5f9; color: #94a3b8; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 9999px; font-size: 0.76rem;">0 / 5</span>';
+    }
+
+    const prayerCells = CANONICAL_PRAYERS.map(slot => {
+      const rec = prayers[slot.key];
+      if (!rec) {
+        return `<td style="text-align: center;"><span class="prayer-status-pill absent">-</span></td>`;
+      }
+      const st = rec.status || '';
+      let pillClass = 'ontime';
+      let icon = 'fa-check';
+      if (st.includes('สาย')) {
+        pillClass = 'late';
+        icon = 'fa-clock';
+      } else if (st.includes('อุซุร')) {
+        pillClass = 'excused';
+        icon = 'fa-bed';
+      }
+
+      const timeText = rec.time ? rec.time.slice(0, 5) : 'เช็คแล้ว';
+      const logId = rec.id || rec.logId || '';
+      return `
+        <td style="text-align: center;">
+          <span class="prayer-status-pill ${pillClass}" onclick="openPrayerHistoryDetailModal('${logId}')" style="cursor: pointer;" title="เวลา ${rec.time || '-'} • คลิกดูภาพและพิกัด">
+            <i class="fa-solid ${icon}"></i> ${timeText}
+          </span>
+        </td>
+      `;
+    }).join('');
+
+    return `
+      <tr>
+        <td style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">${idx + 1}</td>
+        <td><b>${sid}</b></td>
+        <td style="font-weight: 600; color: var(--text-dark);">${s.fullName}</td>
+        <td><span class="badge" style="background: #f1f5f9; color: #334155; font-size: 0.75rem;">${s.grade || '-'}</span></td>
+        ${prayerCells}
+        <td style="text-align: center;">${scoreBadge}</td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="adminSelectStudentForPrayerHistory('${sid}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; font-weight: 600;" title="ดูประวัติการละหมาดทั้งหมดของนักเรียนคนนี้">
+            <i class="fa-solid fa-user-clock"></i> ดูรายคน
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function onAdminPrayerStudentSelectChange() {
+  renderAdminStudentPrayerHistory();
+}
+
+function adminSelectStudentForPrayerHistory(studentId) {
+  setAdminPrayerMode('individual');
+  const select = document.getElementById('adminPrayerStudentSelect');
+  if (select) {
+    select.value = cleanIdString(studentId);
+  }
+  renderAdminStudentPrayerHistory();
+}
+
+function renderAdminStudentPrayerHistory() {
+  const select = document.getElementById('adminPrayerStudentSelect');
+  const slotFilter = document.getElementById('adminPrayerIndivSlotFilter');
+  const profileCard = document.getElementById('adminPrayerStudentProfileCard');
+  const tbody = document.getElementById('adminIndivPrayerLogsTableBody');
+  const badge = document.getElementById('adminIndivLogsCountBadge');
+
+  if (!tbody) return;
+
+  const selectedSid = select ? cleanIdString(select.value) : '';
+  if (!selectedSid) {
+    if (profileCard) profileCard.style.display = 'none';
+    if (badge) badge.innerText = '0 รายการ';
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 3rem 1.5rem;">
+          <i class="fa-solid fa-user-clock" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 0.6rem; display: block;"></i>
+          กรุณาเลือกนักเรียนจากเมนูด้านบน เพื่อตรวจสอบสถิติและประวัติการเช็คชื่อละหมาดรายบุคคล
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const student = allStudents.find(s => isIdMatch(s.studentId, selectedSid)) || {
+    studentId: selectedSid,
+    fullName: 'นักเรียน (' + selectedSid + ')',
+    grade: '-',
+    parentPhone: '-'
+  };
+
+  // Populate profile header
+  if (profileCard) profileCard.style.display = 'block';
+  const elName = document.getElementById('adminIndivName');
+  const elId = document.getElementById('adminIndivId');
+  const elGrade = document.getElementById('adminIndivGrade');
+  const elPhone = document.getElementById('adminIndivPhone');
+  const elAvatar = document.getElementById('adminIndivAvatar');
+
+  if (elName) elName.innerText = student.fullName || '-';
+  if (elId) elId.innerText = cleanIdString(student.studentId);
+  if (elGrade) elGrade.innerText = student.grade || '-';
+  if (elPhone) elPhone.innerText = student.parentPhone || '-';
+  if (elAvatar) {
+    if (student.avatarUrl) {
+      elAvatar.innerHTML = `<img src="${student.avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+    } else {
+      elAvatar.innerText = (student.fullName || 'S').trim().slice(0, 1);
+    }
+  }
+
+  // Retrieve prayer history for this student
+  const allPrayers = getAllCombinedPrayerHistory();
+  let studentPrayers = allPrayers.filter(p => isIdMatch(p.studentId, selectedSid));
+
+  // Sort descending by date & time
+  studentPrayers.sort((a, b) => {
+    const ta = (a.timestamp ? new Date(a.timestamp).getTime() : 0) || (a.date ? new Date(a.date).getTime() : 0);
+    const tb = (b.timestamp ? new Date(b.timestamp).getTime() : 0) || (b.date ? new Date(b.date).getTime() : 0);
+    return tb - ta;
+  });
+
+  // Calculate Student Stats
+  const totalRecords = studentPrayers.length;
+  let ontimeCount = 0;
+  let gpsCount = 0;
+
+  // Last 30 days calculation
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysStr = thirtyDaysAgo.toISOString().split('T')[0];
+  let last30DaysCount = 0;
+
+  studentPrayers.forEach(p => {
+    const st = p.status || '';
+    if (!st.includes('สาย')) ontimeCount++;
+    if (p.isWithinZone || (p.latitude && p.longitude)) gpsCount++;
+    if (p.date && p.date >= thirtyDaysStr) last30DaysCount++;
+  });
+
+  const ontimeRate = totalRecords > 0 ? Math.round((ontimeCount / totalRecords) * 100) : 0;
+  const gpsRate = totalRecords > 0 ? Math.round((gpsCount / totalRecords) * 100) : 0;
+  const streakPct = Math.min(100, Math.round((last30DaysCount / 150) * 100));
+
+  const elKpiTotal = document.getElementById('indivKpiTotal');
+  const elKpiOntime = document.getElementById('indivKpiOntimeRate');
+  const elKpiGps = document.getElementById('indivKpiGpsRate');
+  const elKpiStreak = document.getElementById('indivKpiStreak');
+
+  if (elKpiTotal) elKpiTotal.innerText = `${totalRecords} ครั้ง`;
+  if (elKpiOntime) elKpiOntime.innerText = `${ontimeRate}%`;
+  if (elKpiGps) elKpiGps.innerText = `${gpsRate}%`;
+  if (elKpiStreak) elKpiStreak.innerText = `${streakPct}%`;
+
+  // Filter by selected prayer slot if not 'ALL'
+  const selectedSlot = slotFilter ? slotFilter.value : 'ALL';
+  let displayedLogs = [...studentPrayers];
+  if (selectedSlot !== 'ALL') {
+    displayedLogs = displayedLogs.filter(p => normalizePrayerSlotKey(p.prayerName || p.prayerTime) === selectedSlot);
+  }
+  cachedIndividualStudentRecords = displayedLogs;
+
+  if (badge) badge.innerText = `${displayedLogs.length} รายการ`;
+
+  if (displayedLogs.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+          <i class="fa-solid fa-calendar-xmark" style="font-size: 1.8rem; color: #cbd5e1; margin-bottom: 0.4rem; display: block;"></i>
+          ยังไม่มีบันทึกการเช็คชื่อละหมาดสำหรับนักเรียนคนนี้
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = displayedLogs.map((p, idx) => {
+    const rawPhoto = p.photo || p.photoUrl || p.photoBase64 || '';
+    const hasPhoto = rawPhoto && rawPhoto.length > 50;
+    const slotKey = normalizePrayerSlotKey(p.prayerName || p.prayerTime);
+    const slotMeta = CANONICAL_PRAYERS.find(s => s.key === slotKey) || { icon: '🕌', label: p.prayerName || p.prayerTime || '-' };
+    const logId = p.id || p.logId || '';
+
+    const st = p.status || 'ตรงเวลา';
+    let statusClass = 'status-ontime';
+    if (st.includes('สาย')) statusClass = 'status-late';
+    else if (st.includes('อุซุร')) statusClass = 'status-excused';
+
+    const cleanLoc = p.locationName || (p.latitude ? 'พิกัด GPS ตรวจสอบแล้ว' : '-');
+
+    return `
+      <tr>
+        <td style="text-align: center; color: var(--text-muted);">${idx + 1}</td>
+        <td style="font-weight: 600; color: var(--text-dark);">${p.date || '-'}</td>
+        <td>
+          <span style="font-weight: 700; color: #0284c7; display: inline-flex; align-items: center; gap: 0.35rem;">
+            ${slotMeta.icon} ${slotMeta.label}
+          </span>
+        </td>
+        <td><span style="font-weight: 600; color: #334155;"><i class="fa-regular fa-clock"></i> ${p.time || '-'} น.</span></td>
+        <td><span class="status-badge ${statusClass}">${st}</span></td>
+        <td style="font-size: 0.8rem; color: var(--text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <i class="fa-solid fa-location-dot" style="color: #0284c7;"></i> ${cleanLoc}
+        </td>
+        <td style="text-align: center;">
+          ${hasPhoto ? `
+            <img src="${rawPhoto}" class="prayer-photo-thumb" onclick="openPrayerHistoryDetailModal('${logId}')" title="คลิกดูรูปขยายและรายละเอียด">
+          ` : `
+            <span style="font-size: 0.74rem; color: #94a3b8;"><i class="fa-solid fa-camera-slash"></i> ไม่มีภาพ</span>
+          `}
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openPrayerHistoryDetailModal('${logId}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;" title="ดูรายละเอียดเต็ม พิกัด และภาพถ่าย">
+            <i class="fa-solid fa-clipboard-check"></i> ตรวจสอบ
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function exportAdminDailyPrayerToExcel() {
+  if (!cachedDailyFilteredStudents || cachedDailyFilteredStudents.length === 0) {
+    showToast('ไม่มีข้อมูลนักเรียนสำหรับส่งออก', 'warning');
+    return;
+  }
+
+  const dateInput = document.getElementById('adminPrayerDateSelect');
+  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+
+  const exportData = cachedDailyFilteredStudents.map((s, idx) => {
+    const sid = cleanIdString(s.studentId);
+    const prayers = cachedDailyStudentPrayerMap[sid] || {};
+    const row = {
+      'ลำดับ': idx + 1,
+      'รหัสนักเรียน': sid,
+      'ชื่อ - นามสกุล': s.fullName,
+      'ระดับชั้น': s.grade || '-'
+    };
+
+    CANONICAL_PRAYERS.forEach(slot => {
+      const rec = prayers[slot.key];
+      row[slot.label] = rec ? `${rec.time || 'เช็คแล้ว'} (${rec.status || 'ตรงเวลา'})` : '-';
+    });
+
+    row['จำนวนเวลาที่ละหมาด'] = `${Object.keys(prayers).length} / 5`;
+    return row;
+  });
+
+  try {
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "บันทึกละหมาดรายวัน");
+    const fileName = `บันทึกละหมาดประจำวัน_${selectedDate}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast('ดาวน์โหลดไฟล์ Excel บันทึกละหมาดประจำวันเรียบร้อยแล้ว', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('เกิดข้อผิดพลาดในการส่งออกไฟล์ Excel', 'error');
+  }
+}
+
+function exportAdminStudentPrayerToExcel() {
+  if (!cachedIndividualStudentRecords || cachedIndividualStudentRecords.length === 0) {
+    showToast('ไม่มีประวัติการละหมาดของนักเรียนคนนี้สำหรับส่งออก', 'warning');
+    return;
+  }
+
+  const select = document.getElementById('adminPrayerStudentSelect');
+  const selectedSid = select ? cleanIdString(select.value) : '';
+  const student = allStudents.find(s => isIdMatch(s.studentId, selectedSid));
+  const stdName = student ? student.fullName : selectedSid;
+
+  const exportData = cachedIndividualStudentRecords.map((p, idx) => ({
+    'ลำดับ': idx + 1,
+    'รหัสนักเรียน': cleanIdString(p.studentId),
+    'ชื่อ - นามสกุล': p.studentName || stdName,
+    'ระดับชั้น': p.grade || (student ? student.grade : '-'),
+    'วันที่': p.date || '-',
+    'เวลาละหมาด': p.prayerName || p.prayerTime || '-',
+    'เวลาที่บันทึก': p.time || '-',
+    'สถานะ': p.status || 'ตรงเวลา',
+    'สถานที่': p.locationName || '-',
+    'พิกัดละติจูด': p.latitude || p.lat || '-',
+    'พิกัดลองจิจูด': p.longitude || p.lng || '-',
+    'หมายเหตุ': p.note || '-'
+  }));
+
+  try {
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "ประวัติละหมาดรายคน");
+    const fileName = `ประวัติละหมาด_${stdName.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast('ดาวน์โหลดไฟล์ Excel ประวัตินักเรียนเรียบร้อยแล้ว', 'success');
+  } catch (err) {
+    console.error('Export error:', err);
+    showToast('เกิดข้อผิดพลาดในการส่งออกไฟล์ Excel', 'error');
+  }
+}
+
+async function fetchPrayersFromCloud() {
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
+  if (!url || !navigator.onLine) return;
+
+  try {
+    const sep = url.includes('?') ? '&' : '?';
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 4500) : null;
+
+    const resp = await fetch(`${url}${sep}action=getPrayers&_t=${Date.now()}`, {
+      method: 'GET',
+      redirect: 'follow',
+      ...(controller ? { signal: controller.signal } : {})
+    });
+    if (timeoutId) clearTimeout(timeoutId);
+
+    const json = await resp.json();
+    if (json && (json.success || json.status === 'success') && Array.isArray(json.data) && json.data.length > 0) {
+      let localHist = [];
+      try {
+        localHist = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+      } catch (e) { localHist = []; }
+
+      json.data.forEach(cp => {
+        const sid = cleanIdString(cp.studentId || '');
+        const date = cp.date || '';
+        const slot = normalizePrayerSlotKey(cp.prayerTime || cp.prayerName || '');
+        if (!sid || !date) return;
+        const existIdx = localHist.findIndex(l => isIdMatch(l.studentId, sid) && l.date === date && normalizePrayerSlotKey(l.prayerTime || l.prayerName) === slot);
+        if (existIdx !== -1) {
+          localHist[existIdx] = { ...localHist[existIdx], ...cp };
+        } else {
+          localHist.unshift(cp);
+        }
+      });
+
+      localStorage.setItem('khalifah_prayer_history', JSON.stringify(localHist));
+
+      // Refresh if currently viewing prayers dashboard
+      const tab = document.getElementById('admin-tab-prayers-monitor');
+      if (tab && tab.style.display !== 'none') {
+        if (currentAdminPrayerMode === 'daily') {
+          renderAdminPrayerDailyDashboard();
+        } else {
+          renderAdminStudentPrayerHistory();
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('fetchPrayersFromCloud err:', err);
   }
 }
 

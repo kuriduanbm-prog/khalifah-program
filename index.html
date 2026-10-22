@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=5.0">
+  <link rel="stylesheet" href="style.css?v=5.1">
 </head>
 <body class="auth-locked">
 
@@ -1565,13 +1565,13 @@
           <div class="admin-kpi-sub" id="adminKpiMasterOtpSub">รหัสสุ่มปัจจุบัน: <strong id="adminLiveRandomCodeBadge">------</strong></div>
         </div>
 
-        <div class="admin-kpi-box" onclick="switchAdminTab('activities-admin', document.getElementById('btnTabActivitiesAdmin'))">
+        <div class="admin-kpi-box" onclick="switchAdminTab('prayers-monitor', document.getElementById('btnAdminTabPrayers'))" style="cursor: pointer;" title="คลิกดูแดชบอร์ดเช็คชื่อละหมาดประจำวัน">
           <div class="admin-kpi-top">
-            <span class="admin-kpi-label">สแกนกิจกรรม / ละหมาดวันนี้</span>
-            <i class="fa-solid fa-qrcode"></i>
+            <span class="admin-kpi-label">เช็คชื่อละหมาดวันนี้</span>
+            <i class="fa-solid fa-person-praying" style="color: #0284c7;"></i>
           </div>
           <div class="admin-kpi-val" id="adminKpiPrayersToday">0 รายการ</div>
-          <div class="admin-kpi-sub" id="adminKpiActivitiesSub">คลิกดูผู้สแกน QR เรียลไทม์</div>
+          <div class="admin-kpi-sub" id="adminKpiActivitiesSub">คลิกเปิดดูแดชบอร์ดละหมาด</div>
         </div>
       </div>
 
@@ -1579,6 +1579,9 @@
       <div class="admin-tabs">
         <button class="admin-tab-btn active" id="btnAdminTabStudents" onclick="switchAdminTab('students', this)">
           <i class="fa-solid fa-users"></i> จัดการนักเรียนรายบุคคล
+        </button>
+        <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
+          <i class="fa-solid fa-person-praying"></i> แดชบอร์ดเช็คชื่อละหมาด
         </button>
         <button class="admin-tab-btn" id="btnAdminTabApprovals" onclick="switchAdminTab('approvals', this)">
           <i class="fa-solid fa-envelope-circle-check"></i> อนุมัติบัญชี & ส่งอีเมล OTP <span class="admin-pending-pill" id="adminTabPendingBadge" style="display:none;">0</span>
@@ -2153,6 +2156,257 @@
           </div>
         </div>
       </div>
+
+      <!-- Admin Tab: Prayer Attendance Dashboard & Individual Monitor -->
+      <div id="admin-tab-prayers-monitor" class="admin-content-tab" style="display: none;">
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <!-- Top Card Header & Segmented Mode Switcher -->
+          <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
+            <div>
+              <div class="card-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-person-praying" style="color: #0284c7;"></i> ศูนย์แดชบอร์ดเช็คชื่อละหมาด (Daily & Individual Prayer Monitoring)
+              </div>
+              <div class="card-subtitle">
+                ตรวจสอบสถิติการเช็คชื่อละหมาดประจำวันของโรงเรียน สรุปครบ 5 เวลา และติดตามประวัติการละหมาดรายบุคคลอย่างละเอียด
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+              <!-- Segmented Control Bar -->
+              <div class="prayer-dash-seg-bar">
+                <button type="button" class="prayer-dash-seg-btn active" id="btnPrayerModeDaily" onclick="setAdminPrayerMode('daily')">
+                  <i class="fa-solid fa-chart-pie"></i> แดชบอร์ดภาพรวมรายวัน
+                </button>
+                <button type="button" class="prayer-dash-seg-btn" id="btnPrayerModeIndividual" onclick="setAdminPrayerMode('individual')">
+                  <i class="fa-solid fa-user-clock"></i> ตรวจสอบประวัติรายบุคคล
+                </button>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="syncAllDataFromCloud(true)" style="height: 36px;">
+                <i class="fa-solid fa-rotate"></i> ซิงค์สด Google Sheets
+              </button>
+            </div>
+          </div>
+
+          <!-- ================= MODE 1: DAILY PRAYER OVERVIEW DASHBOARD ================= -->
+          <div id="adminPrayerDailySection" style="display: block;">
+            <!-- Daily Controls Toolbar -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.15rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 0.3rem;">
+                  <i class="fa-regular fa-calendar" style="color: #0284c7;"></i> เลือกวันที่:
+                </span>
+                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="adminPrayerChangeDate(-1)" title="วันก่อนหน้า" style="height: 36px; padding: 0 0.65rem;">
+                    <i class="fa-solid fa-chevron-left"></i>
+                  </button>
+                  <input type="date" id="adminPrayerDateSelect" class="form-control" style="width: auto; height: 36px; font-size: 0.85rem; font-weight: 600;" onchange="renderAdminPrayerDailyDashboard()">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="adminPrayerChangeDate(1)" title="วันถัดไป" style="height: 36px; padding: 0 0.65rem;">
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="adminPrayerSetToday()" title="กลับมาดูวันนี้" style="height: 36px; font-size: 0.8rem; font-weight: 600;">
+                    วันนี้
+                  </button>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                  <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-dark);">ชั้นปี:</span>
+                  <select id="adminPrayerGradeFilter" class="form-control" style="min-width: 140px; height: 36px; font-size: 0.82rem;" onchange="renderAdminPrayerDailyDashboard()">
+                    <option value="ALL">ทุกระดับชั้นปี</option>
+                  </select>
+                </div>
+                <div style="position: relative; min-width: 180px;">
+                  <input type="text" id="adminPrayerSearchInput" class="form-control" placeholder="ค้นหาชื่อ / รหัสนร..." style="padding-left: 2rem; height: 36px; font-size: 0.82rem;" oninput="renderAdminPrayerDailyTable()">
+                  <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.78rem;"></i>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="exportAdminDailyPrayerToExcel()" style="height: 36px; font-size: 0.82rem; font-weight: 600; white-space: nowrap;">
+                  <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> ส่งออก Excel
+                </button>
+              </div>
+            </div>
+
+            <!-- Daily Top-Level Metrics (4 KPI Cards) -->
+            <div class="prayer-kpi-grid">
+              <div class="prayer-kpi-card">
+                <div class="prayer-kpi-top">
+                  <span class="prayer-kpi-title">นักเรียนเป้าหมาย</span>
+                  <span class="prayer-kpi-badge" style="background: #e0f2fe; color: #0369a1;"><i class="fa-solid fa-users"></i></span>
+                </div>
+                <div class="prayer-kpi-number" id="dailyKpiTotalStudents">0 คน</div>
+                <div class="prayer-kpi-sub" id="dailyKpiGradeLabel">ทุกระดับชั้นปี</div>
+              </div>
+
+              <div class="prayer-kpi-card" style="border-left: 3.5px solid #10b981;">
+                <div class="prayer-kpi-top">
+                  <span class="prayer-kpi-title">ละหมาดครบ 5 เวลา (100%)</span>
+                  <span class="prayer-kpi-badge" style="background: #dcfce7; color: #15803d;" id="dailyKpiFullPct">0%</span>
+                </div>
+                <div class="prayer-kpi-number" style="color: #15803d;" id="dailyKpiFullCount">0 คน</div>
+                <div class="prayer-kpi-sub">เช็คชื่อครบทุกเวลาในวันนี้</div>
+              </div>
+
+              <div class="prayer-kpi-card" style="border-left: 3.5px solid #f59e0b;">
+                <div class="prayer-kpi-top">
+                  <span class="prayer-kpi-title">ละหมาดบางส่วน (1 - 4 เวลา)</span>
+                  <span class="prayer-kpi-badge" style="background: #fef3c7; color: #b45309;" id="dailyKpiPartialPct">0%</span>
+                </div>
+                <div class="prayer-kpi-number" style="color: #b45309;" id="dailyKpiPartialCount">0 คน</div>
+                <div class="prayer-kpi-sub">เช็คชื่อแล้วแต่ยังไม่ครบ 5 เวลา</div>
+              </div>
+
+              <div class="prayer-kpi-card" style="border-left: 3.5px solid #94a3b8;">
+                <div class="prayer-kpi-top">
+                  <span class="prayer-kpi-title">ยังไม่เช็คชื่อเลย (0 เวลา)</span>
+                  <span class="prayer-kpi-badge" style="background: #f1f5f9; color: #475569;" id="dailyKpiZeroPct">0%</span>
+                </div>
+                <div class="prayer-kpi-number" style="color: #475569;" id="dailyKpiZeroCount">0 คน</div>
+                <div class="prayer-kpi-sub">ไม่มีบันทึกละหมาดในวันนี้</div>
+              </div>
+            </div>
+
+            <!-- 5-Prayer Breakdown Progress Grid -->
+            <div style="margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
+              <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-dark); margin: 0;">
+                <i class="fa-solid fa-chart-simple" style="color: #0284c7;"></i> สรุปจำนวนผู้เช็คชื่อแยกตามเวลาละหมาด (5 เวลาประจำวัน)
+              </h4>
+              <span style="font-size: 0.78rem; color: var(--text-muted);" id="dailyPrayerDateDisplay">-</span>
+            </div>
+            <div class="prayer-slot-grid" id="adminPrayerSlotsGridContainer">
+              <!-- Dynamically populated via app.js -->
+            </div>
+
+            <!-- Daily Student Attendance Matrix Table -->
+            <div style="margin-top: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-dark); margin: 0;">
+                  <i class="fa-solid fa-table-list" style="color: #0284c7;"></i> ตารางบันทึกการละหมาด 5 เวลาของนักเรียนทุกคน
+                </h4>
+                <span class="badge-sub" id="dailyTableTotalBadge">0 คน</span>
+              </div>
+              <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+                <table class="custom-table" id="adminDailyPrayerMatrixTable">
+                  <thead>
+                    <tr>
+                      <th style="width: 45px; text-align: center;">ลำดับ</th>
+                      <th style="min-width: 95px;">รหัสนักเรียน</th>
+                      <th style="min-width: 140px;">ชื่อ - นามสกุล</th>
+                      <th style="min-width: 70px;">ระดับชั้น</th>
+                      <th style="text-align: center; min-width: 95px;">🌅 ซุบฮิ</th>
+                      <th style="text-align: center; min-width: 95px;">☀️ ซุฮริ</th>
+                      <th style="text-align: center; min-width: 95px;">🌤️ อัศรฺ</th>
+                      <th style="text-align: center; min-width: 95px;">🌇 มัฆริบ</th>
+                      <th style="text-align: center; min-width: 95px;">🌙 อีชาอ์</th>
+                      <th style="text-align: center; min-width: 75px;">ผลรวม</th>
+                      <th style="text-align: right; min-width: 95px;">ประวัติรายคน</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminDailyPrayerMatrixTableBody">
+                    <!-- Populated dynamically via app.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= MODE 2: INDIVIDUAL STUDENT PRAYER HISTORY ================= -->
+          <div id="adminPrayerIndividualSection" style="display: none;">
+            <!-- Student Selector Toolbar -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.15rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 260px;">
+                <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark); white-space: nowrap; margin: 0;">
+                  <i class="fa-solid fa-user-graduate" style="color: #0284c7;"></i> เลือกนักเรียน:
+                </label>
+                <select id="adminPrayerStudentSelect" class="form-control" style="font-size: 0.85rem; height: 38px;" onchange="onAdminPrayerStudentSelectChange()">
+                  <option value="">-- กรุณาเลือกนักเรียนเพื่อดูประวัติ --</option>
+                </select>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <select id="adminPrayerIndivSlotFilter" class="form-control" style="width: auto; height: 38px; font-size: 0.82rem;" onchange="renderAdminStudentPrayerHistory()">
+                  <option value="ALL">ทุกเวลาละหมาด (ทั้งหมด)</option>
+                  <option value="ซุบฮิ">เฉพาะซุบฮิ</option>
+                  <option value="ซุฮริ">เฉพาะซุฮริ</option>
+                  <option value="อัศรฺ">เฉพาะอัศรฺ</option>
+                  <option value="มัฆริบ">เฉพาะมัฆริบ</option>
+                  <option value="อีชาอ์">เฉพาะอีชาอ์</option>
+                </select>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="exportAdminStudentPrayerToExcel()" style="height: 38px; font-size: 0.82rem; font-weight: 600; white-space: nowrap;">
+                  <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> ส่งออกประวัตินักเรียน (.xlsx)
+                </button>
+              </div>
+            </div>
+
+            <!-- Student Profile Summary Banner (shown when student is selected) -->
+            <div id="adminPrayerStudentProfileCard" style="display: none;" class="prayer-indiv-profile-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.85rem;">
+                  <div style="width: 52px; height: 52px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; border: 2px solid #bae6fd;" id="adminIndivAvatar">
+                    👤
+                  </div>
+                  <div>
+                    <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-dark); margin: 0 0 0.2rem 0;" id="adminIndivName">-</h3>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                      <span>รหัสนักเรียน: <b id="adminIndivId" style="color: #0284c7;">-</b></span>
+                      <span>•</span>
+                      <span>ระดับชั้น: <b id="adminIndivGrade">-</b></span>
+                      <span>•</span>
+                      <span>เบอร์ติดต่อผู้ปกครอง: <span id="adminIndivPhone">-</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 4 Quick Stats -->
+                <div style="display: flex; gap: 0.65rem; flex-wrap: wrap;">
+                  <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem 0.85rem; text-align: center; min-width: 85px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">บันทึกทั้งหมด</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #0284c7;" id="indivKpiTotal">0 ครั้ง</div>
+                  </div>
+                  <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem 0.85rem; text-align: center; min-width: 85px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">ตรงเวลา</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #16a34a;" id="indivKpiOntimeRate">0%</div>
+                  </div>
+                  <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem 0.85rem; text-align: center; min-width: 85px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">ยืนยัน GPS</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #0284c7;" id="indivKpiGpsRate">0%</div>
+                  </div>
+                  <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: 8px; padding: 0.5rem 0.85rem; text-align: center; min-width: 85px;">
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">สม่ำเสมอ 30 วัน</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #8b5cf6;" id="indivKpiStreak">0%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Student Individual Prayer Records Table -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-dark); margin: 0;">
+                <i class="fa-solid fa-clock-rotate-left" style="color: #0284c7;"></i> ประวัติและหลักฐานการเช็คชื่อละหมาดรายบุคคล
+              </h4>
+              <span class="badge-sub" id="adminIndivLogsCountBadge">0 รายการ</span>
+            </div>
+            <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+              <table class="custom-table" id="adminIndivPrayerLogsTable">
+                <thead>
+                  <tr>
+                    <th style="width: 45px; text-align: center;">ลำดับ</th>
+                    <th>วันที่บันทึก</th>
+                    <th>เวลาละหมาด</th>
+                    <th>เวลาที่เช็ค</th>
+                    <th>สถานะการละหมาด</th>
+                    <th>สถานที่ / พิกัด GPS</th>
+                    <th style="text-align: center;">ภาพถ่ายพยาน</th>
+                    <th style="text-align: right;">รายละเอียด</th>
+                  </tr>
+                </thead>
+                <tbody id="adminIndivPrayerLogsTableBody">
+                  <!-- Injected via app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Admin Tab 5: System Logo Management (Exclusive for Master Admin) -->
       <div id="admin-tab-logo" class="admin-content-tab" style="display: none;">
         <div class="card" style="max-width: 600px;">
@@ -3049,6 +3303,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=5.0"></script>
+  <script src="app.js?v=5.1"></script>
 </body>
 </html>
