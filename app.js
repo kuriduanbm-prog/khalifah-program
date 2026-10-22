@@ -1156,8 +1156,8 @@ function renderSurahChecklist(filterText = '') {
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-family: 'Traditional Arabic', serif; font-size: 1.1rem; color: #059669; direction: rtl;">${s.arabic}</span>
-          <input type="checkbox" ${isMem ? 'checked' : ''} onclick="event.stopPropagation(); toggleSurahMemorized(${s.num})" style="cursor: pointer; width: 19px; height: 19px; accent-color: #059669;">
+          <span style="font-family: 'Traditional Arabic', serif; font-size: 1.1rem; color: #0284c7; direction: rtl;">${s.arabic}</span>
+          <input type="checkbox" ${isMem ? 'checked' : ''} onclick="event.stopPropagation(); toggleSurahMemorized(${s.num})" style="cursor: pointer; width: 19px; height: 19px; accent-color: #0284c7;">
         </div>
       </div>
     `;
@@ -2951,7 +2951,7 @@ function selectPrayerNoteTime(time) {
 
   const selectedTextEl = document.getElementById('prayerNoteTimeSelectedText');
   if (selectedTextEl) {
-    selectedTextEl.innerHTML = `<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-check"></i> เลือก: ${time}</span>`;
+    selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check"></i> เลือก: ${time}</span>`;
   }
 }
 
@@ -7844,7 +7844,7 @@ function renderAdminLiveActivityFeed() {
 
   tbody.innerHTML = filteredLogs.slice(0, 50).map(item => `
     <tr>
-      <td><span style="font-weight: 700; color: #059669;"><i class="fa-regular fa-clock"></i> ${item.formattedTime || '-'}</span></td>
+      <td><span style="font-weight: 700; color: #0284c7;"><i class="fa-regular fa-clock"></i> ${item.formattedTime || '-'}</span></td>
       <td>${item.formattedDate || '-'}</td>
       <td><b>${item.studentId || '-'}</b></td>
       <td style="font-weight: 600; color: var(--text-dark);">${item.studentName || '-'}</td>
@@ -8261,7 +8261,7 @@ function renderAttendeesTable(list) {
       <td>${item.studentName}</td>
       <td><span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 0.78rem;">${item.grade || '-'}</span></td>
       <td>${item.formattedDate || '-'}</td>
-      <td><span style="color: #059669; font-weight: 600;">${item.formattedTime || '-'}</span></td>
+      <td><span style="color: #0284c7; font-weight: 600;">${item.formattedTime || '-'}</span></td>
       <td style="text-align: right;">
         <button class="btn btn-icon btn-sm" onclick="deleteActivityAttendee('${item.id || item.studentId}')" title="ลบรายการเช็คชื่อนี้" style="color: #ef4444; width: 28px; height: 28px;">
           <i class="fa-solid fa-trash-can"></i>

@@ -189,23 +189,27 @@ html, body {
 
 .nav-link.active {
   background: #ffffff;
-  color: #0f172a;
-  border-color: #e2e8f0;
+  color: var(--primary-dark);
+  border-color: #bae6fd;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.1), 0 1px 2px rgba(0, 0, 0, 0.03);
   outline: none !important;
 }
 
 .nav-link.active:focus,
 .nav-link.active:focus-visible {
   outline: none !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.1), 0 1px 2px rgba(0, 0, 0, 0.03) !important;
 }
 
 .nav-link i {
   font-size: 0.95rem;
   color: currentColor;
   transition: color 0.18s ease;
+}
+
+.nav-link.active i {
+  color: var(--primary);
 }
 
 /* User Profile & Actions */
@@ -364,7 +368,7 @@ html, body {
 }
 
 .mobile-nav-item.active {
-  color: #0f172a;
+  color: var(--primary);
   font-weight: 600;
   transform: translateY(-1px);
   outline: none !important;
@@ -372,7 +376,7 @@ html, body {
 }
 
 .mobile-nav-item.active i {
-  color: #0f172a;
+  color: var(--primary);
 }
 
 /* UI Cards */
@@ -433,16 +437,16 @@ html, body {
 }
 
 .btn-primary {
-  background: #0f172a;
+  background: var(--primary);
   color: #ffffff;
-  border-color: #0f172a;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
 }
 
 .btn-primary:hover {
-  background: #1e293b;
-  border-color: #1e293b;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
   transform: translateY(-1px);
 }
 
@@ -1701,10 +1705,10 @@ html, body {
   background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1.5px solid #10b981;
+  border: 1.5px solid #0284c7;
   border-radius: var(--radius-xl, 1rem);
   padding: 0.85rem 1rem;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(2, 132, 199, 0.3);
   z-index: 99999;
   display: flex;
   align-items: center;
@@ -1724,7 +1728,7 @@ html, body {
   width: 54px;
   height: 54px;
   border-radius: 0.75rem;
-  border: 2px solid #10b981;
+  border: 2px solid #0284c7;
   object-fit: cover;
   flex-shrink: 0;
   background: #1e293b;
@@ -2270,13 +2274,14 @@ body.auth-locked #adminAuthModal {
 
 /* Hasanat Section Sub-tabs & Cards */
 .hasanat-hero-card {
-  background: linear-gradient(135deg, #059669 0%, #047857 60%, #065f46 100%);
+  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 55%, #0284c7 100%);
   color: #ffffff;
   border-radius: var(--radius-xl);
   padding: 1.6rem 1.8rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 10px 25px rgba(5, 150, 105, 0.25);
+  box-shadow: 0 12px 28px -6px rgba(2, 132, 199, 0.28);
 }
+
 
 .hasanat-hero-title {
   font-size: 1.45rem;
@@ -2347,14 +2352,14 @@ body.auth-locked #adminAuthModal {
 
 .hasanat-subnav-btn.active {
   background: #ffffff;
-  color: #047857;
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  color: #0369a1;
+  border-color: #bae6fd;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .hasanat-subnav-btn.active .tab-badge-pill {
-  background: #ecfdf5;
-  color: #059669;
+  background: #e0f2fe;
+  color: #0284c7;
 }
 
 /* Surah Checklist Grid */
@@ -2391,10 +2396,10 @@ body.auth-locked #adminAuthModal {
 }
 
 .surah-item-card:hover {
-  border-color: #059669;
+  border-color: #0284c7;
   background: #f8fafc;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
 }
 
 .surah-item-card:active {
@@ -2402,9 +2407,9 @@ body.auth-locked #adminAuthModal {
 }
 
 .surah-item-card.memorized {
-  border-color: #10b981;
-  background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.12);
+  border-color: #38bdf8;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.12);
 }
 
 .surah-number-badge {
@@ -2424,20 +2429,20 @@ body.auth-locked #adminAuthModal {
 }
 
 .surah-item-card.memorized .surah-number-badge {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
-  border-color: #059669;
-  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+  border-color: #0284c7;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
 }
 
 /* Sunnah Prayers Live Hero Showcase */
 .sunnah-hero-counter-card {
-  background: linear-gradient(145deg, #f0fdf4 0%, #ffffff 50%, #ecfdf5 100%);
-  border: 1.5px solid #a7f3d0;
+  background: linear-gradient(145deg, #f0f9ff 0%, #ffffff 50%, #e0f2fe 100%);
+  border: 1.5px solid #bae6fd;
   border-radius: var(--radius-xl, 1.25rem);
   padding: 1.35rem 1.4rem;
   margin-bottom: 1.35rem;
-  box-shadow: 0 10px 28px -6px rgba(5, 150, 105, 0.12);
+  box-shadow: 0 10px 28px -6px rgba(2, 132, 199, 0.14);
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -2454,14 +2459,14 @@ body.auth-locked #adminAuthModal {
 .sunnah-counter-label {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #065f46;
+  color: #0369a1;
   display: flex;
   align-items: center;
   gap: 0.35rem;
 }
 
 .sunnah-counter-label i {
-  color: #059669;
+  color: #0284c7;
 }
 
 .sunnah-target-badge {
@@ -2485,7 +2490,7 @@ body.auth-locked #adminAuthModal {
 .sunnah-big-num {
   font-size: 2.85rem;
   font-weight: 900;
-  color: #059669;
+  color: #0284c7;
   line-height: 1;
   font-feature-settings: "tnum";
   font-variant-numeric: tabular-nums;
@@ -2495,16 +2500,16 @@ body.auth-locked #adminAuthModal {
 .sunnah-unit-text {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #047857;
+  color: #0369a1;
 }
 
 .sunnah-hadith-quote {
   font-size: 0.76rem;
-  color: #047857;
-  background: rgba(255, 255, 255, 0.75);
+  color: #0369a1;
+  background: rgba(255, 255, 255, 0.85);
   border-radius: var(--radius-md, 0.5rem);
   padding: 0.45rem 0.75rem;
-  border: 1px solid rgba(167, 243, 208, 0.6);
+  border: 1px solid rgba(186, 230, 253, 0.8);
   line-height: 1.45;
   margin-top: 0.4rem;
 }
@@ -2555,9 +2560,9 @@ body.auth-locked #adminAuthModal {
 }
 
 .sunnah-item-row.checked {
-  background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
-  border-color: #86efac;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.1);
+  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+  border-color: #7dd3fc;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12);
 }
 
 /* Prayer Status Badges */
@@ -2756,10 +2761,10 @@ body.auth-locked #adminAuthModal {
 }
 
 .surah-cat-tab.active {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
-  border-color: #059669;
-  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+  border-color: #0284c7;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
 }
 
 /* Sunnah Quick Select Pills */
@@ -2786,10 +2791,10 @@ body.auth-locked #adminAuthModal {
 }
 
 .sunnah-pill-btn.active {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
-  border-color: #059669;
-  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+  border-color: #0284c7;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
 }
 
 /* Prayer History Detail Modal & Items */
@@ -2931,7 +2936,7 @@ body.auth-locked #adminAuthModal {
   position: absolute;
   inset: 0;
   background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px),
-                    radial-gradient(rgba(45, 212, 191, 0.08) 1.5px, transparent 1.5px);
+                    radial-gradient(rgba(56, 189, 248, 0.08) 1.5px, transparent 1.5px);
   background-size: 24px 24px;
   background-position: 0 0, 12px 12px;
   opacity: 0.85;
@@ -2961,7 +2966,7 @@ body.auth-locked #adminAuthModal {
 
 .btn-juz-sort.active {
   background: #ffffff;
-  color: #059669;
+  color: #0284c7;
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -3254,14 +3259,14 @@ body.auth-locked #adminAuthModal {
 
 /* ==================== HASANAT HERO CARD ==================== */
 .hasanat-hero-card {
-  background: linear-gradient(135deg, #064e3b 0%, #047857 55%, #059669 100%);
+  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 55%, #0284c7 100%);
   color: #ffffff;
   border-radius: var(--radius-xl);
   padding: 1.6rem 1.4rem;
   margin-bottom: 1.25rem;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 28px -6px rgba(4, 120, 87, 0.28);
+  box-shadow: 0 12px 28px -6px rgba(2, 132, 199, 0.28);
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
@@ -3325,9 +3330,9 @@ body.auth-locked #adminAuthModal {
 }
 
 .btn-hasanat-date-step:hover {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
-  border-color: #059669;
+  border-color: #0284c7;
   transform: scale(1.05);
 }
 
@@ -3337,8 +3342,8 @@ body.auth-locked #adminAuthModal {
   align-items: center;
   gap: 0.55rem;
   padding: 0.4rem 0.9rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -3346,8 +3351,8 @@ body.auth-locked #adminAuthModal {
 }
 
 .hasanat-date-display-card:hover {
-  background: #dcfce7;
-  border-color: #86efac;
+  background: #e0f2fe;
+  border-color: #7dd3fc;
 }
 
 .hasanat-native-date-input {
@@ -3370,7 +3375,7 @@ body.auth-locked #adminAuthModal {
 }
 
 .hasanat-date-rel-badge.today {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
 }
 
@@ -3392,9 +3397,9 @@ body.auth-locked #adminAuthModal {
   gap: 0.35rem;
   padding: 0.4rem 0.85rem;
   border-radius: var(--radius-full);
-  border: 1.5px solid #a7f3d0;
+  border: 1.5px solid #bae6fd;
   background: #ffffff;
-  color: #059669;
+  color: #0284c7;
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
@@ -3404,10 +3409,10 @@ body.auth-locked #adminAuthModal {
 
 .btn-hasanat-today:hover,
 .btn-hasanat-today.active {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
-  border-color: #059669;
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+  border-color: #0284c7;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
 }
 
 /* ==================== MINIMALIST QURAN TAB STYLES ==================== */
@@ -3447,8 +3452,8 @@ body.auth-locked #adminAuthModal {
 }
 
 .bento-page-card {
-  background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%);
-  border-color: #bbf7d0;
+  background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+  border-color: #bae6fd;
 }
 
 .bento-khatam-card {
@@ -3475,7 +3480,7 @@ body.auth-locked #adminAuthModal {
 }
 
 .bento-label i {
-  color: #059669;
+  color: #0284c7;
 }
 
 .bento-label.gold-label i {
@@ -3487,9 +3492,9 @@ body.auth-locked #adminAuthModal {
   font-weight: 700;
   padding: 0.15rem 0.6rem;
   border-radius: 9999px;
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
 }
 
 .bento-val-row {
@@ -3530,7 +3535,7 @@ body.auth-locked #adminAuthModal {
 
 .bento-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(90deg, #38bdf8 0%, #0284c7 100%);
   border-radius: 9999px;
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -3538,7 +3543,7 @@ body.auth-locked #adminAuthModal {
 .bento-progress-meta {
   font-size: 0.73rem;
   font-weight: 600;
-  color: #059669;
+  color: #0284c7;
   margin-top: 0.35rem;
 }
 
@@ -3595,9 +3600,9 @@ body.auth-locked #adminAuthModal {
 .quran-date-badge {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #059669;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  color: #0284c7;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
   padding: 0.15rem 0.55rem;
   border-radius: 9999px;
 }
@@ -3648,9 +3653,9 @@ body.auth-locked #adminAuthModal {
 }
 
 .btn-quran-step:hover {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
-  border-color: #059669;
+  border-color: #0284c7;
 }
 
 .quran-big-input {
@@ -3659,8 +3664,8 @@ body.auth-locked #adminAuthModal {
   font-size: 1.35rem !important;
   font-weight: 800 !important;
   text-align: center !important;
-  color: #059669 !important;
-  border: 2px solid #059669 !important;
+  color: #0284c7 !important;
+  border: 2px solid #0284c7 !important;
   border-radius: var(--radius-md) !important;
 }
 
@@ -3691,9 +3696,9 @@ body.auth-locked #adminAuthModal {
 }
 
 .quran-pill-step:hover {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
-  border-color: #059669;
+  border-color: #0284c7;
 }
 
 .quran-pill-clear {
@@ -3824,14 +3829,14 @@ body.auth-locked #adminAuthModal {
 }
 
 .btn-khatam-step.plus {
-  background: #059669;
+  background: #0284c7;
   color: #ffffff;
-  border-color: #059669;
+  border-color: #0284c7;
 }
 
 .btn-khatam-step.plus:hover, .btn-khatam-step.plus:active {
-  background: #047857;
-  border-color: #047857;
+  background: #0369a1;
+  border-color: #0369a1;
   transform: scale(1.04);
 }
 
@@ -3885,12 +3890,12 @@ body.auth-locked #adminAuthModal {
 
 /* Ikhlas Notice */
 .quran-ikhlas-notice {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
   border-radius: 10px;
   padding: 0.65rem 0.85rem;
   font-size: 0.78rem;
-  color: #166534;
+  color: #0369a1;
   display: flex;
   align-items: center;
   gap: 0.55rem;
