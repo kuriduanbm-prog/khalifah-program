@@ -31,7 +31,9 @@ const SHEETS = {
   ACTIVITY_LOGS: 'บันทึกการเข้าร่วมกิจกรรม',
   ADMINS: 'ผู้ดูแลระบบ',
   SETTINGS: 'การตั้งค่า',
-  HASANAT: 'บันทึกผลบุญ'
+  HASANAT: 'บันทึกผลบุญ',
+  GRADES: 'ผลการเรียนรายวิชา',
+  APPROVALS: 'รายการรออนุมัติสมัคร'
 };
 
 // ชื่อแผ่นงานเดิมภาษาอังกฤษ (สำหรับแปลงของเดิมให้เป็นภาษาไทยอัตโนมัติ)
@@ -43,14 +45,16 @@ const LEGACY_SHEETS = {
   ACTIVITY_LOGS: ['ActivityLogs', 'activitylogs', 'Activity_Logs', 'บันทึกเข้าร่วมกิจกรรม'],
   ADMINS: ['Admins', 'admins', 'Admin'],
   SETTINGS: ['Settings', 'settings', 'Setting'],
-  HASANAT: ['HasanatLogs', 'hasanatlogs', 'Hasanat_Logs', 'Hasanat', 'ผลบุญ']
+  HASANAT: ['HasanatLogs', 'hasanatlogs', 'Hasanat_Logs', 'Hasanat', 'ผลบุญ'],
+  GRADES: ['Grades', 'grades', 'SubjectGrades', 'ผลการเรียน']
 };
 
 // หัวคอลัมน์ภาษาไทยมาตรฐานสำหรับแต่ละแผ่นงาน
 const HEADERS = {
   STUDENTS: [
     'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'โรงเรียน/สังกัด', 'ระดับชั้น', 
-    'วันเดือนปีเกิด', 'เบอร์โทรผู้ปกครอง', 'วันที่ลงทะเบียน', 'สถานะนักเรียน', 'รูปโปรไฟล์'
+    'วันเดือนปีเกิด', 'เบอร์โทรผู้ปกครอง', 'วันที่ลงทะเบียน', 'สถานะนักเรียน', 'รูปโปรไฟล์',
+    'อีเมล', 'GPAX', 'สถิติมาเรียน JSON', 'เกรดรายวิชา JSON', 'สถานะยืนยันตัวตน'
   ],
   PRAYERS: [
     'รหัสบันทึก', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'เวลาละหมาด', 
@@ -70,7 +74,8 @@ const HEADERS = {
     'ระดับชั้น', 'วันที่เช็คชื่อ', 'เวลาเช็คชื่อ', 'เวลา Timestamp'
   ],
   ADMINS: [
-    'รหัสแอดมิน', 'ชื่อผู้ใช้ (Username)', 'รหัสผ่าน (Password)', 'ชื่อ-นามสกุล', 'ระดับสิทธิ์ (Role)', 'วันที่สร้าง'
+    'รหัสแอดมิน', 'ชื่อผู้ใช้ (Username)', 'รหัสผ่าน (Password)', 'ชื่อ-นามสกุล', 'ระดับสิทธิ์ (Role)', 'วันที่สร้าง',
+    'อีเมล', 'เบอร์โทรศัพท์', 'รายวิชาที่รับผิดชอบ JSON', 'สถานะยืนยันตัวตน'
   ],
   SETTINGS: [
     'การตั้งค่า (Key)', 'ค่าที่กำหนด (Value)', 'คำอธิบาย (Description)'
@@ -80,6 +85,10 @@ const HEADERS = {
     'อ่านกุรอานวันนี้ (หน้า)', 'อ่านถึงหน้าที่', 'อ่านจบกี่ยุซ', 'จำนวนดาวที่สะสม (ดวง)', 
     'จำนวนครั้งอ่านจบ30ยุซ (ค็อตม์)', 'จำนวนซูเราะห์ที่ท่องจำ', 'รายชื่อซูเราะห์ที่ท่องจำได้', 
     'รวมร็อกอะฮ์สุนัตวันนี้', 'รายละเอียดละหมาดสุนัต', 'เวลา Timestamp'
+  ],
+  GRADES: [
+    'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'ระดับชั้น', 'รหัสวิชา', 'ชื่อรายวิชา',
+    'ระดับเกรด (1-4)', 'คะแนน (เต็ม 100)', 'ผู้ประเมิน', 'เวลาอัปเดต'
   ]
 };
 
@@ -128,16 +137,18 @@ function getOrCreateSheetSmart(ss, key, defaultHeaders, headerBgColor) {
     }
   }
 
-  // อัปเกรดแถวที่ 1 ให้เป็นหัวตารางภาษาไทยสวยงาม
+  // อัปเกรดแถวที่ 1 ให้เป็นหัวตารางภาษาไทยสวยงามและครบทุกคอลัมน์
   if (defaultHeaders && defaultHeaders.length > 0) {
     const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
     if (lastRow === 0) {
       sheet.appendRow(defaultHeaders);
     } else {
       const firstCell = String(sheet.getRange(1, 1).getValue()).trim();
-      // หากหัวตารางเดิมเป็นภาษาอังกฤษ ให้อัปเดตเป็นหัวภาษาไทยทันที
+      // หากหัวตารางเดิมเป็นภาษาอังกฤษ หรือจำนวนคอลัมน์น้อยกว่ามาตรฐานใหม่ ให้อัปเดตเป็นหัวภาษาไทยครบทุกคอลัมน์ทันที
       if (firstCell.startsWith('Student') || firstCell.startsWith('Log') || 
-          firstCell === 'Key' || firstCell.startsWith('Act') || firstCell.startsWith('Admin')) {
+          firstCell === 'Key' || firstCell.startsWith('Act') || firstCell.startsWith('Admin') ||
+          lastCol < defaultHeaders.length) {
         sheet.getRange(1, 1, 1, defaultHeaders.length).setValues([defaultHeaders]);
       }
     }
@@ -187,6 +198,7 @@ function initializeSheets() {
   const sheetActLogs = getOrCreateSheetSmart(ss, 'ACTIVITY_LOGS', HEADERS.ACTIVITY_LOGS, '#0284c7');
   try {
     sheetActLogs.getRange('B:B').setNumberFormat('@');
+    sheetActLogs.getRange('D:D').setNumberFormat('@');
   } catch (fmtErr) {}
 
   // 5. ผู้ดูแลระบบ
@@ -195,11 +207,12 @@ function initializeSheets() {
     sheetAdmins.getRange('A:A').setNumberFormat('@');
     sheetAdmins.getRange('B:B').setNumberFormat('@');
     sheetAdmins.getRange('C:C').setNumberFormat('@');
+    sheetAdmins.getRange('H:H').setNumberFormat('@');
   } catch (fmtErr) {}
 
   if (sheetAdmins.getLastRow() === 1) {
     sheetAdmins.appendRow([
-      'ADM001', 'admin', MASTER_ADMIN_PASS, 'ผู้ดูแลระบบหลัก (Master Administrator)', 'ผู้ดูแลระบบสูงสุด', new Date().toISOString()
+      'ADM001', 'admin', MASTER_ADMIN_PASS, 'ผู้ดูแลระบบหลัก (Master Administrator)', 'ผู้ดูแลระบบสูงสุด', new Date().toISOString(), '', '', '[]', 'Verified'
     ]);
     const rIdx = sheetAdmins.getLastRow();
     sheetAdmins.getRange(rIdx, 3).setNumberFormat('@').setValue(MASTER_ADMIN_PASS);
@@ -223,6 +236,15 @@ function initializeSheets() {
   try {
     sheetHasanat.getRange('B:B').setNumberFormat('@');
   } catch (fmtErr) {}
+
+  // 8. ผลการเรียนรายวิชา
+  const sheetGrades = getOrCreateSheetSmart(ss, 'GRADES', HEADERS.GRADES, '#4f46e5');
+  try {
+    sheetGrades.getRange('A:A').setNumberFormat('@');
+  } catch (fmtErr) {}
+
+  // 9. รายการรออนุมัติสมัคร
+  ensureApprovalsSheet();
 
   // ทำการแปลงข้อมูลในเซลล์เดิมที่เป็นภาษาอังกฤษให้เป็นภาษาไทย และทำความสะอาดเลขศูนย์นำหน้า
   convertDataCellsToThai(ss);
@@ -426,6 +448,18 @@ function doGet(e) {
       case 'getPendingRegistrations':
         result = getPendingRegistrations();
         break;
+      case 'getHasanat':
+        result = getHasanat(e.parameter.studentId);
+        break;
+      case 'getSubjectGrades':
+        result = getSubjectGrades(e.parameter.studentId, e.parameter.subject);
+        break;
+      case 'getSettings':
+        result = getSettings();
+        break;
+      case 'getFullDatabase':
+        result = getFullDatabase();
+        break;
       default:
         result = { success: false, error: 'Unknown action' };
     }
@@ -471,6 +505,9 @@ function doPost(e) {
       case 'prayerCheckIn':
         result = recordPrayer(postData.data || postData);
         break;
+      case 'deletePrayerRecord':
+        result = deletePrayerRecord(postData.data || postData);
+        break;
       case 'recordHasanat':
       case 'saveQuranLog':
       case 'saveSunnahLog':
@@ -494,6 +531,9 @@ function doPost(e) {
       case 'checkInActivity':
       case 'activityCheckIn':
         result = checkInActivity(postData.data || postData);
+        break;
+      case 'deleteActivityAttendee':
+        result = deleteActivityAttendee(postData.data || postData);
         break;
       case 'adminLogin':
         result = verifyAdminLogin(postData.password || (postData.data && postData.data.password), postData.username || (postData.data && postData.data.username));
@@ -522,6 +562,9 @@ function doPost(e) {
       case 'registerPendingUser':
         result = registerPendingUser(postData.data || postData);
         break;
+      case 'deletePendingRegistration':
+        result = deletePendingRegistration(postData.data || postData);
+        break;
       case 'approveRegistrationAndSendEmail':
         result = approveRegistrationAndSendEmail(postData.data || postData);
         break;
@@ -536,6 +579,12 @@ function doPost(e) {
         break;
       case 'saveSubjectGrades':
         result = saveSubjectGrades(postData.data || postData);
+        break;
+      case 'saveSubjects':
+        result = saveSubjects(postData.data || postData);
+        break;
+      case 'saveSetting':
+        result = saveSetting(postData.data || postData);
         break;
       default:
         result = { success: false, error: 'Invalid POST action: ' + action };
@@ -625,6 +674,45 @@ function formatAsText(val) {
   return cleanVal(val);
 }
 
+/**
+ * แปลงค่าวันที่จาก Google Sheets Date Object หรือ String ให้เป็นรูปแบบมาตรฐาน YYYY-MM-DD
+ */
+function formatSheetDate(val) {
+  if (!val) return '';
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    let yr = val.getFullYear();
+    if (yr > 2400) {
+      const adjusted = new Date(val.getTime());
+      adjusted.setFullYear(yr - 543);
+      return Utilities.formatDate(adjusted, "Asia/Bangkok", "yyyy-MM-dd");
+    }
+    return Utilities.formatDate(val, "Asia/Bangkok", "yyyy-MM-dd");
+  }
+  const s = cleanVal(val);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900) {
+    let yr = parsed.getFullYear();
+    if (yr > 2400) parsed.setFullYear(yr - 543);
+    return Utilities.formatDate(parsed, "Asia/Bangkok", "yyyy-MM-dd");
+  }
+  return s;
+}
+
+/**
+ * แปลงค่าเวลาจาก Google Sheets Date Object (1899-12-30) หรือ String ให้เป็น HH:mm:ss
+ */
+function formatSheetTime(val) {
+  if (!val) return '';
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    return Utilities.formatDate(val, "Asia/Bangkok", "HH:mm:ss");
+  }
+  const s = cleanVal(val);
+  const match = s.match(/(\d{2}:\d{2}(?::\d{2})?)/);
+  if (match) return match[1];
+  return s;
+}
+
 function registerStudent(data) {
   if (!data) return { success: false, message: 'ไม่มีข้อมูลนักเรียน' };
   initializeSheets();
@@ -637,8 +725,9 @@ function registerStudent(data) {
   }
 
   const cleanSid = cleanVal(data.studentId);
+  if (!cleanSid) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
   const cleanBD = normalizeBirthDate(data.birthDate);
-  const cleanPh = normalizePhone(data.parentPhone);
+  const cleanPh = normalizePhone(data.parentPhone || data.phone);
   const statusThai = data.status === 'รอผู้สมัครกรอกรหัส OTP'
     ? 'รอผู้สมัครกรอกรหัส OTP'
     : formatStudentStatusThai(data.status || 'Active');
@@ -655,13 +744,25 @@ function registerStudent(data) {
     ? photoLink 
     : (rawPhoto && !rawPhoto.startsWith('data:image') && rawPhoto.length < 500 ? rawPhoto : 'รูปโปรไฟล์ในอุปกรณ์');
 
+  const emailVal = cleanVal(data.email || '');
+  const gpaxVal = (data.gpax !== undefined && data.gpax !== null && data.gpax !== '') ? String(data.gpax) : '';
+  const attendanceJson = data.attendance ? JSON.stringify(data.attendance) : '';
+  const gradesJson = Array.isArray(data.grades) ? JSON.stringify(data.grades) : '';
+  const approvalStatusVal = cleanVal(data.approvalStatus || (statusThai === 'รอผู้สมัครกรอกรหัส OTP' ? 'AwaitingOtp' : 'Verified'));
+
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (isCodeMatch(rows[i][0], cleanSid)) {
       const rowNum = i + 1;
       const existingRegDate = cleanVal(rows[i][6]) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
       const finalPhoto = (safePhotoRef && safePhotoRef !== 'รูปโปรไฟล์ในอุปกรณ์') ? safePhotoRef : (cleanVal(rows[i][8]) || safePhotoRef);
-      sheet.getRange(rowNum, 1, 1, 9).setValues([[
+      const finalEmail = emailVal || cleanVal(rows[i][9] || '');
+      const finalGpax = gpaxVal || cleanVal(rows[i][10] || '0.00');
+      const finalAttJson = attendanceJson || cleanVal(rows[i][11] || '{"present":0,"late":0,"leave":0,"absent":0}');
+      const finalGradesJson = gradesJson || cleanVal(rows[i][12] || '[]');
+      const finalApproval = data.approvalStatus ? approvalStatusVal : (cleanVal(rows[i][13]) || approvalStatusVal);
+
+      sheet.getRange(rowNum, 1, 1, 14).setValues([[
         cleanSid,
         data.fullName || rows[i][1] || '',
         data.schoolName || rows[i][2] || '',
@@ -670,11 +771,35 @@ function registerStudent(data) {
         cleanPh || normalizePhone(rows[i][5]),
         existingRegDate,
         statusThai,
-        finalPhoto
+        finalPhoto,
+        finalEmail,
+        finalGpax,
+        finalAttJson,
+        finalGradesJson,
+        finalApproval
       ]]);
       sheet.getRange(rowNum, 1).setNumberFormat('@').setValue(cleanSid);
       sheet.getRange(rowNum, 5).setNumberFormat('@').setValue(cleanBD || normalizeBirthDate(rows[i][4]));
       sheet.getRange(rowNum, 6).setNumberFormat('@').setValue(cleanPh || normalizePhone(rows[i][5]));
+
+      if (data.hasanat) {
+        try {
+          recordHasanat({
+            studentId: cleanSid,
+            studentName: data.fullName || rows[i][1] || '',
+            grade: data.grade || rows[i][3] || '',
+            quran: data.hasanat.quran,
+            memorization: data.hasanat.memorization,
+            sunnah: data.hasanat.sunnah
+          });
+        } catch (hErr) {}
+      }
+      if (Array.isArray(data.grades) && data.grades.length > 0) {
+        try {
+          syncStudentGradesArrayToSheet(cleanSid, data.fullName || rows[i][1] || '', data.grade || rows[i][3] || '', data.grades, 'Admin/System');
+        } catch (gErr) {}
+      }
+
       return {
         success: true,
         updated: true,
@@ -687,7 +812,10 @@ function registerStudent(data) {
           birthDate: cleanBD || normalizeBirthDate(rows[i][4]),
           parentPhone: cleanPh || normalizePhone(rows[i][5]),
           status: statusThai,
-          avatarUrl: photoLink || rawPhoto || rows[i][8]
+          avatarUrl: photoLink || rawPhoto || rows[i][8],
+          email: finalEmail,
+          gpax: Number(finalGpax) || 0,
+          approvalStatus: finalApproval
         }
       };
     }
@@ -704,7 +832,12 @@ function registerStudent(data) {
     cleanPh,
     registeredAt,
     statusThai,
-    safePhotoRef
+    safePhotoRef,
+    emailVal,
+    gpaxVal || '0.00',
+    attendanceJson || '{"present":0,"late":0,"leave":0,"absent":0}',
+    gradesJson || '[]',
+    approvalStatusVal
   ]);
 
   // ตั้งค่า NumberFormat เป็น Plain Text เพื่อรักษาเลข 0 นำหน้าแน่นอน 100%
@@ -712,6 +845,24 @@ function registerStudent(data) {
   sheet.getRange(lastRow, 1).setNumberFormat('@').setValue(cleanSid);
   sheet.getRange(lastRow, 5).setNumberFormat('@').setValue(cleanBD);
   sheet.getRange(lastRow, 6).setNumberFormat('@').setValue(cleanPh);
+
+  if (data.hasanat) {
+    try {
+      recordHasanat({
+        studentId: cleanSid,
+        studentName: data.fullName || '',
+        grade: data.grade || '',
+        quran: data.hasanat.quran,
+        memorization: data.hasanat.memorization,
+        sunnah: data.hasanat.sunnah
+      });
+    } catch (hErr) {}
+  }
+  if (Array.isArray(data.grades) && data.grades.length > 0) {
+    try {
+      syncStudentGradesArrayToSheet(cleanSid, data.fullName || '', data.grade || '', data.grades, 'Admin/System');
+    } catch (gErr) {}
+  }
 
   return { 
     success: true, 
@@ -723,9 +874,156 @@ function registerStudent(data) {
       grade: data.grade,
       birthDate: cleanBD,
       parentPhone: cleanPh,
-      avatarUrl: photoLink || rawPhoto
+      status: statusThai,
+      avatarUrl: photoLink || rawPhoto,
+      email: emailVal,
+      gpax: Number(gpaxVal) || 0,
+      approvalStatus: approvalStatusVal
     }
   };
+}
+
+function buildStudentObjectFromRow(row, hasanatMap, gradesMap) {
+  const sid = cleanVal(row[0]);
+  let attendance = { present: 0, late: 0, leave: 0, absent: 0 };
+  try {
+    if (row[11]) attendance = JSON.parse(row[11]);
+  } catch (e) {}
+
+  let grades = [];
+  try {
+    if (row[12]) grades = JSON.parse(row[12]);
+  } catch (e) {}
+  if ((!Array.isArray(grades) || grades.length === 0) && gradesMap && gradesMap[sid]) {
+    grades = gradesMap[sid];
+  }
+
+  let gpax = parseFloat(row[10]);
+  if (isNaN(gpax) && Array.isArray(grades) && grades.length > 0) {
+    const sum = grades.reduce((acc, g) => acc + (parseFloat(g.grade) || 0), 0);
+    gpax = Number((sum / grades.length).toFixed(2));
+  } else if (isNaN(gpax)) {
+    gpax = 0;
+  }
+
+  const defaultHasanat = {
+    quran: { pagesToday: 0, currentPage: 1, juzCompleted: 0, stars: 0, khatamCount: 0 },
+    memorization: { count: 0, memorizedSurahs: [] },
+    sunnah: { totalRakaat: 0, rawatib: {} }
+  };
+
+  return {
+    studentId: sid,
+    fullName: cleanVal(row[1]),
+    schoolName: cleanVal(row[2]),
+    grade: cleanVal(row[3]),
+    birthDate: normalizeBirthDate(row[4]),
+    parentPhone: normalizePhone(row[5]),
+    registeredAt: formatSheetDate(row[6]) || cleanVal(row[6]),
+    status: cleanVal(row[7]) || 'ปกติ (กำลังศึกษา)',
+    profilePhoto: cleanVal(row[8] || ''),
+    avatarUrl: cleanVal(row[8] || ''),
+    email: cleanVal(row[9] || ''),
+    gpax: gpax,
+    attendance: attendance,
+    grades: Array.isArray(grades) ? grades : [],
+    approvalStatus: cleanVal(row[13] || (cleanVal(row[7]) === 'รอผู้สมัครกรอกรหัส OTP' ? 'AwaitingOtp' : 'Verified')),
+    hasanat: (hasanatMap && hasanatMap[sid]) ? hasanatMap[sid] : defaultHasanat
+  };
+}
+
+function getLatestHasanatMapByStudent(ss) {
+  const map = {};
+  try {
+    const sheet = ss.getSheetByName(SHEETS.HASANAT);
+    if (!sheet || sheet.getLastRow() <= 1) return map;
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const sid = cleanVal(rows[i][1]);
+      if (!sid) continue;
+      const prev = map[sid] || {
+        quran: { pagesToday: 0, currentPage: 1, juzCompleted: 0, stars: 0, khatamCount: 0 },
+        memorization: { count: 0, memorizedSurahs: [] },
+        sunnah: { totalRakaat: 0, rawatib: {} }
+      };
+
+      const pagesToday = Number(rows[i][5]) || 0;
+      const currentPage = Number(rows[i][6]) || prev.quran.currentPage || 1;
+      const juzCompleted = Number(rows[i][7]) || prev.quran.juzCompleted || 0;
+      const stars = Math.max(Number(rows[i][8]) || 0, prev.quran.stars || 0);
+      const khatamCount = Math.max(Number(rows[i][9]) || 0, prev.quran.khatamCount || 0);
+
+      let memList = prev.memorization.memorizedSurahs || [];
+      const rawMemStr = cleanVal(rows[i][11]);
+      if (rawMemStr) {
+        const parsedList = rawMemStr.split(',').map(s => s.trim()).filter(Boolean);
+        if (parsedList.length > 0) memList = parsedList;
+      }
+      const memCount = Math.max(Number(rows[i][10]) || 0, memList.length);
+
+      let rawatib = prev.sunnah.rawatib || {};
+      try {
+        if (rows[i][13]) {
+          const parsedRawatib = JSON.parse(rows[i][13]);
+          if (parsedRawatib && Object.keys(parsedRawatib).length > 0) rawatib = parsedRawatib;
+        }
+      } catch (e) {}
+      const totalRakaat = Number(rows[i][12]) || prev.sunnah.totalRakaat || 0;
+
+      map[sid] = {
+        quran: {
+          pagesToday: pagesToday,
+          currentPage: currentPage,
+          juzCompleted: juzCompleted,
+          stars: stars,
+          khatamCount: khatamCount,
+          lastReadDate: formatSheetDate(rows[i][4])
+        },
+        memorization: {
+          count: memCount,
+          memorizedSurahs: memList,
+          lastUpdate: cleanVal(rows[i][14])
+        },
+        sunnah: {
+          totalRakaat: totalRakaat,
+          rawatib: rawatib,
+          lastSunnahDate: formatSheetDate(rows[i][4])
+        }
+      };
+    }
+  } catch (err) {}
+  return map;
+}
+
+function getLatestGradesMapByStudent(ss) {
+  const map = {};
+  try {
+    const sheet = ss.getSheetByName(SHEETS.GRADES);
+    if (!sheet || sheet.getLastRow() <= 1) return map;
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const sid = cleanVal(rows[i][0]);
+      const subjCode = cleanVal(rows[i][3]);
+      const subjName = cleanVal(rows[i][4]);
+      const gradeVal = parseFloat(rows[i][5]) || 0;
+      const scoreVal = parseFloat(rows[i][6]) || 0;
+      if (!sid || (!subjCode && !subjName)) continue;
+      if (!map[sid]) map[sid] = [];
+      const existingIdx = map[sid].findIndex(g => (subjCode && g.code === subjCode) || (subjName && g.name === subjName));
+      const entry = {
+        code: subjCode || subjName,
+        name: subjName || subjCode,
+        grade: gradeVal,
+        score: scoreVal
+      };
+      if (existingIdx !== -1) {
+        map[sid][existingIdx] = entry;
+      } else {
+        map[sid].push(entry);
+      }
+    }
+  } catch (err) {}
+  return map;
 }
 
 function getStudent(studentId, parentPhone) {
@@ -734,6 +1032,8 @@ function getStudent(studentId, parentPhone) {
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
   const rows = sheet.getDataRange().getValues();
+  const hasanatMap = getLatestHasanatMapByStudent(ss);
+  const gradesMap = getLatestGradesMapByStudent(ss);
 
   const targetId = cleanVal(studentId);
   const targetPhone = normalizePhone(parentPhone);
@@ -757,21 +1057,12 @@ function getStudent(studentId, parentPhone) {
     if (isMatch) {
       return {
         success: true,
-        student: {
-          studentId: cleanVal(rows[i][0]),
-          fullName: rows[i][1],
-          schoolName: rows[i][2],
-          grade: rows[i][3],
-          birthDate: normalizeBirthDate(rows[i][4]),
-          parentPhone: normalizePhone(rows[i][5]),
-          status: rows[i][7] || 'ปกติ (กำลังศึกษา)',
-          avatarUrl: rows[i][8] || ''
-        }
+        student: buildStudentObjectFromRow(rows[i], hasanatMap, gradesMap)
       };
     }
   }
 
-  return { success: false, message: 'ไม่พบข้อมูลนักเรียน' };
+  return { success: false, message: 'ไม่พบข้อมูลนักเรียนในฐานข้อมูล' };
 }
 
 function loginStudent(studentId, passOrPhone) {
@@ -780,6 +1071,8 @@ function loginStudent(studentId, passOrPhone) {
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
   const rows = sheet.getDataRange().getValues();
+  const hasanatMap = getLatestHasanatMapByStudent(ss);
+  const gradesMap = getLatestGradesMapByStudent(ss);
 
   const cleanInput = cleanVal(passOrPhone);
   const targetId = cleanVal(studentId);
@@ -790,20 +1083,20 @@ function loginStudent(studentId, passOrPhone) {
     const sPhone = rows[i][5];
 
     if (isCodeMatch(sId, targetId)) {
-      const matchPass = isCodeMatch(bDate, cleanInput) || isPhoneMatch(sPhone, cleanInput);
+      const matchPass = !cleanInput || isCodeMatch(bDate, cleanInput) || isPhoneMatch(sPhone, cleanInput);
       if (matchPass) {
+        const studentObj = buildStudentObjectFromRow(rows[i], hasanatMap, gradesMap);
+        if (studentObj.status === 'รอผู้สมัครกรอกรหัส OTP' || studentObj.approvalStatus === 'PendingAdmin' || studentObj.approvalStatus === 'AwaitingOtp') {
+          return {
+            success: false,
+            requireOtp: true,
+            approvalStatus: studentObj.approvalStatus,
+            message: 'บัญชียังไม่ได้ยืนยันรหัส OTP 6 หลักจากอีเมล'
+          };
+        }
         return {
           success: true,
-          student: {
-            studentId: cleanVal(rows[i][0]),
-            fullName: rows[i][1],
-            schoolName: rows[i][2],
-            grade: rows[i][3],
-            birthDate: normalizeBirthDate(rows[i][4]),
-            parentPhone: normalizePhone(rows[i][5]),
-            status: rows[i][7] || 'ปกติ (กำลังศึกษา)',
-            avatarUrl: rows[i][8] || ''
-          }
+          student: studentObj
         };
       } else {
         return { success: false, message: 'รหัสผ่านหรือข้อมูลยืนยันไม่ถูกต้อง' };
@@ -811,7 +1104,7 @@ function loginStudent(studentId, passOrPhone) {
     }
   }
 
-  return { success: false, message: 'ไม่พบรหัสนักเรียนในระบบ' };
+  return { success: false, message: 'ไม่พบรหัสนักเรียนในฐานข้อมูล Google Sheets' };
 }
 
 function updateStudentGrade(studentId, newGrade) {
@@ -828,8 +1121,183 @@ function updateStudentGrade(studentId, newGrade) {
   return { success: false, message: 'ไม่พบรหัสนักเรียน' };
 }
 
+function syncStudentGradesArrayToSheet(studentId, studentName, gradeLevel, gradesArray, evaluator) {
+  if (!Array.isArray(gradesArray) || gradesArray.length === 0) return;
+  const ss = getSpreadsheet();
+  const sheetGrades = getOrCreateSheetSmart(ss, 'GRADES', HEADERS.GRADES, '#4f46e5');
+  const rows = sheetGrades.getDataRange().getValues();
+  const nowStr = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+  const cleanSid = cleanVal(studentId);
+
+  gradesArray.forEach(g => {
+    const subjCode = cleanVal(g.code || g.subjectCode || g.name || '');
+    const subjName = cleanVal(g.name || g.subjectName || subjCode);
+    const gradeVal = (g.grade !== undefined && g.grade !== null) ? Number(g.grade) : 0;
+    const scoreVal = (g.score !== undefined && g.score !== null) ? Number(g.score) : (gradeVal * 25);
+    if (!subjCode && !subjName) return;
+
+    let foundRow = -1;
+    for (let i = 1; i < rows.length; i++) {
+      if (isCodeMatch(rows[i][0], cleanSid) &&
+          ((subjCode && cleanVal(rows[i][3]) === subjCode) || (subjName && cleanVal(rows[i][4]) === subjName))) {
+        foundRow = i + 1;
+        break;
+      }
+    }
+
+    const rowData = [
+      cleanSid,
+      studentName || '',
+      gradeLevel || '',
+      subjCode,
+      subjName,
+      gradeVal,
+      scoreVal,
+      evaluator || 'Teacher',
+      nowStr
+    ];
+
+    if (foundRow !== -1) {
+      sheetGrades.getRange(foundRow, 1, 1, 9).setValues([rowData]);
+      sheetGrades.getRange(foundRow, 1).setNumberFormat('@').setValue(cleanSid);
+    } else {
+      sheetGrades.appendRow(rowData);
+      const lastRow = sheetGrades.getLastRow();
+      sheetGrades.getRange(lastRow, 1).setNumberFormat('@').setValue(cleanSid);
+    }
+  });
+}
+
 function updateSubjectScores(data) {
-  return { success: true, message: 'บันทึกคะแนนสมรรถนะสำเร็จ', data: data };
+  if (!data) return { success: false, message: 'ไม่มีข้อมูลคะแนนรายวิชา' };
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheetStudents = ss.getSheetByName(SHEETS.STUDENTS);
+  const sheetGrades = getOrCreateSheetSmart(ss, 'GRADES', HEADERS.GRADES, '#4f46e5');
+  const nowStr = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+
+  const subjCode = cleanVal(data.subjectCode || data.subject || data.subjectName || '');
+  const subjName = cleanVal(data.subjectName || data.subject || subjCode);
+  const evaluator = cleanVal(data.teacherId || data.evaluator || 'อาจารย์ผู้สอน');
+  let updatedCount = 0;
+
+  const studentRows = sheetStudents ? sheetStudents.getDataRange().getValues() : [];
+
+  // กรณีที่ 1: ส่งมาเป็น studentGrades Array (จาก saveTeacherGradingScores)
+  if (Array.isArray(data.studentGrades)) {
+    data.studentGrades.forEach(item => {
+      const cleanSid = cleanVal(item.studentId);
+      if (!cleanSid) return;
+      if (Array.isArray(item.grades)) {
+        syncStudentGradesArrayToSheet(cleanSid, item.fullName || '', item.grade || '', item.grades, evaluator);
+      } else if (subjCode || subjName) {
+        syncStudentGradesArrayToSheet(cleanSid, item.fullName || '', item.grade || '', [{
+          code: subjCode,
+          name: subjName,
+          grade: item.gradeVal !== undefined ? item.gradeVal : item.grade,
+          score: item.score
+        }], evaluator);
+      }
+
+      // อัปเดตในแผ่นงาน รายชื่อนักเรียน (GPAX + เกรดรายวิชา JSON)
+      for (let i = 1; i < studentRows.length; i++) {
+        if (isCodeMatch(studentRows[i][0], cleanSid)) {
+          if (item.gpax !== undefined) {
+            sheetStudents.getRange(i + 1, 11).setValue(String(item.gpax));
+          }
+          if (Array.isArray(item.grades)) {
+            sheetStudents.getRange(i + 1, 13).setValue(JSON.stringify(item.grades));
+          }
+          break;
+        }
+      }
+      updatedCount++;
+    });
+  }
+
+  // กรณีที่ 2: ส่งมาเป็น scores / grades Object Map { studentId: gradeVal } (จาก saveTeacherPortalGrades)
+  const scoresMap = data.scores || data.grades || {};
+  if (scoresMap && typeof scoresMap === 'object' && !Array.isArray(scoresMap)) {
+    Object.keys(scoresMap).forEach(sid => {
+      const cleanSid = cleanVal(sid);
+      const gradeVal = Number(scoresMap[sid]) || 0;
+      const scoreVal = gradeVal === 4 ? 85 : (gradeVal === 3 ? 75 : (gradeVal === 2 ? 65 : 55));
+      let sName = '';
+      let sGradeLevel = cleanVal(data.gradeFilter || '');
+
+      for (let i = 1; i < studentRows.length; i++) {
+        if (isCodeMatch(studentRows[i][0], cleanSid)) {
+          sName = cleanVal(studentRows[i][1]);
+          sGradeLevel = cleanVal(studentRows[i][3]) || sGradeLevel;
+          let existingGrades = [];
+          try {
+            if (studentRows[i][12]) existingGrades = JSON.parse(studentRows[i][12]);
+          } catch (e) {}
+          if (!Array.isArray(existingGrades)) existingGrades = [];
+          const gIdx = existingGrades.findIndex(g => g.name === subjName || g.code === subjCode);
+          if (gIdx !== -1) {
+            existingGrades[gIdx].grade = gradeVal;
+            existingGrades[gIdx].score = scoreVal;
+          } else {
+            existingGrades.push({ code: subjCode || subjName, name: subjName || subjCode, grade: gradeVal, score: scoreVal });
+          }
+          const avgGpax = existingGrades.length > 0
+            ? (existingGrades.reduce((acc, g) => acc + (Number(g.grade) || 0), 0) / existingGrades.length).toFixed(2)
+            : '0.00';
+          sheetStudents.getRange(i + 1, 11).setValue(String(avgGpax));
+          sheetStudents.getRange(i + 1, 13).setValue(JSON.stringify(existingGrades));
+          break;
+        }
+      }
+
+      syncStudentGradesArrayToSheet(cleanSid, sName, sGradeLevel, [{
+        code: subjCode || subjName,
+        name: subjName || subjCode,
+        grade: gradeVal,
+        score: scoreVal
+      }], evaluator);
+      updatedCount++;
+    });
+  }
+
+  return {
+    success: true,
+    updatedCount: updatedCount,
+    message: 'บันทึกคะแนนและเกรดรายวิชาลง Google Sheets สำเร็จ (' + updatedCount + ' รายการ)'
+  };
+}
+
+function getSubjectGrades(studentId, subject) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.GRADES);
+  if (!sheet || sheet.getLastRow() <= 1) return { success: true, data: [] };
+  const rows = sheet.getDataRange().getValues();
+  const targetSid = cleanVal(studentId || '');
+  const targetSubj = cleanVal(subject || '');
+  const results = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const sid = cleanVal(rows[i][0]);
+    const subjCode = cleanVal(rows[i][3]);
+    const subjName = cleanVal(rows[i][4]);
+    if (!sid) continue;
+    if (targetSid && !isCodeMatch(sid, targetSid)) continue;
+    if (targetSubj && subjCode !== targetSubj && subjName !== targetSubj) continue;
+
+    results.push({
+      studentId: sid,
+      studentName: cleanVal(rows[i][1]),
+      gradeLevel: cleanVal(rows[i][2]),
+      subjectCode: subjCode,
+      subjectName: subjName,
+      grade: Number(rows[i][5]) || 0,
+      score: Number(rows[i][6]) || 0,
+      evaluator: cleanVal(rows[i][7]),
+      updatedAt: cleanVal(rows[i][8])
+    });
+  }
+  return { success: true, data: results };
 }
 
 function recordPrayer(data) {
@@ -838,11 +1306,28 @@ function recordPrayer(data) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.PRAYERS);
 
-  const logId = data.logId || data.id || ('PRY-' + new Date().getTime());
+  const logId = cleanVal(data.logId || data.id || ('PRY-' + new Date().getTime()));
   const timestamp = data.timestamp || new Date().toISOString();
   const now = new Date();
-  const dateStr = data.date || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
-  const timeStr = data.time || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
+  const dateStr = formatSheetDate(data.date) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
+  const timeStr = formatSheetTime(data.time) || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
+  const cleanSid = formatAsText(data.studentId);
+
+  // รองรับทั้ง prayerTime, prayerName, timeSlot
+  const rawPrayerTime = data.prayerTime || data.prayerName || data.timeSlot || '';
+  const prayerNameThai = formatPrayerTimeThai(rawPrayerTime);
+
+  // ป้องกันการซิงค์ซ้ำ (Deduplicate by logId หรือ studentId + date + prayerTime)
+  const existingRows = sheet.getDataRange().getValues();
+  for (let i = 1; i < existingRows.length; i++) {
+    const rLogId = cleanVal(existingRows[i][0]);
+    const rSid = cleanVal(existingRows[i][1]);
+    const rPt = formatPrayerTimeThai(existingRows[i][4]);
+    const rDate = formatSheetDate(existingRows[i][6]);
+    if ((logId && rLogId === logId) || (cleanSid && isCodeMatch(rSid, cleanSid) && rDate === dateStr && rPt === prayerNameThai)) {
+      return { success: true, deduplicated: true, message: 'ข้อมูลการละหมาดนี้มีอยู่ในฐานข้อมูลแล้ว', logId: rLogId };
+    }
+  }
 
   // จัดการรูปถ่ายพยานการละหมาด
   const rawBase64 = data.photoBase64 || data.photo || (data.photoUrl && data.photoUrl.startsWith('data:image') ? data.photoUrl : '');
@@ -865,8 +1350,8 @@ function recordPrayer(data) {
       const contentType = "image/jpeg";
       const cleanBase64 = rawBase64.includes(',') ? rawBase64.split(',')[1] : rawBase64;
       const bytes = Utilities.base64Decode(cleanBase64);
-      const studentIdClean = String(data.studentId || 'std').replace(/[^a-zA-Z0-9_-]/g, '');
-      const pTimeClean = String(data.prayerTime || data.prayerName || 'prayer').replace(/[^a-zA-Z0-9_\u0E00-\u0E7F-]/g, '');
+      const studentIdClean = String(cleanSid || 'std').replace(/[^a-zA-Z0-9_-]/g, '');
+      const pTimeClean = String(rawPrayerTime || 'prayer').replace(/[^a-zA-Z0-9_\u0E00-\u0E7F-]/g, '');
       const blob = Utilities.newBlob(bytes, contentType, `${studentIdClean}_${pTimeClean}_${dateStr}_${logId}.jpg`);
       const file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -881,9 +1366,6 @@ function recordPrayer(data) {
     photoRef = (data.photoUrl && data.photoUrl.length < 500) ? data.photoUrl : 'รูปถ่ายยืนยันในเครื่อง';
   }
 
-  // รองรับทั้ง prayerTime, prayerName, timeSlot
-  const rawPrayerTime = data.prayerTime || data.prayerName || data.timeSlot || '';
-  const prayerNameThai = formatPrayerTimeThai(rawPrayerTime);
   const statusThai = formatStatusThai(data.status || 'ตรงเวลา');
   const isWithin = (data.isWithinZone === true || data.isWithinZone === 'ใช่' || data.isWithinZone === 'true');
   const withinZoneThai = isWithin ? 'ใช่' : 'ไม่ใช่';
@@ -898,13 +1380,13 @@ function recordPrayer(data) {
 
   // ระบุสถานที่และพิกัด Google Maps หากอยู่นอกพื้นที่
   let locationDisplay = data.locationName || '';
-  if (lat && lng && !isWithin) {
+  if (lat && lng && !isWithin && locationDisplay.indexOf('maps?q=') === -1) {
     locationDisplay += ` (แผนที่: https://www.google.com/maps?q=${lat},${lng})`;
   }
 
   sheet.appendRow([
     logId,
-    formatAsText(data.studentId),
+    cleanSid,
     data.studentName || '',
     data.grade || '',
     prayerNameThai,
@@ -920,8 +1402,42 @@ function recordPrayer(data) {
     statusThai,
     data.note || ''
   ]);
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
 
   return { success: true, message: 'บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef };
+}
+
+function deletePrayerRecord(data) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PRAYERS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานบันทึกเวลาละหมาด' };
+
+  const targetLogId = cleanVal(data.logId || data.id || '');
+  const targetSid = cleanVal(data.studentId || '');
+  const targetTimestamp = cleanVal(data.timestamp || '');
+  const targetDate = formatSheetDate(data.date || '');
+  const targetPrayer = formatPrayerTimeThai(data.prayerTime || data.prayerName || '');
+
+  const rows = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const rLogId = cleanVal(rows[i][0]);
+    const rSid = cleanVal(rows[i][1]);
+    const rPt = formatPrayerTimeThai(rows[i][4]);
+    const rTs = cleanVal(rows[i][5]);
+    const rDate = formatSheetDate(rows[i][6]);
+
+    const matchById = targetLogId && rLogId === targetLogId;
+    const matchByTs = targetSid && targetTimestamp && isCodeMatch(rSid, targetSid) && rTs === targetTimestamp;
+    const matchByDatePt = targetSid && targetDate && targetPrayer && isCodeMatch(rSid, targetSid) && rDate === targetDate && rPt === targetPrayer;
+
+    if (matchById || matchByTs || matchByDatePt) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: 'ลบบันทึกเวลาละหมาดเรียบร้อยแล้ว' };
+    }
+  }
+  return { success: false, message: 'ไม่พบรายการละหมาดที่ต้องการลบ' };
 }
 
 function getPrayers(studentId, date) {
@@ -932,28 +1448,29 @@ function getPrayers(studentId, date) {
 
   const results = [];
   for (let i = 1; i < rows.length; i++) {
-    const sId = String(rows[i][1]).trim();
-    const rowDate = String(rows[i][6]).trim();
+    const sId = cleanVal(rows[i][1]);
+    const rowDate = formatSheetDate(rows[i][6]);
+    const rowTime = formatSheetTime(rows[i][7]);
 
-    if ((!studentId || sId === String(studentId).trim()) &&
-        (!date || rowDate === String(date).trim())) {
+    if ((!studentId || isCodeMatch(sId, studentId)) &&
+        (!date || rowDate === formatSheetDate(date))) {
       results.push({
-        logId: rows[i][0],
-        studentId: rows[i][1],
-        studentName: rows[i][2],
-        grade: rows[i][3],
-        prayerTime: rows[i][4],
-        timestamp: rows[i][5],
-        date: rows[i][6],
-        time: rows[i][7],
+        logId: cleanVal(rows[i][0]),
+        studentId: sId,
+        studentName: cleanVal(rows[i][2]),
+        grade: cleanVal(rows[i][3]),
+        prayerTime: cleanVal(rows[i][4]),
+        timestamp: cleanVal(rows[i][5]),
+        date: rowDate,
+        time: rowTime,
         latitude: rows[i][8],
         longitude: rows[i][9],
-        locationName: rows[i][10],
+        locationName: cleanVal(rows[i][10]),
         distanceMeters: rows[i][11],
-        isWithinZone: rows[i][12] === 'ใช่',
-        photoUrl: rows[i][13],
-        status: rows[i][14],
-        note: rows[i][15]
+        isWithinZone: rows[i][12] === 'ใช่' || rows[i][12] === true,
+        photoUrl: cleanVal(rows[i][13]),
+        status: cleanVal(rows[i][14]),
+        note: cleanVal(rows[i][15])
       });
     }
   }
@@ -964,21 +1481,24 @@ function recordAttendance(data) {
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ATTENDANCE);
-  const logId = 'ATT-' + new Date().getTime();
+  const logId = cleanVal(data.logId || ('ATT-' + new Date().getTime()));
   const now = new Date();
-  const dateStr = Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
-  const timeStr = Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
+  const dateStr = formatSheetDate(data.date) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
+  const timeStr = formatSheetTime(data.time) || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
+  const cleanSid = formatAsText(data.studentId);
 
   sheet.appendRow([
     logId,
-    formatAsText(data.studentId),
-    data.studentName,
-    data.grade,
-    data.date || dateStr,
-    data.time || timeStr,
+    cleanSid,
+    data.studentName || '',
+    data.grade || '',
+    dateStr,
+    timeStr,
     formatAttendanceStatusThai(data.status || 'มา'),
     data.note || ''
   ]);
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
 
   return { success: true, message: 'บันทึกการมาเรียนสำเร็จ', logId: logId };
 }
@@ -991,20 +1511,20 @@ function getAttendance(studentId, grade) {
 
   const results = [];
   for (let i = 1; i < rows.length; i++) {
-    const sId = String(rows[i][1]).trim();
-    const sGrade = String(rows[i][3]).trim();
+    const sId = cleanVal(rows[i][1]);
+    const sGrade = cleanVal(rows[i][3]);
 
-    if ((!studentId || sId === String(studentId).trim()) &&
-        (!grade || sGrade === String(grade).trim())) {
+    if ((!studentId || isCodeMatch(sId, studentId)) &&
+        (!grade || sGrade === cleanVal(grade))) {
       results.push({
-        logId: rows[i][0],
-        studentId: rows[i][1],
-        studentName: rows[i][2],
-        grade: rows[i][3],
-        date: rows[i][4],
-        time: rows[i][5],
-        status: rows[i][6],
-        note: rows[i][7]
+        logId: cleanVal(rows[i][0]),
+        studentId: sId,
+        studentName: cleanVal(rows[i][2]),
+        grade: sGrade,
+        date: formatSheetDate(rows[i][4]),
+        time: formatSheetTime(rows[i][5]),
+        status: cleanVal(rows[i][6]),
+        note: cleanVal(rows[i][7])
       });
     }
   }
@@ -1018,8 +1538,8 @@ function createActivity(data) {
   const actId = cleanVal(data.id || data.activityId || ('ACT-' + new Date().getTime()));
   const title = cleanVal(data.title || 'กิจกรรม');
   const desc = cleanVal(data.description || data.type || 'กิจกรรมทั่วไป');
-  const startDate = cleanVal(data.startDate || data.date || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd"));
-  const endDate = cleanVal(data.endDate || data.date || startDate);
+  const startDate = formatSheetDate(data.startDate || data.date) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+  const endDate = formatSheetDate(data.endDate || data.date) || startDate;
   const location = cleanVal(data.location || 'ลานกิจกรรมหลัก KHALIFAH');
   const createdBy = cleanVal(data.createdBy || 'Admin');
   const createdAt = cleanVal(data.createdAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
@@ -1080,9 +1600,9 @@ function getActivities() {
       title: cleanVal(rows[i][1]),
       type: cleanVal(rows[i][2]) || 'กิจกรรมทั่วไป',
       description: cleanVal(rows[i][2]) || 'กิจกรรมทั่วไป',
-      date: cleanVal(rows[i][3]),
-      startDate: cleanVal(rows[i][3]),
-      endDate: cleanVal(rows[i][4]),
+      date: formatSheetDate(rows[i][3]) || cleanVal(rows[i][3]),
+      startDate: formatSheetDate(rows[i][3]) || cleanVal(rows[i][3]),
+      endDate: formatSheetDate(rows[i][4]) || cleanVal(rows[i][4]),
       location: cleanVal(rows[i][5]) || 'ลานกิจกรรมหลัก',
       createdBy: cleanVal(rows[i][6]) || 'Admin',
       createdAt: cleanVal(rows[i][7]),
@@ -1090,6 +1610,19 @@ function getActivities() {
     });
   }
   return { success: true, data: results.reverse() };
+}
+
+function stripKhalifahQrPrefix(rawTitle, fallbackActId) {
+  let title = cleanVal(rawTitle);
+  let extractedActId = cleanVal(fallbackActId);
+  if (title.toUpperCase().startsWith('KHALIFAH_ACT:')) {
+    const parts = title.split(':');
+    if (parts.length >= 3) {
+      if (!extractedActId || extractedActId === '-') extractedActId = parts[1].trim();
+      title = parts.slice(2).join(':').trim();
+    }
+  }
+  return { title: title, activityId: extractedActId };
 }
 
 function getActivityLogs(activityId) {
@@ -1102,7 +1635,8 @@ function getActivityLogs(activityId) {
 
   const results = [];
   for (let i = 1; i < rows.length; i++) {
-    const rowActId = cleanVal(rows[i][1]);
+    const parsedQr = stripKhalifahQrPrefix(rows[i][2], rows[i][1]);
+    const rowActId = parsedQr.activityId;
     if (targetActId && rowActId !== targetActId) continue;
     const logId = cleanVal(rows[i][0]);
     const sid = cleanVal(rows[i][3]);
@@ -1111,12 +1645,12 @@ function getActivityLogs(activityId) {
       id: logId || ('ACTLOG-' + i),
       logId: logId || ('ACTLOG-' + i),
       activityId: rowActId,
-      activityTitle: cleanVal(rows[i][2]),
+      activityTitle: parsedQr.title,
       studentId: sid,
       studentName: cleanVal(rows[i][4]),
       grade: cleanVal(rows[i][5]),
-      formattedDate: cleanVal(rows[i][6]),
-      formattedTime: cleanVal(rows[i][7]),
+      formattedDate: formatSheetDate(rows[i][6]) || cleanVal(rows[i][6]),
+      formattedTime: formatSheetTime(rows[i][7]) || cleanVal(rows[i][7]),
       checkInTimestamp: cleanVal(rows[i][8])
     });
   }
@@ -1130,8 +1664,9 @@ function checkInActivity(data) {
   const sheetActivities = ss.getSheetByName(SHEETS.ACTIVITIES);
   const sheetLogs = ss.getSheetByName(SHEETS.ACTIVITY_LOGS);
 
-  const targetActId = cleanVal(data.activityId || '');
-  const targetActTitle = cleanVal(data.activityTitle || data.title || '');
+  const parsedQr = stripKhalifahQrPrefix(data.activityTitle || data.title || '', data.activityId || '');
+  const targetActId = parsedQr.activityId;
+  const targetActTitle = parsedQr.title;
   const cleanSid = cleanVal(data.studentId || '-');
   let activityFoundTitle = targetActTitle;
   let matchedActivityRow = -1;
@@ -1155,8 +1690,9 @@ function checkInActivity(data) {
   if (sheetLogs) {
     const logRows = sheetLogs.getDataRange().getValues();
     for (let i = 1; i < logRows.length; i++) {
-      const rActId = cleanVal(logRows[i][1]);
-      const rActTitle = cleanVal(logRows[i][2]);
+      const rowParsed = stripKhalifahQrPrefix(logRows[i][2], logRows[i][1]);
+      const rActId = rowParsed.activityId;
+      const rActTitle = rowParsed.title;
       const rSid = cleanVal(logRows[i][3]);
       const sameAct = (targetActId && rActId === targetActId) || (!targetActId && targetActTitle && rActTitle === targetActTitle);
       if (sameAct) {
@@ -1170,8 +1706,8 @@ function checkInActivity(data) {
     if (!alreadyCheckedIn) {
       const logId = cleanVal(data.id || ('ACTLOG-' + new Date().getTime()));
       const now = new Date();
-      const dateStr = cleanVal(data.formattedDate || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd"));
-      const timeStr = cleanVal(data.formattedTime || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss"));
+      const dateStr = formatSheetDate(data.formattedDate) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
+      const timeStr = formatSheetTime(data.formattedTime) || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
       const timestamp = cleanVal(data.checkInTimestamp || now.toISOString());
 
       sheetLogs.appendRow([
@@ -1204,6 +1740,31 @@ function checkInActivity(data) {
   };
 }
 
+function deleteActivityAttendee(data) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheetLogs = ss.getSheetByName(SHEETS.ACTIVITY_LOGS);
+  if (!sheetLogs) return { success: false, message: 'ไม่พบแผ่นงานบันทึกการเข้าร่วมกิจกรรม' };
+
+  const targetLogId = cleanVal(data.logId || data.id || '');
+  const targetActId = cleanVal(data.activityId || '');
+  const targetSid = cleanVal(data.studentId || '');
+  const rows = sheetLogs.getDataRange().getValues();
+
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const rLogId = cleanVal(rows[i][0]);
+    const rParsed = stripKhalifahQrPrefix(rows[i][2], rows[i][1]);
+    const rSid = cleanVal(rows[i][3]);
+
+    if ((targetLogId && rLogId === targetLogId) ||
+        (targetActId && targetSid && rParsed.activityId === targetActId && isCodeMatch(rSid, targetSid))) {
+      sheetLogs.deleteRow(i + 1);
+      return { success: true, message: 'ลบรายชื่อผู้เข้าร่วมกิจกรรมเรียบร้อยแล้ว' };
+    }
+  }
+  return { success: false, message: 'ไม่พบรายชื่อผู้เข้าร่วมที่ต้องการลบ' };
+}
+
 function verifyAdminLogin(password, username) {
   if (isCodeMatch(password, MASTER_ADMIN_PASS)) {
     return { success: true, role: 'SuperAdmin', username: 'MasterAdmin' };
@@ -1213,7 +1774,7 @@ function verifyAdminLogin(password, username) {
   const sheet = ss.getSheetByName(SHEETS.ADMINS);
   if (sheet) {
     const rows = sheet.getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
+    for (let i = rows.length - 1; i >= 1; i--) {
       if (cleanVal(rows[i][1]).toLowerCase() === cleanVal(username).toLowerCase() && 
           isCodeMatch(rows[i][2], password)) {
         const approvalStatus = cleanVal(rows[i][9] || 'Verified');
@@ -1262,19 +1823,32 @@ function addSubAdmin(data) {
   const createdAt = cleanVal(data.createdAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
 
   const rows = sheet.getDataRange().getValues();
+  const matchingRows = [];
   for (let i = 1; i < rows.length; i++) {
     if (cleanVal(rows[i][1]).toLowerCase() === cleanUser.toLowerCase()) {
-      const rowNum = i + 1;
-      const existingId = cleanVal(rows[i][0]) || ('ADM-' + new Date().getTime());
-      const passToSave = cleanPass || cleanVal(rows[i][2]);
-      sheet.getRange(rowNum, 1, 1, 10).setValues([[
-        existingId, cleanUser, passToSave, fullName, roleCode, createdAt, email, phone, subjectsJson, approvalStatus
-      ]]);
-      sheet.getRange(rowNum, 2).setNumberFormat('@').setValue(cleanUser);
-      sheet.getRange(rowNum, 3).setNumberFormat('@').setValue(passToSave);
-      sheet.getRange(rowNum, 8).setNumberFormat('@').setValue(phone);
-      return { success: true, message: 'อัปเดตข้อมูลบัญชีบุคลากรสำเร็จ', adminId: existingId };
+      matchingRows.push(i + 1);
     }
+  }
+
+  if (matchingRows.length > 0) {
+    const rowNum = matchingRows[0];
+    const existingRow = rows[rowNum - 1];
+    const existingId = cleanVal(existingRow[0]) || ('ADM-' + new Date().getTime());
+    const passToSave = cleanPass || cleanVal(existingRow[2]);
+    const emailToSave = email || cleanVal(existingRow[6] || '');
+    const phoneToSave = phone || normalizePhone(existingRow[7] || '');
+    sheet.getRange(rowNum, 1, 1, 10).setValues([[
+      existingId, cleanUser, passToSave, fullName, roleCode, createdAt, emailToSave, phoneToSave, subjectsJson, approvalStatus
+    ]]);
+    sheet.getRange(rowNum, 2).setNumberFormat('@').setValue(cleanUser);
+    sheet.getRange(rowNum, 3).setNumberFormat('@').setValue(passToSave);
+    sheet.getRange(rowNum, 8).setNumberFormat('@').setValue(phoneToSave);
+
+    // ลบแถวซ้ำซ้อนถ้ามี
+    for (let k = matchingRows.length - 1; k >= 1; k--) {
+      sheet.deleteRow(matchingRows[k]);
+    }
+    return { success: true, message: 'อัปเดตข้อมูลบัญชีบุคลากรสำเร็จ', adminId: existingId };
   }
 
   const adminId = cleanVal(data.id || data.adminId || ('ADM-' + new Date().getTime()));
@@ -1306,12 +1880,14 @@ function deleteSubAdmin(username) {
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานผู้ดูแลระบบ' };
   const targetUser = cleanVal(username).toLowerCase();
   const rows = sheet.getDataRange().getValues();
+  let deleted = false;
   for (let i = rows.length - 1; i >= 1; i--) {
     if (cleanVal(rows[i][1]).toLowerCase() === targetUser) {
       sheet.deleteRow(i + 1);
-      return { success: true, message: 'ลบบัญชีบุคลากรเรียบร้อยแล้ว' };
+      deleted = true;
     }
   }
+  if (deleted) return { success: true, message: 'ลบบัญชีบุคลากรเรียบร้อยแล้ว' };
   return { success: false, message: 'ไม่พบบัญชีที่ต้องการลบ' };
 }
 
@@ -1321,29 +1897,35 @@ function getSubAdmins() {
   const sheet = ss.getSheetByName(SHEETS.ADMINS);
   if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
-  const results = [];
+  const dedupMap = {};
+  const order = [];
+
   for (let i = 1; i < rows.length; i++) {
     const uname = cleanVal(rows[i][1]);
     if (!uname || uname.toLowerCase() === 'admin') continue;
+    const key = uname.toLowerCase();
     let assignedSubjects = [];
     try {
       assignedSubjects = rows[i][8] ? JSON.parse(rows[i][8]) : [];
     } catch (e) {}
-    results.push({
-      id: cleanVal(rows[i][0]),
-      adminId: cleanVal(rows[i][0]),
+
+    const prev = dedupMap[key];
+    dedupMap[key] = {
+      id: cleanVal(rows[i][0]) || (prev ? prev.id : ''),
+      adminId: cleanVal(rows[i][0]) || (prev ? prev.adminId : ''),
       username: uname,
-      password: cleanVal(rows[i][2]),
-      fullName: cleanVal(rows[i][3]),
-      role: cleanVal(rows[i][4]) || 'TEACHER',
-      createdAt: cleanVal(rows[i][5]),
-      email: cleanVal(rows[i][6] || ''),
-      phone: normalizePhone(rows[i][7] || ''),
-      assignedSubjects: Array.isArray(assignedSubjects) ? assignedSubjects : [],
-      approvalStatus: cleanVal(rows[i][9] || 'Verified')
-    });
+      password: cleanVal(rows[i][2]) || (prev ? prev.password : ''),
+      fullName: cleanVal(rows[i][3]) || (prev ? prev.fullName : uname),
+      role: cleanVal(rows[i][4]) || (prev ? prev.role : 'TEACHER'),
+      createdAt: formatSheetDate(rows[i][5]) || cleanVal(rows[i][5]),
+      email: cleanVal(rows[i][6]) || (prev ? prev.email : ''),
+      phone: normalizePhone(rows[i][7]) || (prev ? prev.phone : ''),
+      assignedSubjects: (Array.isArray(assignedSubjects) && assignedSubjects.length > 0) ? assignedSubjects : (prev ? prev.assignedSubjects : []),
+      approvalStatus: cleanVal(rows[i][9]) || (prev ? prev.approvalStatus : 'Verified')
+    };
+    if (order.indexOf(key) === -1) order.push(key);
   }
-  return { success: true, data: results };
+  return { success: true, data: order.map(k => dedupMap[k]) };
 }
 
 function getAllStudents() {
@@ -1352,20 +1934,14 @@ function getAllStudents() {
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   if (!sheet) return { success: true, data: [] };
   const rows = sheet.getDataRange().getValues();
+  const hasanatMap = getLatestHasanatMapByStudent(ss);
+  const gradesMap = getLatestGradesMapByStudent(ss);
 
   const results = [];
   for (let i = 1; i < rows.length; i++) {
-    results.push({
-      studentId: cleanVal(rows[i][0]),
-      fullName: rows[i][1],
-      schoolName: rows[i][2],
-      grade: rows[i][3],
-      birthDate: normalizeBirthDate(rows[i][4]),
-      parentPhone: normalizePhone(rows[i][5]),
-      registeredAt: rows[i][6],
-      status: rows[i][7],
-      profilePhoto: rows[i][8] || ''
-    });
+    const sid = cleanVal(rows[i][0]);
+    if (!sid) continue;
+    results.push(buildStudentObjectFromRow(rows[i], hasanatMap, gradesMap));
   }
   return { success: true, data: results };
 }
@@ -1375,7 +1951,7 @@ function deleteStudent(studentId) {
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
 
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = rows.length - 1; i >= 1; i--) {
     if (isCodeMatch(rows[i][0], studentId)) {
       sheet.deleteRow(i + 1);
       return { success: true, message: 'ลบข้อมูลนักเรียนรหัส ' + cleanVal(studentId) + ' เรียบร้อยแล้ว' };
@@ -1435,7 +2011,6 @@ function updateAppLogo(logoBase64) {
       logoUrl = file.getUrl();
     } catch (err) {
       Logger.log('Drive logo save error: ' + err.message);
-      // fallback to safe ref if string is too long for cell
       if (logoBase64.length > 5000) {
         logoUrl = 'โลโก้ของระบบ (บันทึกในอุปกรณ์)';
       }
@@ -1510,64 +2085,169 @@ function updateStudentProfilePhoto(studentId, avatarUrl) {
 }
 
 /**
- * บันทึกข้อมูลผลบุญและศาสนกิจ (อัลกุรอาน, ท่องจำซูเราะห์, ละหมาดสุนัต) ลง Google Sheet
+ * บันทึกข้อมูลผลบุญและศาสนกิจ (อัลกุรอาน, ท่องจำซูเราะห์, ละหมาดสุนัต) ลง Google Sheet แบบผสานข้อมูลทั้ง 3 ด้านไม่ให้ทับกันเป็น 0
  */
 function recordHasanat(data) {
+  if (!data) return { success: false, message: 'ไม่มีข้อมูลผลบุญ' };
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.HASANAT);
   
-  const logId = 'HAS-' + new Date().getTime();
+  const cleanSid = formatAsText(data.studentId);
+  if (!cleanSid) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
   const timestamp = new Date().toISOString();
-  const dateStr = data.date || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+  const dateStr = formatSheetDate(data.date) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
 
-  const q = data.quran || {
-    pagesToday: data.pagesToday || 0,
-    currentPage: data.currentPage || 0,
-    juzCompleted: data.juzCompleted || 0,
-    stars: data.stars || 0,
-    khatamCount: data.khatamCount || 0
-  };
-  const m = data.memorization || {
-    count: data.count || data.memorizedCount || (Array.isArray(data.memorizedSurahs) ? data.memorizedSurahs.length : 0),
-    memorizedSurahs: data.memorizedSurahs || []
-  };
-  const s = data.sunnah || {
-    totalRakaat: data.totalRakaat || 0,
-    rawatib: data.rawatib || {}
+  // ดึงข้อมูลสะสมล่าสุดของนักเรียนคนนี้จากแผ่นงานเพื่อไม่ให้ค่าสะสม (เช่น currentPage, stars, memorizedSurahs) ถูกรีเซ็ตเป็น 0
+  const hasanatMap = getLatestHasanatMapByStudent(ss);
+  const prev = hasanatMap[cleanSid] || {
+    quran: { pagesToday: 0, currentPage: 1, juzCompleted: 0, stars: 0, khatamCount: 0 },
+    memorization: { count: 0, memorizedSurahs: [] },
+    sunnah: { totalRakaat: 0, rawatib: {} }
   };
 
-  const memListStr = Array.isArray(m.memorizedSurahs) ? m.memorizedSurahs.join(', ') : (m.memorizedSurahs || '');
-  const sunnahDetailsStr = JSON.stringify(s.rawatib || (data.rawatib || {}));
+  const qIn = data.quran || {};
+  const mIn = data.memorization || {};
+  const sIn = data.sunnah || {};
 
+  const pagesToday = (qIn.pagesToday !== undefined) ? qIn.pagesToday : ((data.pagesToday !== undefined) ? data.pagesToday : prev.quran.pagesToday);
+  const currentPage = (qIn.currentPage !== undefined) ? qIn.currentPage : ((data.currentPage !== undefined) ? data.currentPage : prev.quran.currentPage);
+  const juzCompleted = (qIn.juzCompleted !== undefined) ? qIn.juzCompleted : ((data.juzCompleted !== undefined) ? data.juzCompleted : prev.quran.juzCompleted);
+  const stars = (qIn.stars !== undefined) ? qIn.stars : ((data.stars !== undefined) ? data.stars : prev.quran.stars);
+  const khatamCount = (qIn.khatamCount !== undefined) ? qIn.khatamCount : ((data.khatamCount !== undefined) ? data.khatamCount : prev.quran.khatamCount);
+
+  const memSurahs = Array.isArray(mIn.memorizedSurahs)
+    ? mIn.memorizedSurahs
+    : (Array.isArray(data.memorizedSurahs) ? data.memorizedSurahs : prev.memorization.memorizedSurahs);
+  const memCount = (mIn.count !== undefined)
+    ? mIn.count
+    : ((data.count !== undefined) ? data.count : ((data.memorizedCount !== undefined) ? data.memorizedCount : memSurahs.length));
+
+  const totalRakaat = (sIn.totalRakaat !== undefined) ? sIn.totalRakaat : ((data.totalRakaat !== undefined) ? data.totalRakaat : prev.sunnah.totalRakaat);
+  const rawatibObj = sIn.rawatib || data.rawatib || prev.sunnah.rawatib || {};
+
+  const memListStr = Array.isArray(memSurahs) ? memSurahs.join(', ') : String(memSurahs || '');
+  const sunnahDetailsStr = JSON.stringify(rawatibObj);
+
+  // ค้นหาว่ามีแถวของนักเรียนคนนี้ในวันนี้หรือยัง ถ้ามีให้อัปเดตแถวเดิมแทนการสร้างซ้ำ
+  const rows = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const rSid = cleanVal(rows[i][1]);
+    const rDate = formatSheetDate(rows[i][4]);
+    if (isCodeMatch(rSid, cleanSid) && rDate === dateStr) {
+      const existingLogId = cleanVal(rows[i][0]) || ('HAS-' + new Date().getTime());
+      const rowValues = [
+        existingLogId,
+        cleanSid,
+        data.studentName || cleanVal(rows[i][2]) || '',
+        data.grade || cleanVal(rows[i][3]) || '',
+        dateStr,
+        pagesToday || 0,
+        currentPage || 1,
+        juzCompleted || 0,
+        stars || 0,
+        khatamCount || 0,
+        memCount || 0,
+        memListStr,
+        totalRakaat || 0,
+        sunnahDetailsStr,
+        timestamp
+      ];
+      sheet.getRange(i + 1, 1, 1, 15).setValues([rowValues]);
+      sheet.getRange(i + 1, 2).setNumberFormat('@').setValue(cleanSid);
+      return {
+        success: true,
+        updated: true,
+        message: 'อัปเดตข้อมูลผลบุญและศาสนกิจสำเร็จเรียบร้อย',
+        logId: existingLogId,
+        stars: stars || 0
+      };
+    }
+  }
+
+  const logId = 'HAS-' + new Date().getTime();
   sheet.appendRow([
     logId,
-    formatAsText(data.studentId),
-    data.studentName,
-    data.grade,
+    cleanSid,
+    data.studentName || '',
+    data.grade || '',
     dateStr,
-    q.pagesToday || 0,
-    q.currentPage || 0,
-    q.juzCompleted || 0,
-    q.stars || 0,
-    q.khatamCount || 0,
-    m.count || 0,
+    pagesToday || 0,
+    currentPage || 1,
+    juzCompleted || 0,
+    stars || 0,
+    khatamCount || 0,
+    memCount || 0,
     memListStr,
-    s.totalRakaat || 0,
+    totalRakaat || 0,
     sunnahDetailsStr,
     timestamp
   ]);
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
 
   return { 
     success: true, 
     message: 'บันทึกข้อมูลผลบุญและศาสนกิจสำเร็จเรียบร้อย', 
     logId: logId,
-    stars: q.stars || 0
+    stars: stars || 0
+  };
+}
+
+function getHasanat(studentId) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.HASANAT);
+  if (!sheet || sheet.getLastRow() <= 1) return { success: true, data: [], byStudent: {} };
+  const rows = sheet.getDataRange().getValues();
+  const targetSid = cleanVal(studentId || '');
+  const list = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const sid = cleanVal(rows[i][1]);
+    if (!sid) continue;
+    if (targetSid && !isCodeMatch(sid, targetSid)) continue;
+    let rawatib = {};
+    try {
+      if (rows[i][13]) rawatib = JSON.parse(rows[i][13]);
+    } catch (e) {}
+    const memStr = cleanVal(rows[i][11]);
+    const memArr = memStr ? memStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    list.push({
+      logId: cleanVal(rows[i][0]),
+      studentId: sid,
+      studentName: cleanVal(rows[i][2]),
+      grade: cleanVal(rows[i][3]),
+      date: formatSheetDate(rows[i][4]),
+      quran: {
+        pagesToday: Number(rows[i][5]) || 0,
+        currentPage: Number(rows[i][6]) || 1,
+        juzCompleted: Number(rows[i][7]) || 0,
+        stars: Number(rows[i][8]) || 0,
+        khatamCount: Number(rows[i][9]) || 0
+      },
+      memorization: {
+        count: Number(rows[i][10]) || memArr.length,
+        memorizedSurahs: memArr
+      },
+      sunnah: {
+        totalRakaat: Number(rows[i][12]) || 0,
+        rawatib: rawatib
+      },
+      timestamp: cleanVal(rows[i][14])
+    });
+  }
+
+  return {
+    success: true,
+    data: list,
+    byStudent: getLatestHasanatMapByStudent(ss)
   };
 }
 
 /**
- * ซิงค์ข้อมูลทั้งหมด (นักเรียน, ละหมาด, ผลบุญ) เข้า Google Sheet ในคราวเดียว พร้อมแปลงเป็นภาษาไทย 100%
+ * ซิงค์ข้อมูลทั้งหมด (นักเรียน, บุคลากร, กิจกรรม, ละหมาด, ผลบุญ, มาเรียน, รายวิชา) เข้า Google Sheet ในคราวเดียว
  */
 function batchSyncData(data) {
   initializeSheets();
@@ -1575,77 +2255,79 @@ function batchSyncData(data) {
   let studentsSynced = 0;
   let prayersSynced = 0;
   let hasanatSynced = 0;
+  let adminsSynced = 0;
+  let activitiesSynced = 0;
 
-  // 1. Sync นักเรียน
+  // 1. Sync นักเรียน (ทั้งเพิ่มใหม่และอัปเดตแถวเดิมครบทุกคอลัมน์)
   if (data.students && Array.isArray(data.students)) {
-    const sheetStudents = ss.getSheetByName(SHEETS.STUDENTS);
-    const existing = sheetStudents.getDataRange().getValues();
-
     data.students.forEach(s => {
-      const rawPhoto = s.avatarUrl || s.profilePhoto || '';
-      const cleanSid = cleanVal(s.studentId);
-      const photoLink = saveStudentPhotoToDrive(cleanSid, rawPhoto);
-
-      let foundRow = -1;
-      for (let i = 1; i < existing.length; i++) {
-        if (isCodeMatch(existing[i][0], cleanSid)) {
-          foundRow = i + 1;
-          break;
-        }
-      }
-
-      if (foundRow === -1) {
-        const cleanBD = normalizeBirthDate(s.birthDate);
-        const cleanPh = normalizePhone(s.parentPhone);
-        sheetStudents.appendRow([
-          cleanSid,
-          s.fullName,
-          s.schoolName,
-          s.grade,
-          cleanBD,
-          cleanPh,
-          Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"),
-          formatStudentStatusThai(s.status || 'Active'),
-          photoLink
-        ]);
-        const lastRow = sheetStudents.getLastRow();
-        sheetStudents.getRange(lastRow, 1).setNumberFormat('@').setValue(cleanSid);
-        sheetStudents.getRange(lastRow, 5).setNumberFormat('@').setValue(cleanBD);
-        sheetStudents.getRange(lastRow, 6).setNumberFormat('@').setValue(cleanPh);
+      if (s && s.studentId) {
+        registerStudent(s);
         studentsSynced++;
-      } else {
-        if (photoLink) {
-          sheetStudents.getRange(foundRow, 9).setValue(photoLink);
-        }
       }
     });
   }
 
-  // 2. Sync บันทึกละหมาด
+  // 2. Sync บุคลากร/อาจารย์ (subAdmins)
+  if (data.subAdmins && Array.isArray(data.subAdmins)) {
+    data.subAdmins.forEach(adm => {
+      if (adm && adm.username) {
+        addSubAdmin(adm);
+        adminsSynced++;
+      }
+    });
+  }
+
+  // 3. Sync กิจกรรม
+  if (data.activities && Array.isArray(data.activities)) {
+    data.activities.forEach(act => {
+      if (act && (act.id || act.activityId || act.title)) {
+        createActivity(act);
+        activitiesSynced++;
+      }
+    });
+  }
+
+  // 4. Sync บันทึกละหมาด
   if (data.prayers && Array.isArray(data.prayers)) {
     data.prayers.forEach(p => {
-      recordPrayer(p);
-      prayersSynced++;
+      if (p && p.studentId) {
+        recordPrayer(p);
+        prayersSynced++;
+      }
     });
   }
 
-  // 3. Sync ผลบุญ
+  // 5. Sync ผลบุญ
   if (data.hasanat && Array.isArray(data.hasanat)) {
     data.hasanat.forEach(h => {
-      recordHasanat(h);
-      hasanatSynced++;
+      if (h && h.studentId) {
+        recordHasanat(h);
+        hasanatSynced++;
+      }
     });
+  }
+
+  // 6. Sync รายวิชา (Subjects)
+  if (data.subjects && Array.isArray(data.subjects)) {
+    saveSubjects({ subjects: data.subjects });
   }
 
   return {
     success: true,
-    message: 'ซิงค์ข้อมูลลง Google Sheet และจัดหมวดภาษาไทยเรียบร้อยแล้ว',
-    summary: { students: studentsSynced, prayers: prayersSynced, hasanat: hasanatSynced }
+    message: 'ซิงค์ข้อมูลทุกหมวดลง Google Sheets สำเร็จเรียบร้อยแล้ว',
+    summary: {
+      students: studentsSynced,
+      subAdmins: adminsSynced,
+      activities: activitiesSynced,
+      prayers: prayersSynced,
+      hasanat: hasanatSynced
+    }
   };
 }
 
 // ==========================================
-// V4.0: ระบบยืนยันตัวตนผ่านแอดมิน (Random OTP + Email), อาจารย์ผู้สอน, และจัดการข้อมูลเชิงลึก
+// V4.0 - V4.5: ระบบยืนยันตัวตนผ่านแอดมิน (Random OTP + Email), อาจารย์ผู้สอน, รายวิชา, และการตั้งค่าทั้งหมด
 // ==========================================
 
 function ensureApprovalsSheet() {
@@ -1710,6 +2392,23 @@ function registerPendingUser(data) {
     reqId: reqId,
     otpCode: otpCode
   };
+}
+
+function deletePendingRegistration(data) {
+  const sheet = ensureApprovalsSheet();
+  const targetReqId = cleanVal(data.reqId || data.id || '');
+  const targetUserId = cleanVal(data.userId || '');
+  const rows = sheet.getDataRange().getValues();
+
+  for (let i = rows.length - 1; i >= 1; i--) {
+    const rReqId = cleanVal(rows[i][0]);
+    const rUserId = cleanVal(rows[i][2]);
+    if ((targetReqId && rReqId === targetReqId) || (targetUserId && isCodeMatch(rUserId, targetUserId))) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: 'ลบคำขอสมัครออกจากฐานข้อมูลเรียบร้อยแล้ว' };
+    }
+  }
+  return { success: false, message: 'ไม่พบคำขอสมัครที่ต้องการลบ' };
 }
 
 /**
@@ -1865,6 +2564,7 @@ function verifyUserOtp(data) {
         if (rRole === 'student') {
           payload.studentId = payload.studentId || rUserId;
           payload.fullName = payload.fullName || cleanVal(rows[i][3]);
+          payload.email = payload.email || cleanVal(rows[i][4]);
           payload.status = 'Active';
           payload.approvalStatus = 'Verified';
           registerStudent(payload);
@@ -1933,15 +2633,18 @@ function getPendingRegistrations() {
   const rows = sheet.getDataRange().getValues();
   const list = [];
   for (let i = 1; i < rows.length; i++) {
+    const reqId = cleanVal(rows[i][0]);
+    const userId = cleanVal(rows[i][2]);
+    if (!reqId && !userId) continue;
     let payload = {};
     try {
       payload = rows[i][9] ? JSON.parse(rows[i][9]) : {};
     } catch (e) {}
     list.push({
-      reqId: cleanVal(rows[i][0]),
-      id: cleanVal(rows[i][0]),
+      reqId: reqId,
+      id: reqId,
       role: cleanVal(rows[i][1]),
-      userId: cleanVal(rows[i][2]),
+      userId: userId,
       fullName: cleanVal(rows[i][3]),
       email: cleanVal(rows[i][4]),
       phone: cleanVal(payload.phone || payload.parentPhone || ''),
@@ -1967,38 +2670,82 @@ function updateStudentFull(student) {
 }
 
 /**
- * อาจารย์ผู้สอนบันทึกเช็คชื่อมาเรียนรายวัน
+ * อาจารย์ผู้สอนบันทึกเช็คชื่อมาเรียนรายวัน พร้อมอัปเดตสถิติมาเรียนในแผ่นงานรายชื่อนักเรียน
  */
 function saveDailyAttendance(data) {
   initializeSheets();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ATTENDANCE);
-  const dateStr = cleanVal(data.date || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd"));
+  const sheetStudents = ss.getSheetByName(SHEETS.STUDENTS);
+  const dateStr = formatSheetDate(data.date) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
   const gradeStr = cleanVal(data.grade || '');
   const records = data.records || {};
+  const studentDetails = data.studentDetails || {};
   const timeStr = Utilities.formatDate(new Date(), "Asia/Bangkok", "HH:mm:ss");
+  const teacherNote = 'เช็คชื่อโดยอาจารย์ (' + cleanVal(data.teacherId || 'admin') + ')';
   let count = 0;
+
+  const studentRows = sheetStudents ? sheetStudents.getDataRange().getValues() : [];
+  const studentNameMap = {};
+  const studentGradeMap = {};
+  for (let i = 1; i < studentRows.length; i++) {
+    const sid = cleanVal(studentRows[i][0]);
+    studentNameMap[sid] = cleanVal(studentRows[i][1]);
+    studentGradeMap[sid] = cleanVal(studentRows[i][3]);
+  }
+
+  const existingAttRows = sheet.getDataRange().getValues();
 
   Object.keys(records).forEach(sid => {
     const cleanSid = cleanVal(sid);
     const status = cleanVal(records[sid]);
-    const logId = 'ATT-' + new Date().getTime() + '-' + count;
-    sheet.appendRow([
-      logId,
-      cleanSid,
-      '',
-      gradeStr,
-      dateStr,
-      timeStr,
-      formatAttendanceStatusThai(status),
-      'เช็คชื่อโดยอาจารย์ (' + cleanVal(data.teacherId || 'admin') + ')'
-    ]);
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
+    const statusThai = formatAttendanceStatusThai(status);
+    const detail = studentDetails[cleanSid] || {};
+    const sName = cleanVal(detail.fullName || studentNameMap[cleanSid] || '');
+    const sGrade = cleanVal(detail.grade || gradeStr || studentGradeMap[cleanSid] || '');
+
+    // ตรวจสอบว่าเคยเช็คชื่อวันนี้ไปแล้วหรือยัง ถ้ามีให้อัปเดตแถวเดิม
+    let foundAttRow = -1;
+    for (let i = existingAttRows.length - 1; i >= 1; i--) {
+      if (isCodeMatch(existingAttRows[i][1], cleanSid) && formatSheetDate(existingAttRows[i][4]) === dateStr) {
+        foundAttRow = i + 1;
+        break;
+      }
+    }
+
+    if (foundAttRow !== -1) {
+      sheet.getRange(foundAttRow, 3, 1, 6).setValues([[
+        sName, sGrade, dateStr, timeStr, statusThai, teacherNote
+      ]]);
+    } else {
+      const logId = 'ATT-' + new Date().getTime() + '-' + count;
+      sheet.appendRow([
+        logId,
+        cleanSid,
+        sName,
+        sGrade,
+        dateStr,
+        timeStr,
+        statusThai,
+        teacherNote
+      ]);
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
+    }
+
+    // อัปเดตสถิติมาเรียน JSON ในแผ่นงาน รายชื่อนักเรียน
+    if (sheetStudents && detail.attendance) {
+      for (let i = 1; i < studentRows.length; i++) {
+        if (isCodeMatch(studentRows[i][0], cleanSid)) {
+          sheetStudents.getRange(i + 1, 12).setValue(JSON.stringify(detail.attendance));
+          break;
+        }
+      }
+    }
     count++;
   });
 
-  return { success: true, count: count, message: 'บันทึกการเช็คชื่อเรียบร้อยแล้ว' };
+  return { success: true, count: count, message: 'บันทึกการเช็คชื่อลง Google Sheets เรียบร้อยแล้ว (' + count + ' คน)' };
 }
 
 /**
@@ -2006,7 +2753,87 @@ function saveDailyAttendance(data) {
  */
 function saveSubjectGrades(data) {
   return updateSubjectScores({
-    subjectName: data.subject,
-    scores: data.grades || {}
+    subjectCode: data.subjectCode || data.subject,
+    subjectName: data.subjectName || data.subject,
+    teacherId: data.teacherId || 'Teacher',
+    gradeFilter: data.gradeFilter || '',
+    scores: data.grades || data.scores || {},
+    studentGrades: data.studentGrades
   });
+}
+
+/**
+ * บันทึกรายวิชาทั้งหมดของระบบลงในแผ่นงาน การตั้งค่า (Key = AppSubjects)
+ */
+function saveSubjects(data) {
+  if (!data || !Array.isArray(data.subjects)) {
+    return { success: false, message: 'ไม่มีข้อมูลรายวิชา' };
+  }
+  return saveSetting({
+    key: 'AppSubjects',
+    value: JSON.stringify(data.subjects),
+    description: 'รายวิชาทั้งหมดของระบบ (JSON)'
+  });
+}
+
+/**
+ * บันทึกค่าการตั้งค่าลงแผ่นงาน การตั้งค่า (Key-Value)
+ */
+function saveSetting(data) {
+  if (!data || !data.key) return { success: false, message: 'ไม่พบคีย์การตั้งค่า' };
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.SETTINGS);
+  const key = cleanVal(data.key);
+  const val = (typeof data.value === 'object') ? JSON.stringify(data.value) : String(data.value !== undefined ? data.value : '');
+  const desc = cleanVal(data.description || 'การตั้งค่าระบบ');
+
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (cleanVal(rows[i][0]) === key) {
+      sheet.getRange(i + 1, 2).setNumberFormat('@').setValue(val);
+      if (data.description) sheet.getRange(i + 1, 3).setValue(desc);
+      return { success: true, message: 'อัปเดตการตั้งค่า ' + key + ' สำเร็จ' };
+    }
+  }
+  sheet.appendRow([key, val, desc]);
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(val);
+  return { success: true, message: 'บันทึกการตั้งค่า ' + key + ' สำเร็จ' };
+}
+
+function getSettings() {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.SETTINGS);
+  if (!sheet || sheet.getLastRow() <= 1) return { success: true, data: {} };
+  const rows = sheet.getDataRange().getValues();
+  const settings = {};
+  for (let i = 1; i < rows.length; i++) {
+    const k = cleanVal(rows[i][0]);
+    if (!k) continue;
+    settings[k] = cleanVal(rows[i][1]);
+  }
+  return { success: true, data: settings };
+}
+
+/**
+ * ดึงข้อมูลทุกตารางจาก Google Sheets ในครั้งเดียว เพื่อให้เว็บแอปซิงค์ฐานข้อมูลล่าสุดแบบเรียลไทม์ 100%
+ */
+function getFullDatabase() {
+  initializeSheets();
+  return {
+    success: true,
+    timestamp: new Date().toISOString(),
+    students: getAllStudents().data || [],
+    subAdmins: getSubAdmins().data || [],
+    pendingRegistrations: getPendingRegistrations().data || [],
+    activities: getActivities().data || [],
+    activityLogs: getActivityLogs().data || [],
+    prayers: getPrayers().data || [],
+    attendance: getAttendance().data || [],
+    hasanat: getHasanat().data || [],
+    subjectGrades: getSubjectGrades().data || [],
+    settings: getSettings().data || {}
+  };
 }

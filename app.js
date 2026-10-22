@@ -962,7 +962,10 @@ function saveQuranReadingLog() {
     currentPage: pCur,
     juzCompleted: jComp,
     stars: stars,
-    khatamCount: khatamVal
+    khatamCount: khatamVal,
+    quran: h.quran,
+    memorization: h.memorization,
+    sunnah: h.sunnah
   });
 }
 
@@ -1287,16 +1290,18 @@ function saveSurahMemorizationLog() {
   playSuccessSound();
   showToast(`บันทึกสถิติท่องจำอัลกุรอาน ${h.memorization.count} ซูเราะห์เรียบร้อยแล้ว`, 'success');
 
-  // ซิงค์สถิติท่องจำซูเราะห์เข้า Google Sheets
+  // ซิงค์สถิติท่องจำซูเราะห์เข้า Google Sheets พร้อมข้อมูลผลบุญครบ 3 เสาหลัก
   syncRecordToGoogleSheet('saveSurahMemorizationLog', {
     studentId: currentStudent.studentId,
     studentName: currentStudent.fullName,
     grade: currentStudent.grade,
     date: hasanatSelectedDate || new Date().toISOString().split('T')[0],
-    memorization: {
-      count: h.memorization.count,
-      memorizedSurahs: h.memorization.memorizedSurahs
-    }
+    count: h.memorization.count,
+    memorizedCount: h.memorization.count,
+    memorizedSurahs: h.memorization.memorizedSurahs,
+    quran: h.quran,
+    memorization: h.memorization,
+    sunnah: h.sunnah
   });
 }
 
@@ -1385,7 +1390,11 @@ function calculateDailySunnahRakaat(shouldSave = false) {
       totalRakaat: total,
       duhaRakaat: duha,
       witrRakaat: witr,
-      tahajjudRakaat: tahajjud
+      tahajjudRakaat: tahajjud,
+      rawatib: rawatibState,
+      quran: h.quran,
+      memorization: h.memorization,
+      sunnah: h.sunnah || { totalRakaat: total, rawatib: rawatibState }
     });
   }
 
@@ -1726,11 +1735,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initExportDateDefaults();
   enforceMandatoryLogin();
 
-  // ซิงค์รายการกิจกรรมและรายชื่ออาจารย์จาก Cloud เบื้องหลัง
+  // ซิงค์ฐานข้อมูลทั้งหมดกับ Google Sheets แบบเรียลไทม์ทันทีเมื่อเปิดแอป
   setTimeout(() => {
-    if (typeof fetchActivitiesAndLogsFromCloud === 'function') fetchActivitiesAndLogsFromCloud(false);
-    if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(false);
-  }, 600);
+    if (typeof syncAllDataFromCloud === 'function') {
+      syncAllDataFromCloud(false);
+    }
+  }, 350);
 
   // ตรวจสอบว่ามี #admin ใน URL หรือไม่
   if (window.location.hash === '#admin') {
@@ -4150,41 +4160,43 @@ async function handleStudentLogin() {
   const pendingList = getPendingRegistrations();
   const pendingMatch = pendingList.find(p => p.role === 'student' && isIdMatch(p.userId, studentIdInput) && p.status !== 'Verified');
 
-  let found = allStudents.find(s => {
-    const matchId = isIdMatch(s.studentId, studentIdInput);
-    const matchPhone = isPhoneMatch(s.parentPhone, cleanInputPhone) || isPhoneMatch(s.parentPhone, rawParentPhone);
-    return matchId && matchPhone;
-  });
+  // ตรวจสอบกับฐานข้อมูล Google Sheets เป็นหลักแบบเรียลไทม์ (Strict Live Database Verification)
+  let found = null;
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
 
-  if (!found) {
-    let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
-    if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
-    if (url) {
-      showToast('กำลังค้นหาข้อมูลนักเรียนจากฐานข้อมูลกลาง...', 'info');
-      try {
-        const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentIdInput)}&parentPhone=${encodeURIComponent(cleanInputPhone)}`);
-        const json = await resp.json();
-        if (json && json.success && json.student) {
-          const remoteStudent = json.student;
-          remoteStudent.studentId = cleanIdString(remoteStudent.studentId);
-          remoteStudent.parentPhone = normalizePhone(remoteStudent.parentPhone);
-          if (remoteStudent.birthDate) remoteStudent.birthDate = normalizeBirthDate(remoteStudent.birthDate);
+  if (url && navigator.onLine) {
+    showToast('กำลังตรวจสอบข้อมูลกับฐานข้อมูล Google Sheets...', 'info');
+    try {
+      const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentIdInput)}&parentPhone=${encodeURIComponent(cleanInputPhone)}&_t=${Date.now()}`);
+      const json = await resp.json();
+      if (json && json.success && json.student) {
+        found = json.student;
+        found.studentId = cleanIdString(found.studentId);
+        found.parentPhone = normalizePhone(found.parentPhone);
+        if (found.birthDate) found.birthDate = normalizeBirthDate(found.birthDate);
 
-          if (isIdMatch(remoteStudent.studentId, studentIdInput) && (isPhoneMatch(remoteStudent.parentPhone, cleanInputPhone) || isPhoneMatch(remoteStudent.parentPhone, rawParentPhone))) {
-            found = remoteStudent;
-            const existIdx = allStudents.findIndex(s => isIdMatch(s.studentId, studentIdInput));
-            if (existIdx !== -1) {
-              allStudents[existIdx] = found;
-            } else {
-              allStudents.push(found);
-            }
-            localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
-          }
+        // อัปเดตข้อมูลนักเรียนล่าสุดลงในรายการแคช
+        const existIdx = allStudents.findIndex(s => isIdMatch(s.studentId, studentIdInput));
+        if (existIdx !== -1) {
+          allStudents[existIdx] = { ...allStudents[existIdx], ...found };
+        } else {
+          allStudents.push(found);
         }
-      } catch (e) {
-        console.warn('Remote student lookup failed:', e);
+        localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
       }
+    } catch (e) {
+      console.warn('Live student lookup failed, falling back to local cache:', e);
     }
+  }
+
+  // หากไม่มีเน็ตหรือต่อฐานข้อมูลไม่ได้ชั่วคราว ให้ค้นหาจากแคชในเครื่อง
+  if (!found) {
+    found = allStudents.find(s => {
+      const matchId = isIdMatch(s.studentId, studentIdInput);
+      const matchPhone = isPhoneMatch(s.parentPhone, cleanInputPhone) || isPhoneMatch(s.parentPhone, rawParentPhone);
+      return matchId && matchPhone;
+    });
   }
 
   // Strict OTP Gate: Applicant CANNOT log in until they enter the 6-digit OTP sent to their email by Admin
@@ -4343,22 +4355,16 @@ async function handleTeacherLogin() {
     return;
   }
 
+  // ซิงค์รายชื่ออาจารย์จาก Google Sheets เพื่อความสดใหม่ล่าสุดเสมอ
+  if (navigator.onLine && typeof fetchSubAdminsFromCloud === 'function') {
+    await fetchSubAdminsFromCloud(false);
+  }
+
   let foundTeacher = subAdmins.find(s => {
     const matchUser = isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser));
     const matchPass = isIdMatch(s.password, cleanPass);
     return matchUser && matchPass;
   });
-
-  // If not found locally, sync subAdmins from Google Sheets so accounts added by Admin on another device work immediately
-  if (!foundTeacher && typeof fetchSubAdminsFromCloud === 'function') {
-    showToast('กำลังตรวจสอบบัญชีอาจารย์/ผู้บริหารจากฐานข้อมูลกลาง...', 'info');
-    await fetchSubAdminsFromCloud(false);
-    foundTeacher = subAdmins.find(s => {
-      const matchUser = isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser));
-      const matchPass = isIdMatch(s.password, cleanPass);
-      return matchUser && matchPass;
-    });
-  }
 
   // Check if pending admin OTP verification
   const pendingList = getPendingRegistrations();
@@ -5228,6 +5234,11 @@ function adminRejectRegistration(reqId) {
   renderPendingApprovalsTable();
   renderSuperAdminOverviewKpis();
   showToast('ลบคำขอสมัครเรียบร้อยแล้ว', 'info');
+
+  syncRecordToGoogleSheet('deletePendingRegistration', {
+    reqId: reqId,
+    userId: target ? target.userId : ''
+  });
 }
 
 function renderAdminStudentsTable(filteredList = null) {
@@ -5605,6 +5616,8 @@ function saveAdminStudentDeepEdit() {
   h.sunnah.totalRakaat = sunnahRakaat;
   saveStudentHasanat(h);
 
+  student.hasanat = h;
+
   allStudents[sIdx] = student;
   localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
 
@@ -5639,6 +5652,11 @@ function adminDeleteStudentPrayerRecord(studentId, logId) {
   viewStudentDetails(studentId);
   renderAdminStudentsTable();
   showToast('ลบประวัติการละหมาดเรียบร้อยแล้ว', 'info');
+
+  syncRecordToGoogleSheet('deletePrayerRecord', {
+    studentId: studentId,
+    logId: logId
+  });
 }
 
 function deleteStudent(studentId) {
@@ -6179,6 +6197,7 @@ function saveTeacherGradingScores() {
   }
 
   let updatedCount = 0;
+  const studentGrades = [];
   inputs.forEach(inp => {
     const sId = inp.getAttribute('data-student-id');
     const gradeVal = normalizeGrade1To4(inp.value);
@@ -6189,8 +6208,18 @@ function saveTeacherGradingScores() {
       if (!allStudents[sIdx].skills) allStudents[sIdx].skills = {};
       allStudents[sIdx].subjectGrades[currentSubj] = gradeVal;
       allStudents[sIdx].skills[currentSubj] = gradeVal;
-      recalculateStudentGpa(allStudents[sIdx]);
+      const newGpa = recalculateStudentGpa(allStudents[sIdx]);
       updatedCount++;
+
+      studentGrades.push({
+        studentId: sId,
+        fullName: allStudents[sIdx].fullName,
+        grade: allStudents[sIdx].grade,
+        score: gradeVal === 4 ? 85 : (gradeVal === 3 ? 75 : (gradeVal === 2 ? 65 : 55)),
+        gradeVal: gradeVal,
+        gpax: newGpa,
+        allGrades: allStudents[sIdx].grades || []
+      });
 
       if (currentStudent && isIdMatch(currentStudent.studentId, sId)) {
         currentStudent = allStudents[sIdx];
@@ -6204,8 +6233,12 @@ function saveTeacherGradingScores() {
   renderSkillRadarChart();
   renderCurrentStudentProfile();
 
+  const subjObj = (typeof appSubjects !== 'undefined') ? appSubjects.find(s => s.id === currentSubj) : null;
   syncRecordToGoogleSheet('saveSubjectGrades', {
-    subjectId: currentSubj,
+    subjectCode: currentSubj,
+    subjectName: subjObj ? subjObj.name : currentSubj,
+    teacherId: currentAdmin ? currentAdmin.username : 'Teacher',
+    studentGrades: studentGrades,
     updatedCount: updatedCount,
     timestamp: new Date().toISOString()
   });
@@ -6442,11 +6475,22 @@ function saveTeacherDailyAttendance() {
   playSuccessSound();
   showToast(`บันทึกการเช็คชื่อมาเรียนวันที่ ${selectedDate} จำนวน ${count} คน สำเร็จ!`, 'success');
 
+  const studentDetails = {};
+  filtered.forEach(s => {
+    const sId = cleanIdString(s.studentId);
+    studentDetails[sId] = {
+      fullName: s.fullName,
+      grade: s.grade,
+      attendance: s.attendance
+    };
+  });
+
   syncRecordToGoogleSheet('saveDailyAttendance', {
     date: selectedDate,
     grade: selectedGrade,
     teacher: currentAdmin ? currentAdmin.username : 'Teacher',
-    records: savedLogs[selectedDate]
+    records: savedLogs[selectedDate],
+    studentDetails: studentDetails
   });
 }
 
@@ -6562,10 +6606,27 @@ function saveTeacherPortalGrades() {
   renderSkillRadarChart();
   renderCurrentStudentProfile();
 
+  const subjObj = (typeof appSubjects !== 'undefined') ? appSubjects.find(s => s.id === currentSubj) : null;
+  const scoresMap = {};
+  gradesBatch.forEach(g => { scoresMap[g.studentId] = g.gradeVal; });
+
   syncRecordToGoogleSheet('saveSubjectGrades', {
-    subjectId: currentSubj,
-    teacher: currentAdmin ? currentAdmin.username : 'Teacher',
-    grades: gradesBatch,
+    subjectCode: currentSubj,
+    subjectName: subjObj ? subjObj.name : currentSubj,
+    teacherId: currentAdmin ? currentAdmin.username : 'Teacher',
+    studentGrades: gradesBatch.map(g => {
+      const st = allStudents.find(s => isIdMatch(s.studentId, g.studentId));
+      return {
+        studentId: g.studentId,
+        fullName: st ? st.fullName : '',
+        grade: st ? st.grade : '',
+        gradeVal: g.gradeVal,
+        score: g.gradeVal === 4 ? 85 : (g.gradeVal === 3 ? 75 : (g.gradeVal === 2 ? 65 : 55)),
+        gpax: g.gpa,
+        grades: st ? (st.grades || []) : []
+      };
+    }),
+    grades: scoresMap,
     timestamp: new Date().toISOString()
   });
 
@@ -6652,6 +6713,8 @@ function submitSaveSubject() {
   renderSkillRadarChart();
   populateGradingSubjectSelect();
   showToast('บันทึกข้อมูลรายวิชาเรียบร้อยแล้ว', 'success');
+
+  syncRecordToGoogleSheet('saveSubjects', { subjects: appSubjects });
 }
 
 function deleteSubject(id) {
@@ -6663,6 +6726,8 @@ function deleteSubject(id) {
   renderSkillRadarChart();
   populateGradingSubjectSelect();
   showToast('ลบรายวิชาเรียบร้อยแล้ว', 'info');
+
+  syncRecordToGoogleSheet('saveSubjects', { subjects: appSubjects });
 }
 
 // ----------------- REPORT EXPORT ENGINE (WORD / EXCEL / PDF) ----------------- //
@@ -6952,10 +7017,14 @@ async function forceSyncAllToGoogleSheet() {
     };
   });
 
+  loadAppSubjects();
   const payload = {
     students: allStudents,
+    subAdmins: subAdmins,
+    activities: activities,
     prayers: historyList,
-    hasanat: hasanatArray
+    hasanat: hasanatArray,
+    subjects: appSubjects
   };
 
   try {
@@ -6966,7 +7035,7 @@ async function forceSyncAllToGoogleSheet() {
       body: JSON.stringify({ action: 'batchSync', data: payload })
     });
 
-    showToast(`ซิงค์สำเร็จ! ส่งข้อมูลนักเรียน ${allStudents.length} คน, ละหมาด ${historyList.length} รายการ, ผลบุญ ${hasanatArray.length} รายการ ลง Google Sheet แล้ว`, 'success');
+    showToast(`ซิงค์สำเร็จ! ส่งข้อมูลนักเรียน ${allStudents.length} คน, อาจารย์ ${subAdmins.length} ท่าน, กิจกรรม ${activities.length} รายการ, ละหมาด ${historyList.length} รายการ, ผลบุญ ${hasanatArray.length} รายการ ลง Google Sheet แล้ว`, 'success');
   } catch (err) {
     showToast('เกิดข้อผิดพลาดในการซิงค์: ' + err.message, 'error');
   }
@@ -7790,24 +7859,226 @@ function renderAdminLiveActivityFeed() {
   `).join('');
 }
 
+// ----------------- COMPREHENSIVE CLOUD DATABASE SYNC ENGINE (FULL GOOGLE SHEETS SYNC) ----------------- //
+let isSyncingAllCloud = false;
+
+async function syncAllDataFromCloud(showToastMsg = false) {
+  if (isSyncingAllCloud) return;
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
+  if (!url || !navigator.onLine) return;
+
+  isSyncingAllCloud = true;
+  if (showToastMsg) {
+    showToast('กำลังเชื่อมต่อและดึงข้อมูลล่าสุดจาก Google Sheets...', 'info');
+  }
+
+  try {
+    const sep = url.includes('?') ? '&' : '?';
+    let db = null;
+
+    // ลองดึงฐานข้อมูลเต็มผ่าน action=getFullDatabase ในคำขอเดียว
+    try {
+      const fullResp = await fetch(`${url}${sep}action=getFullDatabase&_t=${Date.now()}`);
+      const fullJson = await fullResp.json();
+      if (fullJson && fullJson.success) {
+        db = fullJson;
+      }
+    } catch (e) {
+      db = null;
+    }
+
+    // หาก endpoint รวมยังไม่พร้อม ให้ดึงแบบขนานจากทุก endpoint เดิม
+    if (!db) {
+      const [stdRes, admRes, pendRes, actRes, logsRes, pryRes, attRes, hasRes, grdRes, setRes] = await Promise.all([
+        fetch(`${url}${sep}action=getAllStudents&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getSubAdmins&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getPendingRegistrations&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getActivities&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getActivityLogs&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getPrayers&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getAttendance&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getHasanat&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getSubjectGrades&_t=${Date.now()}`).then(r => r.json()).catch(() => null),
+        fetch(`${url}${sep}action=getSettings&_t=${Date.now()}`).then(r => r.json()).catch(() => null)
+      ]);
+      db = {
+        students: stdRes && stdRes.data ? stdRes.data : [],
+        subAdmins: admRes && admRes.data ? admRes.data : [],
+        pendingRegistrations: pendRes && pendRes.data ? pendRes.data : [],
+        activities: actRes && actRes.data ? actRes.data : [],
+        activityLogs: logsRes && logsRes.data ? logsRes.data : [],
+        prayers: pryRes && pryRes.data ? pryRes.data : [],
+        attendance: attRes && attRes.data ? attRes.data : [],
+        hasanat: hasRes && hasRes.data ? hasRes.data : [],
+        subjectGrades: grdRes && grdRes.data ? grdRes.data : [],
+        settings: setRes && setRes.data ? setRes.data : {}
+      };
+    }
+
+    // 1. ซิงค์ตารางนักเรียน (Students)
+    if (Array.isArray(db.students) && db.students.length > 0) {
+      const cloudMap = {};
+      db.students.forEach(s => {
+        if (!s || !s.studentId) return;
+        const sid = cleanIdString(s.studentId);
+        s.studentId = sid;
+        s.parentPhone = normalizePhone(s.parentPhone);
+        s.birthDate = normalizeBirthDate(s.birthDate);
+        cloudMap[sid] = s;
+      });
+
+      // ปรับปรุง allStudents ให้ตรงกับ Google Sheets
+      const mergedStudents = Object.values(cloudMap);
+      allStudents = mergedStudents;
+      localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+
+      // ตรวจสอบความถูกต้องของนักเรียนที่กำลังล็อกอิน (Strict Session Verification)
+      if (currentStudent) {
+        const curSid = cleanIdString(currentStudent.studentId);
+        if (cloudMap[curSid]) {
+          currentStudent = { ...currentStudent, ...cloudMap[curSid] };
+          localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+        } else {
+          // ไม่พบในฐานข้อมูล Google Sheets! ตรวจสอบว่ารออนุมัติ OTP หรือไม่
+          const isPending = Array.isArray(db.pendingRegistrations) && db.pendingRegistrations.some(p => isIdMatch(p.userId, curSid));
+          if (!isPending) {
+            console.warn(`นักเรียนรหัส ${curSid} ไม่มีอยู่จริงใน Google Sheets จึงต้องออกจากระบบ`);
+            localStorage.removeItem('khalifah_current_student');
+            currentStudent = null;
+            document.body.classList.add('auth-locked');
+            showToast('บัญชีของคุณไม่มีอยู่ในฐานข้อมูล Google Sheets กรุณาติดต่อผู้ดูแลระบบหรือลงทะเบียนใหม่', 'warning');
+            enforceMandatoryLogin();
+          }
+        }
+      }
+    }
+
+    // 2. ซิงค์อาจารย์และบุคลากร (SubAdmins)
+    if (Array.isArray(db.subAdmins) && db.subAdmins.length > 0) {
+      subAdmins = db.subAdmins;
+      localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+
+      if (currentAdmin && currentAdmin.role !== 'SuperAdmin') {
+        const curUser = cleanIdString(currentAdmin.username);
+        const adminFound = subAdmins.find(a => isIdMatch(a.username, curUser));
+        if (adminFound) {
+          currentAdmin = { ...currentAdmin, ...adminFound };
+        } else {
+          console.warn(`บัญชีอาจารย์ ${curUser} ไม่มีอยู่ใน Google Sheets`);
+        }
+      }
+    }
+
+    // 3. ซิงค์รายการรออนุมัติและ OTP (Pending Registrations)
+    if (Array.isArray(db.pendingRegistrations)) {
+      savePendingRegistrations(db.pendingRegistrations);
+    }
+
+    // 4. ซิงค์กิจกรรมและผู้เข้าร่วม (Activities & Activity Logs)
+    if (Array.isArray(db.activities) && db.activities.length > 0) {
+      activities = db.activities;
+      localStorage.setItem('khalifah_activities', JSON.stringify(activities));
+    }
+    if (Array.isArray(db.activityLogs)) {
+      localStorage.setItem('khalifah_student_act_logs', JSON.stringify(db.activityLogs));
+    }
+
+    // 5. ซิงค์บันทึกเวลาละหมาด (Prayers)
+    if (Array.isArray(db.prayers) && db.prayers.length > 0) {
+      localStorage.setItem('khalifah_prayer_history', JSON.stringify(db.prayers));
+      const todayStr = new Date().toISOString().split('T')[0];
+      todayPrayers = db.prayers.filter(p => p.date === todayStr);
+      localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+    }
+
+    // 6. ซิงค์ผลบุญ (Hasanat)
+    if (Array.isArray(db.hasanat) && db.hasanat.length > 0) {
+      let allHasanat = {};
+      try {
+        allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
+      } catch (e) { allHasanat = {}; }
+      db.hasanat.forEach(item => {
+        const sid = cleanIdString(item.studentId);
+        if (!sid) return;
+        allHasanat[sid] = allHasanat[sid] || {};
+        if (item.quran) allHasanat[sid].quran = { ...(allHasanat[sid].quran || {}), ...item.quran };
+        if (item.memorization) allHasanat[sid].memorization = { ...(allHasanat[sid].memorization || {}), ...item.memorization };
+        if (item.sunnah) allHasanat[sid].sunnah = { ...(allHasanat[sid].sunnah || {}), ...item.sunnah };
+      });
+      localStorage.setItem('khalifah_student_hasanat', JSON.stringify(allHasanat));
+    }
+
+    // 7. ซิงค์รายวิชาและการตั้งค่า (Subjects & Settings)
+    if (db.settings) {
+      if (db.settings.AppSubjects) {
+        try {
+          const parsedSubj = JSON.parse(db.settings.AppSubjects);
+          if (Array.isArray(parsedSubj) && parsedSubj.length > 0) {
+            appSubjects = parsedSubj;
+            localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
+          }
+        } catch (e) {}
+      }
+      if (db.settings.PrayerBufferMinutes) {
+        const bufferVal = parseInt(db.settings.PrayerBufferMinutes, 10);
+        if (!isNaN(bufferVal)) {
+          prayerBufferMinutes = bufferVal;
+          localStorage.setItem('khalifah_prayer_buffer_mins', String(bufferVal));
+        }
+      }
+    }
+
+    // อัปเดตการแสดงผลหน้าจอทั้งหมด
+    renderCurrentStudentProfile();
+    renderDashboardCharts();
+    renderActivitiesList();
+    renderTodayPrayerTable();
+    renderPrayerHistory();
+    renderAdminStudentsTable();
+    renderSubAdminsTable();
+    renderPendingApprovalsTable();
+    renderAdminActivitiesTable();
+    renderAdminLiveActivityFeed();
+    renderSuperAdminOverviewKpis();
+    if (typeof initTeacherPortalView === 'function' && currentAdmin) {
+      initTeacherPortalView();
+    }
+
+    if (showToastMsg) {
+      playSuccessSound();
+      showToast('ซิงค์ฐานข้อมูลล่าสุดกับ Google Sheets สำเร็จเรียบร้อย!', 'success');
+    }
+  } catch (err) {
+    console.warn('syncAllDataFromCloud error:', err);
+    if (showToastMsg) {
+      showToast('ไม่สามารถเชื่อมต่อฐานข้อมูล Google Sheets ได้: ' + err.message, 'warning');
+    }
+  } finally {
+    isSyncingAllCloud = false;
+  }
+}
+
 let adminActivityPollingTimer = null;
 
 async function fetchActivitiesAndLogsFromCloud(showToastMsg = false) {
-  if (!gasWebAppUrl) {
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
+  if (!url) {
     renderAdminActivitiesTable();
     renderAdminLiveActivityFeed();
     return;
   }
 
   try {
-    const sep = gasWebAppUrl.includes('?') ? '&' : '?';
+    const sep = url.includes('?') ? '&' : '?';
     const [actRes, logsRes] = await Promise.all([
-      fetch(`${gasWebAppUrl}${sep}action=getActivities&_t=${Date.now()}`, { method: 'GET', redirect: 'follow' }).then(r => r.json()).catch(() => null),
-      fetch(`${gasWebAppUrl}${sep}action=getActivityLogs&_t=${Date.now()}`, { method: 'GET', redirect: 'follow' }).then(r => r.json()).catch(() => null)
+      fetch(`${url}${sep}action=getActivities&_t=${Date.now()}`, { method: 'GET', redirect: 'follow' }).then(r => r.json()).catch(() => null),
+      fetch(`${url}${sep}action=getActivityLogs&_t=${Date.now()}`, { method: 'GET', redirect: 'follow' }).then(r => r.json()).catch(() => null)
     ]);
 
     // Merge activities from cloud
-    if (actRes && actRes.status === 'success' && Array.isArray(actRes.data)) {
+    if (actRes && (actRes.success || actRes.status === 'success') && Array.isArray(actRes.data)) {
       let localActs = [...activities];
       actRes.data.forEach(cloudAct => {
         const cId = String(cloudAct.id || cloudAct.activityId || '').trim();
@@ -7834,7 +8105,7 @@ async function fetchActivitiesAndLogsFromCloud(showToastMsg = false) {
     }
 
     // Merge activity logs from cloud
-    if (logsRes && logsRes.status === 'success' && Array.isArray(logsRes.data)) {
+    if (logsRes && (logsRes.success || logsRes.status === 'success') && Array.isArray(logsRes.data)) {
       let localLogs = [];
       try {
         localLogs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]');
@@ -7843,8 +8114,14 @@ async function fetchActivitiesAndLogsFromCloud(showToastMsg = false) {
       logsRes.data.forEach(cloudLog => {
         const stdId = cleanIdString(cloudLog.studentId || '');
         const actId = String(cloudLog.activityId || '').trim();
-        const actTitle = String(cloudLog.activityTitle || '').trim();
+        let actTitle = String(cloudLog.activityTitle || '').trim();
         if (!stdId) return;
+
+        // Clean out raw prefix if present
+        if (actTitle.toUpperCase().startsWith('KHALIFAH_ACT:')) {
+          const parts = actTitle.split(':');
+          if (parts.length >= 3) actTitle = parts.slice(2).join(':').trim();
+        }
 
         const existingIdx = localLogs.findIndex(l =>
           isIdMatch(l.studentId, stdId) &&
@@ -7916,7 +8193,7 @@ function startAdminActivityLivePolling() {
   stopAdminActivityLivePolling();
   adminActivityPollingTimer = setInterval(() => {
     const adminView = document.getElementById('view-admin');
-    if (isAdminLoggedIn && adminView && adminView.classList.contains('active')) {
+    if (!!currentAdmin && adminView && adminView.classList.contains('active')) {
       fetchActivitiesAndLogsFromCloud(false);
     }
   }, 5000);
@@ -8026,6 +8303,11 @@ function deleteActivityAttendee(logId) {
   renderAdminActivitiesTable();
   renderAdminLiveActivityFeed();
   showToast('ลบรายการเช็คชื่อเรียบร้อยแล้ว', 'info');
+
+  syncRecordToGoogleSheet('deleteActivityAttendee', {
+    logId: logId,
+    activityId: currentViewingActivityId || ''
+  });
 }
 
 function exportAttendeesToExcel() {
