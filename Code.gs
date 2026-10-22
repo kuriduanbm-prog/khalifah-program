@@ -32,7 +32,7 @@ function runOrganizeGoogleSheetsDirectly() {
   Logger.log('🚀 เริ่มต้นจัดระเบียบโครงสร้าง Google Sheets ทันที...');
   const result = initializeSheets();
   Logger.log('ผลการดำเนินการ: ' + JSON.stringify(result));
-  Logger.log('✅ จัดระเบียบครบทั้ง 12 แผ่นงาน เรียงแท็บ แยกอาจารย์/แอดมิน ล็อคแถวบนสุด และใส่ Dropdown สำเร็จ 100%!');
+  Logger.log('✅ จัดระเบียบครบทั้ง 13 แผ่นงาน (รวมแท็บปฏิทินกิจกรรม) เรียงแท็บ แยกอาจารย์/แอดมิน ล็อคแถวบนสุด และใส่ Dropdown สำเร็จ 100%!');
   return result;
 }
 
