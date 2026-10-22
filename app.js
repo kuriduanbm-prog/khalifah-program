@@ -3321,14 +3321,28 @@ function formatRadarLabelMultiLine(text) {
 }
 
 function renderSkillRadarChart() {
-  const ctx = document.getElementById('skillRadarChart');
-  if (!ctx) return;
+  const canvas = document.getElementById('skillRadarChart');
+  const container = document.getElementById('skillChartContainer');
+  if (!canvas) return;
 
   if (skillChartInstance) skillChartInstance.destroy();
 
   loadAppSubjects();
 
-  const labels = appSubjects.map(s => formatRadarLabelMultiLine(s.name));
+  // If no subjects exist, handle gracefully
+  if (!appSubjects || appSubjects.length === 0) {
+    if (container) container.style.height = '180px';
+    return;
+  }
+
+  // Adjust container height dynamically based on subject count (approx 44px per subject + padding)
+  const calcHeight = Math.max(260, appSubjects.length * 44 + 65);
+  if (container) {
+    container.style.height = `${calcHeight}px`;
+  }
+  canvas.style.height = `${calcHeight}px`;
+
+  const labels = appSubjects.map(s => s.name);
   const dataGrades = appSubjects.map(s => {
     if (currentStudent) {
       const gradesMap = currentStudent.subjectGrades || {};
@@ -3340,19 +3354,51 @@ function renderSkillRadarChart() {
         return normalizeGrade1To4(skillsMap[s.id]);
       }
     }
-    return 0; // Unassigned / not yet graded = 0 (narrow center until teacher enters grade 1-4)
+    return 0; // Unassigned / not yet graded
   });
 
-  // Render subject grade pills below radar chart
+  // Calculate dynamic bar colors based on grade value
+  const barBackgrounds = dataGrades.map(g => {
+    if (g >= 3.5) return 'rgba(16, 185, 129, 0.9)'; // Emerald (3.5 - 4.0)
+    if (g >= 2.5) return 'rgba(2, 132, 199, 0.9)';   // Sky Blue (2.5 - 3.49)
+    if (g >= 1.5) return 'rgba(245, 158, 11, 0.9)';  // Amber (1.5 - 2.49)
+    if (g > 0) return 'rgba(239, 68, 68, 0.85)';     // Coral/Red (< 1.5)
+    return 'rgba(203, 213, 225, 0.7)';               // Neutral Slate (Pending)
+  });
+
+  const barBorders = dataGrades.map(g => {
+    if (g >= 3.5) return '#059669';
+    if (g >= 2.5) return '#0369a1';
+    if (g >= 1.5) return '#d97706';
+    if (g > 0) return '#dc2626';
+    return '#94a3b8';
+  });
+
+  // Render subject grade pills below horizontal bar chart with enhanced readability
   const pillsContainer = document.getElementById('studentSubjectGradesPills');
   if (pillsContainer) {
     pillsContainer.innerHTML = appSubjects.map((s, idx) => {
       const g = dataGrades[idx];
-      const gradeLabel = g > 0 ? `เกรด ${Number.isInteger(g) ? g : g.toFixed(1)}` : 'รอผล';
+      let gradeText = 'รอผล';
+      let badgeStyle = 'background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;';
+      if (g >= 3.5) {
+        gradeText = `เกรด ${Number.isInteger(g) ? g : g.toFixed(1)}`;
+        badgeStyle = 'background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;';
+      } else if (g >= 2.5) {
+        gradeText = `เกรด ${Number.isInteger(g) ? g : g.toFixed(1)}`;
+        badgeStyle = 'background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;';
+      } else if (g >= 1.5) {
+        gradeText = `เกรด ${Number.isInteger(g) ? g : g.toFixed(1)}`;
+        badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
+      } else if (g > 0) {
+        gradeText = `เกรด ${Number.isInteger(g) ? g : g.toFixed(1)}`;
+        badgeStyle = 'background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;';
+      }
+
       return `
-        <div class="subject-grade-pill-item" title="${escapeHtml(s.name)}: ${gradeLabel}">
+        <div class="subject-grade-pill-item" title="${escapeHtml(s.name)}: ${gradeText}">
           <span class="subject-grade-pill-name">${escapeHtml(s.name)}</span>
-          <span class="subject-grade-pill-val">${gradeLabel}</span>
+          <span class="subject-grade-pill-val" style="${badgeStyle}">${gradeText}</span>
         </div>
       `;
     }).join('');
@@ -3365,60 +3411,80 @@ function renderSkillRadarChart() {
     if (statGpa) statGpa.innerText = newGpa;
   }
 
-  skillChartInstance = new Chart(ctx, {
-    type: 'radar',
+  skillChartInstance = new Chart(canvas, {
+    type: 'bar',
     data: {
       labels: labels,
       datasets: [{
-        label: 'เกรดรายวิชา (เต็ม 4.00)',
+        label: 'เกรด (เต็ม 4.00)',
         data: dataGrades,
-        backgroundColor: 'rgba(15, 23, 42, 0.14)',
-        borderColor: '#0f172a',
-        borderWidth: 2,
-        pointBackgroundColor: '#0f172a',
-        pointBorderColor: '#ffffff',
-        pointHoverBackgroundColor: '#ffffff',
-        pointHoverBorderColor: '#0f172a',
-        pointRadius: 4
+        backgroundColor: barBackgrounds,
+        borderColor: barBorders,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        barPercentage: 0.65,
+        categoryPercentage: 0.85
       }]
     },
     options: {
+      indexAxis: 'y',
       animation: {
-        duration: 900,
+        duration: 800,
         easing: 'easeOutQuart'
       },
       responsive: true,
       maintainAspectRatio: false,
       layout: {
-        padding: { top: 10, bottom: 10, left: 18, right: 18 }
+        padding: { top: 10, bottom: 10, left: 10, right: 25 }
       },
       scales: {
-        r: {
+        x: {
           min: 0,
           max: 4,
+          grid: {
+            color: 'rgba(226, 232, 240, 0.8)',
+            drawBorder: false
+          },
           ticks: {
             stepSize: 1,
-            display: true,
-            backdropColor: 'transparent',
             color: '#64748b',
-            font: { family: 'Kanit', size: 9, weight: '600' }
+            font: { family: 'Kanit, Prompt, sans-serif', size: 11, weight: '600' },
+            callback: function(val) {
+              return val.toFixed(1);
+            }
           },
-          pointLabels: {
-            font: { family: 'Kanit', size: 10.5, weight: '600' },
+          title: {
+            display: true,
+            text: 'ระดับเกรดเฉลี่ย (1.00 – 4.00)',
+            color: '#94a3b8',
+            font: { family: 'Kanit, Prompt, sans-serif', size: 10, weight: '600' }
+          }
+        },
+        y: {
+          grid: {
+            display: false,
+            drawBorder: false
+          },
+          ticks: {
             color: '#0f172a',
+            font: { family: 'Kanit, Prompt, sans-serif', size: 12, weight: '600' },
             padding: 8
-          },
-          grid: { color: 'rgba(203, 213, 225, 0.85)' },
-          angleLines: { color: 'rgba(203, 213, 225, 0.85)' }
+          }
         }
       },
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: '#0f172a',
+          titleFont: { family: 'Kanit, Prompt, sans-serif', size: 12, weight: '700' },
+          bodyFont: { family: 'Kanit, Prompt, sans-serif', size: 12 },
+          padding: 10,
+          cornerRadius: 8,
           callbacks: {
             label: function(context) {
               const val = context.raw || 0;
-              return val > 0 ? ` เกรด: ${val} / 4` : ' ยังไม่มีเกรด (0 / 4)';
+              if (val <= 0) return ' สถานะ: รอผลการประเมินจากอาจารย์';
+              return ` ผลการเรียน: เกรด ${val.toFixed(2)} (เต็ม 4.00)`;
             }
           }
         }

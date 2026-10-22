@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=5.1">
+  <link rel="stylesheet" href="style.css?v=5.4">
 </head>
 <body class="auth-locked">
 
@@ -289,15 +289,20 @@
           <div class="card-header" style="align-items: flex-start; gap: 0.75rem; flex-wrap: wrap;">
             <div>
               <div class="card-title">
-                <i class="fa-solid fa-compass-drafting"></i> กราฟทักษะและผลการเรียนรายวิชา (เกรด 1 – 4)
+                <i class="fa-solid fa-chart-bar" style="color: var(--primary);"></i> ผลการเรียนและระดับทักษะรายวิชา (เกรด 1.0 – 4.0)
               </div>
-              <div class="card-subtitle">แสดงเกรดรายวิชาที่อาจารย์ผู้สอนประเมิน (เกรด 1 กราฟแคบ • เกรด 4 กราฟกางเต็มสมรรถนะ)</div>
+              <div class="card-subtitle">เปรียบเทียบระดับผลการเรียนรายวิชาตามที่อาจารย์ประเมิน (เกรด 1.00 – 4.00)</div>
             </div>
-            <span class="badge-sub" id="radarScaleBadge" style="background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; font-size: 0.75rem; font-weight: 600;">
-              สเกลเกรด 1.0 – 4.0
-            </span>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span class="badge-sub" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.75rem; font-weight: 700;">
+                <i class="fa-solid fa-star"></i> เกรด 4.00 สูงสุด
+              </span>
+              <span class="badge-sub" id="radarScaleBadge" style="background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; font-size: 0.75rem; font-weight: 600;">
+                สเกลเกรด 1.0 – 4.0
+              </span>
+            </div>
           </div>
-          <div class="chart-container" style="height: 300px;">
+          <div class="chart-container" id="skillChartContainer" style="position: relative; height: auto; min-height: 280px; width: 100%;">
             <canvas id="skillRadarChart"></canvas>
           </div>
           <!-- Minimalist Subject Grade Pills Breakdown -->
@@ -3506,6 +3511,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=5.3"></script>
+  <script src="app.js?v=5.4"></script>
 </body>
 </html>
