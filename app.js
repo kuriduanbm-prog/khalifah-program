@@ -11901,10 +11901,60 @@ function canManageCalendar() {
 
 function getVisibleCalendarEvents() {
   const isManager = canManageCalendar();
-  if (isManager) {
-    return calendarEvents;
+
+  // กรณีนักเรียนเข้าใช้งาน: กรองกิจกรรมเฉพาะที่เกี่ยวกับตนเอง
+  if (!isManager && currentStudent) {
+    return calendarEvents.filter(e => {
+      const target = (e.targetAudience || 'all').toLowerCase();
+      // ซ่อนกิจกรรมเฉพาะอาจารย์
+      if (target === 'teachers') return false;
+
+      // ตรวจสอบกิจกรรมเฉพาะนักเรียน
+      if (target === 'students') {
+        // เจาะจงนักเรียนรายคน
+        if (e.targetStudentId && e.targetStudentId !== 'ALL') {
+          return isIdMatch(currentStudent.studentId, e.targetStudentId);
+        }
+        // เจาะจงระดับชั้น
+        if (e.targetGrade && e.targetGrade !== 'ALL') {
+          const stGrade = currentStudent.grade || '';
+          if (e.targetGrade === 'LOWER_SEC') {
+            return ['มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3'].includes(stGrade);
+          }
+          if (e.targetGrade === 'UPPER_SEC') {
+            return ['มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'].includes(stGrade);
+          }
+          return stGrade === e.targetGrade;
+        }
+      }
+
+      return true; // กิจกรรมสำหรับทุกคน หรือนักเรียนทุกระดับชั้น
+    });
   }
-  // นักเรียน: ซ่อนกิจกรรมที่ตั้งไว้สำหรับเฉพาะอาจารย์/ผู้บริหาร
+
+  // กรณีอาจารย์หรือผู้บริหารเข้าใช้งาน:
+  if (currentAdmin) {
+    // SuperAdmin และ Executive สามารถเห็นกิจกรรมทุกรายการ
+    if (currentAdmin.role === 'SuperAdmin' || currentAdmin.role === 'EXECUTIVE') {
+      return calendarEvents;
+    }
+    return calendarEvents.filter(e => {
+      const target = (e.targetAudience || 'all').toLowerCase();
+      if (target === 'teachers') {
+        // เจาะจงอาจารย์รายท่าน
+        if (e.targetTeacherUsername && e.targetTeacherUsername !== 'ALL') {
+          return e.targetTeacherUsername === currentAdmin.username || (typeof canDeleteCalendarEvent === 'function' && canDeleteCalendarEvent(e));
+        }
+        // เจาะจงบทบาท
+        if (e.targetTeacherRole && e.targetTeacherRole !== 'ALL') {
+          return e.targetTeacherRole === currentAdmin.role || (typeof canDeleteCalendarEvent === 'function' && canDeleteCalendarEvent(e));
+        }
+      }
+      return true;
+    });
+  }
+
+  // ผู้ใช้ทั่วไปหรือยังไม่ล็อกอิน: แสดงเฉพาะกิจกรรมที่ไม่ใช่เฉพาะอาจารย์
   return calendarEvents.filter(e => {
     const target = (e.targetAudience || 'all').toLowerCase();
     return target !== 'teachers';
@@ -12547,7 +12597,8 @@ function openCalendarEventDetail(eventId) {
   }
 
   if (metaEl) {
-    metaEl.innerText = `บันทึกโดย: ${ev.createdBy || 'ผู้ดูแลระบบ'} • อัปเดตล่าสุด: ${ev.updatedAt || '-'}`;
+    const targetDesc = ev.targetAudienceLabel ? ` • สำหรับ: ${ev.targetAudienceLabel}` : '';
+    metaEl.innerText = `บันทึกโดย: ${ev.createdBy || 'ผู้ดูแลระบบ'}${targetDesc} • อัปเดตล่าสุด: ${ev.updatedAt || '-'}`;
   }
 
   // ซ่อนปุ่มแก้ไข/ลบ สำหรับผู้ที่ไม่มีสิทธิ์ (รูปแนบ 4: ตนเองและแอดมินเท่านั้นที่สามารถลบได้)
@@ -12871,6 +12922,88 @@ function openCalendarDayModal(dateStr, dayEvents) {
   openModal('calendarDayEventsModal');
 }
 
+// ----------------- CALENDAR TARGET AUDIENCE SUB-OPTIONS (รูปแนบ: เฉพาะนักเรียน/เฉพาะอาจารย์) ----------------- //
+
+function onCalTargetAudienceChange() {
+  const targetSelect = document.getElementById('calFormTarget');
+  const studentsBox = document.getElementById('calTargetStudentsBox');
+  const teachersBox = document.getElementById('calTargetTeachersBox');
+  if (!targetSelect) return;
+
+  const val = targetSelect.value;
+  if (val === 'students') {
+    if (studentsBox) studentsBox.style.display = 'block';
+    if (teachersBox) teachersBox.style.display = 'none';
+    populateCalTargetStudents();
+  } else if (val === 'teachers') {
+    if (studentsBox) studentsBox.style.display = 'none';
+    if (teachersBox) teachersBox.style.display = 'block';
+    populateCalTargetTeachers();
+  } else {
+    if (studentsBox) studentsBox.style.display = 'none';
+    if (teachersBox) teachersBox.style.display = 'none';
+  }
+}
+
+function populateCalTargetStudents() {
+  const gradeSel = document.getElementById('calTargetGrade');
+  const studentSel = document.getElementById('calTargetSpecificStudent');
+  if (!studentSel) return;
+  const currentVal = studentSel.value;
+  const selectedGrade = gradeSel ? gradeSel.value : 'ALL';
+
+  let filtered = allStudents;
+  if (selectedGrade === 'LOWER_SEC') {
+    filtered = allStudents.filter(s => ['มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3'].includes(s.grade));
+  } else if (selectedGrade === 'UPPER_SEC') {
+    filtered = allStudents.filter(s => ['มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'].includes(s.grade));
+  } else if (selectedGrade && selectedGrade !== 'ALL') {
+    filtered = allStudents.filter(s => s.grade === selectedGrade);
+  }
+
+  studentSel.innerHTML = '<option value="ALL">นักเรียนทุกคนในระดับชั้นที่เลือก</option>' + 
+    filtered.map(s => `<option value="${escapeHtml(s.studentId)}">${escapeHtml(s.studentId)} - ${escapeHtml(s.fullName)} (${escapeHtml(s.grade || '')})</option>`).join('');
+
+  if (currentVal && (currentVal === 'ALL' || filtered.some(s => isIdMatch(s.studentId, currentVal)))) {
+    studentSel.value = currentVal;
+  } else {
+    studentSel.value = 'ALL';
+  }
+}
+
+function onCalTargetGradeChange() {
+  populateCalTargetStudents();
+}
+
+function populateCalTargetTeachers() {
+  const teacherSel = document.getElementById('calTargetSpecificTeacher');
+  if (!teacherSel) return;
+  const currentVal = teacherSel.value;
+
+  const roleLabels = {
+    SuperAdmin: 'แอดมินสูงสุด',
+    EXECUTIVE: 'ผู้บริหารสถานศึกษา',
+    TEACHER: 'อาจารย์ผู้สอน',
+    HOMEROOM: 'อาจารย์ประจำชั้น',
+    ACTIVITY: 'ฝ่ายกิจกรรม',
+    SubAdmin: 'ผู้ช่วยแอดมิน'
+  };
+
+  let list = Array.isArray(subAdmins) ? [...subAdmins] : [];
+  if (currentAdmin && !list.some(a => a.username === currentAdmin.username)) {
+    list.unshift(currentAdmin);
+  }
+
+  teacherSel.innerHTML = '<option value="ALL">อาจารย์ทุกคนในกลุ่มที่เลือก</option>' +
+    list.map(a => `<option value="${escapeHtml(a.username)}">${escapeHtml(a.fullName || a.username)} (${roleLabels[a.role] || a.role || 'อาจารย์'})</option>`).join('');
+
+  if (currentVal && (currentVal === 'ALL' || list.some(a => a.username === currentVal))) {
+    teacherSel.value = currentVal;
+  } else {
+    teacherSel.value = 'ALL';
+  }
+}
+
 function openCalendarEventModal(eventId = null, defaultDate = null) {
   if (!canManageCalendar()) {
     showToast('เฉพาะผู้บริหาร แอดมิน และอาจารย์เท่านั้นที่มีสิทธิ์เพิ่มหรือแก้ไขปฏิทิน', 'warning');
@@ -12882,6 +13015,10 @@ function openCalendarEventModal(eventId = null, defaultDate = null) {
   const titleInput = document.getElementById('calFormTitle');
   const catInput = document.getElementById('calFormCategory');
   const targetInput = document.getElementById('calFormTarget');
+  const targetGradeInput = document.getElementById('calTargetGrade');
+  const targetStudentInput = document.getElementById('calTargetSpecificStudent');
+  const targetTeacherRoleInput = document.getElementById('calTargetTeacherRole');
+  const targetTeacherInput = document.getElementById('calTargetSpecificTeacher');
   const sDateInput = document.getElementById('calFormStartDate');
   const eDateInput = document.getElementById('calFormEndDate');
   const sTimeInput = document.getElementById('calFormStartTime');
@@ -12898,6 +13035,16 @@ function openCalendarEventModal(eventId = null, defaultDate = null) {
     if (titleInput) titleInput.value = ev.title || '';
     if (catInput) catInput.value = ev.category || 'กิจกรรมทั่วไป';
     if (targetInput) targetInput.value = ev.targetAudience || 'all';
+
+    onCalTargetAudienceChange();
+    if (targetGradeInput) targetGradeInput.value = ev.targetGrade || 'ALL';
+    populateCalTargetStudents();
+    if (targetStudentInput) targetStudentInput.value = ev.targetStudentId || 'ALL';
+
+    if (targetTeacherRoleInput) targetTeacherRoleInput.value = ev.targetTeacherRole || 'ALL';
+    populateCalTargetTeachers();
+    if (targetTeacherInput) targetTeacherInput.value = ev.targetTeacherUsername || 'ALL';
+
     if (sDateInput) sDateInput.value = ev.startDate || '';
     if (eDateInput) eDateInput.value = ev.endDate || '';
     if (sTimeInput) sTimeInput.value = ev.startTime || '';
@@ -12915,6 +13062,15 @@ function openCalendarEventModal(eventId = null, defaultDate = null) {
     if (titleInput) titleInput.value = '';
     if (catInput) catInput.value = 'กิจกรรมทั่วไป';
     if (targetInput) targetInput.value = 'all';
+
+    onCalTargetAudienceChange();
+    if (targetGradeInput) targetGradeInput.value = 'ALL';
+    populateCalTargetStudents();
+    if (targetStudentInput) targetStudentInput.value = 'ALL';
+    if (targetTeacherRoleInput) targetTeacherRoleInput.value = 'ALL';
+    populateCalTargetTeachers();
+    if (targetTeacherInput) targetTeacherInput.value = 'ALL';
+
     const initDate = defaultDate || calSelectedDate || new Date().toISOString().split('T')[0];
     if (sDateInput) sDateInput.value = initDate;
     if (eDateInput) eDateInput.value = '';
@@ -12954,6 +13110,10 @@ async function saveCalendarEventForm() {
   const titleInput = document.getElementById('calFormTitle');
   const catInput = document.getElementById('calFormCategory');
   const targetInput = document.getElementById('calFormTarget');
+  const targetGradeInput = document.getElementById('calTargetGrade');
+  const targetStudentInput = document.getElementById('calTargetSpecificStudent');
+  const targetTeacherRoleInput = document.getElementById('calTargetTeacherRole');
+  const targetTeacherInput = document.getElementById('calTargetSpecificTeacher');
   const sDateInput = document.getElementById('calFormStartDate');
   const eDateInput = document.getElementById('calFormEndDate');
   const sTimeInput = document.getElementById('calFormStartTime');
@@ -12981,7 +13141,60 @@ async function saveCalendarEventForm() {
   const eventId = (idInput && idInput.value) ? idInput.value : ('CAL-' + Date.now());
   const category = catInput ? catInput.value : 'กิจกรรมทั่วไป';
   const targetAudience = targetInput ? targetInput.value : 'all';
-  const targetAudienceLabel = (targetAudience === 'teachers') ? 'เฉพาะอาจารย์และผู้บริหาร' : (targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน (นักเรียนและอาจารย์)');
+  const targetGrade = (targetAudience === 'students' && targetGradeInput) ? targetGradeInput.value : 'ALL';
+  const targetStudentId = (targetAudience === 'students' && targetStudentInput) ? targetStudentInput.value : 'ALL';
+  const targetTeacherRole = (targetAudience === 'teachers' && targetTeacherRoleInput) ? targetTeacherRoleInput.value : 'ALL';
+  const targetTeacherUsername = (targetAudience === 'teachers' && targetTeacherInput) ? targetTeacherInput.value : 'ALL';
+
+  let targetStudentName = '';
+  if (targetStudentId !== 'ALL') {
+    const st = allStudents.find(s => isIdMatch(s.studentId, targetStudentId));
+    if (st) targetStudentName = st.fullName;
+  }
+
+  let targetTeacherName = '';
+  if (targetTeacherUsername !== 'ALL') {
+    const tc = Array.isArray(subAdmins) ? subAdmins.find(a => a.username === targetTeacherUsername) : null;
+    if (tc) targetTeacherName = tc.fullName;
+    else if (currentAdmin && currentAdmin.username === targetTeacherUsername) targetTeacherName = currentAdmin.fullName;
+  }
+
+  // คำนวณ Label กลุ่มเป้าหมายที่ชัดเจน
+  let targetAudienceLabel = 'ทุกคน (นักเรียนและอาจารย์)';
+  if (targetAudience === 'students') {
+    if (targetStudentId !== 'ALL' && targetStudentName) {
+      targetAudienceLabel = `เฉพาะนักเรียน: ${targetStudentName}`;
+    } else if (targetGrade !== 'ALL') {
+      const gradeMap = {
+        'LOWER_SEC': 'ม.ต้น (ม.1 – ม.3)',
+        'UPPER_SEC': 'ม.ปลาย (ม.4 – ม.6)',
+        'มัธยมศึกษาปีที่ 1': 'ม.1',
+        'มัธยมศึกษาปีที่ 2': 'ม.2',
+        'มัธยมศึกษาปีที่ 3': 'ม.3',
+        'มัธยมศึกษาปีที่ 4': 'ม.4',
+        'มัธยมศึกษาปีที่ 5': 'ม.5',
+        'มัธยมศึกษาปีที่ 6': 'ม.6'
+      };
+      targetAudienceLabel = `เฉพาะนักเรียน ${gradeMap[targetGrade] || targetGrade}`;
+    } else {
+      targetAudienceLabel = 'เฉพาะนักเรียน (ทุกระดับชั้น)';
+    }
+  } else if (targetAudience === 'teachers') {
+    if (targetTeacherUsername !== 'ALL' && targetTeacherName) {
+      targetAudienceLabel = `เฉพาะอาจารย์: ${targetTeacherName}`;
+    } else if (targetTeacherRole !== 'ALL') {
+      const roleMap = {
+        TEACHER: 'อาจารย์ผู้สอน',
+        HOMEROOM: 'อาจารย์ประจำชั้น',
+        ACTIVITY: 'ฝ่ายกิจกรรม',
+        EXECUTIVE: 'ผู้บริหารสถานศึกษา'
+      };
+      targetAudienceLabel = `เฉพาะ${roleMap[targetTeacherRole] || targetTeacherRole}`;
+    } else {
+      targetAudienceLabel = 'เฉพาะอาจารย์และผู้บริหาร';
+    }
+  }
+
   const endDate = (eDateInput && eDateInput.value) ? eDateInput.value : startDate;
   const startTime = isAllDay ? '' : (sTimeInput ? sTimeInput.value : '');
   const endTime = isAllDay ? '' : (eTimeInput ? eTimeInput.value : '');
@@ -13001,6 +13214,12 @@ async function saveCalendarEventForm() {
     category: category,
     targetAudience: targetAudience,
     targetAudienceLabel: targetAudienceLabel,
+    targetGrade: targetGrade,
+    targetStudentId: targetStudentId,
+    targetStudentName: targetStudentName,
+    targetTeacherRole: targetTeacherRole,
+    targetTeacherUsername: targetTeacherUsername,
+    targetTeacherName: targetTeacherName,
     startDate: startDate,
     endDate: endDate,
     startTime: startTime,

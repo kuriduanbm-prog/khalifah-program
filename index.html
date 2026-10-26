@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6.7">
+  <link rel="stylesheet" href="style.css?v=6.8">
 </head>
 <body class="auth-locked">
 
@@ -4387,11 +4387,73 @@
             <label class="form-label" style="font-weight: 600; color: #0f172a;">
               กลุ่มเป้าหมาย (สิทธิ์การเห็น) <span style="color: var(--danger);">*</span>
             </label>
-            <select id="calFormTarget" class="form-control" style="font-weight: 600; background: #f8fafc;">
+            <select id="calFormTarget" class="form-control" style="font-weight: 600; background: #f8fafc;" onchange="onCalTargetAudienceChange()">
               <option value="all">🌐 ทุกคน (นักเรียนและอาจารย์)</option>
               <option value="students">🎓 เฉพาะนักเรียน</option>
               <option value="teachers">🔒 เฉพาะอาจารย์และผู้บริหาร</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Sub-options for เฉพาะนักเรียน: เลือกระดับชั้นเรียน หรือระบุตัวบุคคล -->
+        <div id="calTargetStudentsBox" style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.9rem;">
+          <div style="font-weight: 700; font-size: 0.85rem; color: #166534; margin-bottom: 0.65rem; display: flex; align-items: center; gap: 0.4rem;">
+            <i class="fa-solid fa-graduation-cap"></i> กำหนดเป้าหมายนักเรียนและระดับชั้น
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; color: #15803d;">
+                สร้างสำหรับชั้นมัธยมศึกษาปีที่เท่าไหร่
+              </label>
+              <select id="calTargetGrade" class="form-control" style="font-size: 0.82rem; background: #fff;" onchange="onCalTargetGradeChange()">
+                <option value="ALL">ทุกระดับชั้น (ม.1 – ม.6)</option>
+                <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
+                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
+                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3 (ม.3)</option>
+                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
+                <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5 (ม.5)</option>
+                <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6 (ม.6)</option>
+                <option value="LOWER_SEC">กลุ่มมัธยมศึกษาตอนต้น (ม.1 – ม.3)</option>
+                <option value="UPPER_SEC">กลุ่มมัธยมศึกษาตอนปลาย (ม.4 – ม.6)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; color: #15803d;">
+                สร้างถึงใคร (ระบุนักเรียน)
+              </label>
+              <select id="calTargetSpecificStudent" class="form-control" style="font-size: 0.82rem; background: #fff;">
+                <option value="ALL">นักเรียนทุกคนในระดับชั้นที่เลือก</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-options for เฉพาะอาจารย์และผู้บริหาร: เลือกฝ่าย หรือระบุอาจารย์เฉพาะท่าน -->
+        <div id="calTargetTeachersBox" style="display: none; background: #fffdf5; border: 1.5px solid #fde68a; border-radius: 10px; padding: 0.85rem; margin-bottom: 0.9rem;">
+          <div style="font-weight: 700; font-size: 0.85rem; color: #92400e; margin-bottom: 0.65rem; display: flex; align-items: center; gap: 0.4rem;">
+            <i class="fa-solid fa-chalkboard-user"></i> กำหนดเป้าหมายอาจารย์และบุคลากร
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; color: #b45309;">
+                สร้างสำหรับฝ่าย / กลุ่มบทบาท
+              </label>
+              <select id="calTargetTeacherRole" class="form-control" style="font-size: 0.82rem; background: #fff;">
+                <option value="ALL">อาจารย์และบุคลากรทุกท่าน</option>
+                <option value="TEACHER">เฉพาะอาจารย์ผู้สอน</option>
+                <option value="HOMEROOM">เฉพาะอาจารย์ประจำชั้น</option>
+                <option value="ACTIVITY">เฉพาะฝ่ายกิจกรรม</option>
+                <option value="EXECUTIVE">เฉพาะผู้บริหารสถานศึกษา</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; color: #b45309;">
+                สร้างถึงใคร (ระบุอาจารย์เฉพาะท่าน)
+              </label>
+              <select id="calTargetSpecificTeacher" class="form-control" style="font-size: 0.82rem; background: #fff;">
+                <option value="ALL">อาจารย์ทุกคนในกลุ่มที่เลือก</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -4448,6 +4510,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=6.7"></script>
+  <script src="app.js?v=6.8"></script>
 </body>
 </html>
