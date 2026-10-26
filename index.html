@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6.8">
+  <link rel="stylesheet" href="style.css?v=6.9">
 </head>
 <body class="auth-locked">
 
@@ -4232,37 +4232,26 @@
           </button>
         </div>
 
-        <!-- Quick Event Selector Bar ("เลือกวันที่ เดือน เฉพาะที่มีกิจกรรมได้ด้วย") -->
-        <div class="cal-quick-jumper-card">
-          <div class="cal-quick-jumper-header">
-            <span class="cal-quick-jumper-title">
-              <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> ทางลัดเฉพาะวันที่มีกิจกรรม:
-            </span>
-            <span class="cal-quick-jumper-count" id="calQuickJumperCount">พบ 0 รายการ</span>
-          </div>
-          <select id="calEventQuickSelect-dash" class="cal-quick-select" onchange="jumpToSelectedCalendarEvent(this.value, 'dash')">
-            <option value="">-- แตะเพื่อเลือกดูวันที่มีกิจกรรมโดยตรง --</option>
-          </select>
-        </div>
-
-        <!-- Controls Toolbar: Month/Year select + Prev/Today/Next -->
+        <!-- Controls Toolbar: Month/Year select + Prev/Today/Next (Minimal & Single Row) -->
         <div class="cal-controls-toolbar cal-phone-toolbar">
           <div class="cal-select-group">
-            <select id="calMonthSelect-dash" class="cal-select cal-select-month" onchange="onCalendarSelectChange('dash')"></select>
-            <select id="calYearSelect-dash" class="cal-select cal-select-year" onchange="onCalendarSelectChange('dash')"></select>
+            <select id="calMonthSelect-dash" class="cal-select cal-select-month" onchange="onCalendarSelectChange('dash')" aria-label="เลือกเดือน"></select>
+            <select id="calYearSelect-dash" class="cal-select cal-select-year" onchange="onCalendarSelectChange('dash')" aria-label="เลือกปี พ.ศ."></select>
           </div>
           <div class="cal-btn-group">
-            <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(-1, 'dash')" title="เดือนก่อนหน้า">
+            <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(-1, 'dash')" title="เดือนก่อนหน้า" aria-label="เดือนก่อนหน้า">
               <i class="fa-solid fa-chevron-left"></i>
             </button>
             <button type="button" class="btn-cal-today" onclick="resetCalendarToToday('dash')">
               วันนี้
             </button>
-            <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(1, 'dash')" title="เดือนถัดไป">
+            <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(1, 'dash')" title="เดือนถัดไป" aria-label="เดือนถัดไป">
               <i class="fa-solid fa-chevron-right"></i>
             </button>
           </div>
           <!-- Hidden compatibility elements -->
+          <select id="calEventQuickSelect-dash" style="display: none;"></select>
+          <span id="calQuickJumperCount" style="display: none;"></span>
           <button type="button" id="btnDashCalAddEvent" style="display: none;"></button>
           <div id="btnCalViewFull-dash" style="display: none;"></div>
           <div id="btnCalViewSplit-dash" style="display: none;"></div>
@@ -4510,6 +4499,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=6.8"></script>
+  <script src="app.js?v=6.9"></script>
 </body>
 </html>

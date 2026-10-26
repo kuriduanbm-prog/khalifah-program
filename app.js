@@ -12104,20 +12104,12 @@ function updateCalendarViewClasses() {
 
 function populateCalendarSelects() {
   const scopes = ['dash', 'teacher', 'admin'];
-  const visibleEvents = (typeof getVisibleCalendarEvents === 'function') ? getVisibleCalendarEvents() : [];
   scopes.forEach(scope => {
     const mSelect = document.getElementById(`calMonthSelect-${scope}`);
     const ySelect = document.getElementById(`calYearSelect-${scope}`);
     if (mSelect) {
       mSelect.innerHTML = THAI_MONTH_NAMES.map((name, idx) => {
-        const m = idx + 1;
-        const count = visibleEvents.filter(e => {
-          if (!e.startDate) return false;
-          const p = e.startDate.split('-');
-          return parseInt(p[0], 10) === calCurrentYear && parseInt(p[1], 10) === m;
-        }).length;
-        const badge = (count > 0 && scope === 'dash') ? ` (⭐ ${count} กิจกรรม)` : '';
-        return `<option value="${idx}">${name}${badge}</option>`;
+        return `<option value="${idx}">${name}</option>`;
       }).join('');
       mSelect.value = calCurrentMonth;
     }
@@ -12127,7 +12119,7 @@ function populateCalendarSelects() {
       let yOptions = '';
       for (let y = startYear; y <= endYear; y++) {
         const thaiY = y + 543;
-        yOptions += `<option value="${y}">${thaiY} (${y})</option>`;
+        yOptions += `<option value="${y}">${thaiY}</option>`;
       }
       ySelect.innerHTML = yOptions;
       ySelect.value = calCurrentYear;
@@ -12726,7 +12718,6 @@ function populateCalendarQuickSelect() {
   const quickSelect = document.getElementById('calEventQuickSelect-dash');
   const countBadge = document.getElementById('calActiveTabBadge');
   const jumperCount = document.getElementById('calQuickJumperCount');
-  if (!quickSelect) return;
 
   const visibleEvents = getVisibleCalendarEvents();
   const curY = calCurrentYear;
@@ -12743,6 +12734,8 @@ function populateCalendarQuickSelect() {
 
   if (countBadge) countBadge.innerText = currentMonthEvents.length;
   if (jumperCount) jumperCount.innerText = `พบ ${sortedEvents.length} รายการ`;
+
+  if (!quickSelect) return;
 
   let optHtml = `<option value="">-- แตะเพื่อเลือกดูวันที่มีกิจกรรม (${sortedEvents.length} รายการ) --</option>`;
 

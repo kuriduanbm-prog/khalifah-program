@@ -8444,13 +8444,110 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   background: #ffffff;
 }
 
+/* Minimal, Touch-Friendly Calendar Toolbar for Mobile */
 .cal-phone-toolbar {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-wrap: nowrap;
+  gap: 0.45rem;
+  background: #f8fafc;
+  padding: 0.35rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.cal-phone-toolbar .cal-select-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-phone-toolbar .cal-select {
+  height: 36px;
+  padding: 0 0.5rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  min-width: 0;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.cal-phone-toolbar .cal-select:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.cal-phone-toolbar .cal-select-month {
+  flex: 1.25;
+  min-width: 0;
+}
+
+.cal-phone-toolbar .cal-select-year {
+  flex: 0.95;
+  min-width: 0;
+}
+
+.cal-phone-toolbar .cal-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.cal-phone-toolbar .btn-cal-nav {
+  width: 34px;
+  height: 36px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.cal-phone-toolbar .btn-cal-today {
+  height: 36px;
+  padding: 0 0.65rem;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
+}
+
+.cal-phone-toolbar .btn-cal-nav:hover,
+.cal-phone-toolbar .btn-cal-today:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.cal-phone-toolbar .btn-cal-nav:active,
+.cal-phone-toolbar .btn-cal-today:active {
+  transform: scale(0.96);
+  background: #e2e8f0;
 }
 
 .cal-phone-matrix {
@@ -8873,20 +8970,21 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
 .cal-phone-view-toggle {
   display: flex;
   background: #f1f5f9;
-  padding: 4px;
+  padding: 3px;
   border-radius: 12px;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.65rem;
   border: 1px solid #e2e8f0;
   gap: 4px;
 }
 
 .cal-view-tab-btn {
   flex: 1;
+  height: 38px;
   border: none;
   background: transparent;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.8rem;
-  font-weight: 700;
+  padding: 0 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: #64748b;
   border-radius: 9px;
   cursor: pointer;
@@ -8901,7 +8999,8 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
 .cal-view-tab-btn.active {
   background: #ffffff;
   color: #0f172a;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: 700;
 }
 
 .cal-view-tab-badge {
@@ -8919,13 +9018,9 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   color: #ffffff;
 }
 
-/* Quick Jumper Card */
+/* Quick Jumper Card (Removed per user request) */
 .cal-quick-jumper-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 0.6rem 0.75rem;
-  margin-bottom: 0.75rem;
+  display: none !important;
 }
 
 .cal-quick-jumper-header {
