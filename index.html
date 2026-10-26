@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=7.0">
+  <link rel="stylesheet" href="style.css?v=7.1">
 </head>
 <body class="auth-locked">
 
@@ -1711,8 +1711,19 @@
                   </button>
                 </div>
 
-                <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnTeacherCalAddEvent" onclick="openCalendarEventModal()">
-                  <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมใหม่
+                <!-- Google Calendar Sync Button -->
+                <button type="button" class="btn-gcal-sync-pill" onclick="openGoogleCalendarSyncModal()" title="เชื่อมต่อและซิงค์กับ Google Calendar">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                    <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+                    <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+                    <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+                  </svg>
+                  <span>Google Calendar</span>
+                </button>
+
+                <button type="button" class="btn-gcal-create" id="btnTeacherCalAddEvent" onclick="openCalendarEventModal()" title="สร้างกิจกรรมใหม่">
+                  <svg width="18" height="18" viewBox="0 0 36 36" style="vertical-align: middle;"><path fill="#4285F4" d="M16 16v14h4V20z"/><path fill="#34A853" d="M30 16H20l-4 4h14z"/><path fill="#FBBC05" d="M6 16h10l4-4H6z"/><path fill="#EA4335" d="M20 16V6h-4v10z"/><path fill="none" d="M0 0h36v36H0z"/></svg>
+                  <span>สร้างกิจกรรม</span>
                 </button>
               </div>
             </div>
@@ -2857,8 +2868,19 @@
                   </button>
                 </div>
 
-                <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnAdminCalAddEvent" onclick="openCalendarEventModal()">
-                  <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมใหม่
+                <!-- Google Calendar Sync Button -->
+                <button type="button" class="btn-gcal-sync-pill" onclick="openGoogleCalendarSyncModal()" title="เชื่อมต่อและซิงค์กับ Google Calendar">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                    <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+                    <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+                    <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+                  </svg>
+                  <span>Google Calendar</span>
+                </button>
+
+                <button type="button" class="btn-gcal-create" id="btnAdminCalAddEvent" onclick="openCalendarEventModal()" title="สร้างกิจกรรมใหม่">
+                  <svg width="18" height="18" viewBox="0 0 36 36" style="vertical-align: middle;"><path fill="#4285F4" d="M16 16v14h4V20z"/><path fill="#34A853" d="M30 16H20l-4 4h14z"/><path fill="#FBBC05" d="M6 16h10l4-4H6z"/><path fill="#EA4335" d="M20 16V6h-4v10z"/><path fill="none" d="M0 0h36v36H0z"/></svg>
+                  <span>สร้างกิจกรรม</span>
                 </button>
               </div>
             </div>
@@ -4202,7 +4224,101 @@
             <i class="fa-solid fa-trash-can"></i> ลบกิจกรรม
           </button>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('calendarEventDetailModal')">ปิดหน้าต่าง</button>
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <a id="btnCalDetailAddToGoogle" href="#" target="_blank" class="btn btn-primary btn-sm btn-gcal-direct" title="เพิ่มกิจกรรมนี้ลงใน Google Calendar ของคุณ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align: middle; margin-right: 4px;">
+              <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#ffffff" stroke-width="1.2"/>
+              <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+              <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+            </svg>
+            เพิ่มลง Google Calendar
+          </a>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('calendarEventDetailModal')">ปิดหน้าต่าง</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Google Calendar Integration & Sync (สำหรับนักเรียนและอาจารย์) -->
+  <div class="modal-overlay" id="googleCalendarSyncModal" onclick="if(event.target===this)closeModal('googleCalendarSyncModal')">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header" style="align-items: center; border-bottom: 1px solid #dadce0; padding: 1.15rem 1.35rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: #e8f0fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+              <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+              <rect x="7" y="2" width="2" height="4" rx="1" fill="#1a73e8"/>
+              <rect x="15" y="2" width="2" height="4" rx="1" fill="#1a73e8"/>
+              <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+            </svg>
+          </div>
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #1a73e8; margin: 0; line-height: 1.3;">
+              เชื่อมต่อ Google Calendar
+            </h3>
+            <p style="font-size: 0.74rem; color: #5f6368; margin: 2px 0 0 0;">
+              ซิงค์กำหนดการและกิจกรรมโรงเรียนเข้าสู่ Google Calendar ของนักเรียนและอาจารย์
+            </p>
+          </div>
+        </div>
+        <button type="button" class="btn-icon" onclick="closeModal('googleCalendarSyncModal')" title="ปิดหน้าต่าง">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <!-- Option 1: 1-Click Sync current month -->
+        <div class="gcal-sync-option-card">
+          <div class="gcal-option-icon" style="background: #e8f0fe; color: #1a73e8;">
+            <i class="fa-solid fa-bolt"></i>
+          </div>
+          <div class="gcal-option-content" style="flex: 1; min-width: 0;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 0.2rem 0;">
+              1-Click บันทึกลง Google Calendar
+            </h4>
+            <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.65rem 0; line-height: 1.4;">
+              แตะกิจกรรมที่ต้องการเพื่อเปิดแอป Google Calendar และบันทึกเข้าปฏิทินส่วนตัวทันที
+            </p>
+            <div id="gcalMonthQuickLinks" style="display: flex; flex-direction: column; gap: 0.35rem;">
+              <!-- Populated dynamically via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Option 2: Download .ics calendar file -->
+        <div class="gcal-sync-option-card" style="margin-top: 0.85rem;">
+          <div class="gcal-option-icon" style="background: #e6f4ea; color: #137333;">
+            <i class="fa-solid fa-calendar-arrow-down"></i>
+          </div>
+          <div class="gcal-option-content" style="flex: 1; min-width: 0;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 0.2rem 0;">
+              ดาวน์โหลดไฟล์ปฏิทิน (.ics)
+            </h4>
+            <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.65rem 0; line-height: 1.4;">
+              นำเข้ากิจกรรมทั้งหมดลงใน Google Calendar, Apple Calendar (iOS) หรือ Outlook ในครั้งเดียว
+            </p>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="downloadSchoolCalendarIcs()" style="font-weight: 600; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-solid fa-download"></i> ดาวน์โหลดไฟล์ปฏิทิน (.ics)
+            </button>
+          </div>
+        </div>
+
+        <!-- Helpful Quick Guide -->
+        <div class="gcal-guide-box" style="margin-top: 1rem; background: #f8fafd; border: 1px solid #d2e3fc; border-radius: 10px; padding: 0.85rem 1rem;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: #1a73e8; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+            <i class="fa-solid fa-circle-question"></i> วิธีนำเข้าลง Google Calendar บนมือถือ:
+          </div>
+          <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.76rem; color: #475569; line-height: 1.55;">
+            <li>กดปุ่ม <strong>"ดาวน์โหลดไฟล์ปฏิทิน (.ics)"</strong> ด้านบน</li>
+            <li>แตะเปิดไฟล์ที่ดาวน์โหลดมา -> เลือกระบบ <strong>"Google Calendar"</strong></li>
+            <li>กด <strong>"เพิ่มทั้งหมด" (Add all)</strong> กิจกรรมจะซิงค์เข้าปฏิทิน Google ของคุณทันที</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="border-top: 1px solid #dadce0; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('googleCalendarSyncModal')">ปิดหน้าต่าง</button>
       </div>
     </div>
   </div>
@@ -4211,18 +4327,36 @@
   <div class="modal-overlay" id="schoolCalendarModal" onclick="if(event.target===this)closeModal('schoolCalendarModal')">
     <div class="modal-dialog cal-phone-modal-dialog">
       <div class="modal-header cal-phone-modal-header">
-        <div style="display: flex; align-items: center; gap: 0.65rem;">
-          <div class="cal-modal-icon-badge">
-            <i class="fa-solid fa-calendar-days"></i>
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div class="cal-modal-icon-badge" style="background: #e8f0fe; color: #1a73e8;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+                <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+                <rect x="7" y="2" width="2" height="4" rx="1" fill="#1a73e8"/>
+                <rect x="15" y="2" width="2" height="4" rx="1" fill="#1a73e8"/>
+                <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+              </svg>
+            </div>
+            <div>
+              <h3 style="font-size: 1.12rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.25;">ปฏิทินกิจกรรมโรงเรียน</h3>
+              <p style="font-size: 0.74rem; color: #64748b; margin: 2px 0 0 0;">เชื่อมต่อ Google Calendar และติดตามกำหนดการ</p>
+            </div>
           </div>
-          <div>
-            <h3 style="font-size: 1.12rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.25;">ปฏิทินกิจกรรมโรงเรียน</h3>
-            <p style="font-size: 0.74rem; color: #64748b; margin: 2px 0 0 0;">แตะที่วันที่มีสีเพื่อดูรายละเอียดประกาศ</p>
+          <div style="display: flex; align-items: center; gap: 0.4rem;">
+            <button type="button" class="btn-gcal-sync-pill" onclick="openGoogleCalendarSyncModal()" title="เชื่อมต่อ Google Calendar" style="padding: 0 8px; height: 32px; font-size: 0.75rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+                <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+                <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+              </svg>
+              <span>ซิงค์</span>
+            </button>
+            <button type="button" class="btn-icon" onclick="closeModal('schoolCalendarModal')" title="ปิดปฏิทิน">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
           </div>
         </div>
-        <button type="button" class="btn-icon" onclick="closeModal('schoolCalendarModal')" title="ปิดปฏิทิน">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
       </div>
 
       <div class="modal-body cal-phone-modal-body">
@@ -4503,6 +4637,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=7.0"></script>
+  <script src="app.js?v=7.1"></script>
 </body>
 </html>

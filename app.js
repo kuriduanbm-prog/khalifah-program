@@ -12342,6 +12342,188 @@ function isDateInRange(targetDate, startDate, endDate) {
   return targetDate >= s && targetDate <= e;
 }
 
+// ========================================================
+// GOOGLE CALENDAR SYNC & EXPORT UTILITIES
+// ("เชื่อมต่อกับ google calendar ของนร.ได้ด้วย และรูปแบบ UI เอาของ google calendar เลย")
+// ========================================================
+
+function getGoogleCalendarEventUrl(ev) {
+  if (!ev) return 'https://calendar.google.com/calendar/';
+  const title = encodeURIComponent(ev.title || 'กิจกรรมโรงเรียน');
+  const location = encodeURIComponent(ev.location || '');
+  let detailsText = ev.description || '';
+  if (ev.category) detailsText += `\n[หมวดหมู่: ${ev.category}]`;
+  if (ev.targetAudienceLabel) detailsText += `\n[สำหรับ: ${ev.targetAudienceLabel}]`;
+  detailsText += '\n\n(บันทึกจากระบบ Hasanat School System)';
+  const details = encodeURIComponent(detailsText);
+
+  let datesParam = '';
+  const sDate = (ev.startDate || '').replace(/-/g, '');
+  const rawEndDate = ev.endDate || ev.startDate || '';
+
+  if (ev.startTime) {
+    const sTime = ev.startTime.replace(':', '') + '00';
+    let eTime = ev.endTime ? ev.endTime.replace(':', '') + '00' : '';
+    if (!eTime) {
+      const parts = ev.startTime.split(':');
+      const h = parseInt(parts[0], 10);
+      const m = parts[1] || '00';
+      eTime = `${String(Math.min(23, h + 1)).padStart(2, '0')}${m}00`;
+    }
+    const eDate = rawEndDate.replace(/-/g, '');
+    datesParam = `${sDate}T${sTime}/${eDate}T${eTime}`;
+  } else {
+    // All-day: Google Calendar end date is exclusive, so add 1 day
+    try {
+      const parts = rawEndDate.split('-');
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      d.setDate(d.getDate() + 1);
+      const nextY = d.getFullYear();
+      const nextM = String(d.getMonth() + 1).padStart(2, '0');
+      const nextD = String(d.getDate()).padStart(2, '0');
+      datesParam = `${sDate}/${nextY}${nextM}${nextD}`;
+    } catch (e) {
+      datesParam = `${sDate}/${rawEndDate.replace(/-/g, '')}`;
+    }
+  }
+
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${datesParam}&ctz=Asia/Bangkok&details=${details}&location=${location}`;
+}
+
+function downloadSchoolCalendarIcs() {
+  const visibleEvents = getVisibleCalendarEvents();
+  if (!visibleEvents || visibleEvents.length === 0) {
+    showToast('ไม่มีกิจกรรมในปฏิทินสำหรับส่งออก', 'info');
+    return;
+  }
+
+  const nowIso = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const icsLines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Hasanat School System//School Calendar//TH',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:ปฏิทินโรงเรียน (Hasanat)',
+    'X-WR-TIMEZONE:Asia/Bangkok'
+  ];
+
+  visibleEvents.forEach(ev => {
+    if (!ev.startDate) return;
+    const uid = `${ev.id || 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)}@hasanat.local`;
+    const summary = (ev.title || 'กิจกรรมโรงเรียน').replace(/\r?\n/g, ' ');
+    const description = (ev.description || '').replace(/\r?\n/g, '\\n');
+    const location = (ev.location || '').replace(/\r?\n/g, ' ');
+    const sDate = ev.startDate.replace(/-/g, '');
+    const rawEndDate = ev.endDate || ev.startDate;
+
+    icsLines.push('BEGIN:VEVENT');
+    icsLines.push(`UID:${uid}`);
+    icsLines.push(`DTSTAMP:${nowIso}`);
+
+    if (ev.startTime) {
+      const sTime = ev.startTime.replace(':', '') + '00';
+      let eTime = ev.endTime ? ev.endTime.replace(':', '') + '00' : '';
+      if (!eTime) {
+        const parts = ev.startTime.split(':');
+        const h = parseInt(parts[0], 10);
+        const m = parts[1] || '00';
+        eTime = `${String(Math.min(23, h + 1)).padStart(2, '0')}${m}00`;
+      }
+      const eDate = rawEndDate.replace(/-/g, '');
+      icsLines.push(`DTSTART;TZID=Asia/Bangkok:${sDate}T${sTime}`);
+      icsLines.push(`DTEND;TZID=Asia/Bangkok:${eDate}T${eTime}`);
+    } else {
+      try {
+        const parts = rawEndDate.split('-');
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        d.setDate(d.getDate() + 1);
+        const nextDateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+        icsLines.push(`DTSTART;VALUE=DATE:${sDate}`);
+        icsLines.push(`DTEND;VALUE=DATE:${nextDateStr}`);
+      } catch (e) {
+        icsLines.push(`DTSTART;VALUE=DATE:${sDate}`);
+        icsLines.push(`DTEND;VALUE=DATE:${rawEndDate.replace(/-/g, '')}`);
+      }
+    }
+
+    icsLines.push(`SUMMARY:${summary}`);
+    if (description) icsLines.push(`DESCRIPTION:${description}`);
+    if (location) icsLines.push(`LOCATION:${location}`);
+    if (ev.category) icsLines.push(`CATEGORIES:${ev.category}`);
+    icsLines.push('END:VEVENT');
+  });
+
+  icsLines.push('END:VCALENDAR');
+
+  const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+  const downloadUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = `hasanat_school_calendar_${calCurrentYear}_${calCurrentMonth + 1}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(downloadUrl);
+  showToast('ดาวน์โหลดไฟล์ปฏิทิน (.ics) เรียบร้อยแล้ว พร้อมนำเข้า Google Calendar', 'success');
+}
+
+function openGoogleCalendarSyncModal() {
+  const listEl = document.getElementById('gcalQuickEventsList');
+  const visibleEvents = getVisibleCalendarEvents();
+  const curY = calCurrentYear;
+  const curM = calCurrentMonth + 1;
+
+  if (listEl) {
+    const monthEvents = visibleEvents.filter(ev => {
+      if (!ev.startDate) return false;
+      const parts = ev.startDate.split('-');
+      return parseInt(parts[0], 10) === curY && parseInt(parts[1], 10) === curM;
+    }).sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+    if (monthEvents.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 1.25rem 0.5rem; color: #94a3b8; font-size: 0.8rem;">
+          <i class="fa-regular fa-calendar" style="margin-right: 4px;"></i> ไม่มีกิจกรรมในเดือนที่เลือก คุณสามารถใช้ปุ่ม "ดาวน์โหลดไฟล์ปฏิทิน (.ics)" ด้านล่างเพื่อซิงค์กิจกรรมทั้งหมดได้
+        </div>
+      `;
+    } else {
+      let html = '';
+      monthEvents.forEach(ev => {
+        const gUrl = getGoogleCalendarEventUrl(ev);
+        const s = formatThaiDateDisplay(ev.startDate);
+        const timeStr = ev.startTime ? `${ev.startTime} น.` : 'ตลอดทั้งวัน';
+        const catClass = getCategoryClass(ev.category);
+        html += `
+          <div class="gcal-quick-link-item ${catClass}">
+            <div style="min-width: 0; flex: 1;">
+              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${escapeHtml(ev.title)}
+              </div>
+              <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <span><i class="fa-regular fa-calendar"></i> ${s}</span>
+                <span><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+                ${ev.location ? `<span><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> ${escapeHtml(ev.location)}</span>` : ''}
+              </div>
+            </div>
+            <a href="${gUrl}" target="_blank" rel="noopener noreferrer" class="btn-gcal-mini-action" title="เพิ่มกิจกรรมนี้ลงใน Google Calendar ของคุณ">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+                <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+                <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+              </svg>
+              <span>เพิ่ม</span>
+            </a>
+          </div>
+        `;
+      });
+      listEl.innerHTML = html;
+    }
+  }
+
+  openModal('googleCalendarSyncModal');
+}
+
 function renderCalendar(targetScope = 'all') {
   const scopes = (targetScope === 'all') ? ['dash', 'teacher', 'admin'] : [targetScope];
   const isManager = canManageCalendar();
@@ -12594,6 +12776,14 @@ function renderCalendarAgenda(scope) {
           <div class="cal-agenda-item-foot">
             <span class="cal-category-pill ${catClass}">${escapeHtml(ev.category || 'ทั่วไป')}</span>
             ${ev.location ? `<span class="cal-agenda-loc"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(ev.location)}</span>` : ''}
+            <a href="${getGoogleCalendarEventUrl(ev)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" class="btn-gcal-mini-action" style="margin-left: auto;" title="เพิ่มลงใน Google Calendar">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+                <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+                <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+              </svg>
+              <span>Google Cal</span>
+            </a>
           </div>
         </div>
       `;
@@ -12701,6 +12891,12 @@ function openCalendarEventDetail(eventId) {
     metaEl.innerText = `บันทึกโดย: ${ev.createdBy || 'ผู้ดูแลระบบ'}${targetDesc} • อัปเดตล่าสุด: ${ev.updatedAt || '-'}`;
   }
 
+  // เชื่อมต่อ Google Calendar: สร้างลิงก์ 1-Click เพิ่มลงปฏิทิน Google อัตโนมัติ
+  const btnAddToGoogle = document.getElementById('btnCalDetailAddToGoogle');
+  if (btnAddToGoogle) {
+    btnAddToGoogle.href = getGoogleCalendarEventUrl(ev);
+  }
+
   // ซ่อนปุ่มแก้ไข/ลบ สำหรับผู้ที่ไม่มีสิทธิ์ (รูปแนบ 4: ตนเองและแอดมินเท่านั้นที่สามารถลบได้)
   const canDel = canDeleteCalendarEvent(ev);
   if (adminActions) {
@@ -12795,6 +12991,7 @@ function renderStudentActiveEventsList() {
     const dateRangeStr = e ? `${s} – ${e}` : s;
     const timeStr = ev.startTime ? `${ev.startTime} - ${ev.endTime || 'เสร็จสิ้น'} น.` : 'ตลอดทั้งวัน';
     const targetLabel = ev.targetAudienceLabel || (ev.targetAudience === 'teachers' ? 'เฉพาะอาจารย์' : (ev.targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน'));
+    const gCalUrl = getGoogleCalendarEventUrl(ev);
 
     html += `
       <div class="cal-active-list-item ${catClass}" onclick="jumpToSelectedCalendarEvent('${ev.startDate}', 'dash')">
@@ -12812,8 +13009,18 @@ function renderStudentActiveEventsList() {
           <span><i class="fa-regular fa-clock"></i> ${timeStr}</span>
           ${ev.location ? `<span><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> ${escapeHtml(ev.location)}</span>` : ''}
         </div>
-        <div class="cal-active-list-action">
-          <span>แตะดูรายละเอียด</span> <i class="fa-solid fa-arrow-right"></i>
+        <div class="cal-active-list-action" style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 4px;">
+          <a href="${gCalUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" class="btn-gcal-mini-action" title="เพิ่มลง Google Calendar ทันที">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+              <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+              <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+              <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+            </svg>
+            <span>Google Cal</span>
+          </a>
+          <span style="display: inline-flex; align-items: center; gap: 0.3rem; color: #1a73e8; font-weight: 700;">
+            <span>แตะดูรายละเอียด</span> <i class="fa-solid fa-arrow-right"></i>
+          </span>
         </div>
       </div>
     `;
@@ -12968,16 +13175,27 @@ function openCalendarDayModal(dateStr, dayEvents) {
         const dateRangeStr = e ? `${s} ถึง ${e}` : s;
         const timeStr = ev.startTime ? `${ev.startTime} - ${ev.endTime || 'เสร็จสิ้น'} น.` : 'ตลอดทั้งวัน (All-day)';
         const targetLabel = ev.targetAudienceLabel || (ev.targetAudience === 'teachers' ? 'เฉพาะอาจารย์' : (ev.targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน'));
+        const gCalUrl = getGoogleCalendarEventUrl(ev);
 
         cardsHtml += `
           <div class="cal-day-modal-card ${catClass}">
             <div class="cal-day-modal-card-header">
-              <span class="cal-category-pill ${catClass}">
-                <i class="${iconClass}"></i> ${escapeHtml(ev.category || 'กิจกรรมทั่วไป')}
-              </span>
-              <span class="cal-target-pill target-${ev.targetAudience || 'all'}">
-                ${escapeHtml(targetLabel)}
-              </span>
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                <span class="cal-category-pill ${catClass}">
+                  <i class="${iconClass}"></i> ${escapeHtml(ev.category || 'กิจกรรมทั่วไป')}
+                </span>
+                <span class="cal-target-pill target-${ev.targetAudience || 'all'}">
+                  ${escapeHtml(targetLabel)}
+                </span>
+              </div>
+              <a href="${gCalUrl}" target="_blank" rel="noopener noreferrer" class="btn-gcal-mini-action" title="เพิ่มกิจกรรมนี้ลงใน Google Calendar ของคุณ">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                  <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+                  <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+                  <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+                </svg>
+                <span>Google Cal</span>
+              </a>
             </div>
 
             <h4 class="cal-day-modal-card-title">
