@@ -12468,8 +12468,43 @@ function downloadSchoolCalendarIcs() {
   showToast('ดาวน์โหลดไฟล์ปฏิทิน (.ics) เรียบร้อยแล้ว พร้อมนำเข้า Google Calendar', 'success');
 }
 
+function subscribeToSchoolGoogleCalendar() {
+  let calId = localStorage.getItem('khalifah_school_gcal_id');
+  if (!calId) {
+    const input = prompt(
+      'กรุณาระบุ Google Calendar ID หรืออีเมล Gmail ของโรงเรียน (เช่น school@gmail.com หรือ c_xxx@group.calendar.google.com):',
+      ''
+    );
+    if (!input || !input.trim()) return;
+    calId = input.trim();
+    localStorage.setItem('khalifah_school_gcal_id', calId);
+    showToast('บันทึก Google Calendar ID ของโรงเรียนเรียบร้อยแล้ว', 'success');
+  }
+
+  // Open Google Calendar Subscribe URL (Zero-Download Cloud Sync)
+  const gcalSubscribeUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(calId)}`;
+  window.open(gcalSubscribeUrl, '_blank');
+}
+
+function configureSchoolGoogleCalendarId() {
+  const current = localStorage.getItem('khalifah_school_gcal_id') || '';
+  const input = prompt(
+    'ตั้งค่า Google Calendar ID หรืออีเมล Gmail ของโรงเรียนสำหรับติดตามปฏิทิน:',
+    current
+  );
+  if (input !== null) {
+    if (input.trim()) {
+      localStorage.setItem('khalifah_school_gcal_id', input.trim());
+      showToast('บันทึก Google Calendar ID ของโรงเรียนเรียบร้อยแล้ว', 'success');
+    } else {
+      localStorage.removeItem('khalifah_school_gcal_id');
+      showToast('ลบการตั้งค่า Calendar ID แล้ว', 'info');
+    }
+  }
+}
+
 function openGoogleCalendarSyncModal() {
-  const listEl = document.getElementById('gcalQuickEventsList');
+  const listEl = document.getElementById('gcalMonthQuickLinks') || document.getElementById('gcalQuickEventsList');
   const visibleEvents = getVisibleCalendarEvents();
   const curY = calCurrentYear;
   const curM = calCurrentMonth + 1;
@@ -12483,8 +12518,8 @@ function openGoogleCalendarSyncModal() {
 
     if (monthEvents.length === 0) {
       listEl.innerHTML = `
-        <div style="text-align: center; padding: 1.25rem 0.5rem; color: #94a3b8; font-size: 0.8rem;">
-          <i class="fa-regular fa-calendar" style="margin-right: 4px;"></i> ไม่มีกิจกรรมในเดือนที่เลือก คุณสามารถใช้ปุ่ม "ดาวน์โหลดไฟล์ปฏิทิน (.ics)" ด้านล่างเพื่อซิงค์กิจกรรมทั้งหมดได้
+        <div style="text-align: center; padding: 1.25rem 0.5rem; color: #94a3b8; font-size: 0.8rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+          <i class="fa-regular fa-calendar" style="margin-right: 4px;"></i> ไม่มีกิจกรรมในเดือนนี้ คุณสามารถเลือกเดือนอื่น หรือกดติดตามปฏิทินโรงเรียนด้านล่างได้ครับ
         </div>
       `;
     } else {
@@ -12497,16 +12532,16 @@ function openGoogleCalendarSyncModal() {
         html += `
           <div class="gcal-quick-link-item ${catClass}">
             <div style="min-width: 0; flex: 1;">
-              <div style="font-size: 0.82rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 ${escapeHtml(ev.title)}
               </div>
               <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap;">
-                <span><i class="fa-regular fa-calendar"></i> ${s}</span>
-                <span><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+                <span><i class="fa-regular fa-calendar" style="color: #1a73e8;"></i> ${s}</span>
+                <span><i class="fa-regular fa-clock" style="color: #1a73e8;"></i> ${timeStr}</span>
                 ${ev.location ? `<span><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> ${escapeHtml(ev.location)}</span>` : ''}
               </div>
             </div>
-            <a href="${gUrl}" target="_blank" rel="noopener noreferrer" class="btn-gcal-mini-action" title="เพิ่มกิจกรรมนี้ลงใน Google Calendar ของคุณ">
+            <a href="${gUrl}" target="_blank" rel="noopener noreferrer" class="btn-gcal-mini-action" title="เปิดแอป Google Calendar และกดบันทึกทันที (ไม่ต้องโหลดไฟล์)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
                 <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
                 <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>

@@ -4268,53 +4268,75 @@
       </div>
 
       <div class="modal-body" style="padding: 1.25rem;">
-        <!-- Option 1: 1-Click Sync current month -->
-        <div class="gcal-sync-option-card">
-          <div class="gcal-option-icon" style="background: #e8f0fe; color: #1a73e8;">
-            <i class="fa-solid fa-bolt"></i>
-          </div>
-          <div class="gcal-option-content" style="flex: 1; min-width: 0;">
-            <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 0.2rem 0;">
-              1-Click บันทึกลง Google Calendar
-            </h4>
-            <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.65rem 0; line-height: 1.4;">
-              แตะกิจกรรมที่ต้องการเพื่อเปิดแอป Google Calendar และบันทึกเข้าปฏิทินส่วนตัวทันที
-            </p>
-            <div id="gcalMonthQuickLinks" style="display: flex; flex-direction: column; gap: 0.35rem;">
-              <!-- Populated dynamically via JS -->
+        <!-- Option 1: 1-Click บันทึกลง Google Calendar (ไม่ต้องดาวน์โหลดไฟล์) -->
+        <div class="gcal-sync-option-card" style="border: 1.5px solid #1a73e8; background: #ffffff; border-radius: 12px; padding: 1rem; box-shadow: 0 2px 8px rgba(26,115,232,0.08);">
+          <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+            <div class="gcal-option-icon" style="background: #e8f0fe; color: #1a73e8; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0;">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div class="gcal-option-content" style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                <h4 style="font-size: 0.96rem; font-weight: 800; color: #1a73e8; margin: 0;">
+                  1-Click บันทึกลง Google Calendar
+                </h4>
+                <span style="font-size: 0.68rem; font-weight: 700; color: #137333; background: #e6f4ea; border: 1px solid #ceead6; padding: 1px 6px; border-radius: 9999px;">
+                  ⚡ ไม่ต้องดาวน์โหลดไฟล์
+                </span>
+              </div>
+              <p style="font-size: 0.78rem; color: #475569; margin: 0 0 0.75rem 0; line-height: 1.45;">
+                แตะปุ่ม <strong>"เพิ่ม"</strong> ที่กิจกรรมที่ต้องการ ระบบจะเปิด Google Calendar ขึ้นมา ให้กดปุ่ม <strong>"บันทึก"</strong> ได้ทันทีโดยไม่ต้องโหลดไฟล์ใดๆ ลงเครื่อง
+              </p>
+              <div id="gcalMonthQuickLinks" style="display: flex; flex-direction: column; gap: 0.45rem; max-height: 220px; overflow-y: auto; padding-right: 2px;">
+                <!-- Populated dynamically via JS -->
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Option 2: Download .ics calendar file -->
-        <div class="gcal-sync-option-card" style="margin-top: 0.85rem;">
-          <div class="gcal-option-icon" style="background: #e6f4ea; color: #137333;">
-            <i class="fa-solid fa-calendar-arrow-down"></i>
-          </div>
-          <div class="gcal-option-content" style="flex: 1; min-width: 0;">
-            <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 0.2rem 0;">
-              ดาวน์โหลดไฟล์ปฏิทิน (.ics)
-            </h4>
-            <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.65rem 0; line-height: 1.4;">
-              นำเข้ากิจกรรมทั้งหมดลงใน Google Calendar, Apple Calendar (iOS) หรือ Outlook ในครั้งเดียว
-            </p>
-            <button type="button" class="btn btn-outline-primary btn-sm" onclick="downloadSchoolCalendarIcs()" style="font-weight: 600; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.35rem;">
-              <i class="fa-solid fa-download"></i> ดาวน์โหลดไฟล์ปฏิทิน (.ics)
-            </button>
+        <!-- Option 2: กดติดตามปฏิทินโรงเรียนบน Google Calendar (ซิงค์อัตโนมัติ ไม่ต้องโหลดไฟล์) -->
+        <div class="gcal-sync-option-card" style="margin-top: 0.85rem; border: 1px solid #dadce0; background: #f8fafd; border-radius: 12px; padding: 1rem;">
+          <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+            <div class="gcal-option-icon" style="background: #e8f0fe; color: #1a73e8; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0;">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </div>
+            <div class="gcal-option-content" style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                <h4 style="font-size: 0.94rem; font-weight: 800; color: #0f172a; margin: 0;">
+                  ติดตามปฏิทินโรงเรียน (ซิงค์อัตโนมัติ)
+                </h4>
+                <span style="font-size: 0.68rem; font-weight: 700; color: #1a73e8; background: #e8f0fe; border: 1px solid #d2e3fc; padding: 1px 6px; border-radius: 9999px;">
+                  ไม่ต้องโหลดไฟล์
+                </span>
+              </div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 0.65rem 0; line-height: 1.45;">
+                เพิ่มปฏิทินโรงเรียนเข้าแอป Google Calendar ถาวร เมื่อมีกิจกรรมใหม่เข้ามา ระบบจะอัปเดตเข้าปฏิทินในโทรศัพท์อัตโนมัติ
+              </p>
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="subscribeToSchoolGoogleCalendar()" style="background: #1a73e8; border-color: #1a73e8; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                  <i class="fa-solid fa-plus"></i> เพิ่มปฏิทินโรงเรียนใน Google Cal
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="configureSchoolGoogleCalendarId()" style="font-size: 0.76rem; border-radius: 8px;" title="ตั้งค่าหรือเปลี่ยน Google Calendar ID / อีเมล">
+                  <i class="fa-solid fa-gear"></i> ตั้งค่า ID ปฏิทิน
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Helpful Quick Guide -->
-        <div class="gcal-guide-box" style="margin-top: 1rem; background: #f8fafd; border: 1px solid #d2e3fc; border-radius: 10px; padding: 0.85rem 1rem;">
-          <div style="font-size: 0.82rem; font-weight: 700; color: #1a73e8; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
-            <i class="fa-solid fa-circle-question"></i> วิธีนำเข้าลง Google Calendar บนมือถือ:
+        <!-- Option 3: ตัวเลือกเสริม: ดาวน์โหลดไฟล์ (.ics) -->
+        <details style="margin-top: 0.85rem; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 0.65rem 0.85rem; background: #fafbfc;">
+          <summary style="font-size: 0.8rem; font-weight: 700; color: #64748b; cursor: pointer; user-select: none;">
+            📁 ตัวเลือกเสริม: ดาวน์โหลดไฟล์ปฏิทิน (.ics) สำหรับนำเข้าแบบออฟไลน์
+          </summary>
+          <div style="margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid #f1f5f9;">
+            <p style="font-size: 0.76rem; color: #64748b; margin: 0 0 0.5rem 0; line-height: 1.4;">
+              สำหรับผู้ที่ต้องการนำเข้าแบบไฟล์ลง Apple Calendar (iOS/Mac), Microsoft Outlook หรือเก็บไฟล์สำรองไว้ในเครื่อง
+            </p>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="downloadSchoolCalendarIcs()" style="font-weight: 600; font-size: 0.78rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.35rem;">
+              <i class="fa-solid fa-download"></i> ดาวน์โหลดไฟล์ .ics
+            </button>
           </div>
-          <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.76rem; color: #475569; line-height: 1.55;">
-            <li>กดปุ่ม <strong>"ดาวน์โหลดไฟล์ปฏิทิน (.ics)"</strong> ด้านบน</li>
-            <li>แตะเปิดไฟล์ที่ดาวน์โหลดมา -> เลือกระบบ <strong>"Google Calendar"</strong></li>
-            <li>กด <strong>"เพิ่มทั้งหมด" (Add all)</strong> กิจกรรมจะซิงค์เข้าปฏิทิน Google ของคุณทันที</li>
-          </ol>
-        </div>
+        </details>
       </div>
 
       <div class="modal-footer" style="border-top: 1px solid #dadce0; justify-content: flex-end;">
