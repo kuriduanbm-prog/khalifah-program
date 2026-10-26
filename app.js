@@ -11314,6 +11314,26 @@ function getCategoryClass(cat) {
   return 'cat-general';
 }
 
+function getCategoryShortLabel(cat) {
+  const c = String(cat || '').trim();
+  if (c.includes('สอบ') || c.includes('ประเมิน')) return 'สอบ';
+  if (c.includes('หยุด') || c.includes('ปิดภาค')) return 'วันหยุด';
+  if (c.includes('ละหมาด') || c.includes('ศาสนกิจ') || c.includes('กุรอาน')) return 'ศาสนกิจ';
+  if (c.includes('เรียน') || c.includes('การสอน')) return 'การเรียน';
+  if (c.includes('ประชุม') || c.includes('สัมมนา')) return 'ประชุม';
+  return 'กิจกรรม';
+}
+
+function getCategoryIcon(cat) {
+  const c = String(cat || '').trim();
+  if (c.includes('สอบ') || c.includes('ประเมิน')) return 'fa-solid fa-file-pen';
+  if (c.includes('หยุด') || c.includes('ปิดภาค')) return 'fa-solid fa-mug-hot';
+  if (c.includes('ละหมาด') || c.includes('ศาสนกิจ') || c.includes('กุรอาน')) return 'fa-solid fa-mosque';
+  if (c.includes('เรียน') || c.includes('การสอน')) return 'fa-solid fa-book-open';
+  if (c.includes('ประชุม') || c.includes('สัมมนา')) return 'fa-solid fa-users';
+  return 'fa-solid fa-bullhorn';
+}
+
 function formatThaiDateDisplay(dateStr) {
   if (!dateStr) return '-';
   const parts = dateStr.split('-');
@@ -11376,6 +11396,7 @@ function renderCalendar(targetScope = 'all') {
     const gridEl = document.getElementById(`calDaysGrid-${scope}`);
     if (!gridEl) return;
 
+    const isStudentCompact = (scope === 'dash');
     let cellsHtml = '';
 
     // 1. Previous Month Days
@@ -11384,13 +11405,21 @@ function renderCalendar(targetScope = 'all') {
       const prevM = (calCurrentMonth === 0) ? 12 : calCurrentMonth;
       const prevY = (calCurrentMonth === 0) ? calCurrentYear - 1 : calCurrentYear;
       const dateStr = `${prevY}-${String(prevM).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-      cellsHtml += `
-        <div class="cal-day-cell cal-day-other-month" data-date="${dateStr}">
-          <div class="cal-day-header">
+      if (isStudentCompact) {
+        cellsHtml += `
+          <div class="cal-day-cell cal-day-other-month" data-date="${dateStr}">
             <span class="cal-day-num">${dayNum}</span>
           </div>
-        </div>
-      `;
+        `;
+      } else {
+        cellsHtml += `
+          <div class="cal-day-cell cal-day-other-month" data-date="${dateStr}">
+            <div class="cal-day-header">
+              <span class="cal-day-num">${dayNum}</span>
+            </div>
+          </div>
+        `;
+      }
     }
 
     // 2. Current Month Days
@@ -11407,47 +11436,87 @@ function renderCalendar(targetScope = 'all') {
       // Find events for this day
       const dayEvents = visibleEvents.filter(e => isDateInRange(dateStr, e.startDate, e.endDate));
 
-      let chipsHtml = '';
-      if (dayEvents.length > 0) {
-        chipsHtml += '<div class="cal-day-chips">';
-        const displayList = dayEvents.slice(0, maxChipsPerCell);
-        displayList.forEach(ev => {
-          const catClass = getCategoryClass(ev.category);
-          const timeInfo = ev.startTime ? ` (${ev.startTime} น.)` : '';
-          chipsHtml += `
-            <div class="cal-chip ${catClass}" title="${escapeHtml(ev.title)}${timeInfo}" onclick="event.stopPropagation(); openCalendarEventDetail('${ev.id}')">
-              <span class="cal-chip-dot"></span>
-              <span class="cal-chip-text">${escapeHtml(ev.title)}</span>
-            </div>
-          `;
-        });
-        if (dayEvents.length > maxChipsPerCell) {
-          const moreCount = dayEvents.length - maxChipsPerCell;
-          chipsHtml += `<div class="cal-chip-more">+${moreCount} อื่นๆ</div>`;
+      if (isStudentCompact) {
+        // STUDENT VIEW: มินิมอล เซลล์สี่เหลี่ยมเต็มสีสันตามหมวดหมู่การประกาศ แตะแล้วเปิดดูรายละเอียด
+        let fillClass = '';
+        let miniLabelHtml = '';
+        let tooltipText = `วันที่ ${formatThaiDateDisplay(dateStr)}`;
+
+        if (dayEvents.length > 0) {
+          const primaryCatClass = getCategoryClass(dayEvents[0].category);
+          fillClass = `cal-day-event-filled fill-${primaryCatClass}`;
+          if (dayEvents.length === 1) {
+            const shortLabel = getCategoryShortLabel(dayEvents[0].category);
+            miniLabelHtml = `<span class="cal-mini-label">${escapeHtml(shortLabel)}</span>`;
+            tooltipText = `📌 ${escapeHtml(dayEvents[0].title)} (${formatThaiDateDisplay(dateStr)}) - แตะเพื่อดูรายละเอียด`;
+          } else {
+            miniLabelHtml = `<span class="cal-mini-label">${dayEvents.length} ประกาศ</span>`;
+            tooltipText = `📌 ${dayEvents.length} ประกาศและกิจกรรม (${formatThaiDateDisplay(dateStr)}) - แตะเพื่อดูรายละเอียด`;
+          }
+        } else if (isToday) {
+          miniLabelHtml = `<span class="cal-mini-today-dot"></span>`;
+          tooltipText = `วันนี้ (${formatThaiDateDisplay(dateStr)})`;
         }
-        chipsHtml += '</div>';
-      }
 
-      const cellClasses = [
-        'cal-day-cell',
-        isToday ? 'cal-day-today' : '',
-        isSelected ? 'cal-day-selected' : '',
-        isSun ? 'cal-day-sun' : '',
-        isFri ? 'cal-day-fri' : ''
-      ].filter(Boolean).join(' ');
+        const cellClasses = [
+          'cal-day-cell',
+          fillClass,
+          isToday ? 'cal-day-today' : '',
+          isSelected ? 'cal-day-selected' : '',
+          isSun ? 'cal-day-sun' : '',
+          isFri ? 'cal-day-fri' : ''
+        ].filter(Boolean).join(' ');
 
-      // Double-click on admin/teacher allows quick add
-      const dblClickAttr = isManager ? `ondblclick="openCalendarEventModal(null, '${dateStr}')"` : '';
-
-      cellsHtml += `
-        <div class="${cellClasses}" data-date="${dateStr}" onclick="selectCalendarDate('${dateStr}')" ${dblClickAttr}>
-          <div class="cal-day-header">
+        cellsHtml += `
+          <div class="${cellClasses}" data-date="${dateStr}" onclick="handleCalendarDayClick('${dateStr}', '${scope}')" title="${tooltipText}">
             <span class="cal-day-num">${day}</span>
-            ${isToday ? '<span class="cal-today-tag">วันนี้</span>' : ''}
+            ${miniLabelHtml}
+            ${(isToday && dayEvents.length > 0) ? '<span class="cal-mini-today-indicator"></span>' : ''}
           </div>
-          ${chipsHtml}
-        </div>
-      `;
+        `;
+      } else {
+        // TEACHER & ADMIN VIEW: มุมมองกำหนดการพร้อมชิปรายการ และดับเบิ้ลคลิกเพิ่มกิจกรรม
+        let chipsHtml = '';
+        if (dayEvents.length > 0) {
+          chipsHtml += '<div class="cal-day-chips">';
+          const displayList = dayEvents.slice(0, maxChipsPerCell);
+          displayList.forEach(ev => {
+            const catClass = getCategoryClass(ev.category);
+            const timeInfo = ev.startTime ? ` (${ev.startTime} น.)` : '';
+            chipsHtml += `
+              <div class="cal-chip ${catClass}" title="${escapeHtml(ev.title)}${timeInfo}" onclick="event.stopPropagation(); openCalendarEventDetail('${ev.id}')">
+                <span class="cal-chip-dot"></span>
+                <span class="cal-chip-text">${escapeHtml(ev.title)}</span>
+              </div>
+            `;
+          });
+          if (dayEvents.length > maxChipsPerCell) {
+            const moreCount = dayEvents.length - maxChipsPerCell;
+            chipsHtml += `<div class="cal-chip-more">+${moreCount} อื่นๆ</div>`;
+          }
+          chipsHtml += '</div>';
+        }
+
+        const cellClasses = [
+          'cal-day-cell',
+          isToday ? 'cal-day-today' : '',
+          isSelected ? 'cal-day-selected' : '',
+          isSun ? 'cal-day-sun' : '',
+          isFri ? 'cal-day-fri' : ''
+        ].filter(Boolean).join(' ');
+
+        const dblClickAttr = isManager ? `ondblclick="openCalendarEventModal(null, '${dateStr}')"` : '';
+
+        cellsHtml += `
+          <div class="${cellClasses}" data-date="${dateStr}" onclick="handleCalendarDayClick('${dateStr}', '${scope}')" ${dblClickAttr}>
+            <div class="cal-day-header">
+              <span class="cal-day-num">${day}</span>
+              ${isToday ? '<span class="cal-today-tag">วันนี้</span>' : ''}
+            </div>
+            ${chipsHtml}
+          </div>
+        `;
+      }
     }
 
     // 3. Next Month Days Padding to complete grid (multiples of 7)
@@ -11457,13 +11526,21 @@ function renderCalendar(targetScope = 'all') {
       const nextM = (calCurrentMonth === 11) ? 1 : calCurrentMonth + 2;
       const nextY = (calCurrentMonth === 11) ? calCurrentYear + 1 : calCurrentYear;
       const dateStr = `${nextY}-${String(nextM).padStart(2, '0')}-${String(nextDay).padStart(2, '0')}`;
-      cellsHtml += `
-        <div class="cal-day-cell cal-day-other-month" data-date="${dateStr}">
-          <div class="cal-day-header">
+      if (isStudentCompact) {
+        cellsHtml += `
+          <div class="cal-day-cell cal-day-other-month" data-date="${dateStr}">
             <span class="cal-day-num">${nextDay}</span>
           </div>
-        </div>
-      `;
+        `;
+      } else {
+        cellsHtml += `
+          <div class="cal-day-cell cal-day-other-month" data-date="${dateStr}">
+            <div class="cal-day-header">
+              <span class="cal-day-num">${nextDay}</span>
+            </div>
+          </div>
+        `;
+      }
     }
 
     gridEl.innerHTML = cellsHtml;
@@ -11638,6 +11715,109 @@ function openCalendarEventDetail(eventId) {
   }
 
   openModal('calendarEventDetailModal');
+}
+
+function handleCalendarDayClick(dateStr, scope) {
+  selectCalendarDate(dateStr);
+
+  // ฝั่งนักเรียน: กดดูตรงวันที่ รายละเอียดประกาศจะเด้งขึ้นมาทันที
+  if (scope === 'dash') {
+    const visibleEvents = getVisibleCalendarEvents();
+    const dayEvents = visibleEvents.filter(e => isDateInRange(dateStr, e.startDate, e.endDate));
+    if (dayEvents.length > 0) {
+      openCalendarDayModal(dateStr, dayEvents);
+    } else {
+      showToast(`วันที่ ${formatThaiDateDisplay(dateStr)}: ไม่มีประกาศหรือกิจกรรม`, 'info');
+    }
+  }
+}
+
+function openCalendarDayModal(dateStr, dayEvents) {
+  const modal = document.getElementById('calendarDayEventsModal');
+  if (!modal) return;
+
+  const { dayName, fullDate } = formatThaiDateWithDayName(dateStr);
+  const titleEl = document.getElementById('calDayModalTitle');
+  const subEl = document.getElementById('calDayModalSubtitle');
+  const countEl = document.getElementById('calDayModalCount');
+  const bodyEl = document.getElementById('calDayModalBody');
+
+  if (titleEl) titleEl.innerText = `วัน${dayName}ที่ ${fullDate}`;
+  if (subEl) subEl.innerText = 'ประกาศและกำหนดการโรงเรียน';
+  if (countEl) countEl.innerText = `รวมทั้งสิ้น ${dayEvents.length} รายการ`;
+
+  if (bodyEl) {
+    if (!dayEvents || dayEvents.length === 0) {
+      bodyEl.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: #64748b;">
+          <i class="fa-regular fa-calendar-xmark" style="font-size: 2.5rem; color: #94a3b8; margin-bottom: 0.75rem;"></i>
+          <div style="font-weight: 700; color: #334155; font-size: 1rem;">ไม่มีประกาศหรือกิจกรรมในวันนี้</div>
+          <div style="font-size: 0.85rem; margin-top: 0.25rem;">กำหนดการปกติ ไม่มีการแจ้งเตือนเป็นพิเศษ</div>
+        </div>
+      `;
+    } else {
+      let cardsHtml = '<div style="display: flex; flex-direction: column; gap: 0.95rem;">';
+      dayEvents.forEach(ev => {
+        const catClass = getCategoryClass(ev.category);
+        const iconClass = getCategoryIcon(ev.category);
+        const s = formatThaiDateDisplay(ev.startDate);
+        const e = (ev.endDate && ev.endDate !== ev.startDate) ? formatThaiDateDisplay(ev.endDate) : null;
+        const dateRangeStr = e ? `${s} ถึง ${e}` : s;
+        const timeStr = ev.startTime ? `${ev.startTime} - ${ev.endTime || 'เสร็จสิ้น'} น.` : 'ตลอดทั้งวัน (All-day)';
+        const targetLabel = ev.targetAudienceLabel || (ev.targetAudience === 'teachers' ? 'เฉพาะอาจารย์' : (ev.targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน'));
+
+        cardsHtml += `
+          <div class="cal-day-modal-card ${catClass}">
+            <div class="cal-day-modal-card-header">
+              <span class="cal-category-pill ${catClass}">
+                <i class="${iconClass}"></i> ${escapeHtml(ev.category || 'กิจกรรมทั่วไป')}
+              </span>
+              <span class="cal-target-pill target-${ev.targetAudience || 'all'}">
+                ${escapeHtml(targetLabel)}
+              </span>
+            </div>
+
+            <h4 class="cal-day-modal-card-title">
+              ${escapeHtml(ev.title || 'ไม่มีชื่อกิจกรรม')}
+            </h4>
+
+            <div class="cal-day-modal-meta-grid">
+              <div class="cal-day-modal-meta-item">
+                <i class="fa-regular fa-calendar" style="color: var(--primary);"></i>
+                <span>${dateRangeStr}</span>
+              </div>
+              <div class="cal-day-modal-meta-item">
+                <i class="fa-regular fa-clock" style="color: var(--primary);"></i>
+                <span>${timeStr}</span>
+              </div>
+              ${ev.location ? `
+                <div class="cal-day-modal-meta-item" style="grid-column: 1 / -1;">
+                  <i class="fa-solid fa-location-dot" style="color: #ef4444;"></i>
+                  <span>${escapeHtml(ev.location)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            ${ev.description ? `
+              <div class="cal-day-modal-desc-box">
+                <div class="cal-day-modal-desc-title"><i class="fa-solid fa-circle-info"></i> รายละเอียดประกาศ</div>
+                <div class="cal-day-modal-desc-text">${escapeHtml(ev.description)}</div>
+              </div>
+            ` : ''}
+
+            <div class="cal-day-modal-card-footer">
+              <span><i class="fa-regular fa-user"></i> บันทึกโดย: ${escapeHtml(ev.createdBy || 'โรงเรียน')}</span>
+              ${ev.updatedAt ? `<span><i class="fa-regular fa-clock"></i> ${escapeHtml(ev.updatedAt)}</span>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      cardsHtml += '</div>';
+      bodyEl.innerHTML = cardsHtml;
+    }
+  }
+
+  openModal('calendarDayEventsModal');
 }
 
 function openCalendarEventModal(eventId = null, defaultDate = null) {
