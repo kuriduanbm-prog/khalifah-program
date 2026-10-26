@@ -13835,8 +13835,8 @@ function openGoogleCalendarSyncModal() {
 
     if (monthEvents.length === 0) {
       listEl.innerHTML = `
-        <div style="text-align: center; padding: 1.25rem 0.5rem; color: #94a3b8; font-size: 0.8rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
-          <i class="fa-regular fa-calendar" style="margin-right: 4px;"></i> ไม่มีกิจกรรมในเดือนนี้ คุณสามารถเลือกเดือนอื่น หรือกดติดตามปฏิทินโรงเรียนด้านล่างได้ครับ
+        <div style="text-align: center; padding: 1.5rem 0.75rem; color: #94a3b8; font-size: 0.85rem; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+          <i class="fa-regular fa-calendar" style="margin-right: 6px; font-size: 1.1rem;"></i> ไม่มีกิจกรรมในเดือนนี้ คุณสามารถเลือกเดือนอื่น หรือกดติดตามปฏิทินโรงเรียนด้านล่างได้ครับ
         </div>
       `;
     } else {
@@ -13848,23 +13848,25 @@ function openGoogleCalendarSyncModal() {
         const catClass = getCategoryClass(ev.category);
         html += `
           <div class="gcal-quick-link-item ${catClass}">
-            <div style="min-width: 0; flex: 1;">
-              <div style="font-size: 0.84rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <div style="min-width: 0; flex: 1; padding-right: 6px;">
+              <div style="font-size: 0.88rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35;">
                 ${escapeHtml(ev.title)}
               </div>
-              <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap;">
-                <span><i class="fa-regular fa-calendar" style="color: #1a73e8;"></i> ${s}</span>
-                <span><i class="fa-regular fa-clock" style="color: #1a73e8;"></i> ${timeStr}</span>
-                ${ev.location ? `<span><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> ${escapeHtml(ev.location)}</span>` : ''}
+              <div style="font-size: 0.74rem; color: #64748b; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <span style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-calendar" style="color: #1a73e8;"></i> ${s}</span>
+                <span style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-regular fa-clock" style="color: #1a73e8;"></i> ${timeStr}</span>
+                ${ev.location ? `<span style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> ${escapeHtml(ev.location)}</span>` : ''}
               </div>
             </div>
-            <a href="${gUrl}" target="_blank" rel="noopener noreferrer" class="btn-gcal-mini-action" title="เปิดแอป Google Calendar และกดบันทึกทันที (ไม่ต้องโหลดไฟล์)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
-                <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
-                <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
-                <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+            <a href="${gUrl}" target="_blank" rel="noopener noreferrer" class="btn-gcal-add-enticing" title="เปิดแอป Google Calendar และกดบันทึกทันที">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                <rect x="3" y="4" width="18" height="18" rx="3.5" fill="#ffffff" stroke="currentColor" stroke-width="2"/>
+                <rect x="3" y="4" width="18" height="6" rx="3.5" fill="currentColor"/>
+                <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
+                <circle cx="16" cy="3" r="1.5" fill="currentColor"/>
+                <text x="12" y="18" fill="currentColor" font-size="8.5" font-weight="900" text-anchor="middle" font-family="sans-serif">31</text>
               </svg>
-              <span>เพิ่ม</span>
+              <span>+ เพิ่มลงปฏิทิน</span>
             </a>
           </div>
         `;
@@ -13897,6 +13899,12 @@ function renderCalendar(targetScope = 'all') {
       addBtn.style.display = isManager ? 'inline-flex' : 'none';
     }
   });
+
+  // ซิงค์ปุ่มเพิ่มกิจกรรมเดี่ยวบน schoolCalendarModal ให้เฉพาะอาจารย์หรือแอดมินเห็น
+  const modalAddBtn = document.getElementById('btnModalCalAddEvent');
+  if (modalAddBtn) {
+    modalAddBtn.style.display = isManager ? 'inline-flex' : 'none';
+  }
 
   // Calculate Month Days
   const firstDayIndex = new Date(calCurrentYear, calCurrentMonth, 1).getDay(); // 0 = Sun
@@ -14458,6 +14466,10 @@ function openSchoolCalendarModal() {
   renderCalendar('dash');
   updateCalendarLauncherBadge();
   populateCalendarQuickSelect();
+  const modalAddBtn = document.getElementById('btnModalCalAddEvent');
+  if (modalAddBtn) {
+    modalAddBtn.style.display = canManageCalendar() ? 'inline-flex' : 'none';
+  }
   openModal('schoolCalendarModal');
 }
 
@@ -14540,13 +14552,15 @@ function openCalendarDayModal(dateStr, dayEvents) {
                   ${escapeHtml(targetLabel)}
                 </span>
               </div>
-              <a href="${gCalUrl}" target="_blank" rel="noopener noreferrer" class="btn-gcal-mini-action" title="เพิ่มกิจกรรมนี้ลงใน Google Calendar ของคุณ">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
-                  <rect x="3" y="4" width="18" height="18" rx="3" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
-                  <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
-                  <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+              <a href="${gCalUrl}" target="_blank" rel="noopener noreferrer" class="btn-gcal-add-enticing" title="เปิดแอป Google Calendar และกดบันทึกทันที">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                  <rect x="3" y="4" width="18" height="18" rx="3.5" fill="#ffffff" stroke="currentColor" stroke-width="2"/>
+                  <rect x="3" y="4" width="18" height="6" rx="3.5" fill="currentColor"/>
+                  <circle cx="8" cy="3" r="1.5" fill="currentColor"/>
+                  <circle cx="16" cy="3" r="1.5" fill="currentColor"/>
+                  <text x="12" y="18" fill="currentColor" font-size="8.5" font-weight="900" text-anchor="middle" font-family="sans-serif">31</text>
                 </svg>
-                <span>Google Cal</span>
+                <span>+ เพิ่มลงปฏิทิน</span>
               </a>
             </div>
 
@@ -14587,6 +14601,20 @@ function openCalendarDayModal(dateStr, dayEvents) {
       });
       cardsHtml += '</div>';
       bodyEl.innerHTML = cardsHtml;
+    }
+  }
+
+  // ซิงค์ปุ่มเพิ่มกิจกรรมในวันนี้เฉพาะอาจารย์หรือแอดมิน
+  const addDayBtn = document.getElementById('btnDayModalAddEvent');
+  if (addDayBtn) {
+    if (canManageCalendar()) {
+      addDayBtn.style.display = 'inline-flex';
+      addDayBtn.onclick = () => {
+        closeModal('calendarDayEventsModal');
+        openCalendarEventModal(null, dateStr);
+      };
+    } else {
+      addDayBtn.style.display = 'none';
     }
   }
 
