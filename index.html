@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6.6">
+  <link rel="stylesheet" href="style.css?v=6.7">
 </head>
 <body class="auth-locked">
 
@@ -1379,40 +1379,16 @@
             <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบนักเรียน
           </button>
         </div>
-  
-        <!-- Grade Promotion Tool (ตอบโจทย์ ม.5 -> ม.6) -->
-        <div style="background: var(--primary-light); padding: 1.25rem; border-radius: var(--radius-md); border: 1.5px solid #bae6fd;">
-          <h4 style="color: var(--primary-dark); font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 0.4rem;">
-            <i class="fa-solid fa-arrow-up-right-dots"></i> อัปเดตข้อมูล / เลื่อนชั้นปีการศึกษา
-          </h4>
-          <p style="font-size: 0.84rem; color: var(--text-body); margin: 0.4rem 0 1rem 0;">
-            เมื่อเริ่มต้นปีการศึกษาใหม่ หากท่านเลื่อนชั้นเรียน (เช่น จาก ม.5 ขึ้น ม.6) สามารถเลือกชั้นปีใหม่และกดบันทึกได้ทันที
-          </p>
-          <div style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
-            <select class="form-control" id="selectNewGrade" style="max-width: 220px; background: #fff;">
-              <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1</option>
-              <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
-              <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
-              <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
-              <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5</option>
-              <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6</option>
-              <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
-            </select>
-            <button class="btn btn-primary" onclick="updateStudentGrade()">
-              <i class="fa-solid fa-floppy-disk"></i> บันทึกเลื่อนชั้นปี
-            </button>
-          </div>
-        </div>
       </div>
     </section>
 
     <!-- ==================== VIEW 5: TEACHER & EXECUTIVE PORTAL (ระบบอาจารย์และผู้บริหาร) ==================== -->
     <section id="view-teacher" class="view-section">
-      <!-- Teacher & Executive Bento Header -->
+      <!-- Teacher & Executive Bento Header (รูปแนบ 3: แสดงชื่ออาจารย์ และวิชาที่สอนดูง่าย) -->
       <div class="teacher-hero-card">
         <div class="teacher-hero-content">
           <div class="teacher-hero-profile">
-            <div class="teacher-role-avatar">
+            <div class="teacher-role-avatar" id="teacherHeroAvatar">
               <i class="fa-solid fa-chalkboard-user"></i>
             </div>
             <div class="teacher-hero-meta">
@@ -1425,23 +1401,33 @@
                 </span>
               </div>
               <h2 class="teacher-hero-title" id="teacherHeaderName">
-                ระบบอาจารย์ผู้สอนและวิชาการ
+                อาจารย์ผู้สอน
               </h2>
               <p class="teacher-hero-subtitle" id="teacherHeaderSub">
-                เช็คชื่อนักเรียนประจำวัน ประเมินเกรดรายวิชา (เกรด 1 – 4) และติดตามสถิติภาพรวม
+                เช็คชื่อนักเรียนประจำวัน ประเมินเกรดรายวิชา และติดตามสถิติภาพรวม
               </p>
             </div>
           </div>
           <div class="teacher-hero-actions">
-            <span class="teacher-assigned-badge" id="teacherAssignedSubjectsBadge">
+            <div class="teacher-subjects-container" style="margin: 0; min-width: 250px; max-width: 440px;">
+              <div class="teacher-subjects-label">
+                <i class="fa-solid fa-book-open-reader" style="color: var(--primary);"></i> รายวิชาที่รับผิดชอบการสอน:
+              </div>
+              <div class="teacher-subjects-chips" id="teacherAssignedSubjectsChips">
+                <span class="teacher-subj-chip"><i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดวิชา...</span>
+              </div>
+            </div>
+            <span class="teacher-assigned-badge" id="teacherAssignedSubjectsBadge" style="display: none;">
               <i class="fa-solid fa-book-bookmark"></i> วิชาที่รับผิดชอบ: -
             </span>
-            <button class="btn btn-secondary btn-sm" id="btnBackToAdminFromTeacher" onclick="switchView('admin')" style="display: none;">
-              <i class="fa-solid fa-shield-halved"></i> หน้าแอดมินสูงสุด
-            </button>
-            <button class="teacher-logout-btn" onclick="teacherLogout()">
-              <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ
-            </button>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnBackToAdminFromTeacher" onclick="switchView('admin')" style="display: none;">
+                <i class="fa-solid fa-shield-halved"></i> หน้าแอดมินสูงสุด
+              </button>
+              <button type="button" class="teacher-logout-btn" onclick="teacherLogout()">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1517,32 +1503,54 @@
               <button type="button" class="btn btn-secondary btn-sm" onclick="markAllTeacherAttendance('present')">
                 <i class="fa-solid fa-check-double"></i> เช็ค "มาเรียน" ทั้งห้อง
               </button>
-              <button type="button" class="btn btn-primary" onclick="saveTeacherAttendanceBatch()">
-                <i class="fa-solid fa-floppy-disk"></i> บันทึกการเช็คชื่อวันนี้
+              <button type="button" class="btn btn-primary" id="btnSaveTeacherAttendance" onclick="saveTeacherAttendanceBatch()">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึกการเช็คชื่อ
               </button>
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; margin-bottom: 1.1rem; background: #f8fafc; padding: 0.95rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
-            <div class="form-group" style="margin: 0;">
-              <label class="form-label"><i class="fa-regular fa-calendar"></i> วันที่เช็คชื่อ</label>
-              <input type="date" class="form-control" id="teacherAttDateInput" onchange="renderTeacherAttendanceTable()">
+          <!-- Filter & Date History Navigation Bar (รูปแนบ 4: ดูย้อนหลังได้) -->
+          <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-light); margin-bottom: 1.1rem; display: flex; flex-direction: column; gap: 0.85rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.4rem;">
+                  <i class="fa-regular fa-calendar" style="color: var(--primary);"></i> เลือกวันที่เช็คชื่อ:
+                </span>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="shiftTeacherAttDate(-1)" title="ดูย้อนหลัง 1 วัน">
+                    <i class="fa-solid fa-chevron-left"></i> ย้อนหลัง
+                  </button>
+                  <input type="date" class="form-control" id="teacherAttDateInput" onchange="renderTeacherAttendanceTable()" style="max-width: 165px; height: 36px; padding: 0.35rem 0.6rem; font-weight: 600;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="shiftTeacherAttDate(1)" title="วันถัดไป">
+                    ถัดไป <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherAttDateToday()" title="กลับมาเป็นวันนี้">
+                    <i class="fa-solid fa-clock-rotate-left"></i> วันนี้
+                  </button>
+                </div>
+              </div>
+              <div id="teacherAttHistoryIndicator" class="teacher-att-history-indicator">
+                <i class="fa-solid fa-calendar-check" style="color: var(--primary);"></i> ข้อมูลประจำวันนี้
+              </div>
             </div>
-            <div class="form-group" style="margin: 0;">
-              <label class="form-label"><i class="fa-solid fa-layer-group"></i> เลือกระดับชั้นเรียน</label>
-              <select class="form-control" id="teacherAttGradeSelect" onchange="renderTeacherAttendanceTable()">
-                <option value="ALL">ทุกระดับชั้น (แสดงทั้งหมด)</option>
-                <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
-                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
-                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3 (ม.3)</option>
-                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
-                <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5 (ม.5)</option>
-                <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6 (ม.6)</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin: 0;">
-              <label class="form-label"><i class="fa-solid fa-magnifying-glass"></i> ค้นหาชื่อ/รหัสนักเรียน</label>
-              <input type="text" class="form-control" id="teacherAttSearchInput" placeholder="พิมพ์ชื่อหรือรหัส..." oninput="renderTeacherAttendanceTable()">
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label"><i class="fa-solid fa-layer-group"></i> เลือกระดับชั้นเรียน</label>
+                <select class="form-control" id="teacherAttGradeSelect" onchange="renderTeacherAttendanceTable()">
+                  <option value="ALL" selected>ทุกระดับชั้น (แสดงนักเรียนทุกคน)</option>
+                  <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
+                  <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
+                  <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3 (ม.3)</option>
+                  <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
+                  <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5 (ม.5)</option>
+                  <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6 (ม.6)</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label"><i class="fa-solid fa-magnifying-glass"></i> ค้นหาชื่อ/รหัสนักเรียน</label>
+                <input type="text" class="form-control" id="teacherAttSearchInput" placeholder="พิมพ์ชื่อหรือรหัส..." oninput="renderTeacherAttendanceTable()">
+              </div>
             </div>
           </div>
 
@@ -1598,20 +1606,37 @@
             <div class="form-group" style="margin: 0;">
               <label class="form-label"><i class="fa-solid fa-graduation-cap"></i> เลือกระดับชั้นเรียน</label>
               <select class="form-control" id="teacherPortalGradeSelect" onchange="renderTeacherPortalGradesTable()">
-                <option value="ALL">ทุกระดับชั้น (แสดงทั้งหมด)</option>
+                <option value="ALL" selected>ทุกระดับชั้น (แสดงนักเรียนทุกคน)</option>
                 <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
                 <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
                 <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3 (ม.3)</option>
                 <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
-                <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5 (ม.5)</option>
+                <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5 (ม.5)</option>
                 <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6 (ม.6)</option>
               </select>
             </div>
           </div>
 
+          <!-- Dynamic Assignment Columns Control Bar (รูปแนบ 4: เพิ่มช่องคะแนนได้ตามต้องการ) -->
+          <div class="teacher-assignments-control-bar">
+            <div class="assignments-bar-header">
+              <div class="assignments-bar-title">
+                <i class="fa-solid fa-list-check" style="color: var(--primary);"></i>
+                <span>ช่องเก็บคะแนน / ชิ้นงานย่อย:</span>
+                <span class="assignments-count-badge" id="teacherAssignmentsCount">0 ชิ้นงาน</span>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openAddAssignmentColumnModal()" style="font-weight: 600;">
+                <i class="fa-solid fa-plus-circle" style="color: var(--primary);"></i> เพิ่มช่องคะแนน/ชิ้นงาน
+              </button>
+            </div>
+            <div class="teacher-assignment-chips" id="teacherAssignmentChipsList">
+              <!-- Rendered dynamically via JS: chips for each custom assignment -->
+            </div>
+          </div>
+
           <div class="table-responsive">
-            <table class="custom-table">
-              <thead>
+            <table class="custom-table" id="teacherGradesTableMain">
+              <thead id="teacherPortalGradesTableHead">
                 <tr>
                   <th style="width: 115px;">รหัสนักเรียน</th>
                   <th>ชื่อ - นามสกุล</th>
@@ -1623,13 +1648,21 @@
               </thead>
               <tbody id="teacherPortalGradesTableBody">
                 <!-- Injected via app.js -->
-                          </table>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
       <!-- Teacher Subtab 3: School Calendar Management -->
       <div id="teacher-tab-calendar" class="teacher-subcontent" style="display: none;">
+        <!-- Mobile/Tablet Quick Add Bar (รูปแนบ 4: เพิ่มกิจกรรมได้ง่ายในมือถือหรือแท็บเล็ต) -->
+        <div class="teacher-cal-mobile-bar">
+          <button type="button" class="teacher-cal-quick-add-btn" onclick="openCalendarEventModal()">
+            <i class="fa-solid fa-circle-plus"></i> เพิ่มกิจกรรม / ประกาศโรงเรียนใหม่
+          </button>
+        </div>
+
         <div class="calendar-bento-container" id="teacherCalendarSection" style="margin-bottom: 1.5rem;">
           <div class="card cal-card-wrapper">
             <div class="card-header cal-card-header">
@@ -1717,6 +1750,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Teacher Mobile/Tablet Bottom Navigation Bar (รูปแนบ 4: บาร์ปุ่มแท็บแยกด้านล่าง) -->
+      <nav class="teacher-bottom-nav-bar" id="teacherBottomNavBar">
+        <button type="button" class="teacher-bottom-nav-item active" id="btnTeacherBottomAtt" onclick="switchTeacherTab('attendance')">
+          <i class="fa-solid fa-clipboard-check"></i>
+          <span>เช็คชื่อ</span>
+        </button>
+        <button type="button" class="teacher-bottom-nav-item" id="btnTeacherBottomGrade" onclick="switchTeacherTab('grades')">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>กรอกเกรด</span>
+        </button>
+        <button type="button" class="teacher-bottom-nav-item" id="btnTeacherBottomCal" onclick="switchTeacherTab('calendar')">
+          <i class="fa-solid fa-calendar-days"></i>
+          <span>ปฏิทิน</span>
+        </button>
+      </nav>
     </section>
 
     <!-- ==================== VIEW 6: SUPER ADMIN CONTROL CENTER ==================== -->
@@ -2085,47 +2134,128 @@
         </div>
       </div>
 
-      <!-- Admin Tab 3: Batch Grade Promotion -->
+      <!-- Admin Tab 3: Grade Promotion Center (เฉพาะแอดมินเท่านั้น เลื่อนขั้นทุกชั้นปีในครั้งเดียว หรือเลือกเป็นรายคน) -->
       <div id="admin-tab-promote" class="admin-content-tab" style="display: none;">
-        <div class="card" style="max-width: 600px;">
-          <div class="card-header">
-            <div>
-              <div class="card-title">
-                <i class="fa-solid fa-graduation-cap"></i> ระบบเลื่อนชั้นปีการศึกษาแบบยกห้อง
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+          
+          <!-- Card 1: เลื่อนขั้นทุกชั้นปีพร้อมกันทั้งโรงเรียนในครั้งเดียว (One-Click All Grades) -->
+          <div class="card" style="border: 2px solid #059669; box-shadow: 0 4px 16px rgba(5, 150, 105, 0.08);">
+            <div class="card-header" style="background: #f0fdf4; border-bottom: 1px solid #bbf7d0;">
+              <div>
+                <div class="card-title" style="color: #065f46;">
+                  <i class="fa-solid fa-graduation-cap"></i> 1. เลื่อนขั้นทุกชั้นปีในครั้งเดียว (ทั้งโรงเรียน)
+                </div>
+                <div class="card-subtitle" style="color: #047857;">
+                  ปรับเลื่อนชั้นปีนักเรียนทั้งหมดพร้อมกันในครั้งเดียวเมื่อขึ้นปีการศึกษาใหม่
+                </div>
               </div>
-              <div class="card-subtitle">อำนวยความสะดวกให้แอดมินปรับเลื่อนระดับชั้นนักเรียนอัตโนมัติเมื่อขึ้นปีการศึกษาใหม่</div>
+              <span class="badge-sub" style="background: #dcfce7; color: #15803d; border-color: #86efac; font-weight: 700;">
+                <i class="fa-solid fa-bolt"></i> ครั้งเดียวจบ
+              </span>
+            </div>
+            <div class="card-body" style="padding: 1.25rem;">
+              <div style="font-size: 0.82rem; color: #475569; margin-bottom: 0.95rem; line-height: 1.5;">
+                ระบบจะทำการเลื่อนระดับชั้นอัตโนมัติตามลำดับจากชั้นสูงสุดลงมา:
+                <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; font-weight: 600;">
+                  <div style="color: #b91c1c;">🎓 ม.6 ➔ สำเร็จการศึกษา (พร้อมเปลี่ยนสถานะ)</div>
+                  <div style="color: #0f172a;">⬆️ ม.5 ➔ มัธยมศึกษาปีที่ 6</div>
+                  <div style="color: #0f172a;">⬆️ ม.4 ➔ มัธยมศึกษาปีที่ 5</div>
+                  <div style="color: #0f172a;">⬆️ ม.3 ➔ มัธยมศึกษาปีที่ 4</div>
+                  <div style="color: #0f172a;">⬆️ ม.2 ➔ มัธยมศึกษาปีที่ 3</div>
+                  <div style="color: #0f172a;">⬆️ ม.1 ➔ มัธยมศึกษาปีที่ 2</div>
+                </div>
+              </div>
+              <div id="adminPromotionCountsBreakdown" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.78rem;">
+                <!-- Breakdown of student counts per grade -->
+              </div>
+              <button type="button" class="btn btn-primary btn-block" style="background: #059669; border-color: #047857;" onclick="executeFullSchoolBatchPromotion()">
+                <i class="fa-solid fa-bolt"></i> ยืนยันเลื่อนชั้นปีทุกระดับชั้นในครั้งเดียว
+              </button>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <div style="flex: 1;">
-              <label class="form-label">จากระดับชั้นเดิม</label>
-              <select class="form-control" id="batchFromGrade">
-                <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1</option>
-                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
-                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
-                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
-                <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5</option>
-                <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6</option>
-              </select>
+
+          <!-- Card 2: เลื่อนชั้นปีแบบเลือกทีละระดับชั้น (Batch by Grade) -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i class="fa-solid fa-layer-group"></i> 2. เลื่อนชั้นปีทีละระดับชั้น
+                </div>
+                <div class="card-subtitle">เลื่อนเฉพาะกลุ่มนักเรียนในระดับชั้นที่กำหนด</div>
+              </div>
             </div>
-            <div style="padding-top: 1.5rem; font-size: 1.5rem; color: var(--primary);">
-              <i class="fa-solid fa-arrow-right"></i>
-            </div>
-            <div style="flex: 1;">
-              <label class="form-label">เลื่อนขึ้นเป็นระดับชั้นใหม่</label>
-              <select class="form-control" id="batchToGrade">
-                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
-                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
-                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
-                <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5</option>
-                <option value="มัธยมศึกษาปีที่ 6" selected>มัธยมศึกษาปีที่ 6</option>
-                <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
-              </select>
+            <div class="card-body" style="padding: 1.25rem;">
+              <div style="display: flex; align-items: center; gap: 0.85rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 130px;">
+                  <label class="form-label">จากระดับชั้นเดิม</label>
+                  <select class="form-control" id="batchFromGrade">
+                    <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1</option>
+                    <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
+                    <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
+                    <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
+                    <option value="มัธยมศึกษาปีที่ 5" selected>มัธยมศึกษาปีที่ 5</option>
+                    <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6</option>
+                  </select>
+                </div>
+                <div style="padding-top: 1.5rem; font-size: 1.3rem; color: var(--primary);">
+                  <i class="fa-solid fa-arrow-right"></i>
+                </div>
+                <div style="flex: 1; min-width: 130px;">
+                  <label class="form-label">เลื่อนขึ้นเป็นระดับชั้นใหม่</label>
+                  <select class="form-control" id="batchToGrade">
+                    <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
+                    <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
+                    <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
+                    <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5</option>
+                    <option value="มัธยมศึกษาปีที่ 6" selected>มัธยมศึกษาปีที่ 6</option>
+                    <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
+                  </select>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-block" onclick="executeBatchPromotion()">
+                <i class="fa-solid fa-check"></i> เลื่อนชั้นปีเฉพาะระดับชั้นที่เลือก
+              </button>
             </div>
           </div>
-          <button class="btn btn-primary btn-block" onclick="executeBatchPromotion()">
-            <i class="fa-solid fa-bolt"></i> ยืนยันเลื่อนชั้นปีนักเรียนทั้งหมด
-          </button>
+
+          <!-- Card 3: เลื่อนชั้นปีนักเรียนเป็นรายบุคคล (Individual Student Promotion) -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i class="fa-solid fa-user-pen"></i> 3. เลื่อนชั้นปีนักเรียนเป็นรายคน
+                </div>
+                <div class="card-subtitle">ปรับระดับชั้นให้นักเรียนเฉพาะบุคคลอย่างเจาะจง</div>
+              </div>
+            </div>
+            <div class="card-body" style="padding: 1.25rem;">
+              <div class="form-group" style="margin-bottom: 0.85rem;">
+                <label class="form-label">เลือกนักเรียนที่ต้องการเลื่อนชั้นปี</label>
+                <select class="form-control" id="adminSingleStudentSelect" onchange="onAdminSingleStudentSelectChange()">
+                  <option value="">-- กรุณาเลือกนักเรียน --</option>
+                </select>
+              </div>
+              <div id="adminSingleStudentCurrentInfo" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.6rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: #334155;">
+                <!-- Student current grade & name info -->
+              </div>
+              <div class="form-group" style="margin-bottom: 1.15rem;">
+                <label class="form-label">เลื่อนระดับชั้นขึ้นเป็น</label>
+                <select class="form-control" id="adminSingleTargetGrade">
+                  <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1</option>
+                  <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
+                  <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
+                  <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
+                  <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5</option>
+                  <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6</option>
+                  <option value="สำเร็จการศึกษา">สำเร็จการศึกษา</option>
+                </select>
+              </div>
+              <button type="button" class="btn btn-primary btn-block" onclick="executeSingleStudentPromotion()">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึกเลื่อนชั้นปีรายบุคคล
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -2989,6 +3119,78 @@
             <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ (Logout)
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Teacher Account & Profile Photo Modal (รูปแนบ 5: ป๊อปอัปมุมขวาบนโหมดอาจารย์) -->
+  <div class="modal-overlay" id="teacherAccountModal">
+    <div class="modal-dialog" style="max-width: 420px; text-align: center;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-dark);">
+          <i class="fa-solid fa-chalkboard-user" style="color: var(--primary);"></i> ข้อมูลโปรไฟล์อาจารย์
+        </div>
+        <button class="btn-icon" onclick="closeModal('teacherAccountModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.25rem;">
+        <div class="profile-avatar-wrapper" style="margin: 0 auto 1rem auto; width: 88px; height: 88px;">
+          <div id="teacherModalAvatar" class="profile-avatar-display" style="width: 88px; height: 88px; font-size: 2.4rem;">
+            <i class="fa-solid fa-chalkboard-user"></i>
+          </div>
+          <label for="inputTeacherPhotoModal" class="btn-avatar-upload" title="เปลี่ยนรูปโปรไฟล์อาจารย์">
+            <i class="fa-solid fa-camera"></i>
+          </label>
+          <input type="file" id="inputTeacherPhotoModal" accept="image/*" style="display: none;" onchange="handleTeacherProfileUpload(event)">
+        </div>
+
+        <h3 id="teacherModalFullName" style="font-size: 1.18rem; font-weight: 700; margin: 0 0 0.25rem 0; color: var(--text-dark);">-</h3>
+        <p id="teacherModalRole" style="font-size: 0.84rem; color: var(--text-muted); margin: 0 0 1.25rem 0;">อาจารย์ผู้สอน / ครูประจำวิชา</p>
+
+        <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('inputTeacherPhotoModal').click();">
+            <i class="fa-solid fa-camera"></i> อัปโหลด / เปลี่ยนรูปโปรไฟล์อาจารย์
+          </button>
+          <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('teacherAccountModal'); adminLogout();" style="color: var(--danger); border-color: #fecaca; background: #fff5f5; margin-top: 0.4rem;">
+            <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบอาจารย์ (Logout)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add Dynamic Assignment Column (รูปแนบ 4: เพิ่มช่องเก็บคะแนน/ชิ้นงาน) -->
+  <div class="modal-overlay" id="addAssignmentColumnModal">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.05rem; color: var(--text-dark);">
+          <i class="fa-solid fa-plus-circle" style="color: var(--primary);"></i> เพิ่มช่องเก็บคะแนน / ชิ้นงานใหม่
+        </div>
+        <button class="btn-icon" onclick="closeModal('addAssignmentColumnModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem;">
+        <form onsubmit="submitAddAssignmentColumn(event)">
+          <div class="form-group" style="margin-bottom: 0.95rem;">
+            <label class="form-label">ชื่อชิ้นงาน / ช่องคะแนน <span style="color: var(--danger);">*</span></label>
+            <input type="text" class="form-control" id="newAssignmentTitleInput" placeholder="เช่น ชิ้นงานที่ 1, สอบเก็บคะแนน, สมุดงาน" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0.95rem;">
+            <label class="form-label">คะแนนเต็ม <span style="color: var(--danger);">*</span></label>
+            <input type="number" class="form-control" id="newAssignmentMaxScoreInput" min="1" max="1000" value="10" required>
+            <small style="color: var(--text-muted); font-size: 0.78rem;">ระบบจะคำนวณสัดส่วนคะแนนและตัดเกรดให้อัตโนมัติ</small>
+          </div>
+          <div style="display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1.25rem;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('addAssignmentColumnModal')">
+              ยกเลิก
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fa-solid fa-check"></i> เพิ่มช่องคะแนน
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -4246,6 +4448,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=6.6"></script>
+  <script src="app.js?v=6.7"></script>
 </body>
 </html>

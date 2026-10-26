@@ -9088,3 +9088,212 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
     grid-template-columns: 1fr;
   }
 }
+
+/* ========================================================
+   TEACHER PORTAL BOTTOM NAVIGATION & UI ENHANCEMENTS
+   (รูปแนบ 4: Botton อยู่ด้านล่าง แยกตามแท็บนั้นๆ)
+   ======================================================== */
+.teacher-bottom-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  display: none;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0.45rem 0.75rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
+  z-index: 1000;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+}
+
+body.teacher-portal-active .teacher-bottom-nav-bar {
+  display: flex !important;
+}
+
+.teacher-bottom-nav-item {
+  flex: 1;
+  max-width: 130px;
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.4rem;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  gap: 0.2rem;
+}
+
+.teacher-bottom-nav-item .teacher-bottom-nav-icon {
+  font-size: 1.15rem;
+  transition: transform 0.16s ease;
+}
+
+.teacher-bottom-nav-item.active {
+  color: var(--primary, #059669);
+  font-weight: 800;
+  background: rgba(5, 150, 105, 0.08);
+}
+
+.teacher-bottom-nav-item.active .teacher-bottom-nav-icon {
+  transform: translateY(-2px) scale(1.1);
+}
+
+#view-teacher {
+  padding-bottom: 85px !important;
+}
+
+/* Teacher Subjects Chips & Header (รูปแนบ 3) */
+.teacher-subjects-container {
+  margin-top: 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+}
+
+.teacher-subjects-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.teacher-subjects-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.teacher-subj-chip {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.teacher-subj-chip i {
+  color: var(--primary, #059669);
+}
+
+/* Teacher Dynamic Assignment Columns (รูปแนบ 4: เพิ่มช่องคะแนนได้) */
+.teacher-assignments-control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 0.85rem;
+}
+
+.teacher-assignments-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.teacher-assignment-chips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.assignment-chip {
+  background: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  color: #0369a1;
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.assignment-chip-remove {
+  background: transparent;
+  border: none;
+  color: #0284c7;
+  cursor: pointer;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.assignment-chip-remove:hover {
+  color: #b91c1c;
+}
+
+.assignment-score-input {
+  width: 65px !important;
+  padding: 0.3rem 0.35rem !important;
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  text-align: center;
+  border-radius: 6px !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.assignment-score-input:focus {
+  border-color: var(--primary, #059669) !important;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15) !important;
+}
+
+.teacher-cal-mobile-bar {
+  margin-bottom: 1rem;
+}
+
+.teacher-cal-quick-add-btn {
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+}
+
+.teacher-att-history-indicator {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}

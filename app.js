@@ -2186,6 +2186,9 @@ function switchView(viewName) {
     }
   }
 
+  // Toggle teacher bottom nav bar active state
+  document.body.classList.toggle('teacher-portal-active', viewName === 'teacher');
+
   // Update tabs active state
   document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
@@ -3021,6 +3024,7 @@ async function captureAndSavePrayerInstant() {
   renderTodayPrayerTable();
   renderDashboardCharts();
   renderCurrentStudentProfile();
+  renderCurrentStudentProfile();
 
   if (document.getElementById('prayerNoteInput')) {
     document.getElementById('prayerNoteInput').value = '';
@@ -3215,6 +3219,7 @@ function captureAndRecordPrayer() {
 
   renderTodayPrayerTable();
   renderDashboardCharts();
+  renderCurrentStudentProfile();
 
   // ส่งข้อมูลไปยัง Google Apps Script Backend (หากตั้งค่าไว้)
   syncRecordToGoogleSheet('recordPrayer', prayerRecord);
@@ -3489,6 +3494,7 @@ async function savePrayerNoteOnly() {
   renderTodayPrayerTable();
   renderPrayerHistory();
   renderDashboardCharts();
+  renderCurrentStudentProfile();
 
   playSuccessSound();
   showToast(`บันทึกหมายเหตุการละหมาด ${savedTimes.length} เวลา (${savedTimes.join(', ')}) เรียบร้อยแล้ว!`, 'success');
@@ -4182,15 +4188,22 @@ function renderCurrentStudentProfile() {
   if (dashGrade) dashGrade.innerText = currentStudent.grade;
   if (dashSchool) dashSchool.innerText = currentStudent.schoolName;
 
-  // Real stats calculation
-  const myPrayersToday = todayPrayers.filter(p => p.studentId === currentStudent.studentId);
+  // Real stats calculation (รูปแนบ 1: คำนวณจำนวนเวลาละหมาดที่บันทึกครบถ้วนตามจริง ไม่ซ้ำซ้อน)
+  const prayerSlotsRecorded = new Set();
+  todayPrayers.forEach(p => {
+    if (isIdMatch(p.studentId, currentStudent.studentId)) {
+      const slot = p.prayerTime || p.prayerName || p.timeSlot;
+      if (slot) prayerSlotsRecorded.add(slot);
+      else prayerSlotsRecorded.add(p.id || Math.random());
+    }
+  });
   const myActs = activities.filter(a => a.checkedIn);
   const att = currentStudent.attendance || { present: 0, late: 0, leave: 0, absent: 0 };
   const totalDays = att.present + att.late + att.leave + att.absent;
   const attRate = totalDays > 0 ? ((att.present / totalDays) * 100).toFixed(1) + '%' : '0%';
 
   if (statAtt) statAtt.innerText = attRate;
-  if (statPry) statPry.innerText = `${myPrayersToday.length} / 5`;
+  if (statPry) statPry.innerText = `${Math.min(5, prayerSlotsRecorded.size)} / 5`;
   if (statAct) statAct.innerText = `${myActs.length} ครั้ง`;
   if (statGpa) statGpa.innerText = currentStudent.gpa || '0.00';
 
@@ -4283,10 +4296,7 @@ function updateStudentGrade() {
 
 function handleUserBadgeClick() {
   if (currentAdmin) {
-    const roleLabel = currentAdmin.role === 'SuperAdmin' ? 'แอดมินสูงสุด' : (currentAdmin.role === 'EXECUTIVE' ? 'ผู้บริหาร' : 'อาจารย์');
-    if (confirm(`คุณกำลังอยู่ในโหมด${roleLabel} (${currentAdmin.fullName || currentAdmin.username})\nต้องการออกจากระบบใช่หรือไม่?`)) {
-      adminLogout();
-    }
+    openTeacherAccountModal();
     return;
   }
   if (currentStudent) {
@@ -4294,6 +4304,120 @@ function handleUserBadgeClick() {
   } else {
     openModal('authModal');
   }
+}
+
+function openTeacherAccountModal() {
+  if (!currentAdmin) return;
+  const nameEl = document.getElementById('teacherModalFullName');
+  const roleEl = document.getElementById('teacherModalRole');
+  const avatarEl = document.getElementById('teacherModalAvatar');
+
+  const roleLabelMap = {
+    SuperAdmin: 'แอดมินสูงสุด (Super Admin)',
+    EXECUTIVE: 'ผู้บริหารสถานศึกษา',
+    TEACHER: 'อาจารย์ผู้สอน / ครูประจำวิชา',
+    HOMEROOM: 'อาจารย์ประจำชั้น',
+    ACTIVITY: 'ฝ่ายกิจกรรม',
+    SubAdmin: 'ผู้ช่วยแอดมิน'
+  };
+
+  if (nameEl) nameEl.innerText = currentAdmin.fullName || currentAdmin.username || 'อาจารย์ผู้สอน';
+  if (roleEl) roleEl.innerText = `${roleLabelMap[currentAdmin.role] || 'อาจารย์ผู้สอน'}${currentAdmin.email ? ' • ' + currentAdmin.email : ''}`;
+
+  if (avatarEl) {
+    const tAv = currentAdmin.avatarUrl || currentAdmin.photo || localStorage.getItem('khalifah_admin_avatar_' + currentAdmin.username);
+    if (tAv) {
+      avatarEl.innerHTML = `<img src="${tAv}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+    } else {
+      avatarEl.innerHTML = `<i class="fa-solid fa-chalkboard-user"></i>`;
+    }
+  }
+
+  openModal('teacherAccountModal');
+}
+
+function handleTeacherProfileUpload(event) {
+  if (!currentAdmin) {
+    showToast('กรุณาเข้าสู่ระบบอาจารย์ก่อนอัปโหลดรูป', 'warning');
+    return;
+  }
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WebP)', 'warning');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      // Resize to square avatar max 320x320
+      const canvas = document.createElement('canvas');
+      const maxDim = 320;
+      let width = img.width;
+      let height = img.height;
+      if (width > height) {
+        if (width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const base64Data = canvas.toDataURL('image/jpeg', 0.85);
+
+      // Save locally
+      currentAdmin.avatarUrl = base64Data;
+      currentAdmin.photo = base64Data;
+      localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+      localStorage.setItem('khalifah_admin_avatar_' + currentAdmin.username, base64Data);
+
+      // Update in subAdmins list if exists
+      if (Array.isArray(subAdmins)) {
+        const idx = subAdmins.findIndex(a => a.username === currentAdmin.username);
+        if (idx !== -1) {
+          subAdmins[idx].avatarUrl = base64Data;
+          subAdmins[idx].photo = base64Data;
+          localStorage.setItem('khalifah_subadmins', JSON.stringify(subAdmins));
+        }
+      }
+
+      // Update UI elements
+      const modalAv = document.getElementById('teacherModalAvatar');
+      if (modalAv) {
+        modalAv.innerHTML = `<img src="${base64Data}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+      }
+      const heroAv = document.getElementById('teacherHeroAvatar');
+      if (heroAv) {
+        heroAv.innerHTML = `<img src="${base64Data}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">`;
+      }
+      const navAv = document.getElementById('headerUserAvatar') || document.getElementById('userAvatarText');
+      if (navAv) {
+        navAv.innerHTML = `<img src="${base64Data}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 9999px;">`;
+      }
+
+      if (typeof playSuccessSound === 'function') playSuccessSound();
+      showToast('✓ อัปโหลดและบันทึกรูปโปรไฟล์อาจารย์เรียบร้อยแล้ว!', 'success');
+
+      // Sync to cloud
+      syncRecordToGoogleSheet('updateSubAdminPhoto', {
+        username: currentAdmin.username,
+        photo: base64Data
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function openStudentAccountModal() {
@@ -5628,7 +5752,14 @@ function updateAdminUIVisibility(isAuthenticated) {
     if (headerName) headerName.innerText = 'Super Admin';
     if (headerSub) headerSub.innerText = 'ผู้ดูแลระบบสูงสุด';
     if (headerRole) headerRole.innerText = 'แอดมินสูงสุด';
-    if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-user-shield"></i>';
+    const sAv = currentAdmin?.avatarUrl || currentAdmin?.photo || localStorage.getItem('khalifah_admin_avatar_' + currentAdmin?.username);
+    if (headerAvatar) {
+      if (sAv) {
+        headerAvatar.innerHTML = `<img src="${sAv}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 9999px;">`;
+      } else {
+        headerAvatar.innerHTML = '<i class="fa-solid fa-user-shield"></i>';
+      }
+    }
   } else if (isTeacher && currentAdmin) {
     const roleLabelMap = {
       TEACHER: 'อาจารย์ผู้สอน',
@@ -5640,7 +5771,14 @@ function updateAdminUIVisibility(isAuthenticated) {
     if (headerName) headerName.innerText = currentAdmin.fullName || currentAdmin.username;
     if (headerSub) headerSub.innerText = roleLabelMap[currentAdmin.role] || 'อาจารย์ / บุคลากร';
     if (headerRole) headerRole.innerText = roleLabelMap[currentAdmin.role] || 'อาจารย์';
-    if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i>';
+    const tAv = currentAdmin.avatarUrl || currentAdmin.photo || localStorage.getItem('khalifah_admin_avatar_' + currentAdmin.username);
+    if (headerAvatar) {
+      if (tAv) {
+        headerAvatar.innerHTML = `<img src="${tAv}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 9999px;">`;
+      } else {
+        headerAvatar.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i>';
+      }
+    }
   } else if (isStudent && currentStudent) {
     if (headerName) headerName.innerText = currentStudent.fullName || 'นักเรียน';
     if (headerSub) headerSub.innerText = `${currentStudent.grade || ''} • รหัส ${currentStudent.studentId || ''}`;
@@ -5878,6 +6016,9 @@ function switchAdminTab(tabName, element) {
     if (typeof fetchPrayersFromCloud === 'function') fetchPrayersFromCloud();
   } else if (tabName === 'calendar-admin') {
     if (typeof renderCalendar === 'function') renderCalendar('admin');
+  } else if (tabName === 'promote') {
+    if (typeof updateAdminPromotionBreakdown === 'function') updateAdminPromotionBreakdown();
+    if (typeof populateAdminSingleStudentSelect === 'function') populateAdminSingleStudentSelect();
   }
 }
 
@@ -6802,9 +6943,227 @@ function executeBatchPromotion() {
 
   localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
   renderAdminStudentsTable();
+  if (typeof updateAdminPromotionBreakdown === 'function') updateAdminPromotionBreakdown();
+  if (typeof populateAdminSingleStudentSelect === 'function') populateAdminSingleStudentSelect();
   showToast(`เลื่อนชั้นปีนักเรียนจาก ${fromGrade} ➔ ${toGrade} สำเร็จจำนวน ${count} คน` + (isGraduating ? ' พร้อมบันทึกสถานะ "สำเร็จการศึกษา"' : ''), 'success');
 
   syncRecordToGoogleSheet('batchPromote', { fromGrade, toGrade });
+}
+
+// ----------------- COMPREHENSIVE ADMIN PROMOTION CONTROLS (รูปแนบ 2) ----------------- //
+
+function updateAdminPromotionBreakdown() {
+  const container = document.getElementById('adminPromotionCountsBreakdown');
+  if (!container) return;
+  const gradeKeys = [
+    'มัธยมศึกษาปีที่ 1',
+    'มัธยมศึกษาปีที่ 2',
+    'มัธยมศึกษาปีที่ 3',
+    'มัธยมศึกษาปีที่ 4',
+    'มัธยมศึกษาปีที่ 5',
+    'มัธยมศึกษาปีที่ 6',
+    'สำเร็จการศึกษา'
+  ];
+  const counts = {};
+  gradeKeys.forEach(g => counts[g] = 0);
+  let otherCount = 0;
+
+  allStudents.forEach(s => {
+    const gr = s.grade || '';
+    if (counts[gr] !== undefined) counts[gr]++;
+    else otherCount++;
+  });
+
+  container.innerHTML = `
+    <div style="font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+      <span><i class="fa-solid fa-users" style="color: var(--primary);"></i> สรุปจำนวนนักเรียนปัจจุบัน</span>
+      <span style="color: var(--primary); font-weight: 700;">รวมทั้งหมด ${allStudents.length} คน</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.4rem;">
+      <div style="background: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">ม.1: <b>${counts['มัธยมศึกษาปีที่ 1']}</b> คน</div>
+      <div style="background: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">ม.2: <b>${counts['มัธยมศึกษาปีที่ 2']}</b> คน</div>
+      <div style="background: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">ม.3: <b>${counts['มัธยมศึกษาปีที่ 3']}</b> คน</div>
+      <div style="background: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">ม.4: <b>${counts['มัธยมศึกษาปีที่ 4']}</b> คน</div>
+      <div style="background: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">ม.5: <b>${counts['มัธยมศึกษาปีที่ 5']}</b> คน</div>
+      <div style="background: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0; color: #b91c1c;">ม.6: <b>${counts['มัธยมศึกษาปีที่ 6']}</b> คน</div>
+      <div style="background: #fff; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0; color: #15803d;">จบแล้ว: <b>${counts['สำเร็จการศึกษา']}</b> คน</div>
+    </div>
+  `;
+}
+
+function populateAdminSingleStudentSelect() {
+  const sel = document.getElementById('adminSingleStudentSelect');
+  if (!sel) return;
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="">-- กรุณาเลือกนักเรียน --</option>' + 
+    allStudents.map(s => `<option value="${escapeHtml(s.studentId)}">${escapeHtml(s.studentId)} - ${escapeHtml(s.fullName)} (${escapeHtml(s.grade || 'ไม่ระบุ')})</option>`).join('');
+  if (curVal) sel.value = curVal;
+}
+
+function onAdminSingleStudentSelectChange() {
+  const sel = document.getElementById('adminSingleStudentSelect');
+  const info = document.getElementById('adminSingleStudentCurrentInfo');
+  const targetGradeSel = document.getElementById('adminSingleTargetGrade');
+  if (!sel || !info) return;
+
+  const sId = sel.value;
+  if (!sId) {
+    info.style.display = 'none';
+    return;
+  }
+  const s = allStudents.find(item => isIdMatch(item.studentId, sId));
+  if (!s) {
+    info.style.display = 'none';
+    return;
+  }
+
+  info.style.display = 'block';
+  info.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
+      <div>
+        <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">${escapeHtml(s.fullName)}</div>
+        <div style="color: #64748b; font-size: 0.8rem;">รหัสนักเรียน: <b>${escapeHtml(s.studentId)}</b></div>
+      </div>
+      <div style="text-align: right;">
+        <div>ชั้นปัจจุบัน: <span class="badge-sub" style="font-weight: 700;">${escapeHtml(s.grade || 'ไม่ระบุ')}</span></div>
+        <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">สถานะ: ${escapeHtml(s.status || 'Active')}</div>
+      </div>
+    </div>
+  `;
+
+  // Pre-select next target grade logically
+  if (targetGradeSel && s.grade) {
+    const nextGradeMap = {
+      'มัธยมศึกษาปีที่ 1': 'มัธยมศึกษาปีที่ 2',
+      'มัธยมศึกษาปีที่ 2': 'มัธยมศึกษาปีที่ 3',
+      'มัธยมศึกษาปีที่ 3': 'มัธยมศึกษาปีที่ 4',
+      'มัธยมศึกษาปีที่ 4': 'มัธยมศึกษาปีที่ 5',
+      'มัธยมศึกษาปีที่ 5': 'มัธยมศึกษาปีที่ 6',
+      'มัธยมศึกษาปีที่ 6': 'สำเร็จการศึกษา'
+    };
+    if (nextGradeMap[s.grade]) {
+      targetGradeSel.value = nextGradeMap[s.grade];
+    }
+  }
+}
+
+function executeSingleStudentPromotion() {
+  const sel = document.getElementById('adminSingleStudentSelect');
+  const targetGradeSel = document.getElementById('adminSingleTargetGrade');
+  if (!sel || !sel.value) {
+    showToast('กรุณาเลือกนักเรียนที่ต้องการเลื่อนชั้นปี', 'warning');
+    return;
+  }
+  const sId = sel.value;
+  const toGrade = targetGradeSel ? targetGradeSel.value : '';
+  const s = allStudents.find(item => isIdMatch(item.studentId, sId));
+  if (!s) {
+    showToast('ไม่พบข้อมูลนักเรียน', 'error');
+    return;
+  }
+  if (s.grade === toGrade) {
+    if (!confirm(`นักเรียนอยู่ในชั้น "${toGrade}" อยู่แล้ว ต้องการบันทึกซ้ำหรือไม่?`)) return;
+  }
+
+  const isGraduating = (toGrade === 'สำเร็จการศึกษา' || String(toGrade).includes('สำเร็จ'));
+  const todayStr = new Date().toISOString().substring(0, 10);
+  const oldGrade = s.grade;
+  s.grade = toGrade;
+  if (isGraduating) {
+    s.status = 'สำเร็จการศึกษา';
+    s.statusEffectiveDate = todayStr;
+    s.statusDate = todayStr;
+    s.statusNote = 'สำเร็จการศึกษาจากการเลื่อนระดับชั้นรายบุคคล';
+  }
+
+  if (currentStudent && isIdMatch(currentStudent.studentId, sId)) {
+    currentStudent.grade = toGrade;
+    if (isGraduating) {
+      currentStudent.status = 'สำเร็จการศึกษา';
+      currentStudent.statusEffectiveDate = todayStr;
+      currentStudent.statusDate = todayStr;
+      currentStudent.statusNote = 'สำเร็จการศึกษาจากการเลื่อนระดับชั้นรายบุคคล';
+    }
+    localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+    renderCurrentStudentProfile();
+  }
+
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+  updateAdminPromotionBreakdown();
+  populateAdminSingleStudentSelect();
+  onAdminSingleStudentSelectChange();
+  renderAdminStudentsTable();
+
+  playSuccessSound();
+  showToast(`เลื่อนชั้นปี ${s.fullName} จาก "${oldGrade}" ➔ "${toGrade}" สำเร็จ!` + (isGraduating ? ' (สถานะสำเร็จการศึกษา)' : ''), 'success');
+
+  syncRecordToGoogleSheet('updateStudentGrade', {
+    studentId: s.studentId,
+    newGrade: toGrade,
+    isGraduating: isGraduating
+  });
+}
+
+function executeFullSchoolBatchPromotion() {
+  if (!confirm('⚡ ยืนยันการเลื่อนระดับชั้นนักเรียนทั้งหมดในโรงเรียนในครั้งเดียวใช่หรือไม่?\n\n- ม.6 ➔ สำเร็จการศึกษา\n- ม.5 ➔ ม.6\n- ม.4 ➔ ม.5\n- ม.3 ➔ ม.4\n- ม.2 ➔ ม.3\n- ม.1 ➔ ม.2\n\nระบบจะทำการอัปเดตนักเรียนทุกคนทันที')) {
+    return;
+  }
+
+  const todayStr = new Date().toISOString().substring(0, 10);
+  let countM6 = 0, countM5 = 0, countM4 = 0, countM3 = 0, countM2 = 0, countM1 = 0;
+
+  // Process in strict top-down order to prevent double promotion
+  allStudents.forEach(s => {
+    const gr = s.grade || '';
+    if (gr === 'มัธยมศึกษาปีที่ 6') {
+      s.grade = 'สำเร็จการศึกษา';
+      s.status = 'สำเร็จการศึกษา';
+      s.statusEffectiveDate = todayStr;
+      s.statusDate = todayStr;
+      s.statusNote = 'สำเร็จการศึกษาจากการเลื่อนระดับชั้นประจำปี';
+      countM6++;
+    } else if (gr === 'มัธยมศึกษาปีที่ 5') {
+      s.grade = 'มัธยมศึกษาปีที่ 6';
+      countM5++;
+    } else if (gr === 'มัธยมศึกษาปีที่ 4') {
+      s.grade = 'มัธยมศึกษาปีที่ 5';
+      countM4++;
+    } else if (gr === 'มัธยมศึกษาปีที่ 3') {
+      s.grade = 'มัธยมศึกษาปีที่ 4';
+      countM3++;
+    } else if (gr === 'มัธยมศึกษาปีที่ 2') {
+      s.grade = 'มัธยมศึกษาปีที่ 3';
+      countM2++;
+    } else if (gr === 'มัธยมศึกษาปีที่ 1') {
+      s.grade = 'มัธยมศึกษาปีที่ 2';
+      countM1++;
+    }
+  });
+
+  const totalPromoted = countM6 + countM5 + countM4 + countM3 + countM2 + countM1;
+
+  if (currentStudent) {
+    const updatedCur = allStudents.find(s => isIdMatch(s.studentId, currentStudent.studentId));
+    if (updatedCur) {
+      currentStudent = updatedCur;
+      localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+      renderCurrentStudentProfile();
+    }
+  }
+
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+  updateAdminPromotionBreakdown();
+  populateAdminSingleStudentSelect();
+  renderAdminStudentsTable();
+
+  playSuccessSound();
+  showToast(`🎉 เลื่อนระดับชั้นนักเรียนทั้งโรงเรียนสำเร็จ รวม ${totalPromoted} คน (ม.6 จบการศึกษา ${countM6} คน, ม.1-ม.5 เลื่อนชั้น ${totalPromoted - countM6} คน)`, 'success');
+
+  syncRecordToGoogleSheet('fullSchoolBatchPromote', {
+    timestamp: new Date().toISOString(),
+    totalPromoted: totalPromoted,
+    summary: { countM6, countM5, countM4, countM3, countM2, countM1 }
+  });
 }
 
 // ----------------- CREATE ACTIVITY & FULL TEACHER / SUB-ADMIN CRUD ----------------- //
@@ -7352,15 +7711,19 @@ function saveTeacherGradingScores() {
 // ----------------- DEDICATED TEACHER & EXECUTIVE PORTAL (#view-teacher) ----------------- //
 let teacherDailyAttendanceDraft = {}; // { [studentId]: 'present' | 'late' | 'leave' | 'absent' }
 
+let teacherLastAttLoadedDate = null;
+
 function initTeacherPortalView() {
   loadAppSubjects();
-  const titleEl = document.getElementById('teacherWelcomeTitle');
-  const subEl = document.getElementById('teacherAssignedSubjectsSubtitle');
+  const titleEl = document.getElementById('teacherHeaderName') || document.getElementById('teacherWelcomeTitle');
+  const subEl = document.getElementById('teacherHeaderSub') || document.getElementById('teacherAssignedSubjectsSubtitle');
   const rolePill = document.getElementById('teacherPortalRolePill');
   const dateInput = document.getElementById('teacherAttDateInput');
   const kpiStd = document.getElementById('teacherKpiTotalStudents');
   const kpiChecked = document.getElementById('teacherKpiCheckedToday');
   const kpiSubj = document.getElementById('teacherKpiSubjectsCount');
+  const heroAvatar = document.getElementById('teacherHeroAvatar');
+  const chipsContainer = document.getElementById('teacherAssignedSubjectsChips');
 
   const todayStr = new Date().toISOString().split('T')[0];
   if (dateInput && !dateInput.value) {
@@ -7384,8 +7747,22 @@ function initTeacherPortalView() {
         : '<i class="fa-solid fa-chalkboard-user"></i> TEACHER PORTAL • ระบบอาจารย์และวิชาการ';
     }
     if (titleEl) {
-      titleEl.innerText = `${isExec ? 'ระบบผู้บริหาร' : 'ระบบอาจารย์ผู้สอน'}: ${currentAdmin.fullName || currentAdmin.username}`;
+      titleEl.innerText = `${currentAdmin.fullName || currentAdmin.username || (isExec ? 'ผู้บริหาร' : 'อาจารย์ผู้สอน')}`;
     }
+    if (subEl) {
+      subEl.innerText = `ครูประจำวิชา / ${currentAdmin.email || currentAdmin.role || 'ฝ่ายวิชาการ'}`;
+    }
+
+    // Teacher Hero Avatar (รูปแนบ 3 / รูปแนบ 5)
+    if (heroAvatar) {
+      const tAv = currentAdmin.avatarUrl || currentAdmin.photo || localStorage.getItem('khalifah_admin_avatar_' + currentAdmin.username);
+      if (tAv) {
+        heroAvatar.innerHTML = `<img src="${tAv}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px; cursor: pointer;" onclick="openTeacherAccountModal()" title="คลิกเพื่อจัดการโปรไฟล์">`;
+      } else {
+        heroAvatar.innerHTML = '<i class="fa-solid fa-chalkboard-user" style="cursor: pointer;" onclick="openTeacherAccountModal()" title="คลิกเพื่อจัดการโปรไฟล์"></i>';
+      }
+    }
+
     const assignedIds = Array.isArray(currentAdmin.assignedSubjects)
       ? currentAdmin.assignedSubjects
       : (currentAdmin.assignedSubject ? [currentAdmin.assignedSubject] : []);
@@ -7393,8 +7770,21 @@ function initTeacherPortalView() {
       ? appSubjects
       : appSubjects.filter(s => assignedIds.includes(s.id));
 
+    // Render subjects as clean chips (รูปแนบ 3: ทำให้ดูวิชาที่ได้รับการสอนได้ง่ายขึ้น)
+    if (chipsContainer) {
+      if (assignedSubjObjs.length === 0) {
+        chipsContainer.innerHTML = '<span class="teacher-subj-chip">ไม่มีวิชาที่กำหนด</span>';
+      } else {
+        chipsContainer.innerHTML = assignedSubjObjs.map(s => `
+          <span class="teacher-subj-chip" title="${escapeHtml(s.description || s.name)}">
+            <i class="fa-solid fa-book-bookmark" style="color: var(--primary);"></i>
+            ${escapeHtml(s.name)}${s.code ? ` (${escapeHtml(s.code)})` : ''}
+          </span>
+        `).join('');
+      }
+    }
+
     const names = assignedSubjObjs.map(s => s.name).join(', ');
-    if (subEl) subEl.innerText = `วิชาที่รับผิดชอบ: ${names || 'ทุกวิชา'}`;
     const badgeEl = document.getElementById('teacherAssignedSubjectsBadge');
     if (badgeEl) badgeEl.innerHTML = `<i class="fa-solid fa-book-bookmark"></i> วิชาที่รับผิดชอบ: ${escapeHtml(names || 'ทุกวิชา')}`;
     if (kpiSubj) kpiSubj.innerText = `${assignedSubjObjs.length} วิชา`;
@@ -7405,12 +7795,19 @@ function initTeacherPortalView() {
     }
   }
 
+  // Ensure default grade is ALL for full student view
+  const attGradeSel = document.getElementById('teacherAttGradeSelect');
+  if (attGradeSel && !attGradeSel.value) attGradeSel.value = 'ALL';
+  const gradeSel = document.getElementById('teacherPortalGradeSelect');
+  if (gradeSel && !gradeSel.value) gradeSel.value = 'ALL';
+
   renderTeacherAttendanceTable();
   renderTeacherGradesPortalTable();
   if (typeof renderCalendar === 'function') renderCalendar('teacher');
 }
 
 function switchTeacherPortalTab(tabName, btnEl) {
+  // Sync top segmented tabs
   document.querySelectorAll('#view-teacher .admin-tab-btn, #view-teacher .hasanat-subnav-btn, #view-teacher .teacher-nav-tab').forEach(b => b.classList.remove('active'));
   if (btnEl) {
     btnEl.classList.add('active');
@@ -7421,6 +7818,14 @@ function switchTeacherPortalTab(tabName, btnEl) {
     const fallbackBtn = document.getElementById(fallbackId);
     if (fallbackBtn) fallbackBtn.classList.add('active');
   }
+
+  // Sync bottom navigation bar (รูปแนบ 4: บาร์ปุ่มแท็บแยกด้านล่าง)
+  document.querySelectorAll('#view-teacher .teacher-bottom-nav-item').forEach(b => b.classList.remove('active'));
+  let bottomBtnId = 'btnTeacherBottomAtt';
+  if (tabName === 'grades') bottomBtnId = 'btnTeacherBottomGrade';
+  else if (tabName === 'calendar') bottomBtnId = 'btnTeacherBottomCal';
+  const bottomBtn = document.getElementById(bottomBtnId);
+  if (bottomBtn) bottomBtn.classList.add('active');
 
   const tabAtt = document.getElementById('teacher-tab-attendance');
   const tabGrd = document.getElementById('teacher-tab-grades');
@@ -7442,6 +7847,23 @@ function switchTeacherTab(tabName, btnEl = null) {
   switchTeacherPortalTab(tabName, btnEl);
 }
 
+// Attendance Date Navigation Functions (รูปแนบ 4: ปรับให้เช็คมาเรียนดูย้อนหลังได้)
+function shiftTeacherAttDate(offsetDays) {
+  const dateInput = document.getElementById('teacherAttDateInput');
+  if (!dateInput) return;
+  const cur = dateInput.value ? new Date(dateInput.value) : new Date();
+  cur.setDate(cur.getDate() + offsetDays);
+  dateInput.value = cur.toISOString().split('T')[0];
+  renderTeacherAttendanceTable();
+}
+
+function setTeacherAttDateToday() {
+  const dateInput = document.getElementById('teacherAttDateInput');
+  if (!dateInput) return;
+  dateInput.value = new Date().toISOString().split('T')[0];
+  renderTeacherAttendanceTable();
+}
+
 function renderTeacherAttendanceTable() {
   const tbody = document.getElementById('teacherAttendanceTableBody');
   const gradeSelect = document.getElementById('teacherAttGradeSelect');
@@ -7449,9 +7871,36 @@ function renderTeacherAttendanceTable() {
   const searchInput = document.getElementById('teacherAttSearchInput');
   if (!tbody || !gradeSelect) return;
 
-  const selectedGrade = gradeSelect.value;
+  const selectedGrade = gradeSelect.value || 'ALL';
   const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
   const searchQuery = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
+
+  // Reset attendance draft when date changes so historical data loads cleanly
+  if (teacherLastAttLoadedDate !== selectedDate) {
+    teacherDailyAttendanceDraft = {};
+    teacherLastAttLoadedDate = selectedDate;
+  }
+
+  // Update History indicator badge and button text
+  const todayStr = new Date().toISOString().split('T')[0];
+  const historyIndicator = document.getElementById('teacherAttHistoryIndicator');
+  const saveBtn = document.getElementById('btnSaveTeacherAttendance');
+  if (saveBtn) {
+    saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> บันทึกการเช็คชื่อ (${selectedDate === todayStr ? 'วันนี้' : selectedDate})`;
+  }
+  if (historyIndicator) {
+    if (selectedDate === todayStr) {
+      historyIndicator.innerHTML = `<i class="fa-solid fa-calendar-check" style="color: var(--primary);"></i> <span>เช็คชื่อประจำวันนี้ (${selectedDate})</span>`;
+      historyIndicator.style.borderColor = '#bbf7d0';
+      historyIndicator.style.background = '#f0fdf4';
+      historyIndicator.style.color = '#15803d';
+    } else {
+      historyIndicator.innerHTML = `<i class="fa-solid fa-clock-rotate-left" style="color: #ea580c;"></i> <span>ดู/แก้ไขย้อนหลัง วันที่ ${selectedDate}</span>`;
+      historyIndicator.style.borderColor = '#fdba74';
+      historyIndicator.style.background = '#fff7ed';
+      historyIndicator.style.color = '#c2410c';
+    }
+  }
 
   const filtered = allStudents.filter(s => {
     const matchGrade = (selectedGrade === 'ALL' || !selectedGrade || s.grade === selectedGrade);
@@ -7465,8 +7914,8 @@ function renderTeacherAttendanceTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-          ไม่พบรายชื่อนักเรียนในระดับชั้นที่เลือก
+        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          ไม่พบรายชื่อนักเรียนในระดับชั้นหรือคำค้นหาที่เลือก
         </td>
       </tr>
     `;
@@ -7530,7 +7979,7 @@ function markAllStudentsPresentInClass(status = 'present') {
     teacherDailyAttendanceDraft[cleanIdString(s.studentId)] = status || 'present';
   });
   renderTeacherAttendanceTable();
-  showToast('เลือกสถานะ "มาเรียน" ให้ทั้งห้องเรียบร้อย กดบันทึกด้านล่างเพื่อยืนยัน', 'info');
+  showToast('เลือกสถานะ "มาเรียน" ให้ทุกคนเรียบร้อย กดบันทึกเพื่อยืนยัน', 'info');
 }
 
 function markAllTeacherAttendance(status = 'present') {
@@ -7542,7 +7991,7 @@ function saveTeacherDailyAttendance() {
   const dateInput = document.getElementById('teacherAttDateInput');
   if (!gradeSelect) return;
 
-  const selectedGrade = gradeSelect.value;
+  const selectedGrade = gradeSelect.value || 'ALL';
   const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
   const filtered = allStudents.filter(s => selectedGrade === 'ALL' || !selectedGrade || s.grade === selectedGrade);
 
@@ -7611,26 +8060,201 @@ function saveTeacherAttendanceBatch() {
   saveTeacherDailyAttendance();
 }
 
+// ----------------- DYNAMIC ASSIGNMENT COLUMNS & CUSTOM GRADING (รูปแนบ 4) ----------------- //
+
+function getSubjectAssignments(subjectId) {
+  if (!subjectId) return [];
+  let map = {};
+  try {
+    map = JSON.parse(localStorage.getItem('khalifah_subject_assignments') || '{}');
+  } catch (e) { map = {}; }
+  return Array.isArray(map[subjectId]) ? map[subjectId] : [];
+}
+
+function saveSubjectAssignments(subjectId, assignments) {
+  if (!subjectId) return;
+  let map = {};
+  try {
+    map = JSON.parse(localStorage.getItem('khalifah_subject_assignments') || '{}');
+  } catch (e) { map = {}; }
+  map[subjectId] = assignments;
+  localStorage.setItem('khalifah_subject_assignments', JSON.stringify(map));
+}
+
+function openAddAssignmentColumnModal() {
+  const subjSelect = document.getElementById('teacherPortalSubjectSelect');
+  if (!subjSelect || !subjSelect.value) {
+    showToast('กรุณาเลือกรายวิชาก่อนเพิ่มช่องคะแนน', 'warning');
+    return;
+  }
+  const titleInput = document.getElementById('newAssignmentTitleInput');
+  const maxInput = document.getElementById('newAssignmentMaxScoreInput');
+  if (titleInput) titleInput.value = '';
+  if (maxInput) maxInput.value = '10';
+  openModal('addAssignmentColumnModal');
+}
+
+function submitAddAssignmentColumn(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const subjSelect = document.getElementById('teacherPortalSubjectSelect');
+  if (!subjSelect || !subjSelect.value) return;
+  const subjectId = subjSelect.value;
+
+  const titleInput = document.getElementById('newAssignmentTitleInput');
+  const maxInput = document.getElementById('newAssignmentMaxScoreInput');
+  const title = (titleInput?.value || '').trim();
+  const maxScore = parseFloat(maxInput?.value) || 10;
+
+  if (!title) {
+    showToast('กรุณาระบุชื่อชิ้นงานหรือช่องคะแนน', 'warning');
+    return;
+  }
+  if (maxScore <= 0) {
+    showToast('คะแนนเต็มต้องมากกว่า 0', 'warning');
+    return;
+  }
+
+  const assignments = getSubjectAssignments(subjectId);
+  const newCol = {
+    id: 'asg_' + Date.now(),
+    title: title,
+    maxScore: maxScore
+  };
+  assignments.push(newCol);
+  saveSubjectAssignments(subjectId, assignments);
+
+  closeModal('addAssignmentColumnModal');
+  playSuccessSound();
+  showToast(`เพิ่มช่องคะแนน "${title}" (เต็ม ${maxScore}) เรียบร้อยแล้ว`, 'success');
+  renderTeacherGradesPortalTable();
+}
+
+function removeAssignmentColumn(assignmentId) {
+  const subjSelect = document.getElementById('teacherPortalSubjectSelect');
+  if (!subjSelect || !subjSelect.value) return;
+  const subjectId = subjSelect.value;
+
+  const assignments = getSubjectAssignments(subjectId);
+  const target = assignments.find(a => a.id === assignmentId);
+  if (!confirm(`คุณต้องการลบช่องคะแนน "${target ? target.title : ''}" ใช่หรือไม่?`)) return;
+
+  const updated = assignments.filter(a => a.id !== assignmentId);
+  saveSubjectAssignments(subjectId, updated);
+  showToast('ลบช่องคะแนนเรียบร้อยแล้ว', 'info');
+  renderTeacherGradesPortalTable();
+}
+
+function onAssignmentScoreInputChange(inputEl, studentId, subjectId) {
+  const assignments = getSubjectAssignments(subjectId);
+  let totalScore = 0;
+  let totalMax = 0;
+  assignments.forEach(a => {
+    totalMax += a.maxScore;
+    const inp = document.querySelector(`.assignment-score-input[data-student-id="${studentId}"][data-assignment-id="${a.id}"]`);
+    const val = parseFloat(inp?.value);
+    if (!isNaN(val)) totalScore += val;
+  });
+  const pct = totalMax > 0 ? (totalScore / totalMax) * 100 : 0;
+  const labelEl = document.getElementById(`totalScorePct_${studentId}`);
+  if (labelEl) {
+    labelEl.innerText = `${totalScore} / ${totalMax} (${pct.toFixed(0)}%)`;
+    labelEl.style.color = pct >= 50 ? 'var(--primary)' : 'var(--text-muted)';
+  }
+
+  // Auto-calculate suggested grade based on percentage
+  let suggestedGrade = 0;
+  if (pct >= 80) suggestedGrade = 4;
+  else if (pct >= 75) suggestedGrade = 3.5;
+  else if (pct >= 70) suggestedGrade = 3;
+  else if (pct >= 65) suggestedGrade = 2.5;
+  else if (pct >= 60) suggestedGrade = 2;
+  else if (pct >= 55) suggestedGrade = 1.5;
+  else if (pct >= 50) suggestedGrade = 1;
+  else suggestedGrade = 0;
+
+  const gradeSelect = document.querySelector(`.teacher-portal-grade-input[data-student-id="${studentId}"]`);
+  if (gradeSelect) {
+    gradeSelect.value = String(suggestedGrade);
+  }
+}
+
 function renderTeacherGradesPortalTable() {
   const tbody = document.getElementById('teacherPortalGradesTableBody');
+  const thead = document.getElementById('teacherPortalGradesTableHead');
   const subjSelect = document.getElementById('teacherPortalSubjectSelect');
   const gradeSelect = document.getElementById('teacherPortalGradeSelect');
+  const countBadge = document.getElementById('teacherAssignmentsCount');
+  const chipsList = document.getElementById('teacherAssignmentChipsList');
   if (!tbody || !subjSelect || !gradeSelect) return;
 
   const currentSubj = subjSelect.value;
-  const currentGrade = gradeSelect.value;
+  const currentGrade = gradeSelect.value || 'ALL';
   const filtered = allStudents.filter(s => currentGrade === 'ALL' || !currentGrade || s.grade === currentGrade);
+  const assignments = getSubjectAssignments(currentSubj);
+
+  // Update Assignment Bar Header & Chips List
+  if (countBadge) countBadge.innerText = `${assignments.length} ชิ้นงาน`;
+  if (chipsList) {
+    if (assignments.length === 0) {
+      chipsList.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">ยังไม่มีช่องชิ้นงานย่อย (คุณสามารถกดปุ่ม "+ เพิ่มช่องคะแนน/ชิ้นงาน" เพื่อเพิ่มได้ทันที)</span>';
+    } else {
+      chipsList.innerHTML = assignments.map(a => `
+        <span class="assignment-chip">
+          <i class="fa-solid fa-file-pen" style="color: var(--primary);"></i>
+          <span>${escapeHtml(a.title)} (เต็ม ${a.maxScore})</span>
+          <button type="button" class="btn-remove-assignment" onclick="removeAssignmentColumn('${escapeHtml(a.id)}')" title="ลบช่องคะแนนนี้">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </span>
+      `).join('');
+    }
+  }
+
+  // Render Table Header dynamically
+  if (thead) {
+    if (assignments.length > 0) {
+      thead.innerHTML = `
+        <tr>
+          <th style="width: 105px;">รหัสนักเรียน</th>
+          <th style="min-width: 150px;">ชื่อ - นามสกุล</th>
+          <th style="width: 110px;">ระดับชั้น</th>
+          ${assignments.map(a => `<th style="text-align: center; min-width: 90px;">${escapeHtml(a.title)}<br><small style="color: var(--text-muted); font-weight: normal;">(เต็ม ${a.maxScore})</small></th>`).join('')}
+          <th style="text-align: center; min-width: 95px;">รวมคะแนน</th>
+          <th style="width: 130px; text-align: center;">เกรดตัด (0–4)</th>
+          <th style="text-align: right; min-width: 180px;">เลือกเกรดด่วน</th>
+        </tr>
+      `;
+    } else {
+      thead.innerHTML = `
+        <tr>
+          <th style="width: 115px;">รหัสนักเรียน</th>
+          <th>ชื่อ - นามสกุล</th>
+          <th>ระดับชั้น</th>
+          <th style="text-align: center;">สถานะนักเรียน</th>
+          <th style="width: 150px; text-align: center;">เกรดที่ได้ (0 – 4)</th>
+          <th style="text-align: right; min-width: 240px;">กดเลือกเกรดด่วน (1 – 4)</th>
+        </tr>
+      `;
+    }
+  }
 
   if (filtered.length === 0) {
+    const colCount = assignments.length > 0 ? (assignments.length + 5) : 6;
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        <td colspan="${colCount}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
           ไม่พบรายชื่อนักเรียนในระดับชั้นที่เลือก
         </td>
       </tr>
     `;
     return;
   }
+
+  // Load persistent assignment scores
+  let allScoresMap = {};
+  try {
+    allScoresMap = JSON.parse(localStorage.getItem('khalifah_student_assignment_scores') || '{}');
+  } catch (e) { allScoresMap = {}; }
 
   const gradeChoices = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4];
 
@@ -7640,6 +8264,62 @@ function renderTeacherGradesPortalTable() {
       ? s.subjectGrades[currentSubj]
       : (s.skills && s.skills[currentSubj] !== undefined ? s.skills[currentSubj] : 0);
     const curGradeVal = normalizeGrade1To4(rawVal);
+
+    const studentAsgMap = (allScoresMap[sId] && allScoresMap[sId][currentSubj]) || (s.assignmentScores && s.assignmentScores[currentSubj]) || {};
+
+    let totalScore = 0;
+    let totalMax = 0;
+    assignments.forEach(a => {
+      totalMax += a.maxScore;
+      const sc = parseFloat(studentAsgMap[a.id]);
+      if (!isNaN(sc)) totalScore += sc;
+    });
+    const pct = totalMax > 0 ? (totalScore / totalMax) * 100 : 0;
+
+    if (assignments.length > 0) {
+      return `
+        <tr>
+          <td><b>${escapeHtml(sId)}</b></td>
+          <td>
+            <div style="font-weight: 600; color: var(--text-dark);">${escapeHtml(s.fullName)}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">GPAX: ${escapeHtml(recalculateStudentGpa(s))}</div>
+          </td>
+          <td><span class="badge-sub">${escapeHtml(s.grade)}</span></td>
+          ${assignments.map(a => {
+            const sc = studentAsgMap[a.id] !== undefined ? studentAsgMap[a.id] : '';
+            return `
+              <td style="text-align: center;">
+                <input type="number" step="0.5" min="0" max="${a.maxScore}" 
+                  class="assignment-score-input" 
+                  data-student-id="${escapeHtml(sId)}" 
+                  data-assignment-id="${escapeHtml(a.id)}" 
+                  data-max-score="${a.maxScore}" 
+                  value="${sc}" 
+                  placeholder="0-${a.maxScore}"
+                  oninput="onAssignmentScoreInputChange(this, '${escapeHtml(sId)}', '${escapeHtml(currentSubj)}')"
+                >
+              </td>
+            `;
+          }).join('')}
+          <td style="text-align: center;">
+            <span id="totalScorePct_${escapeHtml(sId)}" style="font-weight: 700; color: ${pct >= 50 ? 'var(--primary)' : 'var(--text-muted)'}; font-size: 0.84rem;">
+              ${totalScore} / ${totalMax} (${pct.toFixed(0)}%)
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <select class="grade-select-pill teacher-portal-grade-input" data-student-id="${escapeHtml(sId)}">
+              ${gradeChoices.map(g => `<option value="${g}" ${g === curGradeVal ? 'selected' : ''}>${g === 0 ? '0 (รอผล)' : 'เกรด ' + g}</option>`).join('')}
+            </select>
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 1)" style="padding: 0.2rem 0.4rem; font-size: 0.72rem;">1</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 2)" style="padding: 0.2rem 0.4rem; font-size: 0.72rem;">2</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 3)" style="padding: 0.2rem 0.4rem; font-size: 0.72rem;">3</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 4)" style="padding: 0.2rem 0.4rem; font-size: 0.72rem;">4</button>
+          </td>
+        </tr>
+      `;
+    }
 
     return `
       <tr>
@@ -7685,6 +8365,30 @@ function saveTeacherPortalGrades() {
     showToast('ไม่มีรายชื่อนักเรียนให้บันทึกเกรด', 'warning');
     return;
   }
+
+  // Save assignment scores if any exist
+  let allScoresMap = {};
+  try {
+    allScoresMap = JSON.parse(localStorage.getItem('khalifah_student_assignment_scores') || '{}');
+  } catch (e) { allScoresMap = {}; }
+
+  const asgInputs = document.querySelectorAll('.assignment-score-input');
+  asgInputs.forEach(inp => {
+    const sId = inp.getAttribute('data-student-id');
+    const asgId = inp.getAttribute('data-assignment-id');
+    const val = inp.value !== '' ? parseFloat(inp.value) : '';
+    if (!allScoresMap[sId]) allScoresMap[sId] = {};
+    if (!allScoresMap[sId][currentSubj]) allScoresMap[sId][currentSubj] = {};
+    allScoresMap[sId][currentSubj][asgId] = val;
+
+    const s = allStudents.find(item => isIdMatch(item.studentId, sId));
+    if (s) {
+      if (!s.assignmentScores) s.assignmentScores = {};
+      if (!s.assignmentScores[currentSubj]) s.assignmentScores[currentSubj] = {};
+      s.assignmentScores[currentSubj][asgId] = val;
+    }
+  });
+  localStorage.setItem('khalifah_student_assignment_scores', JSON.stringify(allScoresMap));
 
   let updatedCount = 0;
   const gradesBatch = [];
@@ -7745,7 +8449,7 @@ function saveTeacherPortalGrades() {
   });
 
   playSuccessSound();
-  showToast(`บันทึกเกรดวิชา (ระดับ 1-4) ของนักเรียน ${updatedCount} คน สำเร็จ! กราฟทักษะของนักเรียนอัปเดตทันที`, 'success');
+  showToast(`บันทึกเกรดวิชา (ระดับ 1-4) และคะแนนเก็บของนักเรียน ${updatedCount} คน สำเร็จ! กราฟทักษะอัปเดตทันที`, 'success');
 }
 
 function renderAdminSubjectsTable() {
@@ -11846,12 +12550,32 @@ function openCalendarEventDetail(eventId) {
     metaEl.innerText = `บันทึกโดย: ${ev.createdBy || 'ผู้ดูแลระบบ'} • อัปเดตล่าสุด: ${ev.updatedAt || '-'}`;
   }
 
-  // ซ่อนปุ่มแก้ไข/ลบ สำหรับนักเรียน
+  // ซ่อนปุ่มแก้ไข/ลบ สำหรับผู้ที่ไม่มีสิทธิ์ (รูปแนบ 4: ตนเองและแอดมินเท่านั้นที่สามารถลบได้)
+  const canDel = canDeleteCalendarEvent(ev);
   if (adminActions) {
     adminActions.style.display = canManageCalendar() ? 'flex' : 'none';
   }
+  const deleteBtn = document.getElementById('btnCalDetailDelete');
+  const editBtn = document.getElementById('btnCalDetailEdit');
+  if (deleteBtn) {
+    deleteBtn.style.display = canDel ? 'inline-flex' : 'none';
+  }
+  if (editBtn) {
+    editBtn.style.display = canDel ? 'inline-flex' : 'none';
+  }
 
   openModal('calendarEventDetailModal');
+}
+
+function canDeleteCalendarEvent(ev) {
+  if (!currentAdmin) return false;
+  if (currentAdmin.role === 'SuperAdmin') return true;
+  if (!ev) return false;
+  const currentU = (currentAdmin.username || '').toLowerCase().trim();
+  const evCreatorU = (ev.creatorUsername || '').toLowerCase().trim();
+  if (evCreatorU && evCreatorU === currentU) return true;
+  if (ev.createdBy && (ev.createdBy === currentAdmin.fullName || ev.createdBy === currentAdmin.username)) return true;
+  return false;
 }
 
 let studentCalMode = 'grid'; // 'grid' | 'list'
@@ -12265,6 +12989,9 @@ async function saveCalendarEventForm() {
   const description = descInput ? descInput.value.trim() : '';
 
   const creatorName = currentAdmin ? (currentAdmin.fullName || currentAdmin.username || 'ผู้ดูแลระบบ') : 'แอดมิน';
+  const existingIdx = calendarEvents.findIndex(e => e.id === eventId);
+  const existingCreatorU = (existingIdx !== -1 && calendarEvents[existingIdx].creatorUsername) ? calendarEvents[existingIdx].creatorUsername : (currentAdmin ? currentAdmin.username : 'admin');
+  const creatorUsername = existingCreatorU;
   const updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
   const eventData = {
@@ -12281,11 +13008,11 @@ async function saveCalendarEventForm() {
     location: location,
     description: description,
     createdBy: creatorName,
+    creatorUsername: creatorUsername,
     updatedAt: updatedAt
   };
 
   // Update local state
-  const existingIdx = calendarEvents.findIndex(e => e.id === eventId);
   if (existingIdx !== -1) {
     calendarEvents[existingIdx] = { ...calendarEvents[existingIdx], ...eventData };
   } else {
@@ -12329,6 +13056,11 @@ async function saveCalendarEventForm() {
 
 function editEventFromDetail() {
   if (!currentViewingEventId) return;
+  const ev = calendarEvents.find(e => e.id === currentViewingEventId);
+  if (!canDeleteCalendarEvent(ev)) {
+    showToast('⚠️ คุณไม่มีสิทธิ์แก้ไขกิจกรรมนี้ (เฉพาะผู้สร้างกิจกรรมและ Super Admin เท่านั้น)', 'error');
+    return;
+  }
   closeModal('calendarEventDetailModal');
   openCalendarEventModal(currentViewingEventId);
 }
@@ -12340,6 +13072,10 @@ async function deleteEventFromDetail() {
   }
   if (!currentViewingEventId) return;
   const ev = calendarEvents.find(e => e.id === currentViewingEventId);
+  if (!canDeleteCalendarEvent(ev)) {
+    showToast('⚠️ คุณไม่มีสิทธิ์ลบกิจกรรมนี้ (เฉพาะผู้สร้างกิจกรรมและ Super Admin เท่านั้นที่สามารถลบได้)', 'error');
+    return;
+  }
   const title = ev ? ev.title : 'กิจกรรมนี้';
 
   if (!confirm(`คุณต้องการลบกิจกรรม "${title}" ออกจากปฏิทินและ Google Sheets ใช่หรือไม่?`)) {
