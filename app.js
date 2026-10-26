@@ -7359,6 +7359,8 @@ function initTeacherPortalView() {
 
     const names = assignedSubjObjs.map(s => s.name).join(', ');
     if (subEl) subEl.innerText = `วิชาที่รับผิดชอบ: ${names || 'ทุกวิชา'}`;
+    const badgeEl = document.getElementById('teacherAssignedSubjectsBadge');
+    if (badgeEl) badgeEl.innerHTML = `<i class="fa-solid fa-book-bookmark"></i> วิชาที่รับผิดชอบ: ${escapeHtml(names || 'ทุกวิชา')}`;
     if (kpiSubj) kpiSubj.innerText = `${assignedSubjObjs.length} วิชา`;
 
     const portalSubjSel = document.getElementById('teacherPortalSubjectSelect');
@@ -7373,7 +7375,7 @@ function initTeacherPortalView() {
 }
 
 function switchTeacherPortalTab(tabName, btnEl) {
-  document.querySelectorAll('#view-teacher .admin-tab-btn, #view-teacher .hasanat-subnav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#view-teacher .admin-tab-btn, #view-teacher .hasanat-subnav-btn, #view-teacher .teacher-nav-tab').forEach(b => b.classList.remove('active'));
   if (btnEl) {
     btnEl.classList.add('active');
   } else {

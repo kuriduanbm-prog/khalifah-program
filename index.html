@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6.4">
+  <link rel="stylesheet" href="style.css?v=6.5">
 </head>
 <body class="auth-locked">
 
@@ -1409,80 +1409,95 @@
     <!-- ==================== VIEW 5: TEACHER & EXECUTIVE PORTAL (ระบบอาจารย์และผู้บริหาร) ==================== -->
     <section id="view-teacher" class="view-section">
       <!-- Teacher & Executive Bento Header -->
-      <div class="bento-hero-card" style="margin-bottom: 1rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-          <div style="display: flex; align-items: center; gap: 0.95rem;">
-            <div class="bento-role-icon">
+      <div class="teacher-hero-card">
+        <div class="teacher-hero-content">
+          <div class="teacher-hero-profile">
+            <div class="teacher-role-avatar">
               <i class="fa-solid fa-chalkboard-user"></i>
             </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <span class="bento-portal-pill" id="teacherPortalRolePill">BACK-OFFICE • อาจารย์และผู้บริหาร</span>
-                <span class="live-sync-pill"><span class="pulse-dot"></span> ซิงค์ Google Sheets อัตโนมัติ</span>
+            <div class="teacher-hero-meta">
+              <div class="teacher-tag-row">
+                <span class="teacher-portal-pill" id="teacherPortalRolePill">
+                  <i class="fa-solid fa-graduation-cap"></i> ระบบอาจารย์และวิชาการ
+                </span>
+                <span class="teacher-sync-pill">
+                  <span class="pulse-dot"></span> ซิงค์ Google Sheets เรียลไทม์
+                </span>
               </div>
-              <h2 style="font-size: 1.28rem; font-weight: 700; color: var(--text-dark); margin: 0.25rem 0 0 0;" id="teacherHeaderName">
-                ระบบอาจารย์ผู้สอนและผู้บริหาร (Teacher & Executive Portal)
+              <h2 class="teacher-hero-title" id="teacherHeaderName">
+                ระบบอาจารย์ผู้สอนและวิชาการ
               </h2>
-              <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.15rem;" id="teacherHeaderSub">
+              <p class="teacher-hero-subtitle" id="teacherHeaderSub">
                 เช็คชื่อนักเรียนประจำวัน ประเมินเกรดรายวิชา (เกรด 1 – 4) และติดตามสถิติภาพรวม
-              </div>
+              </p>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <span class="badge-sub" id="teacherAssignedSubjectsBadge" style="background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; padding: 0.4rem 0.8rem; font-size: 0.78rem; font-weight: 600;">
-              วิชาที่รับผิดชอบ: -
+          <div class="teacher-hero-actions">
+            <span class="teacher-assigned-badge" id="teacherAssignedSubjectsBadge">
+              <i class="fa-solid fa-book-bookmark"></i> วิชาที่รับผิดชอบ: -
             </span>
             <button class="btn btn-secondary btn-sm" id="btnBackToAdminFromTeacher" onclick="switchView('admin')" style="display: none;">
-              <i class="fa-solid fa-shield-halved"></i> กลับหน้าแอดมินสูงสุด
+              <i class="fa-solid fa-shield-halved"></i> หน้าแอดมินสูงสุด
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="teacherLogout()" style="color: var(--danger); border-color: #fecaca; background: #fff5f5;">
-              <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+            <button class="teacher-logout-btn" onclick="teacherLogout()">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ
             </button>
           </div>
         </div>
       </div>
 
       <!-- Teacher & Executive Bento KPI Summary -->
-      <div class="bento-kpi-grid" style="margin-bottom: 1.15rem;">
-        <div class="bento-kpi-card" onclick="switchTeacherTab('attendance')">
-          <div class="bento-kpi-top">
-            <span class="bento-kpi-label">นักเรียนในระบบทั้งหมด</span>
-            <span class="bento-kpi-icon"><i class="fa-solid fa-users"></i></span>
+      <div class="teacher-kpi-grid">
+        <div class="teacher-kpi-card" onclick="switchTeacherTab('attendance')">
+          <div class="teacher-kpi-header">
+            <span class="teacher-kpi-title">นักเรียนในระบบทั้งหมด</span>
+            <span class="teacher-kpi-icon icon-students"><i class="fa-solid fa-users"></i></span>
           </div>
-          <div class="bento-kpi-val" id="teacherKpiTotalStudents">0 คน</div>
-          <div class="bento-kpi-foot">คลิกเพื่อเช็คชื่อมาเรียนประจำวัน</div>
+          <div class="teacher-kpi-num" id="teacherKpiTotalStudents">0 คน</div>
+          <div class="teacher-kpi-footer">
+            <span>คลิกเพื่อเช็คชื่อมาเรียน</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </div>
         </div>
-        <div class="bento-kpi-card" onclick="switchTeacherTab('attendance')">
-          <div class="bento-kpi-top">
-            <span class="bento-kpi-label">เช็คชื่อมาเรียนวันนี้</span>
-            <span class="bento-kpi-icon"><i class="fa-solid fa-user-check"></i></span>
+        <div class="teacher-kpi-card" onclick="switchTeacherTab('attendance')">
+          <div class="teacher-kpi-header">
+            <span class="teacher-kpi-title">เช็คชื่อมาเรียนวันนี้</span>
+            <span class="teacher-kpi-icon icon-check"><i class="fa-solid fa-user-check"></i></span>
           </div>
-          <div class="bento-kpi-val" id="teacherKpiCheckedToday">0 คน</div>
-          <div class="bento-kpi-foot" id="teacherKpiDateSub">อัปเดตข้อมูลเรียลไทม์</div>
+          <div class="teacher-kpi-num" id="teacherKpiCheckedToday">0 คน</div>
+          <div class="teacher-kpi-footer" id="teacherKpiDateSub">
+            <span>อัปเดตข้อมูลเรียลไทม์</span>
+          </div>
         </div>
-        <div class="bento-kpi-card" onclick="switchTeacherTab('grades')">
-          <div class="bento-kpi-top">
-            <span class="bento-kpi-label">รายวิชาที่รับผิดชอบ</span>
-            <span class="bento-kpi-icon"><i class="fa-solid fa-award"></i></span>
+        <div class="teacher-kpi-card" onclick="switchTeacherTab('grades')">
+          <div class="teacher-kpi-header">
+            <span class="teacher-kpi-title">รายวิชาที่รับผิดชอบ</span>
+            <span class="teacher-kpi-icon icon-subjects"><i class="fa-solid fa-award"></i></span>
           </div>
-          <div class="bento-kpi-val" id="teacherKpiSubjectsCount">0 วิชา</div>
-          <div class="bento-kpi-foot">คลิกเพื่อกรอกเกรดรายวิชา (1 – 4)</div>
+          <div class="teacher-kpi-num" id="teacherKpiSubjectsCount">0 วิชา</div>
+          <div class="teacher-kpi-footer">
+            <span>คลิกเพื่อประเมินเกรด</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </div>
         </div>
       </div>
 
-      <!-- Teacher Mode Segmented Navigation -->
-      <div class="hasanat-subnav minimal-subnav" style="max-width: 680px; margin: 0 auto 1.25rem auto; grid-template-columns: 1fr 1fr;">
-        <button class="hasanat-subnav-btn active" id="btnTeacherTabAtt" onclick="switchTeacherTab('attendance')">
-          <div class="tab-top-row"><i class="fa-solid fa-user-check"></i> <span>1. เช็คชื่อนักเรียนมาเรียน</span></div>
-          <span class="tab-badge-pill" id="teacherAttCountBadge">ประจำวัน</span>
+      <!-- Teacher Mode Elegant Segmented Tab Bar (Clean, Single Row, Human-Crafted) -->
+      <div class="teacher-segmented-nav">
+        <button class="hasanat-subnav-btn teacher-nav-tab active" id="btnTeacherTabAtt" onclick="switchTeacherTab('attendance')">
+          <i class="fa-solid fa-clipboard-check"></i>
+          <span class="tab-label">เช็คชื่อมาเรียน</span>
+          <span class="teacher-tab-badge" id="teacherAttCountBadge">ประจำวัน</span>
         </button>
-        <button class="hasanat-subnav-btn" id="btnTeacherTabGrade" onclick="switchTeacherTab('grades')">
-          <div class="tab-top-row"><i class="fa-solid fa-graduation-cap"></i> <span>2. กรอกเกรดรายวิชา (1 – 4)</span></div>
-          <span class="tab-badge-pill" id="teacherGradesSubjBadge">เชื่อมกราฟทักษะ</span>
+        <button class="hasanat-subnav-btn teacher-nav-tab" id="btnTeacherTabGrade" onclick="switchTeacherTab('grades')">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span class="tab-label">กรอกเกรดรายวิชา</span>
+          <span class="teacher-tab-badge" id="teacherGradesSubjBadge">เกรด 1–4</span>
         </button>
-        <button class="hasanat-subnav-btn" id="btnTeacherTabCal" onclick="switchTeacherTab('calendar')">
-          <div class="tab-top-row"><i class="fa-solid fa-calendar-days"></i> <span>3. ปฏิทินกิจกรรมโรงเรียน</span></div>
-          <span class="tab-badge-pill" id="teacherCalBadge">จัดการกิจกรรม</span>
+        <button class="hasanat-subnav-btn teacher-nav-tab" id="btnTeacherTabCal" onclick="switchTeacherTab('calendar')">
+          <i class="fa-solid fa-calendar-days"></i>
+          <span class="tab-label">ปฏิทินกิจกรรม</span>
+          <span class="teacher-tab-badge" id="teacherCalBadge">โรงเรียน</span>
         </button>
       </div>
 
@@ -4203,6 +4218,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=6.4"></script>
+  <script src="app.js?v=6.5"></script>
 </body>
 </html>

@@ -5524,49 +5524,64 @@ body.auth-locked #adminAuthModal.open,
 
 .att-status-btn-group {
   display: inline-flex;
-  gap: 0.28rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .att-status-btn {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  padding: 0.28rem 0.55rem;
-  border-radius: 6px;
+  padding: 0.32rem 0.65rem;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  user-select: none;
 }
 
 .att-status-btn:hover {
-  border-color: #64748b;
+  border-color: #cbd5e1;
+  background: #f8fafc;
   color: #0f172a;
+  transform: translateY(-1px);
 }
 
 .att-status-btn.active-present {
-  background: #0f172a;
-  border-color: #0f172a;
-  color: #ffffff;
+  background: #059669 !important;
+  border-color: #047857 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(5, 150, 105, 0.25);
 }
 
 .att-status-btn.active-late {
-  background: #475569;
-  border-color: #475569;
-  color: #ffffff;
+  background: #d97706 !important;
+  border-color: #b45309 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.25);
 }
 
 .att-status-btn.active-leave {
-  background: #e2e8f0;
-  border-color: #94a3b8;
-  color: #0f172a;
+  background: #0284c7 !important;
+  border-color: #0369a1 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.25);
 }
 
 .att-status-btn.active-absent {
-  background: #fef2f2;
-  border-color: #fca5a5;
-  color: #991b1b;
+  background: #dc2626 !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(220, 38, 38, 0.25);
 }
 
 .grade-select-pill {
@@ -5975,6 +5990,355 @@ body.portal-mode-admin .app-header,
 body.portal-mode-teacher .app-header {
   border-bottom: 1px solid #cbd5e1;
   background: #ffffff;
+}
+
+/* ==========================================================================
+   HUMAN-CRAFTED TEACHER & EXECUTIVE PORTAL ("ดูไม่เหมือนเอไอ เรียบร้อย สบายตา")
+   ========================================================================== */
+
+/* 1. Header Navigation for Teacher */
+body.portal-mode-teacher #nav-teacher {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.35rem 1rem;
+  font-size: 0.84rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+body.portal-mode-teacher #nav-teacher i {
+  color: #059669;
+}
+
+/* 2. Hero Header Card */
+.teacher-hero-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.35rem 1.6rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  margin-bottom: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.teacher-hero-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.teacher-hero-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.teacher-role-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+}
+
+.teacher-hero-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.teacher-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.3rem;
+}
+
+.teacher-portal-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  letter-spacing: 0.01em;
+}
+
+.teacher-sync-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.teacher-hero-title {
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.teacher-hero-subtitle {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0.25rem 0 0 0;
+  line-height: 1.4;
+}
+
+.teacher-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.teacher-assigned-badge {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.teacher-logout-btn {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.16s ease;
+}
+
+.teacher-logout-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+/* 3. Stat / KPI Cards Grid */
+.teacher-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.teacher-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.15rem 1.35rem;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.teacher-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+}
+
+.teacher-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.teacher-kpi-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.teacher-kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  flex-shrink: 0;
+}
+
+.teacher-kpi-icon.icon-students {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.teacher-kpi-icon.icon-check {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.teacher-kpi-icon.icon-subjects {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.teacher-kpi-num {
+  font-size: 1.68rem;
+  font-weight: 800;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  margin: 0.2rem 0 0.35rem 0;
+}
+
+.teacher-kpi-footer {
+  font-size: 0.76rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+}
+
+.teacher-kpi-footer i {
+  font-size: 0.68rem;
+  transition: transform 0.15s ease;
+}
+
+.teacher-kpi-card:hover .teacher-kpi-footer i {
+  transform: translateX(3px);
+  color: #0f172a;
+}
+
+/* 4. Elegant Single-Row Segmented Tab Navigation */
+.teacher-segmented-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 680px;
+  margin: 0 auto 1.6rem auto;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  gap: 4px;
+}
+
+.teacher-nav-tab {
+  flex: 1;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  height: 44px;
+  padding: 0 0.95rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.teacher-nav-tab:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: #0f172a;
+}
+
+.teacher-nav-tab.active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 700;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08) !important;
+}
+
+.teacher-nav-tab.active i {
+  color: #059669 !important;
+}
+
+.teacher-tab-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.04);
+  color: #64748b;
+  transition: all 0.15s ease;
+}
+
+.teacher-nav-tab.active .teacher-tab-badge {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+/* Responsive Breakpoints for Teacher Portal */
+@media (max-width: 768px) {
+  .teacher-hero-card {
+    padding: 1.15rem 1.25rem;
+  }
+  .teacher-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .teacher-segmented-nav {
+    max-width: 100%;
+    padding: 3px;
+    gap: 2px;
+  }
+  .teacher-nav-tab {
+    height: 40px;
+    padding: 0 0.45rem;
+    font-size: 0.78rem;
+    gap: 0.35rem;
+  }
+  .teacher-tab-badge {
+    display: none;
+  }
 }
 
 /* 3. Bento Back-Office Architecture (Admin & Teacher Views) */
