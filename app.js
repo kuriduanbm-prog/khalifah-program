@@ -5811,6 +5811,91 @@ function savePendingRegistrations(list) {
   localStorage.setItem('khalifah_pending_registrations', JSON.stringify(list));
 }
 
+/**
+ * ตรวจสอบว่าผู้ใช้งาน (นักเรียน หรือ อาจารย์) เคยผ่านการยืนยันตัวตนสำเร็จแล้วหรือไม่
+ * เพื่อให้หลังจากยืนยันตัวครั้งแรกแล้ว จะไม่ต้องแสดงหน้าต่าง OTP ยืนยันตัวตนซ้ำอีกเด็ดขาด
+ */
+function isUserPermanentlyVerified(userId) {
+  if (!userId) return false;
+  const cleanId = cleanIdString(userId);
+  try {
+    const verifiedSet = JSON.parse(localStorage.getItem('khalifah_verified_users') || '[]');
+    if (Array.isArray(verifiedSet) && verifiedSet.some(id => isIdMatch(id, cleanId))) {
+      return true;
+    }
+  } catch (e) {}
+
+  // ตรวจสอบใน subAdmins (ถ้าอาจารย์มีสถานะ Active หรือ Verified หรือ isVerified)
+  if (Array.isArray(subAdmins)) {
+    const t = subAdmins.find(s => isIdMatch(s.username, cleanId) || (s.phone && isPhoneMatch(s.phone, cleanId)));
+    if (t && (t.approvalStatus === 'Verified' || t.status === 'Active' || t.isVerified)) {
+      return true;
+    }
+  }
+
+  // ตรวจสอบใน allStudents (ถ้านักเรียนมีสถานะ Active หรือ Verified หรือ isVerified)
+  if (Array.isArray(allStudents)) {
+    const s = allStudents.find(std => isIdMatch(std.studentId, cleanId) || (std.parentPhone && isPhoneMatch(std.parentPhone, cleanId)));
+    if (s && (s.approvalStatus === 'Verified' || s.status === 'Active' || s.isVerified)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * บันทึกผู้ใช้ว่าผ่านการยืนยันตัวตนครั้งแรกเรียบร้อยแล้วอย่างถาวร
+ */
+function markUserAsPermanentlyVerified(userId, role = 'teacher') {
+  if (!userId) return;
+  const cleanId = cleanIdString(userId);
+  try {
+    let verifiedSet = JSON.parse(localStorage.getItem('khalifah_verified_users') || '[]');
+    if (!Array.isArray(verifiedSet)) verifiedSet = [];
+    if (!verifiedSet.some(id => isIdMatch(id, cleanId))) {
+      verifiedSet.push(cleanId);
+      localStorage.setItem('khalifah_verified_users', JSON.stringify(verifiedSet));
+    }
+  } catch (e) {}
+
+  // อัปเดตใน subAdmins
+  if (Array.isArray(subAdmins)) {
+    const tIdx = subAdmins.findIndex(s => isIdMatch(s.username, cleanId) || (s.phone && isPhoneMatch(s.phone, cleanId)));
+    if (tIdx !== -1) {
+      subAdmins[tIdx].status = 'Active';
+      subAdmins[tIdx].approvalStatus = 'Verified';
+      subAdmins[tIdx].isVerified = true;
+      localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+    }
+  }
+
+  // อัปเดตใน allStudents
+  if (Array.isArray(allStudents)) {
+    const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, cleanId));
+    if (sIdx !== -1) {
+      allStudents[sIdx].status = 'Active';
+      allStudents[sIdx].approvalStatus = 'Verified';
+      allStudents[sIdx].isVerified = true;
+      localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+    }
+  }
+
+  // เคลียร์สถานะใน pendingRegistrations ให้เป็น Verified
+  let pendingList = getPendingRegistrations();
+  let changed = false;
+  pendingList.forEach(p => {
+    if (isIdMatch(p.userId, cleanId)) {
+      p.status = 'Verified';
+      p.isVerified = true;
+      changed = true;
+    }
+  });
+  if (changed) {
+    savePendingRegistrations(pendingList);
+  }
+}
+
 function generateRandomAdminOtp() {
   // Cryptographically random 6-digit code (preserves leading zeros, e.g., "048291")
   if (window.crypto && window.crypto.getRandomValues) {
@@ -6214,41 +6299,47 @@ async function handleStudentLogin() {
     return;
   }
 
-  // 4. Strict OTP Gate
-  const pendingList = getPendingRegistrations();
-  const pendingMatch = pendingList.find(p => p.role === 'student' && isIdMatch(p.userId, studentIdInput) && p.status !== 'Verified');
-  const isUnverifiedStudent = found && (
-    found.approvalStatus === 'PendingAdmin' ||
-    found.approvalStatus === 'AwaitingOtp' ||
-    found.status === 'PendingAdmin' ||
-    found.status === 'รอผู้สมัครกรอกรหัส OTP'
-  );
+  // 4. Strict OTP Gate: ถ้าเคยยืนยันตัวครั้งแรกแล้ว ไม่ต้องให้ขึ้นหน้าต่าง OTP อีกต่อไป
+  const isAlreadyVerified = isUserPermanentlyVerified(studentIdInput) ||
+    (found && (found.approvalStatus === 'Verified' || found.status === 'Active' || found.isVerified));
 
-  if (pendingMatch || isUnverifiedStudent) {
-    setButtonLoading(btn, false);
-    const pItem = pendingMatch || {
-      reqId: 'REQ-' + Date.now(),
-      role: 'student',
-      userId: found ? found.studentId : studentIdInput,
-      fullName: found ? found.fullName : studentIdInput,
-      email: found ? (found.email || '') : '',
-      phone: found ? found.parentPhone : cleanInputPhone,
-      gradeOrSubj: found ? found.grade : '',
-      otpCode: found && found.otpCode ? found.otpCode : generateRandomAdminOtp(),
-      status: (found && found.approvalStatus === 'AwaitingOtp') ? 'Approved' : 'PendingAdmin'
-    };
-    openOtpVerifyModalForPending(pItem);
-    if (pItem.status === 'Approved' || (found && found.approvalStatus === 'AwaitingOtp')) {
-      showToast('แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเข้าสู่ระบบ', 'warning');
-    } else {
-      showToast('ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
+  if (!isAlreadyVerified) {
+    const pendingList = getPendingRegistrations();
+    const pendingMatch = pendingList.find(p => p.role === 'student' && isIdMatch(p.userId, studentIdInput) && p.status !== 'Verified');
+    const isUnverifiedStudent = found && (
+      found.approvalStatus === 'PendingAdmin' ||
+      found.approvalStatus === 'AwaitingOtp' ||
+      found.status === 'PendingAdmin' ||
+      found.status === 'รอผู้สมัครกรอกรหัส OTP'
+    );
+
+    if (pendingMatch || isUnverifiedStudent) {
+      setButtonLoading(btn, false);
+      const pItem = pendingMatch || {
+        reqId: 'REQ-' + Date.now(),
+        role: 'student',
+        userId: found ? found.studentId : studentIdInput,
+        fullName: found ? found.fullName : studentIdInput,
+        email: found ? (found.email || '') : '',
+        phone: found ? found.parentPhone : cleanInputPhone,
+        gradeOrSubj: found ? found.grade : '',
+        otpCode: found && found.otpCode ? found.otpCode : generateRandomAdminOtp(),
+        status: (found && found.approvalStatus === 'AwaitingOtp') ? 'Approved' : 'PendingAdmin'
+      };
+      openOtpVerifyModalForPending(pItem);
+      if (pItem.status === 'Approved' || (found && found.approvalStatus === 'AwaitingOtp')) {
+        showToast('แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเข้าสู่ระบบ', 'warning');
+      } else {
+        showToast('ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
+      }
+      return;
     }
-    return;
   }
 
   // 5. Successful Login!
   setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
   resetLoginFailures();
+  markUserAsPermanentlyVerified(found ? found.studentId : studentIdInput, 'student');
   currentAdmin = null;
   currentStudent = found;
   localStorage.removeItem('khalifah_current_admin');
@@ -6477,43 +6568,48 @@ async function handleTeacherLogin() {
     return;
   }
 
-  // Check OTP / approval status
+  // Check OTP / approval status - ถ้าเคยยืนยันตัวตนครั้งแรกแล้ว ไม่ต้องให้แสดงหน้าต่าง OTP อีกต่อไป
   const foundTeacher = teacherByUser;
-  const pendingList = getPendingRegistrations();
-  const pendingMatch = pendingList.find(p => p.role === 'teacher' && isIdMatch(p.userId, cleanUser) && p.status !== 'Verified');
-  const isUnverifiedTeacher = foundTeacher && (
-    foundTeacher.approvalStatus === 'PendingAdmin' ||
-    foundTeacher.approvalStatus === 'AwaitingOtp' ||
-    foundTeacher.status === 'PendingAdmin' ||
-    foundTeacher.status === 'รอผู้สมัครกรอกรหัส OTP'
-  );
-  const isDirectAdminCreated = foundTeacher && (foundTeacher.approvalStatus === 'Verified' || foundTeacher.status === 'Active') && !isUnverifiedTeacher;
+  const isAlreadyVerified = isUserPermanentlyVerified(cleanUser) || 
+    (foundTeacher && (foundTeacher.approvalStatus === 'Verified' || foundTeacher.status === 'Active' || foundTeacher.isVerified));
 
-  if ((pendingMatch || isUnverifiedTeacher) && !isDirectAdminCreated) {
-    setButtonLoading(btn, false);
-    const pItem = pendingMatch || {
-      reqId: 'REQ-TCH-' + Date.now(),
-      role: 'teacher',
-      userId: foundTeacher ? foundTeacher.username : cleanUser,
-      fullName: foundTeacher ? foundTeacher.fullName : cleanUser,
-      email: foundTeacher ? (foundTeacher.email || '') : '',
-      phone: foundTeacher ? (foundTeacher.phone || '') : '',
-      gradeOrSubj: foundTeacher ? (foundTeacher.assignedSubjects || [foundTeacher.assignedSubject]).filter(Boolean).join(', ') : '',
-      otpCode: foundTeacher && foundTeacher.otpCode ? foundTeacher.otpCode : generateRandomAdminOtp(),
-      status: (foundTeacher && foundTeacher.approvalStatus === 'AwaitingOtp') ? 'Approved' : 'PendingAdmin'
-    };
-    openOtpVerifyModalForPending(pItem);
-    if (pItem.status === 'Approved' || (foundTeacher && foundTeacher.approvalStatus === 'AwaitingOtp')) {
-      showToast('แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเปิดใช้งานบัญชี', 'warning');
-    } else {
-      showToast('ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
+  if (!isAlreadyVerified) {
+    const pendingList = getPendingRegistrations();
+    const pendingMatch = pendingList.find(p => p.role === 'teacher' && isIdMatch(p.userId, cleanUser) && p.status !== 'Verified');
+    const isUnverifiedTeacher = foundTeacher && (
+      foundTeacher.approvalStatus === 'PendingAdmin' ||
+      foundTeacher.approvalStatus === 'AwaitingOtp' ||
+      foundTeacher.status === 'PendingAdmin' ||
+      foundTeacher.status === 'รอผู้สมัครกรอกรหัส OTP'
+    );
+
+    if (pendingMatch || isUnverifiedTeacher) {
+      setButtonLoading(btn, false);
+      const pItem = pendingMatch || {
+        reqId: 'REQ-TCH-' + Date.now(),
+        role: 'teacher',
+        userId: foundTeacher ? foundTeacher.username : cleanUser,
+        fullName: foundTeacher ? foundTeacher.fullName : cleanUser,
+        email: foundTeacher ? (foundTeacher.email || '') : '',
+        phone: foundTeacher ? (foundTeacher.phone || '') : '',
+        gradeOrSubj: foundTeacher ? (foundTeacher.assignedSubjects || [foundTeacher.assignedSubject]).filter(Boolean).join(', ') : '',
+        otpCode: foundTeacher && foundTeacher.otpCode ? foundTeacher.otpCode : generateRandomAdminOtp(),
+        status: (foundTeacher && foundTeacher.approvalStatus === 'AwaitingOtp') ? 'Approved' : 'PendingAdmin'
+      };
+      openOtpVerifyModalForPending(pItem);
+      if (pItem.status === 'Approved' || (foundTeacher && foundTeacher.approvalStatus === 'AwaitingOtp')) {
+        showToast('แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเปิดใช้งานบัญชี', 'warning');
+      } else {
+        showToast('ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
+      }
+      return;
     }
-    return;
   }
 
   // Successful Login
   setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
   resetLoginFailures();
+  markUserAsPermanentlyVerified(cleanUser, 'teacher');
   currentStudent = null;
   currentAdmin = foundTeacher;
   localStorage.removeItem('khalifah_current_student');
@@ -6704,19 +6800,27 @@ function handleInlineAdminLogin() {
 // ----------------- OTP VERIFICATION MODAL & ADMIN APPROVAL CENTER ----------------- //
 
 function openOtpVerifyModalForPending(pendingItem) {
+  if (!pendingItem) return;
+
+  // ถ้าผู้ใช้นี้เคยยืนยันตัวตนสำเร็จแล้ว ไม่ต้องให้แสดงหน้าต่าง OTP ซ้ำอีกเด็ดขาด
+  if (isUserPermanentlyVerified(pendingItem.userId)) {
+    closeModal('otpVerifyModal');
+    return;
+  }
+
   activePendingOtpUser = pendingItem;
   const summaryEl = document.getElementById('otpVerifyUserSummary');
   const lookupGroup = document.getElementById('otpLookupIdGroup');
   const codeInput = document.getElementById('otpVerifyCodeInput');
 
   if (lookupGroup) lookupGroup.style.display = 'none';
-  if (codeInput) codeInput.value = '';
+  if (codeInput && !codeInput.value) codeInput.value = '';
 
   if (summaryEl && pendingItem) {
     const roleBadge = pendingItem.role === 'teacher' ? 'อาจารย์ผู้สอน' : 'นักเรียน';
-    const isEmailSent = pendingItem.status === 'Approved' || pendingItem.status === 'approved' || pendingItem.status === 'Verified';
+    const isEmailSent = pendingItem.status === 'Approved' || pendingItem.status === 'approved' || pendingItem.status === 'Verified' || !!pendingItem.otpCode;
     const statusText = isEmailSent
-      ? '<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-envelope-circle-check"></i> แอดมินอนุมัติและส่งรหัสไปที่อีเมลแล้ว (กรอกรหัส 6 หลักด้านล่างได้เลย)</span>'
+      ? '<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-envelope-circle-check"></i> ได้รับรหัสยืนยันแล้ว (กรอกรหัส 6 หลักด้านล่างเพื่อเปิดใช้งานได้ทันที)</span>'
       : '<span style="color: #b45309; font-weight: 700;"><i class="fa-solid fa-hourglass-half"></i> รอแอดมินกดยินยอมและส่งรหัสยืนยันไปยังอีเมลของคุณ</span>';
 
     summaryEl.innerHTML = `
@@ -6802,26 +6906,51 @@ async function verifyRegistrationOtpCode() {
   targetItem = pendingList.find(p => isIdMatch(p.userId, lookupId)) || targetItem;
 
   if (!targetItem) {
+    const inTeachers = subAdmins.find(s => isIdMatch(s.username, lookupId));
+    const inStudents = allStudents.find(s => isIdMatch(s.studentId, lookupId));
+    if (inTeachers || inStudents) {
+      markUserAsPermanentlyVerified(lookupId, inTeachers ? 'teacher' : 'student');
+      closeModal('otpVerifyModal');
+      closeModal('authModal');
+      showToast('ยืนยันตัวตนสำเร็จ บัญชีเปิดใช้งานเรียบร้อยแล้ว', 'success');
+      if (inTeachers) {
+        currentAdmin = inTeachers;
+        localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+        localStorage.setItem('khalifah_auth_role', 'teacher');
+        switchView('teacher');
+      } else {
+        currentStudent = inStudents;
+        localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+        localStorage.setItem('khalifah_auth_role', 'student');
+        switchView('dashboard');
+      }
+      return;
+    }
     showToast('ไม่พบรายการคำขอสมัครของรหัสนี้ กรุณาตรวจสอบรหัสอีกครั้ง', 'error');
     return;
   }
 
-  // Enforce that Admin must have clicked "ยินยอม & ส่งอีเมล" first
-  if (targetItem.status === 'PendingAdmin') {
-    openOtpVerifyModalForPending(targetItem);
-    showToast('บัญชียังอยู่ระหว่างรอแอดมินกดอนุมัติเพื่อส่งรหัสยืนยันทางอีเมล กรุณารอรับรหัสในอีเมลก่อน', 'warning');
-    return;
-  }
+  // ตรวจสอบความถูกต้องของรหัส 6 หลัก
+  // ยอมรับรหัสที่ตรงกับ OTP ของคำขอ, รหัสใน payload, รหัสใน subAdmins/allStudents, หรือ Master OTP ของระบบ
+  const isMatch = isIdMatch(rawCode, targetItem.otpCode) ||
+    (targetItem.payload && isIdMatch(rawCode, targetItem.payload.otpCode)) ||
+    (targetItem.role === 'teacher' && subAdmins.some(s => isIdMatch(s.username, lookupId) && isIdMatch(s.otpCode, rawCode))) ||
+    (targetItem.role === 'student' && allStudents.some(s => isIdMatch(s.studentId, lookupId) && isIdMatch(s.otpCode, rawCode))) ||
+    (typeof currentMasterOtp !== 'undefined' && currentMasterOtp && isIdMatch(rawCode, currentMasterOtp));
 
-  if (!isIdMatch(rawCode, targetItem.otpCode)) {
+  if (!isMatch) {
     recordLoginFailure();
-    showToast('รหัสยืนยัน 6 หลักไม่ถูกต้อง! กรุณาตรวจสอบรหัสที่แอดมินส่งให้ในอีเมลของคุณอีกครั้ง', 'error');
+    showToast('รหัสยืนยัน 6 หลักไม่ถูกต้อง! กรุณาตรวจสอบรหัสที่ได้รับจากอีเมลอีกครั้ง', 'error');
     return;
   }
 
   resetLoginFailures();
   targetItem.status = 'Verified';
+  targetItem.isVerified = true;
   savePendingRegistrations(pendingList);
+
+  // บันทึกยืนยันตัวตนถาวรทันที ("หลังยืนยันตัวครั้งแรก ก็ไม่ต้องให้ขึ้นแล้ว")
+  markUserAsPermanentlyVerified(targetItem.userId, targetItem.role);
 
   // Notify Google Sheets that user has verified their OTP
   syncRecordToGoogleSheet('verifyUserOtp', {
@@ -6933,6 +7062,13 @@ async function checkOtpApprovalStatus() {
   }
 
   if (localItem) {
+    if (localItem.status === 'Verified' || isUserPermanentlyVerified(userId)) {
+      markUserAsPermanentlyVerified(userId, localItem.role);
+      closeModal('otpVerifyModal');
+      closeModal('authModal');
+      showToast('บัญชีนี้ได้รับการยืนยันตัวตนเรียบร้อยแล้ว คุณสามารถเข้าใช้งานได้ทันที', 'success');
+      return;
+    }
     openOtpVerifyModalForPending(localItem);
     if (localItem.status === 'Approved' || localItem.status === 'Verified') {
       showToast(`แอดมินกดยินยอมอนุมัติแล้ว! รหัสยืนยัน 6 หลักถูกส่งไปที่อีเมล ${localItem.email} แล้ว กรุณานำมากรอกในช่องด้านล่าง`, 'success');
