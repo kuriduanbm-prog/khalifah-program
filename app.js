@@ -1885,12 +1885,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return; // Kiosk mode active, skip normal login / student dashboards
   }
 
-  if (currentStudent || currentAdmin) {
+  if (currentStudent) {
     document.body.classList.remove('auth-locked');
+    updateAdminUIVisibility(false);
+  } else if (currentAdmin) {
+    document.body.classList.remove('auth-locked');
+    updateAdminUIVisibility(true);
   } else {
     document.body.classList.add('auth-locked');
+    updateAdminUIVisibility(false);
   }
-  updateAdminUIVisibility(!!currentAdmin);
   setupEventListeners();
   renderCurrentStudentProfile();
   renderDashboardCharts();
@@ -1901,7 +1905,14 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPrayerHistory();
   initCalendar();
   initExportDateDefaults();
-  enforceMandatoryLogin();
+
+  if (currentStudent) {
+    switchView('dashboard');
+  } else if (currentAdmin) {
+    switchView(currentAdmin.role === 'SuperAdmin' ? 'admin' : 'teacher');
+  } else {
+    enforceMandatoryLogin();
+  }
 
   // ซิงค์ฐานข้อมูลทั้งหมดกับ Google Sheets แบบเรียลไทม์ทันทีเมื่อเปิดแอป
   setTimeout(() => {
@@ -1912,7 +1923,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ตรวจสอบว่ามี #admin ใน URL หรือไม่
   if (window.location.hash === '#admin') {
-    openModal('adminAuthModal');
+    if (!currentAdmin || currentAdmin.role !== 'SuperAdmin') {
+      openModal('adminAuthModal');
+    }
   }
 
   // Mobile Stability: Release hardware camera streams when app is backgrounded or tab hidden
@@ -1932,33 +1945,78 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadStoredData() {
-  // 1. Load current student (Clean start: null if legacy mock student, unverified, or not logged in)
+  // 1. Resolve Active Session Role (Strict Isolation: Student vs Teacher vs Admin)
+  const authRole = localStorage.getItem('khalifah_auth_role');
   const savedStudent = localStorage.getItem('khalifah_current_student');
-  if (savedStudent) {
-    try {
-      const parsed = JSON.parse(savedStudent);
-      const isUnverified = parsed && (
-        parsed.approvalStatus === 'PendingAdmin' ||
-        parsed.approvalStatus === 'AwaitingOtp' ||
-        parsed.status === 'PendingAdmin' ||
-        parsed.status === 'รอผู้สมัครกรอกรหัส OTP'
-      );
-      // Purge any mock/dummy student IDs, sample names, or unverified OTP accounts
-      if (!parsed || isUnverified || parsed.studentId === 'STD-256901' || parsed.studentId === 'STD-256902' || (parsed.fullName && parsed.fullName.startsWith('นายมูฮัมหมัด ซอ'))) {
-        localStorage.removeItem('khalifah_current_student');
+  const savedAdmin = localStorage.getItem('khalifah_current_admin');
+
+  if (authRole === 'student' || (savedStudent && !savedAdmin)) {
+    // STUDENT SESSION ONLY: Purge any lingering admin session
+    currentAdmin = null;
+    localStorage.removeItem('khalifah_current_admin');
+
+    if (savedStudent) {
+      try {
+        const parsed = JSON.parse(savedStudent);
+        const isUnverified = parsed && (
+          parsed.approvalStatus === 'PendingAdmin' ||
+          parsed.approvalStatus === 'AwaitingOtp' ||
+          parsed.status === 'PendingAdmin' ||
+          parsed.status === 'รอผู้สมัครกรอกรหัส OTP'
+        );
+        if (!parsed || isUnverified || parsed.studentId === 'STD-256901' || parsed.studentId === 'STD-256902' || (parsed.fullName && parsed.fullName.startsWith('นายมูฮัมหมัด ซอ'))) {
+          localStorage.removeItem('khalifah_current_student');
+          localStorage.removeItem('khalifah_auth_role');
+          currentStudent = null;
+        } else {
+          if (parsed.studentId) parsed.studentId = cleanIdString(parsed.studentId);
+          if (parsed.parentPhone) parsed.parentPhone = normalizePhone(parsed.parentPhone);
+          if (parsed.birthDate) parsed.birthDate = normalizeBirthDate(parsed.birthDate);
+          currentStudent = parsed;
+          localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+          localStorage.setItem('khalifah_auth_role', 'student');
+        }
+      } catch (e) {
         currentStudent = null;
-      } else {
-        if (parsed.studentId) parsed.studentId = cleanIdString(parsed.studentId);
-        if (parsed.parentPhone) parsed.parentPhone = normalizePhone(parsed.parentPhone);
-        if (parsed.birthDate) parsed.birthDate = normalizeBirthDate(parsed.birthDate);
-        currentStudent = parsed;
-        localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+        localStorage.removeItem('khalifah_current_student');
+        localStorage.removeItem('khalifah_auth_role');
       }
-    } catch (e) {
+    } else {
       currentStudent = null;
+      localStorage.removeItem('khalifah_auth_role');
+    }
+  } else if (authRole === 'teacher' || authRole === 'admin' || (savedAdmin && !savedStudent)) {
+    // TEACHER OR ADMIN SESSION ONLY: Purge any lingering student session
+    currentStudent = null;
+    localStorage.removeItem('khalifah_current_student');
+
+    if (savedAdmin) {
+      try {
+        const parsedAdmin = JSON.parse(savedAdmin);
+        if (parsedAdmin && (parsedAdmin.username || parsedAdmin.role)) {
+          currentAdmin = parsedAdmin;
+          localStorage.setItem('khalifah_auth_role', parsedAdmin.role === 'SuperAdmin' ? 'admin' : 'teacher');
+        } else {
+          currentAdmin = null;
+          localStorage.removeItem('khalifah_current_admin');
+          localStorage.removeItem('khalifah_auth_role');
+        }
+      } catch (e) {
+        currentAdmin = null;
+        localStorage.removeItem('khalifah_current_admin');
+        localStorage.removeItem('khalifah_auth_role');
+      }
+    } else {
+      currentAdmin = null;
+      localStorage.removeItem('khalifah_auth_role');
     }
   } else {
+    // Unauthenticated or corrupted dual state: clean purge
     currentStudent = null;
+    currentAdmin = null;
+    localStorage.removeItem('khalifah_current_student');
+    localStorage.removeItem('khalifah_current_admin');
+    localStorage.removeItem('khalifah_auth_role');
   }
 
   // 2. Load all students (Filter out dummy students & sanitize IDs/Phone/BirthDate)
@@ -2028,20 +2086,7 @@ function loadStoredData() {
     subAdmins = [];
   }
 
-  // 6. Load current admin / teacher session
-  const savedAdmin = localStorage.getItem('khalifah_current_admin');
-  if (savedAdmin) {
-    try {
-      const parsedAdmin = JSON.parse(savedAdmin);
-      if (parsedAdmin && (parsedAdmin.username || parsedAdmin.role)) {
-        currentAdmin = parsedAdmin;
-      }
-    } catch (e) {
-      currentAdmin = null;
-    }
-  }
-
-  // 7. Load calendar events
+  // 6. Load calendar events
   try {
     const savedCal = localStorage.getItem('khalifah_calendar_events');
     if (savedCal) {
@@ -2085,22 +2130,29 @@ function switchView(viewName) {
     return;
   }
 
-  // Isolate Back-Office (Admin & Teacher) from Student tabs
   const studentViews = ['dashboard', 'prayer', 'activities', 'hasanat', 'profile'];
-  if (currentAdmin && studentViews.includes(viewName)) {
-    viewName = currentAdmin.role === 'SuperAdmin' ? 'admin' : 'teacher';
-  }
 
-  // If attempting to switch to teacher view and not authenticated as teacher/admin
-  if (viewName === 'teacher' && !currentAdmin) {
-    openModal('authModal');
-    selectAuthRole('teacher');
-    return;
+  // 1. If logged in as Student: strictly lock to student views
+  if (currentStudent) {
+    if (!studentViews.includes(viewName)) {
+      showToast('หน้านี้สำหรับอาจารย์และผู้ดูแลระบบเท่านั้น นักเรียนไม่มีสิทธิ์เข้าถึง', 'warning');
+      viewName = 'dashboard';
+    }
   }
-  // If attempting to switch to admin and not authenticated, show passcode modal
-  if (viewName === 'admin' && !currentAdmin) {
-    openModal('adminAuthModal');
-    return;
+  // 2. If logged in as Teacher: strictly lock to teacher view
+  else if (currentAdmin && currentAdmin.role !== 'SuperAdmin') {
+    if (viewName === 'admin') {
+      showToast('เฉพาะแอดมินสูงสุด (Super Admin) เท่านั้นที่สามารถเข้าถึงหน้านี้ได้', 'warning');
+      viewName = 'teacher';
+    } else if (studentViews.includes(viewName)) {
+      viewName = 'teacher';
+    }
+  }
+  // 3. If logged in as Super Admin: allow admin and teacher views
+  else if (currentAdmin && currentAdmin.role === 'SuperAdmin') {
+    if (studentViews.includes(viewName)) {
+      viewName = 'admin';
+    }
   }
 
   // Update tabs active state
@@ -4231,17 +4283,21 @@ function openStudentAccountModal() {
 function studentLogout() {
   if (!confirm('ต้องการออกจากระบบนักเรียนใช่หรือไม่?')) return;
   currentStudent = null;
+  currentAdmin = null;
   localStorage.removeItem('khalifah_current_student');
+  localStorage.removeItem('khalifah_current_admin');
+  localStorage.removeItem('khalifah_auth_role');
   closeModal('studentAccountModal');
+  updateAdminUIVisibility(false);
   renderCurrentStudentProfile();
   renderDashboardCharts();
   renderActivitiesList();
   renderTodayPrayerTable();
-  switchView('dashboard');
-  showToast('ออกจากระบบนักเรียนเรียบร้อยแล้ว', 'info');
   document.body.classList.add('auth-locked');
   toggleAuthForm('login');
+  selectAuthRole('student');
   openModal('authModal');
+  showToast('ออกจากระบบนักเรียนเรียบร้อยแล้ว', 'info');
 }
 
 // ----------------- PROFILE PHOTO UPLOAD (COMPRESSED BASE64) ----------------- //
@@ -4788,7 +4844,9 @@ async function handleStudentLogin() {
   resetLoginFailures();
   currentAdmin = null;
   currentStudent = found;
+  localStorage.removeItem('khalifah_current_admin');
   localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+  localStorage.setItem('khalifah_auth_role', 'student');
 
   setTimeout(() => {
     document.body.classList.remove('auth-locked');
@@ -5049,8 +5107,11 @@ async function handleTeacherLogin() {
   // Successful Login
   setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
   resetLoginFailures();
+  currentStudent = null;
   currentAdmin = foundTeacher;
+  localStorage.removeItem('khalifah_current_student');
   localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+  localStorage.setItem('khalifah_auth_role', 'teacher');
 
   setTimeout(() => {
     document.body.classList.remove('auth-locked');
@@ -5214,8 +5275,11 @@ function handleInlineAdminLogin() {
   if (isIdMatch(pass, MASTER_ADMIN_PASS)) {
     setButtonLoading(btn, false, null, 'ยืนยันสิทธิ์สำเร็จ!');
     resetLoginFailures();
+    currentStudent = null;
     currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
+    localStorage.removeItem('khalifah_current_student');
     localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+    localStorage.setItem('khalifah_auth_role', 'admin');
     setTimeout(() => {
       document.body.classList.remove('auth-locked');
       updateAdminUIVisibility(true);
@@ -5371,10 +5435,12 @@ async function verifyRegistrationOtpCode() {
       allStudents.push(targetItem.payload);
       currentStudent = targetItem.payload;
     }
+    currentAdmin = null;
     localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
     localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+    localStorage.removeItem('khalifah_current_admin');
+    localStorage.setItem('khalifah_auth_role', 'student');
 
-    currentAdmin = null;
     document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(false);
     renderCurrentStudentProfile();
@@ -5397,7 +5463,11 @@ async function verifyRegistrationOtpCode() {
       subAdmins.push(targetItem.payload);
       currentAdmin = targetItem.payload;
     }
+    currentStudent = null;
     localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
+    localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+    localStorage.removeItem('khalifah_current_student');
+    localStorage.setItem('khalifah_auth_role', 'teacher');
 
     document.body.classList.remove('auth-locked');
     updateAdminUIVisibility(true);
@@ -5482,15 +5552,14 @@ function toggleSubAdminField() {
 }
 
 function updateAdminUIVisibility(isAuthenticated) {
-  const isSuper = isAuthenticated && currentAdmin && currentAdmin.role === 'SuperAdmin';
-  const isTeacherOrAdmin = isAuthenticated && !!currentAdmin;
-  const isTeacherOnly = isTeacherOrAdmin && !isSuper;
-  const isStudentMode = !isTeacherOrAdmin && !!currentStudent;
+  const isSuper = !!currentAdmin && currentAdmin.role === 'SuperAdmin';
+  const isTeacher = !!currentAdmin && currentAdmin.role !== 'SuperAdmin';
+  const isStudent = !!currentStudent && !currentAdmin;
 
   // Apply role isolation classes on body to hide Student navigation tabs when Admin or Teacher is logged in
   document.body.classList.toggle('portal-mode-admin', !!isSuper);
-  document.body.classList.toggle('portal-mode-teacher', !!isTeacherOnly);
-  document.body.classList.toggle('portal-mode-student', !!isStudentMode);
+  document.body.classList.toggle('portal-mode-teacher', !!isTeacher);
+  document.body.classList.toggle('portal-mode-student', !!isStudent);
 
   const navAdmin = document.getElementById('nav-admin');
   const mNavAdmin = document.getElementById('m-nav-admin');
@@ -5500,8 +5569,8 @@ function updateAdminUIVisibility(isAuthenticated) {
   const btnTabLogo = document.getElementById('btnTabLogo');
   const btnBackAdmin = document.getElementById('btnBackToAdminFromTeacher');
 
-  if (navTeacher) navTeacher.style.display = isTeacherOrAdmin ? 'inline-flex' : 'none';
-  if (mNavTeacher) mNavTeacher.style.display = isTeacherOrAdmin ? 'flex' : 'none';
+  if (navTeacher) navTeacher.style.display = (isSuper || isTeacher) ? 'inline-flex' : 'none';
+  if (mNavTeacher) mNavTeacher.style.display = (isSuper || isTeacher) ? 'flex' : 'none';
 
   if (navAdmin) navAdmin.style.display = isSuper ? 'inline-flex' : 'none';
   if (mNavAdmin) mNavAdmin.style.display = isSuper ? 'flex' : 'none';
@@ -5510,18 +5579,21 @@ function updateAdminUIVisibility(isAuthenticated) {
   if (btnBackAdmin) btnBackAdmin.style.display = isSuper ? 'inline-flex' : 'none';
 
   const btnDashAdd = document.getElementById('btnDashCalAddEvent');
-  if (btnDashAdd) btnDashAdd.style.display = isTeacherOrAdmin ? 'inline-flex' : 'none';
+  if (btnDashAdd) btnDashAdd.style.display = (isSuper || isTeacher) ? 'inline-flex' : 'none';
   if (typeof renderCalendar === 'function') renderCalendar('all');
 
-  // Update top-right user badge for Admin / Teacher / Executive
+  // Update top-right user badge for Admin / Teacher / Student
   const headerName = document.getElementById('headerUserName');
   const headerSub = document.getElementById('headerUserSub');
   const headerAvatar = document.getElementById('headerUserAvatar');
+  const headerRole = document.getElementById('headerUserRole');
+
   if (isSuper) {
     if (headerName) headerName.innerText = 'Super Admin';
     if (headerSub) headerSub.innerText = 'ผู้ดูแลระบบสูงสุด';
+    if (headerRole) headerRole.innerText = 'แอดมินสูงสุด';
     if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-user-shield"></i>';
-  } else if (isTeacherOnly && currentAdmin) {
+  } else if (isTeacher && currentAdmin) {
     const roleLabelMap = {
       TEACHER: 'อาจารย์ผู้สอน',
       EXECUTIVE: 'ผู้บริหารสถานศึกษา',
@@ -5531,7 +5603,24 @@ function updateAdminUIVisibility(isAuthenticated) {
     };
     if (headerName) headerName.innerText = currentAdmin.fullName || currentAdmin.username;
     if (headerSub) headerSub.innerText = roleLabelMap[currentAdmin.role] || 'อาจารย์ / บุคลากร';
+    if (headerRole) headerRole.innerText = roleLabelMap[currentAdmin.role] || 'อาจารย์';
     if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i>';
+  } else if (isStudent && currentStudent) {
+    if (headerName) headerName.innerText = currentStudent.fullName || 'นักเรียน';
+    if (headerSub) headerSub.innerText = `${currentStudent.grade || ''} • รหัส ${currentStudent.studentId || ''}`;
+    if (headerRole) headerRole.innerText = 'นักเรียน';
+    if (headerAvatar) {
+      if (currentStudent.avatarUrl) {
+        headerAvatar.innerHTML = `<img src="${currentStudent.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 9999px;">`;
+      } else {
+        headerAvatar.innerHTML = '<i class="fa-solid fa-user-graduate"></i>';
+      }
+    }
+  } else {
+    if (headerName) headerName.innerText = 'เข้าสู่ระบบ';
+    if (headerSub) headerSub.innerText = 'นักเรียน / อาจารย์ / แอดมิน';
+    if (headerRole) headerRole.innerText = 'ผู้ใช้ทั่วไป';
+    if (headerAvatar) headerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
   }
 }
 
@@ -5560,8 +5649,11 @@ async function handleAdminLogin() {
   if (isIdMatch(pass, MASTER_ADMIN_PASS) && !user) {
     setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
     resetLoginFailures();
+    currentStudent = null;
     currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
+    localStorage.removeItem('khalifah_current_student');
     localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+    localStorage.setItem('khalifah_auth_role', 'admin');
     setTimeout(() => {
       document.body.classList.remove('auth-locked');
       updateAdminUIVisibility(true);
@@ -5590,8 +5682,11 @@ async function handleAdminLogin() {
     }
     setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
     resetLoginFailures();
+    currentStudent = null;
     currentAdmin = foundSub;
+    localStorage.removeItem('khalifah_current_student');
     localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+    localStorage.setItem('khalifah_auth_role', foundSub.role === 'SuperAdmin' ? 'admin' : 'teacher');
     setTimeout(() => {
       document.body.classList.remove('auth-locked');
       updateAdminUIVisibility(true);
@@ -5620,17 +5715,18 @@ async function handleAdminLogin() {
 
 function adminLogout() {
   if (typeof stopAdminActivityLivePolling === 'function') stopAdminActivityLivePolling();
+  const wasTeacher = currentAdmin && currentAdmin.role !== 'SuperAdmin';
   currentAdmin = null;
+  currentStudent = null;
+  localStorage.removeItem('khalifah_current_admin');
+  localStorage.removeItem('khalifah_current_student');
+  localStorage.removeItem('khalifah_auth_role');
   updateAdminUIVisibility(false);
   renderCurrentStudentProfile();
-  if (!currentStudent) {
-    document.body.classList.add('auth-locked');
-    selectAuthRole('student');
-    openModal('authModal');
-  } else {
-    switchView('dashboard');
-  }
-  showToast('ออกจากระบบผู้ดูแล/อาจารย์แล้ว', 'info');
+  document.body.classList.add('auth-locked');
+  selectAuthRole(wasTeacher ? 'teacher' : 'admin');
+  openModal('authModal');
+  showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
 }
 
 function teacherLogout() {
@@ -10973,23 +11069,12 @@ const THAI_DAY_NAMES = [
 ];
 
 function canManageCalendar() {
-  if (currentAdmin && (currentAdmin.role === 'SuperAdmin' || currentAdmin.role === 'EXECUTIVE' || currentAdmin.role === 'TEACHER' || currentAdmin.username)) {
-    return true;
+  // นักเรียนไม่มีสิทธิ์จัดการปฏิทินเด็ดขาด (ทำได้เฉพาะดู)
+  if (currentStudent && !currentAdmin) {
+    return false;
   }
-  try {
-    const savedAdmin = localStorage.getItem('khalifah_current_admin');
-    if (savedAdmin) {
-      const parsed = JSON.parse(savedAdmin);
-      if (parsed && (parsed.role === 'SuperAdmin' || parsed.role === 'EXECUTIVE' || parsed.role === 'TEACHER' || parsed.username)) {
-        currentAdmin = parsed;
-        return true;
-      }
-    }
-  } catch (e) {}
-
-  const adminView = document.getElementById('view-admin');
-  const teacherView = document.getElementById('view-teacher');
-  if ((adminView && adminView.classList.contains('active')) || (teacherView && teacherView.classList.contains('active'))) {
+  // ตรวจสอบว่าผู้ใช้งานปัจจุบันเป็น Admin / Executive / Teacher หรือไม่
+  if (currentAdmin && (currentAdmin.role === 'SuperAdmin' || currentAdmin.role === 'EXECUTIVE' || currentAdmin.role === 'TEACHER' || currentAdmin.username)) {
     return true;
   }
   return false;

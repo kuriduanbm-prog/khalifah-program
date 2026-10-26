@@ -5929,17 +5929,18 @@ body.auth-locked #authModal .auth-close-btn {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-/* 2. Strict Role Portal Separation (Admin & Teacher Do Not See Student Nav Tabs) */
-body.portal-mode-admin #nav-dashboard,
-body.portal-mode-admin #nav-prayer,
-body.portal-mode-admin #nav-activities,
-body.portal-mode-admin #nav-hasanat,
-body.portal-mode-admin #nav-profile,
-body.portal-mode-admin #m-nav-dashboard,
-body.portal-mode-admin #m-nav-prayer,
-body.portal-mode-admin #m-nav-activities,
-body.portal-mode-admin #m-nav-hasanat,
-body.portal-mode-admin #m-nav-profile,
+/* 2. Strict Role Portal Separation */
+/* นักเรียน: ซ่อนแท็บอาจารย์, แอดมิน, ปุ่มฟันเฟืองตั้งค่า และปุ่มเพิ่มกิจกรรมปฏิทินเด็ดขาด */
+body.portal-mode-student #nav-teacher,
+body.portal-mode-student #m-nav-teacher,
+body.portal-mode-student #nav-admin,
+body.portal-mode-student #m-nav-admin,
+body.portal-mode-student #btnSettingsHeader,
+body.portal-mode-student #btnDashCalAddEvent {
+  display: none !important;
+}
+
+/* อาจารย์: ซ่อนแท็บนักเรียน, แท็บแอดมิน และปุ่มฟันเฟือง */
 body.portal-mode-teacher #nav-dashboard,
 body.portal-mode-teacher #nav-prayer,
 body.portal-mode-teacher #nav-activities,
@@ -5949,7 +5950,24 @@ body.portal-mode-teacher #m-nav-dashboard,
 body.portal-mode-teacher #m-nav-prayer,
 body.portal-mode-teacher #m-nav-activities,
 body.portal-mode-teacher #m-nav-hasanat,
-body.portal-mode-teacher #m-nav-profile {
+body.portal-mode-teacher #m-nav-profile,
+body.portal-mode-teacher #nav-admin,
+body.portal-mode-teacher #m-nav-admin,
+body.portal-mode-teacher #btnSettingsHeader {
+  display: none !important;
+}
+
+/* แอดมิน: ซ่อนแท็บนักเรียน */
+body.portal-mode-admin #nav-dashboard,
+body.portal-mode-admin #nav-prayer,
+body.portal-mode-admin #nav-activities,
+body.portal-mode-admin #nav-hasanat,
+body.portal-mode-admin #nav-profile,
+body.portal-mode-admin #m-nav-dashboard,
+body.portal-mode-admin #m-nav-prayer,
+body.portal-mode-admin #m-nav-activities,
+body.portal-mode-admin #m-nav-hasanat,
+body.portal-mode-admin #m-nav-profile {
   display: none !important;
 }
 
