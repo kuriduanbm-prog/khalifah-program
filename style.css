@@ -2012,6 +2012,63 @@ html, body {
   font-weight: 700;
 }
 
+/* Prayer Chip: Slot Expired / Retroactive Blocked ("ทำให้ไม่สามารถกดบันทึกช่วงเวลาละหมาดย้อนหลังได้") */
+.prayer-chip.slot-expired:not(.done) {
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+  opacity: 0.72;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.prayer-chip.slot-expired:not(.done):hover {
+  background: #fee2e2 !important;
+  border-color: #f87171 !important;
+}
+
+.prayer-chip.slot-expired:not(.done) .prayer-chip-name {
+  color: #991b1b;
+}
+
+.prayer-chip.slot-expired:not(.done) .prayer-chip-status {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+
+/* Prayer Chip: Future / Not Yet Time */
+.prayer-chip.slot-future:not(.done) {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  opacity: 0.8;
+}
+
+.prayer-chip.slot-future:not(.done) .prayer-chip-status {
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Shake Animation for Disallowed Action */
+@keyframes chipShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.prayer-chip.shake-anim {
+  animation: chipShake 0.42s ease-in-out !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
+
+/* Note Chip: Expired */
+.prayer-note-time-chip.slot-expired {
+  opacity: 0.58;
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #991b1b !important;
+  cursor: not-allowed;
+}
+
 /* ==================== IN-CAMERA BOTTOM HUD (REQUEST 3) ==================== */
 .camera-bottom-hud {
   position: absolute;

@@ -2288,11 +2288,11 @@ function renderStudentActivitiesHistory() {
 // ----------------- SMART PRAYER TIME AUTO-DETECTION WITH +/- BUFFER ----------------- //
 // Base prayer windows in minutes from 00:00 (Standard Southern Thailand / Fatoni schedule)
 const PRAYER_TIME_WINDOWS = [
-  { name: 'ซุบฮิ', startMin: 4 * 60 + 45, endMin: 6 * 60 + 25, baseLabel: '04:45 - 06:25 น.' },
-  { name: 'ซุฮริ', startMin: 12 * 60 + 10, endMin: 15 * 60 + 15, baseLabel: '12:10 - 15:15 น.' },
-  { name: 'อัศรฺ', startMin: 15 * 60 + 20, endMin: 18 * 60 + 5, baseLabel: '15:20 - 18:05 น.' },
-  { name: 'มัฆริบ', startMin: 18 * 60 + 10, endMin: 19 * 60 + 25, baseLabel: '18:10 - 19:25 น.' },
-  { name: 'อีชาอ์', startMin: 19 * 60 + 30, endMin: 23 * 60 + 59, baseLabel: '19:30 - 23:59 น.' }
+  { name: 'ซุบฮิ', key: 'ซุบฮิ', startMin: 4 * 60 + 45, endMin: 6 * 60 + 25, baseLabel: '04:45 - 06:25 น.' },
+  { name: 'ซุฮริ', key: 'ซุฮริ', startMin: 12 * 60 + 10, endMin: 15 * 60 + 15, baseLabel: '12:10 - 15:15 น.' },
+  { name: 'อัศรฺ', key: 'อัศรฺ', startMin: 15 * 60 + 20, endMin: 18 * 60 + 5, baseLabel: '15:20 - 18:05 น.' },
+  { name: 'มัฆริบ', key: 'มัฆริบ', startMin: 18 * 60 + 10, endMin: 19 * 60 + 25, baseLabel: '18:10 - 19:25 น.' },
+  { name: 'อีชาอ์', key: 'อีชาอ์', startMin: 19 * 60 + 30, endMin: 23 * 60 + 59, baseLabel: '19:30 - 23:59 น.' }
 ];
 
 let prayerBufferMinutes = parseInt(localStorage.getItem('khalifah_prayer_buffer_mins') || '30', 10);
@@ -2305,6 +2305,98 @@ function formatMinutesToHHMM(totalMins) {
   return `${hh}:${mm}`;
 }
 
+/**
+ * ดึงรายการบันทึกละหมาดของนักเรียนในวันนี้ทั้งหมด (ทั้งที่ถ่ายรูปและหมายเหตุ)
+ */
+function getStudentTodayPrayersList() {
+  if (!currentStudent) return [];
+  const now = new Date();
+  const todayYMD = now.toISOString().split('T')[0];
+  let hist = [];
+  try {
+    hist = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { hist = []; }
+
+  return [...todayPrayers, ...hist].filter(p => {
+    if (!p) return false;
+    const matchStudent = isIdMatch(p.studentId, currentStudent.studentId);
+    const pDate = p.date || (p.timestamp ? p.timestamp.split('T')[0] : '');
+    return matchStudent && (!pDate || pDate === todayYMD);
+  });
+}
+
+/**
+ * ตรวจสอบสถานะเวลาของช่วงละหมาด (อยู่ในเวลา / หมดเวลาแล้ว(ย้อนหลัง) / ยังไม่ถึงเวลา)
+ * ป้องกันไม่ให้สามารถกดบันทึกย้อนหลังได้โดยเด็ดขาด
+ */
+function getPrayerSlotTimeStatus(slotKey, bufferMins = prayerBufferMinutes) {
+  const normKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(slotKey) : slotKey;
+  const now = new Date();
+  const curMin = now.getHours() * 60 + now.getMinutes();
+  const buf = isNaN(bufferMins) ? 30 : Math.max(0, parseInt(bufferMins, 10));
+
+  const window = PRAYER_TIME_WINDOWS.find(w => w.name === normKey || w.key === normKey);
+  if (!window) {
+    return { isActive: true, isPast: false, isFuture: false, statusText: 'ปกติ', rangeLabel: '-' };
+  }
+
+  // จัดการกรณีพิเศษช่วงข้ามคืนสำหรับละหมาดอีชาอ์ (19:30 ถึง รุ่งอรุณก่อนซุบฮิ)
+  if (normKey === 'อีชาอ์') {
+    const fajrWin = PRAYER_TIME_WINDOWS.find(x => x.name === 'ซุบฮิ');
+    const fajrStart = fajrWin ? fajrWin.startMin : 285; // 04:45
+
+    // หากอยู่ในช่วงกลางคืนหลังเริ่มอีชาอ์ (>= 19:30 - buf) หรือเช้ามืดก่อนรุ่งอรุณ (< fajrStart + buf)
+    if (curMin >= (window.startMin - buf) || curMin < (fajrStart + buf)) {
+      return {
+        isActive: true,
+        isPast: false,
+        isFuture: false,
+        statusText: 'อยู่ในเวลา',
+        rangeLabel: '19:30 - ก่อนรุ่งอรุณ'
+      };
+    } else {
+      // กลางวัน (หลังแสงอรุณซุบฮิขึ้น ถึงก่อนเข้าเวลาอีชาอ์ตอนค่ำ)
+      const isMorningPast = curMin >= (fajrStart + buf) && curMin < (12 * 60);
+      return {
+        isActive: false,
+        isPast: isMorningPast,
+        isFuture: !isMorningPast,
+        statusText: isMorningPast ? 'หมดเวลาแล้ว (ย้อนหลัง)' : 'ยังไม่ถึงเวลา',
+        rangeLabel: '19:30 - ก่อนรุ่งอรุณ'
+      };
+    }
+  }
+
+  const startWithBuf = window.startMin - buf;
+  const endWithBuf = window.endMin + buf;
+
+  if (curMin >= startWithBuf && curMin <= endWithBuf) {
+    return {
+      isActive: true,
+      isPast: false,
+      isFuture: false,
+      statusText: 'อยู่ในเวลา',
+      rangeLabel: window.baseLabel
+    };
+  } else if (curMin > endWithBuf) {
+    return {
+      isActive: false,
+      isPast: true,
+      isFuture: false,
+      statusText: 'หมดเวลาแล้ว (ย้อนหลัง)',
+      rangeLabel: window.baseLabel
+    };
+  } else {
+    return {
+      isActive: false,
+      isPast: false,
+      isFuture: true,
+      statusText: 'ยังไม่ถึงเวลา',
+      rangeLabel: window.baseLabel
+    };
+  }
+}
+
 function detectPrayerTimeSlotWithBuffer(bufferMins = prayerBufferMinutes) {
   const now = new Date();
   const curMin = now.getHours() * 60 + now.getMinutes();
@@ -2312,7 +2404,21 @@ function detectPrayerTimeSlotWithBuffer(bufferMins = prayerBufferMinutes) {
 
   // 1. Check exact base window first
   for (const w of PRAYER_TIME_WINDOWS) {
-    if (curMin >= w.startMin && curMin <= w.endMin) {
+    if (w.name === 'อีชาอ์') {
+      const fajrWin = PRAYER_TIME_WINDOWS.find(x => x.name === 'ซุบฮิ');
+      const fajrStart = fajrWin ? fajrWin.startMin : 285;
+      if (curMin >= w.startMin || curMin < fajrStart) {
+        return {
+          matched: true,
+          isExact: true,
+          isBuffered: false,
+          prayerName: w.name,
+          baseLabel: w.baseLabel,
+          effectiveRange: `${formatMinutesToHHMM(w.startMin - buf)} - ก่อนรุ่งอรุณ น.`,
+          bufferMins: buf
+        };
+      }
+    } else if (curMin >= w.startMin && curMin <= w.endMin) {
       return {
         matched: true,
         isExact: true,
@@ -2327,43 +2433,63 @@ function detectPrayerTimeSlotWithBuffer(bufferMins = prayerBufferMinutes) {
 
   // 2. Check within +/- buffer window
   for (const w of PRAYER_TIME_WINDOWS) {
-    const startWithBuf = w.startMin - buf;
-    const endWithBuf = w.endMin + buf;
-    if (curMin >= startWithBuf && curMin <= endWithBuf) {
-      const isBefore = curMin < w.startMin;
-      return {
-        matched: true,
-        isExact: false,
-        isBuffered: true,
-        bufferDirection: isBefore ? 'ก่อนเวลาจริง' : 'หลังเวลาจริง',
-        prayerName: w.name,
-        baseLabel: w.baseLabel,
-        effectiveRange: `${formatMinutesToHHMM(startWithBuf)} - ${formatMinutesToHHMM(endWithBuf)} น.`,
-        bufferMins: buf
-      };
+    if (w.name === 'อีชาอ์') {
+      const fajrWin = PRAYER_TIME_WINDOWS.find(x => x.name === 'ซุบฮิ');
+      const fajrStart = fajrWin ? fajrWin.startMin : 285;
+      if (curMin >= (w.startMin - buf) || curMin < (fajrStart + buf)) {
+        const isBefore = curMin < w.startMin && curMin >= (w.startMin - buf);
+        return {
+          matched: true,
+          isExact: false,
+          isBuffered: true,
+          bufferDirection: isBefore ? 'ก่อนเวลาจริง' : 'หลังเวลาจริง',
+          prayerName: w.name,
+          baseLabel: w.baseLabel,
+          effectiveRange: `${formatMinutesToHHMM(w.startMin - buf)} - ก่อนรุ่งอรุณ น.`,
+          bufferMins: buf
+        };
+      }
+    } else {
+      const startWithBuf = w.startMin - buf;
+      const endWithBuf = w.endMin + buf;
+      if (curMin >= startWithBuf && curMin <= endWithBuf) {
+        const isBefore = curMin < w.startMin;
+        return {
+          matched: true,
+          isExact: false,
+          isBuffered: true,
+          bufferDirection: isBefore ? 'ก่อนเวลาจริง' : 'หลังเวลาจริง',
+          prayerName: w.name,
+          baseLabel: w.baseLabel,
+          effectiveRange: `${formatMinutesToHHMM(startWithBuf)} - ${formatMinutesToHHMM(endWithBuf)} น.`,
+          bufferMins: buf
+        };
+      }
     }
   }
 
-  // 3. Outside any window: find closest upcoming or most recent prayer
-  let closest = PRAYER_TIME_WINDOWS[0];
-  let minDiff = Infinity;
+  // 3. อยู่นอกช่วงเวลาปัจจุบัน: เลือกเฉพาะช่วงเวลาละหมาดรอบถัดไป (NEXT UPCOMING) เท่านั้น
+  // ห้ามเลือกช่วงเวลาที่หมดไปแล้ว (ย้อนหลัง) โดยเด็ดขาด
+  let nextUpcoming = null;
   for (const w of PRAYER_TIME_WINDOWS) {
-    const mid = (w.startMin + w.endMin) / 2;
-    const diff = Math.abs(curMin - mid);
-    if (diff < minDiff) {
-      minDiff = diff;
-      closest = w;
+    if (curMin < w.startMin) {
+      nextUpcoming = w;
+      break;
     }
+  }
+  if (!nextUpcoming) {
+    nextUpcoming = PRAYER_TIME_WINDOWS[0]; // ซุบฮิ ของวันถัดไป
   }
 
   return {
     matched: false,
     isExact: false,
     isBuffered: false,
-    prayerName: closest.name,
-    baseLabel: closest.baseLabel,
-    effectiveRange: `${formatMinutesToHHMM(closest.startMin - buf)} - ${formatMinutesToHHMM(closest.endMin + buf)} น.`,
-    bufferMins: buf
+    prayerName: nextUpcoming.name,
+    baseLabel: nextUpcoming.baseLabel,
+    effectiveRange: `${formatMinutesToHHMM(nextUpcoming.startMin - buf)} - ${formatMinutesToHHMM(nextUpcoming.endMin + buf)} น.`,
+    bufferMins: buf,
+    isNextUpcoming: true
   };
 }
 
@@ -2419,14 +2545,15 @@ function autoSelectDetectedPrayerSlot(showToastMsg = false) {
     if (dot) dot.classList.add('outside');
     if (pillEl) {
       pillEl.className = 'autodetect-status-pill outside';
-      pillEl.innerText = 'เวลาใกล้เคียง';
+      pillEl.innerText = `ยังไม่ถึงเวลา (รอบถัดไป: ${res.prayerName})`;
     }
     if (descEl) {
-      descEl.innerText = `ช่วงละหมาด ${res.prayerName}: ${res.effectiveRange} (เผื่อเวลา ±${res.bufferMins} นาทีแล้ว)`;
+      descEl.innerText = `รอบถัดไป ละหมาด${res.prayerName}: ${res.baseLabel} (ช่วงเวลาก่อนหน้านี้หมดเวลาแล้ว ไม่อนุญาตให้บันทึกย้อนหลัง)`;
     }
   }
 
-  selectPrayerTime(res.prayerName, document.getElementById(`ptime-${res.prayerName}`));
+  // ส่ง isSystemAuto = true เพื่ออนุญาตให้เลือกรอบเวลาอัตโนมัติได้
+  selectPrayerTime(res.prayerName, document.getElementById(`ptime-${res.prayerName}`), true);
   if (typeof selectPrayerNoteTime === 'function') {
     selectPrayerNoteTime(res.prayerName);
   }
@@ -2437,6 +2564,7 @@ function autoSelectDetectedPrayerSlot(showToastMsg = false) {
 }
 
 function startPrayerLiveClock() {
+  let tickCount = 0;
   const updateClock = () => {
     const clockText = document.getElementById('prayerLiveClockText');
     if (clockText) {
@@ -2444,6 +2572,13 @@ function startPrayerLiveClock() {
       clockText.innerText = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' น.';
     }
     updateCameraOverlayText();
+
+    tickCount++;
+    // ตรวจสอบสถานะการหมดเวลาอัตโนมัติทุกๆ 10 วินาที เพื่อล็อคปุ่มทันทีที่หมดเวลาละหมาด
+    if (tickCount % 10 === 0) {
+      refreshPrayerChipsStatus();
+      checkPrayerUnlockState();
+    }
   };
   updateClock();
   if (prayerLiveClockInterval) clearInterval(prayerLiveClockInterval);
@@ -2705,21 +2840,7 @@ function formatDistance(meters) {
 function refreshPrayerChipsStatus() {
   if (!currentStudent) return;
 
-  const now = new Date();
-  const todayYMD = now.toISOString().split('T')[0];
-
-  let hist = [];
-  try {
-    hist = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
-  } catch (e) { hist = []; }
-
-  // รวบรวมข้อมูลการละหมาดของนักเรียนในวันนี้ทั้งหมด (ทั้งที่มีรูป ถ่ายรูปแล้ว หรือบันทึกหมายเหตุแล้ว)
-  const studentTodayPrayers = [...todayPrayers, ...hist].filter(p => {
-    if (!p) return false;
-    const matchStudent = isIdMatch(p.studentId, currentStudent.studentId);
-    const pDate = p.date || (p.timestamp ? p.timestamp.split('T')[0] : '');
-    return matchStudent && (!pDate || pDate === todayYMD);
-  });
+  const studentTodayPrayers = getStudentTodayPrayersList();
 
   const CANONICAL_SLOTS = [
     { key: 'ซุบฮิ', altIds: ['ptime-ซุบฮิ'], statusIds: ['pstatus-ซุบฮิ'] },
@@ -2740,23 +2861,79 @@ function refreshPrayerChipsStatus() {
       return pKey === slot.key;
     });
 
+    const slotStatus = getPrayerSlotTimeStatus(slot.key);
+
     if (rec) {
       chipEl.classList.add('done');
+      chipEl.classList.remove('slot-expired', 'slot-disabled', 'slot-future');
+      chipEl.title = `บันทึกละหมาดแล้ว (${rec.time || '-'})`;
       if (statusEl) {
         statusEl.innerHTML = '<i class="fa-solid fa-check"></i> เช็คแล้ว';
         statusEl.style.color = '#059669';
       }
     } else {
       chipEl.classList.remove('done');
-      if (statusEl) {
-        statusEl.innerText = 'ยังไม่เช็ค';
-        statusEl.style.color = '';
+
+      if (slotStatus.isPast) {
+        // หมดเวลาแล้ว -> ล็อคไม่ให้สามารถกดบันทึกย้อนหลังได้
+        chipEl.classList.add('slot-expired', 'slot-disabled');
+        chipEl.classList.remove('slot-future');
+        chipEl.title = `หมดช่วงเวลาละหมาด ${slot.key} แล้ว (ไม่อนุญาตให้บันทึกย้อนหลัง)`;
+        if (statusEl) {
+          statusEl.innerHTML = '<i class="fa-solid fa-ban"></i> หมดเวลา';
+          statusEl.style.color = '#dc2626';
+        }
+      } else if (slotStatus.isFuture) {
+        chipEl.classList.remove('slot-expired', 'slot-disabled');
+        chipEl.classList.add('slot-future');
+        chipEl.title = `ยังไม่ถึงช่วงเวลาละหมาด ${slot.key} (${slotStatus.rangeLabel})`;
+        if (statusEl) {
+          statusEl.innerHTML = '<i class="fa-regular fa-clock"></i> ยังไม่ถึงเวลา';
+          statusEl.style.color = '#64748b';
+        }
+      } else {
+        // อยู่ในช่วงเวลาละหมาดที่ถูกต้อง
+        chipEl.classList.remove('slot-expired', 'slot-disabled', 'slot-future');
+        chipEl.title = `อยู่ในช่วงเวลาละหมาด ${slot.key} (${slotStatus.rangeLabel})`;
+        if (statusEl) {
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-dot" style="color: #0284c7;"></i> อยู่ในเวลา';
+          statusEl.style.color = '#0284c7';
+        }
       }
     }
   });
 }
 
-function selectPrayerTime(timeName, element) {
+function selectPrayerTime(timeName, element, isSystemAuto = false) {
+  if (!timeName) return;
+
+  const slotStatus = getPrayerSlotTimeStatus(timeName);
+  const studentTodayPrayers = getStudentTodayPrayersList();
+  const alreadyChecked = studentTodayPrayers.some(p => {
+    const pKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || p.timeSlot || '') : (p.prayerName || p.prayerTime || '');
+    return pKey === (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(timeName) : timeName);
+  });
+
+  // ป้องกันการเลือกบันทึกช่วงเวลาย้อนหลัง (เมื่อผู้ใช้แตะปุ่มเอง)
+  if (!isSystemAuto && !alreadyChecked && slotStatus.isPast) {
+    showToast(`⚠️ ไม่สามารถกดบันทึกละหมาดย้อนหลังได้: หมดช่วงเวลาละหมาด ${timeName} แล้ว (${slotStatus.rangeLabel})`, 'error');
+    if (element) {
+      element.classList.add('shake-anim');
+      setTimeout(() => element.classList.remove('shake-anim'), 500);
+    }
+    return;
+  }
+
+  // ป้องกันการเลือกบันทึกเวลาล่วงหน้า
+  if (!isSystemAuto && !alreadyChecked && slotStatus.isFuture) {
+    showToast(`⚠️ ยังไม่ถึงช่วงเวลาละหมาด ${timeName} (${slotStatus.rangeLabel})`, 'warning');
+    if (element) {
+      element.classList.add('shake-anim');
+      setTimeout(() => element.classList.remove('shake-anim'), 500);
+    }
+    return;
+  }
+
   selectedPrayerTime = timeName;
 
   // นำคลาส selected ออกจากทุกปุ่มเวลาละหมาดเพื่อให้เลือกได้เพียง 1 เวลาเท่านั้น
@@ -2773,7 +2950,15 @@ function selectPrayerTime(timeName, element) {
 
   // ซิงค์ชื่อเวลาละหมาดบนวิดีโอถ่ายทอดสด
   const overlayPrayer = document.getElementById('camOverlayPrayer');
-  if (overlayPrayer) overlayPrayer.innerText = `เวลาละหมาด: ${timeName}`;
+  if (overlayPrayer) {
+    if (slotStatus.isPast && !alreadyChecked) {
+      overlayPrayer.innerHTML = `เวลาละหมาด: ${timeName} <span style="color: #ef4444; font-weight: 700;">(หมดเวลาแล้ว)</span>`;
+    } else if (slotStatus.isFuture && !alreadyChecked) {
+      overlayPrayer.innerHTML = `เวลาละหมาด: ${timeName} <span style="color: #f59e0b; font-weight: 700;">(ยังไม่ถึงเวลา)</span>`;
+    } else {
+      overlayPrayer.innerText = `เวลาละหมาด: ${timeName}`;
+    }
+  }
 
   checkPrayerUnlockState();
   refreshPrayerChipsStatus();
@@ -2785,6 +2970,70 @@ function checkPrayerUnlockState() {
   const locText = document.getElementById('prayerVerifiedLocText');
 
   if (!btnCapture) return;
+
+  const studentTodayPrayers = getStudentTodayPrayersList();
+  const alreadyChecked = studentTodayPrayers.some(p => {
+    const pKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || p.timeSlot || '') : (p.prayerName || p.prayerTime || '');
+    return pKey === (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime);
+  });
+
+  const slotStatus = getPrayerSlotTimeStatus(selectedPrayerTime);
+
+  // 1. ตรวจสอบการบันทึกย้อนหลัง: ถ้าหมดเวลาแล้วและยังไม่เคยเช็ค -> ล็อคปุ่มถ่ายรูปและแสดงแถบสีแดงเตือนชัดเจน
+  if (!alreadyChecked && slotStatus.isPast) {
+    btnCapture.disabled = true;
+    btnCapture.classList.add('btn-locked');
+    btnCapture.style.background = '#e11d48';
+    btnCapture.style.borderColor = '#be123c';
+    btnCapture.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
+        <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 0.4rem;">
+          <i class="fa-solid fa-ban"></i> หมดเวลาละหมาด ${selectedPrayerTime} แล้ว
+        </div>
+        <div style="font-size: 0.74rem; font-weight: 500; opacity: 0.95; color: #fee2e2;">
+          ไม่อนุญาตให้กดบันทึกย้อนหลัง (${slotStatus.rangeLabel})
+        </div>
+      </div>
+    `;
+    if (locBadge && locText) {
+      locBadge.style.display = 'inline-flex';
+      locBadge.className = 'prayer-verified-loc-badge verified-out-zone';
+      locBadge.style.background = 'rgba(225, 29, 72, 0.95)';
+      locBadge.style.color = '#ffffff';
+      locText.innerHTML = `<i class="fa-solid fa-ban"></i> หมดเวลาละหมาด ${selectedPrayerTime} แล้ว (ไม่อนุญาตให้บันทึกย้อนหลัง)`;
+    }
+    return;
+  }
+
+  // 2. ตรวจสอบเวลาล่วงหน้า: ถ้ายังไม่ถึงเวลาละหมาด -> ล็อคปุ่มถ่ายรูป
+  if (!alreadyChecked && slotStatus.isFuture) {
+    btnCapture.disabled = true;
+    btnCapture.classList.add('btn-locked');
+    btnCapture.style.background = '#475569';
+    btnCapture.style.borderColor = '#334155';
+    btnCapture.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
+        <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 0.4rem;">
+          <i class="fa-regular fa-clock"></i> ยังไม่ถึงช่วงเวลาละหมาด ${selectedPrayerTime}
+        </div>
+        <div style="font-size: 0.74rem; font-weight: 500; opacity: 0.95; color: #f1f5f9;">
+          ช่วงเวลาละหมาด: ${slotStatus.rangeLabel}
+        </div>
+      </div>
+    `;
+    if (locBadge && locText) {
+      locBadge.style.display = 'inline-flex';
+      locBadge.className = 'prayer-verified-loc-badge';
+      locBadge.style.background = 'rgba(71, 85, 105, 0.95)';
+      locBadge.style.color = '#ffffff';
+      locText.innerHTML = `<i class="fa-regular fa-clock"></i> ยังไม่ถึงเวลาละหมาด ${selectedPrayerTime} (${slotStatus.rangeLabel})`;
+    }
+    return;
+  }
+
+  // คืนค่าปุ่มเป็นสถานะปกติ
+  btnCapture.style.background = '';
+  btnCapture.style.borderColor = '';
 
   const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
 
@@ -2877,6 +3126,26 @@ async function captureAndSavePrayerInstant() {
   if (!selectedPrayerTime) {
     selectedPrayerTime = 'ซุบฮิ';
     selectPrayerTime('ซุบฮิ', document.getElementById('ptime-ซุบฮิ'));
+  }
+
+  // ป้องกันการกดบันทึกช่วงเวลาละหมาดย้อนหลัง
+  const slotStatus = getPrayerSlotTimeStatus(selectedPrayerTime);
+  const studentTodayPrayers = getStudentTodayPrayersList();
+  const alreadyChecked = studentTodayPrayers.some(p => {
+    const pKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || p.timeSlot || '') : (p.prayerName || p.prayerTime || '');
+    return pKey === (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime);
+  });
+
+  if (!alreadyChecked && slotStatus.isPast) {
+    showToast(`⚠️ ปฏิเสธการบันทึก: ไม่สามารถกดบันทึกละหมาดย้อนหลังได้เนื่องจากหมดเวลา ${selectedPrayerTime} แล้ว (${slotStatus.rangeLabel})`, 'error');
+    checkPrayerUnlockState();
+    return;
+  }
+
+  if (!alreadyChecked && slotStatus.isFuture) {
+    showToast(`⚠️ ปฏิเสธการบันทึก: ยังไม่ถึงช่วงเวลาละหมาด ${selectedPrayerTime} (${slotStatus.rangeLabel})`, 'warning');
+    checkPrayerUnlockState();
+    return;
   }
 
   // Anti-cheating check: check if verifiedLocation is missing or expired (> 60s)
@@ -3175,6 +3444,23 @@ function updateCameraOverlayText() {
  * บันทึกภาพพร้อมปั๊มลายน้ำ (Canvas Watermark) และบันทึกลงระบบทันที
  */
 function captureAndRecordPrayer() {
+  const slotStatus = getPrayerSlotTimeStatus(selectedPrayerTime);
+  const studentTodayPrayers = getStudentTodayPrayersList();
+  const alreadyChecked = studentTodayPrayers.some(p => {
+    const pKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || p.timeSlot || '') : (p.prayerName || p.prayerTime || '');
+    return pKey === (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime);
+  });
+
+  if (!alreadyChecked && slotStatus.isPast) {
+    showToast(`⚠️ ปฏิเสธการบันทึก: ไม่สามารถกดบันทึกละหมาดย้อนหลังได้เนื่องจากหมดเวลา ${selectedPrayerTime} แล้ว (${slotStatus.rangeLabel})`, 'error');
+    return;
+  }
+
+  if (!alreadyChecked && slotStatus.isFuture) {
+    showToast(`⚠️ ปฏิเสธการบันทึก: ยังไม่ถึงช่วงเวลาละหมาด ${selectedPrayerTime} (${slotStatus.rangeLabel})`, 'warning');
+    return;
+  }
+
   const video = document.getElementById('cameraStream');
   const canvas = document.getElementById('snapshotCanvas');
 
@@ -3336,13 +3622,27 @@ function togglePrayerNotesCollapse(forceState = null) {
 }
 
 function updatePrayerNoteChipsUI() {
+  const noteInput = document.getElementById('prayerNoteInput');
+  const noteText = noteInput ? noteInput.value.trim() : '';
+  const isExcused = noteText.includes('ประจำเดือน') || noteText.includes('อุซุร') || noteText.includes('ป่วย');
+
   const chips = document.querySelectorAll('.prayer-note-time-chip');
   chips.forEach(chip => {
     const t = chip.getAttribute('data-time');
+    const slotStatus = getPrayerSlotTimeStatus(t);
+
     if (selectedPrayerNoteTimeSlots.includes(t)) {
       chip.classList.add('active');
     } else {
       chip.classList.remove('active');
+    }
+
+    if (slotStatus.isPast && !isExcused) {
+      chip.classList.add('slot-expired');
+      chip.title = `หมดเวลาละหมาด ${t} แล้ว (ไม่อนุญาตให้บันทึกย้อนหลัง)`;
+    } else {
+      chip.classList.remove('slot-expired');
+      chip.title = `เวลา ${t}`;
     }
   });
 
@@ -3372,7 +3672,25 @@ function togglePrayerNoteTime(time) {
   const ALL_PRAYERS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
   if (!time) return;
 
+  const noteInput = document.getElementById('prayerNoteInput');
+  const noteText = noteInput ? noteInput.value.trim() : '';
+  const isExcused = noteText.includes('ประจำเดือน') || noteText.includes('อุซุร') || noteText.includes('ป่วย');
+
+  const slotStatus = getPrayerSlotTimeStatus(time);
   const idx = selectedPrayerNoteTimeSlots.indexOf(time);
+
+  // ป้องกันการเลือกบันทึกช่วงเวลาย้อนหลัง (ยกเว้นกรณีมีประจำเดือน/ลาป่วย)
+  if (idx === -1 && slotStatus.isPast && !isExcused) {
+    showToast(`⚠️ ไม่สามารถเลือกบันทึกเวลา ${time} ย้อนหลังได้ เนื่องจากหมดเวลาแล้ว (อนุญาตเฉพาะกรณีมีประจำเดือน/ลาป่วย)`, 'warning');
+    return;
+  }
+
+  // ป้องกันการเลือกบันทึกเวลาล่วงหน้า
+  if (idx === -1 && slotStatus.isFuture && !isExcused) {
+    showToast(`⚠️ ยังไม่ถึงช่วงเวลาละหมาด ${time} (${slotStatus.rangeLabel})`, 'warning');
+    return;
+  }
+
   if (idx > -1) {
     selectedPrayerNoteTimeSlots.splice(idx, 1);
   } else {
@@ -3389,7 +3707,26 @@ function togglePrayerNoteTime(time) {
 function selectAllPrayerNoteTimes(selectAll = true) {
   const ALL_PRAYERS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
   if (selectAll) {
-    selectedPrayerNoteTimeSlots = [...ALL_PRAYERS];
+    const noteInput = document.getElementById('prayerNoteInput');
+    const noteText = noteInput ? noteInput.value.trim() : '';
+    const isExcused = noteText.includes('ประจำเดือน') || noteText.includes('อุซุร') || noteText.includes('ป่วย');
+
+    if (isExcused) {
+      selectedPrayerNoteTimeSlots = [...ALL_PRAYERS];
+    } else {
+      // กรณีทั่วไป: เลือกเฉพาะช่วงเวลาละหมาดที่อยู่ในเวลาปัจจุบันเท่านั้น (ไม่รวมเวลาย้อนหลัง)
+      const activeSlots = ALL_PRAYERS.filter(p => {
+        const st = getPrayerSlotTimeStatus(p);
+        return st.isActive;
+      });
+      if (activeSlots.length > 0) {
+        selectedPrayerNoteTimeSlots = activeSlots;
+        showToast('เลือกเฉพาะช่วงเวลาละหมาดที่อยู่ในเวลา (ไม่รวมเวลาย้อนหลัง)', 'info');
+      } else {
+        selectedPrayerNoteTimeSlots = [];
+        showToast('⚠️ ไม่สามารถเลือกครบ 5 เวลาได้เนื่องจากมีเวลาที่หมดไปแล้ว (การเลือกครบ 5 เวลาอนุญาตเฉพาะกรณีมีประจำเดือน/ลาป่วยเท่านั้น)', 'warning');
+      }
+    }
   } else {
     selectedPrayerNoteTimeSlots = [];
   }
@@ -3456,6 +3793,19 @@ async function savePrayerNoteOnly() {
   const noteInput = document.getElementById('prayerNoteInput');
   const prayerNote = noteInput ? noteInput.value.trim() : '';
   const isExcused = prayerNote.includes('ประจำเดือน') || prayerNote.includes('อุซุร') || prayerNote.includes('ป่วย');
+
+  // ตรวจสอบไม่ให้กดบันทึกหมายเหตุย้อนหลังสำหรับเวลาที่หมดไปแล้ว (ยกเว้นกรณีมีประจำเดือน/อุซุร/ลาป่วย)
+  for (const pTime of selectedPrayerNoteTimeSlots) {
+    const slotStatus = getPrayerSlotTimeStatus(pTime);
+    if (slotStatus.isPast && !isExcused) {
+      showToast(`⚠️ ปฏิเสธการบันทึก: ไม่สามารถบันทึกเวลา ${pTime} ย้อนหลังได้ เนื่องจากหมดเวลาละหมาดแล้ว (${slotStatus.rangeLabel})`, 'error');
+      return;
+    }
+    if (slotStatus.isFuture && !isExcused) {
+      showToast(`⚠️ ปฏิเสธการบันทึก: ยังไม่ถึงช่วงเวลาละหมาด ${pTime} ไม่สามารถบันทึกล่วงหน้าได้`, 'warning');
+      return;
+    }
+  }
 
   // Anti-cheating check: enforce fresh GPS check before recording note (unless excused)
   const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
