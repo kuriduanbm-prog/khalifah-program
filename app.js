@@ -137,6 +137,19 @@ function getDirectImageUrl(url) {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (!trimmed) return '';
+
+  // Filter out placeholder error texts and invalid values
+  if (
+    trimmed === 'Stored locally on device' || 
+    trimmed === 'รูปโปรไฟล์ในอุปกรณ์' || 
+    trimmed.startsWith('Stored locally') || 
+    trimmed === '-' || 
+    trimmed === 'null' || 
+    trimmed === 'undefined'
+  ) {
+    return '';
+  }
+
   if (trimmed.startsWith('data:image/')) return trimmed;
 
   const drivePatterns = [
@@ -150,7 +163,10 @@ function getDirectImageUrl(url) {
       return `https://lh3.googleusercontent.com/d/${match[1]}`;
     }
   }
-  return trimmed;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return '';
 }
 
 function extractDriveFileId(url) {
@@ -1972,6 +1988,15 @@ function loadStoredData() {
           if (parsed.studentId) parsed.studentId = cleanIdString(parsed.studentId);
           if (parsed.parentPhone) parsed.parentPhone = normalizePhone(parsed.parentPhone);
           if (parsed.birthDate) parsed.birthDate = normalizeBirthDate(parsed.birthDate);
+
+          // Restore persistent avatar if available
+          if (parsed.studentId) {
+            const cachedAv = localStorage.getItem('khalifah_student_avatar_' + parsed.studentId);
+            if (cachedAv && (!parsed.avatarUrl || !getDirectImageUrl(parsed.avatarUrl))) {
+              parsed.avatarUrl = cachedAv;
+            }
+          }
+
           currentStudent = parsed;
           localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
           localStorage.setItem('khalifah_auth_role', 'student');
@@ -2026,7 +2051,13 @@ function loadStoredData() {
       let parsed = JSON.parse(savedAllStudents);
       parsed = parsed.filter(s => s.studentId !== 'STD-256901' && s.studentId !== 'STD-256902' && s.studentId !== 'STD-256903');
       parsed.forEach(s => {
-        if (s.studentId) s.studentId = cleanIdString(s.studentId);
+        if (s.studentId) {
+          s.studentId = cleanIdString(s.studentId);
+          const cachedAv = localStorage.getItem('khalifah_student_avatar_' + s.studentId);
+          if (cachedAv && (!s.avatarUrl || !getDirectImageUrl(s.avatarUrl))) {
+            s.avatarUrl = cachedAv;
+          }
+        }
         if (s.parentPhone) s.parentPhone = normalizePhone(s.parentPhone);
         if (s.birthDate) s.birthDate = normalizeBirthDate(s.birthDate);
       });
@@ -4209,6 +4240,9 @@ function renderCurrentStudentProfile() {
     }
   }
   if (selectNewGrade) selectNewGrade.value = currentStudent.grade;
+  if (typeof syncDashboardGradeFilterToCurrentStudent === 'function') {
+    syncDashboardGradeFilterToCurrentStudent();
+  }
 
   renderDashboardQuranStars();
 }
@@ -4271,8 +4305,9 @@ function openStudentAccountModal() {
   if (nameEl) nameEl.innerText = currentStudent.fullName;
   if (detailsEl) detailsEl.innerText = `รหัส: ${currentStudent.studentId} • ${currentStudent.grade} • ${currentStudent.schoolName || ''}`;
   if (avatarEl) {
-    if (currentStudent.avatarUrl) {
-      avatarEl.innerHTML = `<img src="${currentStudent.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+    const directAv = getDirectImageUrl(currentStudent.avatarUrl);
+    if (directAv) {
+      avatarEl.innerHTML = `<img src="${directAv}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
     } else {
       avatarEl.innerHTML = `<i class="fa-solid fa-user"></i>`;
     }
@@ -4365,6 +4400,7 @@ function handleProfilePhotoUpload(event) {
 
       currentStudent.avatarUrl = compressedBase64;
       localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
+      localStorage.setItem('khalifah_student_avatar_' + currentStudent.studentId, compressedBase64);
 
       // Update in allStudents array
       const idx = allStudents.findIndex(s => s.studentId === currentStudent.studentId);
@@ -9294,6 +9330,24 @@ async function syncAllDataFromCloud(showToastMsg = false) {
         s.studentId = sid;
         s.parentPhone = normalizePhone(s.parentPhone);
         s.birthDate = normalizeBirthDate(s.birthDate);
+
+        // Check local persistent avatar cache
+        const cachedAvatar = localStorage.getItem('khalifah_student_avatar_' + sid);
+        const validCloudUrl = getDirectImageUrl(s.avatarUrl);
+
+        if (validCloudUrl) {
+          // Cloud has verified Google Drive URL: update cache
+          s.avatarUrl = validCloudUrl;
+          s.profilePhoto = validCloudUrl;
+          localStorage.setItem('khalifah_student_avatar_' + sid, validCloudUrl);
+        } else if (cachedAvatar) {
+          // Cloud has empty/pending/invalid avatar, but local device has saved photo: PRESERVE IT!
+          s.avatarUrl = cachedAvatar;
+          s.profilePhoto = cachedAvatar;
+        } else {
+          s.avatarUrl = '';
+          s.profilePhoto = '';
+        }
         cloudMap[sid] = s;
       });
 
@@ -9306,7 +9360,11 @@ async function syncAllDataFromCloud(showToastMsg = false) {
       if (currentStudent) {
         const curSid = cleanIdString(currentStudent.studentId);
         if (cloudMap[curSid]) {
+          const oldAvatar = currentStudent.avatarUrl || localStorage.getItem('khalifah_student_avatar_' + curSid);
           currentStudent = { ...currentStudent, ...cloudMap[curSid] };
+          if (!getDirectImageUrl(currentStudent.avatarUrl) && getDirectImageUrl(oldAvatar)) {
+            currentStudent.avatarUrl = oldAvatar;
+          }
           localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
         } else {
           // ไม่พบในฐานข้อมูล Google Sheets! ตรวจสอบว่ารออนุมัติ OTP หรือไม่
@@ -9766,6 +9824,61 @@ function exportAttendeesToExcel() {
 
 // ----------------- DASHBOARD GRADE FILTER LOGIC ----------------- //
 let currentGradeFilter = 'ALL';
+
+function syncDashboardGradeFilterToCurrentStudent() {
+  const dashGradeSelect = document.getElementById('dashGradeFilter');
+  if (!dashGradeSelect) return;
+  if (!currentStudent || !currentStudent.grade) {
+    dashGradeSelect.value = 'ALL';
+    currentGradeFilter = 'ALL';
+    return;
+  }
+
+  const sGrade = String(currentStudent.grade).trim();
+  let matchedVal = null;
+
+  // 1. Direct match with option value or text
+  for (let i = 0; i < dashGradeSelect.options.length; i++) {
+    const opt = dashGradeSelect.options[i];
+    if (opt.value === sGrade || opt.text === sGrade) {
+      matchedVal = opt.value;
+      break;
+    }
+  }
+
+  // 2. Substring match (e.g. "มัธยมศึกษาปีที่ 5" in "มัธยมศึกษาปีที่ 5 (ม.5)")
+  if (!matchedVal) {
+    for (let i = 0; i < dashGradeSelect.options.length; i++) {
+      const opt = dashGradeSelect.options[i];
+      if (opt.value !== 'ALL' && (sGrade.includes(opt.value) || opt.value.includes(sGrade))) {
+        matchedVal = opt.value;
+        break;
+      }
+    }
+  }
+
+  // 3. Digit match (e.g. '5' for ม.5)
+  if (!matchedVal) {
+    const sDigits = sGrade.replace(/\D/g, '');
+    if (sDigits) {
+      for (let i = 0; i < dashGradeSelect.options.length; i++) {
+        const opt = dashGradeSelect.options[i];
+        if (opt.value !== 'ALL') {
+          const optDigits = opt.value.replace(/\D/g, '');
+          if (optDigits === sDigits) {
+            matchedVal = opt.value;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (matchedVal) {
+    dashGradeSelect.value = matchedVal;
+    currentGradeFilter = matchedVal;
+  }
+}
 
 function handleDashboardGradeFilterChange() {
   const select = document.getElementById('dashGradeFilter');
@@ -11237,13 +11350,22 @@ function updateCalendarViewClasses() {
 
 function populateCalendarSelects() {
   const scopes = ['dash', 'teacher', 'admin'];
+  const visibleEvents = (typeof getVisibleCalendarEvents === 'function') ? getVisibleCalendarEvents() : [];
   scopes.forEach(scope => {
     const mSelect = document.getElementById(`calMonthSelect-${scope}`);
     const ySelect = document.getElementById(`calYearSelect-${scope}`);
     if (mSelect) {
-      mSelect.innerHTML = THAI_MONTH_NAMES.map((name, idx) => 
-        `<option value="${idx}">${name}</option>`
-      ).join('');
+      mSelect.innerHTML = THAI_MONTH_NAMES.map((name, idx) => {
+        const m = idx + 1;
+        const count = visibleEvents.filter(e => {
+          if (!e.startDate) return false;
+          const p = e.startDate.split('-');
+          return parseInt(p[0], 10) === calCurrentYear && parseInt(p[1], 10) === m;
+        }).length;
+        const badge = (count > 0 && scope === 'dash') ? ` (⭐ ${count} กิจกรรม)` : '';
+        return `<option value="${idx}">${name}${badge}</option>`;
+      }).join('');
+      mSelect.value = calCurrentMonth;
     }
     if (ySelect) {
       const startYear = 2024;
@@ -11254,6 +11376,7 @@ function populateCalendarSelects() {
         yOptions += `<option value="${y}">${thaiY} (${y})</option>`;
       }
       ySelect.innerHTML = yOptions;
+      ySelect.value = calCurrentYear;
     }
   });
 }
@@ -11549,6 +11672,17 @@ function renderCalendar(targetScope = 'all') {
 
     // Render Agenda
     renderCalendarAgenda(scope);
+
+    if (scope === 'dash') {
+      if (typeof populateCalendarQuickSelect === 'function') {
+        populateCalendarQuickSelect();
+      }
+      if (typeof studentCalMode !== 'undefined' && studentCalMode === 'list') {
+        if (typeof renderStudentActiveEventsList === 'function') {
+          renderStudentActiveEventsList();
+        }
+      }
+    }
   });
   updateCalendarLauncherBadge();
 }
@@ -11720,9 +11854,175 @@ function openCalendarEventDetail(eventId) {
   openModal('calendarEventDetailModal');
 }
 
+let studentCalMode = 'grid'; // 'grid' | 'list'
+
+function switchStudentCalendarMode(mode) {
+  studentCalMode = mode;
+  const btnGrid = document.getElementById('btnCalModeGrid');
+  const btnList = document.getElementById('btnCalModeList');
+  const matrixContainer = document.getElementById('calPhoneMatrixContainer');
+  const listView = document.getElementById('calPhoneActiveListView');
+
+  if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+  if (btnList) btnList.classList.toggle('active', mode === 'list');
+
+  if (mode === 'grid') {
+    if (matrixContainer) matrixContainer.style.display = 'block';
+    if (listView) listView.style.display = 'none';
+  } else {
+    if (matrixContainer) matrixContainer.style.display = 'none';
+    if (listView) listView.style.display = 'flex';
+    renderStudentActiveEventsList();
+  }
+}
+
+function renderStudentActiveEventsList() {
+  const container = document.getElementById('calPhoneActiveListView');
+  if (!container) return;
+
+  const visibleEvents = getVisibleCalendarEvents();
+  const curY = calCurrentYear;
+  const curM = calCurrentMonth + 1;
+
+  // Filter events active in the selected month
+  const monthEvents = visibleEvents.filter(ev => {
+    if (!ev.startDate) return false;
+    const parts = ev.startDate.split('-');
+    const evY = parseInt(parts[0], 10);
+    const evM = parseInt(parts[1], 10);
+    if (evY === curY && evM === curM) return true;
+    if (ev.endDate) {
+      const eParts = ev.endDate.split('-');
+      const endY = parseInt(eParts[0], 10);
+      const endM = parseInt(eParts[1], 10);
+      return (evY <= curY && endY >= curY) && (evM <= curM && endM >= curM);
+    }
+    return false;
+  }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+
+  if (monthEvents.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2.2rem 1rem; color: #64748b; background: #f8fafc; border-radius: 14px; border: 1px dashed #cbd5e1;">
+        <i class="fa-regular fa-calendar-xmark" style="font-size: 2.2rem; color: #94a3b8; margin-bottom: 0.6rem;"></i>
+        <div style="font-weight: 700; color: #334155; font-size: 0.95rem;">ไม่มีกิจกรรมในเดือนที่เลือก</div>
+        <div style="font-size: 0.78rem; margin-top: 0.25rem;">สามารถเปลี่ยนเดือน หรือแตะเมนูด้านบนเพื่อเลือกวันที่มีกิจกรรม</div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  monthEvents.forEach(ev => {
+    const catClass = getCategoryClass(ev.category);
+    const iconClass = getCategoryIcon(ev.category);
+    const s = formatThaiDateDisplay(ev.startDate);
+    const e = (ev.endDate && ev.endDate !== ev.startDate) ? formatThaiDateDisplay(ev.endDate) : null;
+    const dateRangeStr = e ? `${s} – ${e}` : s;
+    const timeStr = ev.startTime ? `${ev.startTime} - ${ev.endTime || 'เสร็จสิ้น'} น.` : 'ตลอดทั้งวัน';
+    const targetLabel = ev.targetAudienceLabel || (ev.targetAudience === 'teachers' ? 'เฉพาะอาจารย์' : (ev.targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน'));
+
+    html += `
+      <div class="cal-active-list-item ${catClass}" onclick="jumpToSelectedCalendarEvent('${ev.startDate}', 'dash')">
+        <div class="cal-active-list-header">
+          <span class="cal-category-pill ${catClass}" style="font-size: 0.72rem; padding: 2px 7px;">
+            <i class="${iconClass}"></i> ${escapeHtml(ev.category || 'กิจกรรมทั่วไป')}
+          </span>
+          <span class="cal-target-pill target-${ev.targetAudience || 'all'}" style="font-size: 0.7rem;">
+            ${escapeHtml(targetLabel)}
+          </span>
+        </div>
+        <h4 class="cal-active-list-title">${escapeHtml(ev.title)}</h4>
+        <div class="cal-active-list-meta">
+          <span><i class="fa-regular fa-calendar"></i> ${dateRangeStr}</span>
+          <span><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+          ${ev.location ? `<span><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> ${escapeHtml(ev.location)}</span>` : ''}
+        </div>
+        <div class="cal-active-list-action">
+          <span>แตะดูรายละเอียด</span> <i class="fa-solid fa-arrow-right"></i>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function populateCalendarQuickSelect() {
+  const quickSelect = document.getElementById('calEventQuickSelect-dash');
+  const countBadge = document.getElementById('calActiveTabBadge');
+  const jumperCount = document.getElementById('calQuickJumperCount');
+  if (!quickSelect) return;
+
+  const visibleEvents = getVisibleCalendarEvents();
+  const curY = calCurrentYear;
+  const curM = calCurrentMonth + 1;
+
+  // Sort events chronologically
+  const sortedEvents = [...visibleEvents].filter(e => e.startDate).sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  // Count events for current month
+  const currentMonthEvents = sortedEvents.filter(ev => {
+    const parts = ev.startDate.split('-');
+    return parseInt(parts[0], 10) === curY && parseInt(parts[1], 10) === curM;
+  });
+
+  if (countBadge) countBadge.innerText = currentMonthEvents.length;
+  if (jumperCount) jumperCount.innerText = `พบ ${sortedEvents.length} รายการ`;
+
+  let optHtml = `<option value="">-- แตะเพื่อเลือกดูวันที่มีกิจกรรม (${sortedEvents.length} รายการ) --</option>`;
+
+  if (currentMonthEvents.length > 0) {
+    optHtml += `<optgroup label="⭐ กิจกรรมในเดือนนี้ (${currentMonthEvents.length} รายการ)">`;
+    currentMonthEvents.forEach(ev => {
+      const s = formatThaiDateDisplay(ev.startDate);
+      const cat = getCategoryShortLabel(ev.category);
+      optHtml += `<option value="${ev.startDate}">[${s}] [${cat}] ${escapeHtml(ev.title)}</option>`;
+    });
+    optHtml += `</optgroup>`;
+  }
+
+  const otherEvents = sortedEvents.filter(ev => !currentMonthEvents.includes(ev));
+  if (otherEvents.length > 0) {
+    optHtml += `<optgroup label="📅 กิจกรรมในเดือนอื่นๆ / ล่วงหน้า (${otherEvents.length} รายการ)">`;
+    otherEvents.forEach(ev => {
+      const s = formatThaiDateDisplay(ev.startDate);
+      const cat = getCategoryShortLabel(ev.category);
+      optHtml += `<option value="${ev.startDate}">[${s}] [${cat}] ${escapeHtml(ev.title)}</option>`;
+    });
+    optHtml += `</optgroup>`;
+  }
+
+  quickSelect.innerHTML = optHtml;
+}
+
+function jumpToSelectedCalendarEvent(dateStr, scope) {
+  if (!dateStr) return;
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    calCurrentYear = y;
+    calCurrentMonth = m;
+    calSelectedDate = dateStr;
+    renderCalendar('all');
+
+    const visibleEvents = getVisibleCalendarEvents();
+    const dayEvents = visibleEvents.filter(e => isDateInRange(dateStr, e.startDate, e.endDate));
+    if (dayEvents.length > 0) {
+      openCalendarDayModal(dateStr, dayEvents);
+    }
+  }
+  const quickSelect = document.getElementById('calEventQuickSelect-dash');
+  if (quickSelect) quickSelect.value = '';
+}
+
 function openSchoolCalendarModal() {
+  studentCalMode = 'grid';
+  switchStudentCalendarMode('grid');
+  populateCalendarSelects();
   renderCalendar('dash');
   updateCalendarLauncherBadge();
+  populateCalendarQuickSelect();
   openModal('schoolCalendarModal');
 }
 
@@ -11769,7 +12069,7 @@ function openCalendarDayModal(dateStr, dayEvents) {
   const countEl = document.getElementById('calDayModalCount');
   const bodyEl = document.getElementById('calDayModalBody');
 
-  if (titleEl) titleEl.innerText = `วัน${dayName}ที่ ${fullDate}`;
+  if (titleEl) titleEl.innerText = `${dayName}ที่ ${fullDate}`;
   if (subEl) subEl.innerText = 'ประกาศและกำหนดการโรงเรียน';
   if (countEl) countEl.innerText = `รวมทั้งสิ้น ${dayEvents.length} รายการ`;
 

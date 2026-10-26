@@ -8829,6 +8829,234 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   border-top: 1px dashed #e2e8f0;
 }
 
+/* ========================================================
+   CALENDAR DAY EVENTS MODAL & SCHOOL CALENDAR CENTERING
+   ("ป้อปอัพในปฏิทิน ให้อยู่ตรงกลางจอเวลากดดู")
+   ======================================================== */
+#calendarDayEventsModal,
+#schoolCalendarModal {
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1rem !important;
+}
+
+#calendarDayEventsModal .modal-dialog {
+  margin: auto !important;
+  max-width: 490px !important;
+  width: 95% !important;
+  max-height: 86vh !important;
+  max-height: 86dvh !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.32) !important;
+  animation: modalScaleCenter 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+#schoolCalendarModal .modal-dialog {
+  margin: auto !important;
+}
+
+@keyframes modalScaleCenter {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ========================================================
+   STUDENT CALENDAR: MODE SWITCHER & QUICK EVENT JUMPER
+   ("ให้ดูและกดง่ายขึ้นได้ไหม และให้สามารถเลือกวันที่ เดือน เฉพาะที่มีกิจกรรมได้ด้วย")
+   ======================================================== */
+.cal-phone-view-toggle {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  border: 1px solid #e2e8f0;
+  gap: 4px;
+}
+
+.cal-view-tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  border-radius: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.cal-view-tab-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.cal-view-tab-badge {
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  line-height: 1.25;
+}
+
+.cal-view-tab-btn.active .cal-view-tab-badge {
+  background: var(--primary, #059669);
+  color: #ffffff;
+}
+
+/* Quick Jumper Card */
+.cal-quick-jumper-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.cal-quick-jumper-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+  font-size: 0.76rem;
+}
+
+.cal-quick-jumper-title {
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.cal-quick-jumper-count {
+  font-weight: 700;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.cal-quick-select {
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-quick-select:focus {
+  border-color: var(--primary, #059669);
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15);
+}
+
+/* Active Events List View (when student toggles to list mode) */
+.cal-phone-active-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 52vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 4px 6px 2px;
+}
+
+.cal-active-list-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cal-active-list-item:hover,
+.cal-active-list-item:active {
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.cal-active-list-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+}
+
+.cal-active-list-item.cat-exam::before { background: #e11d48; }
+.cal-active-list-item.cat-holiday::before { background: #d97706; }
+.cal-active-list-item.cat-prayer::before { background: #059669; }
+.cal-active-list-item.cat-academic::before { background: #0284c7; }
+.cal-active-list-item.cat-general::before { background: #7c3aed; }
+.cal-active-list-item.cat-meeting::before { background: #475569; }
+
+.cal-active-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cal-active-list-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.cal-active-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.76rem;
+  color: #64748b;
+  flex-wrap: wrap;
+}
+
+.cal-active-list-meta i {
+  color: var(--primary, #059669);
+  margin-right: 3px;
+}
+
+.cal-active-list-action {
+  align-self: flex-end;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary, #059669);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 @media (max-width: 420px) {
   .cal-phone-modal-dialog {
     width: 98% !important;

@@ -1125,7 +1125,7 @@ function registerStudent(data) {
 
   const safePhotoRef = (photoLink && !photoLink.startsWith('data:image')) 
     ? photoLink 
-    : (rawPhoto && !rawPhoto.startsWith('data:image') && rawPhoto.length < 500 ? rawPhoto : 'รูปโปรไฟล์ในอุปกรณ์');
+    : (rawPhoto && !rawPhoto.startsWith('data:image') && rawPhoto.length < 500 ? rawPhoto : '');
 
   const emailVal = cleanVal(data.email || '');
   const gpaxVal = (data.gpax !== undefined && data.gpax !== null && data.gpax !== '') ? String(data.gpax) : '';
@@ -2778,8 +2778,12 @@ function updateAppLogo(logoBase64) {
  */
 function saveStudentPhotoToDrive(studentId, photoBase64) {
   if (!photoBase64 || typeof photoBase64 !== 'string') return '';
-  if (!photoBase64.startsWith('data:image')) {
-    return photoBase64; // เป็น URL อยู่แล้ว
+  const trimmed = photoBase64.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed; // เป็น URL อยู่แล้ว (เช่น ลิงก์ Google Drive หรือ CDN)
+  }
+  if (!trimmed.startsWith('data:image')) {
+    return ''; // ไม่ใช่รูปภาพ
   }
   try {
     const folderName = "Khalifah_Profile_Photos";
@@ -2792,7 +2796,7 @@ function saveStudentPhotoToDrive(studentId, photoBase64) {
     }
     
     const contentType = "image/jpeg";
-    const cleanBase64 = photoBase64.includes(',') ? photoBase64.split(',')[1] : photoBase64;
+    const cleanBase64 = trimmed.includes(',') ? trimmed.split(',')[1] : trimmed;
     const bytes = Utilities.base64Decode(cleanBase64);
     const fileName = `profile_${studentId}.jpg`;
     
@@ -2808,7 +2812,7 @@ function saveStudentPhotoToDrive(studentId, photoBase64) {
     return `https://lh3.googleusercontent.com/d/${file.getId()}`;
   } catch (err) {
     Logger.log('saveStudentPhotoToDrive error: ' + err.message);
-    return 'Stored locally on device';
+    return '';
   }
 }
 
@@ -2819,6 +2823,9 @@ function updateStudentProfilePhoto(studentId, avatarUrl) {
   const rows = sheet.getDataRange().getValues();
   
   const drivePhotoUrl = saveStudentPhotoToDrive(studentId, avatarUrl);
+  if (!drivePhotoUrl) {
+    return { success: false, message: 'บันทึกรูปภาพลง Google Drive ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Drive' };
+  }
 
   for (let i = 1; i < rows.length; i++) {
     if (isCodeMatch(rows[i][0], studentId)) {

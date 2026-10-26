@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6.5">
+  <link rel="stylesheet" href="style.css?v=6.6">
 </head>
 <body class="auth-locked">
 
@@ -4020,6 +4020,29 @@
       </div>
 
       <div class="modal-body cal-phone-modal-body">
+        <!-- Segmented Mode Toggle: Grid View vs Active Events List -->
+        <div class="cal-phone-view-toggle">
+          <button type="button" class="cal-view-tab-btn active" id="btnCalModeGrid" onclick="switchStudentCalendarMode('grid')">
+            <i class="fa-solid fa-calendar-days"></i> ปฏิทินรายเดือน
+          </button>
+          <button type="button" class="cal-view-tab-btn" id="btnCalModeList" onclick="switchStudentCalendarMode('list')">
+            <i class="fa-solid fa-list-check"></i> เฉพาะวันที่มีกิจกรรม <span class="cal-view-tab-badge" id="calActiveTabBadge">0</span>
+          </button>
+        </div>
+
+        <!-- Quick Event Selector Bar ("เลือกวันที่ เดือน เฉพาะที่มีกิจกรรมได้ด้วย") -->
+        <div class="cal-quick-jumper-card">
+          <div class="cal-quick-jumper-header">
+            <span class="cal-quick-jumper-title">
+              <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> ทางลัดเฉพาะวันที่มีกิจกรรม:
+            </span>
+            <span class="cal-quick-jumper-count" id="calQuickJumperCount">พบ 0 รายการ</span>
+          </div>
+          <select id="calEventQuickSelect-dash" class="cal-quick-select" onchange="jumpToSelectedCalendarEvent(this.value, 'dash')">
+            <option value="">-- แตะเพื่อเลือกดูวันที่มีกิจกรรมโดยตรง --</option>
+          </select>
+        </div>
+
         <!-- Controls Toolbar: Month/Year select + Prev/Today/Next -->
         <div class="cal-controls-toolbar cal-phone-toolbar">
           <div class="cal-select-group">
@@ -4043,8 +4066,13 @@
           <div id="btnCalViewSplit-dash" style="display: none;"></div>
         </div>
 
+        <!-- Active Events List Container (Shown when switching to 'list' mode) -->
+        <div id="calPhoneActiveListView" class="cal-phone-active-list-view" style="display: none;">
+          <!-- Dynamically populated via renderStudentActiveEventsList() -->
+        </div>
+
         <!-- Compact Calendar Matrix (Optimized for Mobile Phones) -->
-        <div class="cal-phone-matrix">
+        <div class="cal-phone-matrix" id="calPhoneMatrixContainer">
           <div class="cal-weekdays-row cal-phone-weekdays">
             <div class="cal-weekday cal-sun">อา.</div>
             <div class="cal-weekday">จ.</div>
@@ -4218,6 +4246,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=6.5"></script>
+  <script src="app.js?v=6.6"></script>
 </body>
 </html>
