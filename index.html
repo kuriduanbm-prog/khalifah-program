@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=7.2">
+  <link rel="stylesheet" href="style.css?v=7.3">
 </head>
 <body class="auth-locked">
 
@@ -483,6 +483,34 @@
               <div class="prayer-chip-sub">19:30 - ก่อนรุ่งอรุณ</div>
               <span class="prayer-chip-status" id="pstatus-อีชาอ์">ยังไม่เช็ค</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Request Notification Banner for Expired / Forgotten Prayers -->
+        <div class="prayer-late-request-banner" id="prayerLateRequestBanner" style="display: none;">
+          <div class="late-banner-content">
+            <div class="late-banner-icon">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div class="late-banner-text">
+              <div class="late-banner-title" id="prayerLateBannerTitle">
+                ลืมเช็คชื่อเวลาละหมาด?
+              </div>
+              <div class="late-banner-sub" id="prayerLateBannerSub">
+                ระบบล็อคการบันทึกย้อนหลังอัตโนมัติ หากท่านได้ละหมาดแล้วแต่ลืมเช็ค สามารถกดส่งคำขอให้อาจารย์/แอดมินพิจารณาอนุมัติได้
+              </div>
+            </div>
+          </div>
+          <div class="late-banner-actions">
+            <button type="button" class="btn-prayer-late-action" onclick="openPrayerLateApprovalModal()" id="btnOpenPrayerLateModal">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span>ส่งคำขอให้อาจารย์อนุมัติ</span>
+            </button>
+            <button type="button" class="btn-prayer-late-link" onclick="openStudentPrayerRequestsModal()" id="btnViewStudentPrayerReqs">
+              <i class="fa-solid fa-list-check"></i>
+              <span>ประวัติคำขอของฉัน</span>
+              <span class="late-req-count-badge" id="studentPendingReqBadge" style="display: none;">0</span>
+            </button>
           </div>
         </div>
 
@@ -2557,6 +2585,10 @@
                 <button type="button" class="prayer-dash-seg-btn" id="btnPrayerModeIndividual" onclick="setAdminPrayerMode('individual')">
                   <i class="fa-solid fa-user-clock"></i> ตรวจสอบประวัติรายบุคคล
                 </button>
+                <button type="button" class="prayer-dash-seg-btn" id="btnPrayerModeApprovals" onclick="setAdminPrayerMode('approvals')">
+                  <i class="fa-solid fa-clipboard-check"></i> คำขออนุมัติย้อนหลัง
+                  <span class="badge-pending-count" id="badgePendingPrayerApprovals" style="display: none;">0</span>
+                </button>
               </div>
               <button type="button" class="btn btn-secondary btn-sm" onclick="syncAllDataFromCloud(true)" style="height: 36px;">
                 <i class="fa-solid fa-rotate"></i> ซิงค์สด Google Sheets
@@ -2780,6 +2812,100 @@
                   <!-- Injected via app.js -->
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- ================= MODE 3: PRAYER LATE CHECK-IN APPROVALS ================= -->
+          <div id="adminPrayerApprovalsSection" style="display: none;">
+            <!-- Header note & toolbar -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.15rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <div style="width: 38px; height: 38px; border-radius: 8px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; border: 1px solid #bae6fd;">
+                  <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">
+                    ศูนย์พิจารณาคำขอเช็คชื่อละหมาดย้อนหลัง (กรณีลืมเช็คชื่อ)
+                  </div>
+                  <div style="font-size: 0.78rem; color: var(--text-muted);">
+                    ตรวจสอบเหตุผลและหลักฐานของนักเรียน เมื่อกดอนุมัติ ระบบจะบันทึกผลการละหมาดและสถานะให้ทันที
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="fetchPrayerApprovalsFromCloud(true)" style="height: 36px; font-size: 0.82rem; font-weight: 600;">
+                  <i class="fa-solid fa-rotate"></i> รีเฟรชข้อมูล
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="exportPrayerApprovalsToExcel()" style="height: 36px; font-size: 0.82rem; font-weight: 600; white-space: nowrap;">
+                  <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> ส่งออก Excel (.xlsx)
+                </button>
+              </div>
+            </div>
+
+            <!-- Approvals KPI Summary Cards -->
+            <div class="prayer-approvals-kpi-grid">
+              <div class="prayer-appr-kpi pending">
+                <div class="appr-kpi-label"><i class="fa-solid fa-clock"></i> รออาจารย์ตรวจสอบ</div>
+                <div class="appr-kpi-num" id="adminApprKpiPending">0</div>
+                <div class="appr-kpi-sub">รายการที่ต้องพิจารณา</div>
+              </div>
+              <div class="prayer-appr-kpi approved">
+                <div class="appr-kpi-label"><i class="fa-solid fa-circle-check"></i> อนุมัติแล้ว</div>
+                <div class="appr-kpi-num" id="adminApprKpiApproved">0</div>
+                <div class="appr-kpi-sub">บันทึกละหมาดให้แล้ว</div>
+              </div>
+              <div class="prayer-appr-kpi rejected">
+                <div class="appr-kpi-label"><i class="fa-solid fa-circle-xmark"></i> ไม่อนุมัติ</div>
+                <div class="appr-kpi-num" id="adminApprKpiRejected">0</div>
+                <div class="appr-kpi-sub">คำขอที่ถูกปฏิเสธ</div>
+              </div>
+              <div class="prayer-appr-kpi total">
+                <div class="appr-kpi-label"><i class="fa-solid fa-layer-group"></i> คำขอทั้งหมด</div>
+                <div class="appr-kpi-num" id="adminApprKpiTotal">0</div>
+                <div class="appr-kpi-sub">ประวัติคำขอสะสม</div>
+              </div>
+            </div>
+
+            <!-- Filter & Action Toolbar -->
+            <div class="prayer-approvals-toolbar">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <div class="toolbar-seg-filter">
+                  <button type="button" class="btn-appr-filter active" id="filterBtnPending" data-status="pending" onclick="setAdminPrayerApprovalFilter('pending', this)">
+                    <i class="fa-solid fa-clock"></i> รออนุมัติ (<span id="filterCountPending">0</span>)
+                  </button>
+                  <button type="button" class="btn-appr-filter" id="filterBtnApproved" data-status="approved" onclick="setAdminPrayerApprovalFilter('approved', this)">
+                    <i class="fa-solid fa-check"></i> อนุมัติแล้ว
+                  </button>
+                  <button type="button" class="btn-appr-filter" id="filterBtnRejected" data-status="rejected" onclick="setAdminPrayerApprovalFilter('rejected', this)">
+                    <i class="fa-solid fa-xmark"></i> ไม่อนุมัติ
+                  </button>
+                  <button type="button" class="btn-appr-filter" id="filterBtnAll" data-status="ALL" onclick="setAdminPrayerApprovalFilter('ALL', this)">
+                    ทั้งหมด
+                  </button>
+                </div>
+
+                <select id="adminPrayerApprovalSlotFilter" class="form-control" style="width: auto; height: 36px; font-size: 0.82rem;" onchange="renderAdminPrayerApprovals()">
+                  <option value="ALL">ทุกเวลาละหมาด</option>
+                  <option value="ซุบฮิ">ซุบฮิ</option>
+                  <option value="ซุฮริ">ซุฮริ</option>
+                  <option value="อัศรฺ">อัศรฺ</option>
+                  <option value="มัฆริบ">มัฆริบ</option>
+                  <option value="อีชาอ์">อีชาอ์</option>
+                </select>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="position: relative; min-width: 220px;">
+                  <input type="text" id="adminPrayerApprovalSearchInput" class="form-control" placeholder="ค้นหาชื่อ / รหัสนักเรียน..." style="padding-left: 2rem; height: 36px; font-size: 0.82rem;" oninput="renderAdminPrayerApprovals()">
+                  <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.78rem;"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Approvals Cards / List Container -->
+            <div id="adminPrayerApprovalsListContainer" style="margin-top: 1rem;">
+              <!-- Injected dynamically via app.js -->
             </div>
           </div>
         </div>
@@ -3373,6 +3499,166 @@
         <button class="btn btn-secondary btn-block" onclick="closeModal('prayerDetailModal')">
           ปิดหน้าต่าง
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Prayer Late Check-in Approval Request (For Student) -->
+  <div class="modal-overlay" id="prayerLateApprovalModal">
+    <div class="modal-dialog" style="max-width: 500px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-file-signature" style="color: #0284c7;"></i>
+          <span>ส่งคำขออนุมัติเช็คละหมาดย้อนหลัง (กรณีลืม)</span>
+        </div>
+        <button type="button" class="btn-icon" onclick="closeModal('prayerLateApprovalModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding-top: 0.85rem;">
+        <!-- Student Info Bar -->
+        <div class="late-req-student-bar">
+          <div class="late-req-student-avatar">
+            <i class="fa-solid fa-user-graduate"></i>
+          </div>
+          <div class="late-req-student-info">
+            <div class="late-req-student-name" id="lateReqStudentName">-</div>
+            <div class="late-req-student-sub">
+              <span>รหัสนักเรียน: <b id="lateReqStudentId" style="color: #0284c7;">-</b></span>
+              <span>•</span>
+              <span>ระดับชั้น: <b id="lateReqStudentGrade">-</b></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prayer Slot Selector -->
+        <div class="form-group" style="margin-top: 1rem;">
+          <label class="form-label">
+            <i class="fa-solid fa-person-praying" style="color: #0284c7;"></i> เลือกเวลาละหมาดที่ต้องการขออนุมัติ <span class="required">*</span>
+          </label>
+          <div class="late-req-slot-chips">
+            <button type="button" class="btn-late-slot" data-slot="ซุบฮิ" onclick="selectLateRequestSlot('ซุบฮิ')">
+              <span class="slot-name">ซุบฮิ</span>
+              <span class="slot-sub">04:45 - 06:25</span>
+            </button>
+            <button type="button" class="btn-late-slot" data-slot="ซุฮริ" onclick="selectLateRequestSlot('ซุฮริ')">
+              <span class="slot-name">ซุฮริ</span>
+              <span class="slot-sub">12:10 - 15:15</span>
+            </button>
+            <button type="button" class="btn-late-slot" data-slot="อัศรฺ" onclick="selectLateRequestSlot('อัศรฺ')">
+              <span class="slot-name">อัศรฺ</span>
+              <span class="slot-sub">15:20 - 18:05</span>
+            </button>
+            <button type="button" class="btn-late-slot" data-slot="มัฆริบ" onclick="selectLateRequestSlot('มัฆริบ')">
+              <span class="slot-name">มัฆริบ</span>
+              <span class="slot-sub">18:10 - 19:25</span>
+            </button>
+            <button type="button" class="btn-late-slot" data-slot="อีชาอ์" onclick="selectLateRequestSlot('อีชาอ์')">
+              <span class="slot-name">อีชาอ์</span>
+              <span class="slot-sub">19:30 - ก่อนรุ่งอรุณ</span>
+            </button>
+          </div>
+          <input type="hidden" id="lateReqSelectedSlot" value="">
+        </div>
+
+        <!-- Date of Prayer -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fa-regular fa-calendar" style="color: #0284c7;"></i> วันที่ละหมาด <span class="required">*</span>
+          </label>
+          <input type="date" id="lateReqDate" class="form-control" style="font-weight: 600;">
+        </div>
+
+        <!-- Reason Selection with Quick Presets -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fa-solid fa-circle-question" style="color: #0284c7;"></i> เหตุผลที่ไม่ได้กดเช็คชื่อตามเวลา <span class="required">*</span>
+          </label>
+          <div class="late-req-preset-chips">
+            <button type="button" class="btn-reason-preset active" onclick="setLateReqReasonPreset('ละหมาดแล้วแต่ลืมกดเช็คชื่อ')">
+              ละหมาดแล้วแต่ลืมกดเช็คชื่อ
+            </button>
+            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('ลืมโทรศัพท์ไว้ที่บ้าน')">
+              ลืมโทรศัพท์ไว้ที่บ้าน
+            </button>
+            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('แบตเตอรี่โทรศัพท์หมด')">
+              แบตเตอรี่โทรศัพท์หมด
+            </button>
+            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('สัญญาณอินเทอร์เน็ตขัดข้อง')">
+              สัญญาณอินเทอร์เน็ตขัดข้อง
+            </button>
+            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('ติดภารกิจ/กิจกรรมโรงเรียน')">
+              ติดภารกิจ/กิจกรรมโรงเรียน
+            </button>
+          </div>
+          <input type="hidden" id="lateReqSelectedPreset" value="ละหมาดแล้วแต่ลืมกดเช็คชื่อ">
+          <textarea id="lateReqReasonDetail" class="form-control" rows="2" placeholder="พิมพ์เหตุผลหรือคำชี้แจงเพิ่มเติมให้อาจารย์ (ไม่บังคับ)..." style="margin-top: 0.5rem; resize: vertical; font-size: 0.88rem;"></textarea>
+        </div>
+
+        <!-- Optional Photo Attachment -->
+        <div class="form-group">
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span><i class="fa-solid fa-camera" style="color: #0284c7;"></i> แนบภาพถ่ายพยาน / พิกัด (ไม่บังคับ)</span>
+            <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: normal;">เพื่อความสะดวกรวดเร็วในการอนุมัติ</span>
+          </label>
+          <div class="late-req-photo-upload-wrap">
+            <input type="file" id="lateReqPhotoInput" accept="image/*" style="display: none;" onchange="handleLateReqPhotoSelected(event)">
+            <div class="late-req-photo-preview-box" id="lateReqPhotoPreviewBox" onclick="document.getElementById('lateReqPhotoInput').click()">
+              <div id="lateReqPhotoPlaceholder">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.5rem; color: #94a3b8; margin-bottom: 0.25rem;"></i>
+                <div style="font-size: 0.8rem; color: #475569; font-weight: 600;">คลิกเพื่อเลือกรูปถ่ายพยาน หรือรูปสถานที่</div>
+                <div style="font-size: 0.72rem; color: #94a3b8;">(ระบบบีบอัดรูปภาพให้อัตโนมัติ)</div>
+              </div>
+              <img id="lateReqPhotoPreviewImg" src="" alt="พรีวิวรูปถ่าย" style="display: none; width: 100%; max-height: 180px; object-fit: contain; border-radius: 6px;">
+            </div>
+            <div id="lateReqPhotoRemoveBtn" style="display: none; margin-top: 0.35rem; text-align: right;">
+              <button type="button" class="btn btn-sm btn-link" onclick="removeLateReqPhoto()" style="color: #ef4444; font-size: 0.78rem; text-decoration: none;">
+                <i class="fa-solid fa-trash-can"></i> ลบรูปถ่ายที่แนบ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div style="display: flex; gap: 0.65rem; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeModal('prayerLateApprovalModal')">
+            ยกเลิก
+          </button>
+          <button type="button" class="btn btn-primary" style="flex: 2;" id="btnSubmitLateReq" onclick="submitPrayerLateApprovalRequest()">
+            <i class="fa-solid fa-paper-plane"></i> ส่งคำขอให้อาจารย์อนุมัติ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Student Prayer Request History -->
+  <div class="modal-overlay" id="prayerStudentRequestsModal">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-list-check" style="color: #0284c7;"></i>
+          <span>ประวัติคำขออนุมัติเช็คละหมาดย้อนหลัง</span>
+        </div>
+        <button type="button" class="btn-icon" onclick="closeModal('prayerStudentRequestsModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding-top: 0.85rem;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+          <span>ติดตามสถานะคำขอที่ส่งถึงอาจารย์/แอดมิน</span>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="closeModal('prayerStudentRequestsModal'); openPrayerLateApprovalModal();" style="font-size: 0.78rem; padding: 0.25rem 0.65rem;">
+            <i class="fa-solid fa-plus"></i> ส่งคำขอใหม่
+          </button>
+        </div>
+        <div id="studentPrayerRequestsContainer" class="student-prayer-reqs-list">
+          <!-- Rendered dynamically via app.js -->
+        </div>
+        <div style="margin-top: 1.15rem;">
+          <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('prayerStudentRequestsModal')">
+            ปิดหน้าต่าง
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -4659,6 +4945,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=7.2"></script>
+  <script src="app.js?v=7.3"></script>
 </body>
 </html>

@@ -2902,6 +2902,10 @@ function refreshPrayerChipsStatus() {
       }
     }
   });
+
+  if (typeof updatePrayerLateRequestBanner === 'function') updatePrayerLateRequestBanner();
+  if (typeof updateStudentPendingReqBadge === 'function') updateStudentPendingReqBadge();
+  if (typeof updateAdminPrayerPendingApprovalsBadge === 'function') updateAdminPrayerPendingApprovalsBadge();
 }
 
 function selectPrayerTime(timeName, element, isSystemAuto = false) {
@@ -2914,13 +2918,23 @@ function selectPrayerTime(timeName, element, isSystemAuto = false) {
     return pKey === (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(timeName) : timeName);
   });
 
-  // ป้องกันการเลือกบันทึกช่วงเวลาย้อนหลัง (เมื่อผู้ใช้แตะปุ่มเอง)
+  // ป้องกันการกดบันทึกช่วงเวลาย้อนหลัง แต่เปิดให้เลือกเพื่อกดส่งคำขออนุมัติให้อาจารย์ได้
   if (!isSystemAuto && !alreadyChecked && slotStatus.isPast) {
-    showToast(`⚠️ ไม่สามารถกดบันทึกละหมาดย้อนหลังได้: หมดช่วงเวลาละหมาด ${timeName} แล้ว (${slotStatus.rangeLabel})`, 'error');
+    selectedPrayerTime = timeName;
+    document.querySelectorAll('.prayer-chip, .prayer-time-card').forEach(el => el.classList.remove('selected'));
     if (element) {
-      element.classList.add('shake-anim');
-      setTimeout(() => element.classList.remove('shake-anim'), 500);
+      element.classList.add('selected');
+    } else {
+      const key = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(timeName) : timeName;
+      const target = document.getElementById(`ptime-${timeName}`) ||
+                     document.getElementById(`ptime-${key}`) ||
+                     (key === 'อัศรฺ' ? (document.getElementById('ptime-อัศรฺ') || document.getElementById('ptime-อัศรุ')) : null);
+      if (target) target.classList.add('selected');
     }
+    checkPrayerUnlockState();
+    refreshPrayerChipsStatus();
+    if (typeof updatePrayerLateRequestBanner === 'function') updatePrayerLateRequestBanner(timeName);
+    showToast(`⚠️ หมดช่วงเวลาละหมาด ${timeName} แล้ว (${slotStatus.rangeLabel}) หากลืมเช็คชื่อ สามารถกดปุ่มส่งคำขอให้อาจารย์อนุมัติได้ครับ`, 'warning');
     return;
   }
 
@@ -2979,28 +2993,30 @@ function checkPrayerUnlockState() {
 
   const slotStatus = getPrayerSlotTimeStatus(selectedPrayerTime);
 
-  // 1. ตรวจสอบการบันทึกย้อนหลัง: ถ้าหมดเวลาแล้วและยังไม่เคยเช็ค -> ล็อคปุ่มถ่ายรูปและแสดงแถบสีแดงเตือนชัดเจน
+  // 1. ตรวจสอบการบันทึกย้อนหลัง: ถ้าหมดเวลาแล้วและยังไม่เคยเช็ค -> ล็อคการถ่ายรูปปกติ แต่เปิดให้กดส่งคำขออนุมัติย้อนหลังได้
   if (!alreadyChecked && slotStatus.isPast) {
-    btnCapture.disabled = true;
-    btnCapture.classList.add('btn-locked');
-    btnCapture.style.background = '#e11d48';
-    btnCapture.style.borderColor = '#be123c';
+    btnCapture.disabled = false;
+    btnCapture.classList.remove('btn-locked');
+    btnCapture.className = 'btn btn-cam-shutter btn-cam-late-request';
+    btnCapture.style.background = '#0284c7';
+    btnCapture.style.borderColor = '#0369a1';
+    btnCapture.onclick = () => openPrayerLateApprovalModal(selectedPrayerTime);
     btnCapture.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
         <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 0.4rem;">
-          <i class="fa-solid fa-ban"></i> หมดเวลาละหมาด ${selectedPrayerTime} แล้ว
+          <i class="fa-solid fa-paper-plane"></i> ลืมเช็คเวลา ${selectedPrayerTime}? กดส่งคำขออนุมัติ
         </div>
-        <div style="font-size: 0.74rem; font-weight: 500; opacity: 0.95; color: #fee2e2;">
-          ไม่อนุญาตให้กดบันทึกย้อนหลัง (${slotStatus.rangeLabel})
+        <div style="font-size: 0.74rem; font-weight: 500; opacity: 0.95; color: #e0f2fe;">
+          หมดเวลาบันทึกตรง (${slotStatus.rangeLabel}) • แตะเพื่อส่งคำขอให้อาจารย์
         </div>
       </div>
     `;
     if (locBadge && locText) {
       locBadge.style.display = 'inline-flex';
-      locBadge.className = 'prayer-verified-loc-badge verified-out-zone';
-      locBadge.style.background = 'rgba(225, 29, 72, 0.95)';
+      locBadge.className = 'prayer-verified-loc-badge';
+      locBadge.style.background = 'rgba(2, 132, 199, 0.95)';
       locBadge.style.color = '#ffffff';
-      locText.innerHTML = `<i class="fa-solid fa-ban"></i> หมดเวลาละหมาด ${selectedPrayerTime} แล้ว (ไม่อนุญาตให้บันทึกย้อนหลัง)`;
+      locText.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> หมดเวลาละหมาด ${selectedPrayerTime} • แตะปุ่มด้านล่างเพื่อส่งคำขออนุมัติ`;
     }
     return;
   }
@@ -3011,6 +3027,7 @@ function checkPrayerUnlockState() {
     btnCapture.classList.add('btn-locked');
     btnCapture.style.background = '#475569';
     btnCapture.style.borderColor = '#334155';
+    btnCapture.onclick = null;
     btnCapture.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
         <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 0.4rem;">
@@ -3031,9 +3048,11 @@ function checkPrayerUnlockState() {
     return;
   }
 
-  // คืนค่าปุ่มเป็นสถานะปกติ
+  // คืนค่าปุ่มเป็นสถานะปกติสำหรับการถ่ายรูป
   btnCapture.style.background = '';
   btnCapture.style.borderColor = '';
+  btnCapture.className = 'btn btn-cam-shutter';
+  btnCapture.onclick = () => captureAndSavePrayerInstant();
 
   const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
 
@@ -3062,6 +3081,804 @@ function checkPrayerUnlockState() {
       locBadge.style.color = '#ffffff';
       locText.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> ยังไม่มีพิกัดสดใหม่ (หมดอายุ 60 วินาที)';
     }
+  }
+}
+
+// ==========================================================================
+// PRAYER LATE CHECK-IN APPROVAL SYSTEM (STUDENT REQUEST & ADMIN REVIEW)
+// ==========================================================================
+
+let tempLateReqPhotoBase64 = null;
+let currentAdminPrayerApprovalFilter = 'pending';
+
+/**
+ * ดึงรายการคำขออนุมัติทั้งหมดจาก localStorage
+ */
+function getPrayerApprovalsList() {
+  try {
+    const data = localStorage.getItem('khalifah_prayer_approvals');
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Error loading prayer approvals:', e);
+    return [];
+  }
+}
+
+/**
+ * บันทึกรายการคำขออนุมัติลง localStorage
+ */
+function savePrayerApprovalsList(list) {
+  try {
+    localStorage.setItem('khalifah_prayer_approvals', JSON.stringify(list));
+  } catch (e) {
+    console.error('Error saving prayer approvals:', e);
+  }
+}
+
+/**
+ * ดึงข้อมูลคำขออนุมัติล่าสุดจาก Cloud (Google Sheets) หากมี
+ */
+let isFetchingPrayerApprovalsCloud = false;
+async function fetchPrayerApprovalsFromCloud(force = false) {
+  if (isFetchingPrayerApprovalsCloud) return;
+  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (!url || url.includes('docs.google.com/spreadsheets')) return;
+
+  isFetchingPrayerApprovalsCloud = true;
+  try {
+    const res = await fetch(`${url}?action=getPrayerApprovals`);
+    const json = await res.json();
+    if (json && json.status === 'success' && Array.isArray(json.data)) {
+      const localList = getPrayerApprovalsList();
+      json.data.forEach(cloudItem => {
+        const idx = localList.findIndex(l => l.id === cloudItem.id);
+        if (idx > -1) {
+          localList[idx] = { ...localList[idx], ...cloudItem };
+        } else {
+          localList.push(cloudItem);
+        }
+      });
+      savePrayerApprovalsList(localList);
+      renderAdminPrayerApprovals();
+      updateAdminPrayerPendingApprovalsBadge();
+      updateStudentPendingReqBadge();
+      if (force) showToast('รีเฟรชข้อมูลคำขออนุมัติจาก Cloud เรียบร้อย', 'success');
+    }
+  } catch (e) {
+    console.warn('Cloud prayer approvals fetch info:', e);
+  } finally {
+    isFetchingPrayerApprovalsCloud = false;
+  }
+}
+
+/**
+ * อัปเดตแถบแจ้งเตือนลืมเช็คชื่อในหน้าละหมาด (#prayerLateRequestBanner)
+ */
+function updatePrayerLateRequestBanner(slotName = null) {
+  const banner = document.getElementById('prayerLateRequestBanner');
+  const titleEl = document.getElementById('prayerLateBannerTitle');
+  const subEl = document.getElementById('prayerLateBannerSub');
+  if (!banner) return;
+
+  if (!currentStudent) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  const studentTodayPrayers = getStudentTodayPrayersList();
+  const CANONICAL_SLOTS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+
+  // หารอบเวลาที่หมดเวลาแล้วแต่ยังไม่ได้เช็คชื่อ
+  const expiredUncheckedSlots = CANONICAL_SLOTS.filter(slot => {
+    const isChecked = studentTodayPrayers.some(p => {
+      const pKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || p.timeSlot || '') : (p.prayerName || p.prayerTime || '');
+      return pKey === slot;
+    });
+    const status = getPrayerSlotTimeStatus(slot);
+    return !isChecked && status.isPast;
+  });
+
+  if (expiredUncheckedSlots.length === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  banner.style.display = 'flex';
+  const targetSlot = slotName || selectedPrayerTime || expiredUncheckedSlots[0];
+  if (titleEl) {
+    titleEl.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> ลืมเช็คชื่อเวลา ${targetSlot}?`;
+  }
+  if (subEl) {
+    subEl.innerText = `หมดช่วงเวลาบันทึกตรงแล้ว (${expiredUncheckedSlots.join(', ')}) หากท่านได้ละหมาดแล้ว สามารถกดส่งคำขอให้อาจารย์/แอดมินพิจารณาอนุมัติได้`;
+  }
+}
+
+/**
+ * อัปเดต Badge คำขอที่รอดำเนินการของนักเรียนคนปัจจุบัน
+ */
+function updateStudentPendingReqBadge() {
+  const badge = document.getElementById('studentPendingReqBadge');
+  if (!badge) return;
+
+  if (!currentStudent) {
+    badge.style.display = 'none';
+    return;
+  }
+
+  const list = getPrayerApprovalsList();
+  const pendingCount = list.filter(r => r.studentId === currentStudent.studentId && r.status === 'pending').length;
+  if (pendingCount > 0) {
+    badge.style.display = 'inline-flex';
+    badge.innerText = String(pendingCount);
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+/**
+ * เปิด Modal ส่งคำขออนุมัติละหมาดย้อนหลังสำหรับนักเรียน
+ */
+function openPrayerLateApprovalModal(defaultSlot = null) {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนส่งคำขออนุมัติ', 'warning');
+    openModal('authModal');
+    return;
+  }
+
+  // เติมข้อมูลนักเรียน
+  const nameEl = document.getElementById('lateReqStudentName');
+  const idEl = document.getElementById('lateReqStudentId');
+  const gradeEl = document.getElementById('lateReqStudentGrade');
+  const dateEl = document.getElementById('lateReqDate');
+
+  if (nameEl) nameEl.innerText = currentStudent.fullName || currentStudent.name || '-';
+  if (idEl) idEl.innerText = currentStudent.studentId || '-';
+  if (gradeEl) gradeEl.innerText = currentStudent.grade || '-';
+  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+
+  // เลือก Slot เวลาละหมาดเริ่มต้น
+  let slotToSelect = defaultSlot || selectedPrayerTime;
+  if (!slotToSelect) {
+    const studentTodayPrayers = getStudentTodayPrayersList();
+    const CANONICAL_SLOTS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+    const firstExpired = CANONICAL_SLOTS.find(slot => {
+      const isChecked = studentTodayPrayers.some(p => {
+        const pKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || p.timeSlot || '') : (p.prayerName || p.prayerTime || '');
+        return pKey === slot;
+      });
+      const st = getPrayerSlotTimeStatus(slot);
+      return !isChecked && st.isPast;
+    });
+    slotToSelect = firstExpired || 'ซุบฮิ';
+  }
+  selectLateRequestSlot(slotToSelect);
+
+  // ตั้งค่าเหตุผลเริ่มต้น
+  setLateReqReasonPreset('ละหมาดแล้วแต่ลืมกดเช็คชื่อ');
+  const detailEl = document.getElementById('lateReqReasonDetail');
+  if (detailEl) detailEl.value = '';
+
+  // เคลียร์รูปภาพแนบ
+  removeLateReqPhoto();
+
+  openModal('prayerLateApprovalModal');
+}
+
+/**
+ * เลือกเวลาละหมาดในแบบฟอร์มคำขอ
+ */
+function selectLateRequestSlot(slotName) {
+  const hiddenInput = document.getElementById('lateReqSelectedSlot');
+  if (hiddenInput) hiddenInput.value = slotName;
+
+  document.querySelectorAll('.btn-late-slot').forEach(btn => {
+    const slot = btn.getAttribute('data-slot');
+    btn.classList.toggle('active', slot === slotName);
+  });
+}
+
+/**
+ * เลือก Preset เหตุผล
+ */
+function setLateReqReasonPreset(presetText) {
+  const hiddenInput = document.getElementById('lateReqSelectedPreset');
+  if (hiddenInput) hiddenInput.value = presetText;
+
+  document.querySelectorAll('.btn-reason-preset').forEach(btn => {
+    const text = btn.innerText.trim();
+    btn.classList.toggle('active', text === presetText);
+  });
+}
+
+/**
+ * จัดการเลือกรูปภาพแนบประกอบคำขอ และบีบอัดภาพเพื่อลดขนาด
+ */
+function handleLateReqPhotoSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxDim = 900;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      tempLateReqPhotoBase64 = canvas.toDataURL('image/jpeg', 0.72);
+
+      const previewImg = document.getElementById('lateReqPhotoPreviewImg');
+      const placeholder = document.getElementById('lateReqPhotoPlaceholder');
+      const removeBtn = document.getElementById('lateReqPhotoRemoveBtn');
+
+      if (previewImg) {
+        previewImg.src = tempLateReqPhotoBase64;
+        previewImg.style.display = 'block';
+      }
+      if (placeholder) placeholder.style.display = 'none';
+      if (removeBtn) removeBtn.style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/**
+ * ลบรูปภาพที่แนบ
+ */
+function removeLateReqPhoto() {
+  tempLateReqPhotoBase64 = null;
+  const input = document.getElementById('lateReqPhotoInput');
+  const previewImg = document.getElementById('lateReqPhotoPreviewImg');
+  const placeholder = document.getElementById('lateReqPhotoPlaceholder');
+  const removeBtn = document.getElementById('lateReqPhotoRemoveBtn');
+
+  if (input) input.value = '';
+  if (previewImg) {
+    previewImg.src = '';
+    previewImg.style.display = 'none';
+  }
+  if (placeholder) placeholder.style.display = 'block';
+  if (removeBtn) removeBtn.style.display = 'none';
+}
+
+/**
+ * ส่งคำขออนุมัติเช็คละหมาดย้อนหลัง
+ */
+async function submitPrayerLateApprovalRequest() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบก่อนดำเนินการ', 'warning');
+    return;
+  }
+
+  const slotInput = document.getElementById('lateReqSelectedSlot');
+  const dateInput = document.getElementById('lateReqDate');
+  const presetInput = document.getElementById('lateReqSelectedPreset');
+  const detailInput = document.getElementById('lateReqReasonDetail');
+  const btnSubmit = document.getElementById('btnSubmitLateReq');
+
+  const slot = slotInput ? slotInput.value : '';
+  const date = dateInput ? dateInput.value : '';
+  const preset = presetInput ? presetInput.value : '';
+  const detail = detailInput ? detailInput.value.trim() : '';
+
+  if (!slot) {
+    showToast('⚠️ กรุณาเลือกเวลาละหมาดที่ต้องการขออนุมัติ', 'warning');
+    return;
+  }
+  if (!date) {
+    showToast('⚠️ กรุณาระบุวันที่ละหมาด', 'warning');
+    return;
+  }
+
+  // ตรวจสอบว่ามีคำขอที่รอดำเนินการซ้ำซ้อนสำหรับเวลานี้และวันนี้หรือไม่
+  const list = getPrayerApprovalsList();
+  const duplicate = list.find(r => 
+    r.studentId === currentStudent.studentId &&
+    r.prayerSlot === slot &&
+    r.date === date &&
+    r.status === 'pending'
+  );
+
+  if (duplicate) {
+    showToast(`⚠️ คุณได้ส่งคำขออนุมัติเวลา ${slot} วันที่ ${date} ไปแล้ว กรุณารออาจารย์ตรวจสอบครับ`, 'warning');
+    return;
+  }
+
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่งคำขอ...';
+  }
+
+  const reqItem = {
+    id: 'PREQ-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+    studentId: currentStudent.studentId,
+    studentName: currentStudent.fullName || currentStudent.name || '-',
+    grade: currentStudent.grade || '-',
+    parentPhone: currentStudent.parentPhone || currentStudent.phone || '',
+    prayerSlot: slot,
+    date: date,
+    reasonPreset: preset || 'ละหมาดแล้วแต่ลืมกดเช็คชื่อ',
+    reasonDetail: detail || '',
+    photoUrl: tempLateReqPhotoBase64 || '',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    submittedAtFormatted: new Date().toLocaleString('th-TH'),
+    approvedBy: null,
+    approvedAt: null,
+    rejectedBy: null,
+    rejectedAt: null,
+    adminNote: ''
+  };
+
+  list.unshift(reqItem);
+  savePrayerApprovalsList(list);
+
+  // ส่งข้อมูลไปยัง Google Sheets Backend
+  try {
+    syncRecordToGoogleSheet('prayerLateRequest', reqItem);
+  } catch (err) {
+    console.warn('Sync late prayer request to cloud warning:', err);
+  }
+
+  setTimeout(() => {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ส่งคำขอให้อาจารย์อนุมัติ';
+    }
+    closeModal('prayerLateApprovalModal');
+    showToast(`ส่งคำขออนุมัติละหมาด ${slot} เรียบร้อยแล้ว แจ้งเตือนไปยังอาจารย์และแอดมินแล้วครับ`, 'success');
+
+    updateStudentPendingReqBadge();
+    updateAdminPrayerPendingApprovalsBadge();
+    refreshPrayerChipsStatus();
+  }, 350);
+}
+
+/**
+ * เปิด Modal ตรวจสอบประวัติคำขอของนักเรียน
+ */
+function openStudentPrayerRequestsModal() {
+  if (!currentStudent) {
+    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนตรวจสอบประวัติคำขอ', 'warning');
+    openModal('authModal');
+    return;
+  }
+
+  const container = document.getElementById('studentPrayerRequestsContainer');
+  if (!container) return;
+
+  const list = getPrayerApprovalsList();
+  const myRequests = list.filter(r => r.studentId === currentStudent.studentId);
+
+  if (myRequests.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+        <i class="fa-regular fa-folder-open" style="font-size: 2.2rem; color: #94a3b8; margin-bottom: 0.5rem; display: block;"></i>
+        <div style="font-weight: 600; font-size: 0.9rem; color: #475569;">ยังไม่มีประวัติการส่งคำขออนุมัติ</div>
+        <div style="font-size: 0.78rem; margin-top: 0.25rem;">เมื่อคุณส่งคำขออนุมัติเช็คละหมาดย้อนหลัง สถานะจะปรากฏที่นี่</div>
+      </div>
+    `;
+    openModal('prayerStudentRequestsModal');
+    return;
+  }
+
+  let html = '';
+  myRequests.forEach(req => {
+    let statusBadge = '';
+    if (req.status === 'pending') {
+      statusBadge = '<span class="badge-status-pending"><i class="fa-solid fa-clock"></i> รออาจารย์ตรวจสอบ</span>';
+    } else if (req.status === 'approved') {
+      statusBadge = '<span class="badge-status-approved"><i class="fa-solid fa-circle-check"></i> อนุมัติแล้ว</span>';
+    } else {
+      statusBadge = '<span class="badge-status-rejected"><i class="fa-solid fa-circle-xmark"></i> ไม่อนุมัติ</span>';
+    }
+
+    const subDate = req.date ? formatThaiDate(req.date) : '-';
+    const subTime = req.submittedAtFormatted || (req.createdAt ? new Date(req.createdAt).toLocaleTimeString('th-TH') : '-');
+
+    html += `
+      <div class="student-req-card">
+        <div class="student-req-top">
+          <div class="student-req-slot">
+            <i class="fa-solid fa-person-praying"></i> ละหมาด ${req.prayerSlot}
+            <span class="student-req-date">• ${subDate}</span>
+          </div>
+          <div>${statusBadge}</div>
+        </div>
+        <div class="student-req-reason">
+          <strong>เหตุผล:</strong> ${req.reasonPreset || 'ลืมเช็คชื่อ'}
+          ${req.reasonDetail ? `<div style="color: #64748b; font-size: 0.76rem; margin-top: 0.15rem;">"${req.reasonDetail}"</div>` : ''}
+        </div>
+        ${req.photoUrl ? `
+          <div style="margin-top: 0.4rem;">
+            <img src="${req.photoUrl}" alt="รูปภาพแนบ" style="height: 60px; width: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0; cursor: pointer;" onclick="viewPhotoInNewTab('${req.photoUrl}')" title="คลิกเพื่อดูรูปขนาดเต็ม">
+          </div>
+        ` : ''}
+        ${req.status === 'approved' ? `
+          <div class="student-req-admin-note" style="border-left-color: #10b981; color: #166534; background: #f0fdf4;">
+            <i class="fa-solid fa-circle-check"></i> อนุมัติโดย: ${req.approvedBy || 'อาจารย์/แอดมิน'} เมื่อ ${req.approvedAt ? new Date(req.approvedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.' : '-'} (บันทึกละหมาดให้แล้ว)
+          </div>
+        ` : ''}
+        ${req.status === 'rejected' ? `
+          <div class="student-req-admin-note" style="border-left-color: #ef4444; color: #991b1b; background: #fef2f2;">
+            <i class="fa-solid fa-triangle-exclamation"></i> ไม่ผ่านการอนุมัติ: ${req.adminNote || 'ข้อมูลไม่ตรงตามเงื่อนไข'}
+          </div>
+        ` : ''}
+        <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.4rem; text-align: right;">
+          ส่งคำขอเมื่อ: ${subTime}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  openModal('prayerStudentRequestsModal');
+}
+
+/**
+ * ตัวช่วยเปิดดูรูปภาพในแท็บใหม่
+ */
+function viewPhotoInNewTab(url) {
+  if (!url) return;
+  const w = window.open('');
+  if (w) {
+    w.document.write(`<img src="${url}" style="max-width:100%; height:auto; display:block; margin:20px auto; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15);">`);
+  }
+}
+
+// ----------------- ADMIN APPROVALS DASHBOARD & REVIEW LOGIC ----------------- //
+
+/**
+ * เปลี่ยน Filter สถานะในหน้าแอดมิน (รออนุมัติ / อนุมัติแล้ว / ไม่อนุมัติ / ทั้งหมด)
+ */
+function setAdminPrayerApprovalFilter(status, btnElement) {
+  currentAdminPrayerApprovalFilter = status;
+  document.querySelectorAll('.btn-appr-filter').forEach(btn => btn.classList.remove('active'));
+  if (btnElement) btnElement.classList.add('active');
+  renderAdminPrayerApprovals();
+}
+
+/**
+ * อัปเดตตัวเลขแจ้งเตือนคำขอที่รออนุมัติของแอดมิน
+ */
+function updateAdminPrayerPendingApprovalsBadge() {
+  const badge = document.getElementById('badgePendingPrayerApprovals');
+  const filterCount = document.getElementById('filterCountPending');
+  const list = getPrayerApprovalsList();
+  const pendingCount = list.filter(r => r.status === 'pending').length;
+
+  if (badge) {
+    if (pendingCount > 0) {
+      badge.style.display = 'inline-flex';
+      badge.innerText = String(pendingCount);
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  if (filterCount) {
+    filterCount.innerText = String(pendingCount);
+  }
+}
+
+/**
+ * เรนเดอร์แดชบอร์ดรายการคำขออนุมัติละหมาดย้อนหลังสำหรับแอดมิน/อาจารย์
+ */
+function renderAdminPrayerApprovals() {
+  const container = document.getElementById('adminPrayerApprovalsListContainer');
+  if (!container) return;
+
+  const kpiPending = document.getElementById('adminApprKpiPending');
+  const kpiApproved = document.getElementById('adminApprKpiApproved');
+  const kpiRejected = document.getElementById('adminApprKpiRejected');
+  const kpiTotal = document.getElementById('adminApprKpiTotal');
+  const slotFilter = document.getElementById('adminPrayerApprovalSlotFilter');
+  const searchInput = document.getElementById('adminPrayerApprovalSearchInput');
+
+  const list = getPrayerApprovalsList();
+
+  // คำนวณสรุป KPI รวมทั้งหมด
+  const countPending = list.filter(r => r.status === 'pending').length;
+  const countApproved = list.filter(r => r.status === 'approved').length;
+  const countRejected = list.filter(r => r.status === 'rejected').length;
+  const countTotal = list.length;
+
+  if (kpiPending) kpiPending.innerText = String(countPending);
+  if (kpiApproved) kpiApproved.innerText = String(countApproved);
+  if (kpiRejected) kpiRejected.innerText = String(countRejected);
+  if (kpiTotal) kpiTotal.innerText = String(countTotal);
+
+  updateAdminPrayerPendingApprovalsBadge();
+
+  // กรองตามเงื่อนไข
+  const selectedSlot = slotFilter ? slotFilter.value : 'ALL';
+  const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+  let filtered = list.filter(req => {
+    // กรองตามสถานะ
+    if (currentAdminPrayerApprovalFilter !== 'ALL' && req.status !== currentAdminPrayerApprovalFilter) {
+      return false;
+    }
+    // กรองตามเวลาละหมาด
+    if (selectedSlot !== 'ALL' && req.prayerSlot !== selectedSlot) {
+      return false;
+    }
+    // กรองตามข้อความค้นหา (ชื่อนักเรียน หรือรหัสนักเรียน)
+    if (searchTerm) {
+      const name = (req.studentName || '').toLowerCase();
+      const id = (req.studentId || '').toLowerCase();
+      if (!name.includes(searchTerm) && !id.includes(searchTerm)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); background: #ffffff; border-radius: 10px; border: 1px dashed #cbd5e1;">
+        <i class="fa-regular fa-clipboard" style="font-size: 2.5rem; color: #94a3b8; margin-bottom: 0.65rem; display: block;"></i>
+        <div style="font-weight: 700; font-size: 0.95rem; color: #475569;">ไม่พบรายการคำขออนุมัติในหมวดนี้</div>
+        <div style="font-size: 0.8rem; margin-top: 0.25rem;">เมื่อนักเรียนส่งคำขออนุมัติเช็คละหมาดย้อนหลัง รายการจะแสดงขึ้นที่นี่</div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(req => {
+    let statusBadge = '';
+    if (req.status === 'pending') {
+      statusBadge = '<span class="badge-status-pending"><i class="fa-solid fa-clock"></i> รออาจารย์ตรวจสอบ</span>';
+    } else if (req.status === 'approved') {
+      statusBadge = '<span class="badge-status-approved"><i class="fa-solid fa-circle-check"></i> อนุมัติแล้ว</span>';
+    } else {
+      statusBadge = '<span class="badge-status-rejected"><i class="fa-solid fa-circle-xmark"></i> ไม่อนุมัติ</span>';
+    }
+
+    const subDate = req.date ? formatThaiDate(req.date) : '-';
+    const subTime = req.submittedAtFormatted || (req.createdAt ? new Date(req.createdAt).toLocaleTimeString('th-TH') : '-');
+
+    html += `
+      <div class="prayer-appr-item-card" id="appr-card-${req.id}">
+        <div class="appr-item-header">
+          <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; border: 1px solid #bae6fd;">
+              👤
+            </div>
+            <div>
+              <div class="appr-item-student-name">${typeof escapeHtml === 'function' ? escapeHtml(req.studentName) : req.studentName}</div>
+              <div class="appr-item-student-sub">
+                <span>รหัส: <b style="color: #0284c7;">${typeof escapeHtml === 'function' ? escapeHtml(req.studentId) : req.studentId}</b></span>
+                <span>•</span>
+                <span>ชั้น: <b>${typeof escapeHtml === 'function' ? escapeHtml(req.grade) : req.grade}</b></span>
+                ${req.parentPhone ? `<span>•</span><span>โทร: ${typeof escapeHtml === 'function' ? escapeHtml(req.parentPhone) : req.parentPhone}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div>${statusBadge}</div>
+        </div>
+
+        <div class="appr-item-body">
+          <div class="appr-item-details">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
+              <span style="background: #e0f2fe; color: #0369a1; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;">
+                <i class="fa-solid fa-person-praying"></i> ละหมาด ${typeof escapeHtml === 'function' ? escapeHtml(req.prayerSlot) : req.prayerSlot}
+              </span>
+              <span style="background: #f1f5f9; color: #475569; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+                <i class="fa-regular fa-calendar"></i> วันที่ ${subDate}
+              </span>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">
+                (ส่งเมื่อ: ${subTime})
+              </span>
+            </div>
+
+            <div style="font-size: 0.85rem; color: #334155; margin-bottom: 0.35rem; line-height: 1.45;">
+              <strong>เหตุผลที่ลืมเช็คชื่อ:</strong> <span style="color: #b45309; font-weight: 600;">${typeof escapeHtml === 'function' ? escapeHtml(req.reasonPreset || 'ลืมเช็คชื่อ') : (req.reasonPreset || 'ลืมเช็คชื่อ')}</span>
+              ${req.reasonDetail ? `<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.4rem 0.65rem; margin-top: 0.3rem; font-size: 0.8rem; color: #475569;">"${typeof escapeHtml === 'function' ? escapeHtml(req.reasonDetail) : req.reasonDetail}"</div>` : ''}
+            </div>
+
+            ${req.status === 'approved' ? `
+              <div style="font-size: 0.78rem; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.4rem 0.65rem; margin-top: 0.4rem;">
+                <i class="fa-solid fa-check"></i> อนุมัติโดย: <b>${typeof escapeHtml === 'function' ? escapeHtml(req.approvedBy || 'อาจารย์/แอดมิน') : (req.approvedBy || 'อาจารย์/แอดมิน')}</b> เมื่อ ${req.approvedAt ? new Date(req.approvedAt).toLocaleString('th-TH') : '-'}
+              </div>
+            ` : ''}
+            ${req.status === 'rejected' ? `
+              <div style="font-size: 0.78rem; color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 0.4rem 0.65rem; margin-top: 0.4rem;">
+                <i class="fa-solid fa-xmark"></i> ไม่อนุมัติโดย: <b>${typeof escapeHtml === 'function' ? escapeHtml(req.rejectedBy || 'อาจารย์/แอดมิน') : (req.rejectedBy || 'อาจารย์/แอดมิน')}</b> (เหตุผล: ${typeof escapeHtml === 'function' ? escapeHtml(req.adminNote || 'ไม่ระบุ') : (req.adminNote || 'ไม่ระบุ')})
+              </div>
+            ` : ''}
+          </div>
+
+          ${req.photoUrl ? `
+            <div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.2rem; font-weight: 600;">ภาพถ่ายพยาน:</div>
+              <img src="${req.photoUrl}" alt="ภาพถ่ายพยาน" class="appr-item-photo-thumb" onclick="viewPhotoInNewTab('${req.photoUrl}')" title="คลิกดูภาพขนาดใหญ่">
+            </div>
+          ` : ''}
+        </div>
+
+        ${req.status === 'pending' ? `
+          <div class="appr-item-actions">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="adminRejectPrayerRequest('${req.id}')" style="color: #dc2626; border-color: #fecaca; font-size: 0.8rem;">
+              <i class="fa-solid fa-xmark"></i> ไม่อนุมัติ
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="adminApprovePrayerRequest('${req.id}')" style="background: #10b981; border-color: #059669; font-size: 0.8rem;">
+              <i class="fa-solid fa-check"></i> อนุมัติการละหมาดทันที
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+/**
+ * แอดมิน/อาจารย์กดอนุมัติคำขอละหมาด
+ */
+function adminApprovePrayerRequest(reqId) {
+  const list = getPrayerApprovalsList();
+  const req = list.find(r => r.id === reqId);
+  if (!req) {
+    showToast('ไม่พบข้อมูลคำขอนี้ในระบบ', 'error');
+    return;
+  }
+
+  const approverName = currentAdmin ? (currentAdmin.fullName || currentAdmin.name || currentAdmin.username || 'อาจารย์/แอดมิน') : 'อาจารย์/แอดมิน';
+  req.status = 'approved';
+  req.approvedBy = approverName;
+  req.approvedAt = new Date().toISOString();
+  savePrayerApprovalsList(list);
+
+  // สร้างบันทึกผลการละหมาดให้นักเรียนอัตโนมัติ
+  const now = new Date();
+  const approvedRecord = {
+    id: 'PRY-APPR-' + Date.now(),
+    logId: 'PRY-APPR-' + Date.now(),
+    studentId: req.studentId,
+    studentName: req.studentName,
+    grade: req.grade,
+    prayerName: req.prayerSlot,
+    prayerTime: req.prayerSlot,
+    timeSlot: req.prayerSlot,
+    date: req.date,
+    time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น. (อนุมัติย้อนหลัง)',
+    status: 'อนุมัติย้อนหลังโดยอาจารย์/แอดมิน',
+    note: `อนุมัติกรณีพิเศษ (เหตุผล: ${req.reasonPreset || req.reasonDetail || 'ลืมเช็คชื่อ'})`,
+    location: 'อนุมัติผ่านระบบ (คำขอย้อนหลัง)',
+    photoUrl: req.photoUrl || '',
+    timestamp: now.toISOString(),
+    approvedBy: approverName
+  };
+
+  // บันทึกลง todayPrayers
+  todayPrayers.unshift(approvedRecord);
+  try {
+    localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+  } catch (e) {}
+
+  // บันทึกลงประวัติรวม khalifah_prayer_history
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+  historyList.unshift(approvedRecord);
+  try {
+    localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList));
+  } catch (e) {}
+
+  // ซิงค์บันทึกการละหมาดและสถานะคำขอไปยัง Google Sheets
+  try {
+    syncRecordToGoogleSheet('recordPrayer', approvedRecord);
+    syncRecordToGoogleSheet('updatePrayerLateRequestStatus', {
+      reqId: req.id,
+      status: 'approved',
+      approvedBy: req.approvedBy,
+      approvedAt: req.approvedAt
+    });
+  } catch (e) {
+    console.warn('Sync approval to cloud warning:', e);
+  }
+
+  showToast(`✅ อนุมัติการละหมาด ${req.prayerSlot} ของ ${req.studentName} เรียบร้อยแล้ว`, 'success');
+  renderAdminPrayerApprovals();
+  updateAdminPrayerPendingApprovalsBadge();
+
+  // หากเป็นนักเรียนที่กำลังใช้งานอยู่ ให้รีเฟรชชิปละหมาดเป็นสีเขียวทันที
+  if (currentStudent && currentStudent.studentId === req.studentId) {
+    refreshPrayerChipsStatus();
+    checkPrayerUnlockState();
+  }
+}
+
+/**
+ * แอดมิน/อาจารย์ปฏิเสธคำขอละหมาด
+ */
+function adminRejectPrayerRequest(reqId) {
+  const reason = prompt('ระบุเหตุผลที่ไม่อนุมัติ (ไม่บังคับ):', 'ข้อมูลไม่ครบถ้วนหรือไม่ตรงตามเงื่อนไข');
+  if (reason === null) return; // กด Cancel
+
+  const list = getPrayerApprovalsList();
+  const req = list.find(r => r.id === reqId);
+  if (!req) return;
+
+  const rejecterName = currentAdmin ? (currentAdmin.fullName || currentAdmin.name || currentAdmin.username || 'อาจารย์/แอดมิน') : 'อาจารย์/แอดมิน';
+  req.status = 'rejected';
+  req.rejectedBy = rejecterName;
+  req.rejectedAt = new Date().toISOString();
+  req.adminNote = reason || 'ไม่อนุมัติ';
+  savePrayerApprovalsList(list);
+
+  try {
+    syncRecordToGoogleSheet('updatePrayerLateRequestStatus', {
+      reqId: req.id,
+      status: 'rejected',
+      rejectedBy: req.rejectedBy,
+      rejectedAt: req.rejectedAt,
+      adminNote: req.adminNote
+    });
+  } catch (e) {}
+
+  showToast(`ปฏิเสธคำขอของ ${req.studentName} เรียบร้อยแล้ว`, 'info');
+  renderAdminPrayerApprovals();
+  updateAdminPrayerPendingApprovalsBadge();
+}
+
+/**
+ * ส่งออกรายงานคำขออนุมัติทั้งหมดเป็น Excel
+ */
+function exportPrayerApprovalsToExcel() {
+  const list = getPrayerApprovalsList();
+  if (!list || list.length === 0) {
+    showToast('ไม่มีข้อมูลคำขออนุมัติสำหรับส่งออก Excel', 'warning');
+    return;
+  }
+
+  try {
+    const exportData = list.map((item, idx) => ({
+      'ลำดับ': idx + 1,
+      'รหัสนักเรียน': item.studentId || '-',
+      'ชื่อ-นามสกุล': item.studentName || '-',
+      'ระดับชั้น': item.grade || '-',
+      'เบอร์โทรผู้ปกครอง': item.parentPhone || '-',
+      'เวลาละหมาด': item.prayerSlot || '-',
+      'วันที่ละหมาด': item.date || '-',
+      'เหตุผลที่ลืม': item.reasonPreset || '-',
+      'รายละเอียดเพิ่มเติม': item.reasonDetail || '-',
+      'มีภาพแนบ': item.photoUrl ? 'มีภาพถ่าย' : 'ไม่มี',
+      'สถานะคำขอ': item.status === 'pending' ? 'รอตรวจสอบ' : (item.status === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ'),
+      'วันเวลาที่ส่งคำขอ': item.submittedAtFormatted || item.createdAt || '-',
+      'ผู้ดำเนินการ': item.approvedBy || item.rejectedBy || '-',
+      'วันเวลาที่ดำเนินการ': item.approvedAt || item.rejectedAt || '-',
+      'หมายเหตุอาจารย์': item.adminNote || '-'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "คำขออนุมัติละหมาดย้อนหลัง");
+    const fileName = `Prayer_Approvals_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast('ส่งออกไฟล์ Excel สำเร็จ', 'success');
+  } catch (err) {
+    console.error('Export approvals excel error:', err);
+    showToast('เกิดข้อผิดพลาดในการส่งออก Excel', 'error');
   }
 }
 
@@ -3137,7 +3954,8 @@ async function captureAndSavePrayerInstant() {
   });
 
   if (!alreadyChecked && slotStatus.isPast) {
-    showToast(`⚠️ ปฏิเสธการบันทึก: ไม่สามารถกดบันทึกละหมาดย้อนหลังได้เนื่องจากหมดเวลา ${selectedPrayerTime} แล้ว (${slotStatus.rangeLabel})`, 'error');
+    showToast(`⚠️ หมดเวลาบันทึกละหมาด ${selectedPrayerTime} แล้ว (${slotStatus.rangeLabel}) กรุณาส่งคำขอให้อาจารย์/แอดมินอนุมัติ`, 'error');
+    if (typeof openPrayerLateApprovalModal === 'function') openPrayerLateApprovalModal(selectedPrayerTime);
     checkPrayerUnlockState();
     return;
   }
@@ -3798,7 +4616,8 @@ async function savePrayerNoteOnly() {
   for (const pTime of selectedPrayerNoteTimeSlots) {
     const slotStatus = getPrayerSlotTimeStatus(pTime);
     if (slotStatus.isPast && !isExcused) {
-      showToast(`⚠️ ปฏิเสธการบันทึก: ไม่สามารถบันทึกเวลา ${pTime} ย้อนหลังได้ เนื่องจากหมดเวลาละหมาดแล้ว (${slotStatus.rangeLabel})`, 'error');
+      showToast(`⚠️ หมดเวลาละหมาด ${pTime} แล้ว (${slotStatus.rangeLabel}) กรุณาส่งคำขอให้อาจารย์/แอดมินอนุมัติ`, 'error');
+      if (typeof openPrayerLateApprovalModal === 'function') openPrayerLateApprovalModal(pTime);
       return;
     }
     if (slotStatus.isFuture && !isExcused) {
@@ -9631,15 +10450,19 @@ window.addEventListener('storage', (e) => {
     }
   }
 
-  if (e.key === 'khalifah_prayer_history' || e.key === 'khalifah_today_prayers' || e.key === 'khalifah_prayer_sync_signal') {
+  if (e.key === 'khalifah_prayer_history' || e.key === 'khalifah_today_prayers' || e.key === 'khalifah_prayer_sync_signal' || e.key === 'khalifah_prayer_approvals') {
     const tab = document.getElementById('admin-tab-prayers-monitor');
     if (tab && tab.style.display !== 'none') {
       if (currentAdminPrayerMode === 'daily') {
         if (typeof renderAdminPrayerDailyDashboard === 'function') renderAdminPrayerDailyDashboard();
-      } else {
+      } else if (currentAdminPrayerMode === 'individual') {
         if (typeof renderAdminStudentPrayerHistory === 'function') renderAdminStudentPrayerHistory();
+      } else if (currentAdminPrayerMode === 'approvals') {
+        if (typeof renderAdminPrayerApprovals === 'function') renderAdminPrayerApprovals();
       }
     }
+    if (typeof updateAdminPrayerPendingApprovalsBadge === 'function') updateAdminPrayerPendingApprovalsBadge();
+    if (typeof updateStudentPendingReqBadge === 'function') updateStudentPendingReqBadge();
   }
 });
 
@@ -11192,21 +12015,26 @@ function setAdminPrayerMode(mode) {
   currentAdminPrayerMode = mode;
   const btnDaily = document.getElementById('btnPrayerModeDaily');
   const btnIndiv = document.getElementById('btnPrayerModeIndividual');
+  const btnApprovals = document.getElementById('btnPrayerModeApprovals');
   const secDaily = document.getElementById('adminPrayerDailySection');
   const secIndiv = document.getElementById('adminPrayerIndividualSection');
+  const secApprovals = document.getElementById('adminPrayerApprovalsSection');
 
   if (btnDaily) btnDaily.classList.toggle('active', mode === 'daily');
   if (btnIndiv) btnIndiv.classList.toggle('active', mode === 'individual');
+  if (btnApprovals) btnApprovals.classList.toggle('active', mode === 'approvals');
+
+  if (secDaily) secDaily.style.display = mode === 'daily' ? 'block' : 'none';
+  if (secIndiv) secIndiv.style.display = mode === 'individual' ? 'block' : 'none';
+  if (secApprovals) secApprovals.style.display = mode === 'approvals' ? 'block' : 'none';
 
   if (mode === 'daily') {
-    if (secDaily) secDaily.style.display = 'block';
-    if (secIndiv) secIndiv.style.display = 'none';
     renderAdminPrayerDailyDashboard();
-  } else {
-    if (secDaily) secDaily.style.display = 'none';
-    if (secIndiv) secIndiv.style.display = 'block';
+  } else if (mode === 'individual') {
     populateAdminPrayerStudentSelect();
     renderAdminStudentPrayerHistory();
+  } else if (mode === 'approvals') {
+    renderAdminPrayerApprovals();
   }
 }
 
@@ -11816,10 +12644,13 @@ async function fetchPrayersFromCloud() {
       if (tab && tab.style.display !== 'none') {
         if (currentAdminPrayerMode === 'daily') {
           renderAdminPrayerDailyDashboard();
-        } else {
+        } else if (currentAdminPrayerMode === 'individual') {
           renderAdminStudentPrayerHistory();
+        } else if (currentAdminPrayerMode === 'approvals') {
+          renderAdminPrayerApprovals();
         }
       }
+      if (typeof updateAdminPrayerPendingApprovalsBadge === 'function') updateAdminPrayerPendingApprovalsBadge();
     }
   } catch (err) {
     console.warn('fetchPrayersFromCloud err:', err);
