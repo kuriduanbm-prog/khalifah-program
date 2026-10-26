@@ -278,6 +278,26 @@ function openPrayerHistoryDetailModal(logId) {
   if (!record) {
     record = todayPrayers.find(p => (p.id === logId || p.logId === logId));
   }
+  // ค้นหาเพิ่มเติมจากแคช Admin Daily Prayer Monitor เผื่อเปิดดูจากฝั่งอาจารย์หรือแอดมิน
+  if (!record && typeof cachedDailyStudentPrayerMap === 'object' && cachedDailyStudentPrayerMap) {
+    for (const sid of Object.keys(cachedDailyStudentPrayerMap)) {
+      const studentSlots = cachedDailyStudentPrayerMap[sid];
+      if (studentSlots) {
+        for (const slotKey of Object.keys(studentSlots)) {
+          const rec = studentSlots[slotKey];
+          if (rec && (rec.id === logId || rec.logId === logId)) {
+            record = rec;
+            break;
+          }
+        }
+      }
+      if (record) break;
+    }
+  }
+  if (!record && typeof getAllCombinedPrayerHistory === 'function') {
+    const all = getAllCombinedPrayerHistory();
+    record = all.find(p => (p.id === logId || p.logId === logId));
+  }
   if (!record) {
     showToast('ไม่พบข้อมูลบันทึกละหมาดนี้', 'warning');
     return;
@@ -307,7 +327,10 @@ function openPrayerHistoryDetailModal(logId) {
   if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
 
   if (pBadge) {
-    pBadge.innerHTML = `<span class="status-badge ${statusClass}">${status}</span>`;
+    const repeatBadge = (record.isRepeat || record.attemptCount > 1)
+      ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 9999px; margin-left: 0.35rem; font-weight: 600;"><i class="fa-solid fa-rotate-right"></i> บันทึกซ้ำ (ครั้งที่ ${record.attemptCount || 2})</span>`
+      : '';
+    pBadge.innerHTML = `<span class="status-badge ${statusClass}">${status}</span>${repeatBadge}`;
   }
 
   if (pDate) pDate.innerText = dateStr;
@@ -1649,6 +1672,20 @@ function renderPrayerHistory(filterDate = null) {
   const badge = document.getElementById('prayerHistoryCountBadge');
   const bottomContainer = document.getElementById('prayerInlineHistoryContainer');
   const bottomBadge = document.getElementById('prayerHistoryCountBadgeBottom');
+  const bottomInput = document.getElementById('filterPrayerDateBottom');
+
+  const now = new Date();
+  const todayYMD = now.toISOString().split('T')[0];
+
+  // ถ้าไม่ได้ระบุวันที่ ให้เริ่มต้นด้วยวันปัจจุบันเสมอ (ตามคำขอของผู้ใช้ ป้องกันขึ้น วว/ดด/ปปปป)
+  if (filterDate === null) {
+    if (bottomInput && bottomInput.value) {
+      filterDate = bottomInput.value;
+    } else {
+      filterDate = todayYMD;
+      if (bottomInput) bottomInput.value = todayYMD;
+    }
+  }
 
   if (!container && !bottomContainer) return;
 
@@ -1666,20 +1703,42 @@ function renderPrayerHistory(filterDate = null) {
     historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
   } catch (e) { historyList = []; }
 
-  let myLogs = historyList.filter(p => p.studentId === currentStudent.studentId);
+  // รวมรายการวันนี้จาก todayPrayers ด้วยเพื่อให้ประวัติแสดงผลแบบเรียลไทม์ทันที
+  const combinedLogs = [...todayPrayers, ...historyList];
+  const seenIds = new Set();
+  const uniqueLogs = [];
+  combinedLogs.forEach(p => {
+    if (!p) return;
+    const uid = p.id || p.logId || `${p.studentId}_${p.prayerName || p.prayerTime}_${p.timestamp || p.time}`;
+    if (!seenIds.has(uid)) {
+      seenIds.add(uid);
+      uniqueLogs.push(p);
+    }
+  });
 
-  if (filterDate) {
+  let myLogs = uniqueLogs.filter(p => isIdMatch(p.studentId, currentStudent.studentId));
+
+  if (filterDate && filterDate.trim() !== '') {
     myLogs = myLogs.filter(p => (p.timestamp && p.timestamp.startsWith(filterDate)) || (p.date && p.date === filterDate));
   }
+
+  // เรียงลำดับจากล่าสุดลงไปเก่าสุด
+  myLogs.sort((a, b) => {
+    const timeA = new Date(a.timestamp || a.date).getTime() || 0;
+    const timeB = new Date(b.timestamp || b.date).getTime() || 0;
+    return timeB - timeA;
+  });
 
   if (badge) badge.innerText = `${myLogs.length} บันทึก`;
   if (bottomBadge) bottomBadge.innerText = `${myLogs.length} บันทึก`;
 
   if (myLogs.length === 0) {
+    const displayDateThai = filterDate ? new Date(filterDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
     const noDataHtml = `
-      <div style="text-align: center; padding: 1.5rem; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-md);">
+      <div style="text-align: center; padding: 1.5rem; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-md); border: 1px dashed #cbd5e1;">
         <i class="fa-solid fa-calendar-xmark" style="font-size: 1.8rem; margin-bottom: 0.4rem; display: block; color: #94a3b8;"></i>
-        ${filterDate ? 'ไม่พบบันทึกการละหมาดในวันที่เลือก' : 'ยังไม่มีประวัติการเช็คชื่อละหมาดย้อนหลัง'}
+        ${filterDate ? `ไม่พบบันทึกการละหมาดประจำวันที่ ${displayDateThai}` : 'ยังไม่มีประวัติการเช็คชื่อละหมาด'}
+        <div style="font-size: 0.76rem; color: #64748b; margin-top: 0.35rem;">สามารถกดปุ่ม "ทั้งหมด" ด้านบนเพื่อดูประวัติทุกช่วงเวลา</div>
       </div>
     `;
     if (container) container.innerHTML = noDataHtml;
@@ -1699,6 +1758,10 @@ function renderPrayerHistory(filterDate = null) {
     if (status.includes('อุซุร') || status.includes('ประจำเดือน')) statusClass = 'status-excused';
     if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
 
+    const repeatBadge = (p.isRepeat || p.attemptCount > 1)
+      ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 600;"><i class="fa-solid fa-rotate-right"></i> บันทึกซ้ำ (ครั้งที่ ${p.attemptCount || 2})</span>`
+      : '';
+
     const cardId = p.id || p.logId || ('PRY-' + idx);
     const rawPhoto = p.photo || p.photoUrl || p.photoBase64;
     const directPhoto = getDirectImageUrl(rawPhoto);
@@ -1712,6 +1775,7 @@ function renderPrayerHistory(filterDate = null) {
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
               <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">เวลา: ${p.prayerName || p.prayerTime}</span>
               <span class="status-badge ${statusClass}">${status}</span>
+              ${repeatBadge}
             </div>
             <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem;">
               <i class="fa-solid fa-clock"></i> ${dateStr} • ${timeStr} น. • ณ ${p.locationName || 'พิกัด GPS'}
@@ -1739,7 +1803,7 @@ function filterPrayerHistoryByDate() {
 function clearPrayerDateFilter() {
   const input = document.getElementById('filterPrayerHistoryDate');
   if (input) input.value = '';
-  renderPrayerHistory();
+  renderPrayerHistory('');
 }
 
 function filterPrayerHistoryByDateBottom() {
@@ -1751,7 +1815,7 @@ function filterPrayerHistoryByDateBottom() {
 function clearPrayerDateFilterBottom() {
   const input = document.getElementById('filterPrayerDateBottom');
   if (input) input.value = '';
-  renderPrayerHistory();
+  renderPrayerHistory('');
 }
 
 
@@ -2090,14 +2154,40 @@ function loadStoredData() {
     activities = [];
   }
 
-  // 4. Load today prayers (Clean start)
+  // 4. Load today prayers (Clean start - เก็บเฉพาะของวันนี้เท่านั้น วันเก่าจะถูกย้ายเข้าประวัติอัตโนมัติ)
   const savedPrayers = localStorage.getItem('khalifah_today_prayers');
+  const initNow = new Date();
+  const initTodayYMD = initNow.toISOString().split('T')[0];
   if (savedPrayers) {
     try {
       let parsed = JSON.parse(savedPrayers);
-      parsed = parsed.filter(p => p.studentId !== 'STD-256901');
-      todayPrayers = parsed;
-      localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+      if (Array.isArray(parsed)) {
+        const actualToday = [];
+        const olderPrayers = [];
+        parsed.forEach(p => {
+          if (!p || p.studentId === 'STD-256901') return;
+          const pDate = p.date || (p.timestamp ? p.timestamp.split('T')[0] : '');
+          if (pDate === initTodayYMD) {
+            actualToday.push(p);
+          } else if (pDate) {
+            olderPrayers.push(p);
+          }
+        });
+        todayPrayers = actualToday;
+        localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+
+        if (olderPrayers.length > 0) {
+          let hist = [];
+          try { hist = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]'); } catch(e) { hist = []; }
+          olderPrayers.forEach(oldP => {
+            const exists = hist.some(h => (h.id && h.id === oldP.id) || (h.logId && h.logId === oldP.logId) || (isIdMatch(h.studentId, oldP.studentId) && h.date === oldP.date && normalizePrayerSlotKey(h.prayerName || h.prayerTime) === normalizePrayerSlotKey(oldP.prayerName || oldP.prayerTime)));
+            if (!exists) hist.push(oldP);
+          });
+          localStorage.setItem('khalifah_prayer_history', JSON.stringify(hist.slice(0, 250)));
+        }
+      } else {
+        todayPrayers = [];
+      }
     } catch (e) {
       todayPrayers = [];
     }
@@ -2321,7 +2411,8 @@ function getStudentTodayPrayersList() {
     if (!p) return false;
     const matchStudent = isIdMatch(p.studentId, currentStudent.studentId);
     const pDate = p.date || (p.timestamp ? p.timestamp.split('T')[0] : '');
-    return matchStudent && (!pDate || pDate === todayYMD);
+    // บังคับต้องเป็นวันที่ตรงกับวันนี้เท่านั้น เพื่อแก้บั๊กวันใหม่แล้วยังขึ้นเช็คให้
+    return matchStudent && pDate === todayYMD;
   });
 }
 
@@ -2609,73 +2700,10 @@ function calculateDistanceInMeters(lat1, lon1, lat2, lon2) {
  * ฟังก์ชันตรวจสอบตำแหน่งปัจจุบัน (Geofencing) และตรวจจับการปลอมแปลงพิกัด
  */
 function verifyGeolocation() {
-  if (!currentStudent) {
-    showToast('กรุณาลงทะเบียนหรือเข้าสู่ระบบนักเรียนก่อนตรวจสอบพิกัดและเช็คชื่อ', 'warning');
-    openModal('authModal');
+  if (typeof startPrayerCheckStep1 === 'function') {
+    startPrayerCheckStep1();
     return;
   }
-  const statusBox = document.getElementById('geofenceStatusBox');
-  const statusTitle = document.getElementById('geoStatusTitle');
-  const statusDesc = document.getElementById('geoStatusDesc');
-  const detailsDiv = document.getElementById('geoDetails');
-
-  if (!navigator.geolocation) {
-    showToast('อุปกรณ์ของคุณไม่รองรับการระบุพิกัด GPS', 'error');
-    return;
-  }
-
-  if (statusTitle) statusTitle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบพิกัดความถูกต้อง...';
-  if (statusDesc) statusDesc.innerText = 'กำลังคำนวณตำแหน่งผ่านสัญญาณดาวเทียม GPS กรุณารอสักครู่';
-
-  const btnCenter = document.getElementById('btnCenterVerifyGeo');
-  if (btnCenter) {
-    btnCenter.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบพิกัด...';
-    btnCenter.disabled = true;
-  }
-
-  fetchFreshPrayerLocation()
-    .then((loc) => {
-      // ซ่อน Overlay กลางกล้อง และเปิดกล้องทันที
-      const centerOverlay = document.getElementById('camCenterActionOverlay');
-      if (centerOverlay) centerOverlay.style.display = 'none';
-
-      // แสดงผล UI
-      if (statusBox) {
-        statusBox.classList.remove('unverified', 'within', 'outside');
-        if (loc.isWithinZone) {
-          statusBox.classList.add('within');
-          statusTitle.innerHTML = `<i class="fa-solid fa-circle-check"></i> ยืนยันพิกัดถูกต้อง: อยู่ ณ ${loc.locationName}`;
-          statusDesc.innerText = `พิกัดตรงตามจุดที่กำหนด (ความคลาดเคลื่อน ±${Math.round(loc.accuracy)} ม.) อนุญาตให้เช็คชื่อได้`;
-        } else {
-          statusBox.classList.add('outside');
-          statusTitle.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> อยู่นอกพื้นที่ที่กำหนด`;
-          statusDesc.innerText = `ตรวจพบว่าท่านอยู่: ${loc.locationName} (อยู่นอกรัศมีที่อนุญาต)`;
-        }
-      }
-
-      if (detailsDiv) {
-        detailsDiv.style.display = 'block';
-        detailsDiv.innerHTML = `พิกัดปัจจุบัน: ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)} | แม่นยำ: ±${Math.round(loc.accuracy)}ม. ✓ ตรวจสอบผ่าน (มีผล 60 วินาที)`;
-      }
-
-      showToast(`ระบุพิกัดสำเร็จ: ${loc.isWithinZone ? 'อยู่ในพื้นที่' : 'อยู่นอกพื้นที่'}`, loc.isWithinZone ? 'success' : 'warning');
-      if (btnCenter) {
-        btnCenter.disabled = false;
-        btnCenter.innerHTML = '<i class="fa-solid fa-rotate-right"></i> อัปเดตพิกัดสดใหม่';
-      }
-    })
-    .catch((error) => {
-      if (statusTitle) statusTitle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ไม่สามารถเข้าถึงพิกัด GPS ได้';
-      if (statusDesc) statusDesc.innerText = 'กรุณาอนุญาตให้เบราว์เซอร์เข้าถึง Location/GPS บนอุปกรณ์ของท่าน';
-      showToast('ไม่สามารถดึงพิกัดได้: ' + error.message, 'error');
-
-      if (btnCenter) {
-        btnCenter.disabled = false;
-        btnCenter.innerHTML = '<i class="fa-solid fa-rotate-right"></i> ลองตรวจสอบพิกัดอีกครั้ง';
-      }
-
-      checkPrayerUnlockState();
-    });
 }
 
 /**
@@ -2814,11 +2842,13 @@ function updateGpsCountdownDisplay() {
     }
   }
 
-  if (btnCapture && !btnCapture.disabled) {
+  if (btnCapture && !btnCapture.disabled && prayerCheckStep === 2) {
+    btnCapture.classList.add('btn-cam-shutter-step2');
+    btnCapture.onclick = () => handlePrayerMainButtonClick();
     btnCapture.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
         <div style="font-size: 0.98rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
-          <i class="fa-solid fa-camera"></i> ถ่ายรูปและบันทึก${pTimeText}ทันที
+          <i class="fa-solid fa-camera"></i> 2. ถ่ายรูปและบันทึก${pTimeText}ทันที
         </div>
         <div style="font-size: 0.78rem; font-weight: 500; opacity: 0.92; display: flex; align-items: center; gap: 0.3rem;">
           <i class="fa-solid ${isWithin ? 'fa-location-dot' : 'fa-person-walking-arrow-right'}" style="font-size: 0.72rem;"></i> ${isWithin ? 'ณ ' + locName : locName} • สดใหม่เหลือ ${remainingSec}วิ
@@ -3048,38 +3078,37 @@ function checkPrayerUnlockState() {
     return;
   }
 
-  // คืนค่าปุ่มเป็นสถานะปกติสำหรับการถ่ายรูป
+  // คืนค่าปุ่มเป็นสถานะปกติสำหรับการถ่ายรูป 2 จังหวะ
   btnCapture.style.background = '';
   btnCapture.style.borderColor = '';
-  btnCapture.className = 'btn btn-cam-shutter';
-  btnCapture.onclick = () => captureAndSavePrayerInstant();
+  btnCapture.disabled = false;
+  btnCapture.classList.remove('btn-locked');
+  btnCapture.onclick = () => handlePrayerMainButtonClick();
 
   const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
 
-  if (isGpsValid) {
-    btnCapture.disabled = false;
-    btnCapture.classList.remove('btn-locked');
+  if (isGpsValid && prayerCheckStep === 2) {
+    btnCapture.className = 'btn btn-primary btn-cam-shutter btn-cam-shutter-step2';
     updateGpsCountdownDisplay();
   } else {
-    btnCapture.disabled = false; // อนุญาตให้กดเพื่อดึงพิกัดสดใหม่อัตโนมัติได้ทันที
-    btnCapture.classList.remove('btn-locked');
+    prayerCheckStep = 1;
+    btnCapture.className = 'btn btn-primary btn-cam-shutter';
+    btnCapture.classList.remove('btn-cam-shutter-step2');
     btnCapture.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
-        <div style="font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
-          <i class="fa-solid fa-location-crosshairs"></i> ดึงพิกัดสด & ถ่ายรูปบันทึกทันที
-        </div>
-        <div style="font-size: 0.75rem; font-weight: 400; opacity: 0.88;">
-          (ตรวจสอบพิกัดเรียลไทม์ ป้องกันการทุจริต หมดอายุใน 60วิ)
-        </div>
+      <div class="cam-shutter-content" id="btnCaptureInstantContent">
+        <i class="fa-solid fa-location-crosshairs"></i>
+        <span id="btnCaptureInstantText">1. ตรวจสอบพิกัด GPS & เปิดกล้อง</span>
       </div>
     `;
     if (locBadge && locText) {
-      locBadge.style.display = 'inline-flex';
-      locBadge.className = 'prayer-verified-loc-badge verified-out-zone';
-      locBadge.style.background = 'rgba(225, 29, 72, 0.88)';
-      locBadge.style.borderColor = 'rgba(254, 205, 211, 0.4)';
-      locBadge.style.color = '#ffffff';
-      locText.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> ยังไม่มีพิกัดสดใหม่ (หมดอายุ 60 วินาที)';
+      if (verifiedLocation && !isGpsValid) {
+        locBadge.style.display = 'inline-flex';
+        locBadge.className = 'prayer-verified-loc-badge verified-out-zone';
+        locBadge.style.background = 'rgba(225, 29, 72, 0.88)';
+        locBadge.style.borderColor = 'rgba(254, 205, 211, 0.4)';
+        locBadge.style.color = '#ffffff';
+        locText.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> พิกัดเดิมหมดอายุ (กดจังหวะที่ 1 เพื่ออัปเดต)';
+      }
     }
   }
 }
@@ -3883,23 +3912,34 @@ function exportPrayerApprovalsToExcel() {
 }
 
 /**
- * เปิดกล้องสด In-App Live Camera Stream (Strictly getUserMedia, no gallery pickers)
+ * 2-Step Prayer Flow State:
+ * Step 1: ตรวจสอบพิกัด GPS & เปิดกล้อง
+ * Step 2: ถ่ายรูปและบันทึกข้อมูลเรียลไทม์ทันที
+ */
+let prayerCheckStep = 1;
+
+/**
+ * เปิดกล้องสด In-App Live Camera Stream (Resilient Tiered Fallback)
  */
 async function initLiveCamera() {
   const video = document.getElementById('cameraStream');
   const overlay = document.getElementById('cameraOverlayInfo');
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    console.warn('getUserMedia not supported');
-    return;
+    showToast('เบราว์เซอร์ของท่านไม่รองรับการเปิดกล้องถ่ายภาพ', 'error');
+    return false;
   }
 
   if (activeCameraStream) {
-    activeCameraStream.getTracks().forEach(track => track.stop());
+    try {
+      activeCameraStream.getTracks().forEach(track => track.stop());
+    } catch (e) {}
   }
 
+  let stream = null;
+  // Tier 1: ความละเอียด 1280x720 พร้อมกล้องที่เลือก
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
+    stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: currentFacingMode,
         width: { ideal: 1280 },
@@ -3907,21 +3947,49 @@ async function initLiveCamera() {
       },
       audio: false
     });
+  } catch (err1) {
+    console.warn('Live camera Tier 1 failed, trying Tier 2 (facingMode only):', err1);
+    // Tier 2: ไม่กำหนดขนาด width/height เผื่ออุปกรณ์มือถือบางรุ่นไม่รองรับ
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: currentFacingMode },
+        audio: false
+      });
+    } catch (err2) {
+      console.warn('Live camera Tier 2 failed, trying Tier 3 (video: true):', err2);
+      // Tier 3: กำหนด video: true ขั้นพื้นฐานที่สุด
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+      } catch (err3) {
+        console.error('All camera attempts failed:', err3);
+        showToast('ไม่สามารถเปิดกล้องได้: กรุณาอนุญาตการเข้าถึงกล้องบนอุปกรณ์ของท่าน', 'error');
+        return false;
+      }
+    }
+  }
 
+  if (stream) {
     activeCameraStream = stream;
     if (video) {
       video.srcObject = stream;
       video.style.display = 'block';
-      // FIX CAMERA MIRROR: front camera is mirrored, back camera is NOT mirrored
+      // Mirror เฉพาะกล้องหน้า ส่วนกล้องหลังไม่ต้อง Mirror
       video.className = currentFacingMode === 'user' ? 'camera-stream camera-front' : 'camera-stream camera-back';
-      video.play();
+      try {
+        await video.play();
+      } catch (playErr) {
+        console.warn('Video play error:', playErr);
+      }
     }
     if (overlay) overlay.style.display = 'block';
 
     updateCameraOverlayText();
-  } catch (err) {
-    console.warn('Could not start live camera:', err);
+    return true;
   }
+  return false;
 }
 
 function switchCameraFacing() {
@@ -3931,11 +3999,13 @@ function switchCameraFacing() {
 }
 
 /**
- * ปรับปรุงระบบเช็คชื่อละหมาด: กดแชะเดียวบันทึกทันที (No-scroll UX)
+ * ปุ่มหลักควบคุมระบบเช็คชื่อละหมาด 2 จังหวะ
+ * จังหวะที่ 1: ตรวจสอบพิกัด GPS & เปิดกล้อง
+ * จังหวะที่ 2: ถ่ายรูปและบันทึกข้อมูลเรียลไทม์ทันที
  */
-async function captureAndSavePrayerInstant() {
+async function handlePrayerMainButtonClick() {
   if (!currentStudent) {
-    showToast('กรุณาเข้าสู่ระบบนักเรียนก่อนเช็คชื่อละหมาด', 'warning');
+    showToast('กรุณาลงทะเบียนหรือเข้าสู่ระบบนักเรียนก่อนเช็คชื่อละหมาด', 'warning');
     openModal('authModal');
     return;
   }
@@ -3945,7 +4015,6 @@ async function captureAndSavePrayerInstant() {
     selectPrayerTime('ซุบฮิ', document.getElementById('ptime-ซุบฮิ'));
   }
 
-  // ป้องกันการกดบันทึกช่วงเวลาละหมาดย้อนหลัง
   const slotStatus = getPrayerSlotTimeStatus(selectedPrayerTime);
   const studentTodayPrayers = getStudentTodayPrayersList();
   const alreadyChecked = studentTodayPrayers.some(p => {
@@ -3953,109 +4022,194 @@ async function captureAndSavePrayerInstant() {
     return pKey === (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime);
   });
 
+  // ถ้าหมดเวลาแล้วและยังไม่เคยเช็ค -> เปิดหน้าต่างส่งคำขออนุมัติย้อนหลัง
   if (!alreadyChecked && slotStatus.isPast) {
-    showToast(`⚠️ หมดเวลาบันทึกละหมาด ${selectedPrayerTime} แล้ว (${slotStatus.rangeLabel}) กรุณาส่งคำขอให้อาจารย์/แอดมินอนุมัติ`, 'error');
+    showToast(`⚠️ หมดเวลาบันทึกตรงแล้ว กรุณาส่งคำขอให้อาจารย์อนุมัติ`, 'info');
     if (typeof openPrayerLateApprovalModal === 'function') openPrayerLateApprovalModal(selectedPrayerTime);
-    checkPrayerUnlockState();
     return;
   }
 
+  // ถ้ายังไม่ถึงช่วงเวลาละหมาด
   if (!alreadyChecked && slotStatus.isFuture) {
-    showToast(`⚠️ ปฏิเสธการบันทึก: ยังไม่ถึงช่วงเวลาละหมาด ${selectedPrayerTime} (${slotStatus.rangeLabel})`, 'warning');
-    checkPrayerUnlockState();
+    showToast(`⚠️ ปฏิเสธ: ยังไม่ถึงช่วงเวลาละหมาด ${selectedPrayerTime} (${slotStatus.rangeLabel})`, 'warning');
     return;
   }
 
-  // Anti-cheating check: check if verifiedLocation is missing or expired (> 60s)
-  const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
-  if (!isGpsValid) {
-    const btn = document.getElementById('btnCaptureInstant');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังดึงพิกัด GPS สดใหม่แบบเรียลไทม์...';
-    }
-    showToast('📍 กำลังตรวจสอบพิกัด GPS สดใหม่แบบเรียลไทม์เพื่อป้องกันการทุจริต...', 'info');
+  if (prayerCheckStep === 1) {
+    await startPrayerCheckStep1();
+  } else {
+    await executePrayerCaptureStep2();
+  }
+}
 
-    try {
-      await fetchFreshPrayerLocation();
-    } catch (err) {
-      if (btn) btn.disabled = false;
+/**
+ * จังหวะที่ 1: ตรวจสอบพิกัด GPS & เปิดกล้อง
+ */
+async function startPrayerCheckStep1() {
+  const btnCapture = document.getElementById('btnCaptureInstant');
+  const btnCaptureText = document.getElementById('btnCaptureInstantText');
+  const btnCenter = document.getElementById('btnCenterVerifyGeo');
+  const centerOverlay = document.getElementById('camCenterActionOverlay');
+  const locBadge = document.getElementById('prayerVerifiedLocBadge');
+  const locText = document.getElementById('prayerVerifiedLocText');
+
+  if (btnCapture) {
+    btnCapture.disabled = true;
+    if (btnCaptureText) btnCaptureText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบพิกัด & เปิดกล้อง...';
+  }
+  if (btnCenter) {
+    btnCenter.disabled = true;
+    btnCenter.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบพิกัด GPS & เปิดกล้อง...';
+  }
+
+  try {
+    const loc = await fetchFreshPrayerLocation();
+
+    // ซ่อน Overlay กลางกล้อง
+    if (centerOverlay) centerOverlay.style.display = 'none';
+
+    // เปิดกล้องสดทันที
+    const camOk = await initLiveCamera();
+    if (!camOk) {
+      if (btnCapture) {
+        btnCapture.disabled = false;
+        if (btnCaptureText) btnCaptureText.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> 1. ตรวจสอบพิกัด GPS & เปิดกล้อง';
+      }
+      if (btnCenter) {
+        btnCenter.disabled = false;
+        btnCenter.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> 1. ตรวจสอบพิกัด GPS & เปิดกล้อง';
+      }
+      return;
+    }
+
+    // เลื่อนสถานะเป็น จังหวะที่ 2 (พร้อมถ่ายรูป)
+    prayerCheckStep = 2;
+
+    if (btnCapture) {
+      btnCapture.disabled = false;
+      btnCapture.className = 'btn btn-primary btn-cam-shutter btn-cam-shutter-step2';
+      if (btnCaptureText) {
+        btnCaptureText.innerHTML = '<i class="fa-solid fa-camera"></i> 2. ถ่ายรูปและบันทึกทันที';
+      }
+    }
+
+    if (locBadge && locText) {
+      locBadge.style.display = 'inline-flex';
+      locBadge.className = loc.isWithinZone ? 'prayer-verified-loc-badge verified-in-zone' : 'prayer-verified-loc-badge verified-out-zone';
+      locText.innerHTML = `<i class="fa-solid fa-location-dot"></i> พิกัด: ${loc.locationName}`;
+    }
+
+    showToast(`✓ ยืนยันพิกัด ณ ${loc.locationName} สำเร็จ กรุณากดปุ่มถ่ายรูปเพื่อบันทึก`, 'success');
+  } catch (err) {
+    prayerCheckStep = 1;
+    if (btnCapture) {
+      btnCapture.disabled = false;
+      btnCapture.className = 'btn btn-primary btn-cam-shutter';
+      if (btnCaptureText) btnCaptureText.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> 1. ตรวจสอบพิกัด GPS & เปิดกล้อง';
+    }
+    if (btnCenter) {
+      btnCenter.disabled = false;
+      btnCenter.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> 1. ตรวจสอบพิกัด GPS & เปิดกล้อง';
+    }
+    showToast('ไม่สามารถดึงพิกัดได้: ' + (err.message || err) + ' (กรุณาเปิด Location/GPS บนอุปกรณ์)', 'error');
+  }
+}
+
+/**
+ * จังหวะที่ 2: ถ่ายรูปและบันทึกข้อมูลเรียลไทม์ทันที (No Overlapping Toasts, Full Repeat History)
+ */
+async function executePrayerCaptureStep2() {
+  const video = document.getElementById('cameraStream');
+  const canvas = document.getElementById('snapshotCanvas');
+  const btnCapture = document.getElementById('btnCaptureInstant');
+  const btnCaptureText = document.getElementById('btnCaptureInstantText');
+
+  // ตรวจสอบว่ากล้องพร้อมทำงานหรือไม่
+  if (!activeCameraStream || !video || video.readyState < 2) {
+    showToast('กำลังเตรียมกล้องถ่ายภาพ กรุณารอสักครู่...', 'info');
+    const camOk = await initLiveCamera();
+    if (!camOk) {
+      prayerCheckStep = 1;
       checkPrayerUnlockState();
-      showToast('⚠️ ไม่สามารถดึงพิกัด GPS ได้: ' + err.message + ' กรุณาเปิด Location บนอุปกรณ์', 'error');
       return;
     }
   }
 
-  const video = document.getElementById('cameraStream');
-  const canvas = document.getElementById('snapshotCanvas');
-
-  const vWidth = (video && video.videoWidth > 0) ? video.videoWidth : 640;
-  const vHeight = (video && video.videoHeight > 0) ? video.videoHeight : 480;
-
-  canvas.width = vWidth;
-  canvas.height = vHeight;
-  const ctx = canvas.getContext('2d');
-
-  // Draw camera frame with correct mirroring
-  if (video && video.srcObject && video.readyState >= 2) {
-    if (currentFacingMode === 'user') {
-      ctx.save();
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-      ctx.restore();
-    } else {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  // ตรวจสอบว่าพิกัด GPS หมดอายุหรือไม่ (ถ้าเกิน 60 วินาที ให้อัปเดตใหม่)
+  const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
+  if (!isGpsValid) {
+    showToast('พิกัด GPS หมดอายุ (เกิน 60 วินาที) กำลังดึงพิกัดสดใหม่...', 'info');
+    try {
+      await fetchFreshPrayerLocation();
+    } catch (e) {
+      showToast('ไม่สามารถดึงพิกัด GPS สดใหม่ได้: ' + e.message, 'error');
+      prayerCheckStep = 1;
+      checkPrayerUnlockState();
+      return;
     }
-  } else {
-    // If video hasn't rendered first frame yet, draw a placeholder canvas
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px Kanit, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('ภาพถ่ายพยานการละหมาด (GPS ยืนยันแล้ว)', canvas.width / 2, canvas.height / 2);
-    ctx.textAlign = 'start';
   }
 
-  // Stamp Watermark overlay
+  // 1. ถ่ายภาพจากวิดีโอพร้อมบีบอัดขนาดเหมาะสม (ความกว้างสูงสุด 640px คุณภาพ 0.65 เพื่อความรวดเร็วและบันทึกลง Sheet ได้แน่นอน)
+  const vWidth = (video && video.videoWidth > 0) ? video.videoWidth : 640;
+  const vHeight = (video && video.videoHeight > 0) ? video.videoHeight : 480;
+  const targetWidth = Math.min(vWidth, 640);
+  const targetHeight = Math.round(targetWidth * (vHeight / vWidth));
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext('2d');
+
+  // วาดเฟรมกล้องพร้อมแก้ไขการ Mirror
+  if (currentFacingMode === 'user') {
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+  } else {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  }
+
+  // ปั๊มลายน้ำพยานการละหมาด (Watermark)
   const now = new Date();
   const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('th-TH');
+  const todayYMD = now.toISOString().split('T')[0];
 
-  const boxHeight = 110;
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  const boxHeight = Math.round(canvas.height * 0.22);
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
   ctx.fillRect(0, canvas.height - boxHeight, canvas.width, boxHeight);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 20px Kanit, sans-serif';
-  ctx.fillText(`KHALIFAH • ละหมาดเวลา: ${selectedPrayerTime}`, 20, canvas.height - boxHeight + 30);
+  ctx.font = 'bold 15px Kanit, sans-serif';
+  ctx.fillText(`KHALIFAH • ละหมาดเวลา: ${selectedPrayerTime}`, 14, canvas.height - boxHeight + 22);
 
-  ctx.font = '16px Kanit, sans-serif';
-  ctx.fillText(`นักเรียน: ${currentStudent.fullName} (${currentStudent.studentId}) | ${currentStudent.grade}`, 20, canvas.height - boxHeight + 58);
+  ctx.font = '13px Kanit, sans-serif';
+  ctx.fillText(`นักเรียน: ${currentStudent.fullName} (${currentStudent.studentId}) | ${currentStudent.grade || '-'}`, 14, canvas.height - boxHeight + 42);
 
-  const locText = `พิกัด: ${verifiedLocation.lat.toFixed(5)}, ${verifiedLocation.lng.toFixed(5)} [${verifiedLocation.locationName}] • ${dateStr} ${timeStr}`;
-  ctx.fillText(locText, 20, canvas.height - boxHeight + 86);
+  const locShort = verifiedLocation ? (verifiedLocation.locationName || 'พิกัด GPS') : 'พิกัด GPS';
+  const locText = `พิกัด: ${verifiedLocation.lat.toFixed(5)}, ${verifiedLocation.lng.toFixed(5)} [${locShort}] • ${dateStr} ${timeStr}`;
+  ctx.fillText(locText, 14, canvas.height - boxHeight + 62);
 
-  ctx.fillStyle = verifiedLocation.isWithinZone ? '#10b981' : '#f59e0b';
-  ctx.fillRect(canvas.width - 24, canvas.height - boxHeight, 24, boxHeight);
+  ctx.fillStyle = (verifiedLocation && verifiedLocation.isWithinZone) ? '#10b981' : '#f59e0b';
+  ctx.fillRect(canvas.width - 16, canvas.height - boxHeight, 16, boxHeight);
 
-  const photoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+  // ได้รับ Base64 JPEG ขนาดประมาณ 25-35KB
+  const photoBase64 = canvas.toDataURL('image/jpeg', 0.65);
 
-  // Trigger camera shutter flash effect
+  // ชัตเตอร์และเอฟเฟกต์แฟลช
   const flashEl = document.getElementById('cameraShutterFlash');
   if (flashEl) {
     flashEl.classList.remove('flashing', 'flash-active');
-    void flashEl.offsetWidth; // trigger reflow
+    void flashEl.offsetWidth;
     flashEl.classList.add('flashing', 'flash-active');
     setTimeout(() => {
       flashEl.classList.remove('flashing', 'flash-active');
-    }, 320);
+    }, 300);
   }
 
-  // Play mechanical shutter click sound + haptic vibration
   playCameraShutterSound();
   if (navigator.vibrate) {
-    try { navigator.vibrate([40, 20, 60]); } catch(e) {}
+    try { navigator.vibrate([40, 20, 60]); } catch (e) {}
   }
 
   const statusSelect = document.getElementById('prayerStatusSelect');
@@ -4064,8 +4218,6 @@ async function captureAndSavePrayerInstant() {
   const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
   const prayerNote = noteInput ? noteInput.value.trim() : '';
   const chosenLoc = locSelect ? locSelect.value : (verifiedLocation ? verifiedLocation.locationName : 'พิกัด GPS');
-
-  // Build accurate human-readable location name
   let accurateLocName = chosenLoc;
   if (verifiedLocation && verifiedLocation.isWithinZone) {
     accurateLocName = verifiedLocation.locationName;
@@ -4073,8 +4225,18 @@ async function captureAndSavePrayerInstant() {
 
   const logId = 'PRY-' + Date.now();
   const mapUrl = `https://www.google.com/maps?q=${verifiedLocation.lat},${verifiedLocation.lng}`;
+  const targetKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime;
 
-  // Save prayer record with ALL supported key names for 100% backend compatibility
+  // ตรวจสอบประวัติการบันทึกเดิม เพื่อเก็บสถิติการบันทึกซ้ำ (Repeat Check-In)
+  let historyList = [];
+  try {
+    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { historyList = []; }
+
+  const previousAttempts = historyList.filter(p => isIdMatch(p.studentId, currentStudent.studentId) && (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || '') === targetKey : (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime)) && (p.date === todayYMD || (p.timestamp && p.timestamp.startsWith(todayYMD))));
+  const isRepeat = previousAttempts.length > 0;
+  const attemptCount = previousAttempts.length + 1;
+
   const prayerRecord = {
     id: logId,
     logId: logId,
@@ -4086,7 +4248,7 @@ async function captureAndSavePrayerInstant() {
     status: prayerStatus,
     note: prayerNote,
     timestamp: now.toISOString(),
-    date: now.toISOString().split('T')[0],
+    date: todayYMD,
     time: timeStr,
     latitude: verifiedLocation.lat,
     longitude: verifiedLocation.lng,
@@ -4098,105 +4260,64 @@ async function captureAndSavePrayerInstant() {
     photo: photoBase64,
     photoUrl: photoBase64,
     photoBase64: photoBase64,
-    mapUrl: mapUrl
+    mapUrl: mapUrl,
+    isRepeat: isRepeat,
+    attemptCount: attemptCount
   };
 
-  // Replace or add today's prayer for this time
-  const targetKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime;
+  // เก็บลงประวัติถาวรโดยไม่ลบหรือทับบันทึกเดิม! ให้มีประวัติทุกครั้งที่กดบันทึก
+  historyList.unshift(prayerRecord);
+  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList.slice(0, 250)));
+
+  // อัปเดต todayPrayers ด้วยบันทึกล่าสุด
   const existingIdx = todayPrayers.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || '') === targetKey : (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime)));
   if (existingIdx !== -1) {
     todayPrayers[existingIdx] = prayerRecord;
   } else {
-    todayPrayers.push(prayerRecord);
+    todayPrayers.unshift(prayerRecord);
   }
   localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
 
-  // Save to persistent prayer history
-  let historyList = [];
-  try {
-    historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
-  } catch (e) { historyList = []; }
-  const histIdx = historyList.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || '') === targetKey : (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime)) && p.date === dateStr);
-  if (histIdx !== -1) {
-    historyList[histIdx] = prayerRecord;
-  } else {
-    historyList.unshift(prayerRecord);
-  }
-  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList.slice(0, 200)));
-
-  // Update all UI Chips to green
+  // อัปเดต UI ทันทีแบบเรียลไทม์
   refreshPrayerChipsStatus();
-
-  // 1. Show Animated Viewfinder Confirmation Overlay (#prayerCaptureSuccessOverlay)
-  const successOverlay = document.getElementById('prayerCaptureSuccessOverlay');
-  const overlayImg = document.getElementById('captureOverlayPreviewImg');
-  const overlayStamp = document.getElementById('captureOverlayTimeStamp');
-  const overlayTitle = document.getElementById('captureOverlayTitle');
-  const overlaySub = document.getElementById('captureOverlaySub');
-  if (successOverlay) {
-    if (overlayImg) overlayImg.src = photoBase64;
-    if (overlayStamp) overlayStamp.innerText = `${timeStr} น.`;
-    if (overlayTitle) overlayTitle.innerText = `บันทึกละหมาดเวลา ${selectedPrayerTime} สำเร็จ!`;
-    if (overlaySub) overlaySub.innerText = `สถานที่: ${accurateLocName} • ${dateStr}`;
-    successOverlay.style.display = 'flex';
-    setTimeout(() => {
-      successOverlay.style.display = 'none';
-    }, 2600);
-  }
-
-  // 2. Show Persistent Receipt Card below button (#prayerSavedReceiptCard)
-  const receiptCard = document.getElementById('prayerSavedReceiptCard');
-  if (receiptCard) {
-    receiptCard.innerHTML = `
-      <div class="prayer-saved-receipt-left">
-        <div class="prayer-saved-thumb-wrap">
-          <img src="${photoBase64}" alt="Prayer Receipt">
-          <span class="prayer-saved-thumb-check"><i class="fa-solid fa-check"></i></span>
-        </div>
-        <div style="min-width: 0;">
-          <div style="font-size: 0.84rem; font-weight: 700; color: #0f172a;">
-            บันทึกภาพละหมาดเวลา "${escapeHtml(selectedPrayerTime)}" เรียบร้อยแล้ว
-          </div>
-          <div style="font-size: 0.74rem; color: #64748b; margin-top: 0.1rem;">
-            ${escapeHtml(dateStr)} • เวลา ${escapeHtml(timeStr)} น. • ณ ${escapeHtml(accurateLocName)}
-          </div>
-        </div>
-      </div>
-      <span class="prayer-saved-receipt-badge">
-        <i class="fa-solid fa-circle-check"></i> บันทึกแล้ว
-      </span>
-    `;
-    receiptCard.style.display = 'flex';
-  }
-
   renderTodayPrayerTable();
   renderDashboardCharts();
   renderCurrentStudentProfile();
-  renderCurrentStudentProfile();
+  renderPrayerHistory();
 
   if (document.getElementById('prayerNoteInput')) {
     document.getElementById('prayerNoteInput').value = '';
   }
-  renderPrayerHistory();
 
-  // Instant Button Confirmation Animation
-  const btnCapture = document.getElementById('btnCaptureInstant');
-  if (btnCapture) {
-    const originalText = btnCapture.innerHTML;
-    btnCapture.style.background = '#0f172a';
-    btnCapture.innerHTML = `<i class="fa-solid fa-circle-check"></i> ได้รับรูปและบันทึกเวลาละหมาด ${selectedPrayerTime} เรียบร้อยแล้ว!`;
-    setTimeout(() => {
-      btnCapture.style.background = '';
-      btnCapture.innerHTML = originalText;
-    }, 2800);
-  }
-
-  // Slide-In notification card with thumbnail & meta
-  showCameraSlideToast(photoBase64, selectedPrayerTime, accurateLocName, prayerStatus);
-  showToast(`เช็คชื่อละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว! (${prayerStatus})`, 'success');
-
-  // Sync to Google Sheets
+  // บันทึกและซิงค์ข้อมูลขึ้น Google Sheets ทันทีแบบเรียลไทม์
   syncRecordToGoogleSheet('prayerCheckIn', prayerRecord);
+
+  // แจ้งเตือนข้อความเดียว ชัดเจน สวยงาม ไม่เด้งซ้อนกัน
+  const repeatText = isRepeat ? ` (บันทึกซ้ำครั้งที่ ${attemptCount})` : '';
+  showToast(`✓ บันทึกภาพและเช็คชื่อละหมาดเวลา ${selectedPrayerTime}${repeatText} สำเร็จเรียบร้อย!`, 'success');
+
+  // Feedback ปุ่มเมื่อบันทึกเสร็จสิ้น
+  if (btnCapture) {
+    btnCapture.classList.remove('btn-cam-shutter-step2');
+    btnCapture.style.background = '#0f172a';
+    if (btnCaptureText) {
+      btnCaptureText.innerHTML = `<i class="fa-solid fa-circle-check"></i> บันทึกข้อมูลสำเร็จ!`;
+    }
+    setTimeout(() => {
+      prayerCheckStep = 1;
+      btnCapture.style.background = '';
+      checkPrayerUnlockState();
+    }, 2200);
+  } else {
+    prayerCheckStep = 1;
+  }
+}
+
+/**
+ * ฟังก์ชันสำรองสำหรับเข้ากันได้กับโค้ดส่วนอื่น
+ */
+async function captureAndSavePrayerInstant() {
+  await handlePrayerMainButtonClick();
 }
 
 function openPrayerHistoryModal() {

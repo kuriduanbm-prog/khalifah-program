@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=7.5">
+  <link rel="stylesheet" href="style.css?v=7.6">
 </head>
 <body class="auth-locked">
 
@@ -383,7 +383,7 @@
     <section id="view-prayer" class="view-section">
       <div class="card" style="max-width: 760px; margin: 0 auto 1.5rem auto; padding: 1.25rem 1.15rem;">
         
-        <!-- Header with Title & Live Clock -->
+        <!-- Header with Title -->
         <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
           <div>
             <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-dark); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
@@ -392,10 +392,6 @@
             <p style="font-size: 0.76rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">
               ระบบตรวจจับช่วงเวลาละหมาดอัตโนมัติ พร้อมยืนยันพิกัดและภาพถ่ายเรียลไทม์
             </p>
-          </div>
-          <div class="prayer-live-clock-pill" id="prayerLiveClockPill">
-            <i class="fa-regular fa-clock"></i>
-            <span id="prayerLiveClockText">--:--:-- น.</span>
           </div>
         </div>
 
@@ -516,46 +512,32 @@
 
         <!-- 3. In-App Camera Stream with Mirror Fix, Capture Animation Overlay & Switcher -->
         <div class="camera-container" id="cameraBox">
+          <!-- Live Real-Time Clock Pill in Top-Left Corner of Camera Viewport per Request -->
+          <div class="prayer-live-clock-pill" id="prayerLiveClockPill">
+            <i class="fa-regular fa-clock"></i>
+            <span id="prayerLiveClockText">--:--:-- น.</span>
+          </div>
+
           <video id="cameraStream" class="camera-stream camera-front" autoplay playsinline muted></video>
           <canvas id="snapshotCanvas" style="display: none;"></canvas>
           
           <!-- Camera Flash Feedback Effect -->
           <div class="camera-shutter-flash" id="cameraShutterFlash"></div>
 
-          <!-- NEW: Animated Capture & Save Confirmation Overlay inside Camera -->
-          <div class="prayer-capture-success-overlay" id="prayerCaptureSuccessOverlay" style="display: none;">
-            <div class="capture-success-card">
-              <div class="capture-check-ring">
-                <i class="fa-solid fa-check"></i>
-              </div>
-              <div class="capture-photo-frame-wrap">
-                <img id="captureOverlayPreviewImg" src="" alt="Captured Prayer Photo" class="capture-overlay-img">
-                <span class="capture-live-stamp" id="captureOverlayTimeStamp">บันทึกแล้ว</span>
-              </div>
-              <div class="capture-success-title" id="captureOverlayTitle">บันทึกภาพและเช็คชื่อละหมาดสำเร็จ!</div>
-              <div class="capture-success-sub" id="captureOverlaySub">ระบบบันทึกข้อมูลเข้าฐานข้อมูลเรียบร้อยแล้ว</div>
-              <div class="capture-step-pills">
-                <span class="cap-step-pill done"><i class="fa-solid fa-camera"></i> 1. ได้รับรูปถ่ายแล้ว</span>
-                <span class="cap-step-pill done"><i class="fa-solid fa-location-dot"></i> 2. ยืนยันพิกัดแล้ว</span>
-                <span class="cap-step-pill done"><i class="fa-solid fa-cloud-arrow-up"></i> 3. บันทึกข้อมูลแล้ว</span>
-              </div>
-            </div>
-          </div>
-
           <!-- Camera Flip Button -->
           <button class="btn-flip-cam" id="btnFlipCamera" onclick="switchCameraFacing()" title="สลับกล้องหน้า / กล้องหลัง">
             <i class="fa-solid fa-camera-rotate"></i>
           </button>
 
-          <!-- Center Geolocation & Camera Activation Overlay -->
+          <!-- Center Geolocation & Camera Activation Overlay (Step 1) -->
           <div class="camera-center-action-overlay" id="camCenterActionOverlay">
             <div class="cam-action-glow-icon">
               <i class="fa-solid fa-location-crosshairs"></i>
             </div>
             <div class="cam-action-title" id="camCenterActionTitle">กดตรวจสอบพิกัดเพื่อเปิดกล้อง</div>
-            <div class="cam-action-desc" id="camCenterActionDesc">ระบบจะตรวจสอบว่าท่านอยู่ ณ มัสยิดหรือสถาบัน เมื่อผ่านกล้องจะเปิดทันที</div>
-            <button type="button" class="btn-cam-center-verify" id="btnCenterVerifyGeo" onclick="verifyGeolocation()">
-              <i class="fa-solid fa-location-arrow"></i> ตรวจสอบพิกัดและเปิดกล้อง
+            <div class="cam-action-desc" id="camCenterActionDesc">ระบบจะตรวจสอบพิกัด GPS ณ มัสยิดหรือสถาบัน เมื่อผ่านกล้องจะเปิดทันที</div>
+            <button type="button" class="btn-cam-center-verify" id="btnCenterVerifyGeo" onclick="handlePrayerMainButtonClick()">
+              <i class="fa-solid fa-location-crosshairs"></i> 1. ตรวจสอบพิกัด GPS & เปิดกล้อง
             </button>
           </div>
 
@@ -575,19 +557,14 @@
               <span id="prayerVerifiedLocText">สถานที่: กำลังตรวจสอบ...</span>
             </div>
 
-            <!-- Instant Capture & Save Shutter Button Inside Camera -->
-            <button class="btn btn-primary btn-cam-shutter btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled>
-              <div class="cam-shutter-content">
+            <!-- Instant Capture & Save Shutter Button Inside Camera (2-Step Flow) -->
+            <button class="btn btn-primary btn-cam-shutter" id="btnCaptureInstant" onclick="handlePrayerMainButtonClick()">
+              <div class="cam-shutter-content" id="btnCaptureInstantContent">
                 <i class="fa-solid fa-location-crosshairs"></i>
-                <span id="btnCaptureInstantText">ดึงพิกัดสด & ถ่ายรูปบันทึกทันที</span>
+                <span id="btnCaptureInstantText">1. ตรวจสอบพิกัด GPS & เปิดกล้อง</span>
               </div>
             </button>
           </div>
-        </div>
-
-        <!-- NEW: Latest Captured Prayer Receipt Banner (Persistent visual proof below camera) -->
-        <div id="prayerSavedReceiptCard" class="prayer-saved-receipt-card" style="display: none;">
-          <!-- Injected dynamically on capture -->
         </div>
 
         <!-- 5. Collapsible Prayer Notes Field (Collapsed by default, for special exceptions only) -->
@@ -4928,6 +4905,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=7.5"></script>
+  <script src="app.js?v=7.6"></script>
 </body>
 </html>

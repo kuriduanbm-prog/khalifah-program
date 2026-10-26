@@ -1735,15 +1735,13 @@ function recordPrayer(data) {
   const rawPrayerTime = data.prayerTime || data.prayerName || data.timeSlot || '';
   const prayerNameThai = formatPrayerTimeThai(rawPrayerTime);
 
-  // ป้องกันการซิงค์ซ้ำ (Deduplicate by logId หรือ studentId + date + prayerTime)
+  // ตรวจสอบเฉพาะกรณีรหัส logId ซ้ำเดิมเป๊ะๆ เพื่อป้องกัน packet ซ้ำจากเน็ตกระตุก
+  // แต่หากเป็นการกดบันทึกซ้ำครั้งใหม่ (logId ใหม่) จะบันทึกเป็นประวัติการเช็คชื่อซ้ำตามที่ผู้ใช้ต้องการ
   const existingRows = sheet.getDataRange().getValues();
   for (let i = 1; i < existingRows.length; i++) {
     const rLogId = cleanVal(existingRows[i][0]);
-    const rSid = cleanVal(existingRows[i][1]);
-    const rPt = formatPrayerTimeThai(existingRows[i][4]);
-    const rDate = formatSheetDate(existingRows[i][6]);
-    if ((logId && rLogId === logId) || (cleanSid && isCodeMatch(rSid, cleanSid) && rDate === dateStr && rPt === prayerNameThai)) {
-      return { success: true, deduplicated: true, message: 'ข้อมูลการละหมาดนี้มีอยู่ในฐานข้อมูลแล้ว', logId: rLogId };
+    if (logId && rLogId === logId) {
+      return { success: true, deduplicated: true, message: 'ข้อมูลการละหมาดรหัสนี้มีอยู่ในฐานข้อมูลแล้ว', logId: rLogId };
     }
   }
 
@@ -1777,12 +1775,23 @@ function recordPrayer(data) {
       photoRef = `https://lh3.googleusercontent.com/d/${fileId}`;
     } catch (err) {
       Logger.log('Drive prayer photo error: ' + err.message);
-      photoRef = 'รูปถ่ายยืนยันในเครื่อง (Local Snapshot)';
+      // หากบันทึกลง Google Drive ไม่สำเร็จ (เช่น สิทธิ์ Drive ยังไม่เปิด) ให้บันทึกรูป Base64 ลงเซลล์ Google Sheet ตรงๆ ได้ทันที
+      if (rawBase64.length < 49000) {
+        photoRef = rawBase64;
+      } else {
+        photoRef = '';
+      }
     }
   }
 
   if (!photoRef) {
-    photoRef = (data.photoUrl && data.photoUrl.length < 500) ? data.photoUrl : 'รูปถ่ายยืนยันในเครื่อง';
+    if (rawBase64 && rawBase64.length < 49000) {
+      photoRef = rawBase64;
+    } else if (data.photoUrl && data.photoUrl.startsWith('data:image') && data.photoUrl.length < 49000) {
+      photoRef = data.photoUrl;
+    } else if (data.photoUrl && data.photoUrl.length < 500) {
+      photoRef = data.photoUrl;
+    }
   }
 
   const statusThai = formatStatusThai(data.status || 'ตรงเวลา');
