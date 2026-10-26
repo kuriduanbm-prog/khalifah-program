@@ -2028,6 +2028,29 @@ function loadStoredData() {
     subAdmins = [];
   }
 
+  // 6. Load current admin / teacher session
+  const savedAdmin = localStorage.getItem('khalifah_current_admin');
+  if (savedAdmin) {
+    try {
+      const parsedAdmin = JSON.parse(savedAdmin);
+      if (parsedAdmin && (parsedAdmin.username || parsedAdmin.role)) {
+        currentAdmin = parsedAdmin;
+      }
+    } catch (e) {
+      currentAdmin = null;
+    }
+  }
+
+  // 7. Load calendar events
+  try {
+    const savedCal = localStorage.getItem('khalifah_calendar_events');
+    if (savedCal) {
+      calendarEvents = JSON.parse(savedCal);
+    }
+  } catch (e) {
+    calendarEvents = [];
+  }
+
   // Set input gas URL if present
   const gasInput = document.getElementById('gasApiUrlInput');
   if (gasInput && gasApiUrl) {
@@ -10920,4 +10943,830 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initBirthDatePicker);
 } else {
   initBirthDatePicker();
+}
+
+
+/* ==========================================================================
+   MINIMALIST HUMAN-CRAFTED ACADEMIC & SCHOOL CALENDAR SYSTEM
+   - Permissions: SuperAdmin, Executive & Teacher (Add/Edit/Delete)
+   - Read-only for Students (Strictly hide targetAudience === 'teachers')
+   - Full Month View ("มุมมองทั้งเดือน") & Split View ("คู่กำหนดการ")
+   - Interactive Month/Year selection, Thai Buddhist Era (พ.ศ.) support
+   - Detail Modal & Add/Edit Modal
+   - Real-time Google Sheets Sync & Local Offline Storage
+   ========================================================================== */
+
+let calendarEvents = [];
+let calCurrentMonth = new Date().getMonth();
+let calCurrentYear = new Date().getFullYear();
+let calSelectedDate = new Date().toISOString().split('T')[0];
+let calViewMode = localStorage.getItem('khalifah_cal_view_mode') || 'full'; // 'full' or 'split'
+let currentViewingEventId = null;
+
+const THAI_MONTH_NAMES = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+const THAI_DAY_NAMES = [
+  'อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'
+];
+
+function canManageCalendar() {
+  if (currentAdmin && (currentAdmin.role === 'SuperAdmin' || currentAdmin.role === 'EXECUTIVE' || currentAdmin.role === 'TEACHER' || currentAdmin.username)) {
+    return true;
+  }
+  try {
+    const savedAdmin = localStorage.getItem('khalifah_current_admin');
+    if (savedAdmin) {
+      const parsed = JSON.parse(savedAdmin);
+      if (parsed && (parsed.role === 'SuperAdmin' || parsed.role === 'EXECUTIVE' || parsed.role === 'TEACHER' || parsed.username)) {
+        currentAdmin = parsed;
+        return true;
+      }
+    }
+  } catch (e) {}
+
+  const adminView = document.getElementById('view-admin');
+  const teacherView = document.getElementById('view-teacher');
+  if ((adminView && adminView.classList.contains('active')) || (teacherView && teacherView.classList.contains('active'))) {
+    return true;
+  }
+  return false;
+}
+
+function getVisibleCalendarEvents() {
+  const isManager = canManageCalendar();
+  if (isManager) {
+    return calendarEvents;
+  }
+  // นักเรียน: ซ่อนกิจกรรมที่ตั้งไว้สำหรับเฉพาะอาจารย์/ผู้บริหาร
+  return calendarEvents.filter(e => {
+    const target = (e.targetAudience || 'all').toLowerCase();
+    return target !== 'teachers';
+  });
+}
+
+function loadInitialCalendarData() {
+  try {
+    const saved = localStorage.getItem('khalifah_calendar_events');
+    if (saved) {
+      calendarEvents = JSON.parse(saved);
+    }
+  } catch (e) {
+    calendarEvents = [];
+  }
+
+  // หากยังไม่มีข้อมูล ให้ใส่ข้อมูลกิจกรรมตัวอย่างของโรงเรียนอิสลาม
+  if (!Array.isArray(calendarEvents) || calendarEvents.length === 0) {
+    const curY = new Date().getFullYear();
+    const curM = String(new Date().getMonth() + 1).padStart(2, '0');
+    calendarEvents = [
+      {
+        id: 'CAL-INIT-01',
+        title: 'วันเปิดภาคเรียนที่ 2 / 2569',
+        category: 'การเรียนการสอน',
+        targetAudience: 'all',
+        targetAudienceLabel: 'ทุกคน (นักเรียนและอาจารย์)',
+        startDate: curY + '-' + curM + '-01',
+        endDate: curY + '-' + curM + '-01',
+        startTime: '08:00',
+        endTime: '15:30',
+        location: 'ลานกิจกรรมและห้องเรียนหลัก',
+        description: 'ปฐมนิเทศเปิดภาคเรียน ต้อนรับนักเรียน และชี้แจงระเบียบการเรียนการสอนประจำภาคเรียน',
+        createdBy: 'ผู้บริหารสถานศึกษา',
+        updatedAt: curY + '-' + curM + '-01 08:00:00'
+      },
+      {
+        id: 'CAL-INIT-02',
+        title: 'ละหมาดวันศุกร์ (ญุมอะฮ์) ประจำสัปดาห์',
+        category: 'ละหมาด / ศาสนกิจ',
+        targetAudience: 'all',
+        targetAudienceLabel: 'ทุกคน (นักเรียนและอาจารย์)',
+        startDate: curY + '-' + curM + '-06',
+        endDate: curY + '-' + curM + '-06',
+        startTime: '12:00',
+        endTime: '13:30',
+        location: 'มัสยิดกลาง KHALIFAH',
+        description: 'รับฟังคุฏบะฮ์วันศุกร์และร่วมละหมาดญุมอะฮ์พร้อมเพรียงกันทั้งโรงเรียน',
+        createdBy: 'ฝ่ายศาสนการและคุณธรรม',
+        updatedAt: curY + '-' + curM + '-06 09:00:00'
+      },
+      {
+        id: 'CAL-INIT-03',
+        title: 'ประชุมวางแผนการสอนและประเมินผลครู',
+        category: 'ประชุม / สัมมนา',
+        targetAudience: 'teachers',
+        targetAudienceLabel: 'เฉพาะอาจารย์และผู้บริหาร',
+        startDate: curY + '-' + curM + '-10',
+        endDate: curY + '-' + curM + '-10',
+        startTime: '15:30',
+        endTime: '17:00',
+        location: 'ห้องประชุมฝ่ายบริหาร ชั้น 2',
+        description: 'ติดตามผลการเรียนรายวิชา ทบทวนการเช็คชื่อมาเรียน และการบันทึกผลบุญประจำสัปดาห์',
+        createdBy: 'ฝ่ายวิชาการ',
+        updatedAt: curY + '-' + curM + '-10 10:00:00'
+      },
+      {
+        id: 'CAL-INIT-04',
+        title: 'การสอบกลางภาคเรียน (Midterm Examinations)',
+        category: 'การสอบ / ประเมินผล',
+        targetAudience: 'all',
+        targetAudienceLabel: 'ทุกคน (นักเรียนและอาจารย์)',
+        startDate: curY + '-' + curM + '-18',
+        endDate: curY + '-' + curM + '-20',
+        startTime: '08:30',
+        endTime: '15:00',
+        location: 'อาคารสอบและห้องเรียนประจำชั้น',
+        description: 'การสอบวัดผลสัมฤทธิ์กลางภาคเรียน หมวดวิชาสามัญและวิชาศาสนา ให้นักเรียนแต่งกายถูกต้องตามระเบียบ',
+        createdBy: 'งานทะเบียนและวัดผล',
+        updatedAt: curY + '-' + curM + '-15 11:00:00'
+      },
+      {
+        id: 'CAL-INIT-05',
+        title: 'กิจกรรมค่ายคุณธรรมและค็อตม์อัลกุรอาน',
+        category: 'กิจกรรมทั่วไป',
+        targetAudience: 'students',
+        targetAudienceLabel: 'เฉพาะนักเรียน',
+        startDate: curY + '-' + curM + '-25',
+        endDate: curY + '-' + curM + '-26',
+        startTime: '08:00',
+        endTime: '16:00',
+        location: 'หอประชุมใหญ่ KHALIFAH',
+        description: 'กิจกรรมทบทวนการท่องจำอัลกุรอาน การละหมาดสุนัต และมอบเกียรติบัตรดาวความดี',
+        createdBy: 'ฝ่ายพัฒนานักเรียน',
+        updatedAt: curY + '-' + curM + '-20 14:00:00'
+      }
+    ];
+    try {
+      localStorage.setItem('khalifah_calendar_events', JSON.stringify(calendarEvents));
+    } catch (e) {}
+  }
+}
+
+function initCalendar() {
+  loadInitialCalendarData();
+  populateCalendarSelects();
+  updateCalendarViewClasses();
+  renderCalendar('all');
+}
+
+function setCalendarViewMode(mode, scope = 'all') {
+  calViewMode = (mode === 'split') ? 'split' : 'full';
+  try {
+    localStorage.setItem('khalifah_cal_view_mode', calViewMode);
+  } catch (e) {}
+  updateCalendarViewClasses();
+  renderCalendar('all');
+}
+
+function updateCalendarViewClasses() {
+  const scopes = ['dash', 'teacher', 'admin'];
+  scopes.forEach(scope => {
+    const layoutEl = document.getElementById(`calGridLayout-${scope}`);
+    if (layoutEl) {
+      if (calViewMode === 'full') {
+        layoutEl.classList.add('view-full');
+        layoutEl.classList.remove('view-split');
+      } else {
+        layoutEl.classList.add('view-split');
+        layoutEl.classList.remove('view-full');
+      }
+    }
+
+    const btnFull = document.getElementById(`btnCalViewFull-${scope}`);
+    const btnSplit = document.getElementById(`btnCalViewSplit-${scope}`);
+    if (btnFull && btnSplit) {
+      if (calViewMode === 'full') {
+        btnFull.classList.add('active');
+        btnSplit.classList.remove('active');
+      } else {
+        btnSplit.classList.add('active');
+        btnFull.classList.remove('active');
+      }
+    }
+  });
+}
+
+function populateCalendarSelects() {
+  const scopes = ['dash', 'teacher', 'admin'];
+  scopes.forEach(scope => {
+    const mSelect = document.getElementById(`calMonthSelect-${scope}`);
+    const ySelect = document.getElementById(`calYearSelect-${scope}`);
+    if (mSelect) {
+      mSelect.innerHTML = THAI_MONTH_NAMES.map((name, idx) => 
+        `<option value="${idx}">${name}</option>`
+      ).join('');
+    }
+    if (ySelect) {
+      const startYear = 2024;
+      const endYear = 2029;
+      let yOptions = '';
+      for (let y = startYear; y <= endYear; y++) {
+        const thaiY = y + 543;
+        yOptions += `<option value="${y}">${thaiY} (${y})</option>`;
+      }
+      ySelect.innerHTML = yOptions;
+    }
+  });
+}
+
+function onCalendarSelectChange(scope) {
+  const mSelect = document.getElementById(`calMonthSelect-${scope}`);
+  const ySelect = document.getElementById(`calYearSelect-${scope}`);
+  if (mSelect && ySelect) {
+    calCurrentMonth = parseInt(mSelect.value, 10);
+    calCurrentYear = parseInt(ySelect.value, 10);
+    renderCalendar('all');
+  }
+}
+
+function shiftCalendarMonth(offset, scope) {
+  calCurrentMonth += offset;
+  if (calCurrentMonth < 0) {
+    calCurrentMonth = 11;
+    calCurrentYear -= 1;
+  } else if (calCurrentMonth > 11) {
+    calCurrentMonth = 0;
+    calCurrentYear += 1;
+  }
+  renderCalendar('all');
+}
+
+function resetCalendarToToday(scope) {
+  const now = new Date();
+  calCurrentMonth = now.getMonth();
+  calCurrentYear = now.getFullYear();
+  calSelectedDate = now.toISOString().split('T')[0];
+  renderCalendar('all');
+}
+
+function selectCalendarDate(dateStr) {
+  calSelectedDate = dateStr;
+  const scopes = ['dash', 'teacher', 'admin'];
+  scopes.forEach(scope => {
+    const gridEl = document.getElementById(`calDaysGrid-${scope}`);
+    if (gridEl) {
+      gridEl.querySelectorAll('.cal-day-cell').forEach(cell => {
+        if (cell.dataset.date === dateStr) {
+          cell.classList.add('cal-day-selected');
+        } else {
+          cell.classList.remove('cal-day-selected');
+        }
+      });
+    }
+    renderCalendarAgenda(scope);
+  });
+}
+
+function getCategoryClass(cat) {
+  const c = String(cat || '').trim();
+  if (c.includes('สอบ') || c.includes('ประเมิน')) return 'cat-exam';
+  if (c.includes('เรียน') || c.includes('การสอน')) return 'cat-academic';
+  if (c.includes('ละหมาด') || c.includes('ศาสนกิจ') || c.includes('กุรอาน')) return 'cat-prayer';
+  if (c.includes('หยุด') || c.includes('ปิดภาค')) return 'cat-holiday';
+  if (c.includes('ประชุม') || c.includes('สัมมนา')) return 'cat-meeting';
+  return 'cat-general';
+}
+
+function formatThaiDateDisplay(dateStr) {
+  if (!dateStr) return '-';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = parseInt(parts[2], 10);
+  const thaiYear = y + 543;
+  const mName = THAI_MONTH_NAMES[m] || '';
+  return `${d} ${mName} ${thaiYear}`;
+}
+
+function formatThaiDateWithDayName(dateStr) {
+  if (!dateStr) return { dayName: '-', fullDate: '-' };
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return { dayName: '-', fullDate: dateStr };
+  const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const dayName = 'วัน' + (THAI_DAY_NAMES[dObj.getDay()] || '');
+  const fullDate = formatThaiDateDisplay(dateStr);
+  return { dayName, fullDate };
+}
+
+function isDateInRange(targetDate, startDate, endDate) {
+  if (!startDate) return false;
+  const s = startDate;
+  const e = endDate || startDate;
+  return targetDate >= s && targetDate <= e;
+}
+
+function renderCalendar(targetScope = 'all') {
+  const scopes = (targetScope === 'all') ? ['dash', 'teacher', 'admin'] : [targetScope];
+  const isManager = canManageCalendar();
+  const visibleEvents = getVisibleCalendarEvents();
+
+  updateCalendarViewClasses();
+
+  // Sync toolbar dropdowns & add buttons
+  scopes.forEach(scope => {
+    const mSelect = document.getElementById(`calMonthSelect-${scope}`);
+    const ySelect = document.getElementById(`calYearSelect-${scope}`);
+    if (mSelect) mSelect.value = calCurrentMonth;
+    if (ySelect) ySelect.value = calCurrentYear;
+
+    const addBtn = document.getElementById(
+      scope === 'dash' ? 'btnDashCalAddEvent' : (scope === 'teacher' ? 'btnTeacherCalAddEvent' : 'btnAdminCalAddEvent')
+    );
+    if (addBtn) {
+      addBtn.style.display = isManager ? 'inline-flex' : 'none';
+    }
+  });
+
+  // Calculate Month Days
+  const firstDayIndex = new Date(calCurrentYear, calCurrentMonth, 1).getDay(); // 0 = Sun
+  const daysInMonth = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
+  const prevMonthDays = new Date(calCurrentYear, calCurrentMonth, 0).getDate();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  scopes.forEach(scope => {
+    const gridEl = document.getElementById(`calDaysGrid-${scope}`);
+    if (!gridEl) return;
+
+    let cellsHtml = '';
+
+    // 1. Previous Month Days
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = prevMonthDays - i;
+      const prevM = (calCurrentMonth === 0) ? 12 : calCurrentMonth;
+      const prevY = (calCurrentMonth === 0) ? calCurrentYear - 1 : calCurrentYear;
+      const dateStr = `${prevY}-${String(prevM).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+      cellsHtml += `
+        <div class="cal-day-cell cal-day-other-month" data-date="${dateStr}">
+          <div class="cal-day-header">
+            <span class="cal-day-num">${dayNum}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // 2. Current Month Days
+    const maxChipsPerCell = (calViewMode === 'full') ? 3 : 2;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${calCurrentYear}-${String(calCurrentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isToday = (dateStr === todayStr);
+      const isSelected = (dateStr === calSelectedDate);
+      const dayOfWeek = new Date(calCurrentYear, calCurrentMonth, day).getDay();
+      const isSun = (dayOfWeek === 0);
+      const isFri = (dayOfWeek === 5);
+
+      // Find events for this day
+      const dayEvents = visibleEvents.filter(e => isDateInRange(dateStr, e.startDate, e.endDate));
+
+      let chipsHtml = '';
+      if (dayEvents.length > 0) {
+        chipsHtml += '<div class="cal-day-chips">';
+        const displayList = dayEvents.slice(0, maxChipsPerCell);
+        displayList.forEach(ev => {
+          const catClass = getCategoryClass(ev.category);
+          const timeInfo = ev.startTime ? ` (${ev.startTime} น.)` : '';
+          chipsHtml += `
+            <div class="cal-chip ${catClass}" title="${escapeHtml(ev.title)}${timeInfo}" onclick="event.stopPropagation(); openCalendarEventDetail('${ev.id}')">
+              <span class="cal-chip-dot"></span>
+              <span class="cal-chip-text">${escapeHtml(ev.title)}</span>
+            </div>
+          `;
+        });
+        if (dayEvents.length > maxChipsPerCell) {
+          const moreCount = dayEvents.length - maxChipsPerCell;
+          chipsHtml += `<div class="cal-chip-more">+${moreCount} อื่นๆ</div>`;
+        }
+        chipsHtml += '</div>';
+      }
+
+      const cellClasses = [
+        'cal-day-cell',
+        isToday ? 'cal-day-today' : '',
+        isSelected ? 'cal-day-selected' : '',
+        isSun ? 'cal-day-sun' : '',
+        isFri ? 'cal-day-fri' : ''
+      ].filter(Boolean).join(' ');
+
+      // Double-click on admin/teacher allows quick add
+      const dblClickAttr = isManager ? `ondblclick="openCalendarEventModal(null, '${dateStr}')"` : '';
+
+      cellsHtml += `
+        <div class="${cellClasses}" data-date="${dateStr}" onclick="selectCalendarDate('${dateStr}')" ${dblClickAttr}>
+          <div class="cal-day-header">
+            <span class="cal-day-num">${day}</span>
+            ${isToday ? '<span class="cal-today-tag">วันนี้</span>' : ''}
+          </div>
+          ${chipsHtml}
+        </div>
+      `;
+    }
+
+    // 3. Next Month Days Padding to complete grid (multiples of 7)
+    const totalRendered = firstDayIndex + daysInMonth;
+    const remaining = (totalRendered % 7 === 0) ? 0 : 7 - (totalRendered % 7);
+    for (let nextDay = 1; nextDay <= remaining; nextDay++) {
+      const nextM = (calCurrentMonth === 11) ? 1 : calCurrentMonth + 2;
+      const nextY = (calCurrentMonth === 11) ? calCurrentYear + 1 : calCurrentYear;
+      const dateStr = `${nextY}-${String(nextM).padStart(2, '0')}-${String(nextDay).padStart(2, '0')}`;
+      cellsHtml += `
+        <div class="cal-day-cell cal-day-other-month" data-date="${dateStr}">
+          <div class="cal-day-header">
+            <span class="cal-day-num">${nextDay}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    gridEl.innerHTML = cellsHtml;
+
+    // Render Agenda
+    renderCalendarAgenda(scope);
+  });
+}
+
+function renderCalendarAgenda(scope) {
+  const dateEl = document.getElementById(`calAgendaDate-${scope}`);
+  const badgeEl = document.getElementById(`calAgendaBadge-${scope}`);
+  const listEl = document.getElementById(`calAgendaList-${scope}`);
+  if (!dateEl || !listEl) return;
+
+  const { dayName, fullDate } = formatThaiDateWithDayName(calSelectedDate);
+  const isManager = canManageCalendar();
+
+  dateEl.innerHTML = `
+    <span class="cal-agenda-day-name">${dayName}</span>
+    <span class="cal-agenda-full-date">${fullDate}</span>
+  `;
+
+  const visibleEvents = getVisibleCalendarEvents();
+  const dayEvents = visibleEvents.filter(e => isDateInRange(calSelectedDate, e.startDate, e.endDate));
+
+  if (badgeEl) {
+    badgeEl.innerText = `${dayEvents.length} กิจกรรม`;
+  }
+
+  // Quick Add Button for Admins & Teachers
+  let quickAddBtnHtml = '';
+  if (isManager) {
+    quickAddBtnHtml = `
+      <div class="cal-agenda-quick-add-row">
+        <button type="button" class="btn btn-outline-primary btn-sm btn-cal-quick-add" onclick="openCalendarEventModal(null, '${calSelectedDate}')">
+          <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมในวันที่ ${formatThaiDateDisplay(calSelectedDate)}
+        </button>
+      </div>
+    `;
+  }
+
+  if (dayEvents.length > 0) {
+    let itemsHtml = quickAddBtnHtml;
+    itemsHtml += `<div class="cal-agenda-cards-wrap ${calViewMode === 'full' ? 'cards-grid' : 'cards-list'}">`;
+
+    dayEvents.forEach(ev => {
+      const catClass = getCategoryClass(ev.category);
+      const timeStr = (ev.startTime) ? `${ev.startTime} - ${ev.endTime || 'เสร็จสิ้น'} น.` : 'ตลอดทั้งวัน (All-day)';
+      const targetLabel = ev.targetAudienceLabel || (ev.targetAudience === 'teachers' ? 'เฉพาะอาจารย์' : (ev.targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน'));
+      const targetClass = `target-${ev.targetAudience || 'all'}`;
+
+      itemsHtml += `
+        <div class="cal-agenda-item ${catClass}" onclick="openCalendarEventDetail('${ev.id}')">
+          <div class="cal-agenda-item-top">
+            <span class="cal-agenda-time"><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+            <span class="cal-agenda-target-pill ${targetClass}">${targetLabel}</span>
+          </div>
+          <h4 class="cal-agenda-item-title">${escapeHtml(ev.title)}</h4>
+          <div class="cal-agenda-item-foot">
+            <span class="cal-category-pill ${catClass}">${escapeHtml(ev.category || 'ทั่วไป')}</span>
+            ${ev.location ? `<span class="cal-agenda-loc"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(ev.location)}</span>` : ''}
+          </div>
+        </div>
+      `;
+    });
+
+    itemsHtml += `</div>`;
+    listEl.innerHTML = itemsHtml;
+  } else {
+    // Empty state for selected date + upcoming events preview in current month
+    const upcomingEvents = visibleEvents.filter(e => {
+      return (e.startDate >= calSelectedDate) && (e.startDate.startsWith(`${calCurrentYear}-${String(calCurrentMonth + 1).padStart(2, '0')}`));
+    }).slice(0, 3);
+
+    let upcomingHtml = '';
+    if (upcomingEvents.length > 0) {
+      upcomingHtml = `
+        <div class="cal-upcoming-header">
+          <i class="fa-solid fa-arrow-trend-up"></i> กิจกรรมที่จะมาถึงในเดือนนี้
+        </div>
+        <div class="cal-agenda-cards-wrap ${calViewMode === 'full' ? 'cards-grid' : 'cards-list'}">
+      `;
+      upcomingEvents.forEach(ev => {
+        const catClass = getCategoryClass(ev.category);
+        const dateDisp = formatThaiDateDisplay(ev.startDate);
+        upcomingHtml += `
+          <div class="cal-agenda-item ${catClass}" style="opacity: 0.9;" onclick="openCalendarEventDetail('${ev.id}')">
+            <div class="cal-agenda-item-top">
+              <span class="cal-agenda-time"><i class="fa-regular fa-calendar"></i> ${dateDisp}</span>
+              <span class="cal-agenda-target-pill target-${ev.targetAudience || 'all'}">${ev.targetAudienceLabel || 'ทุกคน'}</span>
+            </div>
+            <h4 class="cal-agenda-item-title">${escapeHtml(ev.title)}</h4>
+            ${ev.location ? `<div class="cal-agenda-item-foot"><span class="cal-agenda-loc"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(ev.location)}</span></div>` : ''}
+          </div>
+        `;
+      });
+      upcomingHtml += `</div>`;
+    }
+
+    listEl.innerHTML = `
+      ${quickAddBtnHtml}
+      <div class="cal-empty-state">
+        <i class="fa-regular fa-calendar-xmark cal-empty-icon"></i>
+        <div class="cal-empty-title">ไม่มีกิจกรรมในวันที่เลือก</div>
+        <div class="cal-empty-sub">คลิกเลือกวันที่อื่นบนปฏิทินเพื่อดูกำหนดการ ${isManager ? 'หรือกดปุ่มด้านบนเพื่อเพิ่มกิจกรรม' : ''}</div>
+      </div>
+      ${upcomingHtml}
+    `;
+  }
+}
+
+function openCalendarEventDetail(eventId) {
+  const ev = calendarEvents.find(e => e.id === eventId);
+  if (!ev) return;
+
+  // นักเรียนไม่สามารถดูกิจกรรมเฉพาะอาจารย์ได้
+  if (!canManageCalendar() && (ev.targetAudience || '').toLowerCase() === 'teachers') {
+    showToast('กิจกรรมนี้สำหรับอาจารย์และบุคลากรเท่านั้น', 'info');
+    return;
+  }
+
+  currentViewingEventId = eventId;
+
+  const titleEl = document.getElementById('calDetailTitle');
+  const catEl = document.getElementById('calDetailCatPill');
+  const targetEl = document.getElementById('calDetailTargetPill');
+  const datesEl = document.getElementById('calDetailDates');
+  const timeEl = document.getElementById('calDetailTime');
+  const locEl = document.getElementById('calDetailLocation');
+  const descEl = document.getElementById('calDetailDescription');
+  const metaEl = document.getElementById('calDetailMeta');
+  const adminActions = document.getElementById('calDetailAdminActions');
+
+  if (titleEl) titleEl.innerText = ev.title || 'ไม่มีชื่อกิจกรรม';
+
+  if (catEl) {
+    catEl.innerText = ev.category || 'กิจกรรมทั่วไป';
+    catEl.className = `cal-category-pill ${getCategoryClass(ev.category)}`;
+  }
+
+  if (targetEl) {
+    targetEl.innerText = ev.targetAudienceLabel || (ev.targetAudience === 'teachers' ? 'เฉพาะอาจารย์และผู้บริหาร' : (ev.targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน (นักเรียนและอาจารย์)'));
+    targetEl.className = `cal-target-pill target-${ev.targetAudience || 'all'}`;
+  }
+
+  if (datesEl) {
+    const s = formatThaiDateDisplay(ev.startDate);
+    const e = (ev.endDate && ev.endDate !== ev.startDate) ? formatThaiDateDisplay(ev.endDate) : null;
+    datesEl.innerText = e ? `${s} ถึง ${e}` : s;
+  }
+
+  if (timeEl) {
+    timeEl.innerText = (ev.startTime) ? `${ev.startTime} - ${ev.endTime || 'เสร็จสิ้น'} น.` : 'กิจกรรมตลอดทั้งวัน (All-day)';
+  }
+
+  if (locEl) {
+    locEl.innerText = ev.location || 'ไม่ได้ระบุสถานที่';
+  }
+
+  if (descEl) {
+    descEl.innerText = ev.description || 'ไม่มีรายละเอียดเพิ่มเติม';
+  }
+
+  if (metaEl) {
+    metaEl.innerText = `บันทึกโดย: ${ev.createdBy || 'ผู้ดูแลระบบ'} • อัปเดตล่าสุด: ${ev.updatedAt || '-'}`;
+  }
+
+  // ซ่อนปุ่มแก้ไข/ลบ สำหรับนักเรียน
+  if (adminActions) {
+    adminActions.style.display = canManageCalendar() ? 'flex' : 'none';
+  }
+
+  openModal('calendarEventDetailModal');
+}
+
+function openCalendarEventModal(eventId = null, defaultDate = null) {
+  if (!canManageCalendar()) {
+    showToast('เฉพาะผู้บริหาร แอดมิน และอาจารย์เท่านั้นที่มีสิทธิ์เพิ่มหรือแก้ไขปฏิทิน', 'warning');
+    return;
+  }
+
+  const titleEl = document.getElementById('calModalTitle');
+  const idInput = document.getElementById('calFormEventId');
+  const titleInput = document.getElementById('calFormTitle');
+  const catInput = document.getElementById('calFormCategory');
+  const targetInput = document.getElementById('calFormTarget');
+  const sDateInput = document.getElementById('calFormStartDate');
+  const eDateInput = document.getElementById('calFormEndDate');
+  const sTimeInput = document.getElementById('calFormStartTime');
+  const eTimeInput = document.getElementById('calFormEndTime');
+  const allDayCheck = document.getElementById('calFormAllDay');
+  const locInput = document.getElementById('calFormLocation');
+  const descInput = document.getElementById('calFormDescription');
+
+  if (eventId) {
+    const ev = calendarEvents.find(e => e.id === eventId);
+    if (!ev) return;
+    if (titleEl) titleEl.innerText = 'แก้ไขกิจกรรมปฏิทิน';
+    if (idInput) idInput.value = ev.id;
+    if (titleInput) titleInput.value = ev.title || '';
+    if (catInput) catInput.value = ev.category || 'กิจกรรมทั่วไป';
+    if (targetInput) targetInput.value = ev.targetAudience || 'all';
+    if (sDateInput) sDateInput.value = ev.startDate || '';
+    if (eDateInput) eDateInput.value = ev.endDate || '';
+    if (sTimeInput) sTimeInput.value = ev.startTime || '';
+    if (eTimeInput) eTimeInput.value = ev.endTime || '';
+    const isAllDay = !ev.startTime && !ev.endTime;
+    if (allDayCheck) {
+      allDayCheck.checked = isAllDay;
+      toggleCalAllDay(isAllDay);
+    }
+    if (locInput) locInput.value = ev.location || '';
+    if (descInput) descInput.value = ev.description || '';
+  } else {
+    if (titleEl) titleEl.innerText = 'เพิ่มกิจกรรมใหม่ในปฏิทิน';
+    if (idInput) idInput.value = '';
+    if (titleInput) titleInput.value = '';
+    if (catInput) catInput.value = 'กิจกรรมทั่วไป';
+    if (targetInput) targetInput.value = 'all';
+    const initDate = defaultDate || calSelectedDate || new Date().toISOString().split('T')[0];
+    if (sDateInput) sDateInput.value = initDate;
+    if (eDateInput) eDateInput.value = '';
+    if (sTimeInput) sTimeInput.value = '08:30';
+    if (eTimeInput) eTimeInput.value = '11:30';
+    if (allDayCheck) {
+      allDayCheck.checked = false;
+      toggleCalAllDay(false);
+    }
+    if (locInput) locInput.value = '';
+    if (descInput) descInput.value = '';
+  }
+
+  openModal('calendarEventModal');
+}
+
+function toggleCalAllDay(isAllDay) {
+  const sTimeInput = document.getElementById('calFormStartTime');
+  const eTimeInput = document.getElementById('calFormEndTime');
+  if (sTimeInput) {
+    sTimeInput.disabled = isAllDay;
+    if (isAllDay) sTimeInput.value = '';
+  }
+  if (eTimeInput) {
+    eTimeInput.disabled = isAllDay;
+    if (isAllDay) eTimeInput.value = '';
+  }
+}
+
+async function saveCalendarEventForm() {
+  if (!canManageCalendar()) {
+    showToast('ไม่มีสิทธิ์ดำเนินการ', 'warning');
+    return;
+  }
+
+  const idInput = document.getElementById('calFormEventId');
+  const titleInput = document.getElementById('calFormTitle');
+  const catInput = document.getElementById('calFormCategory');
+  const targetInput = document.getElementById('calFormTarget');
+  const sDateInput = document.getElementById('calFormStartDate');
+  const eDateInput = document.getElementById('calFormEndDate');
+  const sTimeInput = document.getElementById('calFormStartTime');
+  const eTimeInput = document.getElementById('calFormEndTime');
+  const allDayCheck = document.getElementById('calFormAllDay');
+  const locInput = document.getElementById('calFormLocation');
+  const descInput = document.getElementById('calFormDescription');
+  const btnSave = document.getElementById('btnSaveCalEvent');
+
+  const title = (titleInput && titleInput.value ? titleInput.value : '').trim();
+  const startDate = (sDateInput && sDateInput.value ? sDateInput.value : '').trim();
+
+  if (!title) {
+    showToast('กรุณาระบุชื่อกิจกรรม', 'warning');
+    if (titleInput) titleInput.focus();
+    return;
+  }
+  if (!startDate) {
+    showToast('กรุณาระบุวันที่เริ่มต้น', 'warning');
+    if (sDateInput) sDateInput.focus();
+    return;
+  }
+
+  const isAllDay = allDayCheck ? allDayCheck.checked : false;
+  const eventId = (idInput && idInput.value) ? idInput.value : ('CAL-' + Date.now());
+  const category = catInput ? catInput.value : 'กิจกรรมทั่วไป';
+  const targetAudience = targetInput ? targetInput.value : 'all';
+  const targetAudienceLabel = (targetAudience === 'teachers') ? 'เฉพาะอาจารย์และผู้บริหาร' : (targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน (นักเรียนและอาจารย์)');
+  const endDate = (eDateInput && eDateInput.value) ? eDateInput.value : startDate;
+  const startTime = isAllDay ? '' : (sTimeInput ? sTimeInput.value : '');
+  const endTime = isAllDay ? '' : (eTimeInput ? eTimeInput.value : '');
+  const location = locInput ? locInput.value.trim() : '';
+  const description = descInput ? descInput.value.trim() : '';
+
+  const creatorName = currentAdmin ? (currentAdmin.fullName || currentAdmin.username || 'ผู้ดูแลระบบ') : 'แอดมิน';
+  const updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+  const eventData = {
+    id: eventId,
+    eventId: eventId,
+    title: title,
+    category: category,
+    targetAudience: targetAudience,
+    targetAudienceLabel: targetAudienceLabel,
+    startDate: startDate,
+    endDate: endDate,
+    startTime: startTime,
+    endTime: endTime,
+    location: location,
+    description: description,
+    createdBy: creatorName,
+    updatedAt: updatedAt
+  };
+
+  // Update local state
+  const existingIdx = calendarEvents.findIndex(e => e.id === eventId);
+  if (existingIdx !== -1) {
+    calendarEvents[existingIdx] = { ...calendarEvents[existingIdx], ...eventData };
+  } else {
+    calendarEvents.push(eventData);
+  }
+
+  // Sort by startDate
+  calendarEvents.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+  localStorage.setItem('khalifah_calendar_events', JSON.stringify(calendarEvents));
+
+  // Visual feedback
+  if (btnSave) {
+    btnSave.disabled = true;
+    btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+  }
+
+  closeModal('calendarEventModal');
+  calSelectedDate = startDate;
+  const sParts = startDate.split('-');
+  if (sParts.length === 3) {
+    calCurrentYear = parseInt(sParts[0], 10);
+    calCurrentMonth = parseInt(sParts[1], 10) - 1;
+  }
+  renderCalendar('all');
+  if (typeof playSuccessSound === 'function') playSuccessSound();
+  showToast('✓ บันทึกกิจกรรมปฏิทินเรียบร้อยแล้ว กำลังซิงค์กับ Google Sheets...', 'success');
+
+  // Background Cloud Sync
+  try {
+    await syncRecordToGoogleSheet('saveCalendarEvent', eventData);
+    console.log('✓ Calendar event saved to Google Sheets:', eventId);
+  } catch (err) {
+    console.warn('Sync calendar to cloud failed, saved locally:', err);
+  } finally {
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> บันทึกลง Google Sheets';
+    }
+  }
+}
+
+function editEventFromDetail() {
+  if (!currentViewingEventId) return;
+  closeModal('calendarEventDetailModal');
+  openCalendarEventModal(currentViewingEventId);
+}
+
+async function deleteEventFromDetail() {
+  if (!canManageCalendar()) {
+    showToast('ไม่มีสิทธิ์ดำเนินการ', 'warning');
+    return;
+  }
+  if (!currentViewingEventId) return;
+  const ev = calendarEvents.find(e => e.id === currentViewingEventId);
+  const title = ev ? ev.title : 'กิจกรรมนี้';
+
+  if (!confirm(`คุณต้องการลบกิจกรรม "${title}" ออกจากปฏิทินและ Google Sheets ใช่หรือไม่?`)) {
+    return;
+  }
+
+  const targetId = currentViewingEventId;
+  calendarEvents = calendarEvents.filter(e => e.id !== targetId);
+  localStorage.setItem('khalifah_calendar_events', JSON.stringify(calendarEvents));
+
+  closeModal('calendarEventDetailModal');
+  currentViewingEventId = null;
+  renderCalendar('all');
+  showToast('✓ ลบกิจกรรมออกจากปฏิทินเรียบร้อยแล้ว', 'success');
+
+  try {
+    await syncRecordToGoogleSheet('deleteCalendarEvent', { id: targetId, eventId: targetId });
+    console.log('✓ Calendar event deleted from Google Sheets:', targetId);
+  } catch (err) {
+    console.warn('Delete calendar from cloud failed:', err);
+  }
 }

@@ -300,6 +300,16 @@
                 </button>
               </div>
 
+              <!-- View Mode Toggle (Full Month / Split View) -->
+              <div class="cal-view-toggle-group">
+                <button type="button" class="btn-cal-view active" id="btnCalViewFull-dash" onclick="setCalendarViewMode('full', 'dash')" title="มุมมองทั้งเดือน">
+                  <i class="fa-solid fa-calendar-days"></i> ทั้งเดือน
+                </button>
+                <button type="button" class="btn-cal-view" id="btnCalViewSplit-dash" onclick="setCalendarViewMode('split', 'dash')" title="มุมมองคู่กำหนดการ">
+                  <i class="fa-solid fa-table-columns"></i> คู่กำหนดการ
+                </button>
+              </div>
+
               <!-- Only visible to Admin/Teacher/Executive -->
               <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnDashCalAddEvent" onclick="openCalendarEventModal()" style="display: none;">
                 <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรม
@@ -308,7 +318,7 @@
           </div>
 
           <div class="cal-card-body">
-            <div class="cal-grid-layout">
+            <div class="cal-grid-layout view-full" id="calGridLayout-dash">
               <!-- Left: Month Matrix -->
               <div class="cal-matrix-col">
                 <div class="cal-weekdays-row">
@@ -1707,6 +1717,16 @@
                   </button>
                 </div>
 
+                <!-- View Mode Toggle (Full Month / Split View) -->
+                <div class="cal-view-toggle-group">
+                  <button type="button" class="btn-cal-view active" id="btnCalViewFull-teacher" onclick="setCalendarViewMode('full', 'teacher')" title="มุมมองทั้งเดือน">
+                    <i class="fa-solid fa-calendar-days"></i> ทั้งเดือน
+                  </button>
+                  <button type="button" class="btn-cal-view" id="btnCalViewSplit-teacher" onclick="setCalendarViewMode('split', 'teacher')" title="มุมมองคู่กำหนดการ">
+                    <i class="fa-solid fa-table-columns"></i> คู่กำหนดการ
+                  </button>
+                </div>
+
                 <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnTeacherCalAddEvent" onclick="openCalendarEventModal()">
                   <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมใหม่
                 </button>
@@ -1714,7 +1734,7 @@
             </div>
 
             <div class="cal-card-body">
-              <div class="cal-grid-layout">
+              <div class="cal-grid-layout view-full" id="calGridLayout-teacher">
                 <!-- Left: Month Matrix -->
                 <div class="cal-matrix-col">
                   <div class="cal-weekdays-row">
@@ -2746,6 +2766,16 @@
                   </button>
                 </div>
 
+                <!-- View Mode Toggle (Full Month / Split View) -->
+                <div class="cal-view-toggle-group">
+                  <button type="button" class="btn-cal-view active" id="btnCalViewFull-admin" onclick="setCalendarViewMode('full', 'admin')" title="มุมมองทั้งเดือน">
+                    <i class="fa-solid fa-calendar-days"></i> ทั้งเดือน
+                  </button>
+                  <button type="button" class="btn-cal-view" id="btnCalViewSplit-admin" onclick="setCalendarViewMode('split', 'admin')" title="มุมมองคู่กำหนดการ">
+                    <i class="fa-solid fa-table-columns"></i> คู่กำหนดการ
+                  </button>
+                </div>
+
                 <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnAdminCalAddEvent" onclick="openCalendarEventModal()">
                   <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรมใหม่
                 </button>
@@ -2753,7 +2783,7 @@
             </div>
 
             <div class="cal-card-body">
-              <div class="cal-grid-layout">
+              <div class="cal-grid-layout view-full" id="calGridLayout-admin">
                 <!-- Left: Month Matrix -->
                 <div class="cal-matrix-col">
                   <div class="cal-weekdays-row">
@@ -4122,6 +4152,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=6.0"></script>
+  <script src="app.js?v=6.1"></script>
 </body>
 </html>
