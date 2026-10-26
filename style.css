@@ -7931,98 +7931,210 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
 }
 
 /* ========================================================
-   STUDENT MINIMALIST COMPACT CALENDAR
-   ("ปฏิทินฝั่งนร.ดูเล็ก และมีสีสันตามการประกาศเต็มสี่เหลี่ยม")
+   CALENDAR LAUNCHER CARD ON STUDENT DASHBOARD
+   ("แบบกดปุ่มเพื่อดูปฏิทิน")
    ======================================================== */
-#dashCalendarSection .cal-card-wrapper {
-  border-radius: 16px;
+.cal-launcher-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.35rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border-radius: 16px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
 }
 
-#dashCalendarSection .cal-card-header {
-  padding: 0.95rem 1.15rem;
-  background: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
+.cal-launcher-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
 
-#dashCalendarSection .cal-header-title-group .card-title {
+.cal-launcher-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-launcher-icon-wrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.cal-launcher-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cal-launcher-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.cal-launcher-title {
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
-#dashCalendarSection .cal-header-title-group .card-subtitle {
-  font-size: 0.8rem;
+.cal-launcher-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cal-launcher-desc {
+  font-size: 0.82rem;
   color: #64748b;
+  margin: 2px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ซ่อนปุ่มสลับมุมมอง เต็มเดือน/คู่กำหนดการ ในฝั่งนักเรียน ให้เป็นมินิมอลกะทัดรัด */
-#dashCalendarSection .cal-view-toggle-group {
-  display: none !important;
+.cal-launcher-action-btn {
+  flex-shrink: 0;
+  padding: 0.55rem 1.05rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
 }
 
-/* ฝั่งนักเรียน: แสดงเฉพาะกริดปฏิทินกะทัดรัด และซ่อนคอลัมน์ Agenda ใหญ่ด้านข้าง/ล่าง เพื่อให้ดูเล็ก */
-#dashCalendarSection .cal-grid-layout {
-  display: block !important;
+@media (max-width: 640px) {
+  .cal-launcher-card {
+    padding: 0.95rem 1.05rem;
+    gap: 0.75rem;
+  }
+  .cal-launcher-icon-wrap {
+    width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
+    border-radius: 10px;
+  }
+  .cal-launcher-title {
+    font-size: 0.96rem;
+  }
+  .cal-launcher-desc {
+    display: none;
+  }
+  .cal-launcher-action-btn {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.82rem;
+  }
 }
 
-#dashCalendarSection .cal-agenda-col {
-  display: none !important;
+/* ========================================================
+   SCHOOL CALENDAR MODAL (OPTIMIZED FOR MOBILE PHONES)
+   ("ช่องปฏิทินไม่ต้องใหญ่มากให้เหมาะสมกับโทรศัพท์")
+   ======================================================== */
+.cal-phone-modal-dialog {
+  max-width: 440px !important;
+  width: 95% !important;
+  margin: auto;
+  border-radius: 18px !important;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18) !important;
 }
 
-#dashCalendarSection .cal-matrix-col {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  box-shadow: none !important;
+.cal-phone-modal-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
 }
 
-#dashCalendarSection .cal-card-body {
-  padding: 0.95rem 1.15rem 1.15rem !important;
+.cal-phone-modal-body {
+  padding: 1rem 1.15rem 1.15rem !important;
+  background: #ffffff;
 }
 
-#dashCalendarSection .cal-weekdays-row {
+.cal-phone-toolbar {
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cal-phone-matrix {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.75rem 0.85rem;
+}
+
+.cal-phone-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 4px;
   margin-bottom: 6px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-#dashCalendarSection .cal-weekday {
-  font-size: 0.75rem;
+#schoolCalendarModal .cal-weekday {
+  font-size: 0.74rem;
   font-weight: 700;
   color: #64748b;
   text-align: center;
   padding: 2px 0;
 }
 
-#dashCalendarSection .cal-weekday.cal-sun {
-  color: #e11d48;
-}
+#schoolCalendarModal .cal-weekday.cal-sun { color: #e11d48; }
+#schoolCalendarModal .cal-weekday.cal-fri { color: #059669; }
 
-#dashCalendarSection .cal-weekday.cal-fri {
-  color: #059669;
-}
-
-/* กริดวันที่กะทัดรัด (7 คอลัมน์สมมาตร) */
-#dashCalendarSection .cal-days-grid {
+/* กริดวันที่ขนาดกะทัดรัด (ช่องปฏิทินไม่ใหญ่มาก เหมาะสมกับโทรศัพท์) */
+.cal-phone-grid,
+#schoolCalendarModal .cal-days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 4px;
 }
 
-/* เซลล์สี่เหลี่ยมวันที่กะทัดรัด ปรับสัดส่วน 1:1 ("เต็มสี่เหลี่ยม") */
-#dashCalendarSection .cal-day-cell {
+/* เซลล์สี่เหลี่ยมวันที่ ขนาดกะทัดรัดพอดีมือถือ (~36px - 42px) */
+#schoolCalendarModal .cal-day-cell {
   aspect-ratio: 1 / 1;
   min-height: unset !important;
   height: auto !important;
-  padding: 4px 2px !important;
-  border-radius: 10px;
+  max-width: 44px;
+  max-height: 44px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 2px !important;
+  border-radius: 8px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   display: flex;
@@ -8035,22 +8147,22 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-#dashCalendarSection .cal-day-cell:hover:not(.cal-day-other-month) {
+#schoolCalendarModal .cal-day-cell:hover:not(.cal-day-other-month) {
   transform: translateY(-2px);
   border-color: #cbd5e1;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
 }
 
-#dashCalendarSection .cal-day-cell.cal-day-other-month {
-  opacity: 0.25;
-  background: #fafbfc;
+#schoolCalendarModal .cal-day-cell.cal-day-other-month {
+  opacity: 0.22;
+  background: transparent;
   border-color: #f1f5f9;
   cursor: default;
   pointer-events: none;
 }
 
-#dashCalendarSection .cal-day-cell .cal-day-num {
-  font-size: 0.92rem;
+#schoolCalendarModal .cal-day-cell .cal-day-num {
+  font-size: 0.84rem;
   font-weight: 700;
   color: #334155;
   line-height: 1;
@@ -8060,66 +8172,58 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   background: transparent !important;
 }
 
-#dashCalendarSection .cal-day-cell.cal-day-sun:not(.cal-day-other-month):not(.cal-day-event-filled) .cal-day-num {
+#schoolCalendarModal .cal-day-cell.cal-day-sun:not(.cal-day-other-month):not(.cal-day-event-filled) .cal-day-num {
   color: #e11d48;
 }
 
-#dashCalendarSection .cal-day-cell.cal-day-fri:not(.cal-day-other-month):not(.cal-day-event-filled) .cal-day-num {
+#schoolCalendarModal .cal-day-cell.cal-day-fri:not(.cal-day-other-month):not(.cal-day-event-filled) .cal-day-num {
   color: #059669;
 }
 
 /* วันนี้ (ไม่มีกิจกรรม) */
-#dashCalendarSection .cal-day-cell.cal-day-today:not(.cal-day-event-filled) {
+#schoolCalendarModal .cal-day-cell.cal-day-today:not(.cal-day-event-filled) {
   background: #ecfdf5;
   border: 2px solid #059669;
 }
 
-#dashCalendarSection .cal-day-cell.cal-day-today:not(.cal-day-event-filled) .cal-day-num {
+#schoolCalendarModal .cal-day-cell.cal-day-today:not(.cal-day-event-filled) .cal-day-num {
   color: #047857;
   font-weight: 800;
-}
-
-.cal-mini-today-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 9999px;
-  background: #059669;
-  margin-top: 3px;
 }
 
 /* ========================================================
    มีสีสันตามการประกาศเต็มสี่เหลี่ยม (Filled Color Day Cells)
    ======================================================== */
-#dashCalendarSection .cal-day-cell.cal-day-event-filled {
+#schoolCalendarModal .cal-day-cell.cal-day-event-filled {
   color: #ffffff !important;
   border-width: 1px !important;
   border-style: solid !important;
   transform: translateZ(0);
 }
 
-#dashCalendarSection .cal-day-cell.cal-day-event-filled:hover {
+#schoolCalendarModal .cal-day-cell.cal-day-event-filled:hover {
   transform: translateY(-2px) scale(1.05);
 }
 
-#dashCalendarSection .cal-day-cell.cal-day-event-filled .cal-day-num {
+#schoolCalendarModal .cal-day-cell.cal-day-event-filled .cal-day-num {
   color: #ffffff !important;
   font-weight: 800;
-  font-size: 0.98rem;
+  font-size: 0.88rem;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   line-height: 1;
 }
 
 .cal-mini-label {
-  font-size: 0.58rem;
+  font-size: 0.52rem;
   font-weight: 700;
   color: #ffffff;
   line-height: 1;
-  margin-top: 3px;
-  padding: 1.5px 4px;
-  border-radius: 4px;
+  margin-top: 2px;
+  padding: 1px 3px;
+  border-radius: 3px;
   background: rgba(0, 0, 0, 0.2);
   letter-spacing: -0.01em;
-  max-width: 92%;
+  max-width: 94%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -8127,61 +8231,75 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
 }
 
 /* 1. สอบ / ประเมินผล -> แดงกุหลาบสดใส (Rose / Crimson) */
-#dashCalendarSection .cal-day-cell.fill-cat-exam {
+#schoolCalendarModal .cal-day-cell.fill-cat-exam,
+.fill-cat-exam {
   background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
   border-color: #be123c !important;
-  box-shadow: 0 3px 8px rgba(225, 29, 72, 0.32);
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.32);
 }
 
 /* 2. วันหยุด / ปิดภาคเรียน -> สีส้มอำพันอบอุ่น (Amber / Orange) */
-#dashCalendarSection .cal-day-cell.fill-cat-holiday {
+#schoolCalendarModal .cal-day-cell.fill-cat-holiday,
+.fill-cat-holiday {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
   border-color: #b45309 !important;
-  box-shadow: 0 3px 8px rgba(217, 119, 6, 0.32);
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.32);
 }
 
 /* 3. ศาสนกิจ / ละหมาด / วันศุกร์ -> สีเขียวมรกตอิสลามสง่างาม (Emerald) */
-#dashCalendarSection .cal-day-cell.fill-cat-prayer {
+#schoolCalendarModal .cal-day-cell.fill-cat-prayer,
+.fill-cat-prayer {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
   border-color: #047857 !important;
-  box-shadow: 0 3px 8px rgba(5, 150, 105, 0.32);
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.32);
 }
 
 /* 4. การเรียนการสอน / วิชาการ -> สีน้ำเงินแซฟไฟร์ลุ่มลึก (Sapphire Blue) */
-#dashCalendarSection .cal-day-cell.fill-cat-academic {
+#schoolCalendarModal .cal-day-cell.fill-cat-academic,
+.fill-cat-academic {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
   border-color: #1d4ed8 !important;
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.32);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.32);
 }
 
 /* 5. ประชุม / สัมมนา -> สีม่วงไวโอเล็ตคลาสสิก (Violet) */
-#dashCalendarSection .cal-day-cell.fill-cat-meeting {
+#schoolCalendarModal .cal-day-cell.fill-cat-meeting,
+.fill-cat-meeting {
   background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
   border-color: #6d28d9 !important;
-  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.32);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.32);
 }
 
 /* 6. กิจกรรมทั่วไป / ประกาศโรงเรียน -> สีฟ้าครามโอเชียน (Teal Cyan) */
-#dashCalendarSection .cal-day-cell.fill-cat-general {
+#schoolCalendarModal .cal-day-cell.fill-cat-general,
+.fill-cat-general {
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
   border-color: #0369a1 !important;
-  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.32);
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.32);
 }
 
 /* วันนี้ที่มีประกาศกิจกรรม: ไฮไลท์กรอบขอบ 2 ชั้น ชัดเจน */
-#dashCalendarSection .cal-day-cell.cal-day-event-filled.cal-day-today {
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4.5px #059669, 0 4px 12px rgba(0, 0, 0, 0.28) !important;
+#schoolCalendarModal .cal-day-cell.cal-day-event-filled.cal-day-today {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px #059669, 0 4px 10px rgba(0, 0, 0, 0.28) !important;
 }
 
 .cal-mini-today-indicator {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 6px;
-  height: 6px;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
   background: #ffffff;
   border-radius: 9999px;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
+}
+
+.cal-mini-today-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #059669;
+  margin-top: 2px;
 }
 
 /* แถบอธิบายสีหมวดหมู่ (Legend) */
@@ -8190,73 +8308,67 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 8px 14px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
+  gap: 6px 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .cal-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
+  gap: 5px;
+  font-size: 0.72rem;
   font-weight: 600;
   color: #64748b;
 }
 
 .cal-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 2.5px;
   flex-shrink: 0;
 }
 
-.cal-legend-dot.cat-exam {
-  background: #e11d48;
-}
-
-.cal-legend-dot.cat-holiday {
-  background: #f59e0b;
-}
-
-.cal-legend-dot.cat-prayer {
-  background: #059669;
-}
-
-.cal-legend-dot.cat-academic {
-  background: #2563eb;
-}
-
-.cal-legend-dot.cat-general {
-  background: #0ea5e9;
-}
+.cal-legend-dot.cat-exam { background: #e11d48; }
+.cal-legend-dot.cat-holiday { background: #f59e0b; }
+.cal-legend-dot.cat-prayer { background: #059669; }
+.cal-legend-dot.cat-academic { background: #2563eb; }
+.cal-legend-dot.cat-general { background: #0ea5e9; }
 
 .cal-compact-hint {
   text-align: center;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: #94a3b8;
-  margin-top: 8px;
+  margin-top: 6px;
   font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
+}
+
+.cal-phone-modal-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* ========================================================
    DAY EVENTS POPUP MODAL ("รายละเอียดจะเด้งขึ้น")
    ======================================================== */
 .cal-modal-icon-badge {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
   background: #0f172a;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
 }
 
@@ -8264,7 +8376,7 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 1.15rem;
+  padding: 1.1rem;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
   border-left: 4px solid #94a3b8;
   transition: transform 0.15s ease;
@@ -8287,20 +8399,20 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
 }
 
 .cal-day-modal-card-title {
-  font-size: 1.1rem;
+  font-size: 1.08rem;
   font-weight: 800;
   color: #0f172a;
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.7rem 0;
   line-height: 1.35;
 }
 
 .cal-day-modal-meta-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.6rem 0.85rem;
-  margin-bottom: 0.85rem;
+  gap: 0.55rem 0.8rem;
+  margin-bottom: 0.8rem;
   background: #f8fafc;
-  padding: 0.75rem 0.85rem;
+  padding: 0.7rem 0.8rem;
   border-radius: 10px;
   border: 1px solid #f1f5f9;
 }
@@ -8308,8 +8420,8 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
 .cal-day-modal-meta-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  gap: 0.45rem;
+  font-size: 0.84rem;
   font-weight: 600;
   color: #334155;
 }
@@ -8318,12 +8430,12 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 0.85rem;
-  margin-bottom: 0.75rem;
+  padding: 0.8rem;
+  margin-bottom: 0.7rem;
 }
 
 .cal-day-modal-desc-title {
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
@@ -8335,7 +8447,7 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
 }
 
 .cal-day-modal-desc-text {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   color: #1e293b;
   line-height: 1.6;
   white-space: pre-line;
@@ -8347,36 +8459,38 @@ body.staff-monitor-active .view-section:not(#view-staff-monitor) {
   justify-content: space-between;
   gap: 0.5rem;
   flex-wrap: wrap;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   color: #94a3b8;
-  padding-top: 0.5rem;
+  padding-top: 0.45rem;
   border-top: 1px dashed #e2e8f0;
 }
 
-@media (max-width: 640px) {
-  #dashCalendarSection .cal-card-wrapper {
-    border-radius: 14px;
+@media (max-width: 420px) {
+  .cal-phone-modal-dialog {
+    width: 98% !important;
   }
-  #dashCalendarSection .cal-card-header {
-    padding: 0.85rem 0.95rem;
+  .cal-phone-modal-body {
+    padding: 0.85rem 0.75rem 1rem !important;
   }
-  #dashCalendarSection .cal-card-body {
-    padding: 0.75rem 0.85rem 1rem !important;
+  .cal-phone-matrix {
+    padding: 0.65rem 0.55rem;
   }
-  #dashCalendarSection .cal-days-grid {
-    gap: 4px;
+  .cal-phone-grid,
+  #schoolCalendarModal .cal-days-grid {
+    gap: 3px;
   }
-  #dashCalendarSection .cal-day-cell {
-    border-radius: 8px;
-    padding: 2px !important;
+  #schoolCalendarModal .cal-day-cell {
+    max-width: 38px;
+    max-height: 38px;
+    border-radius: 6px;
   }
-  #dashCalendarSection .cal-day-cell .cal-day-num {
-    font-size: 0.84rem;
+  #schoolCalendarModal .cal-day-cell .cal-day-num {
+    font-size: 0.76rem;
   }
   .cal-mini-label {
-    font-size: 0.52rem;
-    padding: 1px 2px;
-    margin-top: 2px;
+    font-size: 0.48rem;
+    padding: 0.5px 2px;
+    margin-top: 1px;
   }
   .cal-day-modal-meta-grid {
     grid-template-columns: 1fr;

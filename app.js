@@ -11548,6 +11548,7 @@ function renderCalendar(targetScope = 'all') {
     // Render Agenda
     renderCalendarAgenda(scope);
   });
+  updateCalendarLauncherBadge();
 }
 
 function renderCalendarAgenda(scope) {
@@ -11715,6 +11716,30 @@ function openCalendarEventDetail(eventId) {
   }
 
   openModal('calendarEventDetailModal');
+}
+
+function openSchoolCalendarModal() {
+  renderCalendar('dash');
+  updateCalendarLauncherBadge();
+  openModal('schoolCalendarModal');
+}
+
+function updateCalendarLauncherBadge() {
+  const badge = document.getElementById('calLauncherEventBadge');
+  if (!badge) return;
+  const visibleEvents = getVisibleCalendarEvents();
+  const curY = calCurrentYear;
+  const curM = calCurrentMonth + 1;
+  const monthEvents = visibleEvents.filter(e => {
+    if (!e.startDate) return false;
+    const parts = e.startDate.split('-');
+    return parseInt(parts[0], 10) === curY && parseInt(parts[1], 10) === curM;
+  });
+  if (monthEvents.length > 0) {
+    badge.innerHTML = `<i class="fa-solid fa-bell"></i> ${monthEvents.length} กิจกรรมเดือนนี้`;
+  } else {
+    badge.innerHTML = `<i class="fa-solid fa-calendar-check"></i> กำหนดการปกติ`;
+  }
 }
 
 function handleCalendarDayClick(dateStr, scope) {

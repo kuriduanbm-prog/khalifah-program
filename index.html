@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6.3">
+  <link rel="stylesheet" href="style.css?v=6.4">
 </head>
 <body class="auth-locked">
 
@@ -265,104 +265,24 @@
       </div>
 
       
-      <!-- Minimalist School Calendar Section (Student & School View) -->
-      <div class="calendar-bento-container" id="dashCalendarSection" style="margin-bottom: 1.5rem;">
-        <div class="card cal-card-wrapper">
-          <div class="card-header cal-card-header">
-            <div class="cal-header-title-group">
-              <div class="card-title">
-                <i class="fa-solid fa-calendar-days" style="color: var(--primary);"></i> ปฏิทินกิจกรรมโรงเรียน
-              </div>
-              <div class="card-subtitle">
-                ติดตามกำหนดการกิจกรรม วันสอบ ละหมาด และวันสำคัญของโรงเรียน
-              </div>
+      <!-- Minimalist School Calendar Launcher Card (Student View: กดปุ่มเพื่อดูปฏิทิน) -->
+      <div class="calendar-bento-container" id="dashCalendarSection" style="margin-bottom: 1.25rem;">
+        <div class="card cal-launcher-card" onclick="openSchoolCalendarModal()">
+          <div class="cal-launcher-content">
+            <div class="cal-launcher-icon-wrap">
+              <i class="fa-solid fa-calendar-days"></i>
             </div>
-            
-            <div class="cal-controls-toolbar">
-              <div class="cal-select-group">
-                <select id="calMonthSelect-dash" class="cal-select cal-select-month" onchange="onCalendarSelectChange('dash')">
-                  <!-- Injected via JS -->
-                </select>
-                <select id="calYearSelect-dash" class="cal-select cal-select-year" onchange="onCalendarSelectChange('dash')">
-                  <!-- Injected via JS -->
-                </select>
+            <div class="cal-launcher-info">
+              <div class="cal-launcher-title-row">
+                <span class="cal-launcher-title">ปฏิทินกิจกรรมโรงเรียน</span>
+                <span class="cal-launcher-badge" id="calLauncherEventBadge"><i class="fa-solid fa-calendar-check"></i> กำหนดการ & ประกาศ</span>
               </div>
-              
-              <div class="cal-btn-group">
-                <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(-1, 'dash')" title="เดือนก่อนหน้า">
-                  <i class="fa-solid fa-chevron-left"></i>
-                </button>
-                <button type="button" class="btn-cal-today" onclick="resetCalendarToToday('dash')">
-                  <i class="fa-solid fa-clock-rotate-left"></i> วันนี้
-                </button>
-                <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(1, 'dash')" title="เดือนถัดไป">
-                  <i class="fa-solid fa-chevron-right"></i>
-                </button>
-              </div>
-
-              <!-- View Mode Toggle (Full Month / Split View) -->
-              <div class="cal-view-toggle-group">
-                <button type="button" class="btn-cal-view active" id="btnCalViewFull-dash" onclick="setCalendarViewMode('full', 'dash')" title="มุมมองทั้งเดือน">
-                  <i class="fa-solid fa-calendar-days"></i> ทั้งเดือน
-                </button>
-                <button type="button" class="btn-cal-view" id="btnCalViewSplit-dash" onclick="setCalendarViewMode('split', 'dash')" title="มุมมองคู่กำหนดการ">
-                  <i class="fa-solid fa-table-columns"></i> คู่กำหนดการ
-                </button>
-              </div>
-
-              <!-- Only visible to Admin/Teacher/Executive -->
-              <button type="button" class="btn btn-primary btn-sm cal-add-event-btn" id="btnDashCalAddEvent" onclick="openCalendarEventModal()" style="display: none;">
-                <i class="fa-solid fa-plus"></i> เพิ่มกิจกรรม
-              </button>
+              <p class="cal-launcher-desc">ติดตามกำหนดการกิจกรรม วันสอบ ละหมาด และวันสำคัญของโรงเรียน</p>
             </div>
           </div>
-
-          <div class="cal-card-body">
-            <div class="cal-grid-layout view-full" id="calGridLayout-dash">
-              <!-- Left: Month Matrix -->
-              <div class="cal-matrix-col">
-                <div class="cal-weekdays-row">
-                  <div class="cal-weekday cal-sun">อา.</div>
-                  <div class="cal-weekday">จ.</div>
-                  <div class="cal-weekday">อ.</div>
-                  <div class="cal-weekday">พ.</div>
-                  <div class="cal-weekday">พฤ.</div>
-                  <div class="cal-weekday cal-fri">ศ.</div>
-                  <div class="cal-weekday">ส.</div>
-                </div>
-                <div class="cal-days-grid" id="calDaysGrid-dash">
-                  <!-- Injected via app.js -->
-                </div>
-
-                <!-- Minimalist Category Legend for Student View -->
-                <div class="cal-compact-legend">
-                  <div class="cal-legend-item"><span class="cal-legend-dot cat-exam"></span> สอบ/ประเมิน</div>
-                  <div class="cal-legend-item"><span class="cal-legend-dot cat-holiday"></span> วันหยุด</div>
-                  <div class="cal-legend-item"><span class="cal-legend-dot cat-prayer"></span> ศาสนกิจ</div>
-                  <div class="cal-legend-item"><span class="cal-legend-dot cat-academic"></span> การเรียน</div>
-                  <div class="cal-legend-item"><span class="cal-legend-dot cat-general"></span> กิจกรรม</div>
-                </div>
-                <div class="cal-compact-hint">
-                  <i class="fa-solid fa-hand-pointer"></i> แตะที่วันที่มีสีเพื่อดูประกาศและรายละเอียด
-                </div>
-              </div>
-
-              <!-- Right: Selected Date & Agenda Column -->
-              <div class="cal-agenda-col">
-                <div class="cal-agenda-header">
-                  <div class="cal-agenda-date" id="calAgendaDate-dash">
-                    <span class="cal-agenda-day-name">-</span>
-                    <span class="cal-agenda-full-date">-</span>
-                  </div>
-                  <span class="cal-agenda-count-badge" id="calAgendaBadge-dash">0 กิจกรรม</span>
-                </div>
-                
-                <div class="cal-agenda-items-container" id="calAgendaList-dash">
-                  <!-- Injected via app.js -->
-                </div>
-              </div>
-            </div>
-          </div>
+          <button type="button" class="btn btn-primary btn-sm cal-launcher-action-btn" onclick="openSchoolCalendarModal(); event.stopPropagation();">
+            <i class="fa-regular fa-calendar-check"></i> กดดูปฏิทิน
+          </button>
         </div>
       </div>
 
@@ -4066,6 +3986,90 @@
     </div>
   </div>
 
+  <!-- Modal: School Calendar Viewer for Students (กดปุ่มเพื่อดูปฏิทิน ขนาดกะทัดรัดพอดีมือถือ) -->
+  <div class="modal-overlay" id="schoolCalendarModal" onclick="if(event.target===this)closeModal('schoolCalendarModal')">
+    <div class="modal-dialog cal-phone-modal-dialog">
+      <div class="modal-header cal-phone-modal-header">
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <div class="cal-modal-icon-badge">
+            <i class="fa-solid fa-calendar-days"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 1.12rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.25;">ปฏิทินกิจกรรมโรงเรียน</h3>
+            <p style="font-size: 0.74rem; color: #64748b; margin: 2px 0 0 0;">แตะที่วันที่มีสีเพื่อดูรายละเอียดประกาศ</p>
+          </div>
+        </div>
+        <button type="button" class="btn-icon" onclick="closeModal('schoolCalendarModal')" title="ปิดปฏิทิน">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body cal-phone-modal-body">
+        <!-- Controls Toolbar: Month/Year select + Prev/Today/Next -->
+        <div class="cal-controls-toolbar cal-phone-toolbar">
+          <div class="cal-select-group">
+            <select id="calMonthSelect-dash" class="cal-select cal-select-month" onchange="onCalendarSelectChange('dash')"></select>
+            <select id="calYearSelect-dash" class="cal-select cal-select-year" onchange="onCalendarSelectChange('dash')"></select>
+          </div>
+          <div class="cal-btn-group">
+            <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(-1, 'dash')" title="เดือนก่อนหน้า">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button type="button" class="btn-cal-today" onclick="resetCalendarToToday('dash')">
+              วันนี้
+            </button>
+            <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(1, 'dash')" title="เดือนถัดไป">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+          <!-- Hidden compatibility elements -->
+          <button type="button" id="btnDashCalAddEvent" style="display: none;"></button>
+          <div id="btnCalViewFull-dash" style="display: none;"></div>
+          <div id="btnCalViewSplit-dash" style="display: none;"></div>
+        </div>
+
+        <!-- Compact Calendar Matrix (Optimized for Mobile Phones) -->
+        <div class="cal-phone-matrix">
+          <div class="cal-weekdays-row cal-phone-weekdays">
+            <div class="cal-weekday cal-sun">อา.</div>
+            <div class="cal-weekday">จ.</div>
+            <div class="cal-weekday">อ.</div>
+            <div class="cal-weekday">พ.</div>
+            <div class="cal-weekday">พฤ.</div>
+            <div class="cal-weekday cal-fri">ศ.</div>
+            <div class="cal-weekday">ส.</div>
+          </div>
+          <div class="cal-days-grid cal-phone-grid" id="calDaysGrid-dash">
+            <!-- Injected dynamically via app.js -->
+          </div>
+
+          <!-- Category Legend Bar -->
+          <div class="cal-compact-legend cal-phone-legend">
+            <div class="cal-legend-item"><span class="cal-legend-dot cat-exam"></span> สอบ/ประเมิน</div>
+            <div class="cal-legend-item"><span class="cal-legend-dot cat-holiday"></span> วันหยุด</div>
+            <div class="cal-legend-item"><span class="cal-legend-dot cat-prayer"></span> ศาสนกิจ</div>
+            <div class="cal-legend-item"><span class="cal-legend-dot cat-academic"></span> การเรียน</div>
+            <div class="cal-legend-item"><span class="cal-legend-dot cat-general"></span> กิจกรรม</div>
+          </div>
+          <div class="cal-compact-hint">
+            <i class="fa-solid fa-hand-pointer"></i> แตะที่วันที่มีสีเพื่อดูรายละเอียดประกาศ
+          </div>
+        </div>
+
+        <!-- Hidden agenda containers to maintain complete app.js compatibility -->
+        <div id="calGridLayout-dash" style="display: none;">
+          <div id="calAgendaDate-dash"></div>
+          <div id="calAgendaBadge-dash"></div>
+          <div id="calAgendaList-dash"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer cal-phone-modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('schoolCalendarModal')">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Day Events / Announcements Viewer (Triggered when tapping a date on the calendar) -->
   <div class="modal-overlay" id="calendarDayEventsModal" onclick="if(event.target===this)closeModal('calendarDayEventsModal')">
     <div class="modal-dialog" style="max-width: 540px;">
@@ -4199,6 +4203,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=6.3"></script>
+  <script src="app.js?v=6.4"></script>
 </body>
 </html>
