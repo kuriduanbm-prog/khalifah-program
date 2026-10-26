@@ -2668,13 +2668,14 @@ function updateGpsCountdownDisplay() {
 
   if (locBadge && locText) {
     locBadge.style.display = 'inline-flex';
-    locBadge.style.background = isWithin ? '#ecfdf5' : '#fffbeb';
-    locBadge.style.borderColor = isWithin ? '#a7f3d0' : '#fde68a';
-    locBadge.style.color = isWithin ? '#065f46' : '#92400e';
+    locBadge.className = 'prayer-verified-loc-badge ' + (isWithin ? 'verified-in-zone' : 'verified-out-zone');
+    locBadge.style.background = isWithin ? 'rgba(5, 150, 105, 0.88)' : 'rgba(217, 119, 6, 0.88)';
+    locBadge.style.borderColor = isWithin ? 'rgba(167, 243, 208, 0.5)' : 'rgba(253, 230, 138, 0.5)';
+    locBadge.style.color = '#ffffff';
     if (isWithin) {
-      locText.innerHTML = `พิกัด: <b>${locName}</b> ✓ (สดใหม่เหลือ <span style="color:#059669; font-weight:700;">${remainingSec}s</span>)`;
+      locText.innerHTML = `พิกัด: <b>${locName}</b> ✓ (<span style="color:#ffffff; font-weight:700;">เหลือ ${remainingSec}วิ</span>)`;
     } else {
-      locText.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: #d97706;"></i> <b>อยู่นอกพื้นที่:</b> ${locName} (สดใหม่เหลือ <span style="color:#b45309; font-weight:700;">${remainingSec}s</span>)`;
+      locText.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <b>อยู่นอกพื้นที่:</b> ${locName} (<span style="color:#ffffff; font-weight:700;">เหลือ ${remainingSec}วิ</span>)`;
     }
   }
 
@@ -2701,6 +2702,60 @@ function formatDistance(meters) {
 
 // ----------------- PRAYER CHECK-IN LOGIC ----------------- //
 
+function refreshPrayerChipsStatus() {
+  if (!currentStudent) return;
+
+  const now = new Date();
+  const todayYMD = now.toISOString().split('T')[0];
+
+  let hist = [];
+  try {
+    hist = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+  } catch (e) { hist = []; }
+
+  // รวบรวมข้อมูลการละหมาดของนักเรียนในวันนี้ทั้งหมด (ทั้งที่มีรูป ถ่ายรูปแล้ว หรือบันทึกหมายเหตุแล้ว)
+  const studentTodayPrayers = [...todayPrayers, ...hist].filter(p => {
+    if (!p) return false;
+    const matchStudent = isIdMatch(p.studentId, currentStudent.studentId);
+    const pDate = p.date || (p.timestamp ? p.timestamp.split('T')[0] : '');
+    return matchStudent && (!pDate || pDate === todayYMD);
+  });
+
+  const CANONICAL_SLOTS = [
+    { key: 'ซุบฮิ', altIds: ['ptime-ซุบฮิ'], statusIds: ['pstatus-ซุบฮิ'] },
+    { key: 'ซุฮริ', altIds: ['ptime-ซุฮริ'], statusIds: ['pstatus-ซุฮริ'] },
+    { key: 'อัศรฺ', altIds: ['ptime-อัศรฺ', 'ptime-อัศรุ'], statusIds: ['pstatus-อัศรฺ', 'pstatus-อัศรุ'] },
+    { key: 'มัฆริบ', altIds: ['ptime-มัฆริบ'], statusIds: ['pstatus-มัฆริบ'] },
+    { key: 'อีชาอ์', altIds: ['ptime-อีชาอ์'], statusIds: ['pstatus-อีชาอ์'] }
+  ];
+
+  CANONICAL_SLOTS.forEach(slot => {
+    const chipEl = slot.altIds.map(id => document.getElementById(id)).find(Boolean);
+    const statusEl = slot.statusIds.map(id => document.getElementById(id)).find(Boolean);
+    if (!chipEl) return;
+
+    // ตรวจสอบว่าช่วงเวลานี้ได้รับการบันทึกแล้วหรือไม่ (ถ่ายรูปแล้ว / เช็คแล้ว / มีหมายเหตุ)
+    const rec = studentTodayPrayers.find(p => {
+      const pKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || p.timeSlot || '') : (p.prayerName || p.prayerTime || '');
+      return pKey === slot.key;
+    });
+
+    if (rec) {
+      chipEl.classList.add('done');
+      if (statusEl) {
+        statusEl.innerHTML = '<i class="fa-solid fa-check"></i> เช็คแล้ว';
+        statusEl.style.color = '#059669';
+      }
+    } else {
+      chipEl.classList.remove('done');
+      if (statusEl) {
+        statusEl.innerText = 'ยังไม่เช็ค';
+        statusEl.style.color = '';
+      }
+    }
+  });
+}
+
 function selectPrayerTime(timeName, element) {
   selectedPrayerTime = timeName;
 
@@ -2709,7 +2764,10 @@ function selectPrayerTime(timeName, element) {
   if (element) {
     element.classList.add('selected');
   } else {
-    const target = document.getElementById(`ptime-${timeName}`);
+    const key = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(timeName) : timeName;
+    const target = document.getElementById(`ptime-${timeName}`) ||
+                   document.getElementById(`ptime-${key}`) ||
+                   (key === 'อัศรฺ' ? (document.getElementById('ptime-อัศรฺ') || document.getElementById('ptime-อัศรุ')) : null);
     if (target) target.classList.add('selected');
   }
 
@@ -2718,6 +2776,7 @@ function selectPrayerTime(timeName, element) {
   if (overlayPrayer) overlayPrayer.innerText = `เวลาละหมาด: ${timeName}`;
 
   checkPrayerUnlockState();
+  refreshPrayerChipsStatus();
 }
 
 function checkPrayerUnlockState() {
@@ -2748,9 +2807,10 @@ function checkPrayerUnlockState() {
     `;
     if (locBadge && locText) {
       locBadge.style.display = 'inline-flex';
-      locBadge.style.background = '#fef2f2';
-      locBadge.style.borderColor = '#fecaca';
-      locBadge.style.color = '#991b1b';
+      locBadge.className = 'prayer-verified-loc-badge verified-out-zone';
+      locBadge.style.background = 'rgba(225, 29, 72, 0.88)';
+      locBadge.style.borderColor = 'rgba(254, 205, 211, 0.4)';
+      locBadge.style.color = '#ffffff';
       locText.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> ยังไม่มีพิกัดสดใหม่ (หมดอายุ 60 วินาที)';
     }
   }
@@ -2955,7 +3015,8 @@ async function captureAndSavePrayerInstant() {
   };
 
   // Replace or add today's prayer for this time
-  const existingIdx = todayPrayers.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime));
+  const targetKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime;
+  const existingIdx = todayPrayers.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || '') === targetKey : (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime)));
   if (existingIdx !== -1) {
     todayPrayers[existingIdx] = prayerRecord;
   } else {
@@ -2968,16 +3029,16 @@ async function captureAndSavePrayerInstant() {
   try {
     historyList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
   } catch (e) { historyList = []; }
-  historyList.unshift(prayerRecord);
-  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList.slice(0, 150)));
-
-  // Update UI Chip
-  const chipEl = document.getElementById(`ptime-${selectedPrayerTime}`);
-  if (chipEl) {
-    chipEl.classList.add('done');
-    const statusEl = document.getElementById(`pstatus-${selectedPrayerTime}`);
-    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-check"></i> เช็คแล้ว';
+  const histIdx = historyList.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || '') === targetKey : (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime)) && p.date === dateStr);
+  if (histIdx !== -1) {
+    historyList[histIdx] = prayerRecord;
+  } else {
+    historyList.unshift(prayerRecord);
   }
+  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList.slice(0, 200)));
+
+  // Update all UI Chips to green
+  refreshPrayerChipsStatus();
 
   // 1. Show Animated Viewfinder Confirmation Overlay (#prayerCaptureSuccessOverlay)
   const successOverlay = document.getElementById('prayerCaptureSuccessOverlay');
@@ -3288,14 +3349,21 @@ function updatePrayerNoteChipsUI() {
   const selectedTextEl = document.getElementById('prayerNoteTimeSelectedText');
   if (selectedTextEl) {
     if (selectedPrayerNoteTimeSlots.length === 0) {
-      selectedTextEl.innerHTML = `* บังคับเลือกเวลา (เลือกได้หลายเวลา)`;
+      selectedTextEl.innerHTML = `* บังคับเลือกเวลา`;
       selectedTextEl.style.color = '#ef4444';
+      selectedTextEl.title = 'กรุณาเลือกเวลาอย่างน้อย 1 เวลา';
     } else if (selectedPrayerNoteTimeSlots.length === 5) {
-      selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check-double"></i> เลือกครบ 5 เวลา (ทุกเวลา)</span>`;
+      selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check-double"></i> ครบ 5 เวลา</span>`;
       selectedTextEl.style.color = '#0284c7';
+      selectedTextEl.title = 'เลือกครบทั้ง 5 เวลา: ซุบฮิ, ซุฮริ, อัศรุ, มัฆริบ, อีชาอ์';
+    } else if (selectedPrayerNoteTimeSlots.length === 1) {
+      selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check"></i> ${selectedPrayerNoteTimeSlots[0]}</span>`;
+      selectedTextEl.style.color = '#0284c7';
+      selectedTextEl.title = `เลือกเวลา: ${selectedPrayerNoteTimeSlots[0]}`;
     } else {
-      selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check"></i> เลือก ${selectedPrayerNoteTimeSlots.length} เวลา: ${selectedPrayerNoteTimeSlots.join(', ')}</span>`;
+      selectedTextEl.innerHTML = `<span style="color: #0284c7; font-weight: 700;"><i class="fa-solid fa-check"></i> ${selectedPrayerNoteTimeSlots.length} เวลา</span>`;
       selectedTextEl.style.color = '#0284c7';
+      selectedTextEl.title = `เลือก ${selectedPrayerNoteTimeSlots.length} เวลา: ${selectedPrayerNoteTimeSlots.join(', ')}`;
     }
   }
 }
@@ -3419,6 +3487,7 @@ async function savePrayerNoteOnly() {
   const savedTimes = [];
 
   for (const pTime of selectedPrayerNoteTimeSlots) {
+    const slotKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(pTime) : pTime;
     let prayerStatus = 'ตรงเวลา';
     if (prayerNote) {
       if (prayerNote.includes('ประจำเดือน') || prayerNote.includes('อุซุร')) {
@@ -3430,8 +3499,12 @@ async function savePrayerNoteOnly() {
       }
     }
 
-    const existingIdx = todayPrayers.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerTime === pTime || p.prayerName === pTime) && p.date === dateStr);
-    const logId = existingIdx !== -1 ? (todayPrayers[existingIdx].logId || todayPrayers[existingIdx].id) : ('PRY-' + Date.now() + '-' + pTime);
+    const existingIdx = todayPrayers.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerTime || p.prayerName || '') === slotKey : (p.prayerTime === pTime || p.prayerName === pTime)) && p.date === dateStr);
+    const histIdx = historyList.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerTime || p.prayerName || '') === slotKey : (p.prayerTime === pTime || p.prayerName === pTime)) && p.date === dateStr);
+    const logId = existingIdx !== -1 ? (todayPrayers[existingIdx].logId || todayPrayers[existingIdx].id) : (histIdx !== -1 ? (historyList[histIdx].logId || historyList[histIdx].id) : ('PRY-' + Date.now() + '-' + slotKey));
+
+    // Preserve existing photo if previously captured
+    const existingPhoto = existingIdx !== -1 ? (todayPrayers[existingIdx].photoBase64 || todayPrayers[existingIdx].photo || todayPrayers[existingIdx].photoUrl) : (histIdx !== -1 ? (historyList[histIdx].photoBase64 || historyList[histIdx].photo || historyList[histIdx].photoUrl) : '');
 
     const prayerRecord = {
       id: logId,
@@ -3453,9 +3526,9 @@ async function savePrayerNoteOnly() {
       locationName: locName,
       distanceMeters: verifiedLocation ? verifiedLocation.distanceMeters : 0,
       isWithinZone: isWithin,
-      photo: existingIdx !== -1 ? (todayPrayers[existingIdx].photo || todayPrayers[existingIdx].photoUrl) : '',
-      photoUrl: existingIdx !== -1 ? todayPrayers[existingIdx].photoUrl : '',
-      photoBase64: existingIdx !== -1 ? (todayPrayers[existingIdx].photoBase64 || todayPrayers[existingIdx].photo) : '',
+      photo: existingPhoto || '',
+      photoUrl: existingPhoto || '',
+      photoBase64: existingPhoto || '',
       mapUrl: mapUrl
     };
 
@@ -3465,18 +3538,10 @@ async function savePrayerNoteOnly() {
       todayPrayers.unshift(prayerRecord);
     }
 
-    const histIdx = historyList.findIndex(p => p.studentId === currentStudent.studentId && (p.prayerTime === pTime || p.prayerName === pTime) && p.date === dateStr);
     if (histIdx !== -1) {
       historyList[histIdx] = prayerRecord;
     } else {
       historyList.unshift(prayerRecord);
-    }
-
-    const prayerCard = document.getElementById(`ptime-${pTime}`);
-    if (prayerCard) {
-      prayerCard.classList.add('done');
-      const statusSpan = document.getElementById(`pstatus-${pTime}`);
-      if (statusSpan) statusSpan.innerText = '✓ บันทึกแล้ว';
     }
 
     syncRecordToGoogleSheet('recordPrayer', prayerRecord);
@@ -3485,6 +3550,9 @@ async function savePrayerNoteOnly() {
 
   localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
   localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList));
+
+  // Refresh all chips to green
+  refreshPrayerChipsStatus();
 
   // Clear inputs and collapse
   if (noteInput) noteInput.value = '';
@@ -4188,15 +4256,25 @@ function renderCurrentStudentProfile() {
   if (dashGrade) dashGrade.innerText = currentStudent.grade;
   if (dashSchool) dashSchool.innerText = currentStudent.schoolName;
 
-  // Real stats calculation (รูปแนบ 1: คำนวณจำนวนเวลาละหมาดที่บันทึกครบถ้วนตามจริง ไม่ซ้ำซ้อน)
+  // Real stats calculation (คำนวณจำนวนเวลาละหมาดที่บันทึกครบถ้วนตามจริง ไม่ซ้ำซ้อน)
   const prayerSlotsRecorded = new Set();
-  todayPrayers.forEach(p => {
-    if (isIdMatch(p.studentId, currentStudent.studentId)) {
-      const slot = p.prayerTime || p.prayerName || p.timeSlot;
-      if (slot) prayerSlotsRecorded.add(slot);
-      else prayerSlotsRecorded.add(p.id || Math.random());
+  const todayYMD = new Date().toISOString().split('T')[0];
+  let hList = [];
+  try { hList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]'); } catch(e) { hList = []; }
+  [...todayPrayers, ...hList].forEach(p => {
+    if (p && isIdMatch(p.studentId, currentStudent.studentId)) {
+      const pDate = p.date || (p.timestamp ? p.timestamp.split('T')[0] : '');
+      if (!pDate || pDate === todayYMD) {
+        const slot = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerTime || p.prayerName || p.timeSlot || '') : (p.prayerTime || p.prayerName || p.timeSlot || '');
+        if (slot) prayerSlotsRecorded.add(slot);
+      }
     }
   });
+
+  // Refresh all 5 prayer chips to green for checked prayers
+  if (typeof refreshPrayerChipsStatus === 'function') {
+    refreshPrayerChipsStatus();
+  }
   const myActs = activities.filter(a => a.checkedIn);
   const att = currentStudent.attendance || { present: 0, late: 0, leave: 0, absent: 0 };
   const totalDays = att.present + att.late + att.leave + att.absent;
@@ -11338,6 +11416,8 @@ async function fetchPrayersFromCloud() {
         localHist = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
       } catch (e) { localHist = []; }
 
+      const todayStr = new Date().toISOString().split('T')[0];
+
       json.data.forEach(cp => {
         const sid = cleanIdString(cp.studentId || '');
         const date = cp.date || '';
@@ -11345,13 +11425,41 @@ async function fetchPrayersFromCloud() {
         if (!sid || !date) return;
         const existIdx = localHist.findIndex(l => isIdMatch(l.studentId, sid) && l.date === date && normalizePrayerSlotKey(l.prayerTime || l.prayerName) === slot);
         if (existIdx !== -1) {
+          const preservedPhoto = localHist[existIdx].photoBase64 || localHist[existIdx].photo || localHist[existIdx].photoUrl || '';
           localHist[existIdx] = { ...localHist[existIdx], ...cp };
+          if (preservedPhoto && !cp.photo && !cp.photoUrl && !cp.photoBase64) {
+            localHist[existIdx].photo = preservedPhoto;
+            localHist[existIdx].photoUrl = preservedPhoto;
+            localHist[existIdx].photoBase64 = preservedPhoto;
+          }
         } else {
           localHist.unshift(cp);
+        }
+
+        // ซิงค์เข้า todayPrayers หากตรงกับนักเรียนปัจจุบันในวันนี้
+        if (currentStudent && isIdMatch(currentStudent.studentId, sid) && date === todayStr) {
+          const tIdx = todayPrayers.findIndex(tp => isIdMatch(tp.studentId, sid) && normalizePrayerSlotKey(tp.prayerTime || tp.prayerName) === slot);
+          if (tIdx !== -1) {
+            const preservedP = todayPrayers[tIdx].photoBase64 || todayPrayers[tIdx].photo || todayPrayers[tIdx].photoUrl || '';
+            todayPrayers[tIdx] = { ...todayPrayers[tIdx], ...cp };
+            if (preservedP && !cp.photo && !cp.photoUrl && !cp.photoBase64) {
+              todayPrayers[tIdx].photo = preservedP;
+              todayPrayers[tIdx].photoUrl = preservedP;
+              todayPrayers[tIdx].photoBase64 = preservedP;
+            }
+          } else {
+            todayPrayers.unshift(cp);
+          }
         }
       });
 
       localStorage.setItem('khalifah_prayer_history', JSON.stringify(localHist));
+      localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+
+      // รีเฟรชชิป 5 เวลาให้เป็นสีเขียวทันที
+      if (typeof refreshPrayerChipsStatus === 'function') {
+        refreshPrayerChipsStatus();
+      }
 
       // Refresh if currently viewing prayers dashboard
       const tab = document.getElementById('admin-tab-prayers-monitor');

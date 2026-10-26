@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6.9">
+  <link rel="stylesheet" href="style.css?v=7.0">
 </head>
 <body class="auth-locked">
 
@@ -453,34 +453,32 @@
 
         <!-- 2. Compact 5 Prayer Time Chips (With Window Time Hints) -->
         <div style="margin-bottom: 0.65rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
-            <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-dark);">
-              เลือกเวลาละหมาด (ระบบไฮไลต์เวลาปัจจุบันให้อัตโนมัติ):
-            </span>
-            <span id="selectedPrayerSlotLabel" style="font-size: 0.75rem; color: #0284c7; font-weight: 600;"></span>
+          <!-- Row from Request 1: Hidden per user request -->
+          <div style="display: none;">
+            <span id="selectedPrayerSlotLabel"></span>
           </div>
           <div class="prayer-chips-row">
-            <div class="prayer-chip" onclick="selectPrayerTime('ซุบฮิ', this)" id="ptime-ซุบฮิ">
+            <div class="prayer-chip" onclick="selectPrayerTime('ซุบฮิ', this)" id="ptime-ซุบฮิ" data-prayer-key="ซุบฮิ">
               <div class="prayer-chip-name">ซุบฮิ</div>
               <div class="prayer-chip-sub">04:40 - 06:15</div>
               <span class="prayer-chip-status" id="pstatus-ซุบฮิ">ยังไม่เช็ค</span>
             </div>
-            <div class="prayer-chip" onclick="selectPrayerTime('ซุฮริ', this)" id="ptime-ซุฮริ">
+            <div class="prayer-chip" onclick="selectPrayerTime('ซุฮริ', this)" id="ptime-ซุฮริ" data-prayer-key="ซุฮริ">
               <div class="prayer-chip-name">ซุฮริ</div>
               <div class="prayer-chip-sub">12:15 - 15:15</div>
               <span class="prayer-chip-status" id="pstatus-ซุฮริ">ยังไม่เช็ค</span>
             </div>
-            <div class="prayer-chip" onclick="selectPrayerTime('อัศรฺ', this)" id="ptime-อัศรฺ">
-              <div class="prayer-chip-name">อัศรฺ</div>
+            <div class="prayer-chip" onclick="selectPrayerTime('อัศรฺ', this)" id="ptime-อัศรฺ" data-prayer-key="อัศรฺ">
+              <div class="prayer-chip-name">อัศรุ</div>
               <div class="prayer-chip-sub">15:25 - 18:05</div>
               <span class="prayer-chip-status" id="pstatus-อัศรฺ">ยังไม่เช็ค</span>
             </div>
-            <div class="prayer-chip" onclick="selectPrayerTime('มัฆริบ', this)" id="ptime-มัฆริบ">
+            <div class="prayer-chip" onclick="selectPrayerTime('มัฆริบ', this)" id="ptime-มัฆริบ" data-prayer-key="มัฆริบ">
               <div class="prayer-chip-name">มัฆริบ</div>
               <div class="prayer-chip-sub">18:15 - 19:25</div>
               <span class="prayer-chip-status" id="pstatus-มัฆริบ">ยังไม่เช็ค</span>
             </div>
-            <div class="prayer-chip" onclick="selectPrayerTime('อีชาอ์', this)" id="ptime-อีชาอ์">
+            <div class="prayer-chip" onclick="selectPrayerTime('อีชาอ์', this)" id="ptime-อีชาอ์" data-prayer-key="อีชาอ์">
               <div class="prayer-chip-name">อีชาอ์</div>
               <div class="prayer-chip-sub">19:30 - 04:00</div>
               <span class="prayer-chip-status" id="pstatus-อีชาอ์">ยังไม่เช็ค</span>
@@ -540,20 +538,26 @@
             <div id="camOverlayLocation">สถานที่: กำลังระบุ...</div>
             <div id="camOverlayDateTime">วัน-เวลา: -</div>
           </div>
+
+          <!-- Request 3: Floating Bottom HUD (Location Pill + Shutter Button INSIDE Camera per Image 4) -->
+          <div class="camera-bottom-hud" id="cameraBottomHud">
+            <!-- Compact Location Indicator Inside Camera -->
+            <div id="prayerVerifiedLocBadge" class="prayer-verified-loc-badge" style="display: none;">
+              <i class="fa-solid fa-location-dot"></i>
+              <span id="prayerVerifiedLocText">สถานที่: กำลังตรวจสอบ...</span>
+            </div>
+
+            <!-- Instant Capture & Save Shutter Button Inside Camera -->
+            <button class="btn btn-primary btn-cam-shutter btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled>
+              <div class="cam-shutter-content">
+                <i class="fa-solid fa-location-crosshairs"></i>
+                <span id="btnCaptureInstantText">ดึงพิกัดสด & ถ่ายรูปบันทึกทันที</span>
+              </div>
+            </button>
+          </div>
         </div>
 
-        <!-- Compact Location Indicator -->
-        <div id="prayerVerifiedLocBadge" style="display: none; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.82rem; font-weight: 600; margin-top: 0.6rem; margin-bottom: 0.15rem; text-align: center; max-width: 100%; word-break: break-word;">
-          <i class="fa-solid fa-location-dot"></i>
-          <span id="prayerVerifiedLocText">สถานที่: กำลังตรวจสอบ...</span>
-        </div>
-
-        <!-- 4. One-Click Instant Capture & Save Button -->
-        <button class="btn btn-primary btn-block btn-lg btn-locked" id="btnCaptureInstant" onclick="captureAndSavePrayerInstant()" disabled style="font-size: 1rem; padding: 0.85rem; box-shadow: none; margin-top: 0.45rem; margin-bottom: 0.85rem;">
-          <i class="fa-solid fa-lock"></i> กดตรวจสอบพิกัดที่กลางกล้องก่อนถ่ายรูป
-        </button>
-
-        <!-- NEW: Latest Captured Prayer Receipt Banner (Persistent visual proof below button) -->
+        <!-- NEW: Latest Captured Prayer Receipt Banner (Persistent visual proof below camera) -->
         <div id="prayerSavedReceiptCard" class="prayer-saved-receipt-card" style="display: none;">
           <!-- Injected dynamically on capture -->
         </div>
@@ -4499,6 +4503,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=6.9"></script>
+  <script src="app.js?v=7.0"></script>
 </body>
 </html>
