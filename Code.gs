@@ -49,6 +49,7 @@ const SHEETS = {
   GRADES: 'ผลการเรียนรายวิชา',
   HASANAT: 'บันทึกผลบุญ',
   APPROVALS: 'รายการรออนุมัติสมัคร',
+  PRAYER_APPROVALS: 'คำขออนุมัติละหมาด',
   SETTINGS: 'การตั้งค่า',
   CALENDAR: 'ปฏิทินกิจกรรม'
 };
@@ -66,13 +67,26 @@ const SHEET_ORDER = [
   SHEETS.GRADES,         // 9. ผลการเรียนรายวิชา
   SHEETS.HASANAT,        // 10. บันทึกผลบุญ
   SHEETS.APPROVALS,      // 11. รายการรออนุมัติสมัคร
-  SHEETS.SETTINGS,       // 12. การตั้งค่า
-  SHEETS.CALENDAR        // 13. ปฏิทินกิจกรรม
+  SHEETS.PRAYER_APPROVALS, // 12. คำขออนุมัติละหมาด
+  SHEETS.SETTINGS,       // 13. การตั้งค่า
+  SHEETS.CALENDAR        // 14. ปฏิทินกิจกรรม
 ];
 
 // ชื่อแผ่นงานเดิมภาษาอังกฤษ / ชื่อเดิม (สำหรับแปลงของเดิมให้เป็นโครงสร้างใหม่เป็นระเบียบอัตโนมัติ)
 const LEGACY_SHEETS = {
   STUDENTS: ['Students', 'students', 'Student', 'นักเรียน'],
+  TEACHERS: ['Teachers', 'teachers', 'Teacher', 'อาจารย์ผู้สอน', 'รายชื่ออาจารย์'],
+  ADMINS: ['Admins', 'admins', 'Admin', 'ผู้ดูแลระบบ', 'แอดมินดูแลระบบ'],
+  STATUS_LOGS: ['StatusLogs', 'statuslogs', 'StudentStatusLogs', 'บันทึกการเปลี่ยนสถานะนักเรียน', 'สถานะนักเรียน'],
+  PRAYERS: ['PrayerLogs', 'prayerlogs', 'Prayer_Logs', 'Prayers', 'บันทึกละหมาด'],
+  ATTENDANCE: ['AttendanceLogs', 'attendancelogs', 'Attendance_Logs', 'Attendance', 'เช็คชื่อมาเรียน'],
+  ACTIVITIES: ['Activities', 'activities', 'Activity'],
+  ACTIVITY_LOGS: ['ActivityLogs', 'activitylogs', 'Activity_Logs', 'บันทึกเข้าร่วมกิจกรรม'],
+  SETTINGS: ['Settings', 'settings', 'Setting'],
+  HASANAT: ['HasanatLogs', 'hasanatlogs', 'Hasanat_Logs', 'Hasanat', 'ผลบุญ'],
+  GRADES: ['Grades', 'grades', 'SubjectGrades', 'ผลการเรียน'],
+  APPROVALS: ['PendingApprovals', 'pendingapprovals', 'Pending_Approvals', 'รออนุมัติ'],
+  PRAYER_APPROVALS: ['PrayerApprovals', 'prayerapprovals', 'Prayer_Approvals', 'คำขออนุมัติละหมาดย้อนหลัง', 'คำขออนุมัติ'],
   TEACHERS: ['Teachers', 'teachers', 'Teacher', 'อาจารย์ผู้สอน', 'รายชื่ออาจารย์'],
   ADMINS: ['Admins', 'admins', 'Admin', 'ผู้ดูแลระบบ', 'แอดมินดูแลระบบ'],
   STATUS_LOGS: ['StatusLogs', 'statuslogs', 'StudentStatusLogs', 'บันทึกการเปลี่ยนสถานะนักเรียน', 'สถานะนักเรียน'],
@@ -141,6 +155,11 @@ const HEADERS = {
   APPROVALS: [
     'รหัสคำขอ', 'ประเภทผู้ใช้', 'รหัสประจำตัว', 'ชื่อ-นามสกุล', 'อีเมล',
     'รายละเอียดเพิ่มเติม', 'รหัสยืนยันสุ่ม (OTP)', 'สถานะ', 'เวลาที่สมัคร', 'ข้อมูล JSON'
+  ],
+  PRAYER_APPROVALS: [
+    'รหัสคำขอ', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'เบอร์ผู้ปกครอง',
+    'เวลาละหมาด', 'วันที่ละหมาด', 'เหตุผลหลัก', 'รายละเอียดเหตุผล', 'ลิงก์รูปถ่ายพยาน',
+    'สถานะคำขอ', 'เวลาที่ส่งคำขอ', 'ผู้อนุมัติ', 'เวลาที่อนุมัติ', 'หมายเหตุอาจารย์'
   ],
   CALENDAR: [
     'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'วันที่เริ่มต้น', 'วันที่สิ้นสุด', 'เวลาเริ่มต้น', 'เวลาสิ้นสุด',
@@ -337,6 +356,15 @@ function initializeSheets() {
     sheetCal.getRange('D:D').setNumberFormat('@');
     sheetCal.getRange('E:E').setNumberFormat('@');
     sheetCal.getRange('F:F').setNumberFormat('@');
+  } catch (fmtErr) {}
+
+  // 14. คำขออนุมัติละหมาด (กรณีลืมเช็คชื่อ)
+  const sheetPrayerApprovals = getOrCreateSheetSmart(ss, 'PRAYER_APPROVALS', HEADERS.PRAYER_APPROVALS, '#0284c7');
+  try {
+    sheetPrayerApprovals.getRange('A:A').setNumberFormat('@');
+    sheetPrayerApprovals.getRange('B:B').setNumberFormat('@');
+    sheetPrayerApprovals.getRange('E:E').setNumberFormat('@');
+    sheetPrayerApprovals.getRange('G:G').setNumberFormat('@');
   } catch (fmtErr) {}
 
   // อพยพข้อมูลจากชีตเดิมแบบแยกตารางอาจารย์และแอดมิน
@@ -824,6 +852,9 @@ function doGet(e) {
       case 'getCalendar':
         result = getCalendarEvents(e.parameter.role || e.parameter.userRole);
         break;
+      case 'getPrayerApprovals':
+        result = getPrayerApprovals();
+        break;
       case 'getFullDatabase':
         result = getFullDatabase();
         break;
@@ -961,6 +992,12 @@ function doPost(e) {
         break;
       case 'deleteCalendarEvent':
         result = deleteCalendarEvent(postData.data || postData);
+        break;
+      case 'prayerLateRequest':
+        result = savePrayerLateRequest(postData.data || postData);
+        break;
+      case 'updatePrayerLateRequestStatus':
+        result = updatePrayerLateRequestStatus(postData.data || postData);
         break;
       case 'getStatusLogs':
         result = getStatusLogs(postData.studentId || (postData.data && postData.data.studentId));
@@ -3820,6 +3857,150 @@ function getFullDatabase() {
     hasanat: getHasanat().data || [],
     subjectGrades: getSubjectGrades().data || [],
     calendarEvents: getCalendarEvents().data || [],
+    prayerApprovals: getPrayerApprovals().data || [],
     settings: getSettings().data || {}
   };
+}
+
+/**
+ * ดึงรายการคำขออนุมัติละหมาดย้อนหลังทั้งหมดจาก Google Sheets
+ */
+function getPrayerApprovals() {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PRAYER_APPROVALS);
+  if (!sheet) return { success: true, status: 'success', data: [] };
+
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return { success: true, status: 'success', data: [] };
+
+  const list = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row[0]) continue;
+    list.push({
+      id: cleanVal(row[0]),
+      studentId: cleanVal(row[1]),
+      studentName: cleanVal(row[2]),
+      grade: cleanVal(row[3]),
+      parentPhone: cleanVal(row[4]),
+      prayerSlot: cleanVal(row[5]),
+      date: formatSheetDate(row[6]) || cleanVal(row[6]),
+      reasonPreset: cleanVal(row[7]),
+      reasonDetail: cleanVal(row[8]),
+      photoUrl: cleanVal(row[9]),
+      status: cleanVal(row[10]) || 'pending',
+      createdAt: cleanVal(row[11]),
+      submittedAtFormatted: cleanVal(row[11]),
+      approvedBy: cleanVal(row[12]) || null,
+      approvedAt: cleanVal(row[13]) || null,
+      adminNote: cleanVal(row[14]) || ''
+    });
+  }
+  return { success: true, status: 'success', data: list };
+}
+
+/**
+ * บันทึกคำขออนุมัติละหมาดย้อนหลังลง Google Sheets
+ */
+function savePrayerLateRequest(data) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PRAYER_APPROVALS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานคำขออนุมัติละหมาด' };
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return { success: false, message: 'ระบบกำลังมีผู้ใช้งานพร้อมกันจำนวนมาก' };
+  }
+
+  try {
+    const id = cleanVal(data.id || ('PREQ-' + Date.now()));
+    const studentId = cleanVal(data.studentId || '');
+    const studentName = cleanVal(data.studentName || '');
+    const grade = cleanVal(data.grade || '');
+    const parentPhone = cleanVal(data.parentPhone || '');
+    const prayerSlot = cleanVal(data.prayerSlot || '');
+    const date = formatSheetDate(data.date) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+    const reasonPreset = cleanVal(data.reasonPreset || 'ละหมาดแล้วแต่ลืมกดเช็คชื่อ');
+    const reasonDetail = cleanVal(data.reasonDetail || '');
+    const photoUrl = cleanVal(data.photoUrl || '');
+    const status = cleanVal(data.status || 'pending');
+    const submittedAt = data.submittedAtFormatted || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+    const approvedBy = cleanVal(data.approvedBy || '');
+    const approvedAt = cleanVal(data.approvedAt || '');
+    const adminNote = cleanVal(data.adminNote || '');
+
+    const rows = sheet.getDataRange().getValues();
+    let updated = false;
+    for (let i = 1; i < rows.length; i++) {
+      if (cleanVal(rows[i][0]) === id) {
+        sheet.getRange(i + 1, 2, 1, 14).setValues([[
+          studentId, studentName, grade, parentPhone, prayerSlot, date,
+          reasonPreset, reasonDetail, photoUrl, status, submittedAt, approvedBy, approvedAt, adminNote
+        ]]);
+        updated = true;
+        break;
+      }
+    }
+
+    if (!updated) {
+      sheet.appendRow([
+        id, studentId, studentName, grade, parentPhone, prayerSlot, date,
+        reasonPreset, reasonDetail, photoUrl, status, submittedAt, approvedBy, approvedAt, adminNote
+      ]);
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow, 1).setNumberFormat('@');
+      sheet.getRange(lastRow, 2).setNumberFormat('@');
+      sheet.getRange(lastRow, 5).setNumberFormat('@');
+      sheet.getRange(lastRow, 7).setNumberFormat('@');
+    }
+
+    return { success: true, message: 'บันทึกคำขออนุมัติเรียบร้อย', id: id };
+  } catch (err) {
+    return { success: false, message: 'เกิดข้อผิดพลาด: ' + err.message };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * อัปเดตสถานะคำขออนุมัติละหมาดใน Google Sheets
+ */
+function updatePrayerLateRequestStatus(data) {
+  initializeSheets();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.PRAYER_APPROVALS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานคำขออนุมัติละหมาด' };
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {}
+
+  try {
+    const reqId = cleanVal(data.reqId || data.id);
+    const status = cleanVal(data.status || 'approved');
+    const approver = cleanVal(data.approvedBy || data.rejectedBy || 'อาจารย์/แอดมิน');
+    const actionAt = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+    const adminNote = cleanVal(data.adminNote || '');
+
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (cleanVal(rows[i][0]) === reqId) {
+        sheet.getRange(i + 1, 11).setValue(status);
+        sheet.getRange(i + 1, 13).setValue(approver);
+        sheet.getRange(i + 1, 14).setValue(actionAt);
+        sheet.getRange(i + 1, 15).setValue(adminNote);
+        return { success: true, message: 'อัปเดตสถานะคำขอเรียบร้อย' };
+      }
+    }
+    return { success: false, message: 'ไม่พบคำขอรหัส ' + reqId };
+  } catch (err) {
+    return { success: false, message: err.message };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
 }

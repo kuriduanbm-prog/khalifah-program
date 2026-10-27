@@ -3539,12 +3539,47 @@ function viewPhotoInNewTab(url) {
 // ----------------- ADMIN APPROVALS DASHBOARD & REVIEW LOGIC ----------------- //
 
 /**
+ * ช่วยจัดรูปแบบสถานะคำขออนุมัติให้อยู่ในมาตรฐานเดียวกัน (pending, approved, rejected, ALL)
+ */
+function normalizeApprovalStatus(st) {
+  if (!st) return 'pending';
+  const s = String(st).trim().toLowerCase();
+  if (s === 'approved' || s.includes('อนุมัติแล้ว') || s === 'อนุมัติ') return 'approved';
+  if (s === 'rejected' || s.includes('ไม่อนุมัติ') || s.includes('ปฏิเสธ')) return 'rejected';
+  if (s === 'all' || s.includes('ทั้งหมด')) return 'ALL';
+  return 'pending';
+}
+
+/**
  * เปลี่ยน Filter สถานะในหน้าแอดมิน (รออนุมัติ / อนุมัติแล้ว / ไม่อนุมัติ / ทั้งหมด)
  */
-function setAdminPrayerApprovalFilter(status, btnElement) {
-  currentAdminPrayerApprovalFilter = status;
-  document.querySelectorAll('.btn-appr-filter').forEach(btn => btn.classList.remove('active'));
-  if (btnElement) btnElement.classList.add('active');
+function setAdminPrayerApprovalFilter(status, btnElement = null) {
+  currentAdminPrayerApprovalFilter = status || 'pending';
+  const targetStatus = normalizeApprovalStatus(currentAdminPrayerApprovalFilter);
+  document.querySelectorAll('.btn-appr-filter').forEach(btn => {
+    const bStatus = normalizeApprovalStatus(btn.getAttribute('data-status') || '');
+    if (btnElement) {
+      btn.classList.toggle('active', btn === btnElement);
+    } else {
+      btn.classList.toggle('active', bStatus.toLowerCase() === targetStatus.toLowerCase());
+    }
+  });
+  renderAdminPrayerApprovals();
+}
+
+/**
+ * ล้างตัวกรองคำขออนุมัติทั้งหมด ให้กลับมาแสดงคำขอที่รออนุมัติทุกเวลา
+ */
+function resetAdminPrayerApprovalFilters() {
+  currentAdminPrayerApprovalFilter = 'pending';
+  const slotFilter = document.getElementById('adminPrayerApprovalSlotFilter');
+  const searchInput = document.getElementById('adminPrayerApprovalSearchInput');
+  if (slotFilter) slotFilter.value = 'ALL';
+  if (searchInput) searchInput.value = '';
+  document.querySelectorAll('.btn-appr-filter').forEach(btn => {
+    const bStatus = normalizeApprovalStatus(btn.getAttribute('data-status') || '');
+    btn.classList.toggle('active', bStatus === 'pending');
+  });
   renderAdminPrayerApprovals();
 }
 
@@ -3555,7 +3590,7 @@ function updateAdminPrayerPendingApprovalsBadge() {
   const badge = document.getElementById('badgePendingPrayerApprovals');
   const filterCount = document.getElementById('filterCountPending');
   const list = getPrayerApprovalsList();
-  const pendingCount = list.filter(r => r.status === 'pending').length;
+  const pendingCount = list.filter(r => normalizeApprovalStatus(r.status) === 'pending').length;
 
   if (badge) {
     if (pendingCount > 0) {
@@ -3585,12 +3620,17 @@ function renderAdminPrayerApprovals() {
   const slotFilter = document.getElementById('adminPrayerApprovalSlotFilter');
   const searchInput = document.getElementById('adminPrayerApprovalSearchInput');
 
+  const elCountPending = document.getElementById('filterCountPending');
+  const elCountApproved = document.getElementById('filterCountApproved');
+  const elCountRejected = document.getElementById('filterCountRejected');
+  const elCountTotal = document.getElementById('filterCountTotal');
+
   const list = getPrayerApprovalsList();
 
-  // คำนวณสรุป KPI รวมทั้งหมด
-  const countPending = list.filter(r => r.status === 'pending').length;
-  const countApproved = list.filter(r => r.status === 'approved').length;
-  const countRejected = list.filter(r => r.status === 'rejected').length;
+  // คำนวณสรุป KPI รวมทั้งหมดตามสถานะที่ normalize แล้ว
+  const countPending = list.filter(r => normalizeApprovalStatus(r.status) === 'pending').length;
+  const countApproved = list.filter(r => normalizeApprovalStatus(r.status) === 'approved').length;
+  const countRejected = list.filter(r => normalizeApprovalStatus(r.status) === 'rejected').length;
   const countTotal = list.length;
 
   if (kpiPending) kpiPending.innerText = String(countPending);
@@ -3598,26 +3638,48 @@ function renderAdminPrayerApprovals() {
   if (kpiRejected) kpiRejected.innerText = String(countRejected);
   if (kpiTotal) kpiTotal.innerText = String(countTotal);
 
+  if (elCountPending) elCountPending.innerText = String(countPending);
+  if (elCountApproved) elCountApproved.innerText = String(countApproved);
+  if (elCountRejected) elCountRejected.innerText = String(countRejected);
+  if (elCountTotal) elCountTotal.innerText = String(countTotal);
+
   updateAdminPrayerPendingApprovalsBadge();
 
   // กรองตามเงื่อนไข
   const selectedSlot = slotFilter ? slotFilter.value : 'ALL';
   const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  const activeStatusFilter = normalizeApprovalStatus(currentAdminPrayerApprovalFilter);
+
+  // ตรวจสอบความสอดคล้องของปุ่ม Filter active ใน UI
+  document.querySelectorAll('.btn-appr-filter').forEach(btn => {
+    const bStatus = normalizeApprovalStatus(btn.getAttribute('data-status') || '');
+    btn.classList.toggle('active', bStatus.toLowerCase() === activeStatusFilter.toLowerCase());
+  });
 
   let filtered = list.filter(req => {
-    // กรองตามสถานะ
-    if (currentAdminPrayerApprovalFilter !== 'ALL' && req.status !== currentAdminPrayerApprovalFilter) {
+    // 1. กรองตามสถานะ
+    const reqStatus = normalizeApprovalStatus(req.status);
+    if (activeStatusFilter !== 'ALL' && activeStatusFilter !== 'all' && reqStatus !== activeStatusFilter) {
       return false;
     }
-    // กรองตามเวลาละหมาด
-    if (selectedSlot !== 'ALL' && req.prayerSlot !== selectedSlot) {
-      return false;
+
+    // 2. กรองตามเวลาละหมาด (รองรับการ normalize ชื่อเวลา)
+    if (selectedSlot && selectedSlot !== 'ALL') {
+      const normReqSlot = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(req.prayerSlot) : String(req.prayerSlot || '').trim();
+      const normFilterSlot = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedSlot) : String(selectedSlot || '').trim();
+      if (normReqSlot !== normFilterSlot) {
+        return false;
+      }
     }
-    // กรองตามข้อความค้นหา (ชื่อนักเรียน หรือรหัสนักเรียน)
+
+    // 3. กรองตามข้อความค้นหา (ชื่อนักเรียน, รหัสนักเรียน, ชั้นปี, เหตุผล, เวลาละหมาด)
     if (searchTerm) {
       const name = (req.studentName || '').toLowerCase();
       const id = (req.studentId || '').toLowerCase();
-      if (!name.includes(searchTerm) && !id.includes(searchTerm)) {
+      const grade = (req.grade || '').toLowerCase();
+      const slot = (req.prayerSlot || '').toLowerCase();
+      const reason = ((req.reasonPreset || '') + ' ' + (req.reasonDetail || '')).toLowerCase();
+      if (!name.includes(searchTerm) && !id.includes(searchTerm) && !grade.includes(searchTerm) && !slot.includes(searchTerm) && !reason.includes(searchTerm)) {
         return false;
       }
     }
@@ -3625,13 +3687,51 @@ function renderAdminPrayerApprovals() {
   });
 
   if (filtered.length === 0) {
-    container.innerHTML = `
-      <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); background: #ffffff; border-radius: 10px; border: 1px dashed #cbd5e1;">
-        <i class="fa-regular fa-clipboard" style="font-size: 2.5rem; color: #94a3b8; margin-bottom: 0.65rem; display: block;"></i>
-        <div style="font-weight: 700; font-size: 0.95rem; color: #475569;">ไม่พบรายการคำขออนุมัติในหมวดนี้</div>
-        <div style="font-size: 0.8rem; margin-top: 0.25rem;">เมื่อนักเรียนส่งคำขออนุมัติเช็คละหมาดย้อนหลัง รายการจะแสดงขึ้นที่นี่</div>
-      </div>
-    `;
+    if (list.length > 0) {
+      let filterDetails = [];
+      if (activeStatusFilter !== 'ALL' && activeStatusFilter !== 'all') {
+        const statusTh = activeStatusFilter === 'pending' ? 'รออาจารย์ตรวจสอบ' : (activeStatusFilter === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ');
+        filterDetails.push(`สถานะ: <b>${statusTh}</b>`);
+      }
+      if (selectedSlot && selectedSlot !== 'ALL') {
+        filterDetails.push(`เวลาละหมาด: <b>${selectedSlot}</b>`);
+      }
+      if (searchTerm) {
+        filterDetails.push(`คำค้น: <b>"${searchTerm}"</b>`);
+      }
+
+      container.innerHTML = `
+        <div style="text-align: center; padding: 2.75rem 1.25rem; color: var(--text-muted); background: #ffffff; border-radius: 12px; border: 1.5px dashed #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div style="width: 54px; height: 54px; border-radius: 50%; background: #fffbeb; color: #d97706; display: inline-flex; align-items: center; justify-content: center; font-size: 1.6rem; margin-bottom: 0.85rem; border: 1px solid #fde68a;">
+            <i class="fa-solid fa-filter-circle-xmark"></i>
+          </div>
+          <div style="font-weight: 700; font-size: 1.05rem; color: #1e293b; margin-bottom: 0.35rem;">
+            ไม่พบคำขอตามเงื่อนไขตัวกรอง
+          </div>
+          <div style="font-size: 0.84rem; color: #64748b; max-width: 520px; margin: 0 auto 1.25rem auto; line-height: 1.5;">
+            มีคำขอในระบบทั้งหมด <b>${countTotal}</b> รายการ (รออนุมัติ <b>${countPending}</b> รายการ) ${filterDetails.length > 0 ? `<br><span style="font-size: 0.8rem; color: #94a3b8;">(${filterDetails.join(' • ')})</span>` : ''}
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.65rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="resetAdminPrayerApprovalFilters()" style="background: #0284c7; border-color: #0369a1; font-weight: 600; padding: 0.45rem 1rem;">
+              <i class="fa-solid fa-clock"></i> แสดงคำขอรออนุมัติทั้งหมด (${countPending})
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setAdminPrayerApprovalFilter('ALL')" style="font-weight: 600; padding: 0.45rem 1rem;">
+              <i class="fa-solid fa-layer-group"></i> แสดงประวัติคำขอทั้งหมด (${countTotal})
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); background: #ffffff; border-radius: 12px; border: 1px dashed #cbd5e1;">
+          <div style="width: 50px; height: 50px; border-radius: 50%; background: #f8fafc; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 0.75rem; border: 1px solid #e2e8f0;">
+            <i class="fa-regular fa-clipboard"></i>
+          </div>
+          <div style="font-weight: 700; font-size: 0.95rem; color: #475569;">ไม่มีรายการคำขออนุมัติในระบบ</div>
+          <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">เมื่อนักเรียนส่งคำขออนุมัติเช็คละหมาดย้อนหลัง รายการจะแสดงขึ้นที่นี่</div>
+        </div>
+      `;
+    }
     return;
   }
 
@@ -12570,7 +12670,11 @@ function setAdminPrayerMode(mode) {
     populateAdminPrayerStudentSelect();
     renderAdminStudentPrayerHistory();
   } else if (mode === 'approvals') {
-    renderAdminPrayerApprovals();
+    if (typeof resetAdminPrayerApprovalFilters === 'function') {
+      resetAdminPrayerApprovalFilters();
+    } else {
+      renderAdminPrayerApprovals();
+    }
   }
 }
 
