@@ -10398,6 +10398,7 @@ body.teacher-portal-active .teacher-bottom-nav-bar {
 
 /* 1. Student Banner: Expired / Forgotten Prayer Notification */
 .prayer-late-request-banner {
+  display: none !important;
   background: #fffbeb;
   border: 1px solid #fde68a;
   border-radius: var(--radius-md);

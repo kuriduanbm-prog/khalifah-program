@@ -2964,7 +2964,7 @@ function selectPrayerTime(timeName, element, isSystemAuto = false) {
     checkPrayerUnlockState();
     refreshPrayerChipsStatus();
     if (typeof updatePrayerLateRequestBanner === 'function') updatePrayerLateRequestBanner(timeName);
-    showToast(`⚠️ หมดช่วงเวลาละหมาด ${timeName} แล้ว (${slotStatus.rangeLabel}) หากลืมเช็คชื่อ สามารถกดปุ่มส่งคำขอให้อาจารย์อนุมัติได้ครับ`, 'warning');
+    showToast(`⚠️ หมดช่วงเวลาละหมาด ${timeName} แล้ว (${slotStatus.rangeLabel})`, 'warning');
     return;
   }
 
@@ -3023,30 +3023,30 @@ function checkPrayerUnlockState() {
 
   const slotStatus = getPrayerSlotTimeStatus(selectedPrayerTime);
 
-  // 1. ตรวจสอบการบันทึกย้อนหลัง: ถ้าหมดเวลาแล้วและยังไม่เคยเช็ค -> ล็อคการถ่ายรูปปกติ แต่เปิดให้กดส่งคำขออนุมัติย้อนหลังได้
+  // 1. ตรวจสอบการบันทึกย้อนหลัง: ถ้าหมดเวลาแล้วและยังไม่เคยเช็ค -> ล็อคปุ่มถ่ายรูป
   if (!alreadyChecked && slotStatus.isPast) {
-    btnCapture.disabled = false;
-    btnCapture.classList.remove('btn-locked');
-    btnCapture.className = 'btn btn-cam-shutter btn-cam-late-request';
-    btnCapture.style.background = '#0284c7';
-    btnCapture.style.borderColor = '#0369a1';
-    btnCapture.onclick = () => openPrayerLateApprovalModal(selectedPrayerTime);
+    btnCapture.disabled = true;
+    btnCapture.classList.add('btn-locked');
+    btnCapture.className = 'btn btn-cam-shutter btn-locked';
+    btnCapture.style.background = '#64748b';
+    btnCapture.style.borderColor = '#475569';
+    btnCapture.onclick = null;
     btnCapture.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; line-height: 1.25;">
         <div style="font-size: 0.95rem; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 0.4rem;">
-          <i class="fa-solid fa-paper-plane"></i> ลืมเช็คเวลา ${selectedPrayerTime}? กดส่งคำขออนุมัติ
+          <i class="fa-solid fa-clock-rotate-left"></i> หมดช่วงเวลาละหมาด ${selectedPrayerTime} แล้ว
         </div>
-        <div style="font-size: 0.74rem; font-weight: 500; opacity: 0.95; color: #e0f2fe;">
-          หมดเวลาบันทึกตรง (${slotStatus.rangeLabel}) • แตะเพื่อส่งคำขอให้อาจารย์
+        <div style="font-size: 0.74rem; font-weight: 500; opacity: 0.95; color: #f1f5f9;">
+          ช่วงเวลาละหมาด: ${slotStatus.rangeLabel}
         </div>
       </div>
     `;
     if (locBadge && locText) {
       locBadge.style.display = 'inline-flex';
       locBadge.className = 'prayer-verified-loc-badge';
-      locBadge.style.background = 'rgba(2, 132, 199, 0.95)';
+      locBadge.style.background = 'rgba(100, 116, 139, 0.95)';
       locBadge.style.color = '#ffffff';
-      locText.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> หมดเวลาละหมาด ${selectedPrayerTime} • แตะปุ่มด้านล่างเพื่อส่งคำขออนุมัติ`;
+      locText.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> หมดเวลาละหมาด ${selectedPrayerTime} (${slotStatus.rangeLabel})`;
     }
     return;
   }
@@ -3181,45 +3181,11 @@ async function fetchPrayerApprovalsFromCloud(force = false) {
 }
 
 /**
- * อัปเดตแถบแจ้งเตือนลืมเช็คชื่อในหน้าละหมาด (#prayerLateRequestBanner)
+ * อัปเดตแถบแจ้งเตือนลืมเช็คชื่อในหน้าละหมาด (ปิดการทำงานตามความต้องการของผู้ใช้)
  */
 function updatePrayerLateRequestBanner(slotName = null) {
   const banner = document.getElementById('prayerLateRequestBanner');
-  const titleEl = document.getElementById('prayerLateBannerTitle');
-  const subEl = document.getElementById('prayerLateBannerSub');
-  if (!banner) return;
-
-  if (!currentStudent) {
-    banner.style.display = 'none';
-    return;
-  }
-
-  const studentTodayPrayers = getStudentTodayPrayersList();
-  const CANONICAL_SLOTS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
-
-  // หารอบเวลาที่หมดเวลาแล้วแต่ยังไม่ได้เช็คชื่อ
-  const expiredUncheckedSlots = CANONICAL_SLOTS.filter(slot => {
-    const isChecked = studentTodayPrayers.some(p => {
-      const pKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || p.timeSlot || '') : (p.prayerName || p.prayerTime || '');
-      return pKey === slot;
-    });
-    const status = getPrayerSlotTimeStatus(slot);
-    return !isChecked && status.isPast;
-  });
-
-  if (expiredUncheckedSlots.length === 0) {
-    banner.style.display = 'none';
-    return;
-  }
-
-  banner.style.display = 'flex';
-  const targetSlot = slotName || selectedPrayerTime || expiredUncheckedSlots[0];
-  if (titleEl) {
-    titleEl.innerHTML = `<i class="fa-solid fa-clock-rotate-left"></i> ลืมเช็คชื่อเวลา ${targetSlot}?`;
-  }
-  if (subEl) {
-    subEl.innerText = `หมดช่วงเวลาบันทึกตรงแล้ว (${expiredUncheckedSlots.join(', ')}) หากท่านได้ละหมาดแล้ว สามารถกดส่งคำขอให้อาจารย์/แอดมินพิจารณาอนุมัติได้`;
-  }
+  if (banner) banner.style.display = 'none';
 }
 
 /**
@@ -4022,10 +3988,9 @@ async function handlePrayerMainButtonClick() {
     return pKey === (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime);
   });
 
-  // ถ้าหมดเวลาแล้วและยังไม่เคยเช็ค -> เปิดหน้าต่างส่งคำขออนุมัติย้อนหลัง
+  // ถ้าหมดเวลาแล้วและยังไม่เคยเช็ค
   if (!alreadyChecked && slotStatus.isPast) {
-    showToast(`⚠️ หมดเวลาบันทึกตรงแล้ว กรุณาส่งคำขอให้อาจารย์อนุมัติ`, 'info');
-    if (typeof openPrayerLateApprovalModal === 'function') openPrayerLateApprovalModal(selectedPrayerTime);
+    showToast(`⚠️ หมดช่วงเวลาละหมาด ${selectedPrayerTime} แล้ว (${slotStatus.rangeLabel})`, 'warning');
     return;
   }
 
@@ -4737,8 +4702,7 @@ async function savePrayerNoteOnly() {
   for (const pTime of selectedPrayerNoteTimeSlots) {
     const slotStatus = getPrayerSlotTimeStatus(pTime);
     if (slotStatus.isPast && !isExcused) {
-      showToast(`⚠️ หมดเวลาละหมาด ${pTime} แล้ว (${slotStatus.rangeLabel}) กรุณาส่งคำขอให้อาจารย์/แอดมินอนุมัติ`, 'error');
-      if (typeof openPrayerLateApprovalModal === 'function') openPrayerLateApprovalModal(pTime);
+      showToast(`⚠️ หมดเวลาละหมาด ${pTime} แล้ว (${slotStatus.rangeLabel})`, 'error');
       return;
     }
     if (slotStatus.isFuture && !isExcused) {
