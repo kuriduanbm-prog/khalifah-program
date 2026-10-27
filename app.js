@@ -1870,7 +1870,7 @@ const GEOFENCE_TARGETS = {
   }
 };
 
-const MASTER_ADMIN_PASS = '096909';
+// รหัสแอดมินหลักถูกตรวจสอบที่เซิร์ฟเวอร์เท่านั้น (ไม่เก็บในโค้ดฝั่งเว็บอีกต่อไป)
 
 // ----------------- ข้อมูลเริ่มต้น (INITIAL STATE & MOCK DATA) ----------------- //
 const DEFAULT_STUDENT = {
@@ -1955,6 +1955,163 @@ if (storedGasUrl && (storedGasUrl.includes('docs.google.com/spreadsheets') || st
 }
 let gasApiUrl = storedGasUrl || DEFAULT_GAS_API_URL;
 
+// =====================================================================
+//  🔐 SECURITY CLIENT (v8) — เซสชัน token จากเซิร์ฟเวอร์
+//  - ทุกคำขอไปยัง Google Apps Script จะแนบ token อัตโนมัติ (ผ่าน fetch wrapper)
+//  - ไม่ตรวจรหัสผ่านในเบราว์เซอร์อีกต่อไป (เซิร์ฟเวอร์เป็นผู้ตรวจ)
+//  - ล้างข้อมูลลับที่เวอร์ชันเก่าเคยเก็บไว้ในเครื่อง
+// =====================================================================
+const KHALIFAH_SECURITY_VERSION = '8';
+const SESSION_TOKEN_KEY = 'khalifah_session_token';
+const SHARED_DATA_KEYS = [
+  'khalifah_all_students', 'khalifah_sub_admins', 'khalifah_subadmins', 'khalifah_pending_registrations',
+  'khalifah_prayer_history', 'khalifah_today_prayers', 'khalifah_student_act_logs', 'khalifah_student_hasanat',
+  'khalifah_prayer_approvals', 'khalifah_daily_attendance_logs', 'khalifah_student_assignment_scores',
+  'khalifah_verified_users', 'khalifah_admin_master_otp'
+];
+
+(function migrateLegacySecurityStorage() {
+  try {
+    if (localStorage.getItem('khalifah_security_version') !== KHALIFAH_SECURITY_VERSION) {
+      // เวอร์ชันเก่าเก็บรหัสผ่านอาจารย์ / OTP / ข้อมูลนักเรียนทุกคนไว้ในเครื่อง — ลบทิ้งทั้งหมด
+      SHARED_DATA_KEYS.forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('khalifah_security_version', KHALIFAH_SECURITY_VERSION);
+    }
+    // ไม่มี token = ต้องเข้าสู่ระบบใหม่ (รวมถึงผู้ที่ล็อกอินค้างไว้จากเวอร์ชันเก่า)
+    if (!localStorage.getItem(SESSION_TOKEN_KEY)) {
+      if (localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin')) {
+        sessionStorage.setItem('khalifah_relogin_notice', '1');
+      }
+      localStorage.removeItem('khalifah_current_student');
+      localStorage.removeItem('khalifah_current_admin');
+      localStorage.removeItem('khalifah_auth_role');
+    }
+  } catch (e) {}
+})();
+
+function getSessionToken() {
+  try { return localStorage.getItem(SESSION_TOKEN_KEY) || ''; } catch (e) { return ''; }
+}
+function setSessionToken(token) {
+  try {
+    if (token) localStorage.setItem(SESSION_TOKEN_KEY, token);
+    else localStorage.removeItem(SESSION_TOKEN_KEY);
+  } catch (e) {}
+}
+
+/** ล้างเซสชันและข้อมูลของผู้ใช้ก่อนหน้าออกจากเครื่อง (ใช้ตอนออกจากระบบ / เซสชันหมดอายุ) */
+function clearSessionData() {
+  setSessionToken('');
+  try { SHARED_DATA_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  try {
+    allStudents = [];
+    subAdmins = [];
+    todayPrayers = [];
+  } catch (e) {}
+}
+
+function getGasUrl() {
+  let url = (typeof gasApiUrl !== 'undefined' && gasApiUrl) || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
+  if (!url || url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
+  return url;
+}
+
+function isGasRequestUrl(url) {
+  if (!url) return false;
+  if (url.includes('script.google.com/macros/')) return true;
+  const base = getGasUrl();
+  return !!base && url.indexOf(base) === 0;
+}
+
+let sessionExpiredHandled = false;
+function handleSessionExpired(message) {
+  if (sessionExpiredHandled) return;
+  sessionExpiredHandled = true;
+  setTimeout(() => { sessionExpiredHandled = false; }, 4000);
+  const wasLoggedIn = !!(currentStudent || currentAdmin);
+  clearSessionData();
+  if (!wasLoggedIn) return;
+  const wasStudent = !!currentStudent;
+  currentStudent = null;
+  currentAdmin = null;
+  localStorage.removeItem('khalifah_current_student');
+  localStorage.removeItem('khalifah_current_admin');
+  localStorage.removeItem('khalifah_auth_role');
+  if (typeof stopAdminActivityLivePolling === 'function') stopAdminActivityLivePolling();
+  if (typeof updateAdminUIVisibility === 'function') updateAdminUIVisibility(false);
+  document.body.classList.add('auth-locked');
+  if (typeof selectAuthRole === 'function') selectAuthRole(wasStudent ? 'student' : 'teacher');
+  if (typeof openModal === 'function') openModal('authModal');
+  if (typeof showToast === 'function') showToast(message || 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง', 'warning');
+}
+
+// แนบ token ให้ทุกคำขอที่ไปยัง Google Apps Script โดยอัตโนมัติ
+(function installGasFetchWrapper() {
+  if (window.__khalifahFetchWrapped) return;
+  window.__khalifahFetchWrapped = true;
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    let url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (!isGasRequestUrl(url)) return nativeFetch(input, init);
+    const opts = Object.assign({}, init || {});
+    const method = String(opts.method || 'GET').toUpperCase();
+    const tok = getSessionToken();
+    let target = input;
+    if (method === 'GET' && typeof input === 'string') {
+      if (tok && !/[?&]token=/.test(input)) {
+        target = input + (input.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(tok);
+      }
+    } else if (method === 'POST' && typeof opts.body === 'string') {
+      try {
+        const body = JSON.parse(opts.body);
+        if (tok && body && typeof body === 'object' && !body.token) body.token = tok;
+        opts.body = JSON.stringify(body);
+      } catch (e) {}
+      // อ่านผลลัพธ์ได้ เพื่อแจ้งผู้ใช้เมื่อบันทึกไม่สำเร็จหรือเซสชันหมดอายุ
+      if (opts.mode === 'no-cors') opts.mode = 'cors';
+      opts.headers = Object.assign({}, opts.headers || {}, { 'Content-Type': 'text/plain;charset=utf-8' });
+    }
+    return nativeFetch(target, opts).then(resp => {
+      try {
+        if (resp && resp.ok && resp.type !== 'opaque') {
+          resp.clone().json().then(json => {
+            if (!json || json.success !== false) return;
+            if (json.code === 'AUTH_REQUIRED' && (currentStudent || currentAdmin)) {
+              handleSessionExpired(json.message);
+            } else if (json.code === 'FORBIDDEN' && method === 'POST') {
+              showToast(json.message || 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้', 'error');
+            }
+          }).catch(() => {});
+        }
+      } catch (e) {}
+      return resp;
+    });
+  };
+})();
+
+/** เรียก API แบบ POST และอ่านผลลัพธ์ (ใช้กับการเข้าสู่ระบบ / OTP) */
+async function gasApiCall(action, payload, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(getGasUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action }, payload || {})),
+      signal: controller.signal
+    });
+    return await resp.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function describeNetworkError(err) {
+  if (!navigator.onLine) return 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต กรุณาเชื่อมต่อแล้วลองใหม่';
+  if (err && err.name === 'AbortError') return 'เซิร์ฟเวอร์ตอบสนองช้า กรุณาลองใหม่อีกครั้ง';
+  return 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง';
+}
+
 // ----------------- INITIALIZATION ----------------- //
 document.addEventListener('DOMContentLoaded', () => {
   loadStoredData();
@@ -1992,6 +2149,12 @@ document.addEventListener('DOMContentLoaded', () => {
     switchView(currentAdmin.role === 'SuperAdmin' ? 'admin' : 'teacher');
   } else {
     enforceMandatoryLogin();
+    try {
+      if (sessionStorage.getItem('khalifah_relogin_notice')) {
+        sessionStorage.removeItem('khalifah_relogin_notice');
+        setTimeout(() => showToast('ระบบได้รับการอัปเดตความปลอดภัย กรุณาเข้าสู่ระบบอีกครั้ง', 'info'), 600);
+      }
+    } catch (e) {}
   }
 
   // ซิงค์ฐานข้อมูลทั้งหมดกับ Google Sheets แบบเรียลไทม์ทันทีเมื่อเปิดแอป
@@ -5873,6 +6036,7 @@ function openStudentAccountModal() {
 
 function studentLogout() {
   if (!confirm('ต้องการออกจากระบบนักเรียนใช่หรือไม่?')) return;
+  clearSessionData();
   currentStudent = null;
   currentAdmin = null;
   localStorage.removeItem('khalifah_current_student');
@@ -6392,7 +6556,6 @@ async function handleStudentLogin() {
   const rawParentPhone = (phoneEl?.value || '').trim();
   const rawStudentId = (passEl?.value || '').trim();
 
-  // Clear previous inline errors
   document.querySelectorAll('#loginFormSection .auth-field-error-msg').forEach(el => el.remove());
   phoneEl?.classList.remove('is-invalid');
   passEl?.classList.remove('is-invalid');
@@ -6405,128 +6568,61 @@ async function handleStudentLogin() {
     triggerAuthError(passEl, 'กรุณากรอกรหัสนักเรียน (รหัสผ่าน)');
     return;
   }
+  if (!navigator.onLine) {
+    triggerAuthError(phoneEl, 'ต้องเชื่อมต่ออินเทอร์เน็ตเพื่อเข้าสู่ระบบ');
+    return;
+  }
 
   const studentIdInput = cleanIdString(rawStudentId);
   const cleanInputPhone = normalizePhone(rawParentPhone);
 
   setButtonLoading(btn, true, 'กำลังตรวจสอบข้อมูล...');
 
-  // 1. Instant check in memory (allStudents)
-  const studentByPhone = allStudents.find(s => isPhoneMatch(s.parentPhone, cleanInputPhone) || isPhoneMatch(s.parentPhone, rawParentPhone));
-  const studentById = allStudents.find(s => isIdMatch(s.studentId, studentIdInput));
-
-  let found = null;
-
-  if (studentByPhone && studentById && isIdMatch(studentByPhone.studentId, studentById.studentId)) {
-    // Exact match found!
-    found = studentByPhone;
-  } else if (studentByPhone && !studentById) {
-    // Phone exists, but student ID (password) does NOT match any student!
+  let res;
+  try {
+    res = await gasApiCall('loginStudent', { studentId: studentIdInput, parentPhone: cleanInputPhone });
+  } catch (err) {
     setButtonLoading(btn, false);
-    recordLoginFailure();
-    triggerAuthError(passEl, 'รหัสนักเรียน (รหัสผ่าน) ไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
-    return;
-  } else if (studentByPhone && studentById && !isIdMatch(studentByPhone.studentId, studentById.studentId)) {
-    // Phone and ID belong to different students!
-    setButtonLoading(btn, false);
-    recordLoginFailure();
-    triggerAuthError(passEl, 'รหัสนักเรียน (รหัสผ่าน) ไม่ถูกต้องสำหรับเบอร์โทรศัพท์นี้');
-    return;
-  } else if (!studentByPhone && studentById) {
-    // Student ID exists, but parent phone is wrong!
-    setButtonLoading(btn, false);
-    recordLoginFailure();
-    triggerAuthError(phoneEl, 'เบอร์โทรศัพท์ผู้ปกครอง (User) ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+    triggerAuthError(phoneEl, describeNetworkError(err));
     return;
   }
 
-  // 2. If neither exists in local cache, do a fast live check with 2.5s strict timeout
-  if (!found && navigator.onLine) {
-    let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
-    if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
-
-    if (url) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-        const resp = await fetch(`${url}?action=getStudent&studentId=${encodeURIComponent(studentIdInput)}&parentPhone=${encodeURIComponent(cleanInputPhone)}&_t=${Date.now()}`, {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const json = await resp.json();
-        if (json && json.success && json.student) {
-          found = json.student;
-          found.studentId = cleanIdString(found.studentId);
-          found.parentPhone = normalizePhone(found.parentPhone);
-          if (found.birthDate) found.birthDate = normalizeBirthDate(found.birthDate);
-
-          const existIdx = allStudents.findIndex(s => isIdMatch(s.studentId, studentIdInput));
-          if (existIdx !== -1) {
-            allStudents[existIdx] = { ...allStudents[existIdx], ...found };
-          } else {
-            allStudents.push(found);
-          }
-          localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
-        }
-      } catch (e) {
-        // Fast abort or network fail
-      }
-    }
-  }
-
-  // 3. If STILL not found: account definitely does not exist
-  if (!found) {
+  if (!res || !res.success) {
     setButtonLoading(btn, false);
-    recordLoginFailure();
-    triggerAuthError(phoneEl, 'ไม่พบข้อมูลบัญชีนี้ในระบบ กรุณาตรวจสอบเบอร์โทรศัพท์หรือสมัครบัญชีใหม่');
-    return;
-  }
-
-  // 4. Strict OTP Gate: ถ้าเคยยืนยันตัวครั้งแรกแล้ว ไม่ต้องให้ขึ้นหน้าต่าง OTP อีกต่อไป
-  const isAlreadyVerified = isUserPermanentlyVerified(studentIdInput) ||
-    (found && (found.approvalStatus === 'Verified' || found.status === 'Active' || found.isVerified));
-
-  if (!isAlreadyVerified) {
-    const pendingList = getPendingRegistrations();
-    const pendingMatch = pendingList.find(p => p.role === 'student' && isIdMatch(p.userId, studentIdInput) && p.status !== 'Verified');
-    const isUnverifiedStudent = found && (
-      found.approvalStatus === 'PendingAdmin' ||
-      found.approvalStatus === 'AwaitingOtp' ||
-      found.status === 'PendingAdmin' ||
-      found.status === 'รอผู้สมัครกรอกรหัส OTP'
-    );
-
-    if (pendingMatch || isUnverifiedStudent) {
-      setButtonLoading(btn, false);
-      const pItem = pendingMatch || {
-        reqId: 'REQ-' + Date.now(),
+    if (res && res.requireOtp) {
+      const reg = res.registration || {};
+      openOtpVerifyModalForPending({
+        reqId: reg.reqId || ('REQ-' + Date.now()),
         role: 'student',
-        userId: found ? found.studentId : studentIdInput,
-        fullName: found ? found.fullName : studentIdInput,
-        email: found ? (found.email || '') : '',
-        phone: found ? found.parentPhone : cleanInputPhone,
-        gradeOrSubj: found ? found.grade : '',
-        otpCode: found && found.otpCode ? found.otpCode : generateRandomAdminOtp(),
-        status: (found && found.approvalStatus === 'AwaitingOtp') ? 'Approved' : 'PendingAdmin'
-      };
-      openOtpVerifyModalForPending(pItem);
-      if (pItem.status === 'Approved' || (found && found.approvalStatus === 'AwaitingOtp')) {
-        showToast('แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเข้าสู่ระบบ', 'warning');
-      } else {
-        showToast('ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
-      }
+        userId: reg.userId || studentIdInput,
+        fullName: reg.fullName || studentIdInput,
+        email: reg.email || '',
+        status: reg.status || (res.approvalStatus === 'AwaitingOtp' ? 'Approved' : 'PendingAdmin')
+      });
+      showToast(res.approvalStatus === 'AwaitingOtp'
+        ? 'แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเข้าสู่ระบบ'
+        : 'ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
       return;
     }
+    recordLoginFailure();
+    const msg = (res && res.message) || 'ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง';
+    triggerAuthError(res && res.field === 'id' ? passEl : phoneEl, msg);
+    return;
   }
 
-  // 5. Successful Login!
+  setSessionToken(res.token);
+  const found = res.student || {};
+  found.studentId = cleanIdString(found.studentId || studentIdInput);
+  found.parentPhone = normalizePhone(found.parentPhone || cleanInputPhone);
+  if (found.birthDate) found.birthDate = normalizeBirthDate(found.birthDate);
+
   setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
   resetLoginFailures();
-  markUserAsPermanentlyVerified(found ? found.studentId : studentIdInput, 'student');
+  markUserAsPermanentlyVerified(found.studentId, 'student');
   currentAdmin = null;
   currentStudent = found;
+  allStudents = [found];
+  localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
   localStorage.removeItem('khalifah_current_admin');
   localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
   localStorage.setItem('khalifah_auth_role', 'student');
@@ -6542,7 +6638,25 @@ async function handleStudentLogin() {
     closeModal('authModal');
     switchView('dashboard');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
+    if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(false);
   }, 250);
+}
+
+/** ส่งคำขอสมัครไปยังเซิร์ฟเวอร์ และแจ้งผลให้ผู้สมัครทราบทันที (เช่น รหัสนี้มีบัญชีแล้ว) */
+function submitRegistrationToServer(pendingItem) {
+  gasApiCall('registerPendingUser', { data: pendingItem })
+    .then(res => {
+      if (res && res.success === false) {
+        closeModal('otpVerifyModal');
+        showToast(res.message || 'ส่งคำขอสมัครไม่สำเร็จ', 'error');
+        if (res.exists) {
+          selectAuthRole(pendingItem.role === 'teacher' ? 'teacher' : 'student');
+          if (typeof toggleAuthForm === 'function') toggleAuthForm('login');
+          openModal('authModal');
+        }
+      }
+    })
+    .catch(err => showToast('ส่งคำขอสมัครไม่สำเร็จ: ' + describeNetworkError(err), 'error'));
 }
 
 function handleStudentRegister() {
@@ -6686,7 +6800,7 @@ function handleStudentRegister() {
   resetBirthDatePicker();
 
   // Sync to Google Sheets & Admin Queue
-  syncRecordToGoogleSheet('registerPendingUser', pendingItem);
+  submitRegistrationToServer(pendingItem);
   renderPendingApprovalsTable();
   renderSuperAdminOverviewKpis();
 
@@ -6696,6 +6810,84 @@ function handleStudentRegister() {
     openOtpVerifyModalForPending(pendingItem);
     showToast('ส่งคำขอสมัครแล้ว! กรุณารอรับรหัสยืนยัน 6 หลักทางอีเมลเมื่อแอดมินกดอนุมัติ', 'info');
   }, 350);
+}
+
+/** เข้าสู่ระบบบุคลากรผ่านเซิร์ฟเวอร์ — คืนค่า true เมื่อสำเร็จ */
+async function performStaffLogin({ username, password, btn, userEl, passEl, modalsToClose }) {
+  if (!navigator.onLine) {
+    triggerAuthError(userEl || passEl, 'ต้องเชื่อมต่ออินเทอร์เน็ตเพื่อเข้าสู่ระบบ');
+    return false;
+  }
+  let res;
+  try {
+    res = await gasApiCall('adminLogin', { username: username || '', password: password });
+  } catch (err) {
+    setButtonLoading(btn, false);
+    triggerAuthError(passEl, describeNetworkError(err));
+    return false;
+  }
+
+  if (!res || !res.success) {
+    setButtonLoading(btn, false);
+    if (res && res.requireOtp) {
+      const reg = res.registration || {};
+      openOtpVerifyModalForPending({
+        reqId: reg.reqId || ('REQ-TCH-' + Date.now()),
+        role: 'teacher',
+        userId: reg.userId || username,
+        fullName: reg.fullName || username,
+        email: reg.email || '',
+        status: reg.status || 'PendingAdmin'
+      });
+      showToast(res.approvalStatus === 'AwaitingOtp'
+        ? 'แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเปิดใช้งานบัญชี'
+        : 'ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
+      return false;
+    }
+    recordLoginFailure();
+    const msg = (res && res.message) || 'ไม่สามารถเข้าสู่ระบบได้';
+    triggerAuthError(res && res.field === 'username' && userEl ? userEl : passEl, msg);
+    return false;
+  }
+
+  setSessionToken(res.token);
+  const profile = {
+    adminId: res.id || '',
+    username: res.username,
+    fullName: res.fullName,
+    role: res.role,
+    phone: res.phone || '',
+    email: res.email || '',
+    assignedSubjects: res.assignedSubjects || [],
+    assignedSubject: (res.assignedSubjects || [])[0] || '',
+    avatarUrl: res.avatarUrl || '',
+    status: 'Active',
+    approvalStatus: 'Verified'
+  };
+  const isSuper = profile.role === 'SuperAdmin';
+
+  setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
+  resetLoginFailures();
+  markUserAsPermanentlyVerified(profile.username, isSuper ? 'admin' : 'teacher');
+  currentStudent = null;
+  currentAdmin = profile;
+  localStorage.removeItem('khalifah_current_student');
+  localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
+  localStorage.setItem('khalifah_auth_role', isSuper ? 'admin' : 'teacher');
+
+  setTimeout(() => {
+    document.body.classList.remove('auth-locked');
+    updateAdminUIVisibility(true);
+    (modalsToClose || ['authModal']).forEach(id => closeModal(id));
+    switchView(isSuper ? 'admin' : 'teacher');
+    const roleWelcome = isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : 'อาจารย์');
+    showToast(`ยินดีต้อนรับ${roleWelcome} ${profile.fullName || profile.username}`, 'success');
+    if (res.securityWarning) {
+      setTimeout(() => showToast('⚠️ ' + res.securityWarning, 'warning'), 1500);
+    }
+    if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(false);
+  }, 250);
+  return true;
 }
 
 async function handleTeacherLogin() {
@@ -6708,7 +6900,6 @@ async function handleTeacherLogin() {
   const rawUser = (userEl?.value || '').trim();
   const rawPass = (passEl?.value || '').trim();
 
-  // Clear previous inline errors
   document.querySelectorAll('#teacherLoginSection .auth-field-error-msg').forEach(el => el.remove());
   userEl?.classList.remove('is-invalid');
   passEl?.classList.remove('is-invalid');
@@ -6722,93 +6913,8 @@ async function handleTeacherLogin() {
     return;
   }
 
-  const cleanUser = cleanIdString(rawUser);
-  const cleanPass = cleanIdString(rawPass);
-
   setButtonLoading(btn, true, 'กำลังตรวจสอบข้อมูล...');
-
-  // 1. Instant check against subAdmins in memory
-  let teacherByUser = subAdmins.find(s => isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser)));
-
-  // Fast check cloud if not found locally
-  if (!teacherByUser && navigator.onLine && typeof fetchSubAdminsFromCloud === 'function') {
-    try {
-      await fetchSubAdminsFromCloud(false);
-      teacherByUser = subAdmins.find(s => isIdMatch(s.username, cleanUser) || (s.phone && isPhoneMatch(s.phone, cleanUser)));
-    } catch (e) {}
-  }
-
-  if (!teacherByUser) {
-    setButtonLoading(btn, false);
-    recordLoginFailure();
-    triggerAuthError(userEl, 'ไม่พบบัญชีอาจารย์/ผู้บริหารนี้ในระบบ กรุณาตรวจสอบชื่อผู้ใช้หรือสมัครบัญชีใหม่');
-    return;
-  }
-
-  // Check password
-  if (!isIdMatch(teacherByUser.password, cleanPass)) {
-    setButtonLoading(btn, false);
-    recordLoginFailure();
-    triggerAuthError(passEl, 'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
-    return;
-  }
-
-  // Check OTP / approval status - ถ้าเคยยืนยันตัวตนครั้งแรกแล้ว ไม่ต้องให้แสดงหน้าต่าง OTP อีกต่อไป
-  const foundTeacher = teacherByUser;
-  const isAlreadyVerified = isUserPermanentlyVerified(cleanUser) || 
-    (foundTeacher && (foundTeacher.approvalStatus === 'Verified' || foundTeacher.status === 'Active' || foundTeacher.isVerified));
-
-  if (!isAlreadyVerified) {
-    const pendingList = getPendingRegistrations();
-    const pendingMatch = pendingList.find(p => p.role === 'teacher' && isIdMatch(p.userId, cleanUser) && p.status !== 'Verified');
-    const isUnverifiedTeacher = foundTeacher && (
-      foundTeacher.approvalStatus === 'PendingAdmin' ||
-      foundTeacher.approvalStatus === 'AwaitingOtp' ||
-      foundTeacher.status === 'PendingAdmin' ||
-      foundTeacher.status === 'รอผู้สมัครกรอกรหัส OTP'
-    );
-
-    if (pendingMatch || isUnverifiedTeacher) {
-      setButtonLoading(btn, false);
-      const pItem = pendingMatch || {
-        reqId: 'REQ-TCH-' + Date.now(),
-        role: 'teacher',
-        userId: foundTeacher ? foundTeacher.username : cleanUser,
-        fullName: foundTeacher ? foundTeacher.fullName : cleanUser,
-        email: foundTeacher ? (foundTeacher.email || '') : '',
-        phone: foundTeacher ? (foundTeacher.phone || '') : '',
-        gradeOrSubj: foundTeacher ? (foundTeacher.assignedSubjects || [foundTeacher.assignedSubject]).filter(Boolean).join(', ') : '',
-        otpCode: foundTeacher && foundTeacher.otpCode ? foundTeacher.otpCode : generateRandomAdminOtp(),
-        status: (foundTeacher && foundTeacher.approvalStatus === 'AwaitingOtp') ? 'Approved' : 'PendingAdmin'
-      };
-      openOtpVerifyModalForPending(pItem);
-      if (pItem.status === 'Approved' || (foundTeacher && foundTeacher.approvalStatus === 'AwaitingOtp')) {
-        showToast('แอดมินได้ส่งรหัสยืนยัน 6 หลักไปที่อีเมลของคุณแล้ว กรุณากรอกรหัสยืนยันเพื่อเปิดใช้งานบัญชี', 'warning');
-      } else {
-        showToast('ผู้สมัครไม่สามารถเข้าระบบได้จนกว่าจะป้อนเลขยืนยันที่แอดมินส่งให้ในอีเมล', 'warning');
-      }
-      return;
-    }
-  }
-
-  // Successful Login
-  setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
-  resetLoginFailures();
-  markUserAsPermanentlyVerified(cleanUser, 'teacher');
-  currentStudent = null;
-  currentAdmin = foundTeacher;
-  localStorage.removeItem('khalifah_current_student');
-  localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
-  localStorage.setItem('khalifah_auth_role', 'teacher');
-
-  setTimeout(() => {
-    document.body.classList.remove('auth-locked');
-    updateAdminUIVisibility(true);
-    closeModal('authModal');
-    switchView(foundTeacher.role === 'SuperAdmin' ? 'admin' : 'teacher');
-    const roleWelcome = foundTeacher.role === 'EXECUTIVE' ? 'ผู้บริหาร' : 'อาจารย์';
-    showToast(`ยินดีต้อนรับ${roleWelcome} ${foundTeacher.fullName || foundTeacher.username}`, 'success');
-  }, 250);
+  await performStaffLogin({ username: cleanIdString(rawUser), password: rawPass, btn, userEl, passEl, modalsToClose: ['authModal'] });
 }
 
 function handleTeacherRegister() {
@@ -6906,13 +7012,6 @@ function handleTeacherRegister() {
     createdAt: new Date().toISOString().split('T')[0]
   };
 
-  const existIdx = subAdmins.findIndex(s => isIdMatch(s.username, teacherId));
-  if (existIdx !== -1) {
-    subAdmins[existIdx] = newTeacher;
-  } else {
-    subAdmins.push(newTeacher);
-  }
-  localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
 
   const pendingItem = {
     reqId: 'REQ-TCH-' + Date.now(),
@@ -6929,10 +7028,11 @@ function handleTeacherRegister() {
   };
 
   const pendingList = getPendingRegistrations().filter(p => !(p.role === 'teacher' && isIdMatch(p.userId, teacherId)));
-  pendingList.unshift(pendingItem);
+  const localPending = { ...pendingItem, otpCode: '', payload: { ...newTeacher, password: undefined, otpCode: undefined } };
+  pendingList.unshift(localPending);
   savePendingRegistrations(pendingList);
 
-  syncRecordToGoogleSheet('registerPendingUser', pendingItem);
+  submitRegistrationToServer(pendingItem);
   renderPendingApprovalsTable();
   renderSuperAdminOverviewKpis();
 
@@ -6943,7 +7043,7 @@ function handleTeacherRegister() {
   }, 350);
 }
 
-function handleInlineAdminLogin() {
+async function handleInlineAdminLogin() {
   if (!checkLoginRateLimit()) return;
   const passEl = document.getElementById('inlineAdminPassInput');
   const btn = document.getElementById('btnInlineAdminLogin') || document.querySelector('#authAdminContainer button.btn-primary');
@@ -6957,29 +7057,8 @@ function handleInlineAdminLogin() {
     return;
   }
 
-  const pass = cleanIdString(rawPass);
   setButtonLoading(btn, true, 'กำลังตรวจสอบสิทธิ์...');
-
-  if (isIdMatch(pass, MASTER_ADMIN_PASS)) {
-    setButtonLoading(btn, false, null, 'ยืนยันสิทธิ์สำเร็จ!');
-    resetLoginFailures();
-    currentStudent = null;
-    currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
-    localStorage.removeItem('khalifah_current_student');
-    localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
-    localStorage.setItem('khalifah_auth_role', 'admin');
-    setTimeout(() => {
-      document.body.classList.remove('auth-locked');
-      updateAdminUIVisibility(true);
-      closeModal('authModal');
-      switchView('admin');
-      showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
-    }, 250);
-  } else {
-    setButtonLoading(btn, false);
-    recordLoginFailure();
-    triggerAuthError(passEl, 'รหัสแอดมินสูงสุดไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
-  }
+  await performStaffLogin({ username: '', password: rawPass, btn, passEl, modalsToClose: ['authModal'] });
 }
 
 // ----------------- OTP VERIFICATION MODAL & ADMIN APPROVAL CENTER ----------------- //
@@ -7003,7 +7082,7 @@ function openOtpVerifyModalForPending(pendingItem) {
 
   if (summaryEl && pendingItem) {
     const roleBadge = pendingItem.role === 'teacher' ? 'อาจารย์ผู้สอน' : 'นักเรียน';
-    const isEmailSent = pendingItem.status === 'Approved' || pendingItem.status === 'approved' || pendingItem.status === 'Verified' || !!pendingItem.otpCode;
+    const isEmailSent = pendingItem.status === 'Approved' || pendingItem.status === 'approved' || pendingItem.status === 'Verified';
     const statusText = isEmailSent
       ? '<span style="color: #059669; font-weight: 700;"><i class="fa-solid fa-envelope-circle-check"></i> ได้รับรหัสยืนยันแล้ว (กรอกรหัส 6 หลักด้านล่างเพื่อเปิดใช้งานได้ทันที)</span>'
       : '<span style="color: #b45309; font-weight: 700;"><i class="fa-solid fa-hourglass-half"></i> รอแอดมินกดยินยอมและส่งรหัสยืนยันไปยังอีเมลของคุณ</span>';
@@ -7042,121 +7121,66 @@ async function verifyRegistrationOtpCode() {
   const lookupInput = document.getElementById('otpLookupIdInput');
   const rawCode = cleanIdString(codeInput ? codeInput.value : '');
 
-  if (!rawCode) {
-    showToast('กรุณากรอกรหัสยืนยัน 6 หลักที่ได้รับจากอีเมลของแอดมิน', 'warning');
+  if (!/^\d{6}$/.test(rawCode)) {
+    showToast('กรุณากรอกรหัสยืนยัน 6 หลักที่ได้รับจากอีเมล', 'warning');
     return;
   }
 
-  let pendingList = getPendingRegistrations();
-  let targetItem = activePendingOtpUser;
+  const targetItem = activePendingOtpUser;
   const lookupId = targetItem ? targetItem.userId : cleanIdString(lookupInput ? lookupInput.value : '');
-
   if (!lookupId) {
     showToast('กรุณากรอกรหัสนักเรียนหรือรหัสอาจารย์ที่สมัครไว้', 'warning');
     return;
   }
-
-  // Always check cloud status first so cross-device OTP / regeneration works immediately
-  let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
-  if (url && !url.includes('docs.google.com/spreadsheets')) {
-    try {
-      const resp = await fetch(`${url}?action=checkRegistrationStatus&userId=${encodeURIComponent(lookupId)}`);
-      const json = await resp.json();
-      if (json && json.success) {
-        const cloudOtp = cleanIdString(json.otpCode || (json.registration && json.registration.otpCode) || '');
-        const cloudStatus = json.status || (json.registration && json.registration.status) || 'PendingAdmin';
-        let localMatch = pendingList.find(p => isIdMatch(p.userId, lookupId));
-        if (localMatch) {
-          if (cloudOtp) localMatch.otpCode = cloudOtp;
-          if (cloudStatus) localMatch.status = (cloudStatus === 'approved' || cloudStatus === 'Approved') ? 'Approved' : cloudStatus;
-        } else if (json.registration) {
-          localMatch = {
-            reqId: json.registration.reqId || json.registration.id || ('REQ-' + Date.now()),
-            role: json.registration.role || 'student',
-            userId: json.registration.userId || lookupId,
-            fullName: json.registration.fullName || lookupId,
-            email: json.registration.email || '',
-            gradeOrSubj: json.registration.gradeOrSubj || json.registration.detail || '',
-            otpCode: cloudOtp,
-            status: (cloudStatus === 'approved' || cloudStatus === 'Approved') ? 'Approved' : cloudStatus,
-            payload: json.registration.payload || null
-          };
-          pendingList.unshift(localMatch);
-        }
-        savePendingRegistrations(pendingList);
-      }
-    } catch (e) {}
-  }
-
-  targetItem = pendingList.find(p => isIdMatch(p.userId, lookupId)) || targetItem;
-
-  if (!targetItem) {
-    const inTeachers = subAdmins.find(s => isIdMatch(s.username, lookupId));
-    const inStudents = allStudents.find(s => isIdMatch(s.studentId, lookupId));
-    if (inTeachers || inStudents) {
-      markUserAsPermanentlyVerified(lookupId, inTeachers ? 'teacher' : 'student');
-      closeModal('otpVerifyModal');
-      closeModal('authModal');
-      showToast('ยืนยันตัวตนสำเร็จ บัญชีเปิดใช้งานเรียบร้อยแล้ว', 'success');
-      if (inTeachers) {
-        currentAdmin = inTeachers;
-        localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
-        localStorage.setItem('khalifah_auth_role', 'teacher');
-        switchView('teacher');
-      } else {
-        currentStudent = inStudents;
-        localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
-        localStorage.setItem('khalifah_auth_role', 'student');
-        switchView('dashboard');
-      }
-      return;
-    }
-    showToast('ไม่พบรายการคำขอสมัครของรหัสนี้ กรุณาตรวจสอบรหัสอีกครั้ง', 'error');
+  if (!navigator.onLine) {
+    showToast('ต้องเชื่อมต่ออินเทอร์เน็ตเพื่อยืนยันรหัส', 'warning');
     return;
   }
 
-  // ตรวจสอบความถูกต้องของรหัส 6 หลัก
-  // ยอมรับรหัสที่ตรงกับ OTP ของคำขอ, รหัสใน payload, รหัสใน subAdmins/allStudents, หรือ Master OTP ของระบบ
-  const isMatch = isIdMatch(rawCode, targetItem.otpCode) ||
-    (targetItem.payload && isIdMatch(rawCode, targetItem.payload.otpCode)) ||
-    (targetItem.role === 'teacher' && subAdmins.some(s => isIdMatch(s.username, lookupId) && isIdMatch(s.otpCode, rawCode))) ||
-    (targetItem.role === 'student' && allStudents.some(s => isIdMatch(s.studentId, lookupId) && isIdMatch(s.otpCode, rawCode))) ||
-    (typeof currentMasterOtp !== 'undefined' && currentMasterOtp && isIdMatch(rawCode, currentMasterOtp));
+  let res;
+  try {
+    res = await gasApiCall('verifyUserOtp', {
+      data: {
+        userId: lookupId,
+        role: targetItem ? targetItem.role : '',
+        reqId: targetItem ? (targetItem.reqId || '') : '',
+        otpCode: rawCode
+      }
+    });
+  } catch (err) {
+    showToast(describeNetworkError(err), 'error');
+    return;
+  }
 
-  if (!isMatch) {
+  if (!res || !res.success) {
+    if (res && res.alreadyVerified) {
+      closeModal('otpVerifyModal');
+      selectAuthRole(res.role === 'teacher' ? 'teacher' : 'student');
+      openModal('authModal');
+      showToast(res.message, 'info');
+      return;
+    }
+    if (res && res.status === 'PendingAdmin') {
+      showToast(res.message, 'info');
+      return;
+    }
     recordLoginFailure();
-    showToast('รหัสยืนยัน 6 หลักไม่ถูกต้อง! กรุณาตรวจสอบรหัสที่ได้รับจากอีเมลอีกครั้ง', 'error');
+    showToast((res && res.message) || 'รหัสยืนยัน 6 หลักไม่ถูกต้อง', 'error');
     return;
   }
 
   resetLoginFailures();
-  targetItem.status = 'Verified';
-  targetItem.isVerified = true;
+  setSessionToken(res.token);
+  markUserAsPermanentlyVerified(res.userId, res.role);
+  const pendingList = getPendingRegistrations().filter(p => !isIdMatch(p.userId, res.userId));
   savePendingRegistrations(pendingList);
 
-  // บันทึกยืนยันตัวตนถาวรทันที ("หลังยืนยันตัวครั้งแรก ก็ไม่ต้องให้ขึ้นแล้ว")
-  markUserAsPermanentlyVerified(targetItem.userId, targetItem.role);
-
-  // Notify Google Sheets that user has verified their OTP
-  syncRecordToGoogleSheet('verifyUserOtp', {
-    userId: targetItem.userId,
-    role: targetItem.role,
-    otpCode: rawCode
-  });
-
-  if (targetItem.role === 'student') {
-    const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, targetItem.userId));
-    if (sIdx !== -1) {
-      allStudents[sIdx].status = 'Active';
-      allStudents[sIdx].approvalStatus = 'Verified';
-      currentStudent = allStudents[sIdx];
-    } else if (targetItem.payload) {
-      targetItem.payload.status = 'Active';
-      targetItem.payload.approvalStatus = 'Verified';
-      allStudents.push(targetItem.payload);
-      currentStudent = targetItem.payload;
-    }
+  const profile = res.profile || {};
+  if (res.role === 'student') {
+    profile.studentId = cleanIdString(profile.studentId || res.userId);
+    currentStudent = profile;
     currentAdmin = null;
+    allStudents = [profile];
     localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
     localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));
     localStorage.removeItem('khalifah_current_admin');
@@ -7170,22 +7194,10 @@ async function verifyRegistrationOtpCode() {
     closeModal('authModal');
     switchView('dashboard');
     playSuccessSound();
-    showToast(`ยืนยันรหัสจากอีเมลสำเร็จ! ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
-    syncRecordToGoogleSheet('registerStudent', currentStudent);
-  } else if (targetItem.role === 'teacher') {
-    const tIdx = subAdmins.findIndex(s => isIdMatch(s.username, targetItem.userId));
-    if (tIdx !== -1) {
-      subAdmins[tIdx].status = 'Active';
-      subAdmins[tIdx].approvalStatus = 'Verified';
-      currentAdmin = subAdmins[tIdx];
-    } else if (targetItem.payload) {
-      targetItem.payload.status = 'Active';
-      targetItem.payload.approvalStatus = 'Verified';
-      subAdmins.push(targetItem.payload);
-      currentAdmin = targetItem.payload;
-    }
+    showToast(`ยืนยันรหัสจากอีเมลสำเร็จ! ยินดีต้อนรับ ${currentStudent.fullName || ''}`, 'success');
+  } else {
+    currentAdmin = Object.assign({ role: 'TEACHER' }, profile, { username: profile.username || res.userId, status: 'Active', approvalStatus: 'Verified' });
     currentStudent = null;
-    localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
     localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
     localStorage.removeItem('khalifah_current_student');
     localStorage.setItem('khalifah_auth_role', 'teacher');
@@ -7196,12 +7208,10 @@ async function verifyRegistrationOtpCode() {
     closeModal('authModal');
     playSuccessSound();
     switchView('teacher');
-    showToast(`ยืนยันรหัสอาจารย์สำเร็จ! ยินดีต้อนรับอาจารย์ ${currentAdmin.fullName}`, 'success');
-    syncRecordToGoogleSheet('addSubAdmin', currentAdmin);
+    showToast(`ยืนยันรหัสอาจารย์สำเร็จ! ยินดีต้อนรับอาจารย์ ${currentAdmin.fullName || ''}`, 'success');
   }
 
-  renderPendingApprovalsTable();
-  renderSuperAdminOverviewKpis();
+  if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(false);
 }
 
 async function checkOtpApprovalStatus() {
@@ -7374,7 +7384,6 @@ async function handleAdminLogin() {
   const btn = document.getElementById('btnAdminModalLogin') || document.querySelector('#adminAuthModal button.btn-primary');
 
   const rawPass = (passEl?.value || '').trim();
-  const pass = cleanIdString(rawPass);
   const user = cleanIdString((userEl?.value || '').trim());
 
   passEl?.classList.remove('is-invalid');
@@ -7387,77 +7396,13 @@ async function handleAdminLogin() {
   }
 
   setButtonLoading(btn, true, 'กำลังตรวจสอบสิทธิ์...');
-
-  if (isIdMatch(pass, MASTER_ADMIN_PASS) && !user) {
-    setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
-    resetLoginFailures();
-    currentStudent = null;
-    currentAdmin = { username: 'MasterAdmin', fullName: 'แอดมินสูงสุด (Super Admin)', role: 'SuperAdmin' };
-    localStorage.removeItem('khalifah_current_student');
-    localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
-    localStorage.setItem('khalifah_auth_role', 'admin');
-    setTimeout(() => {
-      document.body.classList.remove('auth-locked');
-      updateAdminUIVisibility(true);
-      closeModal('adminAuthModal');
-      closeModal('authModal');
-      switchView('admin');
-      showToast('เข้าสู่ระบบแอดมินสูงสุดสำเร็จ', 'success');
-    }, 250);
-    return;
-  }
-
-  // Check subAdmins
-  let foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
-  if (!foundSub && typeof fetchSubAdminsFromCloud === 'function') {
-    try {
-      await fetchSubAdminsFromCloud(false);
-      foundSub = subAdmins.find(s => (isIdMatch(s.username, user) || (!user && isIdMatch(s.password, pass))) && isIdMatch(s.password, pass));
-    } catch (e) {}
-  }
-
-  if (foundSub) {
-    if (foundSub.approvalStatus === 'PendingAdmin' || foundSub.approvalStatus === 'AwaitingOtp') {
-      setButtonLoading(btn, false);
-      showToast('บัญชีอาจารย์นี้ยังไม่ได้ป้อนรหัสยืนยัน 6 หลักที่ส่งไปยังอีเมล', 'warning');
-      return;
-    }
-    setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
-    resetLoginFailures();
-    currentStudent = null;
-    currentAdmin = foundSub;
-    localStorage.removeItem('khalifah_current_student');
-    localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
-    localStorage.setItem('khalifah_auth_role', foundSub.role === 'SuperAdmin' ? 'admin' : 'teacher');
-    setTimeout(() => {
-      document.body.classList.remove('auth-locked');
-      updateAdminUIVisibility(true);
-      closeModal('adminAuthModal');
-      closeModal('authModal');
-      switchView(foundSub.role === 'SuperAdmin' ? 'admin' : 'teacher');
-      showToast(`ยินดีต้อนรับ ${foundSub.fullName || foundSub.username}`, 'success');
-    }, 250);
-    return;
-  }
-
-  setButtonLoading(btn, false);
-  recordLoginFailure();
-
-  if (user) {
-    const userExists = subAdmins.some(s => isIdMatch(s.username, user) || (s.phone && isPhoneMatch(s.phone, user)));
-    if (userExists) {
-      triggerAuthError(passEl, 'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
-    } else {
-      triggerAuthError(userEl, 'ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาตรวจสอบรหัสอาจารย์หรือชื่อผู้ใช้');
-    }
-  } else {
-    triggerAuthError(passEl, 'รหัสผ่านหลักไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง');
-  }
+  await performStaffLogin({ username: user, password: rawPass, btn, userEl, passEl, modalsToClose: ['adminAuthModal', 'authModal'] });
 }
 
 function adminLogout() {
   if (typeof stopAdminActivityLivePolling === 'function') stopAdminActivityLivePolling();
   const wasTeacher = currentAdmin && currentAdmin.role !== 'SuperAdmin';
+  clearSessionData();
   currentAdmin = null;
   currentStudent = null;
   localStorage.removeItem('khalifah_current_admin');
@@ -7593,6 +7538,7 @@ function switchAdminTab(tabName, element) {
 let isFetchingPendingCloud = false;
 async function fetchPendingApprovalsFromCloud() {
   if (isFetchingPendingCloud) return;
+  if (!currentAdmin || !getSessionToken()) return; // เฉพาะบุคลากร
   let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
   if (!url || url.includes('docs.google.com/spreadsheets')) return;
   isFetchingPendingCloud = true;
@@ -8865,12 +8811,15 @@ function submitQuickAddSubAdmin() {
     createdAt: new Date().toISOString().split('T')[0]
   };
 
+  const localRecord = { ...recordData };
+  delete localRecord.password; // รหัสผ่านเก็บเฉพาะที่เซิร์ฟเวอร์ (แบบแฮช)
   const dupIdx = subAdmins.findIndex(s => isIdMatch(s.username, username));
   if (dupIdx !== -1) {
     recordData.adminId = subAdmins[dupIdx].adminId || recordData.adminId;
-    subAdmins[dupIdx] = recordData;
+    localRecord.adminId = recordData.adminId;
+    subAdmins[dupIdx] = localRecord;
   } else {
-    subAdmins.unshift(recordData);
+    subAdmins.unshift(localRecord);
   }
 
   localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
@@ -8902,7 +8851,6 @@ async function fetchSubAdminsFromCloud(showToastMsg = false) {
         const merged = {
           adminId: remote.adminId || (existIdx !== -1 ? subAdmins[existIdx].adminId : ('TCH-' + Date.now())),
           username: u,
-          password: cleanIdString(remote.password || (existIdx !== -1 ? subAdmins[existIdx].password : '')),
           fullName: remote.fullName || (existIdx !== -1 ? subAdmins[existIdx].fullName : u),
           email: remote.email || (existIdx !== -1 ? subAdmins[existIdx].email : ''),
           phone: normalizePhone(remote.phone || (existIdx !== -1 ? subAdmins[existIdx].phone : '')),
@@ -8968,7 +8916,11 @@ function openEditTeacherModal(username) {
 
   if (document.getElementById('subFullName')) document.getElementById('subFullName').value = t.fullName || '';
   if (document.getElementById('subUsername')) document.getElementById('subUsername').value = cleanIdString(t.username);
-  if (document.getElementById('subPassword')) document.getElementById('subPassword').value = cleanIdString(t.password);
+  const subPassEl = document.getElementById('subPassword');
+  if (subPassEl) {
+    subPassEl.value = '';
+    subPassEl.placeholder = 'เว้นว่างไว้ = ใช้รหัสผ่านเดิม';
+  }
   if (document.getElementById('subEmail')) document.getElementById('subEmail').value = t.email || '';
   if (document.getElementById('subPhone')) document.getElementById('subPhone').value = normalizePhone(t.phone || '');
   if (document.getElementById('subRole')) document.getElementById('subRole').value = t.role || 'TEACHER';
@@ -8998,7 +8950,7 @@ function submitAddSubAdmin() {
     ? selectedSubjects
     : (fallbackSubj ? [fallbackSubj] : appSubjects.map(s => s.id));
 
-  if (!fullName || !username || !pass) {
+  if (!fullName || !username || (!pass && !origUser)) {
     showToast('กรุณากรอกชื่อ-นามสกุล รหัสผู้ใช้ และรหัสผ่านให้ครบถ้วน', 'warning');
     return;
   }
@@ -9018,27 +8970,36 @@ function submitAddSubAdmin() {
     createdAt: new Date().toISOString().split('T')[0]
   };
 
+  if (!pass) delete recordData.password; // แก้ไขโดยไม่เปลี่ยนรหัสผ่าน: เซิร์ฟเวอร์คงรหัสเดิม
   if (origUser) {
     const idx = subAdmins.findIndex(s => isIdMatch(s.username, origUser));
     if (idx !== -1) {
       recordData.adminId = subAdmins[idx].adminId || recordData.adminId;
       recordData.createdAt = subAdmins[idx].createdAt || recordData.createdAt;
-      subAdmins[idx] = recordData;
+    }
+  }
+  const localRecord = { ...recordData };
+  delete localRecord.password;
+  if (origUser) {
+    const idx = subAdmins.findIndex(s => isIdMatch(s.username, origUser));
+    if (idx !== -1) {
+      subAdmins[idx] = localRecord;
     } else {
-      subAdmins.push(recordData);
+      subAdmins.push(localRecord);
     }
   } else {
     const dupIdx = subAdmins.findIndex(s => isIdMatch(s.username, username));
     if (dupIdx !== -1) {
-      subAdmins[dupIdx] = recordData;
+      subAdmins[dupIdx] = localRecord;
     } else {
-      subAdmins.push(recordData);
+      subAdmins.push(localRecord);
     }
   }
 
   localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins));
   if (currentAdmin && isIdMatch(currentAdmin.username, origUser || username)) {
-    currentAdmin = recordData;
+    currentAdmin = { ...currentAdmin, ...localRecord };
+    localStorage.setItem('khalifah_current_admin', JSON.stringify(currentAdmin));
   }
 
   closeModal('addSubAdminModal');
@@ -9094,7 +9055,7 @@ function renderSubAdminsTable() {
       <tr>
         <td>
           <b>${escapeHtml(cleanIdString(a.username))}</b>
-          <div style="font-size: 0.72rem; color: var(--text-muted);">รหัสผ่าน: ${escapeHtml(cleanIdString(a.password))}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);"><i class="fa-solid fa-lock"></i> รหัสผ่านเข้ารหัสไว้ที่เซิร์ฟเวอร์</div>
         </td>
         <td style="font-weight: 600;">${escapeHtml(a.fullName)}</td>
         <td>
@@ -11858,6 +11819,8 @@ let isSyncingAllCloud = false;
 
 async function syncAllDataFromCloud(showToastMsg = false) {
   if (isSyncingAllCloud) return;
+  // ข้อมูลทุกตารางต้องเข้าสู่ระบบก่อน (เซิร์ฟเวอร์ส่งเฉพาะข้อมูลที่ผู้ใช้มีสิทธิ์เห็น)
+  if (!getSessionToken() || (!currentStudent && !currentAdmin)) return;
   let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
   if (url && url.includes('docs.google.com/spreadsheets')) url = DEFAULT_GAS_API_URL;
   if (!url || !navigator.onLine) return;
@@ -11877,6 +11840,8 @@ async function syncAllDataFromCloud(showToastMsg = false) {
       const fullJson = await fullResp.json();
       if (fullJson && fullJson.success) {
         db = fullJson;
+      } else if (fullJson && (fullJson.authRequired || fullJson.forbidden)) {
+        return; // เซสชันหมดอายุ: fetch wrapper จะพาไปหน้าเข้าสู่ระบบ
       }
     } catch (e) {
       db = null;
@@ -13318,6 +13283,12 @@ function checkStaffMonitorUrlParams() {
     }
   } catch (e) {
     targetActId = null;
+  }
+
+  if (targetActId !== null && targetActId !== undefined && !(getSessionToken() && currentAdmin)) {
+    // โหมดจอติดตามแสดงรายชื่อนักเรียน จึงต้องเข้าสู่ระบบบุคลากรบนเครื่องนี้ก่อน
+    setTimeout(() => showToast('กรุณาเข้าสู่ระบบบัญชีอาจารย์/แอดมินบนเครื่องนี้ก่อน แล้วเปิดลิงก์จอติดตามอีกครั้ง', 'warning'), 800);
+    return false;
   }
 
   if (targetActId !== null && targetActId !== undefined) {
