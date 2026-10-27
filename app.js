@@ -9305,6 +9305,7 @@ function initTeacherPortalView() {
   const gradeSel = document.getElementById('teacherPortalGradeSelect');
   if (gradeSel && !gradeSel.value) gradeSel.value = 'ALL';
 
+  renderTeacherOverviewBento();
   renderTeacherAttendanceTable();
   renderTeacherGradesPortalTable();
   if (typeof renderCalendar === 'function') renderCalendar('teacher');
@@ -9316,34 +9317,162 @@ function switchTeacherPortalTab(tabName, btnEl) {
   if (btnEl) {
     btnEl.classList.add('active');
   } else {
-    let fallbackId = 'btnTeacherTabAtt';
-    if (tabName === 'grades') fallbackId = 'btnTeacherTabGrade';
+    let fallbackId = 'btnTeacherTabOverview';
+    if (tabName === 'attendance') fallbackId = 'btnTeacherTabAtt';
+    else if (tabName === 'grades') fallbackId = 'btnTeacherTabGrade';
     else if (tabName === 'calendar') fallbackId = 'btnTeacherTabCal';
     const fallbackBtn = document.getElementById(fallbackId);
     if (fallbackBtn) fallbackBtn.classList.add('active');
   }
 
-  // Sync bottom navigation bar (รูปแนบ 4: บาร์ปุ่มแท็บแยกด้านล่าง)
+  // Sync bottom navigation bar (4 ปุ่ม: ภาพรวม, เช็คชื่อ, กรอกเกรด, ปฏิทิน)
   document.querySelectorAll('#view-teacher .teacher-bottom-nav-item').forEach(b => b.classList.remove('active'));
-  let bottomBtnId = 'btnTeacherBottomAtt';
-  if (tabName === 'grades') bottomBtnId = 'btnTeacherBottomGrade';
+  let bottomBtnId = 'btnTeacherBottomOverview';
+  if (tabName === 'attendance') bottomBtnId = 'btnTeacherBottomAtt';
+  else if (tabName === 'grades') bottomBtnId = 'btnTeacherBottomGrade';
   else if (tabName === 'calendar') bottomBtnId = 'btnTeacherBottomCal';
   const bottomBtn = document.getElementById(bottomBtnId);
   if (bottomBtn) bottomBtn.classList.add('active');
 
+  const tabOvw = document.getElementById('teacher-tab-overview');
   const tabAtt = document.getElementById('teacher-tab-attendance');
   const tabGrd = document.getElementById('teacher-tab-grades');
   const tabCal = document.getElementById('teacher-tab-calendar');
+  if (tabOvw) tabOvw.style.display = (tabName === 'overview') ? 'block' : 'none';
   if (tabAtt) tabAtt.style.display = (tabName === 'attendance') ? 'block' : 'none';
   if (tabGrd) tabGrd.style.display = (tabName === 'grades') ? 'block' : 'none';
   if (tabCal) tabCal.style.display = (tabName === 'calendar') ? 'block' : 'none';
 
-  if (tabName === 'attendance') {
+  if (tabName === 'overview') {
+    renderTeacherOverviewBento();
+  } else if (tabName === 'attendance') {
     renderTeacherAttendanceTable();
   } else if (tabName === 'grades') {
     renderTeacherGradesPortalTable();
   } else if (tabName === 'calendar') {
     if (typeof renderCalendar === 'function') renderCalendar('teacher');
+  }
+}
+
+function renderTeacherOverviewBento() {
+  const kpiStd = document.getElementById('teacherKpiTotalStudents');
+  const kpiChecked = document.getElementById('teacherKpiCheckedToday');
+  const kpiRate = document.getElementById('teacherKpiAttRate');
+  const kpiSubj = document.getElementById('teacherKpiSubjectsCount');
+  const attSummary = document.getElementById('teacherKpiAttSummary');
+  const dateLabel = document.getElementById('bentoAttDateLabel');
+  const progressPct = document.getElementById('bentoAttProgressPct');
+  const progressBar = document.getElementById('bentoAttProgressBar');
+  const cntPresent = document.getElementById('bentoCountPresent');
+  const cntLate = document.getElementById('bentoCountLate');
+  const cntLeave = document.getElementById('bentoCountLeave');
+  const cntAbsent = document.getElementById('bentoCountAbsent');
+  const cntPending = document.getElementById('bentoCountPending');
+  const subjectsOverviewEl = document.getElementById('bentoGradesSubjectsOverview');
+  const upcomingEventsEl = document.getElementById('bentoUpcomingEventsList');
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (dateLabel) {
+    dateLabel.innerText = `ข้อมูลประจำวันที่ ${formatThaiDateDisplay(todayStr)}`;
+  }
+
+  let savedLogs = {};
+  try {
+    savedLogs = JSON.parse(localStorage.getItem('khalifah_daily_attendance_logs') || '{}');
+  } catch (e) { savedLogs = {}; }
+  const todayMap = savedLogs[todayStr] || {};
+
+  const totalStudents = allStudents.length;
+  let presentCount = 0;
+  let lateCount = 0;
+  let leaveCount = 0;
+  let absentCount = 0;
+
+  allStudents.forEach(s => {
+    const sId = cleanIdString(s.studentId);
+    const st = todayMap[sId] || (teacherDailyAttendanceDraft && teacherDailyAttendanceDraft[sId]);
+    if (st === 'present') presentCount++;
+    else if (st === 'late') lateCount++;
+    else if (st === 'leave') leaveCount++;
+    else if (st === 'absent') absentCount++;
+  });
+
+  const checkedTotal = presentCount + lateCount + leaveCount + absentCount;
+  const pendingCount = Math.max(0, totalStudents - checkedTotal);
+  const attRate = checkedTotal > 0 ? ((presentCount / checkedTotal) * 100).toFixed(0) : 0;
+  const progressRate = totalStudents > 0 ? ((checkedTotal / totalStudents) * 100).toFixed(0) : 0;
+
+  if (kpiStd) kpiStd.innerText = `${totalStudents} คน`;
+  if (kpiChecked) kpiChecked.innerText = `${checkedTotal} คน`;
+  if (kpiRate) kpiRate.innerText = `${attRate}%`;
+  if (attSummary) attSummary.innerText = checkedTotal === 0 ? 'ยังไม่ได้เริ่มเช็คชื่อ' : `เช็คแล้ว ${checkedTotal}/${totalStudents} คน`;
+  if (progressPct) progressPct.innerText = `${progressRate}% (${checkedTotal}/${totalStudents} คน)`;
+  if (progressBar) progressBar.style.width = `${progressRate}%`;
+
+  if (cntPresent) cntPresent.innerText = presentCount;
+  if (cntLate) cntLate.innerText = lateCount;
+  if (cntLeave) cntLeave.innerText = leaveCount;
+  if (cntAbsent) cntAbsent.innerText = absentCount;
+  if (cntPending) cntPending.innerText = pendingCount;
+
+  // Subjects overview
+  if (subjectsOverviewEl) {
+    const assignedIds = Array.isArray(currentAdmin?.assignedSubjects)
+      ? currentAdmin.assignedSubjects
+      : (currentAdmin?.assignedSubject ? [currentAdmin.assignedSubject] : []);
+    const assignedSubjObjs = (currentAdmin?.role === 'SuperAdmin' || currentAdmin?.role === 'EXECUTIVE' || assignedIds.length === 0)
+      ? appSubjects
+      : appSubjects.filter(s => assignedIds.includes(s.id));
+
+    if (kpiSubj) kpiSubj.innerText = `${assignedSubjObjs.length} วิชา`;
+
+    if (assignedSubjObjs.length === 0) {
+      subjectsOverviewEl.innerHTML = '<span style="font-size: 0.8rem; color: #64748b; font-style: italic;">ยังไม่มีวิชาที่ได้รับมอบหมาย</span>';
+    } else {
+      subjectsOverviewEl.innerHTML = assignedSubjObjs.slice(0, 3).map(subj => {
+        let evaluatedCount = 0;
+        allStudents.forEach(s => {
+          if (s.subjectGrades && s.subjectGrades[subj.id] !== undefined && s.subjectGrades[subj.id] > 0) {
+            evaluatedCount++;
+          }
+        });
+        const evalPct = totalStudents > 0 ? ((evaluatedCount / totalStudents) * 100).toFixed(0) : 0;
+        return `
+          <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 0.5rem 0.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 3px;">
+              <span><i class="fa-solid fa-book" style="color: var(--primary);"></i> ${escapeHtml(subj.name)}</span>
+              <span style="font-size: 0.74rem; color: #64748b;">ประเมิน ${evaluatedCount}/${totalStudents} (${evalPct}%)</span>
+            </div>
+            <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
+              <div style="width: ${evalPct}%; height: 100%; background: #c026d3; border-radius: 9999px;"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Upcoming events
+  if (upcomingEventsEl) {
+    const visibleEvents = typeof getVisibleCalendarEvents === 'function' ? getVisibleCalendarEvents() : [];
+    const upcoming = visibleEvents.filter(e => e.startDate >= todayStr).sort((a, b) => a.startDate.localeCompare(b.startDate)).slice(0, 3);
+    if (upcoming.length === 0) {
+      upcomingEventsEl.innerHTML = '<span style="font-size: 0.8rem; color: #64748b; font-style: italic;">ไม่มีกิจกรรมล่วงหน้าในขณะนี้</span>';
+    } else {
+      upcomingEventsEl.innerHTML = upcoming.map(ev => {
+        const catClass = typeof getCategoryClass === 'function' ? getCategoryClass(ev.category) : '';
+        const s = typeof formatThaiDateDisplay === 'function' ? formatThaiDateDisplay(ev.startDate) : ev.startDate;
+        return `
+          <div class="bento-upcoming-item" onclick="switchTeacherTab('calendar')">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="cal-category-pill ${catClass}" style="font-size: 0.7rem; padding: 2px 6px;">${escapeHtml(ev.category || 'กิจกรรม')}</span>
+              <span style="font-weight: 600; color: #0f172a; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(ev.title)}</span>
+            </div>
+            <span style="font-size: 0.74rem; color: #64748b; white-space: nowrap;"><i class="fa-regular fa-calendar"></i> ${s}</span>
+          </div>
+        `;
+      }).join('');
+    }
   }
 }
 
@@ -9370,6 +9499,7 @@ function setTeacherAttDateToday() {
 
 function renderTeacherAttendanceTable() {
   const tbody = document.getElementById('teacherAttendanceTableBody');
+  const mobileList = document.getElementById('teacherAttendanceMobileList');
   const gradeSelect = document.getElementById('teacherAttGradeSelect');
   const dateInput = document.getElementById('teacherAttDateInput');
   const searchInput = document.getElementById('teacherAttSearchInput');
@@ -9423,6 +9553,13 @@ function renderTeacherAttendanceTable() {
         </td>
       </tr>
     `;
+    if (mobileList) {
+      mobileList.innerHTML = `
+        <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+          ไม่พบรายชื่อนักเรียนในระดับชั้นหรือคำค้นหาที่เลือก
+        </div>
+      `;
+    }
     return;
   }
 
@@ -9467,6 +9604,52 @@ function renderTeacherAttendanceTable() {
       </tr>
     `;
   }).join('');
+
+  // Mobile Cards Rendering (รูปแนบ 2: พอดีมือถือ ไม่ต้องเลื่อนซ้ายขวา ไม่ทะลุขอบ)
+  if (mobileList) {
+    mobileList.innerHTML = filtered.map(s => {
+      const sId = cleanIdString(s.studentId);
+      const curState = teacherDailyAttendanceDraft[sId] || dayMap[sId] || 'present';
+      const att = s.attendance || { present: 0, late: 0, leave: 0, absent: 0 };
+
+      return `
+        <div class="teacher-att-mobile-card">
+          <div class="att-card-header">
+            <div>
+              <div class="att-card-name">${escapeHtml(s.fullName)}</div>
+              <div class="att-card-tags">
+                <span class="badge-sub" style="font-size: 0.72rem; padding: 2px 6px;">รหัส: ${escapeHtml(sId)}</span>
+                <span class="activity-badge badge-upcoming" style="font-size: 0.7rem; padding: 2px 6px;">${escapeHtml(s.grade)}</span>
+              </div>
+            </div>
+            <div style="flex-shrink: 0; text-align: right;">
+              ${getStudentStatusBadgeHtml(s.status, s.statusEffectiveDate || s.statusDate)}
+            </div>
+          </div>
+
+          <div class="att-card-stats-row">
+            <span>สถิติสะสม:</span>
+            <span>มา <b style="color: #15803d;">${att.present || 0}</b> • สาย <b style="color: #ea580c;">${att.late || 0}</b> • ลา <b style="color: #0284c7;">${att.leave || 0}</b> • ขาด <b style="color: #dc2626;">${att.absent || 0}</b></span>
+          </div>
+
+          <div class="att-card-btn-grid">
+            <button type="button" class="att-status-btn ${curState === 'present' ? 'active-present' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'present')">
+              <i class="fa-solid fa-check"></i> มา
+            </button>
+            <button type="button" class="att-status-btn ${curState === 'late' ? 'active-late' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'late')">
+              สาย
+            </button>
+            <button type="button" class="att-status-btn ${curState === 'leave' ? 'active-leave' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'leave')">
+              ลา
+            </button>
+            <button type="button" class="att-status-btn ${curState === 'absent' ? 'active-absent' : ''}" onclick="setStudentDailyAttendance('${escapeHtml(sId)}', 'absent')">
+              ขาด
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 }
 
 function setStudentDailyAttendance(studentId, status) {
@@ -9649,20 +9832,33 @@ function removeAssignmentColumn(assignmentId) {
 }
 
 function onAssignmentScoreInputChange(inputEl, studentId, subjectId) {
+  const asgId = inputEl.getAttribute('data-assignment-id');
+  const val = inputEl.value;
+
+  // Sync sibling inputs with same studentId and asgId
+  document.querySelectorAll(`.assignment-score-input[data-student-id="${studentId}"][data-assignment-id="${asgId}"]`).forEach(inp => {
+    if (inp !== inputEl) inp.value = val;
+  });
+
   const assignments = getSubjectAssignments(subjectId);
   let totalScore = 0;
   let totalMax = 0;
   assignments.forEach(a => {
     totalMax += a.maxScore;
     const inp = document.querySelector(`.assignment-score-input[data-student-id="${studentId}"][data-assignment-id="${a.id}"]`);
-    const val = parseFloat(inp?.value);
-    if (!isNaN(val)) totalScore += val;
+    const sc = parseFloat(inp?.value);
+    if (!isNaN(sc)) totalScore += sc;
   });
   const pct = totalMax > 0 ? (totalScore / totalMax) * 100 : 0;
   const labelEl = document.getElementById(`totalScorePct_${studentId}`);
   if (labelEl) {
     labelEl.innerText = `${totalScore} / ${totalMax} (${pct.toFixed(0)}%)`;
     labelEl.style.color = pct >= 50 ? 'var(--primary)' : 'var(--text-muted)';
+  }
+  const mobileLabelEl = document.getElementById(`mobileTotalScorePct_${studentId}`);
+  if (mobileLabelEl) {
+    mobileLabelEl.innerText = `${totalScore} / ${totalMax} (${pct.toFixed(0)}%)`;
+    mobileLabelEl.style.color = pct >= 50 ? 'var(--primary)' : 'var(--text-muted)';
   }
 
   // Auto-calculate suggested grade based on percentage
@@ -9676,15 +9872,23 @@ function onAssignmentScoreInputChange(inputEl, studentId, subjectId) {
   else if (pct >= 50) suggestedGrade = 1;
   else suggestedGrade = 0;
 
-  const gradeSelect = document.querySelector(`.teacher-portal-grade-input[data-student-id="${studentId}"]`);
-  if (gradeSelect) {
-    gradeSelect.value = String(suggestedGrade);
-  }
+  const gradeSelects = document.querySelectorAll(`.teacher-portal-grade-input[data-student-id="${studentId}"]`);
+  gradeSelects.forEach(sel => {
+    sel.value = String(suggestedGrade);
+  });
+}
+
+function onTeacherPortalGradeChange(studentId, gradeVal) {
+  const allGradeInputs = document.querySelectorAll(`.teacher-portal-grade-input[data-student-id="${studentId}"]`);
+  allGradeInputs.forEach(el => {
+    if (el.value !== String(gradeVal)) el.value = String(gradeVal);
+  });
 }
 
 function renderTeacherGradesPortalTable() {
   const tbody = document.getElementById('teacherPortalGradesTableBody');
   const thead = document.getElementById('teacherPortalGradesTableHead');
+  const mobileList = document.getElementById('teacherPortalGradesMobileList');
   const subjSelect = document.getElementById('teacherPortalSubjectSelect');
   const gradeSelect = document.getElementById('teacherPortalGradeSelect');
   const countBadge = document.getElementById('teacherAssignmentsCount');
@@ -9751,6 +9955,13 @@ function renderTeacherGradesPortalTable() {
         </td>
       </tr>
     `;
+    if (mobileList) {
+      mobileList.innerHTML = `
+        <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+          ไม่พบรายชื่อนักเรียนในระดับชั้นที่เลือก
+        </div>
+      `;
+    }
     return;
   }
 
@@ -9762,6 +9973,7 @@ function renderTeacherGradesPortalTable() {
 
   const gradeChoices = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4];
 
+  // Desktop Table Rows
   tbody.innerHTML = filtered.map(s => {
     const sId = cleanIdString(s.studentId);
     const rawVal = (s.subjectGrades && s.subjectGrades[currentSubj] !== undefined)
@@ -9811,7 +10023,7 @@ function renderTeacherGradesPortalTable() {
             </span>
           </td>
           <td style="text-align: center;">
-            <select class="grade-select-pill teacher-portal-grade-input" data-student-id="${escapeHtml(sId)}">
+            <select class="grade-select-pill teacher-portal-grade-input" data-student-id="${escapeHtml(sId)}" onchange="onTeacherPortalGradeChange('${escapeHtml(sId)}', this.value)">
               ${gradeChoices.map(g => `<option value="${g}" ${g === curGradeVal ? 'selected' : ''}>${g === 0 ? '0 (รอผล)' : 'เกรด ' + g}</option>`).join('')}
             </select>
           </td>
@@ -9835,7 +10047,7 @@ function renderTeacherGradesPortalTable() {
         <td><span class="badge-sub">${escapeHtml(s.grade)}</span></td>
         <td style="text-align: center;">${getStudentStatusBadgeHtml(s.status, s.statusEffectiveDate || s.statusDate)}</td>
         <td style="text-align: center;">
-          <select class="grade-select-pill teacher-portal-grade-input" data-student-id="${escapeHtml(sId)}">
+          <select class="grade-select-pill teacher-portal-grade-input" data-student-id="${escapeHtml(sId)}" onchange="onTeacherPortalGradeChange('${escapeHtml(sId)}', this.value)">
             ${gradeChoices.map(g => `<option value="${g}" ${g === curGradeVal ? 'selected' : ''}>${g === 0 ? '0 (รอผล)' : 'เกรด ' + g}</option>`).join('')}
           </select>
         </td>
@@ -9848,11 +10060,105 @@ function renderTeacherGradesPortalTable() {
       </tr>
     `;
   }).join('');
+
+  // Mobile Cards Rendering (รูปแนบ 3: พอดีมือถือ ไม่ต้องเลื่อนซ้ายขวา ไม่ทะลุขอบ)
+  if (mobileList) {
+    mobileList.innerHTML = filtered.map(s => {
+      const sId = cleanIdString(s.studentId);
+      const rawVal = (s.subjectGrades && s.subjectGrades[currentSubj] !== undefined)
+        ? s.subjectGrades[currentSubj]
+        : (s.skills && s.skills[currentSubj] !== undefined ? s.skills[currentSubj] : 0);
+      const curGradeVal = normalizeGrade1To4(rawVal);
+      const studentAsgMap = (allScoresMap[sId] && allScoresMap[sId][currentSubj]) || (s.assignmentScores && s.assignmentScores[currentSubj]) || {};
+
+      let totalScore = 0;
+      let totalMax = 0;
+      assignments.forEach(a => {
+        totalMax += a.maxScore;
+        const sc = parseFloat(studentAsgMap[a.id]);
+        if (!isNaN(sc)) totalScore += sc;
+      });
+      const pct = totalMax > 0 ? (totalScore / totalMax) * 100 : 0;
+
+      let asgInputsHtml = '';
+      if (assignments.length > 0) {
+        asgInputsHtml = `
+          <div style="background: #f8fafc; padding: 0.6rem; border-radius: 8px; border: 1px solid #f1f5f9; margin-bottom: 0.65rem;">
+            <div style="font-size: 0.74rem; font-weight: 700; color: #64748b; margin-bottom: 0.4rem;">คะแนนเก็บ / ชิ้นงานย่อย:</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.45rem;">
+              ${assignments.map(a => {
+                const sc = studentAsgMap[a.id] !== undefined ? studentAsgMap[a.id] : '';
+                return `
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 0.68rem; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(a.title)}">${escapeHtml(a.title)} (เต็ม ${a.maxScore})</span>
+                    <input type="number" step="0.5" min="0" max="${a.maxScore}" 
+                      class="assignment-score-input" 
+                      data-student-id="${escapeHtml(sId)}" 
+                      data-assignment-id="${escapeHtml(a.id)}" 
+                      data-max-score="${a.maxScore}" 
+                      value="${sc}" 
+                      placeholder="0-${a.maxScore}"
+                      oninput="onAssignmentScoreInputChange(this, '${escapeHtml(sId)}', '${escapeHtml(currentSubj)}')"
+                      style="width: 100% !important; box-sizing: border-box;"
+                    >
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px dashed #e2e8f0; font-size: 0.78rem;">
+              <span style="color: #64748b;">รวมคะแนน:</span>
+              <span id="mobileTotalScorePct_${escapeHtml(sId)}" style="font-weight: 700; color: ${pct >= 50 ? 'var(--primary)' : 'var(--text-muted)'};">
+                ${totalScore} / ${totalMax} (${pct.toFixed(0)}%)
+              </span>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="teacher-grades-mobile-card">
+          <div class="grade-card-header">
+            <div>
+              <div class="grade-card-name">${escapeHtml(s.fullName)}</div>
+              <div class="grade-card-tags">
+                <span class="badge-sub" style="font-size: 0.72rem; padding: 2px 6px;">รหัส: ${escapeHtml(sId)}</span>
+                <span class="activity-badge badge-upcoming" style="font-size: 0.7rem; padding: 2px 6px;">${escapeHtml(s.grade)}</span>
+              </div>
+            </div>
+            <div style="flex-shrink: 0; text-align: right;">
+              <span style="font-size: 0.76rem; font-weight: 700; color: #1e293b; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                GPAX ${escapeHtml(recalculateStudentGpa(s))}
+              </span>
+            </div>
+          </div>
+
+          ${asgInputsHtml}
+
+          <div style="display: flex; flex-direction: column; gap: 0.45rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: #334155; margin: 0;">เกรดตัด (0–4):</label>
+              <select class="grade-select-pill teacher-portal-grade-input" data-student-id="${escapeHtml(sId)}" onchange="onTeacherPortalGradeChange('${escapeHtml(sId)}', this.value)" style="min-width: 130px; text-align: center;">
+                ${gradeChoices.map(g => `<option value="${g}" ${g === curGradeVal ? 'selected' : ''}>${g === 0 ? '0 (รอผล)' : 'เกรด ' + g}</option>`).join('')}
+              </select>
+            </div>
+            <div class="grades-card-quick-grid">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 1)">เกรด 1</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 2)">เกรด 2</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 3)">เกรด 3</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="setTeacherPortalQuickGrade('${escapeHtml(sId)}', 4)">เกรด 4</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 }
 
 function setTeacherPortalQuickGrade(studentId, gradeVal) {
-  const el = document.querySelector(`.teacher-portal-grade-input[data-student-id="${studentId}"]`);
-  if (el) el.value = String(gradeVal);
+  const allGradeInputs = document.querySelectorAll(`.teacher-portal-grade-input[data-student-id="${studentId}"]`);
+  allGradeInputs.forEach(el => {
+    el.value = String(gradeVal);
+  });
 }
 
 function renderTeacherPortalGradesTable() {
@@ -9877,9 +10183,14 @@ function saveTeacherPortalGrades() {
   } catch (e) { allScoresMap = {}; }
 
   const asgInputs = document.querySelectorAll('.assignment-score-input');
+  const processedAsg = new Set();
   asgInputs.forEach(inp => {
     const sId = inp.getAttribute('data-student-id');
     const asgId = inp.getAttribute('data-assignment-id');
+    const key = `${sId}_${asgId}`;
+    if (!sId || !asgId || processedAsg.has(key)) return;
+    processedAsg.add(key);
+
     const val = inp.value !== '' ? parseFloat(inp.value) : '';
     if (!allScoresMap[sId]) allScoresMap[sId] = {};
     if (!allScoresMap[sId][currentSubj]) allScoresMap[sId][currentSubj] = {};
@@ -9896,9 +10207,13 @@ function saveTeacherPortalGrades() {
 
   let updatedCount = 0;
   const gradesBatch = [];
+  const processedStudents = new Set();
 
   inputs.forEach(inp => {
     const sId = inp.getAttribute('data-student-id');
+    if (!sId || processedStudents.has(sId)) return;
+    processedStudents.add(sId);
+
     const gradeVal = normalizeGrade1To4(inp.value);
 
     const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, sId));
@@ -14038,7 +14353,7 @@ function renderCalendar(targetScope = 'all') {
     const gridEl = document.getElementById(`calDaysGrid-${scope}`);
     if (!gridEl) return;
 
-    const isStudentCompact = (scope === 'dash');
+    const isStudentCompact = (scope === 'dash' || scope === 'teacher');
     let cellsHtml = '';
 
     // 1. Previous Month Days
@@ -14197,6 +14512,25 @@ function renderCalendar(targetScope = 'all') {
       if (typeof studentCalMode !== 'undefined' && studentCalMode === 'list') {
         if (typeof renderStudentActiveEventsList === 'function') {
           renderStudentActiveEventsList();
+        }
+      }
+    }
+
+    if (scope === 'teacher') {
+      const teacherTabBadge = document.getElementById('calTeacherActiveTabBadge');
+      if (teacherTabBadge) {
+        const curY = calCurrentYear;
+        const curM = calCurrentMonth + 1;
+        const monthEvCount = visibleEvents.filter(e => {
+          if (!e.startDate) return false;
+          const parts = e.startDate.split('-');
+          return parseInt(parts[0], 10) === curY && parseInt(parts[1], 10) === curM;
+        }).length;
+        teacherTabBadge.innerText = monthEvCount;
+      }
+      if (typeof teacherCalMode !== 'undefined' && teacherCalMode === 'list') {
+        if (typeof renderTeacherActiveEventsList === 'function') {
+          renderTeacherActiveEventsList();
         }
       }
     }
@@ -14510,6 +14844,112 @@ function renderStudentActiveEventsList() {
   container.innerHTML = html;
 }
 
+let teacherCalMode = 'grid'; // 'grid' | 'list'
+
+function switchTeacherCalendarMode(mode) {
+  teacherCalMode = mode;
+  const btnGrid = document.getElementById('btnTeacherCalModeGrid');
+  const btnList = document.getElementById('btnTeacherCalModeList');
+  const matrixContainer = document.getElementById('calTeacherMatrixContainer');
+  const activeListContainer = document.getElementById('calTeacherActiveListView');
+
+  if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+  if (btnList) btnList.classList.toggle('active', mode === 'list');
+
+  if (mode === 'grid') {
+    if (matrixContainer) matrixContainer.style.display = 'block';
+    if (activeListContainer) activeListContainer.style.display = 'none';
+  } else {
+    if (matrixContainer) matrixContainer.style.display = 'none';
+    if (activeListContainer) activeListContainer.style.display = 'flex';
+    renderTeacherActiveEventsList();
+  }
+}
+
+function renderTeacherActiveEventsList() {
+  const container = document.getElementById('calTeacherActiveListView');
+  const badge = document.getElementById('calTeacherActiveTabBadge');
+  if (!container) return;
+
+  const visibleEvents = getVisibleCalendarEvents();
+  const curY = calCurrentYear;
+  const curM = calCurrentMonth + 1;
+
+  const monthEvents = visibleEvents.filter(ev => {
+    if (!ev.startDate) return false;
+    const parts = ev.startDate.split('-');
+    const evY = parseInt(parts[0], 10);
+    const evM = parseInt(parts[1], 10);
+    if (evY === curY && evM === curM) return true;
+    if (ev.endDate) {
+      const eParts = ev.endDate.split('-');
+      const endY = parseInt(eParts[0], 10);
+      const endM = parseInt(eParts[1], 10);
+      return (evY <= curY && endY >= curY) && (evM <= curM && endM >= curM);
+    }
+    return false;
+  }).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+
+  if (badge) badge.innerText = monthEvents.length;
+
+  if (monthEvents.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2.2rem 1rem; color: #64748b; background: #f8fafc; border-radius: 14px; border: 1px dashed #cbd5e1;">
+        <i class="fa-regular fa-calendar-xmark" style="font-size: 2.2rem; color: #94a3b8; margin-bottom: 0.6rem;"></i>
+        <div style="font-weight: 700; color: #334155; font-size: 0.95rem;">ไม่มีกิจกรรมในเดือนที่เลือก</div>
+        <div style="font-size: 0.78rem; margin-top: 0.25rem;">สามารถเปลี่ยนเดือน หรือกดปุ่ม "+ เพิ่มกิจกรรม" ด้านบน</div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  monthEvents.forEach(ev => {
+    const catClass = getCategoryClass(ev.category);
+    const iconClass = getCategoryIcon(ev.category);
+    const s = formatThaiDateDisplay(ev.startDate);
+    const e = (ev.endDate && ev.endDate !== ev.startDate) ? formatThaiDateDisplay(ev.endDate) : null;
+    const dateRangeStr = e ? `${s} – ${e}` : s;
+    const timeStr = ev.startTime ? `${ev.startTime} - ${ev.endTime || 'เสร็จสิ้น'} น.` : 'ตลอดทั้งวัน';
+    const targetLabel = ev.targetAudienceLabel || (ev.targetAudience === 'teachers' ? 'เฉพาะอาจารย์' : (ev.targetAudience === 'students' ? 'เฉพาะนักเรียน' : 'ทุกคน'));
+    const gCalUrl = getGoogleCalendarEventUrl(ev);
+
+    html += `
+      <div class="cal-active-list-item ${catClass}" onclick="jumpToSelectedCalendarEvent('${ev.startDate}', 'teacher')">
+        <div class="cal-active-list-header">
+          <span class="cal-category-pill ${catClass}" style="font-size: 0.72rem; padding: 2px 7px;">
+            <i class="${iconClass}"></i> ${escapeHtml(ev.category || 'กิจกรรมทั่วไป')}
+          </span>
+          <span class="cal-target-pill target-${ev.targetAudience || 'all'}" style="font-size: 0.7rem;">
+            ${escapeHtml(targetLabel)}
+          </span>
+        </div>
+        <h4 class="cal-active-list-title">${escapeHtml(ev.title)}</h4>
+        <div class="cal-active-list-meta">
+          <span><i class="fa-regular fa-calendar"></i> ${dateRangeStr}</span>
+          <span><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+          ${ev.location ? `<span><i class="fa-solid fa-location-dot" style="color: #ef4444;"></i> ${escapeHtml(ev.location)}</span>` : ''}
+        </div>
+        <div class="cal-active-list-action" style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 4px;">
+          <a href="${gCalUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" class="btn-gcal-mini-action" title="เพิ่มลง Google Calendar ทันที">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+              <rect x="3" y="4" width="18" height="18" rx="3.5" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+              <rect x="3" y="4" width="18" height="5" rx="3" fill="#1a73e8"/>
+              <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+            </svg>
+            <span>Google Cal</span>
+          </a>
+          <span style="display: inline-flex; align-items: center; gap: 0.3rem; color: #1a73e8; font-weight: 700;">
+            <span>แตะดูรายละเอียด</span> <i class="fa-solid fa-arrow-right"></i>
+          </span>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
 function populateCalendarQuickSelect() {
   const quickSelect = document.getElementById('calEventQuickSelect-dash');
   const countBadge = document.getElementById('calActiveTabBadge');
@@ -14570,6 +15010,10 @@ function jumpToSelectedCalendarEvent(dateStr, scope) {
     calSelectedDate = dateStr;
     renderCalendar('all');
 
+    if (scope === 'teacher') {
+      switchTeacherCalendarMode('grid');
+    }
+
     const visibleEvents = getVisibleCalendarEvents();
     const dayEvents = visibleEvents.filter(e => isDateInRange(dateStr, e.startDate, e.endDate));
     if (dayEvents.length > 0) {
@@ -14615,14 +15059,18 @@ function updateCalendarLauncherBadge() {
 function handleCalendarDayClick(dateStr, scope) {
   selectCalendarDate(dateStr);
 
-  // ฝั่งนักเรียน: กดดูตรงวันที่ รายละเอียดประกาศจะเด้งขึ้นมาทันที
-  if (scope === 'dash') {
+  // ฝั่งนักเรียน และฝั่งอาจารย์ (รูปแนบ 1): กดดูตรงวันที่ รายละเอียดประกาศจะเด้งขึ้นมาทันที
+  if (scope === 'dash' || scope === 'teacher') {
     const visibleEvents = getVisibleCalendarEvents();
     const dayEvents = visibleEvents.filter(e => isDateInRange(dateStr, e.startDate, e.endDate));
     if (dayEvents.length > 0) {
       openCalendarDayModal(dateStr, dayEvents);
     } else {
-      showToast(`วันที่ ${formatThaiDateDisplay(dateStr)}: ไม่มีประกาศหรือกิจกรรม`, 'info');
+      if (canManageCalendar() && scope === 'teacher') {
+        openCalendarEventModal(null, dateStr);
+      } else {
+        showToast(`วันที่ ${formatThaiDateDisplay(dateStr)}: ไม่มีประกาศหรือกิจกรรม`, 'info');
+      }
     }
   }
 }

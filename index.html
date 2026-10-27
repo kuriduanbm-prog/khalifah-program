@@ -49,7 +49,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=7.6">
+  <link rel="stylesheet" href="style.css?v=7.7">
 </head>
 <body class="auth-locked">
 
@@ -1393,95 +1393,16 @@
 
     <!-- ==================== VIEW 5: TEACHER & EXECUTIVE PORTAL (ระบบอาจารย์และผู้บริหาร) ==================== -->
     <section id="view-teacher" class="view-section">
-      <!-- Teacher & Executive Bento Header (รูปแนบ 3: แสดงชื่ออาจารย์ และวิชาที่สอนดูง่าย) -->
-      <div class="teacher-hero-card">
-        <div class="teacher-hero-content">
-          <div class="teacher-hero-profile">
-            <div class="teacher-role-avatar" id="teacherHeroAvatar">
-              <i class="fa-solid fa-chalkboard-user"></i>
-            </div>
-            <div class="teacher-hero-meta">
-              <div class="teacher-tag-row">
-                <span class="teacher-portal-pill" id="teacherPortalRolePill">
-                  <i class="fa-solid fa-graduation-cap"></i> ระบบอาจารย์และวิชาการ
-                </span>
-                <span class="teacher-sync-pill">
-                  <span class="pulse-dot"></span> ซิงค์ Google Sheets เรียลไทม์
-                </span>
-              </div>
-              <h2 class="teacher-hero-title" id="teacherHeaderName">
-                อาจารย์ผู้สอน
-              </h2>
-              <p class="teacher-hero-subtitle" id="teacherHeaderSub">
-                เช็คชื่อนักเรียนประจำวัน ประเมินเกรดรายวิชา และติดตามสถิติภาพรวม
-              </p>
-            </div>
-          </div>
-          <div class="teacher-hero-actions">
-            <div class="teacher-subjects-container" style="margin: 0; min-width: 250px; max-width: 440px;">
-              <div class="teacher-subjects-label">
-                <i class="fa-solid fa-book-open-reader" style="color: var(--primary);"></i> รายวิชาที่รับผิดชอบการสอน:
-              </div>
-              <div class="teacher-subjects-chips" id="teacherAssignedSubjectsChips">
-                <span class="teacher-subj-chip"><i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดวิชา...</span>
-              </div>
-            </div>
-            <span class="teacher-assigned-badge" id="teacherAssignedSubjectsBadge" style="display: none;">
-              <i class="fa-solid fa-book-bookmark"></i> วิชาที่รับผิดชอบ: -
-            </span>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
-              <button type="button" class="btn btn-secondary btn-sm" id="btnBackToAdminFromTeacher" onclick="switchView('admin')" style="display: none;">
-                <i class="fa-solid fa-shield-halved"></i> หน้าแอดมินสูงสุด
-              </button>
-              <button type="button" class="teacher-logout-btn" onclick="teacherLogout()">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Teacher & Executive Bento KPI Summary -->
-      <div class="teacher-kpi-grid">
-        <div class="teacher-kpi-card" onclick="switchTeacherTab('attendance')">
-          <div class="teacher-kpi-header">
-            <span class="teacher-kpi-title">นักเรียนในระบบทั้งหมด</span>
-            <span class="teacher-kpi-icon icon-students"><i class="fa-solid fa-users"></i></span>
-          </div>
-          <div class="teacher-kpi-num" id="teacherKpiTotalStudents">0 คน</div>
-          <div class="teacher-kpi-footer">
-            <span>คลิกเพื่อเช็คชื่อมาเรียน</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </div>
-        <div class="teacher-kpi-card" onclick="switchTeacherTab('attendance')">
-          <div class="teacher-kpi-header">
-            <span class="teacher-kpi-title">เช็คชื่อมาเรียนวันนี้</span>
-            <span class="teacher-kpi-icon icon-check"><i class="fa-solid fa-user-check"></i></span>
-          </div>
-          <div class="teacher-kpi-num" id="teacherKpiCheckedToday">0 คน</div>
-          <div class="teacher-kpi-footer" id="teacherKpiDateSub">
-            <span>อัปเดตข้อมูลเรียลไทม์</span>
-          </div>
-        </div>
-        <div class="teacher-kpi-card" onclick="switchTeacherTab('grades')">
-          <div class="teacher-kpi-header">
-            <span class="teacher-kpi-title">รายวิชาที่รับผิดชอบ</span>
-            <span class="teacher-kpi-icon icon-subjects"><i class="fa-solid fa-award"></i></span>
-          </div>
-          <div class="teacher-kpi-num" id="teacherKpiSubjectsCount">0 วิชา</div>
-          <div class="teacher-kpi-footer">
-            <span>คลิกเพื่อประเมินเกรด</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </div>
-        </div>
-      </div>
-
-      <!-- Teacher Mode Elegant Segmented Tab Bar (Clean, Single Row, Human-Crafted) -->
+      <!-- Teacher Mode Elegant Segmented Tab Bar (4 แท็บ: ภาพรวม, เช็คชื่อ, กรอกเกรด, ปฏิทิน) -->
       <div class="teacher-segmented-nav">
-        <button class="hasanat-subnav-btn teacher-nav-tab active" id="btnTeacherTabAtt" onclick="switchTeacherTab('attendance')">
+        <button class="hasanat-subnav-btn teacher-nav-tab active" id="btnTeacherTabOverview" onclick="switchTeacherTab('overview')">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span class="tab-label">ภาพรวม</span>
+          <span class="teacher-tab-badge" id="teacherOverviewBadge">Bento</span>
+        </button>
+        <button class="hasanat-subnav-btn teacher-nav-tab" id="btnTeacherTabAtt" onclick="switchTeacherTab('attendance')">
           <i class="fa-solid fa-clipboard-check"></i>
-          <span class="tab-label">เช็คชื่อมาเรียน</span>
+          <span class="tab-label">เช็คชื่อ</span>
           <span class="teacher-tab-badge" id="teacherAttCountBadge">ประจำวัน</span>
         </button>
         <button class="hasanat-subnav-btn teacher-nav-tab" id="btnTeacherTabGrade" onclick="switchTeacherTab('grades')">
@@ -1496,8 +1417,238 @@
         </button>
       </div>
 
-      <!-- Teacher Subtab 1: Daily Student Attendance Check -->
-      <div id="teacher-tab-attendance" class="teacher-subcontent">
+      <!-- ==================== TAB 1: OVERVIEW BENTO DASHBOARD ==================== -->
+      <div id="teacher-tab-overview" class="teacher-subcontent">
+        <!-- Teacher & Executive Bento Header -->
+        <div class="teacher-hero-card" style="margin-bottom: 1.25rem;">
+          <div class="teacher-hero-content">
+            <div class="teacher-hero-profile">
+              <div class="teacher-role-avatar" id="teacherHeroAvatar">
+                <i class="fa-solid fa-chalkboard-user"></i>
+              </div>
+              <div class="teacher-hero-meta">
+                <div class="teacher-tag-row">
+                  <span class="teacher-portal-pill" id="teacherPortalRolePill">
+                    <i class="fa-solid fa-graduation-cap"></i> ระบบอาจารย์และวิชาการ
+                  </span>
+                  <span class="teacher-sync-pill">
+                    <span class="pulse-dot"></span> ซิงค์ Google Sheets เรียลไทม์
+                  </span>
+                </div>
+                <h2 class="teacher-hero-title" id="teacherHeaderName">
+                  อาจารย์ผู้สอน
+                </h2>
+                <p class="teacher-hero-subtitle" id="teacherHeaderSub">
+                  เช็คชื่อนักเรียนประจำวัน ประเมินเกรดรายวิชา และติดตามสถิติภาพรวม
+                </p>
+              </div>
+            </div>
+            <div class="teacher-hero-actions">
+              <div class="teacher-subjects-container" style="margin: 0; min-width: 250px; max-width: 440px;">
+                <div class="teacher-subjects-label">
+                  <i class="fa-solid fa-book-open-reader" style="color: var(--primary);"></i> รายวิชาที่รับผิดชอบการสอน:
+                </div>
+                <div class="teacher-subjects-chips" id="teacherAssignedSubjectsChips">
+                  <span class="teacher-subj-chip"><i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดวิชา...</span>
+                </div>
+              </div>
+              <span class="teacher-assigned-badge" id="teacherAssignedSubjectsBadge" style="display: none;">
+                <i class="fa-solid fa-book-bookmark"></i> วิชาที่รับผิดชอบ: -
+              </span>
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnBackToAdminFromTeacher" onclick="switchView('admin')" style="display: none;">
+                  <i class="fa-solid fa-shield-halved"></i> หน้าแอดมินสูงสุด
+                </button>
+                <button type="button" class="teacher-logout-btn" onclick="teacherLogout()">
+                  <i class="fa-solid fa-arrow-right-from-bracket"></i> ออกจากระบบ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teacher & Executive Bento KPI Summary (4 KPI Cards) -->
+        <div class="teacher-kpi-grid">
+          <div class="teacher-kpi-card" onclick="switchTeacherTab('attendance')">
+            <div class="teacher-kpi-header">
+              <span class="teacher-kpi-title">นักเรียนในระบบทั้งหมด</span>
+              <span class="teacher-kpi-icon icon-students"><i class="fa-solid fa-users"></i></span>
+            </div>
+            <div class="teacher-kpi-num" id="teacherKpiTotalStudents">0 คน</div>
+            <div class="teacher-kpi-footer">
+              <span>คลิกเพื่อเช็คชื่อมาเรียน</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="teacher-kpi-card" onclick="switchTeacherTab('attendance')">
+            <div class="teacher-kpi-header">
+              <span class="teacher-kpi-title">เช็คชื่อมาเรียนวันนี้</span>
+              <span class="teacher-kpi-icon icon-check"><i class="fa-solid fa-user-check"></i></span>
+            </div>
+            <div class="teacher-kpi-num" id="teacherKpiCheckedToday">0 คน</div>
+            <div class="teacher-kpi-footer" id="teacherKpiDateSub">
+              <span>อัปเดตข้อมูลเรียลไทม์</span>
+            </div>
+          </div>
+          <div class="teacher-kpi-card" onclick="switchTeacherTab('attendance')">
+            <div class="teacher-kpi-header">
+              <span class="teacher-kpi-title">อัตราการมาเรียนวันนี้</span>
+              <span class="teacher-kpi-icon" style="background: #ecfdf5; color: #059669;"><i class="fa-solid fa-chart-line"></i></span>
+            </div>
+            <div class="teacher-kpi-num" id="teacherKpiAttRate">0%</div>
+            <div class="teacher-kpi-footer">
+              <span id="teacherKpiAttSummary">สถิติมาเรียน</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="teacher-kpi-card" onclick="switchTeacherTab('grades')">
+            <div class="teacher-kpi-header">
+              <span class="teacher-kpi-title">รายวิชาที่รับผิดชอบ</span>
+              <span class="teacher-kpi-icon icon-subjects"><i class="fa-solid fa-award"></i></span>
+            </div>
+            <div class="teacher-kpi-num" id="teacherKpiSubjectsCount">0 วิชา</div>
+            <div class="teacher-kpi-footer">
+              <span>คลิกเพื่อประเมินเกรด</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teacher Bento Action & Quick Summary Grid -->
+        <div class="teacher-bento-action-grid">
+          <!-- Widget 1: สรุปสถานะการมาเรียนวันนี้ (Attendance Pulse) -->
+          <div class="teacher-bento-widget">
+            <div class="bento-widget-header">
+              <div class="bento-widget-title-group">
+                <div class="bento-widget-icon" style="background: #f0fdf4; color: #16a34a;">
+                  <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+                <div>
+                  <h4 class="bento-widget-title">สรุปสถานะการมาเรียนวันนี้</h4>
+                  <p class="bento-widget-sub" id="bentoAttDateLabel">ข้อมูลประจำวันนี้</p>
+                </div>
+              </div>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="switchTeacherTab('attendance')">
+                <span>เช็คชื่อต่อ</span> <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+            <div class="bento-att-progress-wrap">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">
+                <span style="color: #475569;">ความคืบหน้าการเช็คชื่อ</span>
+                <span id="bentoAttProgressPct" style="color: var(--primary);">0%</span>
+              </div>
+              <div class="bento-progress-track">
+                <div class="bento-progress-fill" id="bentoAttProgressBar" style="width: 0%;"></div>
+              </div>
+            </div>
+            <div class="bento-att-counts-row">
+              <div class="bento-att-stat-pill pill-present">
+                <span class="pill-dot"></span>
+                <span class="pill-label">มาเรียน</span>
+                <b class="pill-val" id="bentoCountPresent">0</b>
+              </div>
+              <div class="bento-att-stat-pill pill-late">
+                <span class="pill-dot"></span>
+                <span class="pill-label">มาสาย</span>
+                <b class="pill-val" id="bentoCountLate">0</b>
+              </div>
+              <div class="bento-att-stat-pill pill-leave">
+                <span class="pill-dot"></span>
+                <span class="pill-label">ลา</span>
+                <b class="pill-val" id="bentoCountLeave">0</b>
+              </div>
+              <div class="bento-att-stat-pill pill-absent">
+                <span class="pill-dot"></span>
+                <span class="pill-label">ขาด</span>
+                <b class="pill-val" id="bentoCountAbsent">0</b>
+              </div>
+              <div class="bento-att-stat-pill pill-pending">
+                <span class="pill-dot"></span>
+                <span class="pill-label">รอเช็ค</span>
+                <b class="pill-val" id="bentoCountPending">0</b>
+              </div>
+            </div>
+          </div>
+
+          <!-- Widget 2: ระบบประเมินเกรดและทักษะ (Grades & Skills Evaluation) -->
+          <div class="teacher-bento-widget">
+            <div class="bento-widget-header">
+              <div class="bento-widget-title-group">
+                <div class="bento-widget-icon" style="background: #fdf4ff; color: #c026d3;">
+                  <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                  <h4 class="bento-widget-title">ระบบประเมินเกรดและทักษะ</h4>
+                  <p class="bento-widget-sub">เกรด 1–4 อัปเดตเรดาร์ทักษะนักเรียนอัตโนมัติ</p>
+                </div>
+              </div>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="switchTeacherTab('grades')">
+                <span>กรอกเกรด</span> <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+            <div id="bentoGradesSubjectsOverview" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem;">
+              <!-- Dynamically populated via app.js -->
+            </div>
+          </div>
+
+          <!-- Widget 3: ปฏิทินและกิจกรรมโรงเรียนใกล้ถึง (Upcoming School Events) -->
+          <div class="teacher-bento-widget">
+            <div class="bento-widget-header">
+              <div class="bento-widget-title-group">
+                <div class="bento-widget-icon" style="background: #eff6ff; color: #2563eb;">
+                  <i class="fa-solid fa-calendar-days"></i>
+                </div>
+                <div>
+                  <h4 class="bento-widget-title">กิจกรรมและกำหนดการใกล้ถึง</h4>
+                  <p class="bento-widget-sub">เชื่อมต่อ Google Calendar ของโรงเรียน</p>
+                </div>
+              </div>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="switchTeacherTab('calendar')">
+                <span>เปิดปฏิทิน</span> <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+            <div id="bentoUpcomingEventsList" class="bento-upcoming-events-list">
+              <!-- Dynamically populated via app.js -->
+            </div>
+          </div>
+
+          <!-- Widget 4: ทางลัดและเครื่องมือด่วน (Quick Tools) -->
+          <div class="teacher-bento-widget">
+            <div class="bento-widget-header">
+              <div class="bento-widget-title-group">
+                <div class="bento-widget-icon" style="background: #fffbeb; color: #d97706;">
+                  <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div>
+                  <h4 class="bento-widget-title">ทางลัดและเครื่องมือด่วน</h4>
+                  <p class="bento-widget-sub">จัดการข้อมูลวิชาการและปฏิทินกิจกรรม</p>
+                </div>
+              </div>
+            </div>
+            <div class="bento-quick-tools-grid">
+              <button type="button" class="bento-tool-btn" onclick="openCalendarEventModal()">
+                <i class="fa-solid fa-calendar-plus" style="color: #059669;"></i>
+                <span>เพิ่มกิจกรรมใหม่</span>
+              </button>
+              <button type="button" class="bento-tool-btn" onclick="openAddSubjectModal()">
+                <i class="fa-solid fa-folder-plus" style="color: #2563eb;"></i>
+                <span>เพิ่มรายวิชา</span>
+              </button>
+              <button type="button" class="bento-tool-btn" onclick="openGoogleCalendarSyncModal()">
+                <i class="fa-solid fa-cloud-arrow-up" style="color: #1a73e8;"></i>
+                <span>ซิงค์ Google Cal</span>
+              </button>
+              <button type="button" class="bento-tool-btn" onclick="switchTeacherTab('attendance'); markAllTeacherAttendance('present');">
+                <i class="fa-solid fa-check-double" style="color: #7c3aed;"></i>
+                <span>เช็คมาเรียนทั้งห้อง</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TAB 2: DAILY STUDENT ATTENDANCE CHECK ==================== -->
+      <div id="teacher-tab-attendance" class="teacher-subcontent" style="display: none;">
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
             <div>
@@ -1518,14 +1669,14 @@
             </div>
           </div>
 
-          <!-- Filter & Date History Navigation Bar (รูปแนบ 4: ดูย้อนหลังได้) -->
+          <!-- Filter & Date History Navigation Bar -->
           <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-light); margin-bottom: 1.1rem; display: flex; flex-direction: column; gap: 0.85rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                 <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.4rem;">
                   <i class="fa-regular fa-calendar" style="color: var(--primary);"></i> เลือกวันที่เช็คชื่อ:
                 </span>
-                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
                   <button type="button" class="btn btn-secondary btn-sm" onclick="shiftTeacherAttDate(-1)" title="ดูย้อนหลัง 1 วัน">
                     <i class="fa-solid fa-chevron-left"></i> ย้อนหลัง
                   </button>
@@ -1563,7 +1714,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <!-- Desktop Table Wrapper (Hidden on mobile) -->
+          <div class="teacher-att-desktop-wrap table-responsive">
             <table class="custom-table">
               <thead>
                 <tr>
@@ -1580,10 +1732,15 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Mobile Card List for Attendance (Shown on mobile <= 768px, 100% width, no horizontal scroll) -->
+          <div class="teacher-att-mobile-list" id="teacherAttendanceMobileList">
+            <!-- Injected via app.js -->
+          </div>
         </div>
       </div>
 
-      <!-- Teacher Subtab 2: Subject Grade Entry (Grades 1 - 4) -->
+      <!-- ==================== TAB 3: SUBJECT GRADE ENTRY ==================== -->
       <div id="teacher-tab-grades" class="teacher-subcontent" style="display: none;">
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
@@ -1626,7 +1783,7 @@
             </div>
           </div>
 
-          <!-- Dynamic Assignment Columns Control Bar (รูปแนบ 4: เพิ่มช่องคะแนนได้ตามต้องการ) -->
+          <!-- Dynamic Assignment Columns Control Bar -->
           <div class="teacher-assignments-control-bar">
             <div class="assignments-bar-header">
               <div class="assignments-bar-title">
@@ -1643,7 +1800,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <!-- Desktop Grades Table (Hidden on mobile) -->
+          <div class="teacher-grades-desktop-wrap table-responsive">
             <table class="custom-table" id="teacherGradesTableMain">
               <thead id="teacherPortalGradesTableHead">
                 <tr>
@@ -1660,119 +1818,149 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Mobile Card List for Grades (Shown on mobile <= 768px, 100% width, no horizontal scroll) -->
+          <div class="teacher-grades-mobile-list" id="teacherPortalGradesMobileList">
+            <!-- Injected via app.js -->
+          </div>
         </div>
       </div>
 
-      <!-- Teacher Subtab 3: School Calendar Management -->
+      <!-- ==================== TAB 4: SCHOOL CALENDAR MANAGEMENT (รูปแนบ 1: สวยงาม พอดีจอ ปฏิทินและกิจกรรม) ==================== -->
       <div id="teacher-tab-calendar" class="teacher-subcontent" style="display: none;">
-        <div class="calendar-bento-container" id="teacherCalendarSection" style="margin-bottom: 1.5rem;">
-          <div class="card cal-card-wrapper">
-            <div class="card-header cal-card-header">
-              <div class="cal-header-title-group">
-                <div class="card-title">
-                  <i class="fa-solid fa-calendar-days" style="color: var(--primary);"></i> ปฏิทินกิจกรรมและกำหนดการโรงเรียน
+        <div class="teacher-calendar-container" style="max-width: 620px; margin: 0 auto 1.5rem auto;">
+          <div class="card cal-phone-card" style="border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05); overflow: hidden; background: #ffffff;">
+            
+            <!-- Calendar Card Header -->
+            <div style="padding: 1.15rem 1.25rem 0.85rem 1.25rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="cal-modal-icon-badge" style="background: #e8f0fe; color: #1a73e8; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                    <rect x="3" y="4" width="18" height="18" rx="3.5" fill="#ffffff" stroke="#1a73e8" stroke-width="1.8"/>
+                    <rect x="3" y="4" width="18" height="5.5" rx="3" fill="#1a73e8"/>
+                    <rect x="7" y="2" width="2" height="4" rx="1" fill="#1a73e8"/>
+                    <rect x="15" y="2" width="2" height="4" rx="1" fill="#1a73e8"/>
+                    <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
+                  </svg>
                 </div>
-                <div class="card-subtitle">
-                  อาจารย์และผู้บริหารสามารถเพิ่ม แก้ไข กำหนดการ และเลือกว่าจะให้แสดงกับ "นักเรียน", "อาจารย์" หรือ "ทุกคน"
+                <div>
+                  <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.25;">ปฏิทินกิจกรรมโรงเรียน</h3>
+                  <p style="font-size: 0.76rem; color: #64748b; margin: 2px 0 0 0;">เชื่อมต่อ Google Calendar และติดตามกำหนดการ</p>
                 </div>
               </div>
-              
-              <div class="cal-controls-toolbar">
+            </div>
+
+            <div style="padding: 0.95rem 1.25rem;">
+              <!-- Segmented Mode Toggle: Grid View vs Active Events List -->
+              <div class="cal-phone-view-toggle" style="margin-bottom: 0.85rem;">
+                <button type="button" class="cal-view-tab-btn active" id="btnTeacherCalModeGrid" onclick="switchTeacherCalendarMode('grid')">
+                  <i class="fa-solid fa-calendar-days"></i> ปฏิทินรายเดือน
+                </button>
+                <button type="button" class="cal-view-tab-btn" id="btnTeacherCalModeList" onclick="switchTeacherCalendarMode('list')">
+                  <i class="fa-solid fa-list-check"></i> เฉพาะวันที่มีกิจกรรม <span class="cal-view-tab-badge" id="calTeacherActiveTabBadge">0</span>
+                </button>
+              </div>
+
+              <!-- Controls Toolbar: Month/Year select + Prev/Today/Next + Green Single Add Event Button (รูปแนบ 1: ปุ่มชัดและมีปุ่มเดียว) -->
+              <div class="cal-controls-toolbar cal-phone-toolbar" style="margin-bottom: 0.85rem;">
                 <div class="cal-select-group">
-                  <select id="calMonthSelect-teacher" class="cal-select cal-select-month" onchange="onCalendarSelectChange('teacher')">
-                    <!-- Injected via JS -->
-                  </select>
-                  <select id="calYearSelect-teacher" class="cal-select cal-select-year" onchange="onCalendarSelectChange('teacher')">
-                    <!-- Injected via JS -->
-                  </select>
+                  <select id="calMonthSelect-teacher" class="cal-select cal-select-month" onchange="onCalendarSelectChange('teacher')" aria-label="เลือกเดือน"></select>
+                  <select id="calYearSelect-teacher" class="cal-select cal-select-year" onchange="onCalendarSelectChange('teacher')" aria-label="เลือกปี พ.ศ."></select>
                 </div>
-                
                 <div class="cal-btn-group">
                   <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(-1, 'teacher')" title="เดือนก่อนหน้า">
                     <i class="fa-solid fa-chevron-left"></i>
                   </button>
                   <button type="button" class="btn-cal-today" onclick="resetCalendarToToday('teacher')">
-                    <i class="fa-solid fa-clock-rotate-left"></i> วันนี้
+                    วันนี้
                   </button>
                   <button type="button" class="btn-cal-nav" onclick="shiftCalendarMonth(1, 'teacher')" title="เดือนถัดไป">
                     <i class="fa-solid fa-chevron-right"></i>
                   </button>
                 </div>
+                <!-- Single clear prominent green Add Event button (รูปแนบ 1) -->
+                <button type="button" class="btn btn-primary btn-sm btn-cal-single-add" id="btnTeacherCalAddEvent" onclick="openCalendarEventModal()" title="เพิ่มกิจกรรมใหม่" style="background: #059669; border-color: #047857; font-weight: 700; border-radius: 9px; padding: 0.4rem 0.75rem;">
+                  <i class="fa-solid fa-plus"></i> <span>เพิ่มกิจกรรม</span>
+                </button>
+                <!-- Hidden compatibility elements -->
+                <div id="btnCalViewFull-teacher" style="display: none;"></div>
+                <div id="btnCalViewSplit-teacher" style="display: none;"></div>
+              </div>
 
-                <!-- Hidden compatibility elements for view toggle -->
-                <div class="cal-view-toggle-group" style="display: none;">
-                  <button type="button" class="btn-cal-view active" id="btnCalViewFull-teacher" onclick="setCalendarViewMode('full', 'teacher')"></button>
-                  <button type="button" class="btn-cal-view" id="btnCalViewSplit-teacher" onclick="setCalendarViewMode('split', 'teacher')"></button>
+              <!-- Active Events List Container (Shown when switching to 'list' mode) -->
+              <div id="calTeacherActiveListView" class="cal-phone-active-list-view" style="display: none;">
+                <!-- Populated dynamically via JS -->
+              </div>
+
+              <!-- Compact Calendar Matrix (Optimized matching Image 1) -->
+              <div class="cal-phone-matrix" id="calTeacherMatrixContainer">
+                <div class="cal-weekdays-row cal-phone-weekdays">
+                  <div class="cal-weekday cal-sun">อา.</div>
+                  <div class="cal-weekday">จ.</div>
+                  <div class="cal-weekday">อ.</div>
+                  <div class="cal-weekday">พ.</div>
+                  <div class="cal-weekday">พฤ.</div>
+                  <div class="cal-weekday cal-fri">ศ.</div>
+                  <div class="cal-weekday">ส.</div>
+                </div>
+                <div class="cal-days-grid cal-phone-grid" id="calDaysGrid-teacher">
+                  <!-- Injected dynamically via app.js -->
                 </div>
 
-                <!-- Single Clear Add Event Button (ปุ่มชัดและมีปุ่มเดียว) -->
-                <button type="button" class="btn btn-primary btn-sm btn-cal-single-add" id="btnTeacherCalAddEvent" onclick="openCalendarEventModal()" title="เพิ่มกิจกรรมใหม่">
-                  <i class="fa-solid fa-circle-plus"></i>
-                  <span>เพิ่มกิจกรรมใหม่</span>
-                </button>
+                <!-- Category Legend Bar -->
+                <div class="cal-compact-legend cal-phone-legend">
+                  <div class="cal-legend-item"><span class="cal-legend-dot cat-exam"></span> สอบ/ประเมิน</div>
+                  <div class="cal-legend-item"><span class="cal-legend-dot cat-holiday"></span> วันหยุด</div>
+                  <div class="cal-legend-item"><span class="cal-legend-dot cat-prayer"></span> ศาสนกิจ</div>
+                  <div class="cal-legend-item"><span class="cal-legend-dot cat-academic"></span> การเรียน</div>
+                  <div class="cal-legend-item"><span class="cal-legend-dot cat-general"></span> กิจกรรม</div>
+                </div>
+                <div class="cal-compact-hint">
+                  <i class="fa-solid fa-hand-pointer"></i> แตะที่วันที่มีสีเพื่อดูรายละเอียดประกาศ
+                </div>
+              </div>
 
-                <!-- Google Calendar Sync Button -->
-                <button type="button" class="btn-gcal-sync-pill" onclick="openGoogleCalendarSyncModal()" title="เชื่อมต่อและซิงค์กับ Google Calendar">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
-                    <rect x="3" y="4" width="18" height="18" rx="3.5" fill="#ffffff" stroke="#1a73e8" stroke-width="1.8"/>
-                    <rect x="3" y="4" width="18" height="5.5" rx="3" fill="#1a73e8"/>
-                    <text x="12" y="17" fill="#1a73e8" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="sans-serif">31</text>
-                  </svg>
-                  <span>ซิงค์ Google Calendar</span>
-                </button>
+              <!-- Hidden agenda containers to maintain full app.js compatibility -->
+              <div id="calGridLayout-teacher" style="display: none;">
+                <div id="calAgendaDate-teacher"></div>
+                <div id="calAgendaBadge-teacher"></div>
+                <div id="calAgendaList-teacher"></div>
               </div>
             </div>
 
-            <div class="cal-card-body">
-              <div class="cal-grid-layout view-full" id="calGridLayout-teacher">
-                <!-- Left: Month Matrix -->
-                <div class="cal-matrix-col">
-                  <div class="cal-weekdays-row">
-                    <div class="cal-weekday cal-sun">อา.</div>
-                    <div class="cal-weekday">จ.</div>
-                    <div class="cal-weekday">อ.</div>
-                    <div class="cal-weekday">พ.</div>
-                    <div class="cal-weekday">พฤ.</div>
-                    <div class="cal-weekday cal-fri">ศ.</div>
-                    <div class="cal-weekday">ส.</div>
-                  </div>
-                  <div class="cal-days-grid" id="calDaysGrid-teacher">
-                    <!-- Injected via app.js -->
-                  </div>
-                </div>
-
-                <!-- Right: Selected Date & Agenda Column -->
-                <div class="cal-agenda-col">
-                  <div class="cal-agenda-header">
-                    <div class="cal-agenda-date" id="calAgendaDate-teacher">
-                      <span class="cal-agenda-day-name">-</span>
-                      <span class="cal-agenda-full-date">-</span>
-                    </div>
-                    <span class="cal-agenda-count-badge" id="calAgendaBadge-teacher">0 กิจกรรม</span>
-                  </div>
-                  
-                  <div class="cal-agenda-items-container" id="calAgendaList-teacher">
-                    <!-- Injected via app.js -->
-                  </div>
-                </div>
-              </div>
+            <!-- Calendar Card Bottom Footer: Prominent Google Calendar Sync Button -->
+            <div style="padding: 0.85rem 1.25rem; border-top: 1px solid #f1f5f9; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
+              <button type="button" class="btn-gcal-sync-prominent" onclick="openGoogleCalendarSyncModal()" title="เชื่อมต่อและซิงค์ปฏิทินกับ Google Calendar" style="width: 100%; justify-content: center; max-width: 380px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
+                  <rect x="3" y="4" width="18" height="18" rx="3.5" fill="#ffffff" stroke="#1a73e8" stroke-width="2"/>
+                  <rect x="3" y="4" width="18" height="6" rx="3.5" fill="#1a73e8"/>
+                  <circle cx="8" cy="3" r="1.5" fill="#1a73e8"/>
+                  <circle cx="16" cy="3" r="1.5" fill="#1a73e8"/>
+                  <text x="12" y="18" fill="#1a73e8" font-size="8.5" font-weight="900" text-anchor="middle" font-family="sans-serif">31</text>
+                </svg>
+                <span>ซิงค์กับ Google Calendar</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Teacher Mobile/Tablet Bottom Navigation Bar (รูปแนบ 4: บาร์ปุ่มแท็บแยกด้านล่าง) -->
+      <!-- Teacher Mobile/Tablet Bottom Navigation Bar (4 ปุ่ม: ภาพรวม, เช็คชื่อ, กรอกเกรด, ปฏิทิน) -->
       <nav class="teacher-bottom-nav-bar" id="teacherBottomNavBar">
-        <button type="button" class="teacher-bottom-nav-item active" id="btnTeacherBottomAtt" onclick="switchTeacherTab('attendance')">
-          <i class="fa-solid fa-clipboard-check"></i>
+        <button type="button" class="teacher-bottom-nav-item active" id="btnTeacherBottomOverview" onclick="switchTeacherTab('overview')">
+          <i class="fa-solid fa-chart-pie teacher-bottom-nav-icon"></i>
+          <span>ภาพรวม</span>
+        </button>
+        <button type="button" class="teacher-bottom-nav-item" id="btnTeacherBottomAtt" onclick="switchTeacherTab('attendance')">
+          <i class="fa-solid fa-clipboard-check teacher-bottom-nav-icon"></i>
           <span>เช็คชื่อ</span>
         </button>
         <button type="button" class="teacher-bottom-nav-item" id="btnTeacherBottomGrade" onclick="switchTeacherTab('grades')">
-          <i class="fa-solid fa-graduation-cap"></i>
+          <i class="fa-solid fa-graduation-cap teacher-bottom-nav-icon"></i>
           <span>กรอกเกรด</span>
         </button>
         <button type="button" class="teacher-bottom-nav-item" id="btnTeacherBottomCal" onclick="switchTeacherTab('calendar')">
-          <i class="fa-solid fa-calendar-days"></i>
+          <i class="fa-solid fa-calendar-days teacher-bottom-nav-icon"></i>
           <span>ปฏิทิน</span>
         </button>
       </nav>
@@ -4905,6 +5093,6 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=7.6"></script>
+  <script src="app.js?v=7.7"></script>
 </body>
 </html>
