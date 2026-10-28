@@ -1897,3 +1897,39 @@ window.k8RegBirthChange = function (v) {
   const stt = window.switchTeacherTab;
   if (typeof stt === 'function') window.switchTeacherTab = function (t) { const r = stt.apply(this, arguments); if (t === 'calendar') try { render('t'); } catch (e) {} return r; };
 })();
+
+/* ============ Round 7 · Admin mobile: slide-in side drawer ============ */
+(function () {
+  const mq = window.matchMedia ? window.matchMedia('(max-width: 992px)') : { matches: false };
+  window.k8AdmNav = function (open) {
+    const nav = document.getElementById('k8AdminNav'), bd = document.getElementById('k8AdmBackdrop'), bt = document.getElementById('k8AdmBurger');
+    if (!nav) return;
+    const isOpen = open && mq.matches;
+    document.body.classList.toggle('k8-adm-open', !!isOpen);
+    if (bd) bd.hidden = !isOpen;
+    if (bt) bt.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    if (isOpen) { const a = nav.querySelector('.admin-tab-btn.active') || nav.querySelector('.admin-tab-btn'); if (a) setTimeout(() => a.focus(), 50); }
+    else if (open === false && bt && mq.matches) bt.focus();
+  };
+  function syncTitle() {
+    const a = document.querySelector('#k8AdminNav .admin-tab-btn.active');
+    const t = document.getElementById('k8AdmBarTitle');
+    if (a && t) t.textContent = (a.childNodes.length ? Array.from(a.childNodes).filter((n) => n.nodeType === 3).map((n) => n.textContent).join(' ') : a.textContent).replace(/\s+/g, ' ').trim() || 'เมนูแอดมิน';
+    const pill = document.getElementById('adminTabPendingBadge'), bb = document.getElementById('k8AdmBarBadge');
+    if (bb) { const n = pill && pill.style.display !== 'none' ? (pill.textContent || '').trim() : ''; bb.hidden = !n || n === '0'; bb.textContent = n ? n + ' รออนุมัติ' : ''; }
+  }
+  const o = window.switchAdminTab;
+  if (typeof o === 'function') window.switchAdminTab = function () { const r = o.apply(this, arguments); window.k8AdmNav(false); setTimeout(syncTitle, 0); return r; };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('k8-adm-open')) window.k8AdmNav(false); });
+  if (mq.addEventListener) mq.addEventListener('change', () => window.k8AdmNav(false));
+  // swipe from the left edge to open, swipe left to close
+  let sx = null, sy = 0;
+  document.addEventListener('touchstart', (e) => { const v = document.getElementById('view-admin'); if (!v || !v.classList.contains('active') || !mq.matches) return; const t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (sx == null) return; const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+    if (dy < 60) { if (!document.body.classList.contains('k8-adm-open') && sx < 24 && dx > 60) window.k8AdmNav(true); else if (document.body.classList.contains('k8-adm-open') && dx < -60) window.k8AdmNav(false); }
+    sx = null;
+  }, { passive: true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncTitle); else syncTitle();
+  setInterval(() => { const v = document.getElementById('view-admin'); if (v && v.classList.contains('active')) syncTitle(); }, 4000);
+})();

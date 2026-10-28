@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.9">
-  <link rel="stylesheet" href="ui-v8.css?v=8.9">
+  <link rel="stylesheet" href="style.css?v=9.0">
+  <link rel="stylesheet" href="ui-v8.css?v=9.0">
 </head>
 <body class="auth-locked">
 
@@ -2228,7 +2228,15 @@
       </div>
 
       <!-- Admin Navigation (v8: เมนูด้านซ้ายแบ่งหมวด บนคอม / แถบเลื่อนบนมือถือ) -->
-      <nav class="admin-tabs k8-admin-nav" aria-label="เมนูแอดมิน">
+      <div class="k8-adm-bar">
+        <button type="button" class="k8-adm-burger" id="k8AdmBurger" aria-label="เปิดเมนูแอดมิน" aria-controls="k8AdminNav" aria-expanded="false" onclick="k8AdmNav(true)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <span class="k8-adm-bar-t" id="k8AdmBarTitle">ภาพรวม</span>
+        <span class="k8-adm-bar-badge" id="k8AdmBarBadge" hidden></span>
+      </div>
+      <div class="k8-adm-backdrop" id="k8AdmBackdrop" onclick="k8AdmNav(false)" hidden></div>
+      <nav class="admin-tabs k8-admin-nav" id="k8AdminNav" aria-label="เมนูแอดมิน">
         <div class="k8-nav-brand">
           <span class="k8-nav-brand-name">KHALIFAH</span>
           <span class="k8-nav-brand-sub">ศูนย์ควบคุมแอดมิน</span>
@@ -5400,7 +5408,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.9"></script>
-  <script defer src="ui-v8.js?v=8.9"></script>
+  <script defer src="app.js?v=9.0"></script>
+  <script defer src="ui-v8.js?v=9.0"></script>
 </body>
 </html>
