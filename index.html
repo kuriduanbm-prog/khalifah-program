@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.2">
-  <link rel="stylesheet" href="ui-v8.css?v=8.2">
+  <link rel="stylesheet" href="style.css?v=8.3">
+  <link rel="stylesheet" href="ui-v8.css?v=8.3">
 </head>
 <body class="auth-locked">
 
@@ -1563,6 +1563,31 @@
 
       <!-- ==================== TAB 1: OVERVIEW BENTO DASHBOARD ==================== -->
       <div id="teacher-tab-overview" class="teacher-subcontent">
+        <header class="k8-th-head">
+          <div class="k8-th-titles">
+            <div class="k8-th-date" id="k8ThDate">-</div>
+            <h1 id="k8ThName">อาจารย์</h1>
+          </div>
+          <details class="k8-acct">
+            <summary aria-label="บัญชีของฉัน" id="k8ThAvatar">อ</summary>
+            <div class="k8-acct-menu">
+              <button type="button" id="k8ThBackAdmin" onclick="switchView('admin')" hidden>ไปหน้าแอดมิน</button>
+              <button type="button" class="is-danger" onclick="teacherLogout()">ออกจากระบบ</button>
+            </div>
+          </details>
+        </header>
+        <section class="k8-th-kpis">
+          <button type="button" class="k8-th-kpi" onclick="switchTeacherTab('attendance')">
+            <span class="k8-th-kpi-l">มาเรียนวันนี้</span>
+            <span class="k8-th-kpi-v"><b id="k8ThAttN">0</b><small id="k8ThAttT"> / 0</small></span>
+            <span class="k8-th-bar"><span id="k8ThAttBar" style="width:0%"></span></span>
+          </button>
+          <div class="k8-th-kpi">
+            <span class="k8-th-kpi-l" id="k8ThPrayL">ละหมาด</span>
+            <span class="k8-th-kpi-v"><b id="k8ThPrayN">0</b><small id="k8ThPrayT"> / 0</small></span>
+            <span class="k8-th-bar"><span id="k8ThPrayBar" class="is-blue" style="width:0%"></span></span>
+          </div>
+        </section>
         <!-- Teacher & Executive Bento Header -->
         <div class="teacher-hero-card" style="margin-bottom: 1.25rem;">
           <div class="teacher-hero-content">
@@ -1803,6 +1828,25 @@
 
       <!-- ==================== TAB 2: DAILY STUDENT ATTENDANCE CHECK ==================== -->
       <div id="teacher-tab-attendance" class="teacher-subcontent" style="display: none;">
+        <div class="k8-ta">
+          <header class="k8-ta-head">
+            <div class="k8-ta-row">
+              <h1>เช็คชื่อมาเรียน</h1>
+              <label class="k8-ta-date"><span id="k8TaDateText">-</span><input type="date" id="k8TaDateInput" aria-label="เลือกวันที่เช็คชื่อ" onchange="k8TaSetDate(this.value)"></label>
+            </div>
+            <div class="k8-ta-row2">
+              <label for="k8TaGrade" class="sr-only-k8">ห้องเรียน</label>
+              <select id="k8TaGrade" onchange="k8TaSetGrade(this.value)"></select>
+              <button type="button" class="k8-ta-all" onclick="markAllTeacherAttendance('present')">ทุกคนมา</button>
+            </div>
+            <div class="k8-ta-sum" id="k8TaSum"></div>
+          </header>
+          <ul class="k8-ta-list" id="k8TaList"></ul>
+          <footer class="k8-ta-foot">
+            <div class="k8-ta-foot-t"><b id="k8TaPending">-</b><span>กดบันทึกครั้งเดียว ส่งเข้า Google Sheets ทั้งห้อง</span></div>
+            <button type="button" onclick="saveTeacherAttendanceBatch()">บันทึก</button>
+          </footer>
+        </div>
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
             <div>
@@ -5267,7 +5311,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.2"></script>
-  <script defer src="ui-v8.js?v=8.2"></script>
+  <script defer src="app.js?v=8.3"></script>
+  <script defer src="ui-v8.js?v=8.3"></script>
 </body>
 </html>

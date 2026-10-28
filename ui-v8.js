@@ -1275,3 +1275,125 @@
   const rp = window.renderCurrentStudentProfile;
   if (typeof rp === 'function') window.renderCurrentStudentProfile = function () { const r = rp.apply(this, arguments); try { window.renderProfileV8(); } catch (e) {} return r; };
 })();
+
+/* ============ Round 3 · Teacher home + attendance (canvas) ============ */
+(function () {
+  const readJSON = (k, f) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? f : v; } catch (e) { return f; } };
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const DAYS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const DAYS_FULL = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const norm = (id) => String(id == null ? '' : id).replace(/^0+/, '');
+  const cid = (id) => { try { return typeof cleanIdString === 'function' ? cleanIdString(id) : String(id); } catch (e) { return String(id); } };
+  const shortG = (g) => { const m = String(g || '').match(/(\d)/); return m && /มัธยม/.test(g) ? 'ม.' + m[1] : (g || ''); };
+  const initialOf = (name) => String(name || '').replace(/^(อาจารย์|อ\.|ครู|นาย|นางสาว|นาง|เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.)\s*/, '').trim().charAt(0) || 'อ';
+  function students() { return (typeof allStudents !== 'undefined' && Array.isArray(allStudents) ? allStudents : []).filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))); }
+
+  function renderTeacherHome() {
+    const nameEl = document.getElementById('k8ThName');
+    if (!nameEl) return;
+    let a = null; try { a = currentAdmin; } catch (e) {}
+    const now = new Date(), today = ymd(now);
+    const isExec = a && a.role === 'EXECUTIVE';
+    const isSuper = a && /SUPER/i.test(String(a.role || ''));
+    document.getElementById('k8ThDate').textContent = DAYS_FULL[now.getDay()] + ' ' + now.getDate() + ' ' + MON[now.getMonth()] + ' · ' + (isExec ? 'ผู้บริหาร' : 'อาจารย์ผู้สอน');
+    const nm = a ? (a.fullName || a.username || 'อาจารย์') : 'อาจารย์';
+    nameEl.textContent = nm; nameEl.title = nm;
+    document.getElementById('k8ThAvatar').textContent = initialOf(nm);
+    const back = document.getElementById('k8ThBackAdmin'); if (back) back.hidden = !isSuper;
+
+    const list = students(), total = list.length;
+    const ids = {}; list.forEach((s) => { ids[norm(s.studentId)] = 1; });
+    const st = {};
+    readJSON('khalifah_attendance_logs', []).forEach((r) => { if (r && r.date === today) st[norm(r.studentId)] = String(r.status || ''); });
+    const loc = readJSON('khalifah_daily_attendance_logs', {})[today] || {};
+    Object.keys(loc).forEach((k) => { st[norm(k)] = loc[k]; });
+    let came = 0;
+    Object.keys(st).forEach((k) => { if (ids[k] && !/ลา|leave|ขาด|absent/i.test(st[k])) came++; });
+    document.getElementById('k8ThAttN').textContent = came;
+    document.getElementById('k8ThAttT').textContent = ' / ' + total;
+    document.getElementById('k8ThAttBar').style.width = (total ? Math.round(came / total * 100) : 0) + '%';
+
+    let wins = []; try { wins = PRAYER_TIME_WINDOWS; } catch (e) {}
+    const cur = now.getHours() * 60 + now.getMinutes();
+    let w = null; wins.forEach((x) => { if (cur >= x.startMin - 30) w = x; });
+    if (!w) w = wins[wins.length - 1];
+    const slot = w ? w.name : '';
+    const nk = (x) => { try { return normalizePrayerSlotKey(x); } catch (e) { return x; } };
+    const done = {};
+    let tp = []; try { tp = todayPrayers || []; } catch (e) {}
+    [...tp, ...readJSON('khalifah_prayer_history', [])].forEach((p) => {
+      if (!p) return;
+      if (!(p.date === today || String(p.timestamp || '').startsWith(today))) return;
+      if (nk(p.prayerTime || p.prayerName || '') === slot && ids[norm(p.studentId)]) done[norm(p.studentId)] = 1;
+    });
+    const pn = Object.keys(done).length;
+    document.getElementById('k8ThPrayL').textContent = 'ละหมาด' + slot;
+    document.getElementById('k8ThPrayN').textContent = pn;
+    document.getElementById('k8ThPrayT').textContent = ' / ' + total;
+    document.getElementById('k8ThPrayBar').style.width = (total ? Math.round(pn / total * 100) : 0) + '%';
+  }
+  window.renderTeacherHomeV8 = function () { try { renderTeacherHome(); } catch (e) { console.warn('teacher home', e); } };
+
+  // ---------- attendance ----------
+  const KINDS = [['present', 'มา', '#15803d', '#f0fdf4'], ['late', 'สาย', '#b45309', '#fffbeb'], ['leave', 'ลา', '#1d4ed8', '#eff6ff'], ['absent', 'ขาด', '#b91c1c', '#fef2f2']];
+  window.k8TaSetGrade = function (v) { const g = document.getElementById('teacherAttGradeSelect'); if (g) { g.value = v; renderTeacherAttendanceTable(); } };
+  window.k8TaSetDate = function (v) { const d = document.getElementById('teacherAttDateInput'); if (d && v) { d.value = v; renderTeacherAttendanceTable(); } };
+  window.k8TaMark = function (sid, k) { if (typeof setStudentDailyAttendance === 'function') setStudentDailyAttendance(sid, k); };
+  function renderAtt() {
+    const listEl = document.getElementById('k8TaList');
+    if (!listEl) return;
+    const gSel = document.getElementById('teacherAttGradeSelect');
+    const dIn = document.getElementById('teacherAttDateInput');
+    const grade = gSel ? gSel.value : 'ALL';
+    const date = (dIn && dIn.value) || ymd(new Date());
+    const dd = new Date(date + 'T00:00:00');
+    document.getElementById('k8TaDateText').textContent = DAYS[dd.getDay()] + ' ' + dd.getDate() + ' ' + MON[dd.getMonth()] + ' ' + (dd.getFullYear() + 543) + (date === ymd(new Date()) ? '' : ' · ย้อนหลัง');
+    const k8d = document.getElementById('k8TaDateInput'); if (k8d) k8d.value = date;
+    const all = (typeof allStudents !== 'undefined' ? allStudents : []);
+    const sel = document.getElementById('k8TaGrade');
+    if (sel && gSel) {
+      sel.innerHTML = Array.from(gSel.options).map((o) => {
+        const n = o.value === 'ALL' ? all.length : all.filter((s) => s.grade === o.value).length;
+        return '<option value="' + esc(o.value) + '"' + (o.value === grade ? ' selected' : '') + '>' + esc(o.value === 'ALL' ? 'ทุกระดับชั้น' : o.value) + ' · ' + n + ' คน</option>';
+      }).join('');
+    }
+    const rows = all.filter((s) => grade === 'ALL' || !grade || s.grade === grade);
+    let draft = {}; try { draft = teacherDailyAttendanceDraft || {}; } catch (e) {}
+    const saved = readJSON('khalifah_daily_attendance_logs', {})[date] || {};
+    const cnt = { present: 0, late: 0, leave: 0, absent: 0 };
+    let pending = 0;
+    listEl.innerHTML = rows.length ? rows.map((s) => {
+      const id = cid(s.studentId);
+      const cur = draft[id] || saved[id] || 'present';
+      if (cnt[cur] != null) cnt[cur]++;
+      if (!saved[id]) pending++;
+      return '<li class="k8-ta-card"><div class="k8-ta-top"><span class="k8-ta-av">' + esc(initialOf(s.fullName)) + '</span><span class="k8-ta-name" title="' + esc(s.fullName) + '">' + esc(s.fullName) + '</span><span class="k8-ta-id">' + esc(id) + (grade === 'ALL' ? ' · ' + esc(shortG(s.grade)) : '') + '</span></div>' +
+        '<div class="k8-ta-opts" role="radiogroup" aria-label="สถานะการมาเรียน">' + KINDS.map(([k, label, ink, bg]) => {
+          const on = cur === k;
+          return '<button type="button" role="radio" aria-checked="' + on + '" style="' + (on ? 'background:' + ink + ';color:#fff;border-color:' + ink : 'background:' + bg + ';color:' + ink + ';border-color:' + bg) + '" onclick="k8TaMark(\'' + esc(id) + '\',\'' + k + '\')">' + label + '</button>';
+        }).join('') + '</div></li>';
+    }).join('') : '<li class="k8-li-empty">ไม่พบรายชื่อนักเรียนในระดับชั้นนี้</li>';
+    document.getElementById('k8TaSum').innerHTML = KINDS.map(([k, label, ink, bg]) => '<div style="background:' + bg + ';color:' + ink + '"><b>' + cnt[k] + '</b><span>' + label + '</span></div>').join('');
+    const pe = document.getElementById('k8TaPending');
+    pe.textContent = pending > 0 ? 'ยังไม่บันทึก ' + pending + ' คน' : 'บันทึกครบทุกคนแล้ว';
+    pe.style.color = pending > 0 ? '#b45309' : '#15803d';
+  }
+  window.renderTeacherAttV8 = function () { try { renderAtt(); } catch (e) { console.warn('teacher att', e); } };
+  function wrap(fn, after) {
+    const o = window[fn]; if (typeof o !== 'function') return;
+    window[fn] = function () {
+      const r = o.apply(this, arguments);
+      const f = () => { try { after(); } catch (e) {} };
+      if (r && typeof r.then === 'function') r.then(f, f); else f();
+      return r;
+    };
+  }
+  wrap('renderTeacherAttendanceTable', window.renderTeacherAttV8);
+  wrap('saveTeacherAttendanceBatch', () => { window.renderTeacherAttV8(); window.renderTeacherHomeV8(); });
+  wrap('initTeacherPortalView', window.renderTeacherHomeV8);
+  wrap('renderTeacherOverviewBento', window.renderTeacherHomeV8);
+  wrap('switchTeacherTab', () => { window.renderTeacherHomeV8(); window.renderTeacherAttV8(); });
+})();
