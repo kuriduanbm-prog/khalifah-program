@@ -2667,16 +2667,22 @@ window.k8RegBirthChange = function (v) {
   const ROLES = [
     ['TEACHER', 'อาจารย์ผู้สอน', 'เช็คชื่อ กรอกคะแนนและเกรดวิชาที่สอน', false],
     ['TeacherAdmin', 'ครูประจำชั้น', 'เหมือนอาจารย์ + ดูสถิติห้องเรียน', false],
-    ['EXECUTIVE', 'ผู้บริหาร', 'ดูสถิติภาพรวม รายงาน และผลประเมิน', false],
+    ['EXECUTIVE', 'ผู้บริหาร', 'ดูสถิติภาพรวม รายงาน และผลประเมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['ActivityAdmin', 'ฝ่ายกิจกรรม', 'สร้างกิจกรรมและเปิดสแกน QR', false],
-    ['INSPECTOR', 'ผู้ตรวจการ', 'ตรวจเครื่องแต่งกาย หอพัก ห้องน้ำ ความประพฤติ · หัก/เพิ่มคะแนนพฤติกรรม (เข้าทางแท็บแอดมิน)', false],
-    ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ (ยกเว้นตั้งค่าระบบและจัดการแอดมิน)', true]
+    ['INSPECTOR', 'ผู้ตรวจการ', 'ตรวจเครื่องแต่งกาย หอพัก ห้องน้ำ ความประพฤติ · หัก/เพิ่มคะแนนพฤติกรรม (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
+    ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ ยกเว้นตั้งค่าระบบและจัดการแอดมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', true]
   ];
+  const PW_ONLY = ['EXECUTIVE', 'INSPECTOR', 'SubAdmin'];
+  const pwOnly = () => PW_ONLY.indexOf(nfRole) !== -1;
   let nfRole = 'TEACHER'; const nfSubj = new Set();
   function drawRoles() {
     document.getElementById('k8NfRoles').innerHTML = ROLES.filter((r) => !r[3] || isOwner()).map(([k, t, d]) => '<button type="button" class="k8-role" aria-pressed="' + (nfRole === k) + '" onclick="k8NfRole(\'' + k + '\')"><b>' + t + '</b><small>' + d + '</small></button>').join('');
     const showSubj = nfRole === 'TEACHER' || nfRole === 'TeacherAdmin';
     document.getElementById('k8NfSubjWrap').hidden = !showSubj;
+    const uw = document.getElementById('k8NfUser').closest('label'); if (uw) uw.hidden = pwOnly();
+    const pi = document.getElementById('k8NfPass');
+    if (pwOnly()) { if (pi.value.length < 8) window.k8NfGen(); pi.placeholder = 'อย่างน้อย 8 ตัว (กดสุ่มได้)'; } else pi.placeholder = 'อย่างน้อย 6 ตัว';
+    const ph = pi.closest('label').querySelector('small'); if (ph) ph.textContent = pwOnly() ? 'บัญชีนี้เข้าระบบทางแท็บแอดมินด้วยรหัสผ่านนี้อย่างเดียว ไม่ต้องใช้ชื่อผู้ใช้' : 'แจ้งรหัสนี้ให้เจ้าของบัญชี';
   }
   function drawSubj() {
     let subs = []; try { subs = appSubjects || []; } catch (e) {}
@@ -2688,17 +2694,21 @@ window.k8RegBirthChange = function (v) {
   window.k8NewStaff = function () {
     nfRole = 'TEACHER'; nfSubj.clear();
     ['k8NfName', 'k8NfUser', 'k8NfPass', 'k8NfPhone', 'k8NfEmail'].forEach((id) => { const e = document.getElementById(id); e.value = ''; e.classList.remove('is-bad'); });
+    const eb = document.getElementById('k8NfErr'); if (eb) eb.classList.remove('is-ok');
+    const sb = document.getElementById('k8NfSaveBtn'); if (sb) { sb.onclick = () => window.k8NfSave(); sb.textContent = 'สร้างบัญชี'; }
     try { if (typeof loadAppSubjects === 'function') loadAppSubjects(); } catch (e) {}
     drawRoles(); drawSubj(); showErr('k8NfErr', ''); openModal('k8NewStaffModal');
     setTimeout(() => document.getElementById('k8NfName').focus(), 80);
   };
   window.k8NfSave = async function () {
     const v = (id) => (document.getElementById(id).value || '').trim();
-    const name = v('k8NfName'), user = v('k8NfUser'), pass = v('k8NfPass'), phone = v('k8NfPhone').replace(/\D/g, ''), email = v('k8NfEmail');
+    const name = v('k8NfName'), pass = v('k8NfPass'), phone = v('k8NfPhone').replace(/\D/g, ''), email = v('k8NfEmail');
+    let user = v('k8NfUser');
+    if (pwOnly()) { const pre = { EXECUTIVE: 'exec', INSPECTOR: 'insp', SubAdmin: 'sub' }[nfRole] || 'staff'; const c = 'abcdefghjkmnpqrstuvwxyz23456789'; let r = ''; for (let i = 0; i < 5; i++) r += c[Math.floor(Math.random() * c.length)]; user = pre + '-' + r; }
     const bad = [];
     if (!name) bad.push(['k8NfName', 'กรอกชื่อ-นามสกุล']);
-    if (!/^[A-Za-z0-9._-]{3,30}$/.test(user)) bad.push(['k8NfUser', 'ชื่อผู้ใช้ 3–30 ตัว ใช้ a-z 0-9 . _ - เท่านั้น']);
-    if (pass.length < 6) bad.push(['k8NfPass', 'รหัสผ่านอย่างน้อย 6 ตัว']);
+    if (!pwOnly() && !/^[A-Za-z0-9._-]{3,30}$/.test(user)) bad.push(['k8NfUser', 'ชื่อผู้ใช้ 3–30 ตัว ใช้ a-z 0-9 . _ - เท่านั้น']);
+    if (pass.length < (pwOnly() ? 8 : 6)) bad.push(['k8NfPass', 'รหัสผ่านอย่างน้อย ' + (pwOnly() ? 8 : 6) + ' ตัว']);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad.push(['k8NfEmail', 'รูปแบบอีเมลไม่ถูกต้อง']);
     let staff = []; try { staff = subAdmins || []; } catch (e) {}
     if (user && staff.some((x) => String(x.username || '').toLowerCase() === user.toLowerCase())) bad.push(['k8NfUser', 'ชื่อผู้ใช้นี้มีอยู่แล้ว']);
@@ -2713,8 +2723,18 @@ window.k8RegBirthChange = function (v) {
     if (!r || !r.success) { showErr('k8NfErr', (r && r.message) || 'สร้างบัญชีไม่สำเร็จ'); return; }
     const local = Object.assign({}, payload); delete local.password;
     try { staff.unshift(local); localStorage.setItem('khalifah_sub_admins', JSON.stringify(staff)); renderSubAdminsTable(); } catch (e) {}
-    closeModal('k8NewStaffModal');
     const roleName = (ROLES.find((x) => x[0] === nfRole) || [])[1] || 'บุคลากร';
+    if (pwOnly()) {
+      // แสดงรหัสผ่านให้แอดมินจดหรือคัดลอกก่อนปิด
+      const box = document.getElementById('k8NfErr');
+      box.hidden = false; box.classList.add('is-ok');
+      box.innerHTML = 'สร้างบัญชี' + roleName + ' "' + esc(name) + '" แล้ว<br>เข้าระบบทางแท็บแอดมินด้วยรหัสผ่าน: <b class="k8-nf-pw">' + esc(pass) + '</b> <button type="button" class="k8-bh-link" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'' + esc(pass) + '\').then(()=>showToast(\'คัดลอกรหัสผ่านแล้ว\',\'success\'))">คัดลอก</button>';
+      try { box.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+      btn.textContent = 'ปิด'; btn.onclick = () => { box.classList.remove('is-ok'); btn.onclick = () => window.k8NfSave(); btn.textContent = 'สร้างบัญชี'; closeModal('k8NewStaffModal'); };
+      try { if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(true); } catch (e) {}
+      return;
+    }
+    closeModal('k8NewStaffModal');
     if (typeof showToast === 'function') showToast('สร้างบัญชี' + roleName + ' "' + name + '" แล้ว · ชื่อผู้ใช้ ' + user + (nfRole === 'SubAdmin' || nfRole === 'INSPECTOR' ? ' (เข้าทางแท็บแอดมิน)' : ' (เข้าทางแท็บอาจารย์)'), 'success');
     try { if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(true); } catch (e) {}
   };
@@ -2788,7 +2808,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.2';
+  const APP_VERSION = '10.3';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

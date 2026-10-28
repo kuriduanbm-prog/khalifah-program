@@ -1784,3 +1784,7 @@ button.hf-card.hf-beh .k8-bh-ring b { font-size: 17px; margin: 0; }
 .hf-beh-txt b { font-size: 17px; font-weight: 600; margin: 0; color: #0f172a; }
 .hf-beh-txt span { font-size: 13px; color: #64748b; margin: 0; font-weight: 400; }
 .hf-beh-lv { flex: none; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin: 0 !important; }
+#k8NfErr.is-ok { background: #f0fdf4 !important; color: #166534 !important; border-color: #bbf7d0 !important; line-height: 1.7; }
+.k8-nf-pw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; letter-spacing: .5px; background: #fff; padding: 1px 6px; border-radius: 6px; }
+#k8AdmUserGroup[hidden] { display: none !important; }
+.k8-f[hidden], .k8-form-2 > [hidden] { display: none !important; }

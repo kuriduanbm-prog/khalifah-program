@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=10.2">
-  <link rel="stylesheet" href="ui-v8.css?v=10.2">
+  <link rel="stylesheet" href="style.css?v=10.3">
+  <link rel="stylesheet" href="ui-v8.css?v=10.3">
 </head>
 <body class="auth-locked">
   <script>
@@ -4482,14 +4482,14 @@
           <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; color: var(--text-secondary);">
             <i class="fa-solid fa-crown" style="color: var(--text-dark);"></i> <strong>สำหรับแอดมินสูงสุด (Super Admin):</strong> จัดการข้อมูลนักเรียน อาจารย์ อนุมัติรหัสยืนยันแบบสุ่ม และดูสถิติภาพรวมทั้งหมดของระบบ
           </div>
-          <div class="form-group">
-            <label class="form-label" for="inlineAdminUserInput">ชื่อผู้ใช้ <span class="k8-opt">(แอดมินรอง)</span></label>
+          <div class="form-group" id="k8AdmUserGroup" hidden>
+            <label class="form-label" for="inlineAdminUserInput">ชื่อผู้ใช้ <span class="k8-opt">(สำหรับบัญชีเดิมที่ใช้ชื่อผู้ใช้)</span></label>
             <input type="text" class="form-control" id="inlineAdminUserInput" autocomplete="username" placeholder="แอดมินหลักเว้นว่างได้" onkeypress="if(event.key === 'Enter') document.getElementById('inlineAdminPassInput').focus()">
           </div>
           <div class="form-group">
             <label class="form-label" for="inlineAdminPassInput">รหัสผ่าน</label>
             <input type="password" class="form-control" id="inlineAdminPassInput" autocomplete="current-password" placeholder="" onkeypress="if(event.key === 'Enter') handleInlineAdminLogin()">
-            <span class="k8-auth-hint">แอดมินหลัก: กรอกเฉพาะรหัสผ่าน · แอดมินรอง: กรอกชื่อผู้ใช้และรหัสผ่านของตนเอง</span>
+            <span class="k8-auth-hint">แอดมิน แอดมินรอง ผู้บริหาร และผู้ตรวจการ กรอกเฉพาะรหัสผ่านของตนเอง · <a href="javascript:void(0)" onclick="var g=document.getElementById('k8AdmUserGroup');g.hidden=!g.hidden;if(!g.hidden)document.getElementById('inlineAdminUserInput').focus()">เข้าด้วยชื่อผู้ใช้</a></span>
           </div>
           <button class="btn btn-primary btn-block btn-lg" id="btnInlineAdminLogin" onclick="handleInlineAdminLogin()">
             เข้าสู่ระบบ
@@ -5603,7 +5603,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=10.2"></script>
-  <script defer src="ui-v8.js?v=10.2"></script>
+  <script defer src="app.js?v=10.3"></script>
+  <script defer src="ui-v8.js?v=10.3"></script>
 </body>
 </html>

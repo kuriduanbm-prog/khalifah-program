@@ -930,6 +930,23 @@ function verifyToken_(token) {
 
 const INSPECTOR_ROLE_VALUES = ['inspector', 'ผู้ตรวจการ'];
 function isInspectorRole_(v) { return INSPECTOR_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
+// บทบาทที่เข้าระบบทางแท็บแอดมินด้วยรหัสผ่านอย่างเดียว
+const PASSWORD_ONLY_ROLE_VALUES = ['subadmin', 'admin', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง', 'executive', 'ผู้บริหาร', 'inspector', 'ผู้ตรวจการ'];
+function isPasswordOnlyRole_(v) { return PASSWORD_ONLY_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
+function passwordOnlyRows_() {
+  const ss = getSpreadsheet(); const out = [];
+  [SHEETS.ADMINS, SHEETS.TEACHERS].forEach(function (name) {
+    const sh = ss.getSheetByName(name);
+    if (!sh || sh.getLastRow() <= 1) return;
+    sh.getDataRange().getValues().slice(1).forEach(function (r) { if (cleanVal(r[1]) && isPasswordOnlyRole_(r[4])) out.push(r); });
+  });
+  return out;
+}
+/** คืนชื่อผู้ใช้ของบัญชีกลุ่มรหัสผ่านอย่างเดียวที่รหัสตรง (ต้องตรงเพียงบัญชีเดียว) */
+function findPasswordOnlyAccount_(pass) {
+  const hits = passwordOnlyRows_().filter(function (r) { return verifyPassword_(r[2], pass); });
+  return hits.length === 1 ? cleanVal(hits[0][1]) : '';
+}
 function staffTokenRole_(roleValue) {
   const r = cleanVal(roleValue).toLowerCase();
   if (INSPECTOR_ROLE_VALUES.indexOf(r) !== -1) return 'inspector';
@@ -2980,8 +2997,11 @@ function verifyAdminLogin(password, username) {
     return out;
   }
   if (!targetUser) {
+    // แอดมินรอง / ผู้บริหาร / ผู้ตรวจการ เข้าด้วยรหัสผ่านอย่างเดียวได้ (รหัสของบัญชีกลุ่มนี้ไม่ซ้ำกัน)
+    const owner = findPasswordOnlyAccount_(pass);
+    if (owner) return verifyAdminLogin(pass, owner);
     loginFailed_(rlKey);
-    return { success: false, field: 'password', message: masterPass ? 'รหัสแอดมินหลักไม่ถูกต้อง' : 'ยังไม่ได้ตั้งรหัสแอดมินหลักใหม่ (MASTER_ADMIN_PASS) ในระบบหลังบ้าน' };
+    return { success: false, field: 'password', message: 'รหัสผ่านไม่ถูกต้อง' };
   }
 
   ensureSchema();
@@ -3089,6 +3109,13 @@ function addSubAdmin(data) {
     return def;
   };
   const rawPass = cleanVal(data.password || '');
+  if (rawPass && isPasswordOnlyRole_(roleCode) && !isHashedPassword_(rawPass)) {
+    if (rawPass.length < 8) return { success: false, field: 'password', message: 'บัญชีที่เข้าด้วยรหัสผ่านอย่างเดียวต้องใช้รหัสผ่านอย่างน้อย 8 ตัวอักษร' };
+    const master = getMasterPassword_();
+    const clash = (master && safeEquals_(normalizePasswordInput_(rawPass), normalizePasswordInput_(master))) ||
+      passwordOnlyRows_().some(function (r) { return cleanVal(r[1]).toLowerCase() !== cleanUser.toLowerCase() && verifyPassword_(r[2], rawPass); });
+    if (clash) return { success: false, field: 'password', message: 'รหัสผ่านนี้ซ้ำกับบัญชีอื่น กรุณาสุ่มรหัสใหม่' };
+  }
   let storedPass;
   if (rawPass) {
     storedPass = isHashedPassword_(rawPass) ? rawPass : hashPassword_(rawPass);
