@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.7">
-  <link rel="stylesheet" href="ui-v8.css?v=8.7">
+  <link rel="stylesheet" href="style.css?v=8.8">
+  <link rel="stylesheet" href="ui-v8.css?v=8.8">
 </head>
 <body class="auth-locked">
 
@@ -201,6 +201,12 @@
           <span class="hf-next-cta" id="hfNextCta">เช็คชื่อละหมาด</span>
         </button>
 
+        <button type="button" class="hf-cal-btn" onclick="openSchoolCalendarModal()">
+          <span class="hf-cal-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM16 3v4M8 3v4M3 11h18"/></svg></span>
+          <span class="hf-cal-txt"><b>ปฏิทินโรงเรียน</b><span id="hfCalNext">ดูวันสำคัญและกิจกรรมทั้งเดือน</span></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+
         <div class="hf-seg" role="tablist" aria-label="ช่วงเวลา" id="hfPeriods">
           <button type="button" role="tab" data-period="day">รายวัน</button>
           <button type="button" role="tab" data-period="week">รายสัปดาห์</button>
@@ -234,6 +240,7 @@
           <div class="hf-head"><h2>กิจกรรม</h2><button type="button" class="hf-link" onclick="switchView('activities')" id="hfActLink">ดูทั้งหมด</button></div>
           <div id="hfActs"></div>
         </section>
+
 
         <section class="hf-deeds" id="hfDeeds"></section>
       </div>
@@ -5375,7 +5382,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.7"></script>
-  <script defer src="ui-v8.js?v=8.7"></script>
+  <script defer src="app.js?v=8.8"></script>
+  <script defer src="ui-v8.js?v=8.8"></script>
 </body>
 </html>

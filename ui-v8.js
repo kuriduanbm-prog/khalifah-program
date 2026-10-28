@@ -1802,3 +1802,20 @@ window.k8RegBirthChange = function (v) {
   const o = window.renderAdminOverviewV8;
   if (typeof o === 'function') window.renderAdminOverviewV8 = function () { const r = o.apply(this, arguments); try { feed(); } catch (e) {} return r; };
 })();
+
+/* ============ Round 5 · Home F calendar button: next event preview ============ */
+(function () {
+  const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  function upd() {
+    const el = document.getElementById('hfCalNext'); if (!el) return;
+    let evs = []; try { evs = getVisibleCalendarEvents() || []; } catch (e) { try { evs = calendarEvents || []; } catch (e2) {} }
+    const t = new Date(); const today = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+    const next = evs.filter((e) => String(e.endDate || e.startDate || '').slice(0, 10) >= today && e.startDate).sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)))[0];
+    if (!next) { el.textContent = 'ดูวันสำคัญและกิจกรรมทั้งเดือน'; return; }
+    const d = new Date(String(next.startDate).slice(0, 10) + 'T00:00:00');
+    el.textContent = (String(next.startDate).slice(0, 10) <= today ? 'วันนี้' : 'ถัดไป ' + d.getDate() + ' ' + M[d.getMonth()]) + ' · ' + (next.title || '');
+  }
+  const o = window.renderHomeF;
+  if (typeof o === 'function') window.renderHomeF = function () { const r = o.apply(this, arguments); try { upd(); } catch (e) {} return r; };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', upd); else upd();
+})();

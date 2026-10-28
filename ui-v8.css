@@ -1178,3 +1178,10 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
   }
   body .mobile-nav .mobile-nav-item.active, body .teacher-bottom-nav-bar .teacher-bottom-nav-item.active { color: #fff !important; }
 }
+.hf-cal-btn { width: 100%; display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 14px 16px; font-family: inherit; text-align: left; cursor: pointer; color: #0f172a; }
+.hf-cal-btn:hover { border-color: #bae6fd; }
+.hf-cal-btn:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+.hf-cal-ico { width: 40px; height: 40px; border-radius: 12px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; flex: none; }
+.hf-cal-txt { flex: 1; min-width: 0; }
+.hf-cal-txt b { display: block; font-size: 15px; font-weight: 600; }
+.hf-cal-txt span { display: block; font-size: 13px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
