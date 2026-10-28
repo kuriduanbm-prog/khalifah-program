@@ -2788,7 +2788,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.1';
+  const APP_VERSION = '10.2';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3202,7 +3202,12 @@ window.k8RegBirthChange = function (v) {
     const el = document.getElementById('hfBehScore'); if (!el) return;
     const sc = myScore(); const lv = level(sc);
     el.textContent = sc;
-    const box = document.getElementById('hfBeh'); if (box) { box.style.setProperty('--c', lv[1]); box.style.setProperty('--bg', lv[2]); box.setAttribute('aria-label', 'คะแนนพฤติกรรม ' + sc + ' จาก 100 · ' + lv[0]); }
+    const box = document.getElementById('hfBeh'); if (box) box.setAttribute('aria-label', 'คะแนนพฤติกรรม ' + sc + ' จาก 100 · ' + lv[0]);
+    const ring = document.getElementById('hfBehRing'); if (ring) { ring.style.setProperty('--p', sc); ring.style.setProperty('--c', lv[1]); }
+    const lvEl = document.getElementById('hfBehLv'); if (lvEl) { lvEl.textContent = lv[0]; lvEl.style.color = lv[1]; lvEl.style.background = lv[2]; }
+    const t = term(); const act = ((mine && mine.logs) || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t));
+    const minus = act.filter((l) => l.points < 0).reduce((a, l) => a + l.points, 0), plus = act.filter((l) => l.points > 0).reduce((a, l) => a + l.points, 0);
+    const sub = document.getElementById('hfBehSub'); if (sub) sub.textContent = act.length ? 'ถูกหัก ' + Math.abs(minus) + ' · ได้เพิ่ม ' + plus + ' · ภาคเรียนนี้' : 'เต็ม 100 · ยังไม่มีการหักคะแนนภาคเรียนนี้';
   }
   let mineAt = 0;
   async function loadMine(force) {

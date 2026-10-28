@@ -1694,13 +1694,7 @@ html.k8-restoring body { background: #f4f6f9; }
 #view-prayer .camera-container { width: 100% !important; max-width: none !important; align-self: stretch; }
 
 /* ============ Behavior score (inspector / admin / student) ============ */
-.hf-att-wrap { display: grid; grid-template-columns: minmax(78px, 1.15fr) 4fr; gap: 8px; align-items: stretch; }
-.hf-beh { --c: #15803d; --bg: #dcfce7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 2px solid var(--c); border-radius: 14px; background: var(--bg); color: var(--c); font-family: inherit; cursor: pointer; padding: 6px 4px; line-height: 1.1; }
-.hf-beh b { font-size: 26px; font-weight: 700; }
-.hf-beh small { font-size: 11px; opacity: .8; }
-.hf-beh span { font-size: 12px; font-weight: 600; margin-top: 4px; }
 .hf-beh:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
-@media (max-width: 380px) { .hf-att-wrap { grid-template-columns: 1fr; } .hf-beh { flex-direction: row; gap: 6px; justify-content: flex-start; padding: 10px 14px; } .hf-beh span { margin: 0 0 0 auto; } }
 
 body.k8-inspector .app-header, body.k8-inspector .mobile-nav, body.k8-inspector .app-footer, body.k8-inspector footer.footer, body.k8-inspector .teacher-bottom-nav-bar { display: none !important; }
 body.k8-inspector .main-wrapper { padding-top: 12px !important; margin-top: 0 !important; padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)) !important; }
@@ -1781,3 +1775,12 @@ body.k8-inspector #view-inspector.active .k8-insp-nav { display: flex; position:
 .k8-bh-rpts input { width: 58px; height: 42px; border: 1px solid #e2e8f0; border-radius: 10px; text-align: center; font: inherit; font-size: 14px; }
 .k8-bh-rdel { width: 36px; height: 36px; flex: none; border: 0; background: #fef2f2; color: #b91c1c; border-radius: 10px; cursor: pointer; }
 #k8BhModalBody { display: flex; flex-direction: column; gap: 12px; }
+/* behavior: separate card on student home */
+button.hf-card.hf-beh { display: flex !important; flex-direction: row; align-items: center; gap: 14px; width: 100%; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; text-align: left; font-family: inherit; cursor: pointer; border-radius: 20px; padding: 14px 16px; line-height: 1.3; }
+button.hf-card.hf-beh .k8-bh-ring { width: 54px; height: 54px; }
+button.hf-card.hf-beh .k8-bh-ring::before { inset: 6px; }
+button.hf-card.hf-beh .k8-bh-ring b { font-size: 17px; margin: 0; }
+.hf-beh-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hf-beh-txt b { font-size: 17px; font-weight: 600; margin: 0; color: #0f172a; }
+.hf-beh-txt span { font-size: 13px; color: #64748b; margin: 0; font-weight: 400; }
+.hf-beh-lv { flex: none; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin: 0 !important; }
