@@ -57,10 +57,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=9.7">
-  <link rel="stylesheet" href="ui-v8.css?v=9.7">
+  <link rel="stylesheet" href="style.css?v=9.8">
+  <link rel="stylesheet" href="ui-v8.css?v=9.8">
 </head>
 <body class="auth-locked">
+  <script>
+    // เปิดแอปใหม่ / อัปเดตเวอร์ชัน: ถ้าเคยเข้าสู่ระบบไว้ ไม่ต้องโชว์หน้าเข้าสู่ระบบแวบ ๆ ระหว่างโหลด
+    (function () { try {
+      var ls = localStorage;
+      if (ls.getItem('khalifah_session_token') && (ls.getItem('khalifah_current_student') || ls.getItem('khalifah_current_admin'))) {
+        document.body.classList.remove('auth-locked');
+        document.documentElement.classList.add('k8-restoring');
+        setTimeout(function () { document.documentElement.classList.remove('k8-restoring'); }, 4000);
+      }
+    } catch (e) {} })();
+  </script>
 
   <!-- Application Header -->
   <header class="app-header">
@@ -1627,6 +1638,7 @@
           <details class="k8-acct">
             <summary aria-label="บัญชีของฉัน" id="k8ThAvatar">อ</summary>
             <div class="k8-acct-menu">
+              <button type="button" onclick="this.closest('details').open=false; openTeacherAccountModal()">โปรไฟล์ของฉัน</button>
               <button type="button" id="k8ThBackAdmin" onclick="switchView('admin')" hidden>ไปหน้าแอดมิน</button>
               <button type="button" class="is-danger" onclick="teacherLogout()">ออกจากระบบ</button>
             </div>
@@ -5548,7 +5560,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=9.7"></script>
-  <script defer src="ui-v8.js?v=9.7"></script>
+  <script defer src="app.js?v=9.8"></script>
+  <script defer src="ui-v8.js?v=9.8"></script>
 </body>
 </html>

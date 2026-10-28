@@ -1685,3 +1685,9 @@ body.k8-subadmin #btnTabLogo, body.k8-subadmin .k8-admin-nav [onclick*="settings
 #teacher-tab-grades .tg-save.is-dirty button { position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 60; min-height: 44px; border-radius: 999px; box-shadow: 0 8px 24px rgba(91,33,182,.35); }
 #teacher-tab-grades:has(.tg-save.is-dirty) #tgBody { padding-bottom: 64px; }
 @media (min-width: 993px) { #teacher-tab-grades .tg-save.is-dirty button { bottom: 24px; right: 32px; } }
+
+/* ---- Restoring a remembered session: no login flash ---- */
+html.k8-restoring #authModal { display: none !important; }
+html.k8-restoring body > *:not(script) { visibility: hidden; }
+html.k8-restoring body { background: #f4f6f9; }
+.k8-acct-menu button[hidden], #k8ThBackAdmin[hidden] { display: none !important; }

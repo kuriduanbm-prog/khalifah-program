@@ -4732,6 +4732,8 @@ function updatePrayerLateRequestStatus(data) {
 //  - นิยามชิ้นงานเก็บใน "การตั้งค่า" คีย์ SubjectAssignments = { รหัสวิชา: [{id,title,maxScore}] }
 //  - คะแนนรายคนเก็บในแผ่นงาน "คะแนนชิ้นงาน" (1 แถว = นักเรียน 1 คน × ชิ้นงาน 1 ชิ้น)
 // =====================================================================
+const ASSIGNMENT_TOTAL_MAX = 100; // คะแนนเต็มรวมของทุกชิ้นงานในหนึ่งวิชาไม่เกิน 100
+function assignmentsTotal_(list) { return (list || []).reduce(function (t, a) { return t + (Number(a.maxScore) || 0); }, 0); }
 function sanitizeAssignments_(list) {
   if (!Array.isArray(list)) return [];
   const out = [];
@@ -4741,7 +4743,7 @@ function sanitizeAssignments_(list) {
     const id = cleanVal(a.id || '').substring(0, 60);
     const title = cleanVal(a.title || a.name || '').substring(0, 120);
     const max = Number(a.maxScore || a.max);
-    if (!id || !title || !(max > 0) || seen[id]) return;
+    if (!id || !title || !(max > 0) || max > ASSIGNMENT_TOTAL_MAX || seen[id]) return;
     seen[id] = true;
     out.push({ id: id, title: title, maxScore: Math.round(max * 100) / 100 });
   });
@@ -4765,7 +4767,9 @@ function saveSubjectAssignments(data) {
   try { lock.waitLock(15000); } catch (e) {}
   try {
     const map = getAssignmentDefinitionsMap_();
-    map[subjectId] = sanitizeAssignments_(data.assignments);
+    const clean = sanitizeAssignments_(data.assignments);
+    if (assignmentsTotal_(clean) > ASSIGNMENT_TOTAL_MAX + 1e-9) return { success: false, message: 'คะแนนเต็มรวมของทุกชิ้นงานต้องไม่เกิน ' + ASSIGNMENT_TOTAL_MAX + ' คะแนน' };
+    map[subjectId] = clean;
     saveSetting({ key: 'SubjectAssignments', value: JSON.stringify(map), description: 'ชิ้นงาน/ช่องคะแนนของแต่ละรายวิชา (JSON)' });
     return { success: true, message: 'บันทึกรายการชิ้นงานของวิชาเรียบร้อย', assignments: map[subjectId] };
   } finally {
@@ -4787,7 +4791,9 @@ function saveAssignmentScores(data) {
   try {
     if (Array.isArray(data.assignments)) {
       const map = getAssignmentDefinitionsMap_();
-      map[subjectId] = sanitizeAssignments_(data.assignments);
+      const clean = sanitizeAssignments_(data.assignments);
+      if (assignmentsTotal_(clean) > ASSIGNMENT_TOTAL_MAX + 1e-9) return { success: false, message: 'คะแนนเต็มรวมของทุกชิ้นงานต้องไม่เกิน ' + ASSIGNMENT_TOTAL_MAX + ' คะแนน' };
+      map[subjectId] = clean;
       saveSetting({ key: 'SubjectAssignments', value: JSON.stringify(map), description: 'ชิ้นงาน/ช่องคะแนนของแต่ละรายวิชา (JSON)' });
     }
     const defs = getAssignmentDefinitionsMap_()[subjectId] || [];

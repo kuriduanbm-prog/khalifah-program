@@ -444,6 +444,7 @@
     mode: (function () { try { return localStorage.getItem('k8_tg_view') || 'grid'; } catch (e) { return 'grid'; } })()
   };
 
+  const TG_TOTAL_MAX = 100;
   function tgLoadScores() {
     if (!tgState.scores) tgState.scores = readJSON('khalifah_student_assignment_scores', {});
     return tgState.scores;
@@ -504,13 +505,14 @@
     let html = '<label class="tg-search"><span class="sr-only-k8">ค้นหานักเรียน</span><input type="search" id="tgSearch" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(tgState.search || '') + '"></label>';
 
     if (tgState.tab === 'scores') {
-      html += '<div class="tg-head"><h3>ชิ้นงาน (' + defs.length + ')</h3><span>คะแนนเต็มรวม ' + fmtNum(totalMax) + '</span></div>';
+      const left = Math.max(0, Math.round((TG_TOTAL_MAX - totalMax) * 100) / 100);
+      html += '<div class="tg-head"><h3>ชิ้นงาน (' + defs.length + ')</h3><span>คะแนนเต็มรวม <b>' + fmtNum(totalMax) + '</b> / ' + TG_TOTAL_MAX + (left > 0 ? ' · เหลือ ' + fmtNum(left) : ' · ครบแล้ว') + '</span></div>';
       html += '<div class="tg-chips">' + defs.map((a) => '<button type="button" class="tg-chip" data-asg="' + esc(a.id) + '" aria-pressed="' + (a.id === active) + '">' + esc(a.title) + '<small>เต็ม ' + fmtNum(a.maxScore) + '</small></button>').join('') +
         '<button type="button" class="tg-add" data-act="open-add">+ เพิ่มชิ้นงาน</button></div>';
       if (tgState.adding) {
         html += '<div class="tg-form"><div class="tg-form-row">' +
           '<label>ชื่อชิ้นงาน<input type="text" id="tgNewTitle" maxlength="120" placeholder="เช่น ใบงานที่ 4"></label>' +
-          '<label>คะแนนเต็ม<input type="text" inputmode="decimal" id="tgNewMax" placeholder="10"></label></div>' +
+          '<label>คะแนนเต็ม (ใส่ได้อีก ' + fmtNum(left) + ')<input type="text" inputmode="decimal" id="tgNewMax" placeholder="' + (left >= 10 ? '10' : fmtNum(left)) + '"></label></div>' +
           '<div class="tg-btns"><button type="button" class="tg-btn" data-act="cancel-add">ยกเลิก</button><button type="button" class="tg-btn is-primary" data-act="confirm-add">เพิ่มชิ้นงาน</button></div></div>';
       }
       if (defs.length) html += '<div class="tg-mode" role="tablist" aria-label="รูปแบบการกรอกคะแนน">' + [['grid', 'ตารางทุกชิ้นงาน'], ['one', 'กรอกทีละชิ้นงาน']].map(([k, l]) => '<button type="button" role="tab" data-mode="' + k + '" aria-selected="' + (tgState.mode === k) + '">' + l + '</button>').join('') + '</div>';
@@ -622,6 +624,8 @@
           if (!title) { showToast('กรุณาตั้งชื่อชิ้นงาน', 'warning'); return; }
           if (!(max > 0)) { showToast('คะแนนเต็มต้องมากกว่า 0', 'warning'); return; }
           const defs = tgAssignments(subj).slice();
+          const used = defs.reduce((t, d) => t + (Number(d.maxScore) || 0), 0);
+          if (used + max > TG_TOTAL_MAX + 1e-9) { const left = Math.max(0, Math.round((TG_TOTAL_MAX - used) * 100) / 100); showToast(left > 0 ? 'คะแนนเต็มรวมทุกชิ้นงานได้ไม่เกิน ' + TG_TOTAL_MAX + ' · ชิ้นนี้ใส่ได้สูงสุด ' + left + ' คะแนน' : 'คะแนนเต็มรวมครบ ' + TG_TOTAL_MAX + ' แล้ว ลบหรือแก้ชิ้นงานเดิมก่อนเพิ่มใหม่', 'warning'); const mx = document.getElementById('tgNewMax'); if (mx && left > 0) { mx.value = left; mx.focus(); } return; }
           const id = 'asg_' + Date.now();
           defs.push({ id, title, maxScore: max });
           tgPersistAssignments(subj, defs);
@@ -672,9 +676,16 @@
       if (!inp) return;
       const subj = tgSubject();
       const sid = inp.dataset.sid, asg = inp.dataset.asg;
-      const raw = inp.value.trim().replace(',', '.');
+      let raw = inp.value.trim().replace(',', '.').replace(/[^0-9.]/g, '');
+      const firstDot = raw.indexOf('.'); if (firstDot !== -1) raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
+      const mx = Number(inp.dataset.max);
+      if (raw !== '' && !isNaN(Number(raw)) && Number(raw) > mx) {
+        raw = String(mx);
+        if (!inp.dataset.warned) { inp.dataset.warned = '1'; showToast('ชิ้นงานนี้เต็ม ' + fmtNum(mx) + ' คะแนน ใส่เกินไม่ได้', 'warning'); setTimeout(() => { delete inp.dataset.warned; }, 2500); }
+      }
+      if (inp.value !== raw) inp.value = raw;
       const n = Number(raw);
-      const bad = raw !== '' && (isNaN(n) || n < 0 || n > Number(inp.dataset.max));
+      const bad = raw !== '' && (isNaN(n) || n < 0 || n > mx);
       inp.classList.toggle('is-bad', bad);
       const m = tgLoadScores();
       m[sid] = m[sid] || {}; m[sid][subj] = m[sid][subj] || {};
@@ -2766,7 +2777,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '9.7';
+  const APP_VERSION = '9.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -2825,13 +2836,19 @@ window.k8RegBirthChange = function (v) {
       scheduleReload();
     });
   }
+  // อัปเดตแบบไม่รบกวน: โหลดใหม่ตอนผู้ใช้สลับออกจากแอป หรือเมื่อไม่ได้แตะหน้าจอสักพัก (ไม่โหลดใหม่ระหว่างกดเปลี่ยนหน้า)
+  let lastTouch = Date.now();
+  ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach((ev) => window.addEventListener(ev, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   function scheduleReload() {
     if (pendingReload) return;
     pendingReload = true;
-    showToast('มีเวอร์ชันใหม่ กำลังอัปเดตแอป...', 'info');
-    const tryReload = () => { if (isBusy()) return setTimeout(tryReload, 3000); location.reload(); };
-    setTimeout(tryReload, 1200);
+    const doReload = () => { try { sessionStorage.setItem('k8_just_updated', '1'); } catch (e) {} location.reload(); };
+    if (document.hidden) return doReload();
+    document.addEventListener('visibilitychange', () => { if (document.hidden) doReload(); });
+    const idle = () => { if (Date.now() - lastTouch > 45000 && !isBusy()) doReload(); else setTimeout(idle, 5000); };
+    setTimeout(idle, 5000);
   }
+  try { if (sessionStorage.getItem('k8_just_updated')) { sessionStorage.removeItem('k8_just_updated'); setTimeout(() => showToast('อัปเดตแอปเป็นเวอร์ชันล่าสุดแล้ว', 'success'), 1500); } } catch (e) {}
   function checkVersion() {
     if (!navigator.onLine || pendingReload) return;
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((j) => {
@@ -2922,4 +2939,24 @@ window.k8RegBirthChange = function (v) {
   [800, 2500, 5000].forEach((t) => setTimeout(guard, t));
   const sv = window.switchView;
   if (typeof sv === 'function') window.switchView = function () { const r = sv.apply(this, arguments); setTimeout(guard, 300); setTimeout(guard, 1500); return r; };
+})();
+
+/* ---- เลิกซ่อนหน้าจอหลังแอปเตรียมหน้าของผู้ใช้เสร็จ ---- */
+(function () {
+  const done = () => setTimeout(() => document.documentElement.classList.remove('k8-restoring'), 60);
+  if (document.readyState === 'complete') done(); else window.addEventListener('load', done);
+})();
+
+/* ---- บัญชีอาจารย์เข้าหน้าแอดมินไม่ได้ ไม่ว่าจะกดจากปุ่มไหน ---- */
+(function () {
+  const isAdminUser = () => { try { return !!currentAdmin && currentAdmin.role === 'SuperAdmin'; } catch (e) { return false; } };
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) {
+    if (v === 'admin' && !isAdminUser()) {
+      let staff = false; try { staff = !!currentAdmin; } catch (e) {}
+      if (staff) { if (typeof showToast === 'function') showToast('หน้านี้สำหรับแอดมินเท่านั้น', 'warning'); return sv.call(this, 'teacher'); }
+      return sv.call(this, 'dashboard');
+    }
+    return sv.apply(this, arguments);
+  };
 })();
