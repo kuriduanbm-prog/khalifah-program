@@ -776,7 +776,6 @@ function formatAttendanceStatusThai(status) {
 //  - รหัสผ่านอาจารย์/แอดมินถูกเก็บเป็นค่าแฮช (sha256$...) อัตโนมัติเมื่อเข้าสู่ระบบสำเร็จ
 // =====================================================================
 
-const LEGACY_MASTER_ADMIN_PASS = '096909'; // รหัสเก่าที่เคยหลุดใน GitHub — ถูกปฏิเสธเสมอ ห้ามใช้อีก
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const ADMIN_ROLE_VALUES = ['superadmin', 'admin', 'ผู้ดูแลระบบหลัก', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ'];
 const LOGIN_MAX_FAILS = 8;          // ล็อกชั่วคราวหลังกรอกผิดติดกัน
@@ -817,7 +816,7 @@ function setupSecurity() {
   }
   bumpDataVersion_();
   const msg = 'ตั้งค่าความปลอดภัยสำเร็จ: แฮชรหัสผ่าน ' + hashed + ' บัญชี' +
-    (isUsingLegacyMaster_() ? ' ❌ ยังไม่ได้ตั้ง MASTER_ADMIN_PASS (หรือยังเป็นรหัสเก่า) — แอดมินหลักจะเข้าสู่ระบบไม่ได้จนกว่าจะตั้ง' : ' ✅ ใช้รหัสแอดมินหลักจาก Script Properties');
+    (isUsingLegacyMaster_() ? ' ❌ ยังไม่ได้ตั้ง MASTER_ADMIN_PASS — แอดมินหลักจะเข้าสู่ระบบไม่ได้จนกว่าจะตั้ง' : ' ✅ ใช้รหัสแอดมินหลักจาก Script Properties');
   Logger.log(msg);
   return msg;
 }
@@ -835,10 +834,8 @@ function setProp_(k, v) {
   PropertiesService.getScriptProperties().setProperty(k, String(v));
 }
 function getMasterPassword_() {
-  // ไม่มีรหัสสำรองอีกต่อไป: ถ้ายังไม่ตั้ง MASTER_ADMIN_PASS หรือยังตั้งเป็นรหัสเก่าที่หลุด แอดมินหลักจะเข้าสู่ระบบไม่ได้
-  const p = String(getProp_('MASTER_ADMIN_PASS') || '').trim();
-  if (!p || normalizePasswordInput_(p) === normalizePasswordInput_(LEGACY_MASTER_ADMIN_PASS)) return '';
-  return p;
+  // รหัสแอดมินหลักอ่านจาก Script Properties เท่านั้น (ไม่มีรหัสฝังในโค้ด)
+  return String(getProp_('MASTER_ADMIN_PASS') || '').trim();
 }
 function isUsingLegacyMaster_() {
   return !getMasterPassword_();
@@ -848,8 +845,7 @@ function checkSecurityStatus() {
   const raw = String(getProp_('MASTER_ADMIN_PASS') || '');
   let msg;
   if (!raw) msg = '❌ ยังไม่พบ Script Property ชื่อ MASTER_ADMIN_PASS (ตรวจตัวสะกด/ช่องว่าง) — ตอนนี้แอดมินหลักเข้าสู่ระบบไม่ได้';
-  else if (!getMasterPassword_()) msg = '❌ MASTER_ADMIN_PASS ยังเป็นรหัสเก่า 096909 — กรุณาเปลี่ยนเป็นรหัสใหม่';
-  else msg = '✅ ตั้ง MASTER_ADMIN_PASS แล้ว (ยาว ' + raw.trim().length + ' ตัวอักษร) — รหัสเก่า 096909 ใช้ไม่ได้แล้ว';
+  else msg = '✅ ตั้ง MASTER_ADMIN_PASS แล้ว (ยาว ' + raw.trim().length + ' ตัวอักษร)';
   const keys = PropertiesService.getScriptProperties().getKeys().join(', ');
   Logger.log(msg + '\nชื่อ Script Properties ที่มีอยู่: ' + keys);
   return msg;
@@ -2865,12 +2861,6 @@ function verifyAdminLogin(password, username) {
   if (!targetUser) {
     loginFailed_(rlKey);
     return { success: false, field: 'password', message: masterPass ? 'รหัสแอดมินหลักไม่ถูกต้อง' : 'ยังไม่ได้ตั้งรหัสแอดมินหลักใหม่ (MASTER_ADMIN_PASS) ในระบบหลังบ้าน' };
-  }
-
-  // รหัสเก่าที่เคยหลุดใน GitHub ใช้ไม่ได้กับทุกบัญชี
-  if (normalizePasswordInput_(pass) === normalizePasswordInput_(LEGACY_MASTER_ADMIN_PASS)) {
-    loginFailed_(rlKey);
-    return { success: false, field: 'password', message: 'รหัสผ่านนี้ถูกยกเลิกเพื่อความปลอดภัย กรุณาติดต่อผู้ดูแลระบบหลักเพื่อตั้งรหัสใหม่' };
   }
 
   ensureSchema();
