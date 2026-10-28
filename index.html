@@ -28,18 +28,23 @@
   <meta name="twitter:description" content="ระบบเช็คชื่อมาเรียน ละหมาด และกิจกรรมนักเรียน">
   <meta name="twitter:image" content="https://iili.io/nAUqTpS.jpg">
   
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Kanit:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,300&display=swap">
+
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Chart.js for Educational Analytics -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   
     <!-- jsQR for in-app Activity QR Code Scanning -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <!-- QRCode.js for Admin Activity QR Code Generation -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- SheetJS for Excel Export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <!-- Custom Stylesheet -->
     <!-- Progressive Web App (PWA) -->
@@ -49,7 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=7.7">
+  <link rel="stylesheet" href="style.css?v=8.0">
+  <link rel="stylesheet" href="ui-v8.css?v=8.0">
 </head>
 <body class="auth-locked">
 
@@ -66,7 +72,7 @@
       <!-- Desktop Navigation Menu (ปุ่มแอดมินจะซ่อนไว้สำหรับนักเรียน) -->
       <nav class="desktop-nav">
         <button class="nav-link active" onclick="switchView('dashboard')" id="nav-dashboard">
-          <i class="fa-solid fa-chart-pie"></i> แดชบอร์ด
+          <i class="fa-solid fa-house"></i> หน้าแรก
         </button>
         <button class="nav-link" onclick="switchView('prayer')" id="nav-prayer">
           <i class="fa-solid fa-mosque"></i> เช็คละหมาด 5 เวลา
@@ -110,10 +116,10 @@
   </header>
 
   <!-- Mobile Bottom Navigation (ปุ่มแอดมินจะซ่อนไว้สำหรับนักเรียน) -->
-  <div class="mobile-nav">
+  <nav class="mobile-nav" aria-label="เมนูหลัก">
     <button class="mobile-nav-item active" onclick="switchView('dashboard')" id="m-nav-dashboard">
-      <i class="fa-solid fa-chart-pie"></i>
-      <span>แดชบอร์ด</span>
+      <i class="fa-solid fa-house" aria-hidden="true"></i>
+      <span>หน้าแรก</span>
     </button>
     <button class="mobile-nav-item" onclick="switchView('prayer')" id="m-nav-prayer">
       <i class="fa-solid fa-mosque"></i>
@@ -128,8 +134,8 @@
       <span>ผลบุญ</span>
     </button>
     <button class="mobile-nav-item" onclick="switchView('profile')" id="m-nav-profile">
-      <i class="fa-solid fa-user-graduate"></i>
-      <span>โปรไฟล์</span>
+      <i class="fa-solid fa-user" aria-hidden="true"></i>
+      <span>ฉัน</span>
     </button>
     <!-- แสดงเมื่ออาจารย์ล็อกอิน -->
     <button class="mobile-nav-item" onclick="switchView('teacher')" id="m-nav-teacher" style="display: none;">
@@ -141,7 +147,7 @@
       <i class="fa-solid fa-shield-halved"></i>
       <span>แอดมิน</span>
     </button>
-  </div>
+  </nav>
 
   <!-- Main Content Layout -->
   <main class="main-wrapper">
@@ -169,6 +175,70 @@
           </button>
         </div>
       </div>
+      <!-- ===== หน้าแรกแบบ F (v8) ===== -->
+      <div id="homeF" class="hf">
+        <section class="hf-card hf-idcard" aria-label="บัตรนักเรียน">
+          <div class="hf-idcard-band">
+            <span class="hf-idcard-brand">KHALIFAH · บัตรนักเรียน</span>
+            <span id="hfYear">ปีการศึกษา 2569</span>
+          </div>
+          <div class="hf-idcard-body">
+            <div class="hf-photo" id="hfPhoto" aria-hidden="true"></div>
+            <div class="hf-idcard-info">
+              <div class="hf-name" id="hfName">-</div>
+              <dl class="hf-dl">
+                <dt>รหัส</dt><dd id="hfId">-</dd>
+                <dt>ชั้น</dt><dd id="hfGrade">-</dd>
+                <dt>โรงเรียน</dt><dd id="hfSchool">-</dd>
+              </dl>
+              <span class="hf-status" id="hfStatus">กำลังศึกษา</span>
+            </div>
+          </div>
+        </section>
+
+        <button type="button" class="hf-next" id="hfNext" onclick="switchView('prayer')">
+          <span class="hf-next-text" id="hfNextText">-</span>
+          <span class="hf-next-cta" id="hfNextCta">เช็คชื่อละหมาด</span>
+        </button>
+
+        <div class="hf-seg" role="tablist" aria-label="ช่วงเวลา" id="hfPeriods">
+          <button type="button" role="tab" data-period="day">รายวัน</button>
+          <button type="button" role="tab" data-period="week">รายสัปดาห์</button>
+          <button type="button" role="tab" data-period="month">รายเดือน</button>
+        </div>
+
+        <section class="hf-card hf-pad">
+          <div class="hf-head"><h2>การมาเรียน</h2><span id="hfRange">-</span></div>
+          <div class="hf-att" id="hfAtt"></div>
+          <div class="hf-attbar" id="hfAttBar" aria-hidden="true"></div>
+        </section>
+
+        <section class="hf-card hf-pad">
+          <div class="hf-head"><h2>ละหมาด</h2><span class="hf-accent" id="hfPrayerTotal">-</span></div>
+          <div class="hf-bars" id="hfBars" role="img" aria-label="กราฟการละหมาด"></div>
+        </section>
+
+        <section class="hf-card hf-grades">
+          <button type="button" class="hf-grades-toggle" id="hfGradesToggle" aria-expanded="false" aria-controls="hfGradesBody">
+            <span class="hf-grades-icon" id="hfGradesIcon" aria-hidden="true"></span>
+            <span class="hf-grades-label">
+              <span class="hf-grades-title">ผลการเรียนรายวิชา</span>
+              <span class="hf-grades-hint" id="hfGradesHint">ซ่อนไว้เพื่อความเป็นส่วนตัว</span>
+            </span>
+            <span class="hf-grades-action" id="hfGradesAction">แตะเพื่อดู</span>
+          </button>
+          <div class="hf-grades-body" id="hfGradesBody" hidden></div>
+        </section>
+
+        <section class="hf-card hf-list">
+          <div class="hf-head"><h2>กิจกรรม</h2><button type="button" class="hf-link" onclick="switchView('activities')" id="hfActLink">ดูทั้งหมด</button></div>
+          <div id="hfActs"></div>
+        </section>
+
+        <section class="hf-deeds" id="hfDeeds"></section>
+      </div>
+
+      <div class="legacy-dashboard" hidden aria-hidden="true">
       <div class="welcome-banner macos-banner">
         <!-- Blue / Cyan Glowing Geometric Panels with Glassmorphism -->
         <div class="banner-geom-card geom-1"></div>
@@ -376,6 +446,7 @@
             <canvas id="activityPieChart"></canvas>
           </div>
         </div>
+      </div>
       </div>
     </section>
 
@@ -1715,85 +1786,36 @@
       <!-- ==================== TAB 3: SUBJECT GRADE ENTRY ==================== -->
       <div id="teacher-tab-grades" class="teacher-subcontent" style="display: none;">
         <div class="card" style="margin-bottom: 1.5rem;">
-          <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
-            <div>
-              <div class="card-title">
-                <i class="fa-solid fa-award"></i> กรอกเกรดรายวิชาที่ได้รับมอบหมาย (เกรด 1 – 4)
-              </div>
-              <div class="card-subtitle">
-                เมื่อกรอกเกรด (1, 1.5, 2, 2.5, 3, 3.5, 4) รายวิชานี้จะปรากฏบนกราฟทักษะของนักเรียนทันที (เกรด 1 กราฟแคบ ➔ เกรด 4 กราฟกว้างเต็มสมรรถนะ)
-              </div>
+          <div class="tg" id="tgRoot">
+            <div class="tg-head">
+              <h3 style="font-size: 20px;"><i class="fa-solid fa-award" style="color: var(--k8-primary);"></i> คะแนน &amp; เกรด</h3>
+              <button type="button" class="tg-add" onclick="openAddSubjectModal()" style="min-height: 40px;">+ รายวิชาใหม่</button>
             </div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="openAddSubjectModal()">
-                <i class="fa-solid fa-plus"></i> เพิ่มรายวิชาใหม่
-              </button>
-              <button type="button" class="btn btn-primary" onclick="saveTeacherPortalGrades()">
-                <i class="fa-solid fa-floppy-disk"></i> บันทึกเกรดรายวิชานี้
-              </button>
+            <div class="tg-top">
+              <label for="teacherPortalSubjectSelect">รายวิชา
+                <select id="teacherPortalSubjectSelect" onchange="renderTeacherPortalGradesTable()"></select>
+              </label>
+              <label for="teacherPortalGradeSelect">ระดับชั้น
+                <select id="teacherPortalGradeSelect" onchange="renderTeacherPortalGradesTable()">
+                  <option value="ALL" selected>ทุกระดับชั้น</option>
+                  <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1</option>
+                  <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2</option>
+                  <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3</option>
+                  <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4</option>
+                  <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5</option>
+                  <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6</option>
+                </select>
+              </label>
             </div>
-          </div>
-
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem; margin-bottom: 1.1rem; background: #f8fafc; padding: 0.95rem; border-radius: var(--radius-md); border: 1px solid var(--border-light);">
-            <div class="form-group" style="margin: 0;">
-              <label class="form-label"><i class="fa-solid fa-book"></i> รายวิชาที่ได้รับมอบหมาย</label>
-              <select class="form-control" id="teacherPortalSubjectSelect" onchange="renderTeacherPortalGradesTable()">
-                <!-- Populated dynamically via app.js -->
-              </select>
+            <div class="tg-seg" role="tablist" aria-label="โหมด" id="tgTabs">
+              <button type="button" role="tab" data-tab="scores" aria-selected="true">กรอกคะแนนชิ้นงาน</button>
+              <button type="button" role="tab" data-tab="summary" aria-selected="false">สรุปเกรด</button>
             </div>
-            <div class="form-group" style="margin: 0;">
-              <label class="form-label"><i class="fa-solid fa-graduation-cap"></i> เลือกระดับชั้นเรียน</label>
-              <select class="form-control" id="teacherPortalGradeSelect" onchange="renderTeacherPortalGradesTable()">
-                <option value="ALL" selected>ทุกระดับชั้น (แสดงนักเรียนทุกคน)</option>
-                <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
-                <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
-                <option value="มัธยมศึกษาปีที่ 3">มัธยมศึกษาปีที่ 3 (ม.3)</option>
-                <option value="มัธยมศึกษาปีที่ 4">มัธยมศึกษาปีที่ 4 (ม.4)</option>
-                <option value="มัธยมศึกษาปีที่ 5">มัธยมศึกษาปีที่ 5 (ม.5)</option>
-                <option value="มัธยมศึกษาปีที่ 6">มัธยมศึกษาปีที่ 6 (ม.6)</option>
-              </select>
+            <div id="tgBody" style="display: flex; flex-direction: column; gap: 12px;"></div>
+            <div class="tg-save">
+              <span class="tg-save-text" id="tgSaveText" aria-live="polite"></span>
+              <button type="button" id="tgSaveBtn" onclick="saveTeacherPortalGrades()">บันทึก</button>
             </div>
-          </div>
-
-          <!-- Dynamic Assignment Columns Control Bar -->
-          <div class="teacher-assignments-control-bar">
-            <div class="assignments-bar-header">
-              <div class="assignments-bar-title">
-                <i class="fa-solid fa-list-check" style="color: var(--primary);"></i>
-                <span>ช่องเก็บคะแนน / ชิ้นงานย่อย:</span>
-                <span class="assignments-count-badge" id="teacherAssignmentsCount">0 ชิ้นงาน</span>
-              </div>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="openAddAssignmentColumnModal()" style="font-weight: 600;">
-                <i class="fa-solid fa-plus-circle" style="color: var(--primary);"></i> เพิ่มช่องคะแนน/ชิ้นงาน
-              </button>
-            </div>
-            <div class="teacher-assignment-chips" id="teacherAssignmentChipsList">
-              <!-- Rendered dynamically via JS: chips for each custom assignment -->
-            </div>
-          </div>
-
-          <!-- Desktop Grades Table (Hidden on mobile) -->
-          <div class="teacher-grades-desktop-wrap table-responsive">
-            <table class="custom-table" id="teacherGradesTableMain">
-              <thead id="teacherPortalGradesTableHead">
-                <tr>
-                  <th style="width: 115px;">รหัสนักเรียน</th>
-                  <th>ชื่อ - นามสกุล</th>
-                  <th>ระดับชั้น</th>
-                  <th style="text-align: center;">สถานะนักเรียน</th>
-                  <th style="width: 150px; text-align: center;">เกรดที่ได้ (0 – 4)</th>
-                  <th style="text-align: right; min-width: 240px;">กดเลือกเกรดด่วน (1 – 4)</th>
-                </tr>
-              </thead>
-              <tbody id="teacherPortalGradesTableBody">
-                <!-- Injected via app.js -->
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Mobile Card List for Grades (Shown on mobile <= 768px, 100% width, no horizontal scroll) -->
-          <div class="teacher-grades-mobile-list" id="teacherPortalGradesMobileList">
-            <!-- Injected via app.js -->
           </div>
         </div>
       </div>
@@ -5069,6 +5091,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=7.7"></script>
+  <script defer src="app.js?v=8.0"></script>
+  <script defer src="ui-v8.js?v=8.0"></script>
 </body>
 </html>

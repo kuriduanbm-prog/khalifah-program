@@ -11,7 +11,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ⚠️ รหัสแอดมินหลักไม่ได้เก็บไว้ในโค้ดอีกต่อไป
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
-const SCHEMA_VERSION = '8.0';
+const SCHEMA_VERSION = '8.1';
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -53,6 +53,7 @@ const SHEETS = {
   HASANAT: 'บันทึกผลบุญ',
   APPROVALS: 'รายการรออนุมัติสมัคร',
   PRAYER_APPROVALS: 'คำขออนุมัติละหมาด',
+  ASSIGNMENT_SCORES: 'คะแนนชิ้นงาน',
   SETTINGS: 'การตั้งค่า',
   CALENDAR: 'ปฏิทินกิจกรรม'
 };
@@ -71,6 +72,7 @@ const SHEET_ORDER = [
   SHEETS.HASANAT,        // 10. บันทึกผลบุญ
   SHEETS.APPROVALS,      // 11. รายการรออนุมัติสมัคร
   SHEETS.PRAYER_APPROVALS, // 12. คำขออนุมัติละหมาด
+  SHEETS.ASSIGNMENT_SCORES, // คะแนนชิ้นงานรายวิชา
   SHEETS.SETTINGS,       // 13. การตั้งค่า
   SHEETS.CALENDAR        // 14. ปฏิทินกิจกรรม
 ];
@@ -159,6 +161,10 @@ const HEADERS = {
   APPROVALS: [
     'รหัสคำขอ', 'ประเภทผู้ใช้', 'รหัสประจำตัว', 'ชื่อ-นามสกุล', 'อีเมล',
     'รายละเอียดเพิ่มเติม', 'รหัสยืนยันสุ่ม (OTP)', 'สถานะ', 'เวลาที่สมัคร', 'ข้อมูล JSON'
+  ],
+  ASSIGNMENT_SCORES: [
+    'รหัสบันทึก', 'รหัสวิชา', 'ชื่อวิชา', 'รหัสชิ้นงาน', 'ชื่อชิ้นงาน', 'คะแนนเต็ม',
+    'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'คะแนนที่ได้', 'ผู้บันทึก', 'เวลาอัปเดต'
   ],
   PRAYER_APPROVALS: [
     'รหัสคำขอ', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'เบอร์ผู้ปกครอง',
@@ -360,6 +366,14 @@ function initializeSheets() {
   } catch (fmtErr) {}
 
   // 14. คำขออนุมัติละหมาด (กรณีลืมเช็คชื่อ)
+  const sheetAsg = getOrCreateSheetSmart(ss, 'ASSIGNMENT_SCORES', HEADERS.ASSIGNMENT_SCORES, '#4338ca');
+  try {
+    sheetAsg.getRange('A:A').setNumberFormat('@');
+    sheetAsg.getRange('B:B').setNumberFormat('@');
+    sheetAsg.getRange('D:D').setNumberFormat('@');
+    sheetAsg.getRange('G:G').setNumberFormat('@');
+  } catch (fmtErr) {}
+
   const sheetPrayerApprovals = getOrCreateSheetSmart(ss, 'PRAYER_APPROVALS', HEADERS.PRAYER_APPROVALS, '#0284c7');
   try {
     sheetPrayerApprovals.getRange('A:A').setNumberFormat('@');
@@ -1068,7 +1082,7 @@ const ACTION_ACCESS = {
   whoami: 'public',
   // นักเรียน (เฉพาะข้อมูลของตนเอง) หรือบุคลากร
   getFullDatabase: 'student', getPrayers: 'student', getAttendance: 'student', getHasanat: 'student',
-  getSubjectGrades: 'student', getStatusLogs: 'student', getActivityLogs: 'student', getPrayerApprovals: 'student',
+  getSubjectGrades: 'student', getAssignmentScores: 'student', getStatusLogs: 'student', getActivityLogs: 'student', getPrayerApprovals: 'student',
   recordPrayer: 'student', prayerCheckIn: 'student',
   recordHasanat: 'student', saveQuranLog: 'student', saveSunnahLog: 'student', saveSurahMemorizationLog: 'student',
   saveSurahLog: 'student', saveHasanatLog: 'student',
@@ -1081,7 +1095,7 @@ const ACTION_ACCESS = {
   saveSubjectGrades: 'staff', updateSubjectScores: 'staff',
   createActivity: 'staff', deleteActivity: 'staff', deleteActivityAttendee: 'staff',
   saveCalendarEvent: 'staff', deleteCalendarEvent: 'staff', updatePrayerLateRequestStatus: 'staff',
-  approveRegistrationAndSendEmail: 'staff', deletePendingRegistration: 'staff', updateSubAdminPhoto: 'staff',
+  approveRegistrationAndSendEmail: 'staff', saveSubjectAssignments: 'staff', saveAssignmentScores: 'staff', deletePendingRegistration: 'staff', updateSubAdminPhoto: 'staff',
   // แอดมินเท่านั้น
   getAdmins: 'admin', addSubAdmin: 'admin', deleteSubAdmin: 'admin', deleteStudent: 'admin',
   batchPromote: 'admin', fullSchoolBatchPromote: 'admin', updateLogo: 'admin',
@@ -1092,7 +1106,7 @@ const ACTION_ACCESS = {
 // คำสั่งที่เขียนข้อมูล (ล้างแคชเมื่อสำเร็จ)
 const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'getStudent', 'getActivities',
   'getCalendarEvents', 'getCalendar', 'getSettings', 'whoami', 'getFullDatabase', 'getPrayers', 'getAttendance',
-  'getHasanat', 'getSubjectGrades', 'getStatusLogs', 'getActivityLogs', 'getPrayerApprovals', 'getAllStudents',
+  'getHasanat', 'getSubjectGrades', 'getAssignmentScores', 'getStatusLogs', 'getActivityLogs', 'getPrayerApprovals', 'getAllStudents',
   'getSubAdmins', 'getTeachers', 'getPendingRegistrations', 'getAdmins', 'checkRegistrationStatus',
   'loginStudent', 'adminLogin', 'staffLogin'];
 
@@ -1275,6 +1289,13 @@ function dispatchAction_(action, req, data, session, ctx) {
       return getSubjectGrades(ownStudentId_(session, ctx, pick('studentId')), pick('subject'));
     case 'getStatusLogs':
       return getStatusLogs(ownStudentId_(session, ctx, pick('studentId')));
+    case 'getAssignmentScores':
+      return getAssignmentScores(ownStudentId_(session, ctx, pick('studentId')), pick('subjectId'));
+    case 'saveSubjectAssignments':
+      return saveSubjectAssignments(data);
+    case 'saveAssignmentScores':
+      if (!data.teacherId) data.teacherId = session.name || session.userId;
+      return saveAssignmentScores(data);
     case 'getActivityLogs': {
       const r = getActivityLogs(pick('activityId'));
       if (isStudent) r.data = (r.data || []).filter(function (x) { return isCodeMatch(x.studentId, session.userId); });
@@ -1424,6 +1445,7 @@ function buildFullDatabaseRaw_() {
       attendance: getAttendance().data || [],
       hasanat: getHasanat().data || [],
       subjectGrades: getSubjectGrades().data || [],
+      assignmentScores: getAssignmentScores().data || [],
       calendarEvents: getCalendarEvents('staff').data || [],
       prayerApprovals: getPrayerApprovals().data || [],
       settings: publicSettings_(getSettings().data || {})
@@ -1463,6 +1485,7 @@ function scopeDatabase_(db, session) {
     attendance: (db.attendance || []).filter(mine),
     hasanat: (db.hasanat || []).filter(mine),
     subjectGrades: (db.subjectGrades || []).filter(mine),
+    assignmentScores: (db.assignmentScores || []).filter(mine),
     calendarEvents: (db.calendarEvents || []).filter(function (ev) { return ev.targetAudience !== 'teachers'; }),
     prayerApprovals: (db.prayerApprovals || []).filter(mine),
     settings: db.settings || {}
@@ -4613,4 +4636,183 @@ function updatePrayerLateRequestStatus(data) {
   } finally {
     try { lock.releaseLock(); } catch (e) {}
   }
+}
+
+
+// =====================================================================
+//  📝 คะแนนชิ้นงานรายวิชา (อาจารย์เพิ่มชิ้นงานได้เองไม่จำกัด)
+//  - นิยามชิ้นงานเก็บใน "การตั้งค่า" คีย์ SubjectAssignments = { รหัสวิชา: [{id,title,maxScore}] }
+//  - คะแนนรายคนเก็บในแผ่นงาน "คะแนนชิ้นงาน" (1 แถว = นักเรียน 1 คน × ชิ้นงาน 1 ชิ้น)
+// =====================================================================
+function sanitizeAssignments_(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  const seen = {};
+  list.forEach(function (a) {
+    if (!a) return;
+    const id = cleanVal(a.id || '').substring(0, 60);
+    const title = cleanVal(a.title || a.name || '').substring(0, 120);
+    const max = Number(a.maxScore || a.max);
+    if (!id || !title || !(max > 0) || seen[id]) return;
+    seen[id] = true;
+    out.push({ id: id, title: title, maxScore: Math.round(max * 100) / 100 });
+  });
+  return out.slice(0, 100);
+}
+
+function getAssignmentDefinitionsMap_() {
+  const settings = getSettings().data || {};
+  try {
+    const m = JSON.parse(settings.SubjectAssignments || '{}');
+    return (m && typeof m === 'object') ? m : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveSubjectAssignments(data) {
+  const subjectId = cleanVal(data && (data.subjectId || data.subjectCode) || '');
+  if (!subjectId) return { success: false, message: 'ไม่พบรหัสวิชา' };
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) {}
+  try {
+    const map = getAssignmentDefinitionsMap_();
+    map[subjectId] = sanitizeAssignments_(data.assignments);
+    saveSetting({ key: 'SubjectAssignments', value: JSON.stringify(map), description: 'ชิ้นงาน/ช่องคะแนนของแต่ละรายวิชา (JSON)' });
+    return { success: true, message: 'บันทึกรายการชิ้นงานของวิชาเรียบร้อย', assignments: map[subjectId] };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * บันทึกคะแนนชิ้นงาน: data = { subjectId, subjectName, assignments:[...], scores: { studentId: { assignmentId: number|'' } } }
+ * เขียนแบบรวดเดียว (อัปเดตแถวเดิม + ต่อท้ายแถวใหม่) เพื่อความเร็ว
+ */
+function saveAssignmentScores(data) {
+  data = data || {};
+  const subjectId = cleanVal(data.subjectId || data.subjectCode || '');
+  if (!subjectId) return { success: false, message: 'ไม่พบรหัสวิชา' };
+  ensureSchema();
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (e) {}
+  try {
+    if (Array.isArray(data.assignments)) {
+      const map = getAssignmentDefinitionsMap_();
+      map[subjectId] = sanitizeAssignments_(data.assignments);
+      saveSetting({ key: 'SubjectAssignments', value: JSON.stringify(map), description: 'ชิ้นงาน/ช่องคะแนนของแต่ละรายวิชา (JSON)' });
+    }
+    const defs = getAssignmentDefinitionsMap_()[subjectId] || [];
+    const defById = {};
+    defs.forEach(function (a) { defById[a.id] = a; });
+
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName(SHEETS.ASSIGNMENT_SCORES);
+    const students = ss.getSheetByName(SHEETS.STUDENTS);
+    const stuInfo = {};
+    if (students && students.getLastRow() > 1) {
+      students.getRange(2, 1, students.getLastRow() - 1, 4).getValues().forEach(function (r) {
+        stuInfo[cleanVal(r[0])] = { name: cleanVal(r[1]), grade: cleanVal(r[3]) };
+      });
+    }
+    const findStu = function (sid) {
+      if (stuInfo[sid]) return stuInfo[sid];
+      const keys = Object.keys(stuInfo);
+      for (let i = 0; i < keys.length; i++) if (isCodeMatch(keys[i], sid)) return stuInfo[keys[i]];
+      return { name: '', grade: '' };
+    };
+
+    const width = HEADERS.ASSIGNMENT_SCORES.length;
+    const lastRow = sheet.getLastRow();
+    const existing = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, width).getValues() : [];
+    const index = {};
+    existing.forEach(function (r, i) { index[cleanVal(r[1]) + '|' + cleanVal(r[3]) + '|' + cleanVal(r[6]).replace(/^0+/, '')] = i; });
+
+    const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    const teacher = cleanVal(data.teacherId || 'อาจารย์');
+    const subjectName = cleanVal(data.subjectName || subjectId);
+    const appendRows = [];
+    let changed = 0, rejected = 0;
+    const scores = (data.scores && typeof data.scores === 'object') ? data.scores : {};
+
+    Object.keys(scores).forEach(function (rawSid) {
+      const sid = cleanVal(rawSid);
+      const perAsg = scores[rawSid] || {};
+      Object.keys(perAsg).forEach(function (asgId) {
+        const def = defById[cleanVal(asgId)];
+        if (!def) { rejected++; return; }
+        const raw = perAsg[asgId];
+        let val = '';
+        if (raw !== '' && raw !== null && raw !== undefined) {
+          const n = Number(raw);
+          if (isNaN(n) || n < 0 || n > def.maxScore) { rejected++; return; }
+          val = Math.round(n * 100) / 100;
+        }
+        const info = findStu(sid);
+        const row = ['ASG-' + subjectId + '-' + def.id + '-' + sid, subjectId, subjectName, def.id, def.title, def.maxScore, sid, info.name, info.grade, val, teacher, now];
+        const key = subjectId + '|' + def.id + '|' + sid.replace(/^0+/, '');
+        if (index[key] !== undefined) {
+          existing[index[key]] = row;
+        } else {
+          index[key] = existing.length + appendRows.length;
+          appendRows.push(row);
+        }
+        changed++;
+      });
+    });
+
+    if (existing.length) {
+      sheet.getRange(2, 1, existing.length, width).setValues(existing);
+    }
+    if (appendRows.length) {
+      const start = sheet.getLastRow() + 1;
+      const rng = sheet.getRange(start, 1, appendRows.length, width);
+      sheet.getRange(start, 1, appendRows.length, 1).setNumberFormat('@');
+      sheet.getRange(start, 7, appendRows.length, 1).setNumberFormat('@');
+      rng.setValues(appendRows);
+    }
+    SpreadsheetApp.flush();
+    return {
+      success: true,
+      saved: changed,
+      rejected: rejected,
+      message: 'บันทึกคะแนนชิ้นงาน ' + changed + ' รายการ' + (rejected ? ' (ข้าม ' + rejected + ' รายการที่ไม่ถูกต้อง)' : '')
+    };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+function getAssignmentScores(studentId, subjectId) {
+  ensureSchema();
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEETS.ASSIGNMENT_SCORES);
+  if (!sheet || sheet.getLastRow() <= 1) return { success: true, data: [] };
+  const defs = getAssignmentDefinitionsMap_();
+  const rows = readAllRows_(sheet);
+  const targetSid = cleanVal(studentId || '');
+  const targetSubj = cleanVal(subjectId || '');
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const subj = cleanVal(rows[i][1]);
+    const asgId = cleanVal(rows[i][3]);
+    const sid = cleanVal(rows[i][6]);
+    if (!subj || !asgId || !sid) continue;
+    if (targetSid && !isCodeMatch(sid, targetSid)) continue;
+    if (targetSubj && subj !== targetSubj) continue;
+    const def = (defs[subj] || []).filter(function (a) { return a.id === asgId; })[0];
+    if (!def) continue; // ชิ้นงานที่ถูกลบแล้ว
+    const raw = rows[i][9];
+    out.push({
+      studentId: sid,
+      subjectId: subj,
+      subjectName: cleanVal(rows[i][2]),
+      assignmentId: asgId,
+      title: def.title,
+      maxScore: def.maxScore,
+      score: (raw === '' || raw === null) ? null : Number(raw),
+      updatedAt: cleanVal(rows[i][11])
+    });
+  }
+  return { success: true, data: out };
 }

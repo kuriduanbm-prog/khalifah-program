@@ -1967,7 +1967,8 @@ const SHARED_DATA_KEYS = [
   'khalifah_all_students', 'khalifah_sub_admins', 'khalifah_subadmins', 'khalifah_pending_registrations',
   'khalifah_prayer_history', 'khalifah_today_prayers', 'khalifah_student_act_logs', 'khalifah_student_hasanat',
   'khalifah_prayer_approvals', 'khalifah_daily_attendance_logs', 'khalifah_student_assignment_scores',
-  'khalifah_verified_users', 'khalifah_admin_master_otp'
+  'khalifah_verified_users', 'khalifah_admin_master_otp', 'khalifah_attendance_logs', 'khalifah_hasanat_rows',
+  'khalifah_subject_grades_rows'
 ];
 
 (function migrateLegacySecurityStorage() {
@@ -11992,6 +11993,34 @@ async function syncAllDataFromCloud(showToastMsg = false) {
       localStorage.setItem('khalifah_student_hasanat', JSON.stringify(allHasanat));
     }
 
+    // 6.1 ข้อมูลรายวันสำหรับแดชบอร์ด (มาเรียน, ผลบุญรายวัน) และคะแนนชิ้นงาน
+    if (Array.isArray(db.attendance)) {
+      localStorage.setItem('khalifah_attendance_logs', JSON.stringify(db.attendance));
+    }
+    if (Array.isArray(db.hasanat)) {
+      localStorage.setItem('khalifah_hasanat_rows', JSON.stringify(db.hasanat.map(h => ({ studentId: h.studentId, date: h.date, quran: h.quran, memorization: h.memorization, sunnah: h.sunnah }))));
+    }
+    if (db.settings && db.settings.SubjectAssignments) {
+      try {
+        const defs = JSON.parse(db.settings.SubjectAssignments);
+        if (defs && typeof defs === 'object') localStorage.setItem('khalifah_subject_assignments', JSON.stringify(defs));
+      } catch (e) {}
+    }
+    if (Array.isArray(db.assignmentScores)) {
+      const scoreMap = {};
+      db.assignmentScores.forEach(r => {
+        const sid = cleanIdString(r.studentId);
+        if (!sid || !r.subjectId || !r.assignmentId) return;
+        scoreMap[sid] = scoreMap[sid] || {};
+        scoreMap[sid][r.subjectId] = scoreMap[sid][r.subjectId] || {};
+        scoreMap[sid][r.subjectId][r.assignmentId] = (r.score === null || r.score === undefined) ? '' : r.score;
+      });
+      localStorage.setItem('khalifah_student_assignment_scores', JSON.stringify(scoreMap));
+    }
+    if (Array.isArray(db.subjectGrades)) {
+      localStorage.setItem('khalifah_subject_grades_rows', JSON.stringify(db.subjectGrades));
+    }
+
     // 7. ซิงค์รายวิชาและการตั้งค่า (Subjects & Settings)
     if (db.settings) {
       if (db.settings.AppSubjects) {
@@ -12034,6 +12063,7 @@ async function syncAllDataFromCloud(showToastMsg = false) {
     if (typeof initTeacherPortalView === 'function' && currentAdmin) {
       initTeacherPortalView();
     }
+    if (typeof window.renderHomeF === 'function') window.renderHomeF();
 
     if (showToastMsg) {
       playSuccessSound();
