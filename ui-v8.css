@@ -21,8 +21,8 @@
 }
 
 /* ---------- หน้าแรกแบบ F ---------- */
-.hf { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; padding: 4px 0 8px; font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; color: var(--k8-ink); }
-.hf h2 { margin: 0; font-family: 'Kanit', sans-serif; font-size: 17px; font-weight: 600; color: var(--k8-ink); }
+.hf { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; padding: 4px 0 8px; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: var(--k8-ink); }
+.hf h2 { margin: 0; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 17px; font-weight: 600; color: var(--k8-ink); }
 .hf-card { background: var(--k8-card); border: 1px solid var(--k8-line); border-radius: var(--k8-radius); }
 .hf-pad { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .hf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
@@ -31,11 +31,11 @@
 
 .hf-idcard { overflow: hidden; border-radius: 22px; }
 .hf-idcard-band { background: var(--k8-primary); color: #fff; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .3px; }
-.hf-idcard-brand { font-family: 'Kanit', sans-serif; font-weight: 600; font-size: 14px; }
+.hf-idcard-brand { font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 600; font-size: 14px; }
 .hf-idcard-body { display: flex; gap: 14px; padding: 16px; }
-.hf-photo { width: 84px; height: 104px; border-radius: 14px; background: var(--k8-primary-soft) center/cover no-repeat; color: var(--k8-primary); display: flex; align-items: center; justify-content: center; font-family: 'Kanit', sans-serif; font-size: 34px; font-weight: 600; flex: none; overflow: hidden; }
+.hf-photo { width: 84px; height: 104px; border-radius: 14px; background: var(--k8-primary-soft) center/cover no-repeat; color: var(--k8-primary); display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 34px; font-weight: 600; flex: none; overflow: hidden; }
 .hf-idcard-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.hf-name { font-family: 'Kanit', sans-serif; font-size: 20px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hf-name { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 20px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .hf-name.is-long { font-size: 17px; }
 .hf-dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 10px; font-size: 13px; }
 .hf-dl dt { color: var(--k8-ink-3); }
@@ -45,8 +45,8 @@
 .hf-status.is-warn { background: var(--k8-late-bg); color: var(--k8-late); border-color: #fde68a; }
 
 .hf-next { min-height: 56px; border: 0; border-radius: 16px; background: var(--k8-navy); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px 8px 16px; font-family: inherit; font-size: 14px; text-align: left; cursor: pointer; }
-.hf-next b { font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 600; }
-.hf-next-cta { background: #fff; color: var(--k8-navy); border-radius: 10px; padding: 9px 14px; font-family: 'Kanit', sans-serif; font-weight: 600; white-space: nowrap; }
+.hf-next b { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 16px; font-weight: 600; }
+.hf-next-cta { background: #fff; color: var(--k8-navy); border-radius: 10px; padding: 9px 14px; font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 600; white-space: nowrap; }
 .hf-next.is-done .hf-next-cta { background: #dcfce7; color: var(--k8-ok); }
 
 .hf-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--k8-line); border-radius: 14px; padding: 4px; gap: 4px; }
@@ -55,7 +55,7 @@
 
 .hf-att { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .hf-att-item { border-radius: 14px; padding: 10px 4px; text-align: center; }
-.hf-att-item b { display: block; font-family: 'Kanit', sans-serif; font-size: 24px; font-weight: 600; line-height: 1.2; }
+.hf-att-item b { display: block; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 24px; font-weight: 600; line-height: 1.2; }
 .hf-att-item span { font-size: 13px; }
 .hf-attbar { height: 10px; border-radius: 10px; overflow: hidden; display: flex; background: #e2e8f0; }
 .hf-attbar span { height: 10px; }
@@ -70,12 +70,12 @@
 .hf-grades-toggle { width: 100%; min-height: 64px; border: 0; background: transparent; padding: 12px 16px; display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer; font-family: inherit; color: var(--k8-ink); }
 .hf-grades-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--k8-primary-soft); color: var(--k8-primary); display: flex; align-items: center; justify-content: center; flex: none; }
 .hf-grades-label { flex: 1; min-width: 0; }
-.hf-grades-title { display: block; font-family: 'Kanit', sans-serif; font-size: 17px; font-weight: 600; }
+.hf-grades-title { display: block; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 17px; font-weight: 600; }
 .hf-grades-hint { display: block; font-size: 13px; color: var(--k8-ink-2); }
 .hf-grades-action { font-size: 13px; font-weight: 600; color: var(--k8-primary); white-space: nowrap; }
 .hf-grades-body { padding: 0 16px 10px; }
 .hf-gpax { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; margin-bottom: 4px; border-radius: 12px; background: #f0f9ff; font-size: 14px; color: #0c4a6e; }
-.hf-gpax b { font-family: 'Kanit', sans-serif; font-size: 20px; color: var(--k8-primary); }
+.hf-gpax b { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 20px; color: var(--k8-primary); }
 .hf-subj { border-top: 1px solid var(--k8-line-soft); }
 .hf-subj-row { width: 100%; min-height: 50px; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; padding: 4px 0; font-family: inherit; color: var(--k8-ink); text-align: left; cursor: pointer; }
 .hf-subj-row[disabled] { cursor: default; }
@@ -83,7 +83,7 @@
 .hf-subj-name small { display: block; font-size: 12px; color: var(--k8-ink-3); }
 .hf-subj-bar { width: 72px; height: 6px; border-radius: 6px; background: #e2e8f0; flex: none; overflow: hidden; }
 .hf-subj-bar span { display: block; height: 6px; border-radius: 6px; }
-.hf-gpill { min-width: 42px; height: 30px; padding: 0 6px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: 'Kanit', sans-serif; font-weight: 600; font-size: 16px; flex: none; box-sizing: border-box; }
+.hf-gpill { min-width: 42px; height: 30px; padding: 0 6px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 600; font-size: 16px; flex: none; box-sizing: border-box; }
 .hf-gpill.is-wait { font-size: 11px; }
 .hf-asg { list-style: none; margin: 0 0 10px; padding: 8px 12px; background: #f8fafc; border-radius: 12px; display: flex; flex-direction: column; gap: 6px; }
 .hf-asg li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
@@ -96,7 +96,7 @@
 .hf-link { border: 0; background: transparent; color: var(--k8-primary); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 0; min-height: 32px; }
 .hf-act { display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid var(--k8-line-soft); }
 .hf-act-date { width: 44px; text-align: center; font-size: 12px; color: var(--k8-ink-2); line-height: 1.2; flex: none; }
-.hf-act-date b { display: block; font-family: 'Kanit', sans-serif; font-size: 18px; color: var(--k8-ink); }
+.hf-act-date b { display: block; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 18px; color: var(--k8-ink); }
 .hf-act-title { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hf-tag { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 .hf-empty { padding: 14px 0; font-size: 14px; color: var(--k8-ink-3); border-top: 1px solid var(--k8-line-soft); }
@@ -104,7 +104,7 @@
 .hf-deeds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .hf-deed { background: #fff; border: 1px solid var(--k8-line); border-radius: 16px; padding: 12px; border-style: solid; text-align: left; font-family: inherit; cursor: pointer; }
 .hf-deed span { display: block; font-size: 12px; color: var(--k8-ink-2); }
-.hf-deed b { display: block; font-family: 'Kanit', sans-serif; font-size: 17px; font-weight: 600; }
+.hf-deed b { display: block; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 17px; font-weight: 600; }
 
 #view-dashboard { background: transparent; }
 body.portal-mode-student .main-wrapper { background: var(--k8-bg); }
@@ -166,7 +166,7 @@ body.portal-mode-student .main-wrapper { background: var(--k8-bg); }
 }
 
 /* ---------- หน้าอาจารย์: คะแนนชิ้นงาน & เกรด ---------- */
-.tg { display: flex; flex-direction: column; gap: 14px; font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; color: var(--k8-ink); }
+.tg { display: flex; flex-direction: column; gap: 14px; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: var(--k8-ink); }
 .tg-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
 .tg-top label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--k8-ink-2); font-weight: 600; }
 .tg-top select { height: 46px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 10px; font-family: inherit; font-size: 15px; background: #fff; color: var(--k8-ink); }
@@ -174,7 +174,7 @@ body.portal-mode-student .main-wrapper { background: var(--k8-bg); }
 .tg-seg button { height: 42px; border: 0; border-radius: 11px; background: transparent; color: var(--k8-ink-2); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .tg-seg button[aria-selected="true"] { background: #fff; color: var(--k8-primary); }
 .tg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.tg-head h3 { margin: 0; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 600; }
+.tg-head h3 { margin: 0; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 16px; font-weight: 600; }
 .tg-head span { font-size: 13px; color: var(--k8-ink-2); }
 .tg-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .tg-chip { position: relative; min-height: 46px; padding: 4px 14px; border-radius: 14px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; line-height: 1.25; max-width: 100%; overflow-wrap: anywhere; }
@@ -195,21 +195,21 @@ body.portal-mode-student .main-wrapper { background: var(--k8-bg); }
 .tg-row-name { display: block; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .tg-row-sub { display: block; font-size: 12px; color: var(--k8-ink-3); }
 .tg-score { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--k8-ink-2); flex: none; }
-.tg-score input { width: 68px; height: 44px; border-radius: 12px; border: 1px solid #cbd5e1; text-align: center; font-family: 'Kanit', sans-serif; font-size: 18px; font-weight: 600; }
+.tg-score input { width: 68px; height: 44px; border-radius: 12px; border: 1px solid #cbd5e1; text-align: center; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 18px; font-weight: 600; }
 .tg-score input.is-bad { border: 2px solid var(--k8-absent); }
 .tg-sum { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .tg-sum-top { display: flex; align-items: center; gap: 10px; }
 .tg-sum-top .tg-row-name { flex: 1; min-width: 0; }
 .tg-sum-top span:last-child { font-size: 13px; color: var(--k8-ink-2); white-space: nowrap; }
 .tg-grades { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
-.tg-g { position: relative; height: 44px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; color: #334155; font-family: 'Kanit', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; padding: 0; }
+.tg-g { position: relative; height: 44px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; color: #334155; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; padding: 0; }
 .tg-g[aria-checked="true"] { background: var(--k8-primary); color: #fff; border-color: var(--k8-primary); }
 .tg-g.is-suggest::after { content: ''; position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: #38bdf8; }
 .tg-g[aria-checked="true"].is-suggest::after { background: #fff; }
 .tg-note { font-size: 13px; color: var(--k8-ink-2); line-height: 1.5; margin: 0; }
 .tg-save { position: sticky; bottom: 92px; z-index: 5; background: #fff; border: 1px solid var(--k8-line); border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 6px 18px rgba(15, 23, 42, .08); }
 .tg-save-text { flex: 1; font-size: 13px; color: var(--k8-ink-2); }
-.tg-save button { min-height: 48px; padding: 0 22px; border: 0; border-radius: 14px; background: var(--k8-primary); color: #fff; font-family: 'Kanit', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; }
+.tg-save button { min-height: 48px; padding: 0 22px; border: 0; border-radius: 14px; background: var(--k8-primary); color: #fff; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; }
 .tg-save button[disabled] { opacity: .6; cursor: wait; }
 @media (min-width: 993px) { .tg-save { bottom: 16px; } }
 .tg-empty { padding: 24px 12px; text-align: center; color: var(--k8-ink-3); background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 14px; font-size: 14px; }
@@ -225,7 +225,7 @@ body.portal-mode-student .main-wrapper { background: var(--k8-bg); }
    (เปลี่ยนเฉพาะหน้าตา — ฟังก์ชัน GPS / กล้อง / QR / บันทึก ทำงานเหมือนเดิม)
    ===================================================================== */
 body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
-#view-prayer, #view-activities, #view-hasanat, #view-profile { font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; color: var(--k8-ink); }
+#view-prayer, #view-activities, #view-hasanat, #view-profile { font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: var(--k8-ink); }
 #view-prayer .card, #view-activities .card, #view-hasanat .card, #view-profile .card {
   background: var(--k8-card) !important;
   border: 1px solid var(--k8-line) !important;
@@ -233,10 +233,10 @@ body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
   box-shadow: none !important;
 }
 #view-prayer .card-title, #view-activities .card-title, #view-hasanat .card-title, #view-profile .card-title,
-#view-prayer h2, #view-prayer h3, #view-activities h2, #view-activities h3, #view-hasanat h3, #view-profile h3 { font-family: 'Kanit', sans-serif; color: var(--k8-ink); }
+#view-prayer h2, #view-prayer h3, #view-activities h2, #view-activities h3, #view-hasanat h3, #view-profile h3 { font-family: 'IBM Plex Sans Thai', sans-serif; color: var(--k8-ink); }
 #view-prayer .btn-primary, #view-activities .btn-primary, #view-hasanat .btn-primary, #view-profile .btn-primary {
   background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; color: #fff !important;
-  border-radius: 14px !important; min-height: 48px; font-family: 'Kanit', sans-serif; font-weight: 600; box-shadow: none !important;
+  border-radius: 14px !important; min-height: 48px; font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 600; box-shadow: none !important;
 }
 #view-prayer .btn-secondary, #view-activities .btn-secondary, #view-hasanat .btn-secondary, #view-activities .btn-outline {
   border-radius: 12px !important; border-color: #cbd5e1 !important; background: #fff !important; color: #334155 !important; min-height: 44px;
@@ -246,7 +246,7 @@ body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
 /* ละหมาด: ชิปเวลา 5 ช่อง */
 #view-prayer .prayer-chip { border-radius: 14px !important; border: 1px solid var(--k8-line) !important; background: #fff !important; box-shadow: none !important; }
 #view-prayer .prayer-chip.active, #view-prayer .prayer-chip.selected, #view-prayer .prayer-chip[aria-pressed="true"] { border: 2px solid var(--k8-primary) !important; background: #f0f9ff !important; }
-#view-prayer .prayer-chip-name { color: var(--k8-ink) !important; font-family: 'Kanit', sans-serif; }
+#view-prayer .prayer-chip-name { color: var(--k8-ink) !important; font-family: 'IBM Plex Sans Thai', sans-serif; }
 #view-prayer .btn-minimal-pill, #view-hasanat .btn-minimal-pill { border-radius: 999px !important; }
 
 /* กิจกรรม: แถบสลับ สแกน / ประวัติ */
@@ -261,7 +261,7 @@ body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
 #view-hasanat .hasanat-bento-hero::before, #view-hasanat .hasanat-bento-hero::after { display: none !important; }
 #view-hasanat .hasanat-hero-tag { background: rgba(255,255,255,.16) !important; color: #fff !important; border: 0 !important; }
 #view-hasanat .hasanat-hero-date-pill { background: rgba(255,255,255,.12) !important; color: #e0f2fe !important; border: 0 !important; }
-#view-hasanat .hasanat-bento-title { color: #fff !important; font-family: 'Kanit', sans-serif; }
+#view-hasanat .hasanat-bento-title { color: #fff !important; font-family: 'IBM Plex Sans Thai', sans-serif; }
 #view-hasanat .hasanat-bento-desc { color: #e0f2fe !important; }
 #view-hasanat .hasanat-stat-box { background: rgba(255,255,255,.12) !important; border: 1px solid rgba(255,255,255,.18) !important; border-radius: 16px !important; box-shadow: none !important; min-height: 64px; }
 #view-hasanat .hasanat-stat-box .stat-ico { background: #fff !important; color: var(--k8-primary) !important; border-radius: 12px !important; }
@@ -288,38 +288,38 @@ body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
 #view-hasanat .juz-box-item.done { background: var(--k8-primary) !important; color: #fff !important; border-color: var(--k8-primary) !important; }
 #view-hasanat .juz-box-item.current { background: var(--k8-primary-soft) !important; color: var(--k8-primary) !important; border: 2px solid var(--k8-primary) !important; }
 #view-hasanat .btn-hasanat-today, #view-hasanat .hasanat-date-rel-badge.today, #view-hasanat .btn-juz-sort.active { background: var(--k8-primary) !important; color: #fff !important; border-color: var(--k8-primary) !important; }
-#view-profile #profFullName { font-family: 'Kanit', sans-serif; font-size: 20px !important; line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+#view-profile #profFullName { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 20px !important; line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* ---------- เข้าสู่ระบบ / สมัคร / OTP ---------- */
-.auth-portal-dialog { font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; border-radius: 22px !important; }
+.auth-portal-dialog { font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; border-radius: 22px !important; }
 .auth-portal-dialog .auth-portal-brand-banner { background: var(--k8-primary) !important; }
-.auth-portal-dialog .auth-portal-brand-title { font-family: 'Kanit', sans-serif; letter-spacing: .5px; }
+.auth-portal-dialog .auth-portal-brand-title { font-family: 'IBM Plex Sans Thai', sans-serif; letter-spacing: .5px; }
 .auth-portal-dialog .auth-role-switcher, .auth-portal-dialog .auth-mode-segment-bar { background: var(--k8-line) !important; border-radius: 14px !important; padding: 4px !important; border: 0 !important; }
 .auth-portal-dialog .auth-role-btn, .auth-portal-dialog .auth-mode-seg-btn { min-height: 44px; border-radius: 11px !important; font-size: 14px !important; color: var(--k8-ink-2) !important; border: 0 !important; white-space: nowrap; }
 .auth-portal-dialog .auth-role-btn.active, .auth-portal-dialog .auth-mode-seg-btn.active { background: #fff !important; color: var(--k8-primary) !important; box-shadow: 0 1px 2px rgba(15,23,42,.08) !important; }
 .auth-portal-dialog .form-control, #otpVerifyModal .form-control { min-height: 50px; border-radius: 14px !important; border-color: #cbd5e1 !important; font-size: 16px !important; }
-.auth-portal-dialog .btn-primary, #otpVerifyModal .btn-primary { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; border-radius: 14px !important; min-height: 52px; font-family: 'Kanit', sans-serif; font-weight: 600; box-shadow: none !important; }
+.auth-portal-dialog .btn-primary, #otpVerifyModal .btn-primary { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; border-radius: 14px !important; min-height: 52px; font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 600; box-shadow: none !important; }
 .auth-portal-dialog .auth-field-error-msg { color: var(--k8-absent) !important; font-size: 13px !important; }
 .auth-portal-dialog .form-control.is-invalid { border: 2px solid var(--k8-absent) !important; }
 .k8-secure-note { display: flex; gap: 8px; align-items: flex-start; margin: 18px 0 0; font-size: 12px; color: var(--k8-ink-2); line-height: 1.5; }
-#otpVerifyModal .modal-dialog { border-radius: 22px !important; font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; }
-#otpVerifyCodeInput { font-family: 'Kanit', sans-serif; font-size: 26px !important; letter-spacing: 10px; text-align: center; }
+#otpVerifyModal .modal-dialog { border-radius: 22px !important; font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; }
+#otpVerifyCodeInput { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 26px !important; letter-spacing: 10px; text-align: center; }
 
 /* ---------- อาจารย์: ภาพรวม + เช็คชื่อ ---------- */
-#view-teacher { font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; color: var(--k8-ink); }
+#view-teacher { font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: var(--k8-ink); }
 #view-teacher .card, #view-teacher .teacher-hero-card, #view-teacher .teacher-kpi-card { background: #fff !important; border: 1px solid var(--k8-line) !important; border-radius: var(--k8-radius) !important; box-shadow: none !important; }
-#view-teacher .teacher-hero-title, #view-teacher .card-title { font-family: 'Kanit', sans-serif; }
+#view-teacher .teacher-hero-title, #view-teacher .card-title { font-family: 'IBM Plex Sans Thai', sans-serif; }
 #view-teacher .teacher-hero-title { overflow-wrap: anywhere; }
-#view-teacher .btn-primary { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; border-radius: 14px !important; min-height: 48px; font-family: 'Kanit', sans-serif; font-weight: 600; box-shadow: none !important; }
+#view-teacher .btn-primary { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; border-radius: 14px !important; min-height: 48px; font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 600; box-shadow: none !important; }
 #view-teacher .btn-secondary { border-radius: 12px !important; min-height: 44px; }
 #view-teacher .form-control { min-height: 46px; border-radius: 12px !important; }
 .k8-todo, .k8-follow { padding: 6px 16px 10px; margin-bottom: 14px; }
-.k8-todo h2, .k8-follow h2 { margin: 12px 0 4px; font-family: 'Kanit', sans-serif; font-size: 17px; font-weight: 600; }
+.k8-todo h2, .k8-follow h2 { margin: 12px 0 4px; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 17px; font-weight: 600; }
 .k8-follow .hf-head { padding-top: 6px; flex-wrap: wrap; }
 .k8-todo-row { width: 100%; min-height: 64px; display: flex; align-items: center; gap: 12px; border: 0; border-top: 1px solid var(--k8-line-soft); background: transparent; padding: 6px 0; font-family: inherit; color: var(--k8-ink); text-align: left; cursor: pointer; }
 .k8-todo-row:first-child { border-top: 0; }
 .k8-todo-row > i { color: #94a3b8; }
-.k8-todo-badge { min-width: 40px; height: 40px; padding: 0 6px; box-sizing: border-box; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: 'Kanit', sans-serif; font-size: 15px; font-weight: 600; flex: none; }
+.k8-todo-badge { min-width: 40px; height: 40px; padding: 0 6px; box-sizing: border-box; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 15px; font-weight: 600; flex: none; }
 .k8-todo-text { flex: 1; min-width: 0; }
 .k8-todo-text b { display: block; font-size: 15px; overflow-wrap: anywhere; }
 .k8-todo-text span { display: block; font-size: 13px; color: var(--k8-ink-2); }
@@ -349,10 +349,10 @@ body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
 /* =====================================================================
    แอดมิน: เมนูด้านซ้ายแบ่งหมวด (คอมพิวเตอร์) / แถบเลื่อนแนวนอน (มือถือ)
    ===================================================================== */
-#view-admin { font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; color: var(--k8-ink); }
+#view-admin { font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: var(--k8-ink); }
 #view-admin > .bento-hero-card, #view-admin > #adminKpiOverviewGrid { display: none !important; }
 #view-admin .card { border: 1px solid var(--k8-line) !important; border-radius: var(--k8-radius) !important; box-shadow: none !important; }
-#view-admin .card-title { font-family: 'Kanit', sans-serif; }
+#view-admin .card-title { font-family: 'IBM Plex Sans Thai', sans-serif; }
 #view-admin .btn-primary { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; border-radius: 12px !important; box-shadow: none !important; }
 #view-admin .btn-secondary { border-radius: 12px !important; }
 
@@ -383,7 +383,7 @@ body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
     background: #0f172a !important; padding: 20px 14px !important; margin: 0 !important; border-radius: 0 !important; box-sizing: border-box;
   }
   .k8-admin-nav .k8-nav-brand { display: flex; flex-direction: column; padding: 0 10px 4px; }
-  .k8-nav-brand-name { font-family: 'Kanit', sans-serif; font-size: 18px; font-weight: 600; color: #fff; }
+  .k8-nav-brand-name { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 18px; font-weight: 600; color: #fff; }
   .k8-nav-brand-sub { font-size: 12px; color: #94a3b8; }
   .k8-admin-nav .k8-nav-group { display: flex; flex-direction: column; gap: 2px; }
   .k8-admin-nav .k8-nav-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .6px; color: #94a3b8; padding: 0 10px 4px; }
@@ -401,13 +401,13 @@ body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
 
 /* ภาพรวมแอดมิน */
 .k8-admin-overview { display: flex; flex-direction: column; gap: 16px; }
-.k8-ov-head h2 { margin: 0; font-family: 'Kanit', sans-serif; font-size: 26px; font-weight: 600; }
+.k8-ov-head h2 { margin: 0; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 26px; font-weight: 600; }
 .k8-ov-head p { margin: 2px 0 0; font-size: 14px; color: var(--k8-ink-2); }
 .k8-ov-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .k8-kpi { background: #fff; border: 1px solid var(--k8-line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 4px; text-align: left; font-family: inherit; color: var(--k8-ink); cursor: pointer; }
 .k8-kpi:hover { border-color: #93c5fd; }
 .k8-kpi-label { font-size: 13px; color: var(--k8-ink-2); }
-.k8-kpi-val { font-family: 'Kanit', sans-serif; font-size: 30px; font-weight: 600; line-height: 1.2; }
+.k8-kpi-val { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 30px; font-weight: 600; line-height: 1.2; }
 .k8-kpi-sub { font-size: 12px; color: var(--k8-ink-3); }
 .k8-ov-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
 .k8-ov-row > section { flex: 1 1 340px; min-width: 0; margin: 0; }
@@ -418,10 +418,227 @@ body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
 .k8-gbar-track { height: 12px; border-radius: 12px; background: #e2e8f0; overflow: hidden; display: block; }
 .k8-gbar-track span { display: block; height: 12px; border-radius: 12px; }
 .k8-gbar-v { text-align: right; color: var(--k8-ink-2); }
-.k8-admin-overview h2:not(.k8-ov-head h2) { font-family: 'Kanit', sans-serif; font-size: 17px !important; font-weight: 600; margin: 0; }
+.k8-admin-overview h2:not(.k8-ov-head h2) { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 17px !important; font-weight: 600; margin: 0; }
 .k8-ov-grades #k8OvPray { display: flex; flex-direction: column; gap: 12px; }
 .k8-todo h2 { font-size: 17px !important; }
 @media (min-width: 993px) {
   #view-admin .table-responsive { overflow-x: auto; }
   #view-admin .custom-table { min-width: 960px; }
 }
+
+/* ============ Round 3 · Login page (canvas) ============ */
+#authModal.modal-overlay { background: #f4f6f9 !important; backdrop-filter: none !important; align-items: flex-start !important; overflow-y: auto; padding: 0 !important; }
+#authModal .auth-portal-dialog { background: transparent !important; box-shadow: none !important; border: 0 !important; max-width: 420px !important; width: 100%; margin: 0 auto !important; padding: 48px 20px 24px !important; min-height: 100%; display: flex; flex-direction: column; gap: 24px; max-height: none !important; transform: none !important; }
+#authModal .modal-body { padding: 0 !important; overflow: visible !important; max-height: none !important; display: flex; flex-direction: column; gap: 24px; flex: 1; }
+#authModal .auth-portal-brand-banner { background: transparent !important; padding: 0 !important; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; border: 0 !important; box-shadow: none !important; }
+#authModal .auth-portal-emblem { width: 72px !important; height: 72px !important; border-radius: 20px !important; background: #fff !important; border: 1px solid #e2e8f0 !important; display: flex; align-items: center; justify-content: center; box-shadow: none !important; padding: 8px; }
+#authModal .auth-portal-emblem img { width: 100%; height: 100%; object-fit: contain; }
+#authModal .auth-portal-brand-title { font-family: 'IBM Plex Sans Thai', sans-serif !important; font-size: 26px !important; font-weight: 600 !important; color: #0f172a !important; letter-spacing: .5px; margin: 0; }
+#authModal .k8-auth-sub { margin: 0; font-size: 14px; color: #475569; }
+#authModal .modal-header { display: none !important; }
+#authModal .auth-mode-segment-bar { display: none !important; }
+#authModal .k8-auth-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+#authModal .auth-role-switcher { display: grid !important; grid-template-columns: repeat(3, minmax(0,1fr)); background: #f1f5f9 !important; border-radius: 14px !important; padding: 4px !important; gap: 4px; margin: 0 !important; border: 0 !important; }
+#authModal .auth-role-btn { height: 40px; min-height: 40px !important; border: 0 !important; border-radius: 11px !important; background: transparent !important; color: #475569 !important; font-size: 14px !important; font-weight: 600; box-shadow: none !important; padding: 0 4px !important; flex-direction: row !important; }
+#authModal .auth-role-btn i { display: none; }
+#authModal .auth-role-btn.active { background: #fff !important; color: #0369a1 !important; box-shadow: 0 1px 2px rgba(15,23,42,.08) !important; }
+#authModal .form-group { display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px !important; }
+#authModal .form-label { font-size: 14px !important; font-weight: 600 !important; color: #0f172a !important; margin: 0 !important; }
+#authModal .form-control { height: 50px; border-radius: 14px !important; border: 1px solid #cbd5e1 !important; padding: 0 14px !important; font-size: 16px !important; box-shadow: none !important; background: #fff !important; }
+#authModal select.form-control { padding-right: 32px !important; }
+#authModal .form-control:focus { border-color: #0369a1 !important; outline: 3px solid rgba(3,105,161,.18); }
+#authModal .k8-auth-hint { font-size: 13px; color: #475569; }
+#authModal #loginFormSection .form-hint, #authModal #teacherLoginSection .form-hint { display: none; }
+#authModal #loginFormSection > div[style*="border-top"], #authModal #teacherLoginSection > div[style*="border-top"] { display: none !important; }
+#authModal #authAdminContainer > div[style*="background"] { display: none !important; }
+#authModal .btn-primary.btn-block { height: 52px; border-radius: 14px !important; background: #0369a1 !important; border: 0 !important; color: #fff !important; font-family: 'IBM Plex Sans Thai', sans-serif !important; font-size: 17px !important; font-weight: 600 !important; box-shadow: none !important; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 !important; }
+#authModal .btn-primary.btn-block:hover { background: #075985 !important; }
+#authModal .k8-auth-links { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: -8px; }
+#authModal .k8-auth-links a { font-size: 14px; padding: 8px; color: #0369a1; text-decoration: none; }
+#authModal .k8-auth-links a.k8-auth-link-main { font-size: 15px; padding: 10px; font-weight: 600; }
+#authModal .k8-auth-links a:hover { text-decoration: underline; }
+#authModal[data-role="admin"] .k8-auth-links { display: none; }
+#authModal .k8-secure-note { margin: auto 0 0 !important; }
+/* register mode = canvas Register board */
+#authModal[data-mode="register"] .auth-portal-brand-banner,
+#authModal[data-mode="register"] .k8-auth-links,
+#authModal[data-mode="register"] #authRoleBtnAdmin { display: none !important; }
+#authModal[data-mode="register"] .auth-role-switcher { grid-template-columns: repeat(2, minmax(0,1fr)); }
+#authModal[data-mode="register"] .auth-portal-dialog { padding-top: 12px !important; gap: 16px; }
+#authModal[data-mode="register"] .modal-header { display: flex !important; align-items: center; gap: 8px; padding: 0 !important; border: 0 !important; background: transparent !important; }
+#authModal .k8-auth-back { display: none; }
+#authModal[data-mode="register"] .k8-auth-back { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border: 0; border-radius: 12px; background: transparent; color: #0f172a; font-size: 18px; cursor: pointer; flex: none; }
+#authModal[data-mode="register"] .k8-auth-back:hover { background: #e2e8f0; }
+#authModal[data-mode="register"] .auth-close-btn { display: none !important; }
+#authModal .k8-auth-h1 { display: block; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 20px; font-weight: 600; color: #0f172a; }
+#authModal .k8-auth-h2 { display: block; font-size: 13px; font-weight: 400; color: #475569; }
+#authModal #registerFormSection > div[style*="background: #f8fafc"], #authModal #teacherRegisterSection > div[style*="background: #f8fafc"] { display: none !important; }
+#authModal .required { color: #b91c1c; font-weight: 500; font-size: 12px; }
+body:not(.auth-locked) #authModal[data-mode="login"] .modal-header { display: flex !important; justify-content: flex-end; padding: 0 !important; border: 0 !important; background: transparent !important; margin-bottom: -24px; }
+body:not(.auth-locked) #authModal[data-mode="login"] #authModalTitle { display: none !important; }
+body.auth-locked #authModal, #authModal.modal-overlay { background-image: none !important; background-color: #f4f6f9 !important; padding: 0 !important; }
+#authModal[data-mode="register"] #authModalTitle { flex-direction: column !important; align-items: flex-start !important; gap: 0 !important; }
+
+/* ============ Round 3 · Shared page header + Prayer (canvas) ============ */
+.k8-pg-head { display: flex; align-items: center; gap: 8px; padding: 4px 0 8px; }
+.k8-pg-back { width: 44px; height: 44px; border-radius: 14px; border: 0; background: transparent; color: #0f172a; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none; margin-left: -8px; }
+.k8-pg-back:hover { background: #e2e8f0; }
+.k8-pg-titles { flex: 1; min-width: 0; }
+.k8-pg-titles h1 { margin: 0; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 20px; font-weight: 600; color: #0f172a; line-height: 1.3; }
+.k8-pg-sub { font-size: 13px; color: #475569; }
+#view-prayer .k8-pr-wrap { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; max-width: 560px !important; }
+#view-prayer .k8-pr-wrap > div:first-of-type:not(.k8-loc) { }
+#view-prayer .k8-pr-wrap > div[style*="justify-content: space-between"]:not([id]) { display: none !important; }
+.k8-steps { list-style: none; margin: 0 0 12px; padding: 4px 4px 0; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.k8-steps li { display: flex; flex-direction: column; gap: 6px; }
+.k8-step-bar { height: 4px; border-radius: 4px; background: #cbd5e1; }
+.k8-step-lbl { font-size: 12px; font-weight: 600; color: #64748b; }
+.k8-steps li.on .k8-step-bar { background: #0369a1; }
+.k8-steps li.on .k8-step-lbl { color: #0369a1; }
+.k8-loc { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.k8-loc-ico { width: 40px; height: 40px; border-radius: 12px; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; flex: none; }
+.k8-loc-txt { flex: 1; min-width: 0; }
+.k8-loc-title { font-size: 15px; font-weight: 600; color: #0f172a; }
+.k8-loc-desc { font-size: 13px; color: #475569; overflow-wrap: anywhere; }
+.k8-loc .k8-loc-check { display: none; }
+.k8-loc[data-state="in"] { border-color: #bbf7d0; }
+.k8-loc[data-state="in"] .k8-loc-ico { background: #dcfce7; color: #15803d; }
+.k8-loc[data-state="in"] .k8-loc-title { color: #15803d; }
+.k8-loc[data-state="in"] .k8-loc-check { display: inline; }
+.k8-loc[data-state="in"] .k8-loc-dot { display: none; }
+.k8-loc[data-state="out"] { border-color: #fde68a; }
+.k8-loc[data-state="out"] .k8-loc-ico { background: #fef3c7; color: #b45309; }
+.k8-loc[data-state="out"] .k8-loc-title { color: #b45309; }
+#view-prayer #geofenceStatusBox, #view-prayer #prayerVerifiedLocBadge, #view-prayer #btnCenterVerifyGeo { display: none !important; }
+#view-prayer .prayer-chips-row { display: flex !important; gap: 6px !important; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+#view-prayer .prayer-chips-row::-webkit-scrollbar { display: none; }
+#view-prayer .prayer-chip { flex: 1 0 auto; min-width: 64px; padding: 6px 8px !important; min-height: 0 !important; text-align: center; }
+#view-prayer .prayer-chip-sub { display: none !important; }
+#view-prayer .prayer-chip-name { font-size: 14px !important; font-weight: 600; }
+#view-prayer .prayer-chip-status { font-size: 11px !important; padding: 0 !important; background: transparent !important; border: 0 !important; }
+#view-prayer .camera-container { height: 300px !important; min-height: 300px !important; max-height: 300px; border-radius: 20px !important; background: #0f1b26 !important; overflow: hidden; border: 0 !important; box-shadow: none !important; margin: 0 !important; aspect-ratio: auto !important; }
+#view-prayer .camera-center-action-overlay { background: transparent !important; color: #9fb6c9 !important; }
+#view-prayer .camera-center-action-overlay::before { content: ''; position: absolute; inset: 16px; border: 2px dashed rgba(255,255,255,.22); border-radius: 14px; pointer-events: none; }
+#view-prayer .cam-action-glow-icon { background: rgba(255,255,255,.06) !important; color: #9fb6c9 !important; box-shadow: none !important; }
+#view-prayer .cam-action-title { color: #fff !important; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 16px !important; }
+#view-prayer .cam-action-desc { color: #9fb6c9 !important; font-size: 13px !important; }
+#view-prayer .camera-overlay-info { position: absolute; left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important; padding: 12px 14px !important; background: rgba(0,0,0,.55) !important; color: #fff !important; font-size: 12px !important; line-height: 1.5; border-radius: 0 !important; border: 0 !important; }
+#view-prayer .camera-overlay-info div { overflow-wrap: anywhere; }
+#view-prayer .prayer-live-clock-pill { background: rgba(0,0,0,.45) !important; color: #fff !important; border: 0 !important; border-radius: 999px !important; font-size: 12px !important; font-weight: 600; padding: 4px 10px !important; }
+#view-prayer .camera-bottom-hud { display: none !important; }
+.k8-pr-foot { padding: 12px 0 8px; display: flex; flex-direction: column; gap: 10px; }
+.k8-pr-foot #btnCaptureInstant { position: static !important; transform: none !important; width: 100% !important; height: 54px !important; min-height: 54px; border: 0 !important; border-radius: 14px !important; background: #0369a1 !important; color: #fff !important; font-family: 'IBM Plex Sans Thai', sans-serif !important; font-size: 17px !important; font-weight: 600 !important; box-shadow: none !important; display: flex !important; align-items: center; justify-content: center; margin: 0 !important; padding: 0 16px !important; animation: none !important; }
+.k8-pr-foot #btnCaptureInstant:hover { background: #075985 !important; }
+.k8-pr-foot #btnCaptureInstant[disabled] { opacity: .7; }
+.k8-pr-foot #btnCaptureInstant.k8-hide { display: none !important; }
+.k8-pr-foot .cam-shutter-content { display: flex; align-items: center; gap: 10px; color: #fff !important; }
+.k8-pr-done { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; border-radius: 14px; background: #15803d; color: #fff; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 16px; font-weight: 600; padding: 8px 14px; text-align: center; }
+.k8-pr-done[hidden] { display: none; }
+.k8-pr-late { text-align: center; font-size: 14px; padding: 8px; color: #0369a1; text-decoration: none; }
+.k8-pr-late:hover { text-decoration: underline; }
+#view-prayer #prayerNotesCard { background: #fff !important; border: 1px solid #e2e8f0 !important; border-radius: 16px !important; box-shadow: none !important; margin-top: 4px; }
+#view-prayer #prayerNotesCard .prayer-notes-icon-box { background: #e0f2fe !important; color: #0369a1 !important; border-radius: 12px !important; }
+#view-prayer #prayerHistoryBottomSection { background: #fff !important; border: 1px solid #e2e8f0 !important; border-radius: 16px !important; box-shadow: none !important; }
+.k8-pr-done { border: 0; width: 100%; cursor: pointer; }
+.k8-cam-done { position: absolute; inset: 0; z-index: 40; background: rgba(21,128,61,.92); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 16px; }
+.k8-cam-done[hidden] { display: none; }
+.k8-cam-done-t { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 22px; font-weight: 600; }
+.k8-cam-done-s { font-size: 14px; }
+#cameraBox:has(#k8CamDone:not([hidden])) .camera-center-action-overlay, #cameraBox:has(#k8CamDone:not([hidden])) .btn-flip-cam { display: none !important; }
+#cameraBox:has(#k8CamDone:not([hidden])) .prayer-live-clock-pill { display: none !important; }
+
+/* ============ Round 3 · Hasanat (canvas) ============ */
+#view-hasanat { max-width: 560px; margin: 0 auto; }
+.k8-ha-head { padding: 8px 4px 12px; display: flex; flex-direction: column; gap: 12px; }
+.k8-ha-titlerow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.k8-ha-titlerow h1 { margin: 0; font-size: 24px; font-weight: 600; color: #0f172a; }
+.k8-ha-date { font-size: 13px; color: #475569; white-space: nowrap; }
+.k8-seg { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); background: #e2e8f0; border-radius: 14px; padding: 4px; gap: 4px; }
+.k8-seg button { height: 40px; border: 0; border-radius: 11px; background: transparent; color: #475569; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k8-seg button.on { background: #fff; color: #0369a1; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+#view-hasanat .hasanat-bento-hero, #view-hasanat .hasanat-bento-subnav, #view-hasanat .bento-card-header, #view-hasanat .quran-slider-control-box, #view-hasanat .quran-ikhlas-notice, #view-hasanat .bento-card-header + * .kpi-header-row .kpi-section-label i { display: none !important; }
+#view-hasanat .hasanat-date-nav-bar { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 4px 12px !important; margin: 0 !important; display: flex !important; align-items: center; gap: 8px; flex-wrap: nowrap !important; }
+#view-hasanat .hasanat-date-display-card { flex: 1; min-width: 0; height: 44px; border-radius: 12px !important; background: #fff !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; }
+#view-hasanat .btn-hasanat-date-step { width: 44px; height: 44px; flex: none; border-radius: 12px !important; background: #fff !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; color: #0f172a !important; }
+#view-hasanat .btn-hasanat-today { height: 44px; border-radius: 12px !important; padding: 0 12px !important; flex: none; box-shadow: none !important; font-size: 14px !important; }
+#view-hasanat .hasanat-bento-grid { display: block !important; padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; }
+#view-hasanat .hasanat-bento-card { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+#view-hasanat .hasanat-bento-card::before, #view-hasanat .hasanat-bento-card::after { display: none !important; }
+#view-hasanat .bento-card-inner { display: flex !important; flex-direction: column; gap: 12px; padding: 0 !important; background: transparent !important; }
+#view-hasanat .quran-minimal-kpi-card, #view-hasanat .juz-minimal-overview-card, #view-hasanat .quran-input-section, #view-hasanat .khatam-counter-card,
+#view-hasanat .bento-sunnah .bento-card-inner > div, #view-hasanat .bento-memorize .bento-card-inner > div:not(.surah-list-container) {
+  background: #fff !important; border: 1px solid #e2e8f0 !important; border-radius: 18px !important; padding: 16px !important; box-shadow: none !important; margin: 0 !important; }
+#view-hasanat .quran-minimal-kpi-card { order: 1; }
+#view-hasanat .quran-input-section { order: 2; }
+#view-hasanat .bento-quran .btn-minimal-save { order: 3; }
+#view-hasanat .juz-minimal-overview-card { order: 4; }
+#view-hasanat .khatam-counter-card { order: 5; }
+#view-hasanat .kpi-section-label { font-size: 13px !important; color: #475569 !important; font-weight: 400 !important; }
+#view-hasanat .kpi-big-num { font-size: 34px !important; font-weight: 600 !important; color: #0f172a !important; line-height: 1.1; }
+#view-hasanat .kpi-sub-label { font-size: 16px !important; color: #64748b !important; font-weight: 500 !important; }
+#view-hasanat .kpi-pill-badge { background: #e0f2fe !important; color: #0369a1 !important; border: 0 !important; border-radius: 999px !important; font-weight: 600; }
+#view-hasanat .minimal-progress-track { height: 10px !important; border-radius: 10px !important; background: #e2e8f0 !important; }
+#view-hasanat .minimal-progress-fill { height: 10px !important; border-radius: 10px !important; }
+#view-hasanat .minimal-progress-legend { font-size: 12px !important; color: #64748b !important; }
+#view-hasanat .quran-section-header i, #view-hasanat .juz-overview-title i { display: none; }
+#view-hasanat .quran-sec-title, #view-hasanat .juz-overview-title { font-size: 16px !important; font-weight: 600 !important; color: #0f172a !important; }
+#view-hasanat .quran-date-badge { background: #e0f2fe !important; color: #0369a1 !important; border: 0 !important; border-radius: 999px !important; }
+#view-hasanat .quran-daily-stepper-box { background: transparent !important; border: 0 !important; padding: 0 !important; box-shadow: none !important; }
+#view-hasanat .quran-stepper-lbl { display: none !important; }
+#view-hasanat .quran-page-input-wrap { display: flex !important; align-items: center; gap: 12px; width: 100%; }
+#view-hasanat .btn-quran-step { width: 48px !important; height: 48px !important; flex: none; border-radius: 14px !important; border: 1px solid #cbd5e1 !important; background: #fff !important; color: #0f172a !important; font-size: 22px !important; box-shadow: none !important; }
+#view-hasanat .btn-quran-step:last-of-type { background: #e0f2fe !important; border: 0 !important; color: #0369a1 !important; }
+#view-hasanat .quran-big-input { flex: 1; min-width: 0; height: 56px !important; border: 0 !important; background: transparent !important; text-align: center; font-size: 32px !important; font-weight: 600 !important; color: #0f172a !important; box-shadow: none !important; }
+#view-hasanat .quran-unit-lbl { font-size: 12px; color: #64748b; }
+#view-hasanat .quran-quick-pills { display: grid !important; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; margin-top: 12px; }
+#view-hasanat .quran-pill-step, #view-hasanat .quran-pill-clear { height: 40px; min-height: 40px !important; border-radius: 12px !important; border: 1px solid #e2e8f0 !important; background: #f8fafc !important; color: #334155 !important; font-size: 13px !important; padding: 0 4px !important; white-space: nowrap; box-shadow: none !important; }
+#view-hasanat .quran-pill-clear { background: #fff !important; color: #b91c1c !important; }
+#view-hasanat .quran-pill-step.active { background: #f8fafc !important; color: #334155 !important; border-color: #e2e8f0 !important; }
+#view-hasanat .quran-bookmark-box { background: transparent !important; border: 0 !important; border-top: 1px solid #f1f5f9 !important; border-radius: 0 !important; padding: 12px 0 0 !important; margin-top: 12px !important; box-shadow: none !important; }
+#view-hasanat .bookmark-label { font-size: 14px !important; font-weight: 600 !important; }
+#view-hasanat .btn-minimal-save { height: 50px; min-height: 50px; border-radius: 14px !important; background: #0369a1 !important; border: 0 !important; box-shadow: none !important; font-size: 16px !important; font-weight: 600 !important; width: 100%; }
+#view-hasanat .juz-grid-container { display: grid !important; grid-template-columns: repeat(10, minmax(0,1fr)) !important; gap: 5px !important; }
+#view-hasanat .juz-box-item { height: 24px !important; min-height: 24px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 600; padding: 0 !important; background: #f1f5f9 !important; color: #64748b !important; border: 0 !important; box-shadow: none !important; display: flex; align-items: center; justify-content: center; }
+#view-hasanat .juz-box-item.done { background: #0369a1 !important; color: #fff !important; }
+#view-hasanat .juz-box-item.current { background: #e0f2fe !important; color: #0369a1 !important; border: 0 !important; }
+#view-hasanat .juz-overview-footnote { font-size: 12px !important; color: #64748b; }
+#view-hasanat .khatam-crown-icon { background: #fef3c7 !important; color: #b45309 !important; border-radius: 12px !important; box-shadow: none !important; }
+#view-hasanat .khatam-stepper-control { background: transparent !important; border: 0 !important; padding: 0 !important; }
+#view-hasanat .btn-khatam-step { border-radius: 12px !important; background: #fff !important; color: #0f172a !important; border: 1px solid #cbd5e1 !important; box-shadow: none !important; }
+#view-hasanat .btn-khatam-add-one { border-radius: 12px !important; background: #f8fafc !important; color: #334155 !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; }
+/* sunnah */
+#view-hasanat .sunnah-item-row { min-height: 48px; display: flex !important; align-items: center; gap: 12px; border: 0 !important; border-top: 1px solid #f1f5f9 !important; border-radius: 0 !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; font-size: 15px; }
+#view-hasanat .sunnah-item-row input[type="checkbox"] { width: 20px !important; height: 20px !important; accent-color: #15803d !important; }
+#view-hasanat .sunnah-pill-btn { min-height: 40px; border-radius: 12px !important; border: 1px solid #e2e8f0 !important; background: #f8fafc !important; color: #334155 !important; box-shadow: none !important; font-size: 13px !important; }
+#view-hasanat .sunnah-pill-btn.active { background: #15803d !important; color: #fff !important; border-color: #15803d !important; }
+#view-hasanat .bento-sunnah .minimal-progress-fill { background: #15803d !important; }
+#view-hasanat .bento-memorize .minimal-progress-fill { background: #15803d !important; }
+/* memorize */
+#view-hasanat .surah-cat-tab { border-radius: 999px !important; min-height: 36px; box-shadow: none !important; font-size: 13px !important; }
+#view-hasanat .surah-cat-tab.active { background: #0369a1 !important; color: #fff !important; border-color: #0369a1 !important; }
+#view-hasanat .surah-list-container { background: #fff !important; border: 1px solid #e2e8f0 !important; border-radius: 18px !important; box-shadow: none !important; }
+#view-hasanat #searchSurahInput { height: 46px; border-radius: 12px !important; }
+#view-hasanat .quran-quick-stepper-grid { display: none !important; }
+#view-hasanat .hasanat-date-display-card { white-space: nowrap; overflow: hidden; padding: 0 8px; font-size: 14px !important; }
+#view-hasanat .hasanat-date-text { overflow: hidden; text-overflow: ellipsis; font-size: 14px !important; font-weight: 600; }
+#view-hasanat .hasanat-date-rel-badge { white-space: nowrap; flex: none; font-size: 12px !important; border-radius: 999px !important; padding: 2px 8px !important; }
+#view-hasanat .btn-hasanat-today { display: none !important; }
+#view-hasanat .bento-sunnah .quran-minimal-kpi-card, #view-hasanat .bento-memorize .quran-minimal-kpi-card { order: -1; }
+#view-hasanat .bento-sunnah .btn-minimal-save { order: 10; }
+#view-hasanat .bento-memorize .surah-list-container { order: 5; }
+#view-hasanat .sunnah-item-row { flex-direction: row-reverse !important; justify-content: flex-end !important; }
+#view-hasanat .sunnah-item-row > :not(input) { flex: 1; }
+#view-hasanat .sunnah-category-title { font-size: 16px !important; font-weight: 600 !important; color: #0f172a !important; }
+#view-hasanat .sunnah-category-title i { display: none; }
+#view-hasanat .surah-item-row, #view-hasanat .surah-item { border-radius: 14px !important; box-shadow: none !important; border-color: #e2e8f0 !important; }
+#view-hasanat .bento-sunnah .kpi-sub-label { display: none !important; }
+#view-hasanat .bento-memorize .bento-card-inner > div:last-child { order: 7; display: flex; flex-direction: column; gap: 8px; align-items: stretch !important; }
+#view-hasanat .bento-memorize .bento-card-inner > div:last-child .btn-minimal-save { width: 100% !important; }
+#view-hasanat .bento-memorize .quran-minimal-kpi-card > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 4px; }
+.k8-mem-big { display: flex; flex-direction: column; }
+.k8-mem-lbl { font-size: 13px; color: #475569; font-weight: 400; }
+.k8-mem-big b { font-size: 34px; font-weight: 600; color: #0f172a; line-height: 1.1; display: inline; }
+.k8-mem-big small { font-size: 16px; color: #64748b; font-weight: 500; }
+.k8-mem-big { display: block; } .k8-mem-lbl { display: block; }
+#view-hasanat #memorizedPercentLabel { font-size: 12px; color: #64748b; font-weight: 500; }
+#view-hasanat #memorizedPercentLabel { display: none; }

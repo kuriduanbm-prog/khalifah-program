@@ -4409,10 +4409,10 @@ async function executePrayerCaptureStep2() {
   ctx.fillRect(0, canvas.height - boxHeight, canvas.width, boxHeight);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 15px Kanit, sans-serif';
+  ctx.font = 'bold 15px "IBM Plex Sans Thai", sans-serif';
   ctx.fillText(`KHALIFAH • ละหมาดเวลา: ${selectedPrayerTime}`, 14, canvas.height - boxHeight + 22);
 
-  ctx.font = '13px Kanit, sans-serif';
+  ctx.font = '13px "IBM Plex Sans Thai", sans-serif';
   ctx.fillText(`นักเรียน: ${currentStudent.fullName} (${currentStudent.studentId}) | ${currentStudent.grade || '-'}`, 14, canvas.height - boxHeight + 42);
 
   const locShort = verifiedLocation ? (verifiedLocation.locationName || 'พิกัด GPS') : 'พิกัด GPS';
@@ -4664,10 +4664,10 @@ function captureAndRecordPrayer() {
 
   // ข้อมูลตัวอักษร
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 20px Kanit, sans-serif';
+  ctx.font = 'bold 20px "IBM Plex Sans Thai", sans-serif';
   ctx.fillText(`KHALIFAH PROGRAM • เช็คละหมาด: เวลา ${selectedPrayerTime}`, 20, canvas.height - boxHeight + 30);
 
-  ctx.font = '16px Kanit, sans-serif';
+  ctx.font = '16px "IBM Plex Sans Thai", sans-serif';
   ctx.fillText(`นักเรียน: ${currentStudent.fullName} (${currentStudent.studentId}) | ระดับชั้น: ${currentStudent.grade}`, 20, canvas.height - boxHeight + 58);
 
   const locText = `พิกัด: ${verifiedLocation.lat.toFixed(5)}, ${verifiedLocation.lng.toFixed(5)} [${verifiedLocation.locationName}] • ${dateStr} ${timeStr}`;
@@ -4677,7 +4677,7 @@ function captureAndRecordPrayer() {
   ctx.fillStyle = verifiedLocation.isWithinZone ? '#10b981' : '#f59e0b';
   ctx.fillRect(canvas.width - 200, canvas.height - boxHeight + 20, 180, 40);
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 15px Kanit, sans-serif';
+  ctx.font = 'bold 15px "IBM Plex Sans Thai", sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(verifiedLocation.isWithinZone ? '✓ ในพื้นที่กำหนด' : '⚠️ นอกพื้นที่กำหนด', canvas.width - 110, canvas.height - boxHeight + 46);
   ctx.textAlign = 'start';
@@ -5441,7 +5441,7 @@ function renderSkillRadarChart() {
           ticks: {
             stepSize: 1,
             color: '#64748b',
-            font: { family: 'Kanit, Prompt, sans-serif', size: 11, weight: '600' },
+            font: { family: 'IBM Plex Sans Thai, sans-serif', size: 11, weight: '600' },
             callback: function(val) {
               return val.toFixed(1);
             }
@@ -5450,7 +5450,7 @@ function renderSkillRadarChart() {
             display: true,
             text: 'ระดับเกรดเฉลี่ย (1.00 – 4.00)',
             color: '#94a3b8',
-            font: { family: 'Kanit, Prompt, sans-serif', size: 10, weight: '600' }
+            font: { family: 'IBM Plex Sans Thai, sans-serif', size: 10, weight: '600' }
           }
         },
         y: {
@@ -5460,7 +5460,7 @@ function renderSkillRadarChart() {
           },
           ticks: {
             color: '#0f172a',
-            font: { family: 'Kanit, Prompt, sans-serif', size: 12, weight: '600' },
+            font: { family: 'IBM Plex Sans Thai, sans-serif', size: 12, weight: '600' },
             padding: 8
           }
         }
@@ -5469,8 +5469,8 @@ function renderSkillRadarChart() {
         legend: { display: false },
         tooltip: {
           backgroundColor: '#0f172a',
-          titleFont: { family: 'Kanit, Prompt, sans-serif', size: 12, weight: '700' },
-          bodyFont: { family: 'Kanit, Prompt, sans-serif', size: 12 },
+          titleFont: { family: 'IBM Plex Sans Thai, sans-serif', size: 12, weight: '700' },
+          bodyFont: { family: 'IBM Plex Sans Thai, sans-serif', size: 12 },
           padding: 10,
           cornerRadius: 8,
           callbacks: {
@@ -5529,7 +5529,7 @@ function renderAttendanceDoughnutChart() {
         legend: {
           position: 'bottom',
           align: 'center',
-          labels: { font: { family: 'Kanit', size: 11 }, padding: 10, boxWidth: 12 }
+          labels: { font: { family: 'IBM Plex Sans Thai', size: 11 }, padding: 10, boxWidth: 12 }
         }
       }
     }
@@ -5597,10 +5597,10 @@ function renderPrayerBarChart() {
         y: {
           min: 0,
           max: 5,
-          ticks: { stepSize: 1, font: { family: 'Kanit', size: 11 } }
+          ticks: { stepSize: 1, font: { family: 'IBM Plex Sans Thai', size: 11 } }
         },
         x: {
-          ticks: { font: { family: 'Kanit', size: 10 } }
+          ticks: { font: { family: 'IBM Plex Sans Thai', size: 10 } }
         }
       },
       plugins: {
@@ -5650,7 +5650,7 @@ function renderActivityPieChart() {
         legend: {
           position: 'bottom',
           align: 'center',
-          labels: { font: { family: 'Kanit', size: 11 }, padding: 10, boxWidth: 12 }
+          labels: { font: { family: 'IBM Plex Sans Thai', size: 11 }, padding: 10, boxWidth: 12 }
         }
       }
     }

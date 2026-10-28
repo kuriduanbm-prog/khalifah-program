@@ -31,7 +31,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Kanit:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,300&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap">
 
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.0">
-  <link rel="stylesheet" href="ui-v8.css?v=8.0">
+  <link rel="stylesheet" href="style.css?v=8.1">
+  <link rel="stylesheet" href="ui-v8.css?v=8.1">
 </head>
 <body class="auth-locked">
 
@@ -452,7 +452,26 @@
 
     <!-- ==================== VIEW 2: PRAYER CHECK-IN ==================== -->
     <section id="view-prayer" class="view-section">
-      <div class="card" style="max-width: 760px; margin: 0 auto 1.5rem auto; padding: 1.25rem 1.15rem;">
+      <div class="card k8-pr-wrap" style="max-width: 760px; margin: 0 auto 1.5rem auto; padding: 1.25rem 1.15rem;">
+        <header class="k8-pg-head">
+          <button type="button" class="k8-pg-back" aria-label="กลับหน้าแรก" onclick="switchView('dashboard')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <div class="k8-pg-titles">
+            <h1 id="k8PrTitle">เช็คชื่อละหมาด</h1>
+            <div id="k8PrSub" class="k8-pg-sub">กำลังคำนวณช่วงเวลา...</div>
+          </div>
+        </header>
+        <ol class="k8-steps" id="k8PrSteps" aria-label="ขั้นตอน">
+          <li><span class="k8-step-bar"></span><span class="k8-step-lbl">1 ตรวจพิกัด</span></li>
+          <li><span class="k8-step-bar"></span><span class="k8-step-lbl">2 ถ่ายภาพ</span></li>
+          <li><span class="k8-step-bar"></span><span class="k8-step-lbl">3 ส่งบันทึก</span></li>
+        </ol>
+        <section class="k8-loc" id="k8PrLoc" data-state="idle">
+          <span class="k8-loc-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><path class="k8-loc-check" d="m9 10 2 2 4-4"/><circle class="k8-loc-dot" cx="12" cy="10" r="2.5"/></svg></span>
+          <div class="k8-loc-txt">
+            <div class="k8-loc-title" id="k8PrLocTitle">ยังไม่ได้ตรวจพิกัด</div>
+            <div class="k8-loc-desc" id="k8PrLocDesc">กดปุ่มด้านล่างเพื่อตรวจพิกัดและเปิดกล้อง</div>
+          </div>
+        </section>
         
         <!-- Header with Title -->
         <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
@@ -584,6 +603,11 @@
             </button>
           </div>
 
+          <div class="k8-cam-done" id="k8CamDone" hidden>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>
+            <div class="k8-cam-done-t">บันทึกแล้ว</div>
+            <div class="k8-cam-done-s" id="k8CamDoneSub">ส่งถึงอาจารย์เรียบร้อย</div>
+          </div>
           <!-- Watermark Overlay info on video -->
           <div class="camera-overlay-info" id="cameraOverlayInfo" style="display: none;">
             <div id="camOverlayStudent">นักเรียน: -</div>
@@ -610,6 +634,10 @@
           </div>
         </div>
 
+        <div class="k8-pr-foot" id="k8PrFoot">
+          <button type="button" class="k8-pr-done" id="k8PrDone" hidden onclick="switchView('dashboard')">กลับหน้าแรก</button>
+          <a href="javascript:void(0)" class="k8-pr-late" onclick="openPrayerLateApprovalModal()">ลืมเช็คชื่อเวลาก่อนหน้า? ส่งคำขออนุมัติย้อนหลัง</a>
+        </div>
         <!-- 5. Collapsible Prayer Notes Field (Collapsed by default, for special exceptions only) -->
         <div class="prayer-notes-card collapsible-card" id="prayerNotesCard">
           <!-- Accordion Toggle Header -->
@@ -844,6 +872,17 @@
     
     <!-- ==================== VIEW: HASANAT & GOOD DEEDS (ผลบุญ) ==================== -->
     <section id="view-hasanat" class="view-section">
+      <header class="k8-ha-head">
+        <div class="k8-ha-titlerow">
+          <h1>ผลบุญของฉัน</h1>
+          <span id="k8HaDate" class="k8-ha-date"></span>
+        </div>
+        <div class="k8-seg" role="tablist" aria-label="หมวดผลบุญ" id="k8HaTabs">
+          <button type="button" role="tab" data-tab="quran" onclick="switchHasanatSubTab('quran')">อัลกุรอาน</button>
+          <button type="button" role="tab" data-tab="memorize" onclick="switchHasanatSubTab('memorize')">ท่องจำ</button>
+          <button type="button" role="tab" data-tab="sunnah" onclick="switchHasanatSubTab('sunnah')">สุนัต</button>
+        </div>
+      </header>
       <!-- Modern Bento Hero Banner -->
       <div class="hasanat-bento-hero">
         <div class="hasanat-hero-main">
@@ -1012,7 +1051,7 @@
               <div class="quran-section-header">
                 <div class="quran-sec-title">
                   <i class="fa-solid fa-calendar-day"></i>
-                  <span>หน้าที่อ่านได้เฉพาะในวันที่เลือก</span>
+                  <span>วันนี้อ่านเพิ่ม</span>
                 </div>
                 <span class="quran-date-badge" id="quranActiveDateNote">ของวันนี้</span>
               </div>
@@ -1264,7 +1303,7 @@
             <!-- Memorization Progress Bar -->
             <div class="quran-minimal-kpi-card" style="margin-bottom: 1rem; padding: 0.9rem 1rem;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; font-size: 0.8rem; font-weight: 600; color: #334155;">
-                <span>ความก้าวหน้าการท่องจำทั้งหมด</span>
+                <span class="k8-mem-big"><span class="k8-mem-lbl">ท่องจำได้แล้ว</span><b id="k8MemBig">0</b> <small>/ 114 ซูเราะห์</small></span>
                 <span id="memorizedPercentLabel">0.0% (0 / 114 ซูเราะห์)</span>
               </div>
               <div class="minimal-progress-track">
@@ -3897,9 +3936,11 @@
         <div class="auth-portal-emblem">
           <img src="assets/logo.png" alt="KHALIFAH PROGRAM Logo" class="brand-logo-img">
         </div>
-        <div class="auth-portal-brand-title">KHALIFAH PROGRAM</div>
+        <div class="auth-portal-brand-title">KHALIFAH</div>
+        <p class="k8-auth-sub">ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม</p>
       </div>
       <div class="modal-header">
+        <button type="button" class="k8-auth-back" aria-label="กลับไปหน้าเข้าสู่ระบบ" onclick="handleAuthModeSegmentChange('login')"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
         <div style="font-weight: 700; font-size: 1.08rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.45rem;" id="authModalTitle">
           <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> ยืนยันตัวตนเข้าสู่ระบบ
         </div>
@@ -3909,6 +3950,7 @@
       </div>
       <div class="modal-body">
         <!-- 3-Role Selector Tabs (นักเรียน | อาจารย์/ผู้บริหาร | แอดมิน) -->
+        <section class="k8-auth-card">
         <div class="auth-role-switcher" role="tablist" aria-label="เลือกประเภทผู้ใช้งาน">
           <button type="button" class="auth-role-btn active" id="authRoleBtnStudent" onclick="selectAuthRole('student')">
             <i class="fa-solid fa-user-graduate"></i>
@@ -3941,21 +3983,21 @@
           <!-- Student Login Form (User = Parent Phone, Password = Student ID) -->
           <div id="loginFormSection">
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-phone"></i> เบอร์โทรศัพท์ผู้ปกครอง (User) <span class="required">*</span></label>
-              <input type="tel" class="form-control" id="loginParentPhone" placeholder="เช่น 0812345678" onkeypress="if(event.key === 'Enter') handleStudentLogin()">
+              <label class="form-label" for="loginParentPhone">เบอร์โทรศัพท์ผู้ปกครอง</label>
+              <input type="tel" inputmode="numeric" autocomplete="tel" class="form-control" id="loginParentPhone" placeholder="08x-xxx-xxxx" onkeypress="if(event.key === 'Enter') handleStudentLogin()">
               <div class="form-hint" style="color: var(--text-muted); font-size: 0.76rem; margin-top: 0.2rem;">
                 ใช้เบอร์โทรศัพท์ผู้ปกครองที่ได้ลงทะเบียนไว้ (รองรับเลข 0 นำหน้าครบถ้วน)
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-id-badge"></i> รหัสนักเรียน (รหัสผ่าน) <span class="required">*</span></label>
-              <input type="text" class="form-control" id="loginStudentId" placeholder="เช่น 00125 หรือ STD-256901" onkeypress="if(event.key === 'Enter') handleStudentLogin()">
+              <label class="form-label" for="loginStudentId">รหัสนักเรียน</label>
+              <input type="text" class="form-control" id="loginStudentId" placeholder="เช่น 00125" onkeypress="if(event.key === 'Enter') handleStudentLogin()">
               <div class="form-hint" style="color: var(--text-muted); font-size: 0.76rem; margin-top: 0.2rem;">
                 ใช้รหัสนักเรียนที่กรอกไว้ตอนสมัครเป็นรหัสผ่านเข้าสู่ระบบ
               </div>
             </div>
             <button class="btn btn-primary btn-block btn-lg" id="btnStudentLogin" onclick="handleStudentLogin()">
-              <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบนักเรียน
+              เข้าสู่ระบบ
             </button>
 
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--border-light); font-size: 0.84rem;">
@@ -4078,15 +4120,15 @@
           <!-- Teacher Login Section -->
           <div id="teacherLoginSection">
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-id-card-clip"></i> รหัสอาจารย์ / ชื่อผู้ใช้ (Username) <span class="required">*</span></label>
-              <input type="text" class="form-control" id="teacherLoginUser" placeholder="เช่น 0105 หรือ TCH-01 หรือเบอร์โทร" onkeypress="if(event.key === 'Enter') handleTeacherLogin()">
+              <label class="form-label" for="teacherLoginUser">ชื่อผู้ใช้ หรือเบอร์โทรศัพท์</label>
+              <input type="text" class="form-control" id="teacherLoginUser" autocomplete="username" placeholder="" onkeypress="if(event.key === 'Enter') handleTeacherLogin()">
             </div>
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-key"></i> รหัสผ่านอาจารย์ (Password) <span class="required">*</span></label>
-              <input type="password" class="form-control" id="teacherLoginPass" placeholder="กรอกรหัสผ่านอาจารย์" onkeypress="if(event.key === 'Enter') handleTeacherLogin()">
+              <label class="form-label" for="teacherLoginPass">รหัสผ่าน</label>
+              <input type="password" class="form-control" id="teacherLoginPass" autocomplete="current-password" placeholder="" onkeypress="if(event.key === 'Enter') handleTeacherLogin()">
             </div>
             <button class="btn btn-primary btn-block btn-lg" id="btnTeacherLogin" onclick="handleTeacherLogin()">
-              <i class="fa-solid fa-chalkboard-user"></i> เข้าสู่ระบบอาจารย์ผู้สอน
+              เข้าสู่ระบบ
             </button>
 
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--border-light); font-size: 0.84rem;">
@@ -4143,12 +4185,18 @@
             <i class="fa-solid fa-crown" style="color: var(--text-dark);"></i> <strong>สำหรับแอดมินสูงสุด (Super Admin):</strong> จัดการข้อมูลนักเรียน อาจารย์ อนุมัติรหัสยืนยันแบบสุ่ม และดูสถิติภาพรวมทั้งหมดของระบบ
           </div>
           <div class="form-group">
-            <label class="form-label"><i class="fa-solid fa-lock"></i> รหัสผ่านแอดมินสูงสุด (Master Code) <span class="required">*</span></label>
-            <input type="password" class="form-control" id="inlineAdminPassInput" placeholder="กรอกรหัสแอดมินสูงสุด" onkeypress="if(event.key === 'Enter') handleInlineAdminLogin()">
+            <label class="form-label" for="inlineAdminPassInput">รหัสแอดมินหลัก</label>
+            <input type="password" class="form-control" id="inlineAdminPassInput" autocomplete="current-password" placeholder="" onkeypress="if(event.key === 'Enter') handleInlineAdminLogin()">
+            <span class="k8-auth-hint">แอดมินรองเข้าผ่านแท็บ "อาจารย์" ด้วยชื่อผู้ใช้ของตนเอง</span>
           </div>
           <button class="btn btn-primary btn-block btn-lg" id="btnInlineAdminLogin" onclick="handleInlineAdminLogin()">
-            <i class="fa-solid fa-shield-halved"></i> เข้าสู่ระบบแอดมินสูงสุด
+            เข้าสู่ระบบ
           </button>
+        </div>
+        </section>
+        <div class="k8-auth-links" id="k8AuthLinks">
+          <a href="javascript:void(0)" class="k8-auth-link-main" onclick="handleAuthModeSegmentChange('register')">สมัครบัญชีใหม่</a>
+          <a href="javascript:void(0)" onclick="openOtpVerifyModalPrompt(typeof currentAuthRole!=='undefined'&&currentAuthRole==='teacher'?'teacher':'student')">มีรหัสยืนยัน 6 หลักจากอีเมลแล้ว</a>
         </div>
         <p class="k8-secure-note"><i class="fa-solid fa-lock" aria-hidden="true"></i> ตรวจสอบรหัสที่เซิร์ฟเวอร์อย่างปลอดภัย · หากกรอกผิดหลายครั้ง ระบบจะล็อกชั่วคราว 15 นาที</p>
       </div>
@@ -5169,7 +5217,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.0"></script>
-  <script defer src="ui-v8.js?v=8.0"></script>
+  <script defer src="app.js?v=8.1"></script>
+  <script defer src="ui-v8.js?v=8.1"></script>
 </body>
 </html>

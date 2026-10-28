@@ -964,3 +964,173 @@
     };
   }
 })();
+
+/* ============ Round 3 · Login page (canvas Login / Register) ============ */
+(function () {
+  function syncAuthState() {
+    const m = document.getElementById('authModal');
+    if (!m) return;
+    const role = (typeof currentAuthRole !== 'undefined' && currentAuthRole) || 'student';
+    const regS = document.getElementById('registerFormSection');
+    const regT = document.getElementById('teacherRegisterSection');
+    const isReg = role === 'student' ? (regS && regS.style.display !== 'none' && regS.style.display !== '')
+      : role === 'teacher' ? (regT && regT.style.display !== 'none' && regT.style.display !== '') : false;
+    m.dataset.role = role;
+    m.dataset.mode = isReg ? 'register' : 'login';
+    const t = document.getElementById('authModalTitle');
+    if (t && isReg) t.innerHTML = '<span class="k8-auth-h1">สมัครบัญชีใหม่</span><span class="k8-auth-h2">แอดมินจะตรวจสอบ แล้วส่งรหัสยืนยันทางอีเมล</span>';
+  }
+  ['selectAuthRole', 'toggleAuthForm', 'toggleTeacherAuthForm', 'handleAuthModeSegmentChange'].forEach(function (fn) {
+    const orig = window[fn];
+    if (typeof orig !== 'function') return;
+    window[fn] = function () { const r = orig.apply(this, arguments); try { syncAuthState(); } catch (e) {} return r; };
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncAuthState); else syncAuthState();
+})();
+
+/* ============ Round 3 · Prayer check page (canvas Prayer) ============ */
+(function () {
+  const pad = n => String(n).padStart(2, '0');
+  const fmtMin = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+  function slotKey(x) { try { return typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(x) : x; } catch (e) { return x; } }
+  function currentSlot() {
+    try { if (selectedPrayerTime) return selectedPrayerTime; } catch (e) {}
+    const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
+    try {
+      const w = PRAYER_TIME_WINDOWS.find(w => cur >= w.startMin - 30 && cur <= w.endMin + 30);
+      if (w) return w.name;
+      if (cur < PRAYER_TIME_WINDOWS[0].startMin) return 'อีชาอ์';
+    } catch (e) {}
+    return 'ซุบฮิ';
+  }
+  function isDone(slot) {
+    try {
+      const list = getStudentTodayPrayersList() || [];
+      const k = slotKey(slot);
+      return list.some(p => slotKey(p.prayerName || p.prayerTime || p.timeSlot || '') === k);
+    } catch (e) { return false; }
+  }
+  const DEFAULT_TXT = { 1: 'ตรวจพิกัด & เปิดกล้อง', 2: 'ถ่ายภาพและส่งบันทึก' };
+  function relabelBtn() {
+    const t = document.getElementById('btnCaptureInstantText');
+    if (!t) return;
+    const txt = t.textContent || '';
+    if (/1\.\s*ตรวจสอบพิกัด/.test(txt) && !/กำลัง/.test(txt)) t.textContent = DEFAULT_TXT[1];
+    else if (/2\.\s*ถ่ายรูป/.test(txt) && !/กำลัง/.test(txt)) t.textContent = DEFAULT_TXT[2];
+  }
+  window.updatePrayerV8 = function () {
+    const root = document.getElementById('view-prayer');
+    if (!root) return;
+    const slot = currentSlot();
+    const title = document.getElementById('k8PrTitle');
+    if (title) title.textContent = 'เช็คชื่อละหมาด' + slot;
+    let range = '-';
+    try {
+      const w = PRAYER_TIME_WINDOWS.find(w => w.name === slotKey(slot) || w.key === slotKey(slot));
+      if (w) range = slotKey(slot) === 'อีชาอ์' ? fmtMin(w.startMin) + '–ก่อนรุ่งอรุณ' : fmtMin(w.startMin) + '–' + fmtMin(w.endMin);
+    } catch (e) {}
+    const now = new Date();
+    const sub = document.getElementById('k8PrSub');
+    if (sub) sub.textContent = 'ช่วงเวลา ' + range + ' · ตอนนี้ ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' น.';
+
+    const done = isDone(slot);
+    let step = 1;
+    try { step = prayerCheckStep === 2 ? 2 : 1; } catch (e) {}
+    if (done) step = 3;
+    document.querySelectorAll('#k8PrSteps li').forEach((li, i) => li.classList.toggle('on', i + 1 <= step));
+
+    const loc = document.getElementById('k8PrLoc');
+    let vl = null; try { vl = verifiedLocation; } catch (e) {}
+    const lt = document.getElementById('k8PrLocTitle'), ld = document.getElementById('k8PrLocDesc');
+    if (loc && lt && ld) {
+      if (vl && vl.isWithinZone) {
+        loc.dataset.state = 'in'; lt.textContent = 'อยู่ในพื้นที่ละหมาด';
+        ld.textContent = (vl.locationName || 'มัสยิด') + (isFinite(vl.distanceMeters) ? ' · ห่าง ' + Math.round(vl.distanceMeters) + ' ม.' : '');
+      } else if (vl) {
+        loc.dataset.state = 'out'; lt.textContent = 'อยู่นอกพื้นที่ละหมาด';
+        ld.textContent = (vl.locationName || 'ตำแหน่งปัจจุบัน') + (vl.formattedMosqueDist ? ' · ห่างมัสยิด ' + vl.formattedMosqueDist : '');
+      } else {
+        loc.dataset.state = 'idle'; lt.textContent = 'ยังไม่ได้ตรวจพิกัด';
+        ld.textContent = 'กดปุ่มด้านล่างเพื่อตรวจพิกัดและเปิดกล้อง';
+      }
+    }
+    // move the main action button under the camera (canvas footer)
+    const foot = document.getElementById('k8PrFoot'), btn = document.getElementById('btnCaptureInstant');
+    if (foot && btn && btn.parentElement !== foot) foot.insertBefore(btn, foot.firstChild);
+    const doneBox = document.getElementById('k8PrDone');
+    if (doneBox) {
+      doneBox.hidden = !done;
+      const cd = document.getElementById('k8CamDone');
+      if (cd) cd.hidden = !done;
+      const cs = document.getElementById('k8CamDoneSub');
+      if (cs) cs.textContent = 'ละหมาด' + slot + ' · ส่งถึงอาจารย์เรียบร้อย';
+    }
+    if (btn) btn.classList.toggle('k8-hide', done && step === 3 && (function () { try { return prayerCheckStep !== 2; } catch (e) { return true; } })());
+    relabelBtn();
+  };
+  function hook(fn, after) {
+    const orig = window[fn];
+    if (typeof orig !== 'function') return;
+    window[fn] = function () {
+      const r = orig.apply(this, arguments);
+      if (r && typeof r.then === 'function') r.then(() => { try { after(); } catch (e) {} }, () => { try { after(); } catch (e) {} });
+      else try { after(); } catch (e) {}
+      return r;
+    };
+  }
+  const upd = () => window.updatePrayerV8();
+  ['selectPrayerTime', 'handlePrayerMainButtonClick', 'switchView', 'autoSelectDetectedPrayerSlot', 'verifyGeolocation'].forEach(f => hook(f, upd));
+  function boot() {
+    upd();
+    const t = document.getElementById('btnCaptureInstantText');
+    if (t && 'MutationObserver' in window) new MutationObserver(relabelBtn).observe(t, { childList: true, characterData: true, subtree: true });
+    setInterval(() => { const v = document.getElementById('view-prayer'); if (v && v.classList.contains('active')) upd(); }, 5000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+/* ============ Round 3 · Hasanat (canvas: 3 tabs) ============ */
+(function () {
+  let haTab = 'quran';
+  function syncTabs() {
+    document.querySelectorAll('#k8HaTabs button').forEach(b => {
+      const on = b.dataset.tab === haTab;
+      b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    const d = document.getElementById('k8HaDate'), src = document.getElementById('hasanatDateDisplay');
+    if (d) {
+      try { d.textContent = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) {}
+    }
+  }
+  const orig = window.switchHasanatSubTab;
+  if (typeof orig === 'function') {
+    window.switchHasanatSubTab = function (tab) {
+      if (!tab || tab === 'all') tab = haTab || 'quran';
+      haTab = tab;
+      const r = orig.call(this, tab);
+      syncTabs();
+      return r;
+    };
+  }
+  const sv = window.switchView;
+  if (typeof sv === 'function') {
+    window.switchView = function (v) {
+      const r = sv.apply(this, arguments);
+      if (v === 'hasanat') try { window.switchHasanatSubTab(haTab); } catch (e) {}
+      return r;
+    };
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncTabs); else syncTabs();
+})();
+(function () {
+  function memSync() {
+    const src = document.getElementById('ovMemCountVal'), dst = document.getElementById('k8MemBig');
+    if (src && dst) dst.textContent = (src.textContent || '0').trim();
+  }
+  function boot() {
+    memSync();
+    const src = document.getElementById('ovMemCountVal');
+    if (src && 'MutationObserver' in window) new MutationObserver(memSync).observe(src, { childList: true, characterData: true, subtree: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
