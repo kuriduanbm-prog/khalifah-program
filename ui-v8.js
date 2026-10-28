@@ -1819,3 +1819,81 @@ window.k8RegBirthChange = function (v) {
   if (typeof o === 'function') window.renderHomeF = function () { const r = o.apply(this, arguments); try { upd(); } catch (e) {} return r; };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', upd); else upd();
 })();
+
+/* ============ Round 6 · Admin: canvas page headers for the remaining tabs ============ */
+(function () {
+  const HEAD = {
+    'admin-tab-subadmins': ['อาจารย์ & ผู้บริหาร', 'เพิ่มบัญชี กำหนดสิทธิ์ และรายวิชาที่รับผิดชอบ'],
+    'admin-tab-prayers-monitor': ['ละหมาด', 'ติดตามการเช็คชื่อละหมาด 5 เวลา รายวันและรายบุคคล'],
+    'admin-tab-activities-admin': ['กิจกรรม & สแกน QR', 'สร้างกิจกรรม เปิด QR ให้นักเรียนสแกน และดูผู้เข้าร่วม'],
+    'admin-tab-calendar-admin': ['ปฏิทินโรงเรียน', 'วันสำคัญ วันสอบ และกิจกรรมที่แสดงให้นักเรียนและอาจารย์'],
+    'admin-tab-grading': ['เกรดรายวิชา', 'ดูและแก้ไขเกรดของนักเรียนแต่ละวิชา'],
+    'admin-tab-subjects': ['รายวิชา', 'รายวิชาทั้งหมดในโรงเรียนและหมวดทักษะ'],
+    'admin-tab-promote': ['เลื่อนชั้น', 'เลื่อนระดับชั้นทั้งโรงเรียน รายระดับ หรือรายคน'],
+    'admin-tab-reports': ['ส่งออกรายงาน', 'ดาวน์โหลดข้อมูลเป็น Excel, Word หรือ PDF'],
+    'admin-tab-logo': ['ตั้งค่า & โลโก้', 'โลโก้ที่แสดงบนแอปและเอกสาร']
+  };
+  function boot() {
+    Object.keys(HEAD).forEach((id) => {
+      const tab = document.getElementById(id);
+      if (!tab || tab.querySelector(':scope > .k8-page-head')) return;
+      const h = document.createElement('div');
+      h.className = 'k8-page-head';
+      h.innerHTML = '<h1>' + HEAD[id][0] + '</h1><div class="k8-as-sub">' + HEAD[id][1] + '</div>';
+      tab.insertBefore(h, tab.firstChild);
+    });
+    const tg = document.getElementById('admin-tab-grading');
+    if (tg && !document.getElementById('k8GradeTip')) {
+      const tip = document.createElement('div');
+      tip.id = 'k8GradeTip'; tip.className = 'k8-tip';
+      tip.innerHTML = '<span>อยากกรอกคะแนนชิ้นงานและให้เกรด .5 (เช่น 3.5)? ใช้หน้า <b>คะแนน &amp; เกรด</b> ของระบบอาจารย์</span><button type="button" class="k8-btn-pri" onclick="switchView(\'teacher\'); switchTeacherTab(\'grades\')">เปิดหน้าคะแนน &amp; เกรด</button>';
+      tg.insertBefore(tip, tg.children[1] || null);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+/* ============ Round 6 · Reusable canvas calendar (teacher tab) ============ */
+(function () {
+  const MF = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  const DOW = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const COLORS = [['#0369a1', '#e0f2fe'], ['#15803d', '#f0fdf4'], ['#b45309', '#fffbeb'], ['#5b21b6', '#ede9fe'], ['#b91c1c', '#fef2f2']];
+  const catColor = (c) => { const s = String(c || ''); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return /สอบ|ประเมิน|exam/i.test(s) ? COLORS[4] : /หยุด|holiday/i.test(s) ? COLORS[2] : /ศาสน/.test(s) ? COLORS[1] : COLORS[h % 4 === 1 ? 0 : h % 4]; };
+  const st = {}; window.k8CalSel = {};
+  function events() { try { return getVisibleCalendarEvents() || []; } catch (e) { try { return calendarEvents || []; } catch (e2) { return []; } } }
+  const on = (ev, day) => { const s = String(ev.startDate || '').slice(0, 10), e = String(ev.endDate || ev.startDate || '').slice(0, 10); return s && day >= s && day <= (e || s); };
+  function render(key) {
+    const root = document.querySelector('[data-k8cal="' + key + '"]'); if (!root) return;
+    const t = new Date();
+    const s = st[key] || (st[key] = { y: t.getFullYear(), m: t.getMonth(), sel: ymd(t) });
+    window.k8CalSel[key] = s.sel;
+    const evs = events();
+    root.querySelector('[data-k8cal-month]').textContent = MF[s.m] + ' ' + (s.y + 543);
+    const first = new Date(s.y, s.m, 1), days = new Date(s.y, s.m + 1, 0).getDate(), today = ymd(t);
+    let html = DOW.map((d) => '<span class="k8-cal-dow">' + d + '</span>').join('');
+    for (let i = 0; i < (first.getDay() + 6) % 7; i++) html += '<span></span>';
+    for (let d = 1; d <= days; d++) {
+      const k = ymd(new Date(s.y, s.m, d)); const has = evs.find((e) => on(e, k));
+      html += '<button type="button" class="k8-cal-cell' + (k === s.sel ? ' is-sel' : '') + (k === today ? ' is-today' : '') + '" aria-pressed="' + (k === s.sel) + '" onclick="k8CalPickOf(\'' + key + '\',\'' + k + '\')"><span>' + d + '</span><i style="background:' + (has ? (k === s.sel ? '#fff' : catColor(has.category)[0]) : 'transparent') + '"></i></button>';
+    }
+    root.querySelector('[data-k8cal-grid]').innerHTML = html;
+    const sd = new Date(s.sel + 'T00:00:00');
+    root.querySelector('[data-k8cal-label]').textContent = sd.getDate() + ' ' + MF[sd.getMonth()] + ' ' + (sd.getFullYear() + 543);
+    const list = evs.filter((e) => on(e, s.sel));
+    root.querySelector('[data-k8cal-list]').innerHTML = list.length ? list.map((e) => {
+      const [ink, bg] = catColor(e.category);
+      const meta = [e.startTime ? e.startTime + (e.endTime ? '–' + e.endTime : '') : 'ทั้งวัน', e.location, e.targetAudienceLabel].filter(Boolean).join(' · ');
+      return '<button type="button" class="k8-cal-ev" onclick="if(typeof openCalendarEventDetail===\'function\')openCalendarEventDetail(\'' + esc(e.id) + '\')"><span class="k8-cal-ev-bar" style="background:' + ink + '"></span><span class="k8-cal-ev-main"><b>' + esc(e.title || '-') + '</b><span>' + esc(meta) + '</span></span>' + (e.category ? '<span class="k8-pill" style="background:' + bg + ';color:' + ink + '">' + esc(e.category) + '</span>' : '') + '</button>';
+    }).join('') : '<p class="k8-cal-none">ไม่มีกิจกรรมในวันนี้</p>';
+    const add = root.querySelector('[data-k8cal-add]'); if (add) { let can = false; try { can = canManageCalendar(); } catch (e) {} add.hidden = !can; }
+  }
+  window.k8CalShiftOf = function (key, n) { const s = st[key]; if (!s) return; s.m += n; if (s.m < 0) { s.m = 11; s.y--; } if (s.m > 11) { s.m = 0; s.y++; } const t = new Date(); s.sel = (s.y === t.getFullYear() && s.m === t.getMonth()) ? ymd(t) : ymd(new Date(s.y, s.m, 1)); render(key); };
+  window.k8CalPickOf = function (key, k) { if (st[key]) st[key].sel = k; render(key); };
+  const rc = window.renderCalendar;
+  if (typeof rc === 'function') window.renderCalendar = function () { const r = rc.apply(this, arguments); try { render('t'); } catch (e) {} return r; };
+  const stt = window.switchTeacherTab;
+  if (typeof stt === 'function') window.switchTeacherTab = function (t) { const r = stt.apply(this, arguments); if (t === 'calendar') try { render('t'); } catch (e) {} return r; };
+})();

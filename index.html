@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.8">
-  <link rel="stylesheet" href="ui-v8.css?v=8.8">
+  <link rel="stylesheet" href="style.css?v=8.9">
+  <link rel="stylesheet" href="ui-v8.css?v=8.9">
 </head>
 <body class="auth-locked">
 
@@ -1567,12 +1567,12 @@
         </button>
         <button class="hasanat-subnav-btn teacher-nav-tab" id="btnTeacherTabGrade" onclick="switchTeacherTab('grades')">
           <i class="fa-solid fa-graduation-cap"></i>
-          <span class="tab-label">กรอกเกรดรายวิชา</span>
+          <span class="tab-label">คะแนน &amp; เกรด</span>
           <span class="teacher-tab-badge" id="teacherGradesSubjBadge">เกรด 1–4</span>
         </button>
         <button class="hasanat-subnav-btn teacher-nav-tab" id="btnTeacherTabCal" onclick="switchTeacherTab('calendar')">
           <i class="fa-solid fa-calendar-days"></i>
-          <span class="tab-label">ปฏิทินกิจกรรม</span>
+          <span class="tab-label">ปฏิทิน</span>
           <span class="teacher-tab-badge" id="teacherCalBadge">โรงเรียน</span>
         </button>
       </div>
@@ -1993,6 +1993,24 @@
 
       <!-- ==================== TAB 4: SCHOOL CALENDAR MANAGEMENT (รูปแนบ 1: สวยงาม พอดีจอ ปฏิทินและกิจกรรม) ==================== -->
       <div id="teacher-tab-calendar" class="teacher-subcontent" style="display: none;">
+        <div class="k8-cal k8-tcal" data-k8cal="t">
+          <header class="k8-tcal-head">
+            <h1>ปฏิทินโรงเรียน</h1>
+            <button type="button" class="k8-cal-add" data-k8cal-add onclick="if(typeof openCalendarEventModal==='function')openCalendarEventModal(null, (window.k8CalSel && k8CalSel.t) || null)">+ เพิ่มกิจกรรม</button>
+          </header>
+          <section class="k8-cal-card">
+            <div class="k8-cal-nav">
+              <button type="button" aria-label="เดือนก่อนหน้า" onclick="k8CalShiftOf('t',-1)">‹</button>
+              <span data-k8cal-month>-</span>
+              <button type="button" aria-label="เดือนถัดไป" onclick="k8CalShiftOf('t',1)">›</button>
+            </div>
+            <div class="k8-cal-grid" data-k8cal-grid></div>
+          </section>
+          <section class="k8-cal-day">
+            <h2 data-k8cal-label>-</h2>
+            <div data-k8cal-list></div>
+          </section>
+        </div>
         <div class="teacher-calendar-container" style="max-width: 620px; margin: 0 auto 1.5rem auto;">
           <div class="card cal-phone-card" style="border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05); overflow: hidden; background: #ffffff;">
             
@@ -5382,7 +5400,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.8"></script>
-  <script defer src="ui-v8.js?v=8.8"></script>
+  <script defer src="app.js?v=8.9"></script>
+  <script defer src="ui-v8.js?v=8.9"></script>
 </body>
 </html>
