@@ -2832,7 +2832,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.4';
+  const APP_VERSION = '10.5';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -2871,6 +2871,7 @@ window.k8RegBirthChange = function (v) {
     if (!r || !r.dataVersion) return;
     const changed = dataVer && r.dataVersion !== dataVer;
     dataVer = r.dataVersion;
+    if (changed && loggedIn()) { try { if (window.k8BehaviorReload) window.k8BehaviorReload(); } catch (e) {} }
     if (changed && loggedIn() && typeof syncAllDataFromCloud === 'function' && Date.now() - lastSyncAt > 20000) {
       lastSyncAt = Date.now();
       Promise.resolve(syncAllDataFromCloud(false)).catch(() => {});
@@ -3037,7 +3038,9 @@ window.k8RegBirthChange = function (v) {
   const CATS = [['dress', 'เครื่องแต่งกาย', '#1d4ed8', '#eff6ff'], ['dorm', 'ความสะอาดหอพัก', '#7c3aed', '#f5f3ff'], ['toilet', 'ห้องน้ำ', '#0e7490', '#ecfeff'], ['conduct', 'ความประพฤติ', '#b45309', '#fffbeb'], ['good', 'ทำความดี (เพิ่มคะแนน)', '#15803d', '#f0fdf4']];
   const catOf = (k) => CATS.find((c) => c[0] === k) || CATS[3];
   const svg = (k, s) => '<svg width="' + (s || 20) + '" height="' + (s || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICO[k] || ICO.conduct) + '</svg>';
-  function term() { return window.k8Term().key; }
+  // ใช้ภาคเรียนจากเซิร์ฟเวอร์เป็นหลัก (ตรงกับที่บันทึกในชีต) ถ้ายังไม่ได้โหลดใช้ค่าในเครื่อง
+  let serverTerm = '';
+  function term() { return serverTerm || window.k8Term().key; }
   const level = (sc) => sc >= 90 ? ['ดีมาก', '#15803d', '#dcfce7'] : sc >= 70 ? ['ปกติ', '#1d4ed8', '#dbeafe'] : sc >= 50 ? ['ต้องดูแล', '#b45309', '#fef3c7'] : ['ต้องติดตามใกล้ชิด', '#b91c1c', '#fee2e2'];
   const me = () => { try { return currentAdmin || null; } catch (e) { return null; } };
   const isInspector = () => { const a = me(); return !!a && /INSPECTOR|ผู้ตรวจการ/i.test(String(a.realRole || a.role || '')); };
@@ -3062,7 +3065,7 @@ window.k8RegBirthChange = function (v) {
     B.loading = true;
     try {
       const r = await api('getBehaviorData');
-      if (r && r.success) { B.rules = r.rules || []; B.logs = r.logs || []; if (r.students && r.students.length) B.students = r.students; B.loaded = true; try { localStorage.setItem('khalifah_behavior_cache', JSON.stringify({ rules: B.rules, logs: B.logs, students: B.students })); } catch (e) {} }
+      if (r && r.success) { if (r.term) serverTerm = r.term; B.rules = r.rules || []; B.logs = r.logs || []; if (r.students && r.students.length) B.students = r.students; B.loaded = true; try { localStorage.setItem('khalifah_behavior_cache', JSON.stringify({ rules: B.rules, logs: B.logs, students: B.students })); } catch (e) {} }
       else if (r && r.message) toast(r.message, 'error');
     } catch (e) {
       try { const c = JSON.parse(localStorage.getItem('khalifah_behavior_cache') || 'null'); if (c) { B.rules = c.rules || []; B.logs = c.logs || []; B.students = c.students || []; } } catch (er) {}
@@ -3241,7 +3244,7 @@ window.k8RegBirthChange = function (v) {
   // ---------- นักเรียน: กล่องคะแนนพฤติกรรมหน้าแรก ----------
   let mine = null;
   try { mine = JSON.parse(localStorage.getItem('khalifah_behavior_me') || 'null'); } catch (e) {}
-  function myScore() { if (!mine) return 100; const t = term(); return clamp(100 + (mine.logs || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t)).reduce((a, l) => a + (Number(l.points) || 0), 0)); }
+  function myScore() { if (!mine) return 100; const t = mine.term || term(); return clamp(100 + (mine.logs || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t)).reduce((a, l) => a + (Number(l.points) || 0), 0)); }
   function paintMine() {
     const el = document.getElementById('hfBehScore'); if (!el) return;
     const sc = myScore(); const lv = level(sc);
@@ -3249,27 +3252,27 @@ window.k8RegBirthChange = function (v) {
     const box = document.getElementById('hfBeh'); if (box) box.setAttribute('aria-label', 'คะแนนพฤติกรรม ' + sc + ' จาก 100 · ' + lv[0]);
     const ring = document.getElementById('hfBehRing'); if (ring) { ring.style.setProperty('--p', sc); ring.style.setProperty('--c', lv[1]); }
     const lvEl = document.getElementById('hfBehLv'); if (lvEl) { lvEl.textContent = lv[0]; lvEl.style.color = lv[1]; lvEl.style.background = lv[2]; }
-    const t = term(); const act = ((mine && mine.logs) || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t));
+    const t = (mine && mine.term) || term(); const act = ((mine && mine.logs) || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t));
     const minus = act.filter((l) => l.points < 0).reduce((a, l) => a + l.points, 0), plus = act.filter((l) => l.points > 0).reduce((a, l) => a + l.points, 0);
     const sub = document.getElementById('hfBehSub'); if (sub) sub.textContent = act.length ? 'ถูกหัก ' + Math.abs(minus) + ' · ได้เพิ่ม ' + plus + ' · ภาคเรียนนี้' : 'เต็ม 100 · ยังไม่มีการหักคะแนนภาคเรียนนี้';
   }
   let mineAt = 0;
   async function loadMine(force) {
     let st = null; try { st = currentStudent; } catch (e) {}
-    if (!st || (!force && Date.now() - mineAt < 60000)) { paintMine(); return; }
+    if (!st || (!force && Date.now() - mineAt < 15000)) { paintMine(); return; }
     mineAt = Date.now();
-    try { const r = await api('getMyBehavior'); if (r && r.success) { mine = { logs: r.logs || [], term: r.term }; try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} } } catch (e) {}
+    try { const r = await api('getMyBehavior'); if (r && r.success) { if (r.term) serverTerm = r.term; mine = { logs: r.logs || [], term: r.term }; try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} } } catch (e) {}
     paintMine();
   }
   window.k8BehOpenMine = function () {
     let st = null; try { st = currentStudent; } catch (e) {}
-    const t = term();
+    const t = (mine && mine.term) || term();
     const logs = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
     document.getElementById('k8BhModalTitle').textContent = 'คะแนนพฤติกรรมของฉัน';
     document.getElementById('k8BhModalSub').textContent = window.k8Term().label + ' · เริ่มต้น 100 คะแนน';
     document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), logs) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>';
     openModal('k8BhModal');
-    if (st) loadMine(true).then(() => { if (document.getElementById('k8BhModal').classList.contains('open')) { const l2 = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date))); document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), l2) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>'; } });
+    if (st) loadMine(true).then(() => { if (document.getElementById('k8BhModal').classList.contains('open')) { const t2 = (mine && mine.term) || term(); const l2 = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t2).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date))); document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), l2) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>'; } });
   };
 
   // ---------- บัญชีผู้ตรวจการ: ล็อกไว้ที่หน้าผู้ตรวจการเท่านั้น ----------
@@ -3303,7 +3306,9 @@ window.k8RegBirthChange = function (v) {
   if (document.readyState === 'complete') setTimeout(boot, 0); else window.addEventListener('load', () => setTimeout(boot, 0));
   // ข้อมูลสด: เมื่อมีการเปลี่ยนแปลงจากเครื่องอื่น ให้โหลดใหม่ตอนเปิดหน้าอีกครั้ง
   document.addEventListener('visibilitychange', () => { if (document.hidden) return; if (isInspector()) load(true); else loadMine(false); });
-  window.k8BehaviorReload = function () { B.loaded = false; load(true); loadMine(true); };
+  window.k8BehaviorReload = function () { if (isInspector() || (document.getElementById('k8BhAdmin') && document.getElementById('k8BhAdmin').offsetParent)) load(true); loadMine(true); };
+  document.addEventListener('k8-term-changed', () => { paintMine(); render(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMine(true); });
 })();
 
 /* ============ Round 12 · จัดการภาคเรียน / ปีการศึกษา (แอดมิน) ============ */
