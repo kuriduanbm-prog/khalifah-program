@@ -1691,3 +1691,4 @@ html.k8-restoring #authModal { display: none !important; }
 html.k8-restoring body > *:not(script) { visibility: hidden; }
 html.k8-restoring body { background: #f4f6f9; }
 .k8-acct-menu button[hidden], #k8ThBackAdmin[hidden] { display: none !important; }
+#view-prayer .camera-container { width: 100% !important; max-width: none !important; align-self: stretch; }

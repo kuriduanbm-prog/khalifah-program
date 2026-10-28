@@ -1122,6 +1122,9 @@
       } else if (vl) {
         loc.dataset.state = 'out'; lt.textContent = 'อยู่นอกพื้นที่ละหมาด';
         ld.textContent = (vl.locationName || 'ตำแหน่งปัจจุบัน') + (vl.formattedMosqueDist ? ' · ห่างมัสยิด ' + vl.formattedMosqueDist : '');
+      } else if (done) {
+        loc.dataset.state = 'in'; lt.textContent = 'เช็คชื่อเวลานี้เรียบร้อยแล้ว';
+        ld.textContent = 'ไม่ต้องตรวจพิกัดซ้ำ · รอเช็คชื่อเวลาถัดไป';
       } else {
         loc.dataset.state = 'idle'; lt.textContent = 'ยังไม่ได้ตรวจพิกัด';
         ld.textContent = 'กดปุ่มด้านล่างเพื่อตรวจพิกัดและเปิดกล้อง';
@@ -2777,7 +2780,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '9.9';
+  const APP_VERSION = '10.0';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
