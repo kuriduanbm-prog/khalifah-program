@@ -735,3 +735,232 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
+
+/* ---------------- v8 รอบ 2: ภาพรวมอาจารย์ (สิ่งที่ต้องทำ + ต้องติดตาม) ---------------- */
+(function () {
+  'use strict';
+  const esc = (v) => (typeof escapeHtml === 'function' ? escapeHtml(v) : String(v == null ? '' : v));
+  const readJSON = (k, f) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? f : v; } catch (e) { return f; } };
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+
+  function renderTeacherTodo() {
+    const list = document.getElementById('k8TodoList');
+    const follow = document.getElementById('k8FollowList');
+    if (!list || !follow) return;
+    const students = (typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents.filter((s) => !/ลาออก|สำเร็จ/.test(String(s.status || ''))) : [];
+    const today = ymd(new Date());
+
+    // 1) เช็คชื่อวันนี้
+    const logs = readJSON('khalifah_daily_attendance_logs', {});
+    const todayMap = logs[today] || {};
+    const cloudAtt = readJSON('khalifah_attendance_logs', []);
+    const checkedIds = new Set(Object.keys(todayMap));
+    cloudAtt.forEach((r) => { if (r && r.date === today) checkedIds.add(String(r.studentId)); });
+    const notChecked = students.filter((s) => !checkedIds.has(String(s.studentId)) && !checkedIds.has(String(s.studentId).replace(/^0+/, ''))).length;
+
+    // 2) คำขอละหมาดย้อนหลังที่รออนุมัติ
+    const approvals = readJSON('khalifah_prayer_approvals', []);
+    const pendingLate = approvals.filter((a) => a && String(a.status || 'pending').toLowerCase() === 'pending').length;
+
+    // 3) ความคืบหน้าเกรดวิชาแรกที่รับผิดชอบ
+    const subjSel = document.getElementById('teacherPortalSubjectSelect');
+    const subjId = subjSel && subjSel.value;
+    const subjName = subjSel && subjSel.selectedOptions[0] ? subjSel.selectedOptions[0].textContent : '';
+    let graded = 0;
+    if (subjId) {
+      students.forEach((s) => {
+        const g = s.subjectGrades && s.subjectGrades[subjId];
+        if (g !== undefined && g !== null && g !== '' && Number(g) > 0) graded++;
+      });
+    }
+
+    // 4) กิจกรรมใน 7 วัน
+    const acts = (typeof activities !== 'undefined' && Array.isArray(activities)) ? activities : [];
+    const now = new Date(); const in7 = new Date(now.getTime() + 7 * 864e5);
+    const soon = acts.filter((a) => { const d = new Date(a.startDate || a.date); return !isNaN(d) && d >= new Date(ymd(now)) && d <= in7; }).length;
+
+    const rows = [
+      { n: notChecked, title: 'เช็คชื่อมาเรียนวันนี้', sub: notChecked ? 'ยังไม่เช็ค ' + notChecked + ' คน' : 'เช็คครบทุกคนแล้ว', bg: notChecked ? '#fffbeb' : '#f0fdf4', ink: notChecked ? '#b45309' : '#15803d', go: "switchTeacherTab('attendance')" },
+      (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.role === 'SuperAdmin')
+        ? { n: pendingLate, title: 'คำขอละหมาดย้อนหลัง', sub: pendingLate ? 'รออนุมัติ ' + pendingLate + ' รายการ' : 'ไม่มีคำขอค้าง', bg: '#eff6ff', ink: '#1d4ed8', go: "openPrayerApprovalsV8()" }
+        : null,
+      { n: subjId ? students.length - graded : 0, title: 'เกรด' + (subjName ? ' ' + subjName.replace(/^[A-Z0-9]+ - /, '') : ''), sub: subjId ? 'ให้เกรดแล้ว ' + graded + ' จาก ' + students.length + ' คน' : 'ยังไม่มีวิชาที่รับผิดชอบ', bg: '#e0f2fe', ink: '#0369a1', go: "switchTeacherTab('grades')" },
+      { n: soon, title: 'กิจกรรมใกล้ถึง', sub: soon ? soon + ' กิจกรรมภายใน 7 วัน' : 'ไม่มีกิจกรรมใน 7 วัน', bg: '#f0fdf4', ink: '#15803d', go: "switchTeacherTab('calendar')" }
+    ];
+    list.innerHTML = rows.filter(Boolean).map((r) =>
+      '<button type="button" class="k8-todo-row" onclick="' + r.go + '"><span class="k8-todo-badge" style="background:' + r.bg + ';color:' + r.ink + '">' + r.n + '</span>' +
+      '<span class="k8-todo-text"><b>' + esc(r.title) + '</b><span>' + esc(r.sub) + '</span></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>'
+    ).join('');
+
+    // ต้องติดตาม: ขาด/สาย >= 3 ครั้งในสัปดาห์นี้
+    const d0 = new Date(); const dow = (d0.getDay() + 6) % 7; d0.setDate(d0.getDate() - dow);
+    const start = ymd(d0);
+    const counts = {};
+    const bump = (sid, st, date) => {
+      if (!date || date < start) return;
+      const k = String(sid).replace(/^0+/, '');
+      counts[k] = counts[k] || { absent: 0, late: 0 };
+      if (/ขาด|absent/i.test(st)) counts[k].absent++;
+      else if (/สาย|late/i.test(st)) counts[k].late++;
+    };
+    cloudAtt.forEach((r) => r && bump(r.studentId, String(r.status || ''), r.date));
+    Object.keys(logs).forEach((date) => Object.keys(logs[date] || {}).forEach((sid) => bump(sid, logs[date][sid], date)));
+    const flagged = students
+      .map((s) => ({ s, c: counts[String(s.studentId).replace(/^0+/, '')] || { absent: 0, late: 0 } }))
+      .filter((x) => x.c.absent >= 3 || x.c.late >= 3)
+      .slice(0, 12);
+    follow.innerHTML = flagged.length
+      ? flagged.map((x) => {
+          const isAbs = x.c.absent >= 3;
+          return '<span class="k8-chip ' + (isAbs ? 'is-abs' : 'is-late') + '" title="' + esc(x.s.fullName) + '">' + esc(x.s.fullName) + ' · ' + (isAbs ? 'ขาด ' + x.c.absent : 'สาย ' + x.c.late) + '</span>';
+        }).join('')
+      : '<span class="k8-follow-empty">ยังไม่มีนักเรียนที่ต้องติดตามในสัปดาห์นี้</span>';
+  }
+
+  window.openPrayerApprovalsV8 = function () {
+    switchView('admin');
+    const btn = document.getElementById('btnAdminTabPrayers');
+    if (typeof switchAdminTab === 'function') switchAdminTab('prayers-monitor', btn);
+    if (typeof setAdminPrayerMode === 'function') setAdminPrayerMode('approvals');
+  };
+  window.renderTeacherTodoV8 = function () { try { renderTeacherTodo(); } catch (e) { console.warn('teacher todo', e); } };
+  if (typeof window.renderTeacherOverviewBento === 'function') {
+    const orig = window.renderTeacherOverviewBento;
+    window.renderTeacherOverviewBento = function () { const r = orig.apply(this, arguments); window.renderTeacherTodoV8(); return r; };
+  }
+})();
+
+/* ---------------- v8 รอบ 2: แอดมิน — ภาพรวม ---------------- */
+(function () {
+  'use strict';
+  const esc = (v) => (typeof escapeHtml === 'function' ? escapeHtml(v) : String(v == null ? '' : v));
+  const readJSON = (k, f) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? f : v; } catch (e) { return f; } };
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  const TH_DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const TH_MONTHS_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  const GRADES = ['มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3', 'มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'];
+
+  function renderAdminOverview() {
+    const kpiEl = document.getElementById('k8OvKpis');
+    if (!kpiEl) return;
+    const now = new Date();
+    const today = ymd(now);
+    document.getElementById('k8OvDate').textContent = TH_DAYS[now.getDay()] + ' ' + now.getDate() + ' ' + TH_MONTHS_FULL[now.getMonth()] + ' ' + (now.getFullYear() + 543);
+
+    const students = (typeof allStudents !== 'undefined' ? allStudents : []).filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || '')));
+    const teachers = (typeof subAdmins !== 'undefined' ? subAdmins : []);
+    const pendingReg = (typeof getPendingRegistrations === 'function' ? getPendingRegistrations() : []).filter((p) => p && (p.status === 'PendingAdmin' || p.status === 'pending'));
+    const awaitingOtp = (typeof getPendingRegistrations === 'function' ? getPendingRegistrations() : []).filter((p) => p && p.status === 'Approved');
+    const lateReq = readJSON('khalifah_prayer_approvals', []).filter((a) => a && String(a.status || 'pending').toLowerCase() === 'pending');
+
+    // มาเรียนวันนี้
+    const att = readJSON('khalifah_attendance_logs', []).filter((r) => r && r.date === today);
+    const local = (readJSON('khalifah_daily_attendance_logs', {})[today]) || {};
+    const status = {};
+    att.forEach((r) => { status[String(r.studentId).replace(/^0+/, '')] = String(r.status || ''); });
+    Object.keys(local).forEach((sid) => { status[String(sid).replace(/^0+/, '')] = local[sid]; });
+    let present = 0, late = 0, leave = 0, absent = 0;
+    Object.values(status).forEach((st) => {
+      if (/สาย|late/i.test(st)) late++;
+      else if (/ลา|leave|excuse/i.test(st)) leave++;
+      else if (/ขาด|absent/i.test(st)) absent++;
+      else present++;
+    });
+    const checked = present + late + leave + absent;
+    const attPct = checked ? Math.round((present + late) / checked * 100) : 0;
+
+    // ละหมาดวันนี้ตามชั้น (นับคนที่ละหมาดอย่างน้อย 1 เวลาในช่วงปัจจุบัน → ใช้จำนวนเวลาที่ผ่านมาแล้ว)
+    const hist = readJSON('khalifah_prayer_history', []);
+    const todayRec = [...(typeof todayPrayers !== 'undefined' ? todayPrayers : []), ...hist].filter((p) => p && (p.date === today || String(p.timestamp || '').startsWith(today)));
+    const seen = {};
+    todayRec.forEach((p) => {
+      const slot = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerTime || p.prayerName || '') : p.prayerTime;
+      seen[String(p.studentId).replace(/^0+/, '') + '|' + slot] = true;
+    });
+    const wins = (typeof PRAYER_TIME_WINDOWS !== 'undefined') ? PRAYER_TIME_WINDOWS : [];
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const passed = wins.filter((w) => cur >= w.startMin).length || 1;
+    let totalDone = 0;
+    const byGrade = GRADES.map((g) => {
+      const list = students.filter((s) => s.grade === g);
+      let done = 0;
+      list.forEach((s) => {
+        const k = String(s.studentId).replace(/^0+/, '');
+        wins.slice(0, passed).forEach((w) => { if (seen[k + '|' + w.name]) done++; });
+      });
+      totalDone += done;
+      const possible = list.length * passed;
+      return { label: g.replace('มัธยมศึกษาปีที่ ', 'ม.'), n: list.length, pct: possible ? Math.round(done / possible * 100) : 0 };
+    });
+    const prayPossible = students.length * passed;
+    const prayPct = prayPossible ? Math.round(totalDone / prayPossible * 100) : 0;
+    document.getElementById('k8OvPraySlot').textContent = passed + ' เวลาที่ผ่านมาแล้ว';
+
+    const kpis = [
+      { label: 'นักเรียนกำลังศึกษา', value: students.length + ' คน', sub: 'อาจารย์/บุคลากร ' + teachers.length + ' ท่าน', go: "switchAdminTab('students', document.getElementById('btnAdminTabStudents'))" },
+      { label: 'มาเรียนวันนี้', value: checked ? attPct + '%' : '–', sub: checked ? 'มา ' + present + ' · สาย ' + late + ' · ลา ' + leave + ' · ขาด ' + absent : 'ยังไม่มีการเช็คชื่อวันนี้', go: "switchView('teacher'); switchTeacherTab('attendance')" },
+      { label: 'ละหมาดวันนี้', value: prayPct + '%', sub: totalDone + ' จาก ' + prayPossible + ' ครั้งที่ควรมี', go: "switchAdminTab('prayers-monitor', document.getElementById('btnAdminTabPrayers'))" },
+      { label: 'รอดำเนินการ', value: String(pendingReg.length + lateReq.length), sub: 'บัญชีใหม่ ' + pendingReg.length + ' · ละหมาดย้อนหลัง ' + lateReq.length, go: "switchAdminTab('approvals', document.getElementById('btnAdminTabApprovals'))" }
+    ];
+    kpiEl.innerHTML = kpis.map((k) => '<button type="button" class="k8-kpi" onclick="' + k.go + '"><span class="k8-kpi-label">' + esc(k.label) + '</span><span class="k8-kpi-val">' + esc(k.value) + '</span><span class="k8-kpi-sub">' + esc(k.sub) + '</span></button>').join('');
+
+    const notCheckedClasses = GRADES.filter((g) => {
+      const list = students.filter((s) => s.grade === g);
+      return list.length && !list.some((s) => status[String(s.studentId).replace(/^0+/, '')] !== undefined);
+    });
+    const acts = (typeof activities !== 'undefined' ? activities : []);
+    const in7 = new Date(now.getTime() + 7 * 864e5);
+    const soon = acts.filter((a) => { const d = new Date(a.startDate || a.date); return !isNaN(d) && d >= new Date(today) && d <= in7; });
+    const todo = [
+      { n: pendingReg.length, label: 'บัญชีใหม่รออนุมัติและส่งรหัสยืนยัน', cta: 'ตรวจสอบ', bg: '#fffbeb', ink: '#b45309', go: "switchAdminTab('approvals', document.getElementById('btnAdminTabApprovals'))" },
+      { n: lateReq.length, label: 'คำขอละหมาดย้อนหลัง', cta: 'ตรวจสอบ', bg: '#eff6ff', ink: '#1d4ed8', go: 'openPrayerApprovalsV8()' },
+      { n: awaitingOtp.length, label: 'อนุมัติแล้ว รอผู้สมัครกรอกรหัส', cta: 'ดู', bg: '#e0f2fe', ink: '#0369a1', go: "switchAdminTab('approvals', document.getElementById('btnAdminTabApprovals'))" },
+      { n: notCheckedClasses.length, label: notCheckedClasses.length ? 'ห้องที่ยังไม่เช็คชื่อ: ' + notCheckedClasses.map((g) => g.replace('มัธยมศึกษาปีที่ ', 'ม.')).join(', ') : 'ทุกห้องเช็คชื่อแล้ว', cta: 'เช็คชื่อ', bg: notCheckedClasses.length ? '#fef2f2' : '#f0fdf4', ink: notCheckedClasses.length ? '#b91c1c' : '#15803d', go: "switchView('teacher'); switchTeacherTab('attendance')" },
+      { n: soon.length, label: 'กิจกรรมภายใน 7 วัน', cta: 'จัดการ', bg: '#f0fdf4', ink: '#15803d', go: "switchAdminTab('activities-admin', document.getElementById('btnTabActivitiesAdmin'))" }
+    ];
+    document.getElementById('k8OvTodo').innerHTML = todo.map((t) =>
+      '<button type="button" class="k8-todo-row" onclick="' + t.go + '"><span class="k8-todo-badge" style="background:' + t.bg + ';color:' + t.ink + '">' + t.n + '</span><span class="k8-todo-text"><b>' + esc(t.label) + '</b></span><span class="k8-todo-cta">' + t.cta + '</span></button>'
+    ).join('');
+
+    document.getElementById('k8OvPray').innerHTML = byGrade.map((g) =>
+      '<div class="k8-gbar"><span class="k8-gbar-l">' + g.label + '</span><span class="k8-gbar-track" role="img" aria-label="' + g.label + ' ' + g.pct + ' เปอร์เซ็นต์"><span style="width:' + g.pct + '%;background:' + (g.pct < 70 ? '#f59e0b' : '#0369a1') + '"></span></span><span class="k8-gbar-v">' + (g.n ? g.pct + '%' : '–') + '</span></div>'
+    ).join('');
+  }
+
+  window.renderAdminOverviewV8 = function () { try { renderAdminOverview(); } catch (e) { console.warn('admin overview', e); } };
+
+  if (typeof window.switchAdminTab === 'function') {
+    const orig = window.switchAdminTab;
+    window.switchAdminTab = function (tabName) {
+      const r = orig.apply(this, arguments);
+      if (tabName === 'overview') window.renderAdminOverviewV8();
+      const kpi = document.getElementById('adminKpiOverviewGrid');
+      if (kpi) kpi.style.display = 'none';
+      return r;
+    };
+  }
+  let adminOpenedOnce = false;
+  if (typeof window.switchView === 'function') {
+    const origSV = window.switchView;
+    window.switchView = function (viewName) {
+      const r = origSV.apply(this, arguments);
+      const adminActive = document.getElementById('view-admin') && document.getElementById('view-admin').classList.contains('active');
+      if (viewName === 'admin' && adminActive && !adminOpenedOnce) {
+        adminOpenedOnce = true;
+        window.switchAdminTab('overview', document.getElementById('btnAdminTabOverview'));
+      }
+      return r;
+    };
+  }
+  if (typeof window.renderSuperAdminOverviewKpis === 'function') {
+    const origK = window.renderSuperAdminOverviewKpis;
+    window.renderSuperAdminOverviewKpis = function () {
+      const r = origK.apply(this, arguments);
+      const ov = document.getElementById('admin-tab-overview');
+      if (ov && ov.style.display !== 'none') window.renderAdminOverviewV8();
+      return r;
+    };
+  }
+})();

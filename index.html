@@ -1426,6 +1426,18 @@
           </div>
         </div>
 
+        <nav class="k8-links" aria-label="ลิงก์ด่วน">
+          <button type="button" class="k8-link" onclick="switchView('dashboard'); setTimeout(function(){ var t=document.getElementById('hfGradesToggle'); if(t){ t.scrollIntoView({behavior:'smooth', block:'center'}); } }, 120)">
+            <span class="k8-link-ico" aria-hidden="true"><i class="fa-solid fa-chart-simple"></i></span><span>แดชบอร์ด &amp; ผลการเรียนของฉัน</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="k8-link" onclick="openSchoolCalendarModal()">
+            <span class="k8-link-ico" aria-hidden="true"><i class="fa-solid fa-calendar-days"></i></span><span>ปฏิทินโรงเรียน</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="k8-link" onclick="openPrayerLateApprovalModal()">
+            <span class="k8-link-ico" aria-hidden="true"><i class="fa-solid fa-clock-rotate-left"></i></span><span>ขออนุมัติละหมาดย้อนหลัง</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </nav>
+
         <div style="margin-bottom: 1.5rem; text-align: center;">
           <button class="btn btn-secondary btn-block" onclick="studentLogout()" style="color: var(--danger); border-color: #fecaca; background: #fff5f5;">
             <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบนักเรียน
@@ -1509,6 +1521,16 @@
             </div>
           </div>
         </div>
+
+        <!-- v8: สิ่งที่ต้องทำวันนี้ + นักเรียนที่ต้องติดตาม -->
+        <section class="hf-card k8-todo" aria-labelledby="k8TodoTitle">
+          <h2 id="k8TodoTitle">สิ่งที่ต้องทำวันนี้</h2>
+          <div id="k8TodoList"></div>
+        </section>
+        <section class="hf-card k8-follow" aria-labelledby="k8FollowTitle">
+          <div class="hf-head"><h2 id="k8FollowTitle">ต้องติดตาม</h2><span>ขาดหรือมาสายตั้งแต่ 3 ครั้งในสัปดาห์นี้</span></div>
+          <div class="k8-follow-list" id="k8FollowList"></div>
+        </section>
 
         <!-- Teacher & Executive Bento KPI Summary (4 KPI Cards) -->
         <div class="teacher-kpi-grid">
@@ -2025,7 +2047,7 @@
             <i class="fa-solid fa-envelope-circle-check"></i>
           </div>
           <div class="admin-kpi-val" id="adminKpiPendingCount">0 รายการ</div>
-          <div class="admin-kpi-sub" id="adminKpiMasterOtpSub">รหัสสุ่มปัจจุบัน: <strong id="adminLiveRandomCodeBadge">------</strong></div>
+          <div class="admin-kpi-sub" id="adminKpiMasterOtpSub">กดเพื่ออนุมัติและส่งรหัสทางอีเมล</div>
         </div>
 
         <div class="admin-kpi-box" onclick="switchAdminTab('prayers-monitor', document.getElementById('btnAdminTabPrayers'))" style="cursor: pointer;" title="คลิกดูแดชบอร์ดเช็คชื่อละหมาดประจำวัน">
@@ -2038,41 +2060,96 @@
         </div>
       </div>
 
-      <!-- Admin Tabs Navigation -->
-      <div class="admin-tabs">
-        <button class="admin-tab-btn active" id="btnAdminTabStudents" onclick="switchAdminTab('students', this)">
-          <i class="fa-solid fa-users"></i> จัดการนักเรียนรายบุคคล
-        </button>
-        <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
-          <i class="fa-solid fa-person-praying"></i> แดชบอร์ดเช็คชื่อละหมาด
-        </button>
-        <button class="admin-tab-btn" id="btnAdminTabApprovals" onclick="switchAdminTab('approvals', this)">
-          <i class="fa-solid fa-envelope-circle-check"></i> อนุมัติบัญชี & ส่งอีเมล OTP <span class="admin-pending-pill" id="adminTabPendingBadge" style="display:none;">0</span>
-        </button>
-        <button class="admin-tab-btn" id="btnAdminTabTeachers" onclick="switchAdminTab('subadmins', this)">
-          <i class="fa-solid fa-chalkboard-user"></i> เพิ่ม/จัดการอาจารย์ & ผู้บริหาร
-        </button>
-        <button class="admin-tab-btn" id="btnAdminTabGrading" onclick="switchAdminTab('grading', this)">
-          <i class="fa-solid fa-award"></i> กรอกเกรดรายวิชา (1 – 4)
-        </button>
-        <button class="admin-tab-btn" id="btnAdminTabSubjects" onclick="switchAdminTab('subjects', this)">
-          <i class="fa-solid fa-book-open"></i> จัดการรายวิชา
-        </button>
-        <button class="admin-tab-btn" onclick="switchAdminTab('activities-admin', this)" id="btnTabActivitiesAdmin">
-          <i class="fa-solid fa-qrcode"></i> กิจกรรม & สแกน QR เรียลไทม์
-        </button>
-        <button class="admin-tab-btn" onclick="switchAdminTab('calendar-admin', this)" id="btnTabCalendarAdmin">
-          <i class="fa-solid fa-calendar-days"></i> ปฏิทินกิจกรรมโรงเรียน
-        </button>
-        <button class="admin-tab-btn" onclick="switchAdminTab('promote', this)">
-          <i class="fa-solid fa-graduation-cap"></i> เลื่อนชั้นยกห้อง
-        </button>
-        <button class="admin-tab-btn" id="btnAdminTabReports" onclick="switchAdminTab('reports', this)">
-          <i class="fa-solid fa-file-export"></i> ส่งออกรายงาน
-        </button>
-        <button class="admin-tab-btn" onclick="switchAdminTab('logo', this)" id="btnTabLogo">
-          <i class="fa-solid fa-image"></i> โลโก้ระบบ
-        </button>
+      <!-- Admin Navigation (v8: เมนูด้านซ้ายแบ่งหมวด บนคอม / แถบเลื่อนบนมือถือ) -->
+      <nav class="admin-tabs k8-admin-nav" aria-label="เมนูแอดมิน">
+        <div class="k8-nav-brand">
+          <span class="k8-nav-brand-name">KHALIFAH</span>
+          <span class="k8-nav-brand-sub">ศูนย์ควบคุมแอดมิน</span>
+        </div>
+        <div class="k8-nav-group">
+          <span class="k8-nav-label">หน้าหลัก</span>
+          <button class="admin-tab-btn" id="btnAdminTabOverview" onclick="switchAdminTab('overview', this)">
+            <i class="fa-solid fa-gauge-high" aria-hidden="true"></i> ภาพรวม
+          </button>
+        </div>
+        <div class="k8-nav-group">
+          <span class="k8-nav-label">บุคคล</span>
+          <button class="admin-tab-btn active" id="btnAdminTabStudents" onclick="switchAdminTab('students', this)">
+            <i class="fa-solid fa-users" aria-hidden="true"></i> นักเรียน
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabTeachers" onclick="switchAdminTab('subadmins', this)">
+            <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i> อาจารย์ &amp; ผู้บริหาร
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabApprovals" onclick="switchAdminTab('approvals', this)">
+            <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> อนุมัติบัญชี <span class="admin-pending-pill" id="adminTabPendingBadge" style="display:none;">0</span>
+          </button>
+        </div>
+        <div class="k8-nav-group">
+          <span class="k8-nav-label">ติดตามประจำวัน</span>
+          <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
+            <i class="fa-solid fa-person-praying" aria-hidden="true"></i> ละหมาด &amp; คำขอย้อนหลัง
+          </button>
+          <button class="admin-tab-btn" onclick="switchAdminTab('activities-admin', this)" id="btnTabActivitiesAdmin">
+            <i class="fa-solid fa-qrcode" aria-hidden="true"></i> กิจกรรม &amp; สแกน QR
+          </button>
+          <button class="admin-tab-btn" onclick="switchAdminTab('calendar-admin', this)" id="btnTabCalendarAdmin">
+            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> ปฏิทินโรงเรียน
+          </button>
+        </div>
+        <div class="k8-nav-group">
+          <span class="k8-nav-label">วิชาการ</span>
+          <button class="admin-tab-btn" id="btnAdminTabGrading" onclick="switchAdminTab('grading', this)">
+            <i class="fa-solid fa-award" aria-hidden="true"></i> เกรดรายวิชา
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabSubjects" onclick="switchAdminTab('subjects', this)">
+            <i class="fa-solid fa-book-open" aria-hidden="true"></i> รายวิชา
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabPromote" onclick="switchAdminTab('promote', this)">
+            <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> เลื่อนชั้น
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabReports" onclick="switchAdminTab('reports', this)">
+            <i class="fa-solid fa-file-export" aria-hidden="true"></i> ส่งออกรายงาน
+          </button>
+        </div>
+        <div class="k8-nav-group">
+          <span class="k8-nav-label">ระบบ</span>
+          <button class="admin-tab-btn" onclick="switchAdminTab('logo', this)" id="btnTabLogo">
+            <i class="fa-solid fa-image" aria-hidden="true"></i> โลโก้ระบบ
+          </button>
+          <button class="admin-tab-btn" onclick="openModal('settingsModal')">
+            <i class="fa-solid fa-database" aria-hidden="true"></i> ฐานข้อมูล Google Sheets
+          </button>
+          <button class="admin-tab-btn" onclick="switchView('teacher')">
+            <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i> โหมดอาจารย์
+          </button>
+          <button class="admin-tab-btn k8-nav-logout" onclick="adminLogout()">
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> ออกจากระบบ
+          </button>
+        </div>
+        <div class="k8-nav-sync" id="k8NavSync"><span class="k8-dot" aria-hidden="true"></span> เชื่อมต่อ Google Sheets</div>
+      </nav>
+
+      <!-- v8: ภาพรวมแอดมิน -->
+      <div id="admin-tab-overview" class="admin-content-tab" style="display: none;">
+        <div class="k8-admin-overview">
+          <div class="k8-ov-head">
+            <div>
+              <h2>ภาพรวมวันนี้</h2>
+              <p id="k8OvDate">-</p>
+            </div>
+          </div>
+          <div class="k8-ov-kpis" id="k8OvKpis"></div>
+          <div class="k8-ov-row">
+            <section class="hf-card k8-todo" aria-labelledby="k8OvTodoTitle">
+              <h2 id="k8OvTodoTitle">ต้องดำเนินการ</h2>
+              <div id="k8OvTodo"></div>
+            </section>
+            <section class="hf-card k8-ov-grades" aria-labelledby="k8OvPrayTitle">
+              <div class="hf-head"><h2 id="k8OvPrayTitle">ละหมาดวันนี้ ตามระดับชั้น</h2><span id="k8OvPraySlot"></span></div>
+              <div id="k8OvPray"></div>
+            </section>
+          </div>
+        </div>
       </div>
 
       <!-- NEW Admin Tab: Pending Account Approvals & Dynamic Random Verification Code -->
@@ -2081,14 +2158,14 @@
           <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
             <div>
               <div class="card-title">
-                <i class="fa-solid fa-key"></i> ศูนย์อนุมัติการสมัครและรหัสยืนยันแบบสุ่ม (Admin Random OTP & Email Approval)
+                <i class="fa-solid fa-key"></i> อนุมัติบัญชีใหม่ &amp; ส่งรหัสยืนยันทางอีเมล
               </div>
               <div class="card-subtitle">
-                เมื่อนักเรียนหรืออาจารย์สมัครใหม่ ระบบจะสร้างรหัสสุ่มเฉพาะแอดมิน เมื่อแอดมินกด <b>"ยินยอม/อนุมัติ"</b> ระบบจะส่งรหัสยืนยันเข้าอีเมลของผู้สมัครโดยอัตโนมัติทันที
+                เมื่อกด <b>"อนุมัติ"</b> เซิร์ฟเวอร์จะส่งรหัสยืนยัน 6 หลักไปที่อีเมลของผู้สมัครโดยอัตโนมัติ (รหัสสร้างและเก็บที่เซิร์ฟเวอร์ ไม่แสดงในเว็บ)
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <div class="admin-master-otp-box">
+              <div class="admin-master-otp-box" hidden>
                 <span style="font-size: 0.75rem; color: #64748b;">รหัสสุ่มกลางแอดมิน:</span>
                 <strong id="adminCurrentMasterOtpDisplay" style="font-size: 1.05rem; font-family: monospace; color: #0f172a; letter-spacing: 0.08em;">------</strong>
                 <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateAdminRandomOtp(true)" style="padding: 0.2rem 0.55rem; font-size: 0.74rem;" title="สุ่มรหัสใหม่ทันที">
@@ -3839,7 +3916,7 @@
           </button>
           <button type="button" class="auth-role-btn" id="authRoleBtnTeacher" onclick="selectAuthRole('teacher')">
             <i class="fa-solid fa-chalkboard-user"></i>
-            <span>อาจารย์ / ผู้บริหาร</span>
+            <span>อาจารย์</span>
           </button>
           <button type="button" class="auth-role-btn" id="authRoleBtnAdmin" onclick="selectAuthRole('admin')">
             <i class="fa-solid fa-user-shield"></i>
@@ -3884,7 +3961,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--border-light); font-size: 0.84rem;">
               <span>ยังไม่มีบัญชี? <a href="javascript:void(0)" onclick="handleAuthModeSegmentChange('register')" style="color: var(--primary); font-weight: 700; text-decoration: underline;">สมัครลงทะเบียนนักเรียนใหม่</a></span>
               <a href="javascript:void(0)" onclick="openOtpVerifyModalPrompt('student')" style="color: var(--text-secondary); font-weight: 600;">
-                <i class="fa-solid fa-key"></i> กรอกรหัสยืนยันแอดมิน
+                <i class="fa-solid fa-key"></i> มีรหัสยืนยัน 6 หลักจากอีเมลแล้ว
               </a>
             </div>
           </div>
@@ -4015,7 +4092,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--border-light); font-size: 0.84rem;">
               <span>ยังไม่มีบัญชีอาจารย์? <a href="javascript:void(0)" onclick="handleAuthModeSegmentChange('register')" style="color: var(--primary); font-weight: 700; text-decoration: underline;">สมัครบัญชีอาจารย์ใหม่</a></span>
               <a href="javascript:void(0)" onclick="openOtpVerifyModalPrompt('teacher')" style="color: var(--text-secondary); font-weight: 600;">
-                <i class="fa-solid fa-key"></i> กรอกรหัสยืนยันแอดมิน
+                <i class="fa-solid fa-key"></i> มีรหัสยืนยัน 6 หลักจากอีเมลแล้ว
               </a>
             </div>
           </div>
@@ -4073,6 +4150,7 @@
             <i class="fa-solid fa-shield-halved"></i> เข้าสู่ระบบแอดมินสูงสุด
           </button>
         </div>
+        <p class="k8-secure-note"><i class="fa-solid fa-lock" aria-hidden="true"></i> ตรวจสอบรหัสที่เซิร์ฟเวอร์อย่างปลอดภัย · หากกรอกผิดหลายครั้ง ระบบจะล็อกชั่วคราว 15 นาที</p>
       </div>
     </div>
   </div>
@@ -4108,7 +4186,7 @@
 
         <div class="form-group">
           <label class="form-label">รหัสยืนยัน 6 หลักจากแอดมิน / อีเมล <span class="required">*</span></label>
-          <input type="text" class="form-control otp-code-input-box" id="otpVerifyCodeInput" maxlength="10" placeholder="เช่น 048291" onkeypress="if(event.key === 'Enter') verifyRegistrationOtpCode()">
+          <input type="text" class="form-control otp-code-input-box" id="otpVerifyCodeInput" maxlength="6" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" placeholder="000000" onkeypress="if(event.key === 'Enter') verifyRegistrationOtpCode()">
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1rem;">

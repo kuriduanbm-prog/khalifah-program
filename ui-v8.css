@@ -219,3 +219,209 @@ body.portal-mode-student .main-wrapper { background: var(--k8-bg); }
 @media (max-width: 992px) {
   body.teacher-portal-active .mobile-nav { display: none !important; }
 }
+
+/* =====================================================================
+   รอบ 2: ปรับหน้านักเรียนที่เหลือให้เป็นธีมฟ้าเดียวกับหน้าแรก F
+   (เปลี่ยนเฉพาะหน้าตา — ฟังก์ชัน GPS / กล้อง / QR / บันทึก ทำงานเหมือนเดิม)
+   ===================================================================== */
+body:not(.portal-mode-admin) .main-wrapper { background: var(--k8-bg); }
+#view-prayer, #view-activities, #view-hasanat, #view-profile { font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; color: var(--k8-ink); }
+#view-prayer .card, #view-activities .card, #view-hasanat .card, #view-profile .card {
+  background: var(--k8-card) !important;
+  border: 1px solid var(--k8-line) !important;
+  border-radius: var(--k8-radius) !important;
+  box-shadow: none !important;
+}
+#view-prayer .card-title, #view-activities .card-title, #view-hasanat .card-title, #view-profile .card-title,
+#view-prayer h2, #view-prayer h3, #view-activities h2, #view-activities h3, #view-hasanat h3, #view-profile h3 { font-family: 'Kanit', sans-serif; color: var(--k8-ink); }
+#view-prayer .btn-primary, #view-activities .btn-primary, #view-hasanat .btn-primary, #view-profile .btn-primary {
+  background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; color: #fff !important;
+  border-radius: 14px !important; min-height: 48px; font-family: 'Kanit', sans-serif; font-weight: 600; box-shadow: none !important;
+}
+#view-prayer .btn-secondary, #view-activities .btn-secondary, #view-hasanat .btn-secondary, #view-activities .btn-outline {
+  border-radius: 12px !important; border-color: #cbd5e1 !important; background: #fff !important; color: #334155 !important; min-height: 44px;
+}
+#view-prayer .form-control, #view-activities .form-control, #view-hasanat .form-control { border-radius: 12px !important; border-color: #cbd5e1 !important; min-height: 46px; }
+
+/* ละหมาด: ชิปเวลา 5 ช่อง */
+#view-prayer .prayer-chip { border-radius: 14px !important; border: 1px solid var(--k8-line) !important; background: #fff !important; box-shadow: none !important; }
+#view-prayer .prayer-chip.active, #view-prayer .prayer-chip.selected, #view-prayer .prayer-chip[aria-pressed="true"] { border: 2px solid var(--k8-primary) !important; background: #f0f9ff !important; }
+#view-prayer .prayer-chip-name { color: var(--k8-ink) !important; font-family: 'Kanit', sans-serif; }
+#view-prayer .btn-minimal-pill, #view-hasanat .btn-minimal-pill { border-radius: 999px !important; }
+
+/* กิจกรรม: แถบสลับ สแกน / ประวัติ */
+#view-activities .student-act-segment-bar { background: var(--k8-line) !important; border-radius: 14px !important; padding: 4px !important; gap: 4px; box-shadow: none !important; border: 0 !important; }
+#view-activities .student-act-seg-btn { border-radius: 11px !important; min-height: 44px; font-family: inherit; font-weight: 600; color: var(--k8-ink-2) !important; background: transparent !important; box-shadow: none !important; }
+#view-activities .student-act-seg-btn.active { background: #fff !important; color: var(--k8-primary) !important; }
+#view-activities .qr-scanner-box { border-radius: 22px !important; }
+#view-activities .qr-target-frame { border-color: #7dd3fc !important; }
+
+/* ผลบุญ: หัวสีฟ้าแทนสีดำ */
+#view-hasanat .hasanat-bento-hero { background: var(--k8-primary) !important; border: 0 !important; border-radius: 22px !important; box-shadow: none !important; }
+#view-hasanat .hasanat-bento-hero::before, #view-hasanat .hasanat-bento-hero::after { display: none !important; }
+#view-hasanat .hasanat-hero-tag { background: rgba(255,255,255,.16) !important; color: #fff !important; border: 0 !important; }
+#view-hasanat .hasanat-hero-date-pill { background: rgba(255,255,255,.12) !important; color: #e0f2fe !important; border: 0 !important; }
+#view-hasanat .hasanat-bento-title { color: #fff !important; font-family: 'Kanit', sans-serif; }
+#view-hasanat .hasanat-bento-desc { color: #e0f2fe !important; }
+#view-hasanat .hasanat-stat-box { background: rgba(255,255,255,.12) !important; border: 1px solid rgba(255,255,255,.18) !important; border-radius: 16px !important; box-shadow: none !important; min-height: 64px; }
+#view-hasanat .hasanat-stat-box .stat-ico { background: #fff !important; color: var(--k8-primary) !important; border-radius: 12px !important; }
+#view-hasanat .hasanat-stat-box .stat-lbl { color: #e0f2fe !important; }
+#view-hasanat .hasanat-stat-box .stat-val, #view-hasanat .hasanat-stat-box .stat-val small { color: #fff !important; }
+#view-hasanat .hasanat-stat-box .stat-sub-pill { background: rgba(255,255,255,.18) !important; color: #fff !important; }
+#view-hasanat .hasanat-subnav-btn { border-radius: 14px !important; min-height: 46px; box-shadow: none !important; }
+#view-hasanat .hasanat-subnav-btn.active { background: #fff !important; color: var(--k8-primary) !important; border: 2px solid var(--k8-primary) !important; }
+#view-hasanat .minimal-progress-fill { background: var(--k8-primary) !important; }
+#view-hasanat .quran-pill-step, #view-hasanat .sunnah-pill-btn { border-radius: 999px !important; min-height: 40px; }
+#view-hasanat .quran-pill-step.active, #view-hasanat .sunnah-pill-btn.active { background: var(--k8-primary) !important; color: #fff !important; border-color: var(--k8-primary) !important; }
+
+/* โปรไฟล์ (ฉัน) */
+#view-profile .profile-data-box { background: #fff !important; border: 1px solid var(--k8-line) !important; border-radius: 14px !important; box-shadow: none !important; min-width: 0; }
+#view-profile .profile-data-icon { background: var(--k8-primary-soft) !important; color: var(--k8-primary) !important; border-radius: 12px !important; }
+#view-profile .profile-data-val { overflow-wrap: anywhere; word-break: break-word; }
+#view-profile .profile-avatar-display { background: var(--k8-primary-soft) !important; color: var(--k8-primary) !important; }
+.k8-links { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--k8-line); border-radius: 16px; padding: 4px 14px; margin-bottom: 14px; }
+.k8-link { display: flex; align-items: center; gap: 12px; min-height: 54px; border: 0; border-top: 1px solid var(--k8-line-soft); background: transparent; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 15px; color: var(--k8-ink); text-align: left; cursor: pointer; padding: 0; }
+.k8-link:first-child { border-top: 0; }
+.k8-link > span:nth-child(2) { flex: 1; }
+.k8-link > i { color: #94a3b8; }
+.k8-link-ico { width: 34px; height: 34px; border-radius: 10px; background: var(--k8-primary-soft); color: var(--k8-primary); display: flex; align-items: center; justify-content: center; flex: none; }
+#view-hasanat .juz-box-item.done { background: var(--k8-primary) !important; color: #fff !important; border-color: var(--k8-primary) !important; }
+#view-hasanat .juz-box-item.current { background: var(--k8-primary-soft) !important; color: var(--k8-primary) !important; border: 2px solid var(--k8-primary) !important; }
+#view-hasanat .btn-hasanat-today, #view-hasanat .hasanat-date-rel-badge.today, #view-hasanat .btn-juz-sort.active { background: var(--k8-primary) !important; color: #fff !important; border-color: var(--k8-primary) !important; }
+#view-profile #profFullName { font-family: 'Kanit', sans-serif; font-size: 20px !important; line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ---------- เข้าสู่ระบบ / สมัคร / OTP ---------- */
+.auth-portal-dialog { font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; border-radius: 22px !important; }
+.auth-portal-dialog .auth-portal-brand-banner { background: var(--k8-primary) !important; }
+.auth-portal-dialog .auth-portal-brand-title { font-family: 'Kanit', sans-serif; letter-spacing: .5px; }
+.auth-portal-dialog .auth-role-switcher, .auth-portal-dialog .auth-mode-segment-bar { background: var(--k8-line) !important; border-radius: 14px !important; padding: 4px !important; border: 0 !important; }
+.auth-portal-dialog .auth-role-btn, .auth-portal-dialog .auth-mode-seg-btn { min-height: 44px; border-radius: 11px !important; font-size: 14px !important; color: var(--k8-ink-2) !important; border: 0 !important; white-space: nowrap; }
+.auth-portal-dialog .auth-role-btn.active, .auth-portal-dialog .auth-mode-seg-btn.active { background: #fff !important; color: var(--k8-primary) !important; box-shadow: 0 1px 2px rgba(15,23,42,.08) !important; }
+.auth-portal-dialog .form-control, #otpVerifyModal .form-control { min-height: 50px; border-radius: 14px !important; border-color: #cbd5e1 !important; font-size: 16px !important; }
+.auth-portal-dialog .btn-primary, #otpVerifyModal .btn-primary { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; border-radius: 14px !important; min-height: 52px; font-family: 'Kanit', sans-serif; font-weight: 600; box-shadow: none !important; }
+.auth-portal-dialog .auth-field-error-msg { color: var(--k8-absent) !important; font-size: 13px !important; }
+.auth-portal-dialog .form-control.is-invalid { border: 2px solid var(--k8-absent) !important; }
+.k8-secure-note { display: flex; gap: 8px; align-items: flex-start; margin: 18px 0 0; font-size: 12px; color: var(--k8-ink-2); line-height: 1.5; }
+#otpVerifyModal .modal-dialog { border-radius: 22px !important; font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; }
+#otpVerifyCodeInput { font-family: 'Kanit', sans-serif; font-size: 26px !important; letter-spacing: 10px; text-align: center; }
+
+/* ---------- อาจารย์: ภาพรวม + เช็คชื่อ ---------- */
+#view-teacher { font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; color: var(--k8-ink); }
+#view-teacher .card, #view-teacher .teacher-hero-card, #view-teacher .teacher-kpi-card { background: #fff !important; border: 1px solid var(--k8-line) !important; border-radius: var(--k8-radius) !important; box-shadow: none !important; }
+#view-teacher .teacher-hero-title, #view-teacher .card-title { font-family: 'Kanit', sans-serif; }
+#view-teacher .teacher-hero-title { overflow-wrap: anywhere; }
+#view-teacher .btn-primary { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; border-radius: 14px !important; min-height: 48px; font-family: 'Kanit', sans-serif; font-weight: 600; box-shadow: none !important; }
+#view-teacher .btn-secondary { border-radius: 12px !important; min-height: 44px; }
+#view-teacher .form-control { min-height: 46px; border-radius: 12px !important; }
+.k8-todo, .k8-follow { padding: 6px 16px 10px; margin-bottom: 14px; }
+.k8-todo h2, .k8-follow h2 { margin: 12px 0 4px; font-family: 'Kanit', sans-serif; font-size: 17px; font-weight: 600; }
+.k8-follow .hf-head { padding-top: 6px; flex-wrap: wrap; }
+.k8-todo-row { width: 100%; min-height: 64px; display: flex; align-items: center; gap: 12px; border: 0; border-top: 1px solid var(--k8-line-soft); background: transparent; padding: 6px 0; font-family: inherit; color: var(--k8-ink); text-align: left; cursor: pointer; }
+.k8-todo-row:first-child { border-top: 0; }
+.k8-todo-row > i { color: #94a3b8; }
+.k8-todo-badge { min-width: 40px; height: 40px; padding: 0 6px; box-sizing: border-box; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: 'Kanit', sans-serif; font-size: 15px; font-weight: 600; flex: none; }
+.k8-todo-text { flex: 1; min-width: 0; }
+.k8-todo-text b { display: block; font-size: 15px; overflow-wrap: anywhere; }
+.k8-todo-text span { display: block; font-size: 13px; color: var(--k8-ink-2); }
+.k8-follow-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0 4px; }
+.k8-chip { font-size: 13px; padding: 6px 12px; border-radius: 999px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-chip.is-abs { background: var(--k8-absent-bg); color: var(--k8-absent); border: 1px solid #fecaca; }
+.k8-chip.is-late { background: var(--k8-late-bg); color: var(--k8-late); border: 1px solid #fde68a; }
+.k8-follow-empty { font-size: 14px; color: var(--k8-ink-3); }
+
+#view-teacher .att-status-btn-group { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 6px !important; width: 100%; }
+#view-teacher .att-status-btn { min-height: 44px !important; border-radius: 10px !important; font-family: inherit; font-size: 14px !important; font-weight: 600 !important; border: 1px solid transparent !important; justify-content: center; white-space: nowrap; }
+#view-teacher .att-status-btn:nth-child(1) { background: var(--k8-ok-bg) !important; color: var(--k8-ok) !important; }
+#view-teacher .att-status-btn:nth-child(2) { background: var(--k8-late-bg) !important; color: var(--k8-late) !important; }
+#view-teacher .att-status-btn:nth-child(3) { background: var(--k8-leave-bg) !important; color: var(--k8-leave) !important; }
+#view-teacher .att-status-btn:nth-child(4) { background: var(--k8-absent-bg) !important; color: var(--k8-absent) !important; }
+#view-teacher .att-status-btn.active-present { background: var(--k8-ok) !important; color: #fff !important; }
+#view-teacher .att-status-btn.active-late { background: var(--k8-late) !important; color: #fff !important; }
+#view-teacher .att-status-btn.active-leave { background: var(--k8-leave) !important; color: #fff !important; }
+#view-teacher .att-status-btn.active-absent { background: var(--k8-absent) !important; color: #fff !important; }
+#view-teacher .att-status-btn i { display: none; }
+@media (max-width: 640px) {
+  #view-teacher .teacher-kpi-grid { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+  #view-teacher .teacher-kpi-card { padding: 12px !important; }
+  #view-teacher .teacher-kpi-num { font-size: 22px !important; }
+}
+
+/* =====================================================================
+   แอดมิน: เมนูด้านซ้ายแบ่งหมวด (คอมพิวเตอร์) / แถบเลื่อนแนวนอน (มือถือ)
+   ===================================================================== */
+#view-admin { font-family: 'IBM Plex Sans Thai', 'Kanit', system-ui, sans-serif; color: var(--k8-ink); }
+#view-admin > .bento-hero-card, #view-admin > #adminKpiOverviewGrid { display: none !important; }
+#view-admin .card { border: 1px solid var(--k8-line) !important; border-radius: var(--k8-radius) !important; box-shadow: none !important; }
+#view-admin .card-title { font-family: 'Kanit', sans-serif; }
+#view-admin .btn-primary { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; border-radius: 12px !important; box-shadow: none !important; }
+#view-admin .btn-secondary { border-radius: 12px !important; }
+
+.k8-admin-nav.admin-tabs { border: 0 !important; box-shadow: none !important; }
+.k8-admin-nav .k8-nav-brand, .k8-admin-nav .k8-nav-label, .k8-admin-nav .k8-nav-sync { display: none; }
+.k8-admin-nav .admin-tab-btn { font-family: 'IBM Plex Sans Thai', sans-serif !important; }
+
+/* มือถือ/แท็บเล็ต: แถบเลื่อนแนวนอนแบบชิป */
+@media (max-width: 992px) {
+  .k8-admin-nav.admin-tabs { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; gap: 6px !important; padding: 4px 2px 10px !important; margin: 0 0 12px !important; background: transparent !important; scrollbar-width: none; }
+  .k8-admin-nav.admin-tabs::-webkit-scrollbar { display: none; }
+  .k8-admin-nav .k8-nav-group { display: contents; }
+  .k8-admin-nav .admin-tab-btn { flex: none; min-height: 42px; padding: 0 14px !important; border-radius: 999px !important; background: #fff !important; border: 1px solid var(--k8-line) !important; color: #334155 !important; font-size: 14px !important; white-space: nowrap; }
+  .k8-admin-nav .admin-tab-btn.active { background: var(--k8-primary) !important; border-color: var(--k8-primary) !important; color: #fff !important; }
+  .k8-admin-nav .k8-nav-logout { color: var(--k8-absent) !important; }
+}
+
+/* คอมพิวเตอร์: เมนูซ้ายติดหน้าจอ */
+@media (min-width: 993px) {
+  body.portal-mode-admin .main-wrapper { padding: 0 !important; background: var(--k8-bg); }
+  #view-admin.view-section.active { display: grid !important; grid-template-columns: 248px minmax(0, 1fr); grid-auto-rows: min-content; column-gap: 28px; min-height: calc(100vh - 72px); padding-right: 28px; box-sizing: border-box; }
+  #view-admin > * { grid-column: 2; min-width: 0; }
+  #view-admin > .k8-admin-nav { grid-column: 1; grid-row: 1 / span 40; align-self: stretch; }
+  #view-admin > .admin-content-tab { padding-top: 24px; }
+  .k8-admin-nav.admin-tabs {
+    position: sticky; top: 72px; height: calc(100vh - 72px); overflow-y: auto;
+    display: flex !important; flex-direction: column; gap: 14px !important; flex-wrap: nowrap !important;
+    background: #0f172a !important; padding: 20px 14px !important; margin: 0 !important; border-radius: 0 !important; box-sizing: border-box;
+  }
+  .k8-admin-nav .k8-nav-brand { display: flex; flex-direction: column; padding: 0 10px 4px; }
+  .k8-nav-brand-name { font-family: 'Kanit', sans-serif; font-size: 18px; font-weight: 600; color: #fff; }
+  .k8-nav-brand-sub { font-size: 12px; color: #94a3b8; }
+  .k8-admin-nav .k8-nav-group { display: flex; flex-direction: column; gap: 2px; }
+  .k8-admin-nav .k8-nav-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .6px; color: #94a3b8; padding: 0 10px 4px; }
+  .k8-admin-nav .admin-tab-btn { display: flex !important; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 10px !important; border-radius: 10px !important; border: 0 !important; background: transparent !important; color: #cbd5e1 !important; font-size: 14px !important; font-weight: 500 !important; text-align: left; box-shadow: none !important; white-space: normal; }
+  .k8-admin-nav .admin-tab-btn i { width: 18px; text-align: center; color: #94a3b8; }
+  .k8-admin-nav .admin-tab-btn:hover { background: #1e293b !important; color: #fff !important; }
+  .k8-admin-nav .admin-tab-btn.active { background: #1e3a5f !important; color: #fff !important; font-weight: 600 !important; }
+  .k8-admin-nav .admin-tab-btn.active i { color: #7dd3fc; }
+  .k8-admin-nav .admin-pending-pill { margin-left: auto; background: #f59e0b !important; color: #1c1917 !important; }
+  .k8-admin-nav .k8-nav-logout { color: #fca5a5 !important; }
+  .k8-admin-nav .k8-nav-sync { display: flex; align-items: center; gap: 8px; margin-top: auto; padding: 10px; border-radius: 12px; background: #1e293b; font-size: 12px; color: #cbd5e1; }
+  .k8-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex: none; }
+}
+.k8-admin-nav .admin-tab-btn:focus-visible { outline: 3px solid #7dd3fc !important; outline-offset: 2px; }
+
+/* ภาพรวมแอดมิน */
+.k8-admin-overview { display: flex; flex-direction: column; gap: 16px; }
+.k8-ov-head h2 { margin: 0; font-family: 'Kanit', sans-serif; font-size: 26px; font-weight: 600; }
+.k8-ov-head p { margin: 2px 0 0; font-size: 14px; color: var(--k8-ink-2); }
+.k8-ov-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.k8-kpi { background: #fff; border: 1px solid var(--k8-line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 4px; text-align: left; font-family: inherit; color: var(--k8-ink); cursor: pointer; }
+.k8-kpi:hover { border-color: #93c5fd; }
+.k8-kpi-label { font-size: 13px; color: var(--k8-ink-2); }
+.k8-kpi-val { font-family: 'Kanit', sans-serif; font-size: 30px; font-weight: 600; line-height: 1.2; }
+.k8-kpi-sub { font-size: 12px; color: var(--k8-ink-3); }
+.k8-ov-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.k8-ov-row > section { flex: 1 1 340px; min-width: 0; margin: 0; }
+.k8-ov-grades { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.k8-todo-cta { font-size: 13px; color: var(--k8-primary); font-weight: 600; white-space: nowrap; }
+.k8-gbar { display: grid; grid-template-columns: 44px minmax(0, 1fr) 52px; align-items: center; gap: 10px; font-size: 14px; }
+.k8-gbar-l { font-weight: 600; }
+.k8-gbar-track { height: 12px; border-radius: 12px; background: #e2e8f0; overflow: hidden; display: block; }
+.k8-gbar-track span { display: block; height: 12px; border-radius: 12px; }
+.k8-gbar-v { text-align: right; color: var(--k8-ink-2); }
+.k8-admin-overview h2:not(.k8-ov-head h2) { font-family: 'Kanit', sans-serif; font-size: 17px !important; font-weight: 600; margin: 0; }
+.k8-ov-grades #k8OvPray { display: flex; flex-direction: column; gap: 12px; }
+.k8-todo h2 { font-size: 17px !important; }
+@media (min-width: 993px) {
+  #view-admin .table-responsive { overflow-x: auto; }
+  #view-admin .custom-table { min-width: 960px; }
+}
