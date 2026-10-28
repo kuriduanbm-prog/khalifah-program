@@ -1,3 +1,29 @@
+/* ---- ภาคเรียน / ปีการศึกษาปัจจุบัน (แอดมินตั้งค่าได้ · ไม่ตั้ง = คำนวณจากวันที่) ---- */
+window.k8TermSetting = (function () { try { return JSON.parse(localStorage.getItem('khalifah_term_setting') || 'null'); } catch (e) { return null; } })();
+window.k8Term = function () {
+  const c = window.k8TermSetting;
+  let t, y;
+  if (c && c.mode === 'manual' && [1, 2, 3].indexOf(Number(c.term)) !== -1 && Number(c.year) >= 2500) { t = Number(c.term); y = Number(c.year); }
+  else { const d = new Date(); const m = d.getMonth() + 1; const by = d.getFullYear() + 543; t = (m >= 5 && m <= 10) ? 1 : 2; y = m >= 5 ? by : by - 1; }
+  const name = t === 3 ? 'ภาคฤดูร้อน' : 'ภาคเรียนที่ ' + t;
+  return { term: t, year: y, key: t + '/' + y, name: name, label: name + '/' + y, manual: !!(c && c.mode === 'manual') };
+};
+window.k8LoadTermSetting = function () {
+  try {
+    const url = (typeof getGasUrl === 'function') ? getGasUrl() : '';
+    if (!url) return Promise.resolve();
+    return fetch(url + (url.indexOf('?') === -1 ? '?' : '&') + 'action=getSettings&_t=' + Date.now()).then((r) => r.json()).then((j) => {
+      const raw = j && j.data ? j.data.CurrentTerm : null;
+      let v = null; try { v = raw ? JSON.parse(raw) : null; } catch (e) {}
+      const before = JSON.stringify(window.k8TermSetting || null);
+      window.k8TermSetting = v;
+      try { localStorage.setItem('khalifah_term_setting', JSON.stringify(v)); } catch (e) {}
+      if (before !== JSON.stringify(v)) document.dispatchEvent(new CustomEvent('k8-term-changed'));
+    }).catch(() => {});
+  } catch (e) { return Promise.resolve(); }
+};
+setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
+
 /* =====================================================================
    KHALIFAH v8 UI
    1) หน้าแรกนักเรียนแบบ F (บัตรนักเรียน + สรุปรายวัน/สัปดาห์/เดือน + เกรดแบบหุบ)
@@ -163,8 +189,8 @@
     document.getElementById('hfId').textContent = sid || '-';
     document.getElementById('hfGrade').textContent = s.grade || '-';
     document.getElementById('hfSchool').textContent = s.schoolName || '-';
-    const acadYear = (now.getMonth() >= 4 ? now.getFullYear() : now.getFullYear() - 1) + 543;
-    document.getElementById('hfYear').textContent = 'ปีการศึกษา ' + acadYear;
+    const tm = window.k8Term();
+    document.getElementById('hfYear').textContent = 'ปีการศึกษา ' + tm.year + (tm.term === 3 ? ' · ภาคฤดูร้อน' : ' · เทอม ' + tm.term);
     const statusText = String(s.status || 'ปกติ (กำลังศึกษา)');
     const stEl = document.getElementById('hfStatus');
     const normal = /ปกติ|กำลังศึกษา|active/i.test(statusText);
@@ -1839,10 +1865,7 @@ window.k8RegBirthChange = function (v) {
 (function () {
   function term() {
     const el = document.getElementById('tgTerm'); if (!el) return;
-    const d = new Date(), y = d.getFullYear() + 543, m = d.getMonth() + 1;
-    // ภาคเรียนที่ 1: พ.ค.–ต.ค., ภาคเรียนที่ 2: พ.ย.–มี.ค. (ปีการศึกษาเริ่ม พ.ค.)
-    const acad = m >= 5 ? y : y - 1; const t = (m >= 5 && m <= 10) ? 1 : 2;
-    el.textContent = 'ภาคเรียนที่ ' + t + '/' + acad;
+    el.textContent = window.k8Term().label;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', term); else term();
 })();
@@ -1870,7 +1893,7 @@ window.k8RegBirthChange = function (v) {
     box.innerHTML = items.length ? items.slice(0, 5).map(([d, t]) => '<div class="k8-feed-row"><span class="k8-feed-t">' + (d.toDateString() === today ? pad(d.getHours()) + ':' + pad(d.getMinutes()) : d.getDate() + '/' + (d.getMonth() + 1)) + '</span><span class="k8-feed-x">' + esc(t) + '</span></div>').join('')
       : '<div class="k8-li-empty" style="text-align:left;padding:8px 0">ยังไม่มีความเคลื่อนไหว</div>';
     const dt = document.getElementById('k8OvDate');
-    if (dt && dt.textContent.indexOf('ภาคเรียน') === -1) { const n = new Date(), m = n.getMonth() + 1, y = n.getFullYear() + 543; dt.textContent += ' · ภาคเรียนที่ ' + ((m >= 5 && m <= 10) ? 1 : 2) + '/' + (m >= 5 ? y : y - 1); }
+    if (dt) { dt.textContent = dt.textContent.replace(/ · (ภาคเรียนที่|ภาคฤดูร้อน).*$/, '') + ' · ' + window.k8Term().label; }
   }
   const o = window.renderAdminOverviewV8;
   if (typeof o === 'function') window.renderAdminOverviewV8 = function () { const r = o.apply(this, arguments); try { feed(); } catch (e) {} return r; };
@@ -1898,6 +1921,7 @@ window.k8RegBirthChange = function (v) {
   const HEAD = {
     'admin-tab-subadmins': ['อาจารย์ & ผู้บริหาร', 'เพิ่มบัญชี กำหนดสิทธิ์ และรายวิชาที่รับผิดชอบ'],
     'admin-tab-prayers-monitor': ['ละหมาด', 'ติดตามการเช็คชื่อละหมาด 5 เวลา รายวันและรายบุคคล'],
+    'admin-tab-term': ['ภาคเรียน & ปีการศึกษา', 'เลือกว่าตอนนี้เป็นภาคเรียนไหน ปีการศึกษาอะไร ทั้งระบบจะใช้ค่านี้'],
     'admin-tab-behavior': ['คะแนนพฤติกรรม', 'นักเรียนเริ่มที่ 100 คะแนนทุกภาคเรียน · ผู้ตรวจการหัก/เพิ่มคะแนนตามหัวข้อที่ตั้งไว้'],
     'admin-tab-prayer-rank': ['อันดับการละหมาด', 'ดูว่าใครละหมาดสม่ำเสมอ และใครที่ควรติดตามดูแล'],
     'admin-tab-activities-admin': ['กิจกรรม & สแกน QR', 'สร้างกิจกรรม เปิด QR ให้นักเรียนสแกน และดูผู้เข้าร่วม'],
@@ -2808,7 +2832,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.3';
+  const APP_VERSION = '10.4';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3013,7 +3037,7 @@ window.k8RegBirthChange = function (v) {
   const CATS = [['dress', 'เครื่องแต่งกาย', '#1d4ed8', '#eff6ff'], ['dorm', 'ความสะอาดหอพัก', '#7c3aed', '#f5f3ff'], ['toilet', 'ห้องน้ำ', '#0e7490', '#ecfeff'], ['conduct', 'ความประพฤติ', '#b45309', '#fffbeb'], ['good', 'ทำความดี (เพิ่มคะแนน)', '#15803d', '#f0fdf4']];
   const catOf = (k) => CATS.find((c) => c[0] === k) || CATS[3];
   const svg = (k, s) => '<svg width="' + (s || 20) + '" height="' + (s || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICO[k] || ICO.conduct) + '</svg>';
-  function term() { const d = new Date(); const m = d.getMonth() + 1; const y = d.getFullYear() + 543; return ((m >= 5 && m <= 10) ? 1 : 2) + '/' + (m >= 5 ? y : y - 1); }
+  function term() { return window.k8Term().key; }
   const level = (sc) => sc >= 90 ? ['ดีมาก', '#15803d', '#dcfce7'] : sc >= 70 ? ['ปกติ', '#1d4ed8', '#dbeafe'] : sc >= 50 ? ['ต้องดูแล', '#b45309', '#fef3c7'] : ['ต้องติดตามใกล้ชิด', '#b91c1c', '#fee2e2'];
   const me = () => { try { return currentAdmin || null; } catch (e) { return null; } };
   const isInspector = () => { const a = me(); return !!a && /INSPECTOR|ผู้ตรวจการ/i.test(String(a.realRole || a.role || '')); };
@@ -3106,7 +3130,7 @@ window.k8RegBirthChange = function (v) {
     if (q) list = list.filter((x) => String(x.s.fullName || '').toLowerCase().includes(q) || norm(x.s.studentId).includes(q.replace(/^0+/, '')));
     list.sort((a, b) => a.sc - b.sc || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
     const lvBtn = (k, n, l, sub, c, bg) => '<button type="button" aria-pressed="' + (B.sLevel === k) + '" style="--c:' + c + ';--bg:' + bg + '" onclick="k8BhSet(\'sLevel\',\'' + k + '\')"><b>' + n + '</b><span>' + l + '</span>' + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
-    return '<section class="k8-bh-card"><p class="k8-bh-intro">คะแนนพฤติกรรมเริ่มที่ <b>100</b> ทุกภาคเรียน (ภาคเรียนที่ ' + term() + ') · เรียงจากคะแนนน้อยไปมาก เพื่อให้เห็นคนที่ต้องดูแลก่อน</p>' +
+    return '<section class="k8-bh-card"><p class="k8-bh-intro">คะแนนพฤติกรรมเริ่มที่ <b>100</b> ทุกภาคเรียน (' + window.k8Term().label + ') · เรียงจากคะแนนน้อยไปมาก เพื่อให้เห็นคนที่ต้องดูแลก่อน</p>' +
       '<div class="k8-rk-levels">' + lvBtn('all', cnt.all, 'ทั้งหมด', '', '#0f172a', '#f8fafc') + lvBtn('good', cnt.good, 'ดีมาก', '90–100', '#15803d', '#dcfce7') + lvBtn('ok', cnt.ok, 'ปกติ', '70–89', '#1d4ed8', '#dbeafe') + lvBtn('watch', cnt.watch, 'ต้องดูแล', 'ต่ำกว่า 70', '#b91c1c', '#fee2e2') + '</div>' +
       '<div class="k8-bh-filter"><input type="search" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(B.sq) + '" oninput="k8BhSQ(this)" id="k8BhSQ" autocomplete="off">' + gradeSelect(B.sGrade, 'sGrade') + '</div>' +
       '<ul class="k8-bh-list">' + (list.length ? list.slice(0, 300).map((x) => '<li><button type="button" onclick="k8BhOpen(\'' + js(norm(x.s.studentId)) + '\')"><span class="k8-bh-ring" style="--p:' + x.sc + ';--c:' + x.lv[1] + '"><b>' + x.sc + '</b></span><span class="k8-bh-who"><b>' + esc(x.s.fullName) + '</b><small>' + esc(shortG(x.s.grade)) + ' · ' + esc(x.s.studentId) + '</small></span><span class="k8-bh-lv" style="color:' + x.lv[1] + ';background:' + x.lv[2] + '">' + x.lv[0] + '</span></button></li>').join('') : '<li class="k8-bh-empty">ไม่พบนักเรียน</li>') + '</ul></section>';
@@ -3144,7 +3168,7 @@ window.k8RegBirthChange = function (v) {
     const logs = B.logs.filter((l) => norm(l.studentId) === k && (!l.term || l.term === t)).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
     const sc = clamp(100 + logs.filter((l) => l.status !== 'cancelled').reduce((a, l) => a + (Number(l.points) || 0), 0));
     document.getElementById('k8BhModalTitle').textContent = s.fullName || k;
-    document.getElementById('k8BhModalSub').textContent = shortG(s.grade) + ' · ' + (s.studentId || k) + ' · ภาคเรียนที่ ' + t;
+    document.getElementById('k8BhModalSub').textContent = shortG(s.grade) + ' · ' + (s.studentId || k) + ' · ' + window.k8Term().label;
     document.getElementById('k8BhModalBody').innerHTML = detailHtml(sc, logs) + (me() ? '<button type="button" class="k8-bh-go" onclick="k8BhRecordFor(\'' + js(k) + '\')">บันทึกพฤติกรรมให้คนนี้</button>' : '');
     openModal('k8BhModal');
   }
@@ -3242,7 +3266,7 @@ window.k8RegBirthChange = function (v) {
     const t = term();
     const logs = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
     document.getElementById('k8BhModalTitle').textContent = 'คะแนนพฤติกรรมของฉัน';
-    document.getElementById('k8BhModalSub').textContent = 'ภาคเรียนที่ ' + t + ' · เริ่มต้น 100 คะแนน';
+    document.getElementById('k8BhModalSub').textContent = window.k8Term().label + ' · เริ่มต้น 100 คะแนน';
     document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), logs) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>';
     openModal('k8BhModal');
     if (st) loadMine(true).then(() => { if (document.getElementById('k8BhModal').classList.contains('open')) { const l2 = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date))); document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), l2) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>'; } });
@@ -3280,4 +3304,60 @@ window.k8RegBirthChange = function (v) {
   // ข้อมูลสด: เมื่อมีการเปลี่ยนแปลงจากเครื่องอื่น ให้โหลดใหม่ตอนเปิดหน้าอีกครั้ง
   document.addEventListener('visibilitychange', () => { if (document.hidden) return; if (isInspector()) load(true); else loadMine(false); });
   window.k8BehaviorReload = function () { B.loaded = false; load(true); loadMine(true); };
+})();
+
+/* ============ Round 12 · จัดการภาคเรียน / ปีการศึกษา (แอดมิน) ============ */
+(function () {
+  const T = { mode: 'auto', term: 1, year: 2569, saving: false };
+  function sync() { const c = window.k8TermSetting; const cur = window.k8Term(); T.mode = c && c.mode === 'manual' ? 'manual' : 'auto'; T.term = cur.term; T.year = cur.year; }
+  const nameOf = (t) => t === 3 ? 'ภาคฤดูร้อน' : 'ภาคเรียนที่ ' + t;
+  function autoNow() { const d = new Date(); const m = d.getMonth() + 1; const by = d.getFullYear() + 543; return { term: (m >= 5 && m <= 10) ? 1 : 2, year: m >= 5 ? by : by - 1 }; }
+  function render() {
+    const root = document.getElementById('k8TermAdmin'); if (!root) return;
+    const cur = window.k8Term(); const a = autoNow();
+    const pick = T.mode === 'manual' ? { term: T.term, year: T.year } : a;
+    const changed = pick.term + '/' + pick.year !== cur.key;
+    const c = window.k8TermSetting;
+    root.innerHTML =
+      '<section class="k8-term-now"><span>ตอนนี้ระบบใช้</span><b>' + cur.label + '</b><small>' + (cur.manual ? 'กำหนดเองโดยแอดมิน' : 'อัตโนมัติตามวันที่') + (c && c.updatedAt ? ' · อัปเดต ' + c.updatedAt : '') + '</small></section>' +
+      '<section class="k8-bh-card"><h2 class="k8-bh-h">วิธีกำหนดภาคเรียน</h2>' +
+      '<div class="k8-term-modes">' +
+        '<button type="button" aria-pressed="' + (T.mode === 'auto') + '" onclick="k8TermSet(\'mode\',\'auto\')"><b>อัตโนมัติตามวันที่</b><small>พ.ค.–ต.ค. = เทอม 1 · พ.ย.–เม.ย. = เทอม 2 · ตอนนี้คือ ' + nameOf(a.term) + '/' + a.year + '</small></button>' +
+        '<button type="button" aria-pressed="' + (T.mode === 'manual') + '" onclick="k8TermSet(\'mode\',\'manual\')"><b>กำหนดเอง</b><small>เลือกภาคเรียนและปีการศึกษาเอง เช่น เปิดเทอมเร็ว/ช้ากว่าปกติ หรือภาคฤดูร้อน</small></button>' +
+      '</div>' +
+      (T.mode === 'manual' ?
+        '<div class="k8-term-pick"><span class="k8-term-lbl">ภาคเรียน</span><div class="k8-term-chips">' + [1, 2, 3].map((t) => '<button type="button" aria-pressed="' + (T.term === t) + '" onclick="k8TermSet(\'term\',' + t + ')">' + nameOf(t) + '</button>').join('') + '</div>' +
+        '<span class="k8-term-lbl">ปีการศึกษา (พ.ศ.)</span><div class="k8-term-year"><button type="button" aria-label="ปีก่อนหน้า" onclick="k8TermSet(\'year\',' + (T.year - 1) + ')">‹</button><b>' + T.year + '</b><button type="button" aria-label="ปีถัดไป" onclick="k8TermSet(\'year\',' + (T.year + 1) + ')">›</button></div>' +
+        '<button type="button" class="k8-bh-link" onclick="k8TermNext()">เลื่อนไปภาคเรียนถัดไป →</button></div>' : '') +
+      '<div class="k8-term-preview' + (changed ? ' is-change' : '') + '">' + (changed ? 'เมื่อบันทึก ระบบจะเปลี่ยนจาก <b>' + cur.label + '</b> เป็น <b>' + nameOf(pick.term) + '/' + pick.year + '</b>' : 'ค่าที่เลือกตรงกับที่ระบบใช้อยู่แล้ว') + '</div>' +
+      '<button type="button" class="k8-bh-go k8-term-save" ' + (T.saving ? 'disabled' : '') + ' onclick="k8TermSave()">' + (T.saving ? 'กำลังบันทึก…' : 'บันทึกการตั้งค่า') + '</button></section>' +
+      '<section class="k8-bh-card"><h2 class="k8-bh-h">ค่านี้มีผลกับ</h2><ul class="k8-term-fx">' +
+        '<li><b>คะแนนพฤติกรรม</b> เริ่มที่ 100 ใหม่ทุกภาคเรียน · ประวัติภาคเรียนก่อนยังเก็บไว้ใน Google Sheets</li>' +
+        '<li><b>ประเมินอาจารย์</b> นักเรียนประเมินได้ 1 ครั้งต่อวิชาต่อภาคเรียน · เปลี่ยนภาคเรียนแล้วจะเปิดให้ประเมินรอบใหม่</li>' +
+        '<li><b>ป้ายภาคเรียน/ปีการศึกษา</b> บนบัตรนักเรียน หน้าเกรดของอาจารย์ และหน้าภาพรวมแอดมิน</li>' +
+      '</ul></section>';
+  }
+  window.k8TermSet = function (k, v) { T[k] = v; if (k === 'mode' && v === 'manual') { const cur = window.k8Term(); T.term = cur.term; T.year = cur.year; } render(); };
+  window.k8TermNext = function () { if (T.term === 1) T.term = 2; else { T.term = 1; T.year += 1; } render(); };
+  window.k8TermSave = async function () {
+    T.saving = true; render();
+    try {
+      const r = await gasApiCall('saveCurrentTerm', { data: { mode: T.mode, term: T.term, year: T.year } });
+      if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
+      window.k8TermSetting = r.setting;
+      try { localStorage.setItem('khalifah_term_setting', JSON.stringify(r.setting)); } catch (e) {}
+      document.dispatchEvent(new CustomEvent('k8-term-changed'));
+      if (typeof showToast === 'function') showToast(r.message, 'success');
+    } catch (e) { if (typeof showToast === 'function') showToast(e.message || 'บันทึกไม่สำเร็จ', 'error'); }
+    T.saving = false; sync(); render();
+  };
+  if (typeof window.switchAdminTab === 'function') {
+    const sat = window.switchAdminTab;
+    window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'term') { sync(); render(); if (window.k8LoadTermSetting) window.k8LoadTermSetting().then(() => { sync(); render(); }); } return r; };
+  }
+  document.addEventListener('k8-term-changed', () => {
+    const el = document.getElementById('tgTerm'); if (el) el.textContent = window.k8Term().label;
+    try { if (typeof renderCurrentStudentProfile === 'function') renderCurrentStudentProfile(); } catch (e) {}
+    try { if (typeof window.renderAdminOverviewV8 === 'function' && document.getElementById('admin-tab-overview') && document.getElementById('admin-tab-overview').style.display !== 'none') window.renderAdminOverviewV8(); } catch (e) {}
+  });
 })();

@@ -1154,7 +1154,7 @@ const ACTION_ACCESS = {
   // แอดมิน (หลัก + รอง)
   getAdmins: 'admin', addSubAdmin: 'admin', deleteSubAdmin: 'admin', deleteStudent: 'admin',
   batchPromote: 'admin', fullSchoolBatchPromote: 'admin',
-  saveSetting: 'admin', saveSubjects: 'admin',
+  saveSetting: 'admin', saveSubjects: 'admin', saveCurrentTerm: 'admin',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
   init: 'owner', convertToThai: 'owner', organizeSheets: 'owner', organizeGoogleSheets: 'owner'
@@ -1384,6 +1384,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
       return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }) };
     }
+    case 'saveCurrentTerm':
+      return saveCurrentTerm_(data);
     case 'saveBehaviorRules':
       return saveBehaviorRules_(data.rules);
     case 'resetMyHasanat':
@@ -5002,9 +5004,30 @@ const EVAL_ITEMS = [
   'ให้คะแนนและตรวจงานอย่างยุติธรรม',
   'เป็นแบบอย่างที่ดี มีคุณธรรม'
 ];
-function currentTerm_() {
+function autoTerm_() {
   const d = new Date(); const m = d.getMonth() + 1; const y = d.getFullYear() + 543;
   return ((m >= 5 && m <= 10) ? 1 : 2) + '/' + (m >= 5 ? y : y - 1);
+}
+/** ภาคเรียนปัจจุบัน: ใช้ค่าที่แอดมินตั้งไว้ (CurrentTerm) ถ้าไม่ได้ตั้งจะคำนวณจากวันที่ */
+function currentTerm_() {
+  try {
+    const raw = (getSettings().data || {}).CurrentTerm;
+    if (raw) {
+      const c = JSON.parse(raw);
+      const t = Number(c.term), y = Number(c.year);
+      if (c.mode === 'manual' && [1, 2, 3].indexOf(t) !== -1 && y >= 2500 && y <= 2700) return t + '/' + y;
+    }
+  } catch (e) {}
+  return autoTerm_();
+}
+function saveCurrentTerm_(data) {
+  data = data || {};
+  const mode = data.mode === 'manual' ? 'manual' : 'auto';
+  const t = Number(data.term), y = Number(data.year);
+  if (mode === 'manual' && ([1, 2, 3].indexOf(t) === -1 || !(y >= 2500 && y <= 2700))) return { success: false, message: 'ภาคเรียนหรือปีการศึกษาไม่ถูกต้อง' };
+  const value = { mode: mode, term: mode === 'manual' ? t : null, year: mode === 'manual' ? y : null, updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') };
+  saveSetting({ key: 'CurrentTerm', value: JSON.stringify(value), description: 'ภาคเรียน/ปีการศึกษาปัจจุบัน (JSON)' });
+  return { success: true, term: currentTerm_(), setting: value, message: 'ตั้งค่าเป็นภาคเรียนที่ ' + currentTerm_() + ' แล้ว' };
 }
 function evalHash_(sid, term, subj, teacher) {
   const raw = getTokenSecret_() + '|eval|' + cleanVal(sid).replace(/^0+/, '') + '|' + term + '|' + subj + '|' + teacher;

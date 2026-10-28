@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=10.3">
-  <link rel="stylesheet" href="ui-v8.css?v=10.3">
+  <link rel="stylesheet" href="style.css?v=10.4">
+  <link rel="stylesheet" href="ui-v8.css?v=10.4">
 </head>
 <body class="auth-locked">
   <script>
@@ -2401,6 +2401,9 @@
         </div>
         <div class="k8-nav-group">
           <span class="k8-nav-label">ระบบ</span>
+          <button class="admin-tab-btn" onclick="switchAdminTab('term', this)" id="btnTabTerm">
+            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> ภาคเรียน &amp; ปีการศึกษา
+          </button>
           <button class="admin-tab-btn" onclick="switchAdminTab('logo', this)" id="btnTabLogo">
             <i class="fa-solid fa-image" aria-hidden="true"></i> ตั้งค่า &amp; โลโก้
           </button>
@@ -3116,6 +3119,11 @@
             </table>
           </div>
         </div>
+      </div>
+
+      <!-- Admin Tab: Term & academic year -->
+      <div id="admin-tab-term" class="admin-content-tab" style="display: none;">
+        <div class="k8-term" id="k8TermAdmin"></div>
       </div>
 
       <!-- Admin Tab: Behavior score -->
@@ -5603,7 +5611,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=10.3"></script>
-  <script defer src="ui-v8.js?v=10.3"></script>
+  <script defer src="app.js?v=10.4"></script>
+  <script defer src="ui-v8.js?v=10.4"></script>
 </body>
 </html>

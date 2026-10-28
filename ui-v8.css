@@ -1788,3 +1788,28 @@ button.hf-card.hf-beh .k8-bh-ring b { font-size: 17px; margin: 0; }
 .k8-nf-pw { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; letter-spacing: .5px; background: #fff; padding: 1px 6px; border-radius: 6px; }
 #k8AdmUserGroup[hidden] { display: none !important; }
 .k8-f[hidden], .k8-form-2 > [hidden] { display: none !important; }
+
+/* ---- Term & academic year (admin) ---- */
+.k8-term { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.k8-term-now { display: flex; flex-direction: column; gap: 2px; padding: 18px 20px; border-radius: 20px; background: linear-gradient(135deg, #0369a1, #1d4ed8); color: #fff; }
+.k8-term-now span { font-size: 13px; opacity: .85; }
+.k8-term-now b { font-size: 28px; font-weight: 700; letter-spacing: .2px; }
+.k8-term-now small { font-size: 12px; opacity: .85; }
+.k8-term-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 560px) { .k8-term-modes { grid-template-columns: 1fr; } }
+.k8-term-modes button { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 2px solid #e2e8f0; border-radius: 16px; background: #fff; font: inherit; text-align: left; cursor: pointer; color: #0f172a; }
+.k8-term-modes button b { font-size: 15px; } .k8-term-modes button small { font-size: 12px; color: #64748b; line-height: 1.5; }
+.k8-term-modes button[aria-pressed="true"] { border-color: #1d4ed8; background: #eff6ff; }
+.k8-term-pick { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 16px; background: #f8fafc; }
+.k8-term-lbl { font-size: 13px; color: #475569; font-weight: 600; }
+.k8-term-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.k8-term-chips button { height: 42px; padding: 0 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+.k8-term-chips button[aria-pressed="true"] { background: #1d4ed8; border-color: #1d4ed8; color: #fff; font-weight: 600; }
+.k8-term-year { display: inline-flex; align-items: center; gap: 10px; align-self: flex-start; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 4px; }
+.k8-term-year button { width: 40px; height: 40px; border: 0; border-radius: 10px; background: #f1f5f9; font-size: 20px; cursor: pointer; }
+.k8-term-year b { min-width: 64px; text-align: center; font-size: 20px; }
+.k8-term-pick .k8-bh-link { align-self: flex-start; }
+.k8-term-preview { padding: 10px 12px; border-radius: 12px; background: #f1f5f9; font-size: 14px; color: #334155; }
+.k8-term-preview.is-change { background: #fffbeb; color: #92400e; }
+.k8-bh-go.k8-term-save { background: #1d4ed8; }
+.k8-term-fx { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #334155; line-height: 1.6; }
