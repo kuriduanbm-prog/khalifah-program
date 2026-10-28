@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.3">
-  <link rel="stylesheet" href="ui-v8.css?v=8.3">
+  <link rel="stylesheet" href="style.css?v=8.4">
+  <link rel="stylesheet" href="ui-v8.css?v=8.4">
 </head>
 <body class="auth-locked">
 
@@ -2287,6 +2287,17 @@
 
       <!-- NEW Admin Tab: Pending Account Approvals & Dynamic Random Verification Code -->
       <div id="admin-tab-approvals" class="admin-content-tab" style="display: none;">
+        <div class="k8-ap">
+          <div>
+            <h1>อนุมัติบัญชี &amp; คำขอ</h1>
+            <div class="k8-as-sub">เมื่อกดอนุมัติ ระบบจะส่งรหัสยืนยัน 6 หลักไปที่อีเมลของผู้สมัครโดยอัตโนมัติ</div>
+          </div>
+          <div class="k8-ap-tabs" role="tablist" aria-label="ประเภทคำขอ" id="k8ApTabs">
+            <button type="button" role="tab" data-tab="accounts" onclick="k8ApTab('accounts')">บัญชีใหม่</button>
+            <button type="button" role="tab" data-tab="prayers" onclick="k8ApTab('prayers')">ละหมาดย้อนหลัง</button>
+          </div>
+          <div class="k8-ap-grid" id="k8ApGrid"></div>
+        </div>
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
             <div>
@@ -2332,6 +2343,30 @@
 
       <!-- Admin Tab 1: Students Management (Full Deep Edit & Delete) -->
       <div id="admin-tab-students" class="admin-content-tab active">
+        <div class="k8-as">
+          <div class="k8-as-top">
+            <div class="k8-as-titles">
+              <h1>นักเรียน</h1>
+              <div class="k8-as-sub" id="k8AsSub">แสดง 0 คน · กดแถวเพื่อดูรายละเอียด</div>
+            </div>
+            <button type="button" class="k8-btn-line" onclick="exportToExcel()">ส่งออก Excel</button>
+            <button type="button" class="k8-btn-pri" onclick="openAdminEditStudentModal(null)">+ เพิ่มนักเรียน</button>
+          </div>
+          <div class="k8-as-filters">
+            <label for="k8AsSearch" class="sr-only-k8">ค้นหานักเรียน</label>
+            <input id="k8AsSearch" type="search" placeholder="ชื่อ, รหัส หรือเบอร์ผู้ปกครอง" oninput="k8AsSearch(this.value)">
+            <div class="k8-as-chips" id="k8AsChips"></div>
+          </div>
+          <div class="k8-as-body">
+            <div class="k8-as-tablewrap">
+              <table class="k8-as-table">
+                <thead><tr><th scope="col">นักเรียน</th><th scope="col">ชั้น</th><th scope="col">สถานะ</th><th scope="col">มาเรียน</th><th scope="col">ละหมาด 7 วัน</th><th scope="col" class="r">GPAX</th></tr></thead>
+                <tbody id="k8AsRows"></tbody>
+              </table>
+            </div>
+            <aside class="k8-as-detail" id="k8AsDetail" aria-label="รายละเอียดนักเรียน"></aside>
+          </div>
+        </div>
         <div class="card" style="margin-bottom: 1.5rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1.1rem;">
             <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; flex: 1;">
@@ -5311,7 +5346,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.3"></script>
-  <script defer src="ui-v8.js?v=8.3"></script>
+  <script defer src="app.js?v=8.4"></script>
+  <script defer src="ui-v8.js?v=8.4"></script>
 </body>
 </html>

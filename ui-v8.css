@@ -808,3 +808,103 @@ button.k8-th-kpi { cursor: pointer; }
   body.teacher-portal-active .teacher-bottom-nav-bar { position: fixed !important; z-index: 900 !important; margin: 0 auto !important; max-width: 560px; }
   body.teacher-portal-active .main-wrapper { padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)) !important; }
 }
+
+/* ============ Round 3 · Admin students (canvas) ============ */
+#admin-tab-students > .card { display: none !important; }
+.k8-as { display: flex; flex-direction: column; gap: 16px; font-family: 'IBM Plex Sans Thai', sans-serif; color: #0f172a; }
+.k8-as-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.k8-as-titles { flex: 1 1 260px; min-width: 0; }
+.k8-as-titles h1 { margin: 0; font-size: 26px; font-weight: 600; }
+.k8-as-sub { font-size: 14px; color: #475569; }
+.k8-btn-line { height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; font-family: inherit; font-size: 14px; cursor: pointer; }
+.k8-btn-line.is-danger { border-color: #fecaca; color: #b91c1c; }
+.k8-btn-pri { height: 44px; padding: 0 18px; border-radius: 12px; border: 0; background: #0369a1; color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.k8-btn-pri:hover { background: #075985; }
+.k8-as-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.k8-as-filters input { flex: 1 1 240px; height: 42px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 14px; font-family: inherit; font-size: 14px; background: #fff; min-width: 0; }
+.k8-as-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.k8-as-chips button { height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-as-chips button[aria-pressed="true"] { background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-as-body { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.k8-as-tablewrap { flex: 999 1 520px; min-width: 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow-x: auto; }
+.k8-as-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+.k8-as-table thead tr { background: #f8fafc; text-align: left; color: #475569; font-size: 13px; }
+.k8-as-table th { padding: 12px 8px; font-weight: 600; }
+.k8-as-table th:first-child, .k8-as-table td:first-child { padding-left: 14px; }
+.k8-as-table th.r, .k8-as-table td.r { text-align: right; padding-right: 14px; }
+.k8-as-table td { padding: 10px 8px; border-top: 1px solid #f1f5f9; vertical-align: middle; }
+.k8-as-table td.b { font-weight: 600; }
+.k8-as-table tbody tr { cursor: pointer; }
+.k8-as-table tbody tr:hover { background: #f8fafc; }
+.k8-as-table tbody tr.is-sel { background: #f0f9ff; }
+.k8-as-name { border: 0; background: transparent; padding: 0; text-align: left; font-family: inherit; cursor: pointer; max-width: 280px; }
+.k8-as-name b { display: block; font-size: 14px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-as-name span { display: block; font-size: 12px; color: #64748b; }
+.k8-pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.k8-as-pr { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #475569; }
+.k8-as-prbar { width: 70px; height: 8px; border-radius: 8px; background: #e2e8f0; display: block; overflow: hidden; }
+.k8-as-prbar > span { display: block; height: 8px; border-radius: 8px; background: #0369a1; }
+.k8-as-detail { flex: 1 1 280px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; }
+.k8-as-dh { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.k8-as-av { width: 48px; height: 48px; border-radius: 50%; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 600; flex: none; }
+.k8-as-dt { min-width: 0; }
+.k8-as-dt b { display: block; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.k8-as-dt span { display: block; font-size: 13px; color: #475569; }
+.k8-as-dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 14px; }
+.k8-as-dl dt { color: #64748b; }
+.k8-as-dl dd { margin: 0; overflow-wrap: anywhere; }
+.k8-as-acts { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.k8-as-acts button { height: 42px; padding: 0 8px; font-size: 14px; }
+
+/* ============ Round 3 · Admin approvals (canvas) ============ */
+#admin-tab-approvals > .card { display: none !important; }
+.k8-ap { display: flex; flex-direction: column; gap: 16px; color: #0f172a; }
+.k8-ap h1 { margin: 0; font-size: 26px; font-weight: 600; }
+.k8-ap-tabs { display: flex; gap: 6px; border-bottom: 1px solid #e2e8f0; overflow-x: auto; }
+.k8-ap-tabs button { height: 44px; padding: 0 16px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #475569; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.k8-ap-tabs button[aria-selected="true"] { color: #0369a1; border-bottom-color: #0369a1; }
+.k8-ap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 12px; }
+.k8-ap-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.k8-ap-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.k8-ap-ht { min-width: 0; }
+.k8-ap-ht b { display: block; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.k8-ap-ht span { display: block; font-size: 13px; color: #475569; overflow-wrap: anywhere; }
+.k8-ap-dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; }
+.k8-ap-dl dt { color: #64748b; }
+.k8-ap-dl dd { margin: 0; overflow-wrap: anywhere; min-width: 0; }
+.k8-ap-acts { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+.k8-ap-acts button, .k8-ap-acts2 button { height: 44px; border-radius: 12px; font-family: inherit; font-size: 14px; cursor: pointer; }
+.k8-ap-acts2 { display: flex; gap: 8px; margin-top: auto; }
+.k8-ap-acts2 button { flex: 1; height: 40px; border-radius: 10px; }
+.k8-ap .is-ok { border: 0; background: #15803d; color: #fff; font-weight: 600; }
+.k8-ap .is-no { border: 1px solid #fecaca; background: #fff; color: #b91c1c; }
+.k8-ap-sent { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: #475569; background: #f8fafc; border-radius: 10px; padding: 8px 12px; }
+.k8-ap-sent button { border: 0; background: transparent; color: #0369a1; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 32px; }
+.k8-ap-late { flex-direction: row; gap: 14px; }
+.k8-ap-photo { width: 84px; height: 108px; flex: none; border-radius: 12px; background: #e2e8f0; border: 0; padding: 0; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #475569; }
+.k8-ap-photo img { width: 100%; height: 100%; object-fit: cover; }
+.k8-ap-lb { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.k8-ap-lb b { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.k8-ap-meta { font-size: 13px; color: #475569; }
+.k8-ap-why { font-size: 13px; overflow-wrap: anywhere; }
+.k8-ap-done { margin-top: auto; font-size: 13px; font-weight: 600; }
+
+/* ============ Round 3 · Admin shell = canvas (no top bar, sidebar without icons) ============ */
+body.portal-mode-admin .app-header, body.portal-mode-admin .app-footer { display: none !important; }
+body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
+.k8-admin-nav .admin-tab-btn > i { display: none !important; }
+@media (min-width: 993px) {
+  #view-admin.view-section.active { min-height: 100vh; }
+  .k8-admin-nav.admin-tabs { top: 0; height: 100vh; }
+  .k8-admin-nav .k8-nav-brand { flex-direction: row !important; align-items: center; gap: 10px; padding: 0 8px 4px !important; }
+  .k8-admin-nav .k8-nav-brand::before { content: ''; width: 36px; height: 36px; border-radius: 10px; flex: none; background: #fff url('assets/logo.png') center/28px no-repeat; }
+  .k8-admin-nav .k8-nav-brand-name { display: block; font-size: 17px; }
+  .k8-admin-nav .k8-nav-brand-sub { display: block; }
+  .k8-admin-nav .k8-nav-brand > span { display: block; }
+  .k8-admin-nav .k8-nav-brand { display: grid !important; grid-template-columns: 36px 1fr; column-gap: 10px; }
+  .k8-admin-nav .k8-nav-brand::before { grid-row: 1 / span 2; }
+}
+@media (max-width: 992px) {
+  body.portal-mode-admin .main-wrapper { padding-top: 12px !important; }
+}
+.k8-ap-grid > .k8-li-empty { grid-column: 1 / -1; text-align: left; padding: 24px 4px; }
