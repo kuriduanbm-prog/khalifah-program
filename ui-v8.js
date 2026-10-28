@@ -53,7 +53,9 @@
   // ================================================================
   //  1) หน้าแรกแบบ F
   // ================================================================
-  const hfState = { period: 'week', gradesOpen: false, openSubj: null };
+  const k8HideGrades = () => { try { return localStorage.getItem('k8_pref_hideGrades') !== '0'; } catch (e) { return true; } };
+  const hfState = { period: 'week', gradesOpen: !k8HideGrades(), openSubj: null };
+  window.k8HfSetGradesOpen = function (v) { hfState.gradesOpen = !!v; if (!v) hfState.openSubj = null; try { window.renderHomeF(); } catch (e) {} };
 
   const SLOT_ORDER = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
   const slotKey = (name) => (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(name) : name);
@@ -394,7 +396,7 @@
   if (typeof window.switchView === 'function') {
     const origSwitch = window.switchView;
     window.switchView = function (viewName) {
-      if (viewName !== 'dashboard' && hfState.gradesOpen) {
+      if (viewName !== 'dashboard' && hfState.gradesOpen && k8HideGrades()) {
         hfState.gradesOpen = false;
         hfState.openSubj = null;
       }
@@ -404,7 +406,7 @@
     };
   }
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && hfState.gradesOpen) {
+    if (document.hidden && hfState.gradesOpen && k8HideGrades()) {
       hfState.gradesOpen = false;
       hfState.openSubj = null;
       window.renderHomeF();
@@ -1133,4 +1135,143 @@
     if (src && 'MutationObserver' in window) new MutationObserver(memSync).observe(src, { childList: true, characterData: true, subtree: true });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+/* ============ Round 3 · Activities (canvas) ============ */
+(function () {
+  const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function ymd(v) {
+    const m = String(v || '').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (!m) return null;
+    let y = +m[1]; if (y > 2400) y -= 543;
+    return new Date(y, +m[2] - 1, +m[3]);
+  }
+  function hhmm(v) { const m = String(v || '').match(/(\d{1,2}):(\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : ''; }
+  function sameId(a, b) { try { return typeof isIdMatch === 'function' ? isIdMatch(a, b) : String(a) === String(b); } catch (e) { return String(a) === String(b); } }
+  let tab = 'upcoming';
+  function myLogs() {
+    let logs = []; try { logs = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]'); } catch (e) {}
+    let sid = null; try { sid = currentStudent && currentStudent.studentId; } catch (e) {}
+    return sid ? logs.filter((l) => l && sameId(l.studentId, sid)) : [];
+  }
+  window.renderActivitiesV8 = function () {
+    const box = document.getElementById('k8ActList');
+    if (!box) return;
+    const logs = myLogs();
+    const cnt = document.getElementById('k8ActCount');
+    if (cnt) cnt.textContent = 'เข้าร่วมแล้ว ' + logs.length + ' ครั้ง';
+    document.querySelectorAll('#k8ActTabs button').forEach((b) => { const on = b.dataset.tab === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    let rows = [];
+    if (tab === 'upcoming') {
+      const acts = (typeof activities !== 'undefined' && Array.isArray(activities)) ? activities : [];
+      const t = new Date(); const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+      rows = acts.map((a) => ({ a, d: ymd(a.startDate || a.date) })).filter((x) => x.d && x.d >= today).sort((x, y) => x.d - y.d)
+        .map((x) => ({ d: x.d, title: x.a.title || x.a.activityTitle || '-', meta: [hhmm(x.a.startTime || x.a.time || x.a.startDate), x.a.location].filter(Boolean).join(' · ') || (x.a.type || 'กิจกรรม'),
+          tag: +x.d === +today ? 'วันนี้' : ((String(x.a.title || '').match(/ม\.\s?[1-6]/) || ['ทุกคน'])[0].replace(/\s/g, '')), cls: 'up' }));
+    } else {
+      rows = logs.map((l) => ({ d: ymd(l.formattedDate || l.checkInTimestamp || l.date), title: l.activityTitle || l.title || l.activityId || '-',
+        meta: 'สแกนเมื่อ ' + (hhmm(l.formattedTime || l.checkInTimestamp) || '-'), tag: 'เข้าร่วม', cls: 'ok' }))
+        .filter((x) => x.d).sort((x, y) => y.d - x.d);
+    }
+    box.innerHTML = rows.length ? rows.map((r) => '<div class="k8-li"><span class="k8-li-date"><b>' + r.d.getDate() + '</b>' + TH_M[r.d.getMonth()] + '</span>' +
+      '<span class="k8-li-main"><span class="k8-li-title" title="' + esc(r.title) + '">' + esc(r.title) + '</span><span class="k8-li-meta">' + esc(r.meta) + '</span></span>' +
+      '<span class="k8-li-tag ' + r.cls + '">' + r.tag + '</span></div>').join('')
+      : '<div class="k8-li-empty">' + (tab === 'upcoming' ? 'ยังไม่มีกิจกรรมที่กำลังจะมาถึง' : 'ยังไม่เคยเข้าร่วมกิจกรรม · กด "สแกน" เพื่อเช็คชื่อ') + '</div>';
+  };
+  window.k8ActTab = function (t) { tab = t; window.renderActivitiesV8(); };
+  function setScanning(on) { const v = document.getElementById('view-activities'); if (v) v.classList.toggle('k8-scanning', !!on); }
+  window.k8StartActScan = function () {
+    try { isStudentCameraLocked = false; } catch (e) {}
+    setScanning(true);
+    if (typeof setStudentActivityMode === 'function') setStudentActivityMode('scanner');
+  };
+  window.k8StopActScan = function () {
+    setScanning(false);
+    try { currentStudentActivityMode = 'history'; } catch (e) {}
+    if (typeof stopQrScanner === 'function') stopQrScanner();
+    window.renderActivitiesV8();
+  };
+  const sv = window.switchView;
+  if (typeof sv === 'function') {
+    window.switchView = function (v) {
+      if (v === 'activities') { try { currentStudentActivityMode = 'history'; } catch (e) {} setScanning(false); }
+      const r = sv.apply(this, arguments);
+      if (v === 'activities') window.renderActivitiesV8();
+      return r;
+    };
+  }
+  ['renderStudentScannedActivities', 'fetchActivitiesAndLogsFromCloud'].forEach((fn) => {
+    const o = window[fn]; if (typeof o !== 'function') return;
+    window[fn] = function () {
+      const r = o.apply(this, arguments);
+      const after = () => { try { window.renderActivitiesV8(); } catch (e) {} };
+      if (r && typeof r.then === 'function') r.then(after, after); else after();
+      return r;
+    };
+  });
+})();
+
+
+/* ============ Round 3 · Profile "ฉัน" (canvas) + preferences ============ */
+(function () {
+  const getPref = (k, d) => { try { const v = localStorage.getItem('k8_pref_' + k); return v == null ? d : v === '1'; } catch (e) { return d; } };
+  const setPrefRaw = (k, v) => { try { localStorage.setItem('k8_pref_' + k, v ? '1' : '0'); } catch (e) {} };
+  function maskPhone(p) { const d = String(p || '').replace(/\D/g, ''); return d.length >= 9 ? d.slice(0, 3) + '-xxx-' + d.slice(-4) : (p || '-'); }
+  function maskEmail(e) { const m = String(e || '').match(/^(.)[^@]*(@.+)$/); return m ? m[1] + '***' + m[2] : (e || '-'); }
+  function shortGrade(g) { const m = String(g || '').match(/(\d)/); return /มัธยม/.test(g || '') && m ? 'ม.' + m[1] : (g || '-'); }
+  window.renderProfileV8 = function () {
+    let s = null; try { s = currentStudent; } catch (e) {}
+    const $ = (id) => document.getElementById(id);
+    if (!$('k8ProfName')) return;
+    if (!s) { $('k8ProfName').textContent = 'ยังไม่ได้เข้าสู่ระบบ'; return; }
+    $('k8ProfName').textContent = s.fullName || '-';
+    $('k8ProfName').title = s.fullName || '';
+    $('k8ProfSub').textContent = 'รหัส ' + (s.studentId || '-') + ' · ' + shortGrade(s.grade);
+    $('k8ProfSchool').textContent = s.school || s.schoolName || '';
+    $('k8ProfPhone').textContent = maskPhone(s.parentPhone || s.phone);
+    $('k8ProfEmail').textContent = maskEmail(s.email);
+    const av = $('k8ProfAv');
+    let url = ''; try { url = typeof getDirectImageUrl === 'function' ? getDirectImageUrl(s.avatarUrl) : ''; } catch (e) {}
+    if (url) { av.innerHTML = ''; const img = document.createElement('img'); img.src = url; img.alt = 'รูปโปรไฟล์'; av.appendChild(img); }
+    else av.textContent = String(s.fullName || 'น').replace(/^(เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.|นาย|นางสาว|นาง)\s*/, '').charAt(0) || 'น';
+    const hg = $('k8PrefHideGrades'), nt = $('k8PrefNotify');
+    if (hg) hg.checked = getPref('hideGrades', true);
+    if (nt) nt.checked = getPref('notify', false) && ('Notification' in window) && Notification.permission === 'granted';
+  };
+  window.k8OpenGrades = function () {
+    switchView('dashboard');
+    if (window.k8HfSetGradesOpen) window.k8HfSetGradesOpen(true);
+    setTimeout(() => { const t = document.getElementById('hfGradesToggle'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
+  };
+  window.k8SetPref = async function (key, on) {
+    if (key === 'notify' && on) {
+      if (!('Notification' in window)) { if (typeof showToast === 'function') showToast('อุปกรณ์นี้ไม่รองรับการแจ้งเตือน', 'warning'); on = false; }
+      else if (Notification.permission !== 'granted') {
+        let p = 'denied'; try { p = await Notification.requestPermission(); } catch (e) {}
+        if (p !== 'granted') { if (typeof showToast === 'function') showToast('ยังไม่ได้อนุญาตการแจ้งเตือนในเบราว์เซอร์', 'warning'); on = false; }
+      }
+    }
+    setPrefRaw(key, on);
+    if (key === 'hideGrades' && window.k8HfSetGradesOpen) window.k8HfSetGradesOpen(!on);
+    window.renderProfileV8();
+    if (typeof showToast === 'function') showToast(on ? 'เปิดแล้ว' : 'ปิดแล้ว', 'success');
+  };
+  // prayer-time reminders while the app is open
+  let lastFired = '';
+  setInterval(() => {
+    if (!getPref('notify', false) || !('Notification' in window) || Notification.permission !== 'granted') return;
+    let s = null; try { s = currentStudent; } catch (e) {} if (!s) return;
+    const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
+    let w = null; try { w = PRAYER_TIME_WINDOWS.find((x) => x.startMin === cur); } catch (e) {}
+    const key = now.toDateString() + (w && w.name);
+    if (w && lastFired !== key) {
+      lastFired = key;
+      try { new Notification('ถึงเวลาละหมาด' + w.name, { body: 'อย่าลืมเช็คชื่อละหมาดใน KHALIFAH', icon: 'assets/logo.png' }); } catch (e) {}
+    }
+  }, 30000);
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'profile') window.renderProfileV8(); return r; };
+  const rp = window.renderCurrentStudentProfile;
+  if (typeof rp === 'function') window.renderCurrentStudentProfile = function () { const r = rp.apply(this, arguments); try { window.renderProfileV8(); } catch (e) {} return r; };
 })();

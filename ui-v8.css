@@ -642,3 +642,99 @@ body.auth-locked #authModal, #authModal.modal-overlay { background-image: none !
 .k8-mem-big { display: block; } .k8-mem-lbl { display: block; }
 #view-hasanat #memorizedPercentLabel { font-size: 12px; color: #64748b; font-weight: 500; }
 #view-hasanat #memorizedPercentLabel { display: none; }
+
+/* ============ Round 3 · Bottom nav = canvas exact (68px pill, svg icons) ============ */
+@media (max-width: 992px) {
+  body .mobile-nav, body.teacher-portal-active .teacher-bottom-nav-bar { left: 16px !important; right: 16px !important; bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important; height: 68px !important; padding: 0 8px !important; background: #fff !important; border: 1px solid #e2e8f0 !important; display: flex !important; }
+  body .mobile-nav .mobile-nav-item, body .teacher-bottom-nav-bar .teacher-bottom-nav-item { height: 52px !important; min-width: 52px !important; color: #64748b !important; font-size: 11px !important; font-weight: 600 !important; gap: 2px !important; display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1.2; }
+  body .mobile-nav .mobile-nav-item[style*="display: none"] { display: none !important; }
+  body .mobile-nav .mobile-nav-item.active, body .teacher-bottom-nav-bar .teacher-bottom-nav-item.active { color: #fff !important; background: #0369a1 !important; font-size: 14px !important; gap: 8px !important; padding: 0 18px !important; }
+  .k8-nav-ico { width: 22px !important; height: 22px !important; flex: none; display: block !important; font-size: 0 !important; }
+  body .mobile-nav .mobile-nav-item i, body .teacher-bottom-nav-bar i.teacher-bottom-nav-icon { display: none !important; }
+  body .mobile-nav .mobile-nav-item::before, body .mobile-nav .mobile-nav-item::after { display: none !important; }
+}
+
+/* ============ Round 3 · Activities (canvas) ============ */
+#view-activities { max-width: 560px; margin: 0 auto; }
+#view-activities > .card { display: none !important; }
+#view-activities.k8-scanning > .k8-act-scan { display: none !important; }
+#view-activities .k8-act-cancel-row { display: none; }
+#view-activities.k8-scanning .k8-act-cancel-row { display: flex; }
+#view-activities.k8-scanning > .card { display: block !important; background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 0 12px !important; }
+#view-activities.k8-scanning #studentSegment, #view-activities.k8-scanning #studentActSegmentBar, #view-activities.k8-scanning #studentHistorySection { display: none !important; }
+#view-activities.k8-scanning #studentScannerSection > div:first-child:not(.qr-scanner-box) { display: none !important; }
+#view-activities .qr-scanner-box { height: 300px !important; border-radius: 22px !important; background: #0f1b26 !important; overflow: hidden; }
+#view-activities .qr-feedback { border-radius: 14px !important; margin-top: 10px !important; font-size: 14px !important; }
+.k8-act-scan { background: #0369a1; color: #fff; border-radius: 22px; padding: 18px; display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.k8-act-scan-ico { width: 56px; height: 56px; border-radius: 16px; background: rgba(255,255,255,.16); display: flex; align-items: center; justify-content: center; flex: none; }
+.k8-act-scan-txt { flex: 1; min-width: 0; }
+.k8-act-scan-txt b { display: block; font-size: 18px; font-weight: 600; }
+.k8-act-scan-txt small { display: block; font-size: 13px; color: #e0f2fe; }
+.k8-act-scan-btn { height: 46px; padding: 0 16px; border: 0; border-radius: 14px; background: #fff; color: #0369a1; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; flex: none; }
+.k8-act-cancel-row { margin: 0 0 12px; }
+.k8-btn-ghost { flex: 1; height: 44px; border-radius: 12px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-family: inherit; font-size: 14px; cursor: pointer; }
+.k8-seg-2 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; background: #dbe3ec !important; margin-bottom: 12px; }
+.k8-list-card { background: #fff; border: 1px solid #dbe3ec; border-radius: 18px; padding: 4px 16px; }
+.k8-li { display: flex; align-items: center; gap: 12px; min-height: 72px; border-top: 1px solid #f1f5f9; }
+.k8-li:first-child { border-top: 0; }
+.k8-li-date { width: 50px; height: 54px; border-radius: 12px; background: #e0f2fe; color: #0369a1; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; font-size: 11px; font-weight: 600; }
+.k8-li-date b { font-size: 19px; font-weight: 600; line-height: 1; }
+.k8-li-main { flex: 1; min-width: 0; }
+.k8-li-title { display: block; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #0f172a; }
+.k8-li-meta { display: block; font-size: 13px; color: #475569; }
+.k8-li-tag { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; flex: none; }
+.k8-li-tag.up { background: #eff6ff; color: #1d4ed8; }
+.k8-li-tag.ok { background: #f0fdf4; color: #15803d; }
+.k8-li-empty { padding: 24px 4px; text-align: center; color: #64748b; font-size: 14px; }
+#view-activities.k8-scanning.active { display: flex !important; flex-direction: column; }
+#view-activities.k8-scanning > .k8-act-head { order: 0; }
+#view-activities.k8-scanning > .card { order: 1; }
+#view-activities.k8-scanning > .k8-act-cancel-row { order: 2; }
+#view-activities.k8-scanning > #k8ActTabs { order: 3; }
+#view-activities.k8-scanning > #k8ActList { order: 4; }
+#view-activities #studentScannerSection .btn-outline { display: none !important; }
+#view-activities .qr-scanner-box { position: relative; }
+#view-activities .qr-scanner-box::before { content: 'วาง QR ให้อยู่ในกรอบ'; position: absolute; top: 14px; left: 0; right: 0; text-align: center; color: #e0f2fe; font-size: 14px; z-index: 3; pointer-events: none; }
+#view-activities #studentScannerSection .btn-secondary, #view-activities #studentScannerSection .btn-sm { border-radius: 12px !important; min-height: 40px; box-shadow: none !important; }
+/* canvas: student screens have no top app bar on mobile */
+@media (max-width: 992px) {
+  body.portal-mode-student .app-header { display: none !important; }
+  body.portal-mode-student .main-wrapper { padding-top: 12px !important; margin-top: 0 !important; }
+  body.portal-mode-student .app-footer, body.portal-mode-student footer.footer { display: none !important; }
+}
+
+/* ============ Round 3 · Profile (canvas) ============ */
+#view-profile { max-width: 560px; margin: 0 auto; }
+#view-profile > :not(.k8-prof) { display: none !important; }
+.k8-prof { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
+.k8-prof-card { background: #fff; border: 1px solid #dbe3ec; border-radius: 22px; padding: 16px; display: flex; gap: 14px; align-items: center; }
+.k8-prof-av-wrap { position: relative; flex: none; }
+.k8-prof-av { width: 72px; height: 72px; border-radius: 50%; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 600; overflow: hidden; }
+.k8-prof-av img { width: 100%; height: 100%; object-fit: cover; }
+.k8-prof-cam { position: absolute; right: -4px; bottom: -4px; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; background: #0369a1; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.k8-prof-main { flex: 1; min-width: 0; }
+.k8-prof-name { font-size: 19px; font-weight: 600; line-height: 1.3; color: #0f172a; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.k8-prof-sub { font-size: 13px; color: #475569; }
+.k8-wrap { overflow-wrap: anywhere; }
+.k8-box { background: #fff; border: 1px solid #dbe3ec; border-radius: 18px; padding: 4px 16px; }
+.k8-box-h { margin: 12px 0 4px; font-size: 13px; font-weight: 600; color: #475569; }
+.k8-dl { margin: 0; }
+.k8-dl > div { display: flex; justify-content: space-between; gap: 12px; min-height: 44px; align-items: center; border-top: 1px solid #f1f5f9; }
+.k8-dl dt { color: #475569; font-size: 14px; flex: none; }
+.k8-dl dd { margin: 0; font-size: 14px; color: #0f172a; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.k8-pl { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; border: 0; border-top: 1px solid #f1f5f9; background: transparent; color: #0f172a; font-family: inherit; font-size: 15px; text-align: left; cursor: pointer; padding: 0; }
+.k8-pl:first-child { border-top: 0; }
+.k8-pl-ico { width: 34px; height: 34px; border-radius: 10px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; flex: none; }
+.k8-pl-t { flex: 1; }
+.k8-tg { display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid #f1f5f9; cursor: pointer; position: relative; }
+.k8-tg:first-child { border-top: 0; }
+.k8-tg-t { flex: 1; }
+.k8-tg-t span { display: block; font-size: 15px; color: #0f172a; }
+.k8-tg-t small { display: block; font-size: 12px; color: #64748b; }
+.k8-tg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.k8-sw { width: 48px; height: 28px; border-radius: 999px; background: #cbd5e1; position: relative; flex: none; display: block; transition: background .15s; }
+.k8-sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .15s; }
+.k8-tg input:checked + .k8-sw { background: #0369a1; }
+.k8-tg input:checked + .k8-sw::after { left: 23px; }
+.k8-tg input:focus-visible + .k8-sw { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+.k8-logout { min-height: 48px; border-radius: 14px; border: 1px solid #fecaca; background: #fff; color: #b91c1c; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }

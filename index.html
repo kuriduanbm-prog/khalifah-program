@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.1">
-  <link rel="stylesheet" href="ui-v8.css?v=8.1">
+  <link rel="stylesheet" href="style.css?v=8.2">
+  <link rel="stylesheet" href="ui-v8.css?v=8.2">
 </head>
 <body class="auth-locked">
 
@@ -118,33 +118,33 @@
   <!-- Mobile Bottom Navigation (ปุ่มแอดมินจะซ่อนไว้สำหรับนักเรียน) -->
   <nav class="mobile-nav" aria-label="เมนูหลัก">
     <button class="mobile-nav-item active" onclick="switchView('dashboard')" id="m-nav-dashboard">
-      <i class="fa-solid fa-house" aria-hidden="true"></i>
+      <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
       <span>หน้าแรก</span>
     </button>
     <button class="mobile-nav-item" onclick="switchView('prayer')" id="m-nav-prayer">
-      <i class="fa-solid fa-mosque"></i>
+      <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a5 5 0 0 0 5 5c0 4-2 6-5 6s-5-2-5-6a5 5 0 0 0 5-5zM5 21v-5h14v5"/></svg>
       <span>ละหมาด</span>
     </button>
     <button class="mobile-nav-item" onclick="switchView('activities')" id="m-nav-activities">
-      <i class="fa-solid fa-calendar-check"></i>
+      <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM16 3v4M8 3v4M3 11h18"/></svg>
       <span>กิจกรรม</span>
     </button>
     <button class="mobile-nav-item" onclick="switchView('hasanat')" id="m-nav-hasanat">
-      <i class="fa-solid fa-hands-praying"></i>
+      <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h14v16H6.5A2.5 2.5 0 0 0 4 21.5zM8 7h8"/></svg>
       <span>ผลบุญ</span>
     </button>
     <button class="mobile-nav-item" onclick="switchView('profile')" id="m-nav-profile">
-      <i class="fa-solid fa-user" aria-hidden="true"></i>
+      <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21a8 8 0 0 1 16 0"/></svg>
       <span>ฉัน</span>
     </button>
     <!-- แสดงเมื่ออาจารย์ล็อกอิน -->
     <button class="mobile-nav-item" onclick="switchView('teacher')" id="m-nav-teacher" style="display: none;">
-      <i class="fa-solid fa-chalkboard-user"></i>
+      <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v11H3zM8 21h8M12 16v5"/></svg>
       <span>อาจารย์</span>
     </button>
     <!-- แสดงเฉพาะเมื่อแอดมินล็อกอิน -->
     <button class="mobile-nav-item" onclick="switchView('admin')" id="m-nav-admin" style="display: none;">
-      <i class="fa-solid fa-shield-halved"></i>
+      <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>
       <span>แอดมิน</span>
     </button>
   </nav>
@@ -773,6 +773,20 @@
 
     <!-- ==================== VIEW 3: ACTIVITIES ==================== -->
     <section id="view-activities" class="view-section">
+      <header class="k8-ha-head k8-act-head">
+        <div class="k8-ha-titlerow">
+          <h1>กิจกรรม</h1>
+          <span id="k8ActCount" class="k8-ha-date">เข้าร่วมแล้ว 0 ครั้ง</span>
+        </div>
+      </header>
+      <section class="k8-act-scan" id="k8ActScan">
+        <span class="k8-act-scan-ico"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"/></svg></span>
+        <span class="k8-act-scan-txt"><b>เช็คชื่อเข้าร่วมกิจกรรม</b><small>สแกน QR ที่จุดลงทะเบียน</small></span>
+        <button type="button" class="k8-act-scan-btn" onclick="k8StartActScan()">สแกน</button>
+      </section>
+      <div class="k8-act-cancel-row" id="k8ActCancelRow">
+        <button type="button" class="k8-btn-ghost" onclick="k8StopActScan()">ยกเลิกการสแกน</button>
+      </div>
       <div class="card" style="max-width: 620px; margin: 0 auto 1.5rem auto; padding: 1.25rem 1rem;">
         
         <!-- Mode Switcher: สแกน QR Code vs ประวัติการเข้าร่วมกิจกรรม -->
@@ -867,6 +881,11 @@
         </div>
 
       </div>
+      <div class="k8-seg k8-seg-2" role="tablist" aria-label="รายการกิจกรรม" id="k8ActTabs">
+        <button type="button" role="tab" data-tab="upcoming" class="on" aria-selected="true" onclick="k8ActTab('upcoming')">กำลังจะมาถึง</button>
+        <button type="button" role="tab" data-tab="joined" aria-selected="false" onclick="k8ActTab('joined')">เข้าร่วมแล้ว</button>
+      </div>
+      <section class="k8-list-card" id="k8ActList"></section>
     </section>
 
     
@@ -1365,6 +1384,37 @@
 
     <!-- ==================== VIEW 4: STUDENT PROFILE & DETAILS ==================== -->
     <section id="view-profile" class="view-section">
+      <div class="k8-prof">
+        <section class="k8-prof-card">
+          <div class="k8-prof-av-wrap">
+            <div class="k8-prof-av" id="k8ProfAv">น</div>
+            <button type="button" class="k8-prof-cam" aria-label="เปลี่ยนรูปโปรไฟล์" onclick="document.getElementById('inputProfilePhoto').click()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3zM12 9.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z"/></svg></button>
+          </div>
+          <div class="k8-prof-main">
+            <div class="k8-prof-name" id="k8ProfName">-</div>
+            <div class="k8-prof-sub" id="k8ProfSub">-</div>
+            <div class="k8-prof-sub k8-wrap" id="k8ProfSchool">-</div>
+          </div>
+        </section>
+        <section class="k8-box">
+          <h2 class="k8-box-h">ข้อมูลของฉัน</h2>
+          <dl class="k8-dl">
+            <div><dt>เบอร์ผู้ปกครอง</dt><dd id="k8ProfPhone">-</dd></div>
+            <div><dt>อีเมล</dt><dd id="k8ProfEmail">-</dd></div>
+          </dl>
+        </section>
+        <section class="k8-box k8-links-box">
+          <button type="button" class="k8-pl" onclick="switchView('dashboard')"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="k8-pl-t">แดชบอร์ดของฉัน</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button type="button" class="k8-pl" onclick="k8OpenGrades()"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5"/></svg></span><span class="k8-pl-t">ผลการเรียน</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button type="button" class="k8-pl" onclick="openSchoolCalendarModal()"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM16 3v4M8 3v4M3 11h18"/></svg></span><span class="k8-pl-t">ปฏิทินโรงเรียน</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button type="button" class="k8-pl" onclick="openPrayerLateApprovalModal()"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/></svg></span><span class="k8-pl-t">ขออนุมัติละหมาดย้อนหลัง</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+        </section>
+        <section class="k8-box">
+          <label class="k8-tg"><span class="k8-tg-t"><span>ซ่อนเกรดบนหน้าแรก</span><small>แตะเพื่อดูเมื่อต้องการ ป้องกันคนรอบข้างเห็น</small></span><input type="checkbox" role="switch" id="k8PrefHideGrades" onchange="k8SetPref('hideGrades', this.checked)"><span class="k8-sw" aria-hidden="true"></span></label>
+          <label class="k8-tg"><span class="k8-tg-t"><span>แจ้งเตือนเวลาละหมาด</span><small>เตือนเมื่อถึงเวลาเช็คชื่อ</small></span><input type="checkbox" role="switch" id="k8PrefNotify" onchange="k8SetPref('notify', this.checked)"><span class="k8-sw" aria-hidden="true"></span></label>
+        </section>
+        <button type="button" class="k8-logout" onclick="studentLogout()">ออกจากระบบ</button>
+      </div>
       <div class="card" style="max-width: 680px; margin: 0 auto 2rem auto; padding: 1.5rem 1.25rem;">
         <div class="card-header" style="margin-bottom: 1.25rem;">
           <div class="card-title">
@@ -2003,19 +2053,19 @@
       <!-- Teacher Mobile/Tablet Bottom Navigation Bar (4 ปุ่ม: ภาพรวม, เช็คชื่อ, กรอกเกรด, ปฏิทิน) -->
       <nav class="teacher-bottom-nav-bar" id="teacherBottomNavBar">
         <button type="button" class="teacher-bottom-nav-item active" id="btnTeacherBottomOverview" onclick="switchTeacherTab('overview')">
-          <i class="fa-solid fa-chart-pie teacher-bottom-nav-icon"></i>
+          <svg class="k8-nav-ico teacher-bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
           <span>ภาพรวม</span>
         </button>
         <button type="button" class="teacher-bottom-nav-item" id="btnTeacherBottomAtt" onclick="switchTeacherTab('attendance')">
-          <i class="fa-solid fa-clipboard-check teacher-bottom-nav-icon"></i>
+          <svg class="k8-nav-ico teacher-bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 12l2 2 4-4"/></svg>
           <span>เช็คชื่อ</span>
         </button>
         <button type="button" class="teacher-bottom-nav-item" id="btnTeacherBottomGrade" onclick="switchTeacherTab('grades')">
-          <i class="fa-solid fa-graduation-cap teacher-bottom-nav-icon"></i>
-          <span>กรอกเกรด</span>
+          <svg class="k8-nav-ico teacher-bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5"/></svg>
+          <span>เกรด</span>
         </button>
         <button type="button" class="teacher-bottom-nav-item" id="btnTeacherBottomCal" onclick="switchTeacherTab('calendar')">
-          <i class="fa-solid fa-calendar-days teacher-bottom-nav-icon"></i>
+          <svg class="k8-nav-ico teacher-bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM16 3v4M8 3v4M3 11h18"/></svg>
           <span>ปฏิทิน</span>
         </button>
       </nav>
@@ -5217,7 +5267,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.1"></script>
-  <script defer src="ui-v8.js?v=8.1"></script>
+  <script defer src="app.js?v=8.2"></script>
+  <script defer src="ui-v8.js?v=8.2"></script>
 </body>
 </html>
