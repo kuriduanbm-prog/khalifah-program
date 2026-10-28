@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=9.0">
-  <link rel="stylesheet" href="ui-v8.css?v=9.0">
+  <link rel="stylesheet" href="style.css?v=9.1">
+  <link rel="stylesheet" href="ui-v8.css?v=9.1">
 </head>
 <body class="auth-locked">
 
@@ -243,6 +243,24 @@
 
 
         <section class="hf-deeds" id="hfDeeds"></section>
+        <div class="modal-overlay" id="k8AttModal" onclick="if(event.target===this)closeModal('k8AttModal')">
+          <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8AttTitle">
+            <header class="k8-sheet-head"><div><h2 id="k8AttTitle">การมาเรียนของฉัน</h2><span>แยกตามรายวิชา</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8AttModal')">✕</button></header>
+            <div class="k8-sheet-body">
+              <div class="k8-seg" id="k8AttPeriods" role="tablist" aria-label="ช่วงเวลา">
+                <button type="button" data-p="day" onclick="k8AttSet('period','day')">รายวัน</button>
+                <button type="button" data-p="week" onclick="k8AttSet('period','week')">รายสัปดาห์</button>
+                <button type="button" data-p="month" onclick="k8AttSet('period','month')">รายเดือน</button>
+              </div>
+              <div class="k8-att-nav"><button type="button" aria-label="ช่วงก่อนหน้า" onclick="k8AttSet('shift',-1)">‹</button><span id="k8AttRange">-</span><button type="button" aria-label="ช่วงถัดไป" id="k8AttNext" onclick="k8AttSet('shift',1)">›</button></div>
+              <div class="k8-att-chips" id="k8AttChips"></div>
+              <h3 class="k8-att-h">สรุปรายวิชา</h3>
+              <div id="k8AttSubjects"></div>
+              <h3 class="k8-att-h">รายการ</h3>
+              <div id="k8AttList"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="legacy-dashboard" hidden aria-hidden="true">
@@ -905,6 +923,18 @@
     
     <!-- ==================== VIEW: HASANAT & GOOD DEEDS (ผลบุญ) ==================== -->
     <section id="view-hasanat" class="view-section">
+      <div id="k8Has" class="k8h"></div>
+      <div class="modal-overlay" id="k8HasResetModal" onclick="if(event.target===this)closeModal('k8HasResetModal')">
+        <div class="modal-dialog k8-sheet" role="alertdialog" aria-labelledby="k8HasResetTitle">
+          <header class="k8-sheet-head"><div><h2 id="k8HasResetTitle">รีเซ็ตข้อมูลผลบุญทั้งหมด?</h2><span>ข้อมูลที่ลบแล้วจะกู้คืนไม่ได้</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8HasResetModal')">✕</button></header>
+          <div class="k8-sheet-body k8h-reset">
+            <p>ระบบจะลบ <b>หน้าที่อ่าน ดาว ค็อตม์ ซูเราะห์ที่ท่องจำ และละหมาดสุนัตทุกวัน</b> ของคุณ ทั้งในเครื่องนี้และใน Google Sheets</p>
+            <label for="k8HasResetInput">พิมพ์คำว่า <b>ยืนยัน</b> เพื่อรีเซ็ต</label>
+            <input type="text" id="k8HasResetInput" autocomplete="off" oninput="document.getElementById('k8HasResetGo').disabled = this.value.trim() !== 'ยืนยัน'">
+            <div class="k8h-reset-btns"><button type="button" class="k8-btn-line" onclick="closeModal('k8HasResetModal')">ยกเลิก</button><button type="button" class="k8h-danger" id="k8HasResetGo" disabled onclick="k8HasDoReset()">ลบข้อมูลทั้งหมด</button></div>
+          </div>
+        </div>
+      </div>
       <header class="k8-ha-head">
         <div class="k8-ha-titlerow">
           <h1>ผลบุญของฉัน</h1>
@@ -1400,6 +1430,12 @@
 
     <!-- ==================== VIEW 4: STUDENT PROFILE & DETAILS ==================== -->
     <section id="view-profile" class="view-section">
+      <div class="modal-overlay" id="k8EvalModal" onclick="if(event.target===this)closeModal('k8EvalModal')">
+        <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8EvalTitle">
+          <header class="k8-sheet-head"><div><h2 id="k8EvalTitle">ประเมินอาจารย์ผู้สอน</h2><span id="k8EvalSub">ภาคเรียนนี้ · ไม่ระบุชื่อผู้ประเมิน</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8EvalModal')">✕</button></header>
+          <div class="k8-sheet-body" id="k8EvalBody"></div>
+        </div>
+      </div>
       <div class="k8-prof">
         <section class="k8-prof-card">
           <div class="k8-prof-av-wrap">
@@ -1424,6 +1460,7 @@
           <button type="button" class="k8-pl" onclick="k8OpenGrades()"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5"/></svg></span><span class="k8-pl-t">ผลการเรียน</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
           <button type="button" class="k8-pl" onclick="openSchoolCalendarModal()"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM16 3v4M8 3v4M3 11h18"/></svg></span><span class="k8-pl-t">ปฏิทินโรงเรียน</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
           <button type="button" class="k8-pl" onclick="openPrayerLateApprovalModal()"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/></svg></span><span class="k8-pl-t">ขออนุมัติละหมาดย้อนหลัง</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button type="button" class="k8-pl" onclick="k8EvalOpen()"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.4l6-.9z"/></svg></span><span class="k8-pl-t">ประเมินอาจารย์ผู้สอน<small class="k8-pl-badge" id="k8EvalBadge"></small></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
         </section>
         <section class="k8-box">
           <label class="k8-tg"><span class="k8-tg-t"><span>ซ่อนเกรดบนหน้าแรก</span><small>แตะเพื่อดูเมื่อต้องการ ป้องกันคนรอบข้างเห็น</small></span><input type="checkbox" role="switch" id="k8PrefHideGrades" onchange="k8SetPref('hideGrades', this.checked)"><span class="k8-sw" aria-hidden="true"></span></label>
@@ -1661,6 +1698,19 @@
           <div class="hf-head"><h2 id="k8FollowTitle">ต้องติดตาม</h2><span>ขาดหรือมาสายตั้งแต่ 3 ครั้งในสัปดาห์นี้</span></div>
           <div class="k8-follow-list" id="k8FollowList"></div>
         </section>
+        <button type="button" class="hf-cal-btn k8-tier-btn" onclick="k8TierOpen()">
+          <span class="hf-cal-ico" style="background:#fef3c7;color:#b45309"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>
+          <span class="hf-cal-txt"><b>เทียร์ลิสต์ละหมาด</b><span>ตรงเวลาประจำ · มาสายประจำ · ขาดละหมาด (มีหมายเหตุ)</span></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <button type="button" class="hf-cal-btn k8-eval-card" onclick="k8EvalSummary()">
+          <span class="hf-cal-ico" style="background:#ede9fe;color:#5b21b6"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.4l6-.9z"/></svg></span>
+          <span class="hf-cal-txt"><b>ผลประเมินจากนักเรียน</b><span>คะแนนเฉลี่ยรายวิชา ภาคเรียนนี้ (ไม่ระบุชื่อ)</span></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="modal-overlay" id="k8EvalSumModal" onclick="if(event.target===this)closeModal('k8EvalSumModal')">
+          <div class="modal-dialog k8-sheet"><header class="k8-sheet-head"><div><h2>ผลประเมินจากนักเรียน</h2><span id="k8EvalSumSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8EvalSumModal')">✕</button></header><div class="k8-sheet-body" id="k8EvalSumBody"></div></div>
+        </div>
 
         <!-- Teacher & Executive Bento KPI Summary (4 KPI Cards) -->
         <div class="teacher-kpi-grid">
@@ -1848,20 +1898,34 @@
           <header class="k8-ta-head">
             <div class="k8-ta-row">
               <h1>เช็คชื่อมาเรียน</h1>
-              <label class="k8-ta-date"><span id="k8TaDateText">-</span><input type="date" id="k8TaDateInput" aria-label="เลือกวันที่เช็คชื่อ" onchange="k8TaSetDate(this.value)"></label>
+              <button type="button" class="k8-ta-hist-btn" onclick="k8TaOpenHistory()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/></svg>
+                ประวัติ
+              </button>
+            </div>
+            <div class="k8-ta-grid2">
+              <label class="k8-field"><span>วิชา</span><select id="k8TaSubject" onchange="k8TaSet('subject', this.value)"></select></label>
+              <label class="k8-field"><span>วันที่</span><input type="date" id="k8TaDateInput" onchange="k8TaSet('date', this.value)"></label>
             </div>
             <div class="k8-ta-row2">
-              <label for="k8TaGrade" class="sr-only-k8">ห้องเรียน</label>
-              <select id="k8TaGrade" onchange="k8TaSetGrade(this.value)"></select>
-              <button type="button" class="k8-ta-all" onclick="markAllTeacherAttendance('present')">ทุกคนมา</button>
+              <label for="k8TaGrade" class="sr-only-k8">ระดับชั้น</label>
+              <select id="k8TaGrade" onchange="k8TaSet('grade', this.value)"></select>
+              <button type="button" class="k8-ta-all" onclick="k8TaAll('present')">ทุกคนมา</button>
             </div>
+            <div class="k8-ta-saved" id="k8TaSavedNote" hidden></div>
             <div class="k8-ta-sum" id="k8TaSum"></div>
           </header>
           <ul class="k8-ta-list" id="k8TaList"></ul>
           <footer class="k8-ta-foot">
-            <div class="k8-ta-foot-t"><b id="k8TaPending">-</b><span>กดบันทึกครั้งเดียว ส่งเข้า Google Sheets ทั้งห้อง</span></div>
-            <button type="button" onclick="saveTeacherAttendanceBatch()">บันทึก</button>
+            <div class="k8-ta-foot-t"><b id="k8TaPending">-</b><span id="k8TaFootSub">กดบันทึกครั้งเดียว ส่งเข้า Google Sheets ทั้งห้อง</span></div>
+            <button type="button" id="k8TaSaveBtn" onclick="k8TaSave()">บันทึก</button>
           </footer>
+        </div>
+        <div class="modal-overlay" id="k8TaHistoryModal" onclick="if(event.target===this)closeModal('k8TaHistoryModal')">
+          <div class="modal-dialog k8-sheet">
+            <header class="k8-sheet-head"><div><h2>ประวัติการเช็คชื่อ</h2><span id="k8TaHistSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8TaHistoryModal')">✕</button></header>
+            <div class="k8-sheet-body" id="k8TaHistBody"></div>
+          </div>
         </div>
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
@@ -3007,6 +3071,11 @@
 
       <!-- Admin Tab: Prayer Attendance Dashboard & Individual Monitor -->
       <div id="admin-tab-prayers-monitor" class="admin-content-tab" style="display: none;">
+        <button type="button" class="hf-cal-btn k8-tier-btn k8-tier-admin" onclick="k8TierOpen()">
+          <span class="hf-cal-ico" style="background:#fef3c7;color:#b45309"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>
+          <span class="hf-cal-txt"><b>เทียร์ลิสต์ละหมาด</b><span>ตรงเวลาประจำ · มาสายประจำ · ขาดละหมาด (มีหมายเหตุ)</span></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
         <div class="card" style="margin-bottom: 1.5rem;">
           <!-- Top Card Header & Segmented Mode Switcher -->
           <div class="card-header" style="flex-wrap: wrap; gap: 0.85rem;">
@@ -5408,7 +5477,13 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=9.0"></script>
-  <script defer src="ui-v8.js?v=9.0"></script>
+  <div class="modal-overlay" id="k8TierModal" onclick="if(event.target===this)closeModal('k8TierModal')">
+    <div class="modal-dialog k8-sheet k8-tier-sheet" role="dialog" aria-labelledby="k8TierTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8TierTitle">เทียร์ลิสต์ละหมาด</h2><span id="k8TierSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8TierModal')">✕</button></header>
+      <div class="k8-sheet-body" id="k8TierBody"></div>
+    </div>
+  </div>
+  <script defer src="app.js?v=9.1"></script>
+  <script defer src="ui-v8.js?v=9.1"></script>
 </body>
 </html>

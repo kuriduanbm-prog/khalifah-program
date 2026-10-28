@@ -11,7 +11,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ⚠️ รหัสแอดมินหลักไม่ได้เก็บไว้ในโค้ดอีกต่อไป
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
-const SCHEMA_VERSION = '8.1';
+const SCHEMA_VERSION = '9.0';
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -54,6 +54,7 @@ const SHEETS = {
   APPROVALS: 'รายการรออนุมัติสมัคร',
   PRAYER_APPROVALS: 'คำขออนุมัติละหมาด',
   ASSIGNMENT_SCORES: 'คะแนนชิ้นงาน',
+  TEACHER_EVALS: 'ประเมินอาจารย์',
   SETTINGS: 'การตั้งค่า',
   CALENDAR: 'ปฏิทินกิจกรรม'
 };
@@ -73,6 +74,7 @@ const SHEET_ORDER = [
   SHEETS.APPROVALS,      // 11. รายการรออนุมัติสมัคร
   SHEETS.PRAYER_APPROVALS, // 12. คำขออนุมัติละหมาด
   SHEETS.ASSIGNMENT_SCORES, // คะแนนชิ้นงานรายวิชา
+  SHEETS.TEACHER_EVALS,  // ประเมินอาจารย์ (ไม่ระบุชื่อ)
   SHEETS.SETTINGS,       // 13. การตั้งค่า
   SHEETS.CALENDAR        // 14. ปฏิทินกิจกรรม
 ];
@@ -135,7 +137,7 @@ const HEADERS = {
   ],
   ATTENDANCE: [
     'รหัสบันทึก', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 
-    'วันที่', 'เวลา', 'สถานะการมาเรียน', 'หมายเหตุ'
+    'วันที่', 'เวลา', 'สถานะการมาเรียน', 'หมายเหตุ', 'รหัสวิชา', 'ชื่อวิชา', 'ผู้เช็คชื่อ'
   ],
   ACTIVITIES: [
     'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'รายละเอียด', 'วันเริ่มต้น', 'วันสิ้นสุด', 
@@ -161,6 +163,10 @@ const HEADERS = {
   APPROVALS: [
     'รหัสคำขอ', 'ประเภทผู้ใช้', 'รหัสประจำตัว', 'ชื่อ-นามสกุล', 'อีเมล',
     'รายละเอียดเพิ่มเติม', 'รหัสยืนยันสุ่ม (OTP)', 'สถานะ', 'เวลาที่สมัคร', 'ข้อมูล JSON'
+  ],
+  TEACHER_EVALS: [
+    'รหัสประเมิน', 'ภาคเรียน', 'รหัสวิชา', 'ชื่อวิชา', 'อาจารย์ (username)', 'ชื่ออาจารย์',
+    'คะแนนเฉลี่ย', 'คะแนนรายข้อ (JSON)', 'ความคิดเห็น', 'ระดับชั้น', 'เวลาที่ประเมิน', 'รหัสอ้างอิงผู้ประเมิน (แฮช)'
   ],
   ASSIGNMENT_SCORES: [
     'รหัสบันทึก', 'รหัสวิชา', 'ชื่อวิชา', 'รหัสชิ้นงาน', 'ชื่อชิ้นงาน', 'คะแนนเต็ม',
@@ -366,6 +372,8 @@ function initializeSheets() {
   } catch (fmtErr) {}
 
   // 14. คำขออนุมัติละหมาด (กรณีลืมเช็คชื่อ)
+  const sheetEval = getOrCreateSheetSmart(ss, 'TEACHER_EVALS', HEADERS.TEACHER_EVALS, '#7c3aed');
+  try { sheetEval.getRange('A:F').setNumberFormat('@'); sheetEval.getRange('L:L').setNumberFormat('@'); } catch (fmtErr) {}
   const sheetAsg = getOrCreateSheetSmart(ss, 'ASSIGNMENT_SCORES', HEADERS.ASSIGNMENT_SCORES, '#4338ca');
   try {
     sheetAsg.getRange('A:A').setNumberFormat('@');
@@ -1098,6 +1106,8 @@ const ACTION_ACCESS = {
   saveSurahLog: 'student', saveHasanatLog: 'student',
   checkInActivity: 'student', activityCheckIn: 'student',
   updateProfilePhoto: 'student', prayerLateRequest: 'student', updateStudentGrade: 'student',
+  resetMyHasanat: 'student', submitTeacherEvaluation: 'student', getMyEvaluationStatus: 'student', getEvaluationTargets: 'student',
+  getTeacherEvaluationSummary: 'staff',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', updateStudentStatus: 'staff',
@@ -1116,7 +1126,7 @@ const ACTION_ACCESS = {
 // คำสั่งที่เขียนข้อมูล (ล้างแคชเมื่อสำเร็จ)
 const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'getStudent', 'getActivities',
   'getCalendarEvents', 'getCalendar', 'getSettings', 'whoami', 'getFullDatabase', 'getPrayers', 'getAttendance',
-  'getHasanat', 'getSubjectGrades', 'getAssignmentScores', 'getStatusLogs', 'getActivityLogs', 'getPrayerApprovals', 'getAllStudents',
+  'getHasanat', 'getSubjectGrades', 'getMyEvaluationStatus', 'getEvaluationTargets', 'getTeacherEvaluationSummary', 'getAssignmentScores', 'getStatusLogs', 'getActivityLogs', 'getPrayerApprovals', 'getAllStudents',
   'getSubAdmins', 'getTeachers', 'getPendingRegistrations', 'getAdmins', 'checkRegistrationStatus',
   'loginStudent', 'adminLogin', 'staffLogin'];
 
@@ -1303,6 +1313,19 @@ function dispatchAction_(action, req, data, session, ctx) {
       return getAssignmentScores(ownStudentId_(session, ctx, pick('studentId')), pick('subjectId'));
     case 'saveSubjectAssignments':
       return saveSubjectAssignments(data);
+    case 'resetMyHasanat':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return resetMyHasanat_(session.userId);
+    case 'getEvaluationTargets':
+      return getEvaluationTargets_();
+    case 'getMyEvaluationStatus':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return getMyEvaluationStatus_(session.userId, pick('term'));
+    case 'submitTeacherEvaluation':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return submitTeacherEvaluation_(session.userId, data);
+    case 'getTeacherEvaluationSummary':
+      return getTeacherEvaluationSummary_(session, ctx, pick('term'));
     case 'saveAssignmentScores':
       if (!data.teacherId) data.teacherId = session.name || session.userId;
       return saveAssignmentScores(data);
@@ -2527,7 +2550,10 @@ function getAttendance(studentId, grade) {
         date: formatSheetDate(rows[i][4]),
         time: formatSheetTime(rows[i][5]),
         status: cleanVal(rows[i][6]),
-        note: cleanVal(rows[i][7])
+        note: cleanVal(rows[i][7]),
+        subjectCode: cleanVal(rows[i][8] || ''),
+        subjectName: cleanVal(rows[i][9] || ''),
+        checkedBy: cleanVal(rows[i][10] || '')
       });
     }
   }
@@ -4122,6 +4148,9 @@ function saveDailyAttendance(data) {
   const studentDetails = data.studentDetails || {};
   const timeStr = Utilities.formatDate(new Date(), "Asia/Bangkok", "HH:mm:ss");
   const teacherNote = 'เช็คชื่อโดยอาจารย์ (' + cleanVal(data.teacherId || 'admin') + ')';
+  const subjCode = cleanVal(data.subjectCode || '');
+  const subjName = cleanVal(data.subjectName || '');
+  const checkedBy = cleanVal(data.teacherName || data.teacherId || '');
   let count = 0;
 
   const studentRows = sheetStudents ? sheetStudents.getDataRange().getValues() : [];
@@ -4146,15 +4175,15 @@ function saveDailyAttendance(data) {
     // ตรวจสอบว่าเคยเช็คชื่อวันนี้ไปแล้วหรือยัง ถ้ามีให้อัปเดตแถวเดิม
     let foundAttRow = -1;
     for (let i = existingAttRows.length - 1; i >= 1; i--) {
-      if (isCodeMatch(existingAttRows[i][1], cleanSid) && formatSheetDate(existingAttRows[i][4]) === dateStr) {
+      if (isCodeMatch(existingAttRows[i][1], cleanSid) && formatSheetDate(existingAttRows[i][4]) === dateStr && cleanVal(existingAttRows[i][8] || '') === subjCode) {
         foundAttRow = i + 1;
         break;
       }
     }
 
     if (foundAttRow !== -1) {
-      sheet.getRange(foundAttRow, 3, 1, 6).setValues([[
-        sName, sGrade, dateStr, timeStr, statusThai, teacherNote
+      sheet.getRange(foundAttRow, 3, 1, 9).setValues([[
+        sName, sGrade, dateStr, timeStr, statusThai, teacherNote, subjCode, subjName, checkedBy
       ]]);
     } else {
       const logId = 'ATT-' + new Date().getTime() + '-' + count;
@@ -4166,7 +4195,10 @@ function saveDailyAttendance(data) {
         dateStr,
         timeStr,
         statusThai,
-        teacherNote
+        teacherNote,
+        subjCode,
+        subjName,
+        checkedBy
       ]);
       const lastRow = sheet.getLastRow();
       sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
@@ -4823,4 +4855,141 @@ function getAssignmentScores(studentId, subjectId) {
     });
   }
   return { success: true, data: out };
+}
+
+
+/* =====================================================================
+ * ประเมินอาจารย์ผู้สอน (ไม่ระบุชื่อ) — v9.0
+ * เก็บเฉพาะแฮชของ (รหัสนักเรียน + ภาคเรียน + วิชา + อาจารย์) เพื่อกันประเมินซ้ำ
+ * อาจารย์/แอดมินเห็นเฉพาะค่าเฉลี่ยและความคิดเห็น ไม่เห็นตัวตนผู้ประเมิน
+ * ===================================================================== */
+const EVAL_ITEMS = [
+  'อธิบายเนื้อหาเข้าใจง่าย',
+  'เตรียมการสอนและตรงต่อเวลา',
+  'เปิดโอกาสให้ถาม/ช่วยเหลือเมื่อไม่เข้าใจ',
+  'ให้คะแนนและตรวจงานอย่างยุติธรรม',
+  'เป็นแบบอย่างที่ดี มีคุณธรรม'
+];
+function currentTerm_() {
+  const d = new Date(); const m = d.getMonth() + 1; const y = d.getFullYear() + 543;
+  return ((m >= 5 && m <= 10) ? 1 : 2) + '/' + (m >= 5 ? y : y - 1);
+}
+function evalHash_(sid, term, subj, teacher) {
+  const raw = getTokenSecret_() + '|eval|' + cleanVal(sid).replace(/^0+/, '') + '|' + term + '|' + subj + '|' + teacher;
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  return bytes.map(function (b) { const v = (b < 0 ? b + 256 : b).toString(16); return v.length === 1 ? '0' + v : v; }).join('').slice(0, 32);
+}
+function getEvaluationTargets_() {
+  ensureSchema();
+  const ss = getSpreadsheet();
+  let subjects = [];
+  try {
+    const st = ss.getSheetByName(SHEETS.SETTINGS);
+    const rows = st ? st.getDataRange().getValues() : [];
+    for (let i = 1; i < rows.length; i++) if (cleanVal(rows[i][0]) === 'AppSubjects') { subjects = JSON.parse(rows[i][1] || '[]'); break; }
+  } catch (e) {}
+  if (!Array.isArray(subjects) || !subjects.length) subjects = [
+    { id: 'religious', code: 'ISL101', name: 'ศาสนาและจริยธรรม' }, { id: 'science', code: 'SCI101', name: 'วิทยาศาสตร์' },
+    { id: 'math', code: 'MAT101', name: 'คณิตศาสตร์' }, { id: 'language', code: 'THA101', name: 'ภาษาและการสื่อสาร' },
+    { id: 'social', code: 'SOC101', name: 'สังคมและวัฒนธรรม' }, { id: 'tech', code: 'TEC101', name: 'เทคโนโลยีและนวัตกรรม' }];
+  const nameOf = {};
+  (subjects || []).forEach(function (x) {
+    const nm = cleanVal(x.name || x.subjectName || x.id || x.code);
+    [x.id, x.code, x.subjectId].forEach(function (k) { k = cleanVal(k); if (k) nameOf[k] = nm; });
+  });
+  const sh = ss.getSheetByName(SHEETS.TEACHERS);
+  const rows = sh ? sh.getDataRange().getValues() : [];
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const status = cleanVal(rows[i][8] || '');
+    if (/ระงับ|ยกเลิก|พ้นสภาพ|Pending|OTP/i.test(status)) continue;
+    let subj = [];
+    try { subj = rows[i][7] ? JSON.parse(rows[i][7]) : []; } catch (e) {}
+    (Array.isArray(subj) ? subj : []).forEach(function (code) {
+      code = cleanVal(code); if (!code) return;
+      out.push({ subjectCode: code, subjectName: nameOf[code] || code, teacher: cleanVal(rows[i][1]), teacherName: cleanVal(rows[i][3]) });
+    });
+  }
+  return { success: true, term: currentTerm_(), items: EVAL_ITEMS, data: out };
+}
+function getMyEvaluationStatus_(sid, term) {
+  ensureSchema();
+  term = cleanVal(term) || currentTerm_();
+  const t = getEvaluationTargets_().data;
+  const sh = getSpreadsheet().getSheetByName(SHEETS.TEACHER_EVALS);
+  const rows = sh ? readAllRows_(sh) : [];
+  const have = {};
+  for (let i = 1; i < rows.length; i++) have[cleanVal(rows[i][11])] = true;
+  const done = t.filter(function (x) { return have[evalHash_(sid, term, x.subjectCode, x.teacher)]; })
+    .map(function (x) { return x.subjectCode + '|' + x.teacher; });
+  return { success: true, term: term, done: done };
+}
+function submitTeacherEvaluation_(sid, data) {
+  ensureSchema();
+  const term = currentTerm_();
+  const subj = cleanVal(data.subjectCode), teacher = cleanVal(data.teacher);
+  const target = getEvaluationTargets_().data.filter(function (x) { return x.subjectCode === subj && x.teacher === teacher; })[0];
+  if (!target) return { success: false, message: 'ไม่พบวิชาหรืออาจารย์ที่เลือก' };
+  const scores = Array.isArray(data.scores) ? data.scores.map(function (v) { return Math.max(1, Math.min(5, parseInt(v, 10) || 0)); }) : [];
+  if (scores.length !== EVAL_ITEMS.length || scores.some(function (v) { return !v; })) return { success: false, message: 'กรุณาให้คะแนนให้ครบทุกข้อ' };
+  const comment = String(data.comment || '').replace(/[<>]/g, '').slice(0, 500);
+  const hash = evalHash_(sid, term, subj, teacher);
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(10000); } catch (e) {}
+  try {
+    const sh = getSpreadsheet().getSheetByName(SHEETS.TEACHER_EVALS);
+    const rows = sh.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) if (cleanVal(rows[i][11]) === hash) return { success: false, already: true, message: 'คุณประเมินวิชานี้ในภาคเรียนนี้แล้ว' };
+    let grade = '';
+    try { const st = getStudentForStaff_(sid); grade = st && st.student ? cleanVal(st.student.grade) : ''; } catch (e) {}
+    const avg = Math.round(scores.reduce(function (a, b) { return a + b; }, 0) / scores.length * 100) / 100;
+    sh.appendRow(['EV-' + Utilities.getUuid().slice(0, 8), term, subj, target.subjectName, teacher, target.teacherName, avg, JSON.stringify(scores), comment, grade, Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd'), hash]);
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+  return { success: true, message: 'ส่งแบบประเมินเรียบร้อย ขอบคุณครับ' };
+}
+function getTeacherEvaluationSummary_(session, ctx, term) {
+  ensureSchema();
+  term = cleanVal(term) || currentTerm_();
+  const sh = getSpreadsheet().getSheetByName(SHEETS.TEACHER_EVALS);
+  const rows = sh ? readAllRows_(sh) : [];
+  const me = cleanVal(session && session.userId).toLowerCase();
+  const groups = {};
+  for (let i = 1; i < rows.length; i++) {
+    if (cleanVal(rows[i][1]) !== term) continue;
+    const teacher = cleanVal(rows[i][4]);
+    if (!ctx.isAdmin && teacher.toLowerCase() !== me) continue;
+    const key = cleanVal(rows[i][2]) + '|' + teacher;
+    const g = groups[key] || (groups[key] = { subjectCode: cleanVal(rows[i][2]), subjectName: cleanVal(rows[i][3]), teacher: teacher, teacherName: cleanVal(rows[i][5]), count: 0, sums: EVAL_ITEMS.map(function () { return 0; }), comments: [] });
+    let sc = []; try { sc = JSON.parse(rows[i][7] || '[]'); } catch (e) {}
+    g.count++; sc.forEach(function (v, k) { if (k < g.sums.length) g.sums[k] += Number(v) || 0; });
+    const c = cleanVal(rows[i][8]); if (c) g.comments.push(c);
+  }
+  const data = Object.keys(groups).map(function (k) {
+    const g = groups[k];
+    const items = g.sums.map(function (s) { return g.count ? Math.round(s / g.count * 100) / 100 : 0; });
+    // สุ่มลำดับความคิดเห็นเพื่อไม่ให้เดาตัวผู้ประเมินจากลำดับเวลา
+    const cm = g.comments.slice(); for (let j = cm.length - 1; j > 0; j--) { const r = Math.floor(Math.random() * (j + 1)); const t = cm[j]; cm[j] = cm[r]; cm[r] = t; }
+    return { subjectCode: g.subjectCode, subjectName: g.subjectName, teacher: g.teacher, teacherName: g.teacherName, count: g.count,
+      average: g.count ? Math.round(items.reduce(function (a, b) { return a + b; }, 0) / items.length * 100) / 100 : 0,
+      items: items, comments: g.count >= 3 ? cm : [] };
+  });
+  return { success: true, term: term, items: EVAL_ITEMS, data: data, note: 'แสดงความคิดเห็นเมื่อมีผู้ประเมินตั้งแต่ 3 คนขึ้นไป เพื่อไม่ให้ระบุตัวตนได้' };
+}
+
+
+/** นักเรียนล้างข้อมูลผลบุญของตนเองทั้งหมด (ยืนยันจากหน้าแอปแล้ว) */
+function resetMyHasanat_(sid) {
+  ensureSchema();
+  const sh = getSpreadsheet().getSheetByName(SHEETS.HASANAT);
+  if (!sh || sh.getLastRow() <= 1) return { success: true, deleted: 0 };
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) {}
+  let deleted = 0;
+  try {
+    const rows = sh.getDataRange().getValues();
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (isCodeMatch(rows[i][1], sid)) { sh.deleteRow(i + 1); deleted++; }
+    }
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+  return { success: true, deleted: deleted, message: 'ล้างข้อมูลผลบุญแล้ว ' + deleted + ' รายการ' };
 }

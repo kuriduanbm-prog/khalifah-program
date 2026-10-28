@@ -705,7 +705,7 @@ body.auth-locked #authModal, #authModal.modal-overlay { background-image: none !
 
 /* ============ Round 3 · Profile (canvas) ============ */
 #view-profile { max-width: 560px; margin: 0 auto; }
-#view-profile > :not(.k8-prof) { display: none !important; }
+#view-profile > :not(.k8-prof):not(.modal-overlay) { display: none !important; }
 .k8-prof { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
 .k8-prof-card { background: #fff; border: 1px solid #dbe3ec; border-radius: 22px; padding: 16px; display: flex; gap: 14px; align-items: center; }
 .k8-prof-av-wrap { position: relative; flex: none; }
@@ -1267,3 +1267,234 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
   .k8-as-detail { position: static; width: 100%; box-sizing: border-box; }
 }
 @media (prefers-reduced-motion: reduce) { body .k8-admin-nav.admin-tabs { transition: none; } }
+
+/* ============ Round 8 · Attendance per subject ============ */
+.k8-ta-hist-btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px; border-radius: 12px; border: 1px solid #ddd6fe; background: #f5f3ff; color: #5b21b6; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-ta-grid2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; }
+.k8-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.k8-field > span { font-size: 12px; color: #475569; }
+.k8-field select, .k8-field input { height: 44px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 10px; font-family: inherit; font-size: 14px; background: #fff; color: #0f172a; min-width: 0; width: 100%; box-sizing: border-box; }
+.k8-ta-saved { font-size: 13px; color: #1d4ed8; background: #eff6ff; border-radius: 10px; padding: 8px 10px; }
+.k8-ta-saved[hidden] { display: none; }
+.k8-ta-card.is-saved { border-color: #e2e8f0; }
+.k8-ta-foot-t span { display: block; font-size: 12px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#k8TaHistoryModal.modal-overlay { align-items: flex-end; }
+.k8-sheet { width: 100% !important; max-width: 560px !important; margin: 0 auto !important; border-radius: 22px 22px 0 0 !important; padding: 0 !important; background: #fff !important; max-height: 85dvh !important; display: flex; flex-direction: column; overflow: hidden; }
+@media (min-width: 993px) { #k8TaHistoryModal.modal-overlay { align-items: center; } .k8-sheet { border-radius: 22px !important; } }
+.k8-sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 18px 10px; border-bottom: 1px solid #f1f5f9; }
+.k8-sheet-head h2 { margin: 0; font-size: 18px; font-weight: 600; color: #0f172a; }
+.k8-sheet-head span { font-size: 13px; color: #475569; }
+.k8-sheet-x { width: 40px; height: 40px; border-radius: 12px; border: 0; background: #f1f5f9; color: #334155; font-size: 16px; cursor: pointer; flex: none; }
+.k8-sheet-body { padding: 8px 18px 22px; overflow-y: auto; }
+.k8-hist-row { width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border: 0; border-top: 1px solid #f1f5f9; background: transparent; text-align: left; font-family: inherit; cursor: pointer; color: #0f172a; }
+.k8-hist-row:first-child { border-top: 0; }
+.k8-hist-d b { font-size: 15px; font-weight: 600; }
+.k8-hist-d small { display: block; font-size: 12px; color: #64748b; }
+.k8-hist-c { display: flex; gap: 6px; flex-wrap: wrap; }
+.k8-hist-c i { font-style: normal; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+
+/* ============ Round 8 · Teacher pages: breathing room at the top ============ */
+@media (max-width: 992px) {
+  body.teacher-portal-active .main-wrapper { padding-top: calc(28px + env(safe-area-inset-top, 0px)) !important; }
+  .k8-ta-head { margin: 0 0 4px !important; border-radius: 18px !important; border: 1px solid #e2e8f0 !important; padding: 16px !important; }
+  .k8-ta-foot { margin: 0 !important; border-radius: 16px !important; border: 1px solid #e2e8f0 !important; box-shadow: 0 6px 18px rgba(15,23,42,.08) !important; }
+}
+.k8-th-head { padding-top: 0; }
+#teacher-tab-overview { gap: 14px; }
+
+/* ============ Round 8 · Teacher grades easier ============ */
+#teacher-tab-grades .tg-top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
+.tg-search input { width: 100%; box-sizing: border-box; height: 42px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 14px; font-family: inherit; font-size: 14px; background: #fff; }
+.tg-asg-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; color: #475569; background: #f5f3ff; border-radius: 12px; padding: 8px 12px; }
+.tg-asg-bar b { color: #4c1d95; }
+.tg-link-danger { border: 0; background: transparent; color: #b91c1c; font-family: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; padding: 4px 0; }
+.tg-sum-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.tg-sum-tools .tg-btn { flex: 0 1 auto; padding: 0 14px; }
+.tg-sum-tools .tg-btn[disabled] { opacity: .5; }
+#teacher-tab-grades .tg-g.is-suggest::after { background: #a78bfa; }
+#teacher-tab-grades .tg-save button[disabled] { opacity: .5; cursor: default; }
+#teacher-tab-grades .tg-score input { height: 46px; width: 72px; }
+
+/* ============ Round 8 · Attendance drill-down sheet ============ */
+button.hf-att-item { border: 0; font-family: inherit; cursor: pointer; width: 100%; }
+button.hf-att-item:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+#k8AttModal.modal-overlay { align-items: flex-end; }
+@media (min-width: 993px) { #k8AttModal.modal-overlay { align-items: center; } }
+#k8AttModal .k8-sheet-body { display: flex; flex-direction: column; gap: 12px; }
+.k8-seg button.on { background: #fff; color: #0369a1; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+.k8-att-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.k8-att-nav button { width: 44px; height: 40px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; font-size: 18px; color: #334155; cursor: pointer; }
+.k8-att-nav button[disabled] { opacity: .35; cursor: default; }
+.k8-att-nav span { font-size: 15px; font-weight: 600; color: #0f172a; text-align: center; }
+.k8-att-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.k8-att-chips button { height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.k8-att-h { margin: 6px 0 0; font-size: 14px; font-weight: 600; color: #475569; }
+.k8-att-sub { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.k8-att-sub-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.k8-att-sub-top span { color: #475569; font-size: 13px; white-space: nowrap; }
+.k8-att-sub-c { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.k8-att-sub-c i { font-style: normal; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.k8-att-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #f1f5f9; }
+.k8-att-row:first-child { border-top: 0; }
+.k8-att-date { width: 44px; height: 48px; border-radius: 12px; background: #e0f2fe; color: #0369a1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex: none; }
+.k8-att-date b { font-size: 17px; line-height: 1; }
+.k8-att-main { flex: 1; min-width: 0; }
+.k8-att-main b { display: block; font-size: 14px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-att-main span { display: block; font-size: 12px; color: #64748b; }
+
+/* ============ Round 8 · ผลบุญ redesigned ============ */
+#view-hasanat > :not(#k8Has):not(.modal-overlay) { display: none !important; }
+.k8h { display: flex; flex-direction: column; gap: 12px; color: #0f172a; padding-bottom: 8px; }
+.k8h-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
+.k8h-head h1 { margin: 0; font-size: 24px; font-weight: 600; }
+.k8h-date { display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 2px; }
+.k8h-date button { width: 32px; height: 34px; border: 0; background: transparent; font-size: 18px; color: #334155; cursor: pointer; border-radius: 10px; }
+.k8h-date button[disabled] { opacity: .3; cursor: default; }
+.k8h-date label { position: relative; font-size: 13px; font-weight: 600; color: #0369a1; padding: 0 4px; cursor: pointer; white-space: nowrap; }
+.k8h-date input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.k8h-sum { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 14px 16px; }
+.k8h-sum-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.k8h-sum-top b { font-size: 15px; font-weight: 600; }
+.k8h-mini-seg { display: flex; background: #f1f5f9; border-radius: 10px; padding: 3px; gap: 2px; }
+.k8h-mini-seg button { height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: #475569; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.k8h-mini-seg button[aria-pressed="true"] { background: #fff; color: #0369a1; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+.k8h-sum-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.k8h-sum-grid > div { background: #f8fafc; border-radius: 12px; padding: 10px; min-width: 0; }
+.k8h-sum-grid span { display: block; font-size: 12px; color: #475569; }
+.k8h-sum-grid b { display: block; font-size: 20px; font-weight: 600; line-height: 1.3; }
+.k8h-sum-grid small { font-size: 12px; font-weight: 500; }
+.k8h-tabs { background: #e2e8f0 !important; }
+.k8h-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.k8h-card h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.k8h-lbl { font-size: 13px; color: #475569; }
+.k8h-big { font-size: 34px; font-weight: 600; line-height: 1.1; }
+.k8h-big small { font-size: 16px; color: #64748b; font-weight: 500; }
+.k8h-q-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.k8h-q-meta { text-align: right; display: flex; flex-direction: column; font-size: 13px; color: #475569; }
+.k8h-star { color: #b45309; font-weight: 600; }
+.k8h-bar { height: 10px; border-radius: 10px; background: #e2e8f0; overflow: hidden; }
+.k8h-bar span { display: block; height: 10px; border-radius: 10px; background: #0369a1; }
+.k8h-bar.is-green span { background: #15803d; }
+.k8h-bar.is-purple span { background: #6d28d9; }
+.k8h-hint { margin: 0; font-size: 12px; color: #64748b; line-height: 1.5; }
+.k8h-link { align-self: flex-start; border: 0; background: transparent; color: #0369a1; font-family: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }
+.k8h-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.k8h-edit label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #475569; }
+.k8h-edit input { height: 44px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 12px; font-family: inherit; font-size: 16px; }
+.k8h-row { grid-column: 1 / -1; display: flex; gap: 8px; }
+.k8h-row button { flex: 1; }
+.k8h-row-b { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.k8h-muted { font-size: 12px; color: #64748b; }
+.k8h-step { display: flex; align-items: center; gap: 12px; }
+.k8h-step > button { width: 52px; height: 52px; border-radius: 14px; border: 1px solid #cbd5e1; background: #fff; font-size: 24px; color: #0f172a; cursor: pointer; flex: none; }
+.k8h-step > button.is-plus { background: #e0f2fe; border: 0; color: #0369a1; }
+.k8h-step > div { flex: 1; text-align: center; }
+.k8h-step b { display: block; font-size: 34px; font-weight: 600; line-height: 1; }
+.k8h-step span { font-size: 12px; color: #64748b; }
+.k8h-quick { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; }
+.k8h-quick button { height: 42px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; color: #334155; font-family: inherit; font-size: 14px; cursor: pointer; }
+.k8h-quick button.is-clear { background: #fff; color: #b91c1c; }
+.k8h-save { height: 52px; border: 0; border-radius: 14px; background: #0369a1; color: #fff; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.k8h-save[disabled] { background: #e2e8f0; color: #64748b; cursor: default; }
+.k8h-save.is-purple { background: #6d28d9; }
+.k8h-save.is-purple[disabled] { background: #ede9fe; color: #5b21b6; }
+.k8h-juz { display: grid; grid-template-columns: repeat(10, minmax(0,1fr)); gap: 5px; }
+.k8h-juz span { height: 26px; border-radius: 7px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.k8h-juz span.done { background: #0369a1; color: #fff; }
+.k8h-juz span.cur { background: #e0f2fe; color: #0369a1; outline: 2px solid #7dd3fc; }
+.k8h-search { height: 44px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 14px; font-family: inherit; font-size: 15px; width: 100%; box-sizing: border-box; }
+.k8h-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.k8h-chips button { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.k8h-chips button[aria-pressed="true"] { background: #0f172a; border-color: #0f172a; color: #fff; }
+.k8h-surahs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; }
+.k8h-surahs button { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; font-family: inherit; text-align: left; cursor: pointer; color: #0f172a; }
+.k8h-surahs button[aria-pressed="true"] { background: #f0fdf4; border-color: #bbf7d0; }
+.k8h-sn { width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex: none; }
+.k8h-st { flex: 1; min-width: 0; }
+.k8h-st b { display: block; font-size: 14px; font-weight: 600; }
+.k8h-st small { display: block; font-size: 12px; color: #64748b; }
+.k8h-ar { font-size: 16px; color: #0369a1; white-space: nowrap; }
+.k8h-ck { width: 26px; height: 26px; border-radius: 8px; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; flex: none; }
+.k8h-surahs button[aria-pressed="true"] .k8h-ck { background: #15803d; border-color: #15803d; }
+.k8h-sun-total { font-size: 15px; font-weight: 600; color: #6d28d9; }
+.k8h-sub { margin: 4px 0 0; font-size: 14px; font-weight: 600; color: #334155; }
+.k8h-checks { list-style: none; margin: 0; padding: 0; }
+.k8h-checks label { display: flex; align-items: center; gap: 12px; min-height: 50px; border-top: 1px solid #f1f5f9; cursor: pointer; }
+.k8h-checks li:first-child label { border-top: 0; }
+.k8h-checks input { width: 22px; height: 22px; accent-color: #6d28d9; flex: none; }
+.k8h-checks b { display: block; font-size: 15px; font-weight: 500; }
+.k8h-checks small { display: block; font-size: 12px; color: #64748b; }
+.k8h-reset-btn { margin: 8px auto 0; border: 0; background: transparent; color: #b91c1c; font-family: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 10px; }
+#k8HasResetModal.modal-overlay { align-items: flex-end; }
+@media (min-width: 993px) { #k8HasResetModal.modal-overlay { align-items: center; } }
+.k8h-reset { display: flex; flex-direction: column; gap: 12px; font-size: 14px; color: #334155; }
+.k8h-reset p { margin: 0; line-height: 1.6; }
+.k8h-reset input { height: 48px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 14px; font-family: inherit; font-size: 16px; }
+.k8h-reset-btns { display: flex; gap: 8px; }
+.k8h-reset-btns button { flex: 1; height: 48px; }
+.k8h-danger { border: 0; border-radius: 12px; background: #b91c1c; color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.k8h-danger[disabled] { background: #fecaca; cursor: default; }
+
+/* ============ Round 8 · Teacher evaluation ============ */
+.k8-pl-badge { display: block; font-size: 12px; font-weight: 500; color: #15803d; }
+.k8-pl-badge.is-todo { color: #b45309; }
+.k8-pl-badge:empty { display: none; }
+#k8EvalModal.modal-overlay, #k8EvalSumModal.modal-overlay { align-items: flex-end; }
+@media (min-width: 993px) { #k8EvalModal.modal-overlay, #k8EvalSumModal.modal-overlay { align-items: center; } }
+#k8EvalBody, #k8EvalSumBody { display: flex; flex-direction: column; gap: 10px; }
+.k8-eval-note { margin: 0; font-size: 13px; color: #475569; background: #f5f3ff; border-radius: 12px; padding: 10px 12px; line-height: 1.5; }
+.k8-eval-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; text-align: left; font-family: inherit; cursor: pointer; color: #0f172a; }
+.k8-eval-row[disabled] { cursor: default; opacity: .85; }
+.k8-eval-main { flex: 1; min-width: 0; }
+.k8-eval-main b { display: block; font-size: 15px; font-weight: 600; }
+.k8-eval-main span { display: block; font-size: 13px; color: #475569; }
+.k8-eval-who { background: #f8fafc; border-radius: 12px; padding: 10px 12px; }
+.k8-eval-who b { display: block; font-size: 16px; }
+.k8-eval-who span { font-size: 13px; color: #475569; }
+.k8-eval-q { border: 0; margin: 0; padding: 0; }
+.k8-eval-q legend { font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 8px; padding: 0; }
+.k8-eval-scale { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 6px; }
+.k8-eval-scale button { height: 46px; border-radius: 12px; border: 1px solid #ddd6fe; background: #fff; color: #5b21b6; font-family: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
+.k8-eval-scale button[aria-pressed="true"] { background: #5b21b6; border-color: #5b21b6; color: #fff; }
+.k8-eval-scale-l { display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-top: 4px; }
+.k8-eval-c { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; color: #0f172a; }
+.k8-eval-c textarea { border-radius: 12px; border: 1px solid #cbd5e1; padding: 10px 12px; font-family: inherit; font-size: 15px; font-weight: 400; resize: vertical; }
+.k8-eval-card { margin-top: 0; }
+.k8-eval-res { border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.k8-eval-res-top { display: flex; justify-content: space-between; gap: 8px; }
+.k8-eval-res-top b { display: block; font-size: 15px; }
+.k8-eval-res-top small { display: block; font-size: 12px; color: #64748b; }
+.k8-eval-avg { font-size: 26px; font-weight: 600; color: #5b21b6; }
+.k8-eval-avg small { font-size: 13px; color: #64748b; }
+.k8-eval-bar { display: grid; grid-template-columns: minmax(0, 1fr) 90px 30px; gap: 8px; align-items: center; font-size: 12px; color: #334155; }
+.k8-eval-bar i { height: 8px; border-radius: 8px; background: #ede9fe; overflow: hidden; display: block; }
+.k8-eval-bar em { display: block; height: 8px; background: #7c3aed; border-radius: 8px; }
+.k8-eval-res h4 { margin: 4px 0 0; font-size: 13px; color: #475569; }
+.k8-eval-cm { margin: 0; padding-left: 18px; font-size: 13px; color: #0f172a; display: flex; flex-direction: column; gap: 4px; }
+
+/* ============ Round 8 · Prayer tier list ============ */
+#k8TierModal.modal-overlay { align-items: flex-end; z-index: 1200; }
+@media (min-width: 993px) { #k8TierModal.modal-overlay { align-items: center; } .k8-tier-sheet { max-width: 640px !important; } }
+#k8TierBody { display: flex; flex-direction: column; gap: 10px; }
+.k8-tier-tools { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.k8-tier-tools select { height: 36px; border-radius: 10px; border: 1px solid #cbd5e1; padding: 0 10px; font-family: inherit; font-size: 13px; background: #fff; }
+.k8-tier { border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+.k8-tier-h { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 0; background: var(--bg); color: var(--ink); text-align: left; font-family: inherit; cursor: pointer; }
+.k8-tier-h b { display: block; font-size: 15px; font-weight: 600; }
+.k8-tier-h small { display: block; font-size: 12px; opacity: .85; }
+.k8-tier-n { min-width: 32px; height: 32px; border-radius: 999px; background: #fff; color: var(--ink); font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+.k8-tier ul { list-style: none; margin: 0; padding: 0 14px; }
+.k8-tier li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f1f5f9; }
+.k8-tier li:first-child { border-top: 0; }
+.k8-tier-name { flex: 1; min-width: 0; }
+.k8-tier-name b { display: block; font-size: 14px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-tier-name small { display: block; font-size: 12px; color: #64748b; }
+.k8-tier-name em { display: block; font-style: normal; font-size: 12px; color: #1d4ed8; margin-top: 2px; }
+.k8-tier-rate { font-size: 14px; font-weight: 600; color: var(--ink); flex: none; }
+.k8-tier-empty { margin: 0; padding: 10px 14px; font-size: 13px; color: #64748b; }
+.k8-tier-admin { margin: 0 0 16px; }
+#teacher-tab-overview > .k8-tier-btn, #teacher-tab-overview > .k8-eval-card { display: flex !important; }
+#teacher-tab-overview > .modal-overlay { display: flex !important; }
+@media (max-width: 992px) { .modal-overlay:has(> .k8-sheet) { padding: 0 !important; align-items: flex-end !important; } .k8-sheet { max-height: 88dvh !important; } }
+#view-teacher #teacher-tab-overview > .modal-overlay { display: flex !important; }
+#view-teacher #teacher-tab-overview > .k8-tier-btn, #view-teacher #teacher-tab-overview > .k8-eval-card { display: flex !important; }
