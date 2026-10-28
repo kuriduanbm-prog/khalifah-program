@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.4">
-  <link rel="stylesheet" href="ui-v8.css?v=8.4">
+  <link rel="stylesheet" href="style.css?v=8.5">
+  <link rel="stylesheet" href="ui-v8.css?v=8.5">
 </head>
 <body class="auth-locked">
 
@@ -3900,12 +3900,10 @@
 
   <!-- Modal: Prayer Late Check-in Approval Request (For Student) -->
   <div class="modal-overlay" id="prayerLateApprovalModal">
-    <div class="modal-dialog" style="max-width: 500px;">
+    <div class="modal-dialog k8-lr-dialog" style="max-width: 500px;">
       <div class="modal-header">
-        <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-file-signature" style="color: #0284c7;"></i>
-          <span>ส่งคำขออนุมัติเช็คละหมาดย้อนหลัง (กรณีลืม)</span>
-        </div>
+        <button type="button" class="k8-pg-back" aria-label="กลับ" onclick="closeModal('prayerLateApprovalModal')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+        <div class="k8-pg-titles"><h1>ขออนุมัติละหมาดย้อนหลัง</h1><div class="k8-pg-sub">อาจารย์จะตรวจและอนุมัติให้</div></div>
         <button type="button" class="btn-icon" onclick="closeModal('prayerLateApprovalModal')">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -3928,9 +3926,7 @@
 
         <!-- Prayer Slot Selector -->
         <div class="form-group" style="margin-top: 1rem;">
-          <label class="form-label">
-            <i class="fa-solid fa-person-praying" style="color: #0284c7;"></i> เลือกเวลาละหมาดที่ต้องการขออนุมัติ <span class="required">*</span>
-          </label>
+          <label class="form-label">เวลาละหมาด</label>
           <div class="late-req-slot-chips">
             <button type="button" class="btn-late-slot" data-slot="ซุบฮิ" onclick="selectLateRequestSlot('ซุบฮิ')">
               <span class="slot-name">ซุบฮิ</span>
@@ -3958,17 +3954,13 @@
 
         <!-- Date of Prayer -->
         <div class="form-group">
-          <label class="form-label">
-            <i class="fa-regular fa-calendar" style="color: #0284c7;"></i> วันที่ละหมาด <span class="required">*</span>
-          </label>
+          <label class="form-label" for="lateReqDate">วันที่</label>
           <input type="date" id="lateReqDate" class="form-control" style="font-weight: 600;">
         </div>
 
         <!-- Reason Selection with Quick Presets -->
         <div class="form-group">
-          <label class="form-label">
-            <i class="fa-solid fa-circle-question" style="color: #0284c7;"></i> เหตุผลที่ไม่ได้กดเช็คชื่อตามเวลา <span class="required">*</span>
-          </label>
+          <label class="form-label">เหตุผล</label>
           <div class="late-req-preset-chips">
             <button type="button" class="btn-reason-preset active" onclick="setLateReqReasonPreset('ละหมาดแล้วแต่ลืมกดเช็คชื่อ')">
               ละหมาดแล้วแต่ลืมกดเช็คชื่อ
@@ -3987,6 +3979,7 @@
             </button>
           </div>
           <input type="hidden" id="lateReqSelectedPreset" value="ละหมาดแล้วแต่ลืมกดเช็คชื่อ">
+          <label class="form-label k8-lr-detail-l" for="lateReqReasonDetail">รายละเอียดเพิ่มเติม (ถ้ามี)</label>
           <textarea id="lateReqReasonDetail" class="form-control" rows="2" placeholder="พิมพ์เหตุผลหรือคำชี้แจงเพิ่มเติมให้อาจารย์ (ไม่บังคับ)..." style="margin-top: 0.5rem; resize: vertical; font-size: 0.88rem;"></textarea>
         </div>
 
@@ -4001,7 +3994,7 @@
             <div class="late-req-photo-preview-box" id="lateReqPhotoPreviewBox" onclick="document.getElementById('lateReqPhotoInput').click()">
               <div id="lateReqPhotoPlaceholder">
                 <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.5rem; color: #94a3b8; margin-bottom: 0.25rem;"></i>
-                <div style="font-size: 0.8rem; color: #475569; font-weight: 600;">คลิกเพื่อเลือกรูปถ่ายพยาน หรือรูปสถานที่</div>
+                <div class="k8-lr-up" style="font-size: 0.8rem; color: #475569; font-weight: 600;">คลิกเพื่อเลือกรูปถ่ายพยาน หรือรูปสถานที่</div>
                 <div style="font-size: 0.72rem; color: #94a3b8;">(ระบบบีบอัดรูปภาพให้อัตโนมัติ)</div>
               </div>
               <img id="lateReqPhotoPreviewImg" src="" alt="พรีวิวรูปถ่าย" style="display: none; width: 100%; max-height: 180px; object-fit: contain; border-radius: 6px;">
@@ -4020,8 +4013,15 @@
             ยกเลิก
           </button>
           <button type="button" class="btn btn-primary" style="flex: 2;" id="btnSubmitLateReq" onclick="submitPrayerLateApprovalRequest()">
-            <i class="fa-solid fa-paper-plane"></i> ส่งคำขอให้อาจารย์อนุมัติ
+            ส่งคำขอ
           </button>
+        </div>
+      <div class="k8-lr-sent" id="k8LrSent" hidden role="status">
+          <span class="k8-lr-sent-ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4 10-10"/></svg></span>
+          <h2>ส่งคำขอแล้ว</h2>
+          <p id="k8LrSentText">สถานะ: รออาจารย์อนุมัติ</p>
+          <button type="button" class="k8-btn-pri" onclick="closeModal('prayerLateApprovalModal'); switchView('prayer')">กลับหน้าละหมาด</button>
+          <button type="button" class="k8-lr-again" onclick="k8LrAgain()">ส่งคำขออีกรายการ</button>
         </div>
       </div>
     </div>
@@ -4334,11 +4334,10 @@
 
   <!-- Modal: Admin Random OTP Verification (ยืนยันรหัสสุ่มจากแอดมิน) -->
   <div class="modal-overlay" id="otpVerifyModal">
-    <div class="modal-dialog" style="max-width: 460px;">
+    <div class="modal-dialog k8-otp-dialog" style="max-width: 460px;">
       <div class="modal-header">
-        <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.45rem;">
-          <i class="fa-solid fa-key" style="color: var(--primary);"></i> ยืนยันการรับรองจากแอดมิน (รหัสสุ่ม)
-        </div>
+        <button type="button" class="k8-pg-back" aria-label="กลับไปหน้าเข้าสู่ระบบ" onclick="closeModal('otpVerifyModal')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+        <h1 class="k8-otp-h1">ยืนยันตัวตน</h1>
         <button class="btn-icon" onclick="closeModal('otpVerifyModal')">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -4362,16 +4361,17 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">รหัสยืนยัน 6 หลักจากแอดมิน / อีเมล <span class="required">*</span></label>
+          <label class="form-label" for="otpVerifyCodeInput">รหัสยืนยัน 6 หลัก</label>
+          <div class="k8-otp-boxes" id="k8OtpBoxes" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
           <input type="text" class="form-control otp-code-input-box" id="otpVerifyCodeInput" maxlength="6" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" placeholder="000000" onkeypress="if(event.key === 'Enter') verifyRegistrationOtpCode()">
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1rem;">
           <button class="btn btn-primary btn-block btn-lg" onclick="verifyRegistrationOtpCode()">
-            <i class="fa-solid fa-circle-check"></i> ยืนยันรหัสและเปิดใช้งานบัญชีทันที
+            ยืนยันและเข้าสู่ระบบ
           </button>
           <button class="btn btn-secondary btn-block btn-sm" onclick="checkOtpApprovalStatus()">
-            <i class="fa-solid fa-rotate"></i> ตรวจสอบสถานะการกดยินยอมจากแอดมิน
+            ตรวจสอบสถานะคำขอ
           </button>
         </div>
       </div>
@@ -5024,6 +5024,25 @@
   <!-- Modal: School Calendar Viewer for Students (กดปุ่มเพื่อดูปฏิทิน ขนาดกะทัดรัดพอดีมือถือ) -->
   <div class="modal-overlay" id="schoolCalendarModal" onclick="if(event.target===this)closeModal('schoolCalendarModal')">
     <div class="modal-dialog cal-phone-modal-dialog">
+      <div class="k8-cal">
+        <header class="k8-pg-head k8-cal-head">
+          <button type="button" class="k8-pg-back" aria-label="กลับ" onclick="closeModal('schoolCalendarModal')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <div class="k8-pg-titles"><h1>ปฏิทินโรงเรียน</h1></div>
+          <button type="button" class="k8-cal-add" id="k8CalAdd" hidden onclick="if(typeof openCalendarEventModal==='function')openCalendarEventModal()">+ เพิ่ม</button>
+        </header>
+        <section class="k8-cal-card">
+          <div class="k8-cal-nav">
+            <button type="button" aria-label="เดือนก่อนหน้า" onclick="k8CalShift(-1)">‹</button>
+            <span id="k8CalMonth">-</span>
+            <button type="button" aria-label="เดือนถัดไป" onclick="k8CalShift(1)">›</button>
+          </div>
+          <div class="k8-cal-grid" id="k8CalGrid"></div>
+        </section>
+        <section class="k8-cal-day">
+          <h2 id="k8CalDayLabel">-</h2>
+          <div id="k8CalDayList"></div>
+        </section>
+      </div>
       <div class="modal-header cal-phone-modal-header">
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
@@ -5346,7 +5365,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.4"></script>
-  <script defer src="ui-v8.js?v=8.4"></script>
+  <script defer src="app.js?v=8.5"></script>
+  <script defer src="ui-v8.js?v=8.5"></script>
 </body>
 </html>

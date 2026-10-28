@@ -1558,3 +1558,106 @@
   const sat = window.switchAdminTab;
   if (typeof sat === 'function') window.switchAdminTab = function (t) { const r = sat.apply(this, arguments); if (t === 'approvals') { try { fetchPrayerApprovalsFromCloud(false); } catch (e) {} window.renderApprovalsV8(); } return r; };
 })();
+
+/* ============ Round 3 · OTP page (canvas Otp) ============ */
+(function () {
+  function sync() {
+    const inp = document.getElementById('otpVerifyCodeInput'), boxes = document.querySelectorAll('#k8OtpBoxes span');
+    if (!inp || !boxes.length) return;
+    const v = String(inp.value || '').replace(/\D/g, '').slice(0, 6);
+    if (inp.value !== v) inp.value = v;
+    boxes.forEach((b, i) => { b.textContent = v[i] || ''; b.classList.toggle('on', i === Math.min(v.length, 5) && document.activeElement === inp); b.classList.toggle('filled', !!v[i]); });
+  }
+  function boot() {
+    const inp = document.getElementById('otpVerifyCodeInput');
+    if (!inp) return;
+    ['input', 'focus', 'blur', 'keyup'].forEach((ev) => inp.addEventListener(ev, sync));
+    const o = window.openOtpVerifyModalPrompt;
+    if (typeof o === 'function') window.openOtpVerifyModalPrompt = function () { const r = o.apply(this, arguments); sync(); setTimeout(() => { const l = document.getElementById('otpLookupIdInput'); if (l) l.focus(); }, 50); return r; };
+    sync();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+/* ============ Round 3 · Late prayer request (canvas LateRequest) ============ */
+(function () {
+  const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const modal = () => document.getElementById('prayerLateApprovalModal');
+  function setSent(on) { const m = modal(); if (!m) return; m.classList.toggle('k8-sent', !!on); const p = document.getElementById('k8LrSent'); if (p) p.hidden = !on; }
+  window.k8LrAgain = function () { setSent(false); if (typeof openPrayerLateApprovalModal === 'function') openPrayerLateApprovalModal(); };
+  const op = window.openPrayerLateApprovalModal;
+  if (typeof op === 'function') window.openPrayerLateApprovalModal = function () { setSent(false); return op.apply(this, arguments); };
+  let justSent = null;
+  const sb = window.submitPrayerLateApprovalRequest;
+  if (typeof sb === 'function') window.submitPrayerLateApprovalRequest = async function () {
+    const slot = (document.getElementById('lateReqSelectedSlot') || {}).value || '';
+    const date = (document.getElementById('lateReqDate') || {}).value || '';
+    let before = 0; try { before = getPrayerApprovalsList().length; } catch (e) {}
+    const r = await sb.apply(this, arguments);
+    let after = 0; try { after = getPrayerApprovalsList().length; } catch (e) {}
+    if (after > before) justSent = { slot, date };
+    return r;
+  };
+  const cm = window.closeModal;
+  if (typeof cm === 'function') window.closeModal = function (id) {
+    if (id === 'prayerLateApprovalModal' && justSent) {
+      const js = justSent; justSent = null;
+      const d = new Date(js.date + 'T00:00:00');
+      const t = document.getElementById('k8LrSentText');
+      if (t) t.innerHTML = 'ละหมาด' + js.slot + ' · ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543) + '<br>สถานะ: รออาจารย์อนุมัติ';
+      const b = document.getElementById('btnSubmitLateReq'); if (b) setTimeout(() => { b.textContent = 'ส่งคำขอ'; }, 0);
+      setSent(true);
+      return;
+    }
+    if (id === 'prayerLateApprovalModal') setSent(false);
+    return cm.apply(this, arguments);
+  };
+})();
+
+/* ============ Round 3 · School calendar (canvas Calendar) ============ */
+(function () {
+  const MF = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  const DOW = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+  const DOWF = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const COLORS = [['#0369a1', '#e0f2fe'], ['#15803d', '#f0fdf4'], ['#b45309', '#fffbeb'], ['#5b21b6', '#ede9fe'], ['#b91c1c', '#fef2f2']];
+  const catColor = (c) => { const s = String(c || ''); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return /สอบ|exam/i.test(s) ? COLORS[4] : /หยุด|holiday/i.test(s) ? COLORS[2] : COLORS[h % 4]; };
+  const now = new Date();
+  let ym = { y: now.getFullYear(), m: now.getMonth() }, sel = ymd(now);
+  function events() { try { return getVisibleCalendarEvents() || []; } catch (e) { try { return calendarEvents || []; } catch (e2) { return []; } } }
+  function on(ev, day) { const s = String(ev.startDate || '').slice(0, 10), e = String(ev.endDate || ev.startDate || '').slice(0, 10); return s && day >= s && day <= (e || s); }
+  function render() {
+    const grid = document.getElementById('k8CalGrid'); if (!grid) return;
+    const evs = events();
+    document.getElementById('k8CalMonth').textContent = MF[ym.m] + ' ' + (ym.y + 543);
+    const first = new Date(ym.y, ym.m, 1), days = new Date(ym.y, ym.m + 1, 0).getDate(), today = ymd(new Date());
+    let html = DOW.map((d) => '<span class="k8-cal-dow">' + d + '</span>').join('');
+    for (let i = 0; i < first.getDay(); i++) html += '<span></span>';
+    for (let d = 1; d <= days; d++) {
+      const key = ymd(new Date(ym.y, ym.m, d));
+      const has = evs.find((e) => on(e, key));
+      const cls = (key === sel ? ' is-sel' : '') + (key === today ? ' is-today' : '');
+      html += '<button type="button" class="k8-cal-cell' + cls + '" aria-pressed="' + (key === sel) + '" aria-label="' + d + ' ' + MF[ym.m] + (has ? ' มีกิจกรรม' : '') + '" onclick="k8CalPick(\'' + key + '\')"><span>' + d + '</span><i style="background:' + (has ? (key === sel ? '#fff' : catColor(has.category)[0]) : 'transparent') + '"></i></button>';
+    }
+    grid.innerHTML = html;
+    const sd = new Date(sel + 'T00:00:00');
+    document.getElementById('k8CalDayLabel').textContent = DOWF[sd.getDay()] + ' ' + sd.getDate() + ' ' + MF[sd.getMonth()];
+    const list = evs.filter((e) => on(e, sel));
+    document.getElementById('k8CalDayList').innerHTML = list.length ? list.map((e) => {
+      const [ink, bg] = catColor(e.category);
+      const meta = [e.startTime ? e.startTime + (e.endTime ? '–' + e.endTime : '') : 'ทั้งวัน', e.location, e.targetAudienceLabel].filter(Boolean).join(' · ');
+      return '<div class="k8-cal-ev"><span class="k8-cal-ev-bar" style="background:' + ink + '"></span><span class="k8-cal-ev-main"><b>' + esc(e.title || '-') + '</b><span>' + esc(meta) + '</span></span>' + (e.category ? '<span class="k8-pill" style="background:' + bg + ';color:' + ink + '">' + esc(e.category) + '</span>' : '') + '</div>';
+    }).join('') : '<p class="k8-cal-none">ไม่มีกิจกรรมในวันนี้</p>';
+    const add = document.getElementById('k8CalAdd');
+    if (add) { let can = false; try { can = canManageCalendar(); } catch (e) {} add.hidden = !can; }
+  }
+  window.k8CalShift = function (n) { ym.m += n; if (ym.m < 0) { ym.m = 11; ym.y--; } if (ym.m > 11) { ym.m = 0; ym.y++; } const t = new Date(); sel = (ym.y === t.getFullYear() && ym.m === t.getMonth()) ? ymd(t) : ymd(new Date(ym.y, ym.m, 1)); render(); };
+  window.k8CalPick = function (k) { sel = k; render(); };
+  window.renderCalendarV8 = function () { try { render(); } catch (e) { console.warn('k8 cal', e); } };
+  const o = window.openSchoolCalendarModal;
+  if (typeof o === 'function') window.openSchoolCalendarModal = function () { const r = o.apply(this, arguments); const t = new Date(); ym = { y: t.getFullYear(), m: t.getMonth() }; sel = ymd(t); window.renderCalendarV8(); return r; };
+  const rc = window.renderCalendar;
+  if (typeof rc === 'function') window.renderCalendar = function () { const r = rc.apply(this, arguments); window.renderCalendarV8(); return r; };
+})();

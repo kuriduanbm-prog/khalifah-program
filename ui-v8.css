@@ -908,3 +908,94 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
   body.portal-mode-admin .main-wrapper { padding-top: 12px !important; }
 }
 .k8-ap-grid > .k8-li-empty { grid-column: 1 / -1; text-align: left; padding: 24px 4px; }
+
+/* ============ Round 3 · OTP page (canvas) ============ */
+#otpVerifyModal.modal-overlay { background: #f4f6f9 !important; backdrop-filter: none !important; align-items: flex-start !important; padding: 0 !important; overflow-y: auto; }
+#otpVerifyModal .k8-otp-dialog { background: transparent !important; border: 0 !important; box-shadow: none !important; max-width: 420px !important; width: 100%; margin: 0 auto !important; padding: 16px 20px 24px !important; max-height: none !important; transform: none !important; }
+#otpVerifyModal .modal-header { display: flex !important; align-items: center; gap: 8px; border: 0 !important; padding: 0 0 12px !important; background: transparent !important; }
+#otpVerifyModal .modal-header > .btn-icon { display: none !important; }
+.k8-otp-h1 { margin: 0; font-size: 20px; font-weight: 600; color: #0f172a; }
+#otpVerifyModal .modal-body { padding: 0 !important; overflow: visible !important; max-height: none !important; display: flex; flex-direction: column; gap: 16px; }
+#otpVerifyModal .modal-body > div[style*="line-height: 1.55"] { display: none !important; }
+#otpVerifyUserSummary { background: #fff !important; border: 1px solid #e2e8f0 !important; border-radius: 16px !important; padding: 14px 16px !important; margin: 0 !important; font-size: 14px; color: #475569; display: flex; gap: 12px; align-items: center; }
+#otpVerifyUserSummary::before { content: ''; width: 40px; height: 40px; flex: none; border-radius: 12px; background: #e0f2fe no-repeat center/20px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230369a1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM3 7l9 6 9-6'/%3E%3C/svg%3E"); }
+#otpVerifyModal .form-group { margin: 0 !important; display: flex; flex-direction: column; gap: 6px; }
+#otpVerifyModal .form-label { font-size: 14px !important; font-weight: 600 !important; color: #0f172a !important; margin: 0 !important; }
+#otpVerifyModal #otpLookupIdInput { height: 50px; border-radius: 14px !important; border: 1px solid #cbd5e1 !important; font-size: 16px !important; }
+#otpVerifyModal .form-group:has(#k8OtpBoxes) { position: relative; }
+.k8-otp-boxes { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 8px; }
+.k8-otp-boxes span { height: 58px; border-radius: 14px; background: #fff; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 600; color: #0f172a; }
+.k8-otp-boxes span.filled { border-color: #94a3b8; }
+.k8-otp-boxes span.on { border: 2px solid #0369a1; }
+#otpVerifyModal #otpVerifyCodeInput { position: absolute !important; left: 0; right: 0; bottom: 0; height: 58px !important; opacity: 0.01; color: transparent !important; caret-color: transparent; background: transparent !important; border: 0 !important; letter-spacing: 2em; }
+#otpVerifyModal .btn-primary.btn-block { height: 54px; border-radius: 14px !important; background: #0369a1 !important; border: 0 !important; font-size: 17px !important; font-weight: 600 !important; box-shadow: none !important; }
+#otpVerifyModal .btn-secondary.btn-block { height: auto; border: 0 !important; background: transparent !important; color: #0369a1 !important; font-size: 14px !important; box-shadow: none !important; padding: 8px !important; }
+#otpVerifyModal .modal-header { justify-content: flex-start !important; }
+
+/* ============ Round 3 · Late request page (canvas) ============ */
+#prayerLateApprovalModal.modal-overlay { background: #f4f6f9 !important; backdrop-filter: none !important; align-items: flex-start !important; padding: 0 !important; overflow-y: auto; }
+#prayerLateApprovalModal .k8-lr-dialog { background: transparent !important; border: 0 !important; box-shadow: none !important; max-width: 480px !important; width: 100%; margin: 0 auto !important; padding: 16px 16px 28px !important; max-height: none !important; transform: none !important; }
+#prayerLateApprovalModal .modal-header { display: flex !important; align-items: center; justify-content: flex-start !important; gap: 8px; border: 0 !important; padding: 0 0 12px !important; background: transparent !important; }
+#prayerLateApprovalModal .modal-header > .btn-icon { display: none !important; }
+#prayerLateApprovalModal .k8-pg-titles h1 { font-size: 20px; }
+#prayerLateApprovalModal .modal-body { padding: 0 !important; overflow: visible !important; max-height: none !important; display: flex; flex-direction: column; gap: 18px; }
+#prayerLateApprovalModal .late-req-student-bar { display: none !important; }
+#prayerLateApprovalModal .form-group { margin: 0 !important; display: flex; flex-direction: column; gap: 8px; }
+#prayerLateApprovalModal .form-label { font-size: 15px !important; font-weight: 600 !important; color: #0f172a !important; margin: 0 !important; display: block !important; }
+#prayerLateApprovalModal .form-label .required { display: none; }
+#prayerLateApprovalModal .late-req-slot-chips, #prayerLateApprovalModal .late-req-preset-chips { display: flex !important; flex-wrap: wrap; gap: 8px; }
+#prayerLateApprovalModal .btn-late-slot, #prayerLateApprovalModal .btn-reason-preset { min-height: 42px; padding: 0 16px !important; border-radius: 999px !important; border: 1px solid #cbd5e1 !important; background: #fff !important; color: #334155 !important; font-family: inherit; font-size: 14px !important; font-weight: 600; box-shadow: none !important; display: inline-flex; align-items: center; }
+#prayerLateApprovalModal .btn-late-slot .slot-sub { display: none !important; }
+#prayerLateApprovalModal .btn-late-slot .slot-name { font-size: 14px !important; color: inherit !important; }
+#prayerLateApprovalModal .btn-late-slot.active, #prayerLateApprovalModal .btn-late-slot.selected, #prayerLateApprovalModal .btn-reason-preset.active { background: #0369a1 !important; border-color: #0369a1 !important; color: #fff !important; }
+#prayerLateApprovalModal .btn-late-slot.active .slot-name, #prayerLateApprovalModal .btn-late-slot.selected .slot-name { color: #fff !important; }
+#prayerLateApprovalModal input[type="date"], #prayerLateApprovalModal textarea { border-radius: 14px !important; border: 1px solid #cbd5e1 !important; font-size: 16px !important; font-weight: 400 !important; }
+#prayerLateApprovalModal input[type="date"] { height: 50px; }
+#prayerLateApprovalModal .k8-lr-detail-l { margin-top: 10px !important; }
+#prayerLateApprovalModal .late-req-photo-preview-box { min-height: 56px !important; border: 1px dashed #94a3b8 !important; border-radius: 14px !important; background: #fff !important; display: flex; align-items: center; justify-content: center; padding: 8px 12px !important; cursor: pointer; }
+#prayerLateApprovalModal #lateReqPhotoPlaceholder { display: flex; align-items: center; gap: 10px; }
+#prayerLateApprovalModal #lateReqPhotoPlaceholder i, #prayerLateApprovalModal #lateReqPhotoPlaceholder > div:not(.k8-lr-up) { display: none !important; }
+#prayerLateApprovalModal #lateReqPhotoPlaceholder::before { content: ''; width: 20px; height: 20px; background: no-repeat center/20px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3zM12 9.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z'/%3E%3C/svg%3E"); }
+#prayerLateApprovalModal .k8-lr-up { font-size: 0 !important; }
+#prayerLateApprovalModal .k8-lr-up::after { content: 'แนบรูปหลักฐาน (ไม่บังคับ)'; font-size: 15px; color: #334155; font-weight: 500; }
+#prayerLateApprovalModal .form-group label .fa-camera, #prayerLateApprovalModal .form-group:has(.late-req-photo-upload-wrap) > .form-label { display: none !important; }
+#prayerLateApprovalModal .modal-body > div[style*="margin-top: 1.25rem"] .btn-secondary { display: none !important; }
+#prayerLateApprovalModal #btnSubmitLateReq { height: 54px; border-radius: 14px !important; background: #0369a1 !important; border: 0 !important; font-size: 17px !important; font-weight: 600 !important; box-shadow: none !important; flex: 1 !important; }
+#prayerLateApprovalModal.k8-sent .modal-body > :not(.k8-lr-sent) { display: none !important; }
+.k8-lr-sent { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 40px 8px; }
+.k8-lr-sent[hidden] { display: none !important; }
+.k8-lr-sent-ico { width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; }
+.k8-lr-sent h2 { margin: 0; font-size: 22px; font-weight: 600; color: #0f172a; }
+.k8-lr-sent p { margin: 0; font-size: 15px; color: #475569; line-height: 1.6; }
+.k8-lr-sent .k8-btn-pri { width: 100%; height: 52px; margin-top: 8px; border-radius: 14px; font-size: 16px; }
+.k8-lr-again { border: 0; background: transparent; color: #0369a1; font-family: inherit; font-size: 15px; padding: 10px; cursor: pointer; }
+#prayerLateApprovalModal .btn-late-slot, #prayerLateApprovalModal .btn-reason-preset { transition: none !important; }
+
+/* ============ Round 3 · School calendar (canvas) ============ */
+#schoolCalendarModal.modal-overlay { background: #f4f6f9 !important; backdrop-filter: none !important; align-items: flex-start !important; padding: 0 !important; overflow-y: auto; }
+#schoolCalendarModal .cal-phone-modal-dialog { background: transparent !important; border: 0 !important; box-shadow: none !important; max-width: 480px !important; width: 100%; margin: 0 auto !important; padding: 16px 16px 28px !important; max-height: none !important; height: auto !important; transform: none !important; border-radius: 0 !important; }
+#schoolCalendarModal .cal-phone-modal-dialog > :not(.k8-cal) { display: none !important; }
+.k8-cal { display: flex; flex-direction: column; gap: 12px; }
+.k8-cal-head h1 { font-size: 21px !important; }
+.k8-cal-add { height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid #bae6fd; background: #e0f2fe; color: #0369a1; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; flex: none; }
+.k8-cal-add[hidden] { display: none; }
+.k8-cal-card { background: #fff; border: 1px solid #dbe3ec; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.k8-cal-nav { display: flex; align-items: center; justify-content: space-between; }
+.k8-cal-nav button { width: 44px; height: 40px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; color: #334155; font-size: 18px; }
+.k8-cal-nav span { font-size: 17px; font-weight: 600; color: #0f172a; }
+.k8-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 4px; text-align: center; }
+.k8-cal-dow { font-size: 12px; color: #64748b; padding: 4px 0; }
+.k8-cal-cell { height: 44px; border: 0; border-radius: 12px; background: transparent; color: #0f172a; font-family: inherit; font-size: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0; }
+.k8-cal-cell i { width: 6px; height: 6px; border-radius: 50%; display: block; }
+.k8-cal-cell:hover { background: #f1f5f9; }
+.k8-cal-cell.is-today { font-weight: 700; color: #0369a1; }
+.k8-cal-cell.is-sel { background: #0369a1; color: #fff; font-weight: 600; }
+.k8-cal-day { background: #fff; border: 1px solid #dbe3ec; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.k8-cal-day h2 { margin: 0; font-size: 16px; font-weight: 600; color: #0f172a; }
+#k8CalDayList { display: flex; flex-direction: column; gap: 12px; }
+.k8-cal-ev { display: flex; gap: 12px; align-items: flex-start; }
+.k8-cal-ev-bar { width: 4px; align-self: stretch; border-radius: 4px; flex: none; }
+.k8-cal-ev-main { flex: 1; min-width: 0; }
+.k8-cal-ev-main b { display: block; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.k8-cal-ev-main span { display: block; font-size: 13px; color: #475569; overflow-wrap: anywhere; }
+.k8-cal-none { margin: 0; font-size: 14px; color: #64748b; }
