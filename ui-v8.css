@@ -1679,3 +1679,9 @@ body.k8-subadmin #btnTabLogo, body.k8-subadmin .k8-admin-nav [onclick*="settings
 }
 .k8-rk-foot { margin: 10px 0 0; font-size: 12px; color: #64748b; line-height: 1.6; }
 @media (max-width: 560px) { .k8-rk-levels button { flex-direction: row; align-items: baseline; gap: 6px; padding: 8px 10px; } .k8-rk-levels b { font-size: 18px; } .k8-rk-levels small { display: none; } }
+
+/* ---- Grades save bar: never covers the list ---- */
+#teacher-tab-grades .tg-save { position: static !important; margin: 4px 0 0 !important; box-shadow: none !important; border: 1px solid #e2e8f0 !important; border-radius: 16px !important; }
+#teacher-tab-grades .tg-save.is-dirty button { position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 60; min-height: 44px; border-radius: 999px; box-shadow: 0 8px 24px rgba(91,33,182,.35); }
+#teacher-tab-grades:has(.tg-save.is-dirty) #tgBody { padding-bottom: 64px; }
+@media (min-width: 993px) { #teacher-tab-grades .tg-save.is-dirty button { bottom: 24px; right: 32px; } }

@@ -441,7 +441,7 @@
     saving: false,
     search: '',
     showRule: false,
-    mode: (function () { try { return localStorage.getItem('k8_tg_mode') || 'one'; } catch (e) { return 'one'; } })()
+    mode: (function () { try { return localStorage.getItem('k8_tg_view') || 'grid'; } catch (e) { return 'grid'; } })()
   };
 
   function tgLoadScores() {
@@ -513,7 +513,7 @@
           '<label>คะแนนเต็ม<input type="text" inputmode="decimal" id="tgNewMax" placeholder="10"></label></div>' +
           '<div class="tg-btns"><button type="button" class="tg-btn" data-act="cancel-add">ยกเลิก</button><button type="button" class="tg-btn is-primary" data-act="confirm-add">เพิ่มชิ้นงาน</button></div></div>';
       }
-      if (defs.length) html += '<div class="tg-mode" role="tablist" aria-label="รูปแบบการกรอกคะแนน">' + [['one', 'กรอกทีละชิ้นงาน'], ['grid', 'ตารางทุกชิ้นงาน']].map(([k, l]) => '<button type="button" role="tab" data-mode="' + k + '" aria-selected="' + (tgState.mode === k) + '">' + l + '</button>').join('') + '</div>';
+      if (defs.length) html += '<div class="tg-mode" role="tablist" aria-label="รูปแบบการกรอกคะแนน">' + [['grid', 'ตารางทุกชิ้นงาน'], ['one', 'กรอกทีละชิ้นงาน']].map(([k, l]) => '<button type="button" role="tab" data-mode="' + k + '" aria-selected="' + (tgState.mode === k) + '">' + l + '</button>').join('') + '</div>';
       if (defs.length && tgState.mode === 'grid') {
         html += '<p class="tg-note">กรอกคะแนนของนักเรียนแต่ละคนแยกตามชิ้นงานได้ในตารางเดียว · กด Enter เพื่อลงไปคนถัดไปในชิ้นงานเดียวกัน</p>';
         html += '<div class="tg-grid-wrap"><table class="tg-grid"><thead><tr><th scope="col" class="tg-grid-name">นักเรียน</th>' + defs.map((a) => '<th scope="col"><span>' + esc(a.title) + '</span><small>เต็ม ' + fmtNum(a.maxScore) + '</small></th>').join('') + '<th scope="col" class="tg-grid-sum">รวม<small>' + fmtNum(totalMax) + '</small></th></tr></thead><tbody>' +
@@ -567,6 +567,7 @@
     if (!txt || !btn) return;
     const n = subj ? tgDirtyCount(subj) : 0;
     btn.disabled = tgState.saving || n === 0;
+    const bar = btn.closest('.tg-save'); if (bar) bar.classList.toggle('is-dirty', n > 0 || tgState.saving);
     btn.textContent = tgState.saving ? 'กำลังบันทึก...' : (n ? 'บันทึก (' + n + ')' : 'บันทึก');
     if (n > 0) { txt.textContent = 'มีการแก้ไข ' + n + ' รายการ ยังไม่ได้บันทึก'; return; }
     if (tgState.tab === 'scores') {
@@ -599,9 +600,9 @@
     body.addEventListener('click', (e) => {
       const subj = tgSubject();
       const chip = e.target.closest('.tg-chip[data-asg]');
-      if (chip) { tgState.active[subj] = chip.dataset.asg; tgState.adding = false; if (tgState.mode === 'grid') { tgState.mode = 'one'; try { localStorage.setItem('k8_tg_mode', 'one'); } catch (er) {} } renderTeacherGradesV8(); return; }
+      if (chip) { tgState.active[subj] = chip.dataset.asg; tgState.adding = false; if (tgState.mode === 'grid') { tgState.mode = 'one'; try { localStorage.setItem('k8_tg_view', 'one'); } catch (er) {} } renderTeacherGradesV8(); return; }
       const md = e.target.closest('.tg-mode [data-mode]');
-      if (md) { tgState.mode = md.dataset.mode; try { localStorage.setItem('k8_tg_mode', tgState.mode); } catch (er) {} renderTeacherGradesV8(); return; }
+      if (md) { tgState.mode = md.dataset.mode; try { localStorage.setItem('k8_tg_view', tgState.mode); } catch (er) {} renderTeacherGradesV8(); return; }
       const act = e.target.closest('[data-act]');
       if (act) {
         const kind = act.dataset.act;
@@ -2727,6 +2728,7 @@ window.k8RegBirthChange = function (v) {
       const cs = getComputedStyle(n); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
       const r = n.getBoundingClientRect(); if (r.height && r.bottom >= window.innerHeight - 48 && r.top > window.innerHeight * 0.6) top = Math.min(top, r.top);
     });
+    document.querySelectorAll('.tg-save.is-dirty button').forEach((n) => { const r = n.getBoundingClientRect(); if (r.height && getComputedStyle(n).position === 'fixed' && r.top > window.innerHeight * 0.5) top = Math.min(top, r.top); });
     c.style.setProperty('--k8-toast-b', (window.innerHeight - top + 12) + 'px');
   }
   function next() {
@@ -2764,7 +2766,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '9.5';
+  const APP_VERSION = '9.6';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
