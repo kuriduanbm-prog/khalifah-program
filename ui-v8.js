@@ -301,7 +301,7 @@
     const allH = readJSON('khalifah_student_hasanat', {});
     const mine = allH[sid] || {};
     if (!memLatest && mine.memorization) memLatest = Number(mine.memorization.count) || (mine.memorization.memorizedSurahs || []).length || 0;
-    const deeds = [['อ่านอัลกุรอาน', fmtNum(pages) + ' หน้า', '#b45309'], ['ท่องจำสะสม', memLatest + ' ซูเราะห์', '#15803d'], ['ละหมาดสุนัต', fmtNum(rakaat) + ' ร็อกอะฮ์', '#0369a1']];
+    const deeds = [['อ่านอัลกุรอาน', fmtNum(pages) + ' หน้า', '#b45309'], ['ท่องจำใหม่', memLatest + ' ซูเราะห์', '#15803d'], ['สุนัต', fmtNum(rakaat) + ' ร็อกอะฮ์', '#6d28d9']];
     document.getElementById('hfDeeds').innerHTML = deeds.map(([label, value, ink]) =>
       '<button type="button" class="hf-deed" onclick="switchView(\'hasanat\')"><span>' + label + '</span><b style="color:' + ink + '">' + esc(value) + '</b></button>'
     ).join('');
@@ -312,7 +312,7 @@
     const toggle = document.getElementById('hfGradesToggle');
     const body = document.getElementById('hfGradesBody');
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    document.getElementById('hfGradesIcon').innerHTML = '<i class="fa-solid ' + (open ? 'fa-eye' : 'fa-lock') + '"></i>';
+    document.getElementById('hfGradesIcon').innerHTML = open ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
     document.getElementById('hfGradesHint').textContent = open ? 'คนรอบข้างอาจเห็นได้ · ซ่อนอัตโนมัติเมื่อออกจากหน้านี้' : 'ซ่อนไว้เพื่อความเป็นส่วนตัว';
     document.getElementById('hfGradesAction').textContent = open ? 'ซ่อน' : 'แตะเพื่อดู';
     body.hidden = !open;
@@ -922,7 +922,8 @@
       { n: notCheckedClasses.length, label: notCheckedClasses.length ? 'ห้องที่ยังไม่เช็คชื่อ: ' + notCheckedClasses.map((g) => g.replace('มัธยมศึกษาปีที่ ', 'ม.')).join(', ') : 'ทุกห้องเช็คชื่อแล้ว', cta: 'เช็คชื่อ', bg: notCheckedClasses.length ? '#fef2f2' : '#f0fdf4', ink: notCheckedClasses.length ? '#b91c1c' : '#15803d', go: "switchView('teacher'); switchTeacherTab('attendance')" },
       { n: soon.length, label: 'กิจกรรมภายใน 7 วัน', cta: 'จัดการ', bg: '#f0fdf4', ink: '#15803d', go: "switchAdminTab('activities-admin', document.getElementById('btnTabActivitiesAdmin'))" }
     ];
-    document.getElementById('k8OvTodo').innerHTML = todo.map((t) =>
+    const todoShown = todo.filter((t) => +t.n > 0);
+    document.getElementById('k8OvTodo').innerHTML = (todoShown.length ? '' : '<div class="k8-li-empty" style="text-align:left;padding:12px 0">ไม่มีงานค้าง เรียบร้อยดี ✓</div>') + todoShown.map((t) =>
       '<button type="button" class="k8-todo-row" onclick="' + t.go + '"><span class="k8-todo-badge" style="background:' + t.bg + ';color:' + t.ink + '">' + t.n + '</span><span class="k8-todo-text"><b>' + esc(t.label) + '</b></span><span class="k8-todo-cta">' + t.cta + '</span></button>'
     ).join('');
 
@@ -1012,7 +1013,7 @@
       return list.some(p => slotKey(p.prayerName || p.prayerTime || p.timeSlot || '') === k);
     } catch (e) { return false; }
   }
-  const DEFAULT_TXT = { 1: 'ตรวจพิกัด & เปิดกล้อง', 2: 'ถ่ายภาพและส่งบันทึก' };
+  const DEFAULT_TXT = { 1: 'ตรวจพิกัด & เปิดกล้อง', 2: 'ถ่ายภาพ' };
   function relabelBtn() {
     const t = document.getElementById('btnCaptureInstantText');
     if (!t) return;
@@ -1067,6 +1068,17 @@
       const cs = document.getElementById('k8CamDoneSub');
       if (cs) cs.textContent = 'ละหมาด' + slot + ' · ส่งถึงอาจารย์เรียบร้อย';
     }
+    // watermark (canvas)
+    try {
+      const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      let st = null; try { st = currentStudent; } catch (e) {}
+      const gm = st && String(st.grade || '').match(/(\d)/);
+      const nameEl = document.getElementById('k8WmName'), lineEl = document.getElementById('k8WmLine');
+      if (nameEl) nameEl.textContent = st ? (st.fullName || '-') + (gm ? ' · ม.' + gm[1] : '') : '-';
+      if (lineEl) lineEl.textContent = slot + ' · ' + now.getDate() + ' ' + M[now.getMonth()] + ' ' + (now.getFullYear() + 543) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' · ' + ((vl && vl.locationName) || 'กำลังระบุสถานที่');
+      let live = false; try { live = !!activeCameraStream && prayerCheckStep === 2; } catch (e) {}
+      const ph = document.getElementById('k8CamPh'); if (ph) ph.hidden = live;
+    } catch (e) {}
     if (btn) btn.classList.toggle('k8-hide', done && step === 3 && (function () { try { return prayerCheckStep !== 2; } catch (e) { return true; } })());
     relabelBtn();
   };
@@ -1082,6 +1094,18 @@
   }
   const upd = () => window.updatePrayerV8();
   ['selectPrayerTime', 'handlePrayerMainButtonClick', 'switchView', 'autoSelectDetectedPrayerSlot', 'verifyGeolocation'].forEach(f => hook(f, upd));
+  window.k8TogglePrayerMore = function () {
+    const v = document.getElementById('view-prayer'); if (!v) return;
+    const on = !v.classList.contains('k8-more'); v.classList.toggle('k8-more', on);
+    const b = document.getElementById('k8PrMoreBtn'); if (b) b.setAttribute('aria-expanded', on);
+    if (on) setTimeout(() => { const n = document.getElementById('prayerNotesCard'); if (n) n.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+  };
+  const svp = window.switchView;
+  if (typeof svp === 'function') window.switchView = function (v) {
+    const r = svp.apply(this, arguments);
+    if (v === 'prayer') { try { if (typeof autoSelectDetectedPrayerSlot === 'function') autoSelectDetectedPrayerSlot(false); } catch (e) {} upd(); }
+    return r;
+  };
   function boot() {
     upd();
     const t = document.getElementById('btnCaptureInstantText');
@@ -1378,7 +1402,7 @@
     }).join('') : '<li class="k8-li-empty">ไม่พบรายชื่อนักเรียนในระดับชั้นนี้</li>';
     document.getElementById('k8TaSum').innerHTML = KINDS.map(([k, label, ink, bg]) => '<div style="background:' + bg + ';color:' + ink + '"><b>' + cnt[k] + '</b><span>' + label + '</span></div>').join('');
     const pe = document.getElementById('k8TaPending');
-    pe.textContent = pending > 0 ? 'ยังไม่บันทึก ' + pending + ' คน' : 'บันทึกครบทุกคนแล้ว';
+    pe.textContent = pending > 0 ? 'ยังไม่เช็ค ' + pending + ' คน' : 'เช็คครบทุกคนแล้ว';
     pe.style.color = pending > 0 ? '#b45309' : '#15803d';
   }
   window.renderTeacherAttV8 = function () { try { renderAtt(); } catch (e) { console.warn('teacher att', e); } };
@@ -1566,8 +1590,17 @@
     if (!inp || !boxes.length) return;
     const v = String(inp.value || '').replace(/\D/g, '').slice(0, 6);
     if (inp.value !== v) inp.value = v;
+    const vb = document.querySelector('#otpVerifyModal .btn-primary.btn-block'); if (vb) vb.classList.toggle('k8-dim', v.length < 6);
     boxes.forEach((b, i) => { b.textContent = v[i] || ''; b.classList.toggle('on', i === Math.min(v.length, 5) && document.activeElement === inp); b.classList.toggle('filled', !!v[i]); });
   }
+  window.k8OtpKey = function (k) {
+    const inp = document.getElementById('otpVerifyCodeInput'); if (!inp) return;
+    let v = String(inp.value || '').replace(/\D/g, '');
+    if (k === 'del') v = v.slice(0, -1); else if (v.length < 6) v += k;
+    inp.value = v; sync();
+    if (v.length === 6 && typeof verifyRegistrationOtpCode === 'function') { const id = document.getElementById('otpLookupIdInput'); const g = document.getElementById('otpLookupIdGroup'); if (!g || g.style.display === 'none' || (id && id.value.trim())) verifyRegistrationOtpCode(); }
+  };
+  window.k8OtpNoEmail = function () { if (typeof showToast === 'function') showToast('ตรวจสอบโฟลเดอร์จดหมายขยะ (Spam) หากยังไม่ได้รับ ติดต่อแอดมินให้กด "ส่งรหัสอีกครั้ง"', 'info'); };
   function boot() {
     const inp = document.getElementById('otpVerifyCodeInput');
     if (!inp) return;
@@ -1617,7 +1650,7 @@
 /* ============ Round 3 · School calendar (canvas Calendar) ============ */
 (function () {
   const MF = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  const DOW = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+  const DOW = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
   const DOWF = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const pad = (n) => String(n).padStart(2, '0');
@@ -1634,7 +1667,7 @@
     document.getElementById('k8CalMonth').textContent = MF[ym.m] + ' ' + (ym.y + 543);
     const first = new Date(ym.y, ym.m, 1), days = new Date(ym.y, ym.m + 1, 0).getDate(), today = ymd(new Date());
     let html = DOW.map((d) => '<span class="k8-cal-dow">' + d + '</span>').join('');
-    for (let i = 0; i < first.getDay(); i++) html += '<span></span>';
+    for (let i = 0; i < (first.getDay() + 6) % 7; i++) html += '<span></span>';
     for (let d = 1; d <= days; d++) {
       const key = ymd(new Date(ym.y, ym.m, d));
       const has = evs.find((e) => on(e, key));
@@ -1643,7 +1676,7 @@
     }
     grid.innerHTML = html;
     const sd = new Date(sel + 'T00:00:00');
-    document.getElementById('k8CalDayLabel').textContent = DOWF[sd.getDay()] + ' ' + sd.getDate() + ' ' + MF[sd.getMonth()];
+    document.getElementById('k8CalDayLabel').textContent = sd.getDate() + ' ' + MF[sd.getMonth()] + ' ' + (sd.getFullYear() + 543);
     const list = evs.filter((e) => on(e, sel));
     document.getElementById('k8CalDayList').innerHTML = list.length ? list.map((e) => {
       const [ink, bg] = catColor(e.category);
@@ -1660,4 +1693,112 @@
   if (typeof o === 'function') window.openSchoolCalendarModal = function () { const r = o.apply(this, arguments); const t = new Date(); ym = { y: t.getFullYear(), m: t.getMonth() }; sel = ymd(t); window.renderCalendarV8(); return r; };
   const rc = window.renderCalendar;
   if (typeof rc === 'function') window.renderCalendar = function () { const r = rc.apply(this, arguments); window.renderCalendarV8(); return r; };
+})();
+
+/* ============ Round 4 · Hasanat Quran = canvas exact ============ */
+(function () {
+  const num = (id) => { const el = document.getElementById(id); return el ? (parseInt(String(el.value != null && el.tagName === 'INPUT' ? el.value : el.textContent).replace(/[^\d]/g, ''), 10) || 0) : 0; };
+  function sync() {
+    const saved = num('kpiQuranPageText');
+    const today = num('quranPagesTodayInput');
+    const cur = num('quranCurrentPageInput') || Math.min(604, saved + today);
+    const st = document.getElementById('k8QSaveText');
+    if (st) st.textContent = today > 0 ? 'บันทึก · จะอ่านถึงหน้า ' + Math.min(604, cur) : 'บันทึก';
+    const juzDoneTxt = (document.getElementById('juzCompletedOverviewText') || {}).textContent || '';
+    const m = juzDoneTxt.match(/(\d+)\s*\/\s*30/) || juzDoneTxt.match(/จบแล้ว\s*(\d+)/); const juzDone = m ? +m[1] : 0;
+    const stars = document.getElementById('k8QStars'); if (stars) stars.textContent = '★ ' + juzDone + ' ดาว';
+    const juzNow = Math.min(30, Math.floor(Math.max(0, saved - 1) / 20) + 1);
+    const kh = num('quranKhatamCountInput');
+    const meta = document.getElementById('k8QMeta'); if (meta) meta.textContent = 'ยุซที่ ' + juzNow + ' · ค็อตม์ ' + kh + ' ครั้ง';
+    const ot = document.querySelector('#view-hasanat .juz-overview-title'); if (ot && !ot.dataset.k8) { ot.dataset.k8 = '1'; ot.textContent = 'ความคืบหน้า 30 ยุซ'; }
+    const oc = document.getElementById('juzCompletedOverviewText'); if (oc && m) { const t = 'จบแล้ว ' + juzDone + ' ยุซ'; if (oc.textContent !== t) oc.textContent = t; }
+    const hd = document.getElementById('k8HaDate'), src = document.getElementById('hasanatDateDisplay');
+    if (hd && src) { const t = src.textContent.replace(/^วันที่\s*/, '').replace(/^(อาทิตย์|จันทร์|อังคาร|พุธ|พฤหัสบดี|พฤหัส|ศุกร์|เสาร์)\s*/, ''); if (t && t.indexOf('-') === -1 && hd.textContent !== t) hd.textContent = t; }
+  }
+  window.k8HasanatSync = sync;
+  function boot() {
+    const today = document.getElementById('quranPagesTodayInput');
+    if (today) today.addEventListener('input', () => {
+      const saved = num('kpiQuranPageText'); const t = num('quranPagesTodayInput');
+      const cp = document.getElementById('quranCurrentPageInput');
+      if (cp) { cp.value = t > 0 ? Math.min(604, saved + t) : (saved || ''); try { autoCalculateJuzFromPage(); } catch (e) {} }
+      sync();
+    });
+    const hd = document.getElementById('k8HaDate');
+    if (hd) { hd.setAttribute('role', 'button'); hd.tabIndex = 0; hd.title = 'เลือกวันที่'; hd.addEventListener('click', () => { try { triggerHasanatDatePicker(); } catch (e) {} }); }
+    ['kpiQuranPageText', 'juzCompletedOverviewText', 'hasanatDateDisplay', 'quranKhatamCountInput'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && 'MutationObserver' in window) new MutationObserver(() => setTimeout(sync, 0)).observe(el, { childList: true, characterData: true, subtree: true, attributes: true });
+    });
+    ['adjustPagesToday', 'setPagesToday', 'adjustKhatamCount', 'switchHasanatSubTab', 'onHasanatDateChange', 'shiftHasanatDate'].forEach((fn) => {
+      const o = window[fn]; if (typeof o !== 'function') return;
+      window[fn] = function () { const r = o.apply(this, arguments); setTimeout(sync, 0); return r; };
+    });
+    sync();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+(function () {
+  const o = window.setLateReqReasonPreset;
+  if (typeof o !== 'function') return;
+  window.setLateReqReasonPreset = function (t) {
+    const r = o.apply(this, arguments);
+    document.querySelectorAll('.btn-reason-preset').forEach((b) => {
+      const m = String(b.getAttribute('onclick') || '').match(/setLateReqReasonPreset\('([^']*)'\)/);
+      b.classList.toggle('active', !!m && (m[1] === t || m[1].normalize('NFC') === String(t).normalize('NFC')));
+    });
+    return r;
+  };
+})();
+
+/* ============ Round 4 · Register = canvas (native date → BE selects) ============ */
+window.k8RegBirthChange = function (v) {
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return;
+  try { if (typeof initBirthDatePicker === 'function') initBirthDatePicker(); } catch (e) {}
+  const d = document.getElementById('regBirthDay'), mo = document.getElementById('regBirthMonth'), y = document.getElementById('regBirthYear');
+  if (!d || !mo || !y) return;
+  const be = String(+m[1] + 543);
+  if (!Array.from(y.options).some((o) => o.value === be)) { const o = document.createElement('option'); o.value = be; o.textContent = be; y.appendChild(o); }
+  d.value = m[3]; mo.value = m[2]; y.value = be;
+  try { syncBirthDatePicker(); } catch (e) {}
+};
+(function () {
+  function term() {
+    const el = document.getElementById('tgTerm'); if (!el) return;
+    const d = new Date(), y = d.getFullYear() + 543, m = d.getMonth() + 1;
+    // ภาคเรียนที่ 1: พ.ค.–ต.ค., ภาคเรียนที่ 2: พ.ย.–มี.ค. (ปีการศึกษาเริ่ม พ.ค.)
+    const acad = m >= 5 ? y : y - 1; const t = (m >= 5 && m <= 10) ? 1 : 2;
+    el.textContent = 'ภาคเรียนที่ ' + t + '/' + acad;
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', term); else term();
+})();
+
+/* ============ Round 4 · Admin overview extras (search, term, recent feed) ============ */
+(function () {
+  const readJSON = (k, f) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? f : v; } catch (e) { return f; } };
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  window.k8OvSearchGo = function (q) {
+    if (typeof switchAdminTab === 'function') switchAdminTab('students', document.getElementById('btnAdminTabStudents'));
+    const k = document.getElementById('k8AsSearch'); if (k) k.value = q;
+    if (typeof k8AsSearch === 'function') k8AsSearch(q);
+  };
+  function ts(v) { const d = new Date(v); return isNaN(d) ? null : d; }
+  function feed() {
+    const box = document.getElementById('k8OvFeed'); if (!box) return;
+    const items = [];
+    readJSON('khalifah_prayer_approvals', []).forEach((r) => { const d = ts(r.approvedAt || r.createdAt || r.submittedAt); if (d) items.push([d, (r.studentName || r.studentId) + ' ส่งคำขอละหมาดย้อนหลัง (' + (r.prayerSlot || '-') + ')' + (/approved/i.test(r.status) ? ' · อนุมัติแล้ว' : '')]); });
+    readJSON('khalifah_pending_registrations', []).forEach((r) => { const d = ts(r.approvedAt || r.createdAt || r.timestamp); if (d) items.push([d, 'สมัครบัญชีใหม่: ' + (r.fullName || r.userId) + (/approved/i.test(r.status) ? ' · ส่งรหัสแล้ว' : '')]); });
+    readJSON('khalifah_student_act_logs', []).forEach((r) => { const d = ts(r.checkInTimestamp || ((r.formattedDate || '') + 'T' + (r.formattedTime || '00:00'))); if (d) items.push([d, (r.studentName || r.studentId) + ' เข้าร่วม ' + (r.activityTitle || 'กิจกรรม')]); });
+    readJSON('khalifah_attendance_logs', []).slice(-200).forEach((r) => { const d = ts(r.timestamp || ((r.date || '') + 'T' + (r.time || '00:00:00'))); if (d) items.push([d, 'เช็คชื่อมาเรียน: ' + (r.studentName || r.studentId) + ' · ' + (r.status || '')]); });
+    items.sort((a, b) => b[0] - a[0]);
+    const today = new Date().toDateString();
+    const pad = (n) => String(n).padStart(2, '0');
+    box.innerHTML = items.length ? items.slice(0, 5).map(([d, t]) => '<div class="k8-feed-row"><span class="k8-feed-t">' + (d.toDateString() === today ? pad(d.getHours()) + ':' + pad(d.getMinutes()) : d.getDate() + '/' + (d.getMonth() + 1)) + '</span><span class="k8-feed-x">' + esc(t) + '</span></div>').join('')
+      : '<div class="k8-li-empty" style="text-align:left;padding:8px 0">ยังไม่มีความเคลื่อนไหว</div>';
+    const dt = document.getElementById('k8OvDate');
+    if (dt && dt.textContent.indexOf('ภาคเรียน') === -1) { const n = new Date(), m = n.getMonth() + 1, y = n.getFullYear() + 543; dt.textContent += ' · ภาคเรียนที่ ' + ((m >= 5 && m <= 10) ? 1 : 2) + '/' + (m >= 5 ? y : y - 1); }
+  }
+  const o = window.renderAdminOverviewV8;
+  if (typeof o === 'function') window.renderAdminOverviewV8 = function () { const r = o.apply(this, arguments); try { feed(); } catch (e) {} return r; };
 })();

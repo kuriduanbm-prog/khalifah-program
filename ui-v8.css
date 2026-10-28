@@ -999,3 +999,172 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
 .k8-cal-ev-main b { display: block; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .k8-cal-ev-main span { display: block; font-size: 13px; color: #475569; overflow-wrap: anywhere; }
 .k8-cal-none { margin: 0; font-size: 14px; color: #64748b; }
+
+/* ============ Round 4 · Prayer = canvas exact ============ */
+#view-prayer .k8-pr-wrap > div:has(> .prayer-chips-row) { display: none !important; }
+#view-prayer .prayer-live-clock-pill, #view-prayer .camera-center-action-overlay, #view-prayer #cameraOverlayInfo { display: none !important; }
+#view-prayer #prayerNotesCard, #view-prayer #prayerHistoryBottomSection { display: none !important; }
+#view-prayer.k8-more #prayerNotesCard, #view-prayer.k8-more #prayerHistoryBottomSection { display: block !important; }
+#view-prayer .camera-container { position: relative !important; display: flex !important; align-items: center; justify-content: center; }
+.k8-cam-ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; }
+.k8-cam-ph[hidden] { display: none; }
+.k8-cam-frame { position: absolute; inset: 16px; border: 2px dashed rgba(255,255,255,.22); border-radius: 14px; pointer-events: none; z-index: 2; }
+.k8-wm-tag { position: absolute; top: 12px; left: 12px; z-index: 5; font-size: 12px; font-weight: 600; color: #fff; background: rgba(0,0,0,.45); padding: 4px 10px; border-radius: 999px; pointer-events: none; }
+.k8-wm { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; padding: 12px 14px; background: rgba(0,0,0,.55); color: #fff; font-size: 12px; line-height: 1.5; pointer-events: none; }
+.k8-wm b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-wm span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#view-prayer .btn-flip-cam { z-index: 6 !important; top: 10px !important; right: 10px !important; }
+#view-prayer .camera-stream { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; }
+@media (max-width: 992px) {
+  #view-prayer.active .k8-pr-wrap { display: flex !important; flex-direction: column; min-height: calc(100dvh - 12px - 110px - env(safe-area-inset-bottom, 0px)); margin-bottom: 0 !important; }
+  #view-prayer .k8-pr-foot { margin-top: auto; }
+}
+#view-prayer .k8-pr-foot { padding-top: 20px; }
+.k8-pr-more { border: 0; background: transparent; color: #64748b; font-family: inherit; font-size: 13px; padding: 6px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.k8-pr-late { text-decoration: underline !important; text-underline-offset: 3px; }
+
+/* ============ Round 4 · Global mobile gutter = canvas 16px ============ */
+@media (max-width: 992px) {
+  body.portal-mode-student .main-wrapper, body.teacher-portal-active .main-wrapper { padding-left: 16px !important; padding-right: 16px !important; padding-top: 18px !important; }
+  body.portal-mode-student .main-wrapper > *, body.portal-mode-student .view-section { padding-left: 0 !important; padding-right: 0 !important; }
+}
+
+/* ============ Round 4 · Hasanat = canvas exact ============ */
+#view-hasanat .hasanat-date-nav-bar { display: none !important; }
+#k8HaDate { cursor: pointer; }
+#view-hasanat .bento-quran #hasanatQuranPercentText, #view-hasanat .bento-quran .minimal-progress-legend { display: none !important; }
+#view-hasanat .bento-quran .kpi-header-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+#view-hasanat .bento-quran .kpi-right-meta { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.k8-q-stars, .k8-q-meta { display: none; }
+#view-hasanat .bento-quran .k8-q-stars { display: block; font-size: 13px; color: #b45309; font-weight: 600; }
+#view-hasanat .bento-quran .k8-q-meta { display: block; font-size: 13px; color: #475569; }
+#view-hasanat .bento-quran .kpi-section-label { font-size: 13px !important; }
+#view-hasanat .bento-quran .kpi-sub-label { font-size: 16px !important; }
+#view-hasanat .quran-section-header .quran-date-badge { display: none !important; }
+#view-hasanat .quran-section-header { border: 0 !important; padding: 0 0 12px !important; margin: 0 !important; }
+#view-hasanat .quran-bookmark-box { display: none !important; }
+#view-hasanat .quran-unit-lbl { display: none !important; }
+#view-hasanat .quran-page-input-wrap { position: relative; padding-bottom: 14px; }
+#view-hasanat .quran-page-input-wrap::after { content: 'หน้า'; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); font-size: 12px; color: #64748b; }
+#view-hasanat .quran-big-input { height: 40px !important; font-size: 32px !important; line-height: 1; }
+#view-hasanat .quran-quick-pills { grid-template-columns: repeat(4, minmax(0,1fr)) !important; }
+#view-hasanat .quran-quick-pills .quran-pill-step:first-child { display: none !important; }
+#view-hasanat .quran-pill-step, #view-hasanat .quran-pill-clear { font-size: 14px !important; font-weight: 400 !important; }
+/* save button goes inside the "today" card like the canvas */
+#view-hasanat .bento-quran .quran-input-section { border-bottom-left-radius: 0 !important; border-bottom-right-radius: 0 !important; border-bottom: 0 !important; padding-bottom: 12px !important; }
+#view-hasanat .bento-quran .btn-minimal-save { margin-top: -12px !important; border-radius: 0 0 18px 18px !important; box-shadow: 0 0 0 16px #fff inset !important; border: 1px solid #e2e8f0 !important; border-top: 0 !important; height: 82px; background: #fff !important; padding: 0 !important; position: relative; }
+#view-hasanat .bento-quran .btn-minimal-save #k8QSaveText { position: absolute; left: 16px; right: 16px; top: 0; height: 50px; border-radius: 14px; background: #0369a1; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; }
+#view-hasanat .bento-quran .juz-overview-footnote { display: none !important; }
+#view-hasanat .bento-quran .juz-overview-title { font-size: 15px !important; }
+#view-hasanat .bento-quran .juz-overview-counter { font-size: 12px !important; color: #475569 !important; background: none !important; border: 0 !important; padding: 0 !important; }
+#view-hasanat .quran-quick-pills { margin-top: 12px !important; margin-bottom: 0 !important; }
+#view-hasanat .quran-daily-stepper-box > :last-child { margin-bottom: 0 !important; }
+#view-hasanat .bento-quran .quran-input-section { padding-bottom: 4px !important; }
+#view-hasanat .bento-quran .btn-minimal-save { height: 70px; margin-top: -12px !important; }
+#view-hasanat .bento-quran .btn-minimal-save #k8QSaveText { top: 4px; }
+
+/* ============ Round 4 · Login / Late request / Calendar = canvas exact ============ */
+#authModal .k8-auth-links a { text-decoration: underline !important; text-underline-offset: 3px; }
+#authModal .k8-secure-note { display: flex !important; gap: 8px; align-items: flex-start; }
+#prayerLateApprovalModal .late-req-slot-chips { display: grid !important; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 6px !important; }
+#prayerLateApprovalModal .btn-late-slot { min-height: 44px; height: 44px; padding: 0 2px !important; border-radius: 12px !important; justify-content: center; }
+#prayerLateApprovalModal .btn-reason-preset { min-height: 40px; padding: 0 14px !important; font-weight: 600 !important; }
+#prayerLateApprovalModal .late-req-preset-chips .btn-reason-preset.active { background: #0369a1 !important; border-color: #0369a1 !important; color: #fff !important; }
+#prayerLateApprovalModal textarea { min-height: 72px; }
+#prayerLateApprovalModal .late-req-photo-preview-box { min-height: 72px !important; border: 2px dashed #93c5fd !important; background: #f0f9ff !important; }
+#prayerLateApprovalModal #lateReqPhotoPlaceholder::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230369a1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3zM12 9.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z'/%3E%3C/svg%3E"); }
+#prayerLateApprovalModal .k8-lr-up::after { color: #0369a1; font-weight: 600; }
+@media (max-width: 992px) {
+  #prayerLateApprovalModal:not(.k8-sent) .k8-lr-dialog { min-height: 100dvh; display: flex; flex-direction: column; box-sizing: border-box; }
+  #prayerLateApprovalModal:not(.k8-sent) .modal-body { flex: 1; }
+  #prayerLateApprovalModal .modal-body > div[style*="margin-top: 1.25rem"] { margin-top: auto !important; }
+}
+.k8-cal-card, .k8-cal-day { border-color: #e2e8f0 !important; }
+#hfActLink { text-decoration: underline !important; text-underline-offset: 3px; } .hf-grades-icon { color: #0369a1; display: flex; align-items: center; justify-content: center; }
+#prayerLateApprovalModal #lateReqPhotoPlaceholder { display: flex !important; align-items: center; justify-content: center; gap: 10px; }
+#prayerLateApprovalModal #lateReqPhotoPlaceholder::before { display: inline-block; flex: none; }
+#schoolCalendarModal .cal-phone-modal-dialog, #prayerLateApprovalModal .k8-lr-dialog, #otpVerifyModal .k8-otp-dialog { padding-top: 6px !important; }
+#schoolCalendarModal .cal-phone-modal-dialog, #prayerLateApprovalModal .k8-lr-dialog, #otpVerifyModal .k8-otp-dialog { padding-top: 16px !important; }
+
+/* ============ Round 4 · Register = canvas ============ */
+#authModal[data-mode="register"] .k8-auth-card { background: transparent; border: 0; padding: 0; gap: 12px; }
+#authModal[data-mode="register"] .auth-role-switcher { background: #dbe3ec !important; }
+#authModal #registerFormSection { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+#authModal #registerFormSection[style*="display: none"] { display: none !important; }
+#authModal #registerFormSection > div:has(#regAvatarInput) { display: none !important; }
+#authModal #registerFormSection .form-group { margin: 0 !important; gap: 6px; }
+#authModal #registerFormSection .form-group:has(#regStudentId) { order: 1; }
+#authModal #registerFormSection .form-group:has(#regFullName) { order: 2; }
+#authModal #registerFormSection .form-group:has(#regGrade) { order: 3; }
+#authModal #registerFormSection .form-group:has(#regSchoolName) { order: 4; }
+#authModal #registerFormSection .form-group:has(#k8RegBirth) { order: 5; }
+#authModal #registerFormSection .form-group:has(#regParentPhone) { order: 6; }
+#authModal #registerFormSection .form-group:has(#regStudentEmail) { order: 7; }
+#authModal #registerFormSection #btnStudentRegister { order: 8; }
+#authModal #registerFormSection > div:last-child { order: 9; }
+#authModal #registerFormSection .form-group:has(#regStudentEmail) .form-hint { display: none; }
+.k8-help { font-size: 12px; color: #64748b; }
+#authModal #registerFormSection .birthdate-picker-row, #authModal #birthDateDefaultHint, #authModal #birthDateSelectedPill { display: none !important; }
+#authModal #k8RegBirth { height: 50px; }
+#authModal #registerFormSection > div:last-child { font-size: 14px !important; margin: 0 !important; }
+
+/* ============ Round 4 · OTP = canvas (keypad) ============ */
+#otpVerifyModal .k8-otp-dialog { min-height: 100dvh; display: flex; flex-direction: column; box-sizing: border-box; }
+#otpVerifyModal .modal-body { flex: 1; }
+#otpVerifyModal .modal-body > div[style*="flex-direction: column"] { display: flex !important; flex-direction: column; gap: 12px !important; margin: 0 !important; flex: 1; }
+#otpVerifyModal .btn-primary.btn-block.k8-dim { background: #94a3b8 !important; }
+.k8-otp-links { display: flex; justify-content: space-between; gap: 8px; }
+.k8-otp-links button { border: 0; background: transparent; color: #0369a1; font-family: inherit; font-size: 14px; padding: 6px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.k8-otp-pad { margin-top: auto; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; padding-top: 16px; }
+.k8-otp-pad button { height: 54px; border: 0; border-radius: 12px; background: #fff; color: #0f172a; font-family: inherit; font-size: 22px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 0 #e2e8f0; display: flex; align-items: center; justify-content: center; }
+.k8-otp-pad button:active { background: #e0f2fe; }
+.k8-otp-pad .k8-otp-del { background: #e2e8f0; }
+#otpVerifyUserSummary::before { background-color: #f0fdf4 !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2315803d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM3 7l9 6 9-6'/%3E%3C/svg%3E") !important; }
+#otpVerifyModal .btn-secondary.btn-block { display: none !important; }
+#authModal #registerFormSection:not([style*="display: none"]) { display: flex !important; }
+#authModal[data-mode="register"] .modal-header { margin-left: -8px; }
+#authModal #registerFormSection .k8-help { margin-top: -2px; }
+#authModal[data-mode="register"] .modal-header { justify-content: flex-start !important; }
+
+/* ============ Round 4 · Teacher = canvas (purple accent, full-bleed bars) ============ */
+@media (max-width: 992px) {
+  body.teacher-portal-active .teacher-bottom-nav-bar .teacher-bottom-nav-item.active { background: #5b21b6 !important; }
+  .k8-ta-head { margin: -18px -16px 0; border-radius: 0; border: 0; border-bottom: 1px solid #e2e8f0; padding: 16px 16px 10px; }
+  .k8-ta-foot { margin: 0 -16px; border-radius: 0; border: 0; border-top: 1px solid #e2e8f0; box-shadow: none; padding: 12px 16px 14px; }
+  .k8-ta-list { padding-top: 0; }
+}
+.k8-th-kpi-v small { font-weight: 600; }
+
+/* ============ Round 4 · Teacher grades = canvas (purple accent) ============ */
+#teacher-tab-grades > .card { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+#teacher-tab-grades .tg-head { align-items: center; }
+#teacher-tab-grades .tg-title { margin: 0; font-size: 21px !important; font-weight: 600; }
+#teacher-tab-grades .tg-term { font-size: 13px; color: #475569; }
+#teacher-tab-grades .tg-top { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: 8px; }
+#teacher-tab-grades .tg-top label { font-size: 12px; font-weight: 400; color: #475569; }
+#teacher-tab-grades .tg-top select { height: 44px; font-size: 14px; min-width: 0; width: 100%; }
+#teacher-tab-grades .tg-seg { background: #ede9fe; }
+#teacher-tab-grades .tg-seg button[aria-selected="true"] { color: #5b21b6; }
+#teacher-tab-grades .tg-chip[aria-pressed="true"] { background: #5b21b6; border-color: #5b21b6; }
+#teacher-tab-grades .tg-add { border-color: #c4b5fd; color: #5b21b6; }
+#teacher-tab-grades .tg-g[aria-checked="true"] { background: #5b21b6; border-color: #5b21b6; }
+#teacher-tab-grades .tg-btn.is-primary { background: #5b21b6; border-color: #5b21b6; }
+#teacher-tab-grades .tg-save button { background: #5b21b6; }
+#teacher-tab-grades .tg-form { border-color: #ddd6fe; }
+@media (max-width: 992px) {
+  #teacher-tab-grades .tg-save { margin: 0 -16px; border-radius: 0; border: 0; border-top: 1px solid #e2e8f0; box-shadow: none; }
+}
+@media (max-width: 992px) {
+  #teacher-tab-grades .tg-save { margin: 0; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 6px 18px rgba(15,23,42,.08); }
+}
+
+/* ============ Round 4 · Admin = canvas details ============ */
+.k8-ov-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.k8-ov-search { flex: 0 1 300px; min-width: 0; height: 42px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 14px; font-family: inherit; font-size: 14px; background: #fff; }
+.k8-ov-feed { margin-top: 16px; padding: 16px 20px !important; }
+.k8-ov-feed h2 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+.k8-feed-row { display: flex; gap: 16px; padding: 10px 0; border-top: 1px solid #f1f5f9; font-size: 14px; }
+.k8-feed-row:first-child { border-top: 0; }
+.k8-feed-t { width: 48px; flex: none; color: #64748b; font-size: 13px; }
+.k8-feed-x { flex: 1; min-width: 0; overflow-wrap: anywhere; color: #0f172a; }
+.k8-as-chips button[aria-pressed="true"] { background: #0f172a !important; border-color: #0f172a !important; }

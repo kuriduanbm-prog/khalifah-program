@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=8.5">
-  <link rel="stylesheet" href="ui-v8.css?v=8.5">
+  <link rel="stylesheet" href="style.css?v=8.6">
+  <link rel="stylesheet" href="ui-v8.css?v=8.6">
 </head>
 <body class="auth-locked">
 
@@ -608,6 +608,12 @@
             <div class="k8-cam-done-t">บันทึกแล้ว</div>
             <div class="k8-cam-done-s" id="k8CamDoneSub">ส่งถึงอาจารย์เรียบร้อย</div>
           </div>
+          <div class="k8-cam-ph" id="k8CamPh" aria-hidden="true">
+            <svg width="150" height="170" viewBox="0 0 150 170" fill="none" stroke="#3b5468" stroke-width="2"><ellipse cx="75" cy="62" rx="40" ry="48"/><path d="M10 170c6-38 33-58 65-58s59 20 65 58"/></svg>
+          </div>
+          <div class="k8-cam-frame" aria-hidden="true"></div>
+          <span class="k8-wm-tag">ลายน้ำอัตโนมัติ</span>
+          <div class="k8-wm" id="k8Wm"><b id="k8WmName">-</b><span id="k8WmLine">-</span></div>
           <!-- Watermark Overlay info on video -->
           <div class="camera-overlay-info" id="cameraOverlayInfo" style="display: none;">
             <div id="camOverlayStudent">นักเรียน: -</div>
@@ -637,6 +643,7 @@
         <div class="k8-pr-foot" id="k8PrFoot">
           <button type="button" class="k8-pr-done" id="k8PrDone" hidden onclick="switchView('dashboard')">กลับหน้าแรก</button>
           <a href="javascript:void(0)" class="k8-pr-late" onclick="openPrayerLateApprovalModal()">ลืมเช็คชื่อเวลาก่อนหน้า? ส่งคำขออนุมัติย้อนหลัง</a>
+          <button type="button" class="k8-pr-more" id="k8PrMoreBtn" aria-expanded="false" onclick="k8TogglePrayerMore()">บันทึกหมายเหตุ (ลา / อุซุร) · ประวัติการเช็คชื่อ</button>
         </div>
         <!-- 5. Collapsible Prayer Notes Field (Collapsed by default, for special exceptions only) -->
         <div class="prayer-notes-card collapsible-card" id="prayerNotesCard">
@@ -1015,6 +1022,8 @@
                 </div>
                 <div class="kpi-right-meta">
                   <span class="kpi-pill-badge" id="hasanatQuranPercentText">0.0%</span>
+                  <span class="k8-q-stars" id="k8QStars">★ 0 ดาว</span>
+                  <span class="k8-q-meta" id="k8QMeta">ยุซที่ 1 · ค็อตม์ 0 ครั้ง</span>
                 </div>
               </div>
 
@@ -1149,7 +1158,7 @@
             </div>
 
             <button class="btn btn-primary btn-block btn-lg btn-minimal-save" onclick="saveQuranReadingLog()">
-              <i class="fa-solid fa-floppy-disk"></i> บันทึกผลการอ่านอัลกุรอาน
+              <span id="k8QSaveText">บันทึก</span>
             </button>
           </div>
         </div>
@@ -1943,11 +1952,11 @@
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="tg" id="tgRoot">
             <div class="tg-head">
-              <h3 style="font-size: 20px;"><i class="fa-solid fa-award" style="color: var(--k8-primary);"></i> คะแนน &amp; เกรด</h3>
-              <button type="button" class="tg-add" onclick="openAddSubjectModal()" style="min-height: 40px;">+ รายวิชาใหม่</button>
+              <h3 class="tg-title">คะแนน &amp; เกรด</h3>
+              <span class="tg-term" id="tgTerm"></span>
             </div>
             <div class="tg-top">
-              <label for="teacherPortalSubjectSelect">รายวิชา
+              <label for="teacherPortalSubjectSelect">วิชา
                 <select id="teacherPortalSubjectSelect" onchange="renderTeacherPortalGradesTable()"></select>
               </label>
               <label for="teacherPortalGradeSelect">ระดับชั้น
@@ -2214,13 +2223,13 @@
             <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i> อาจารย์ &amp; ผู้บริหาร
           </button>
           <button class="admin-tab-btn" id="btnAdminTabApprovals" onclick="switchAdminTab('approvals', this)">
-            <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> อนุมัติบัญชี <span class="admin-pending-pill" id="adminTabPendingBadge" style="display:none;">0</span>
+            <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> อนุมัติบัญชี &amp; คำขอ <span class="admin-pending-pill" id="adminTabPendingBadge" style="display:none;">0</span>
           </button>
         </div>
         <div class="k8-nav-group">
           <span class="k8-nav-label">ติดตามประจำวัน</span>
           <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
-            <i class="fa-solid fa-person-praying" aria-hidden="true"></i> ละหมาด &amp; คำขอย้อนหลัง
+            <i class="fa-solid fa-person-praying" aria-hidden="true"></i> ละหมาด
           </button>
           <button class="admin-tab-btn" onclick="switchAdminTab('activities-admin', this)" id="btnTabActivitiesAdmin">
             <i class="fa-solid fa-qrcode" aria-hidden="true"></i> กิจกรรม &amp; สแกน QR
@@ -2247,7 +2256,7 @@
         <div class="k8-nav-group">
           <span class="k8-nav-label">ระบบ</span>
           <button class="admin-tab-btn" onclick="switchAdminTab('logo', this)" id="btnTabLogo">
-            <i class="fa-solid fa-image" aria-hidden="true"></i> โลโก้ระบบ
+            <i class="fa-solid fa-image" aria-hidden="true"></i> ตั้งค่า &amp; โลโก้
           </button>
           <button class="admin-tab-btn" onclick="openModal('settingsModal')">
             <i class="fa-solid fa-database" aria-hidden="true"></i> ฐานข้อมูล Google Sheets
@@ -2270,6 +2279,8 @@
               <h2>ภาพรวมวันนี้</h2>
               <p id="k8OvDate">-</p>
             </div>
+            <label class="sr-only-k8" for="k8OvSearch">ค้นหา</label>
+            <input type="search" id="k8OvSearch" class="k8-ov-search" placeholder="ค้นหานักเรียน / อาจารย์ / รหัส" onkeydown="if(event.key==='Enter'){k8OvSearchGo(this.value)}">
           </div>
           <div class="k8-ov-kpis" id="k8OvKpis"></div>
           <div class="k8-ov-row">
@@ -2282,6 +2293,10 @@
               <div id="k8OvPray"></div>
             </section>
           </div>
+          <section class="hf-card k8-ov-feed" aria-labelledby="k8OvFeedTitle">
+            <h2 id="k8OvFeedTitle">ความเคลื่อนไหวล่าสุด</h2>
+            <div id="k8OvFeed"></div>
+          </section>
         </div>
       </div>
 
@@ -3962,25 +3977,14 @@
         <div class="form-group">
           <label class="form-label">เหตุผล</label>
           <div class="late-req-preset-chips">
-            <button type="button" class="btn-reason-preset active" onclick="setLateReqReasonPreset('ละหมาดแล้วแต่ลืมกดเช็คชื่อ')">
-              ละหมาดแล้วแต่ลืมกดเช็คชื่อ
-            </button>
-            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('ลืมโทรศัพท์ไว้ที่บ้าน')">
-              ลืมโทรศัพท์ไว้ที่บ้าน
-            </button>
-            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('แบตเตอรี่โทรศัพท์หมด')">
-              แบตเตอรี่โทรศัพท์หมด
-            </button>
-            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('สัญญาณอินเทอร์เน็ตขัดข้อง')">
-              สัญญาณอินเทอร์เน็ตขัดข้อง
-            </button>
-            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('ติดภารกิจ/กิจกรรมโรงเรียน')">
-              ติดภารกิจ/กิจกรรมโรงเรียน
-            </button>
+            <button type="button" class="btn-reason-preset active" onclick="setLateReqReasonPreset('ละหมาดแล้วแต่ลืมกดเช็คชื่อ')">ละหมาดแล้วแต่ลืมกดเช็คชื่อ</button>
+            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('โทรศัพท์มีปัญหา')">โทรศัพท์มีปัญหา</button>
+            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('ละหมาดที่อื่น')">ละหมาดที่อื่น</button>
+            <button type="button" class="btn-reason-preset" onclick="setLateReqReasonPreset('ลาป่วย / มีเหตุจำเป็น')">ลาป่วย / มีเหตุจำเป็น</button>
           </div>
           <input type="hidden" id="lateReqSelectedPreset" value="ละหมาดแล้วแต่ลืมกดเช็คชื่อ">
           <label class="form-label k8-lr-detail-l" for="lateReqReasonDetail">รายละเอียดเพิ่มเติม (ถ้ามี)</label>
-          <textarea id="lateReqReasonDetail" class="form-control" rows="2" placeholder="พิมพ์เหตุผลหรือคำชี้แจงเพิ่มเติมให้อาจารย์ (ไม่บังคับ)..." style="margin-top: 0.5rem; resize: vertical; font-size: 0.88rem;"></textarea>
+          <textarea id="lateReqReasonDetail" class="form-control" rows="2" placeholder="เช่น ละหมาดที่มัสยิดใกล้บ้าน" style="margin-top: 0.5rem; resize: vertical; font-size: 0.88rem;"></textarea>
         </div>
 
         <!-- Optional Photo Attachment -->
@@ -4069,7 +4073,7 @@
         <p class="k8-auth-sub">ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม</p>
       </div>
       <div class="modal-header">
-        <button type="button" class="k8-auth-back" aria-label="กลับไปหน้าเข้าสู่ระบบ" onclick="handleAuthModeSegmentChange('login')"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+        <button type="button" class="k8-auth-back" aria-label="กลับไปหน้าเข้าสู่ระบบ" onclick="handleAuthModeSegmentChange('login')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <div style="font-weight: 700; font-size: 1.08rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.45rem;" id="authModalTitle">
           <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> ยืนยันตัวตนเข้าสู่ระบบ
         </div>
@@ -4157,24 +4161,26 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">รหัสนักเรียน (กำหนดเองตามรหัสประจำตัว) <span class="required">* (ใช้เป็นรหัสผ่าน)</span></label>
-              <input type="text" class="form-control" id="regStudentId" placeholder="เช่น 00125 หรือ STD-256902">
+              <label class="form-label" for="regStudentId">รหัสนักเรียน</label>
+              <input type="text" class="form-control" id="regStudentId" inputmode="numeric" placeholder="เช่น 00125">
+              <span class="k8-help">ใช้เป็นรหัสผ่านตอนเข้าสู่ระบบ</span>
             </div>
             <div class="form-group">
-              <label class="form-label">ชื่อ - นามสกุล <span class="required">*</span></label>
-              <input type="text" class="form-control" id="regFullName" placeholder="เช่น นายฟาฮัด มะดีเยาะ">
+              <label class="form-label" for="regFullName">ชื่อ-นามสกุล</label>
+              <input type="text" class="form-control" id="regFullName" placeholder="ชื่อจริง นามสกุล">
+              <span class="k8-help">ชื่อยาวได้ ระบบจะตัดบรรทัดให้อัตโนมัติ</span>
             </div>
             <div class="form-group">
-              <label class="form-label">อีเมลสำหรับรับรหัสยืนยันอัตโนมัติ <span class="required">*</span></label>
-              <input type="email" class="form-control" id="regStudentEmail" placeholder="เช่น student@example.com">
+              <label class="form-label" for="regStudentEmail">อีเมลสำหรับรับรหัสยืนยัน</label>
+              <input type="email" class="form-control" id="regStudentEmail" autocomplete="email" placeholder="name@example.com">
               <div class="form-hint" style="font-size: 0.74rem; color: var(--text-muted);">เมื่อแอดมินกดยินยอม ระบบจะส่งรหัสยืนยันไปยังอีเมลนี้ทันที</div>
             </div>
             <div class="form-group">
-              <label class="form-label">ชื่อโรงเรียน / สถาบัน <span class="required">*</span></label>
-              <input type="text" class="form-control" id="regSchoolName" placeholder="เช่น โรงเรียนสาธิต มหาวิทยาลัยฟาฏอนี">
+              <label class="form-label" for="regSchoolName">โรงเรียน</label>
+              <input type="text" class="form-control" id="regSchoolName" placeholder="ชื่อโรงเรียน">
             </div>
             <div class="form-group">
-              <label class="form-label">ระดับชั้นมัธยมศึกษา <span class="required">*</span></label>
+              <label class="form-label" for="regGrade">ระดับชั้น</label>
               <select class="form-control" id="regGrade">
                 <option value="มัธยมศึกษาปีที่ 1">มัธยมศึกษาปีที่ 1 (ม.1)</option>
                 <option value="มัธยมศึกษาปีที่ 2">มัธยมศึกษาปีที่ 2 (ม.2)</option>
@@ -4186,9 +4192,10 @@
             </div>
             <div class="form-group">
               <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                <span><i class="fa-regular fa-calendar-days" style="margin-right: 0.25rem;"></i> วันเดือนปีเกิด (พ.ศ.) <span class="required">*</span></span>
+                <span>วันเกิด</span>
               </label>
               
+              <input type="date" id="k8RegBirth" class="form-control" aria-label="วันเกิด" onchange="k8RegBirthChange(this.value)">
               <div class="birthdate-picker-row">
                 <div class="birthdate-col-day">
                   <select class="form-control birthdate-select" id="regBirthDay" onchange="syncBirthDatePicker()">
@@ -4232,11 +4239,12 @@
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">เบอร์โทรศัพท์ผู้ปกครอง <span class="required">* (ใช้เป็น User เข้าสู่ระบบ)</span></label>
-              <input type="tel" class="form-control" id="regParentPhone" placeholder="เช่น 0812345678">
+              <label class="form-label" for="regParentPhone">เบอร์โทรศัพท์ผู้ปกครอง</label>
+              <input type="tel" class="form-control" id="regParentPhone" inputmode="numeric" placeholder="08x-xxx-xxxx">
+              <span class="k8-help">ใช้เป็นชื่อผู้ใช้ตอนเข้าสู่ระบบ</span>
             </div>
             <button class="btn btn-primary btn-block btn-lg" id="btnStudentRegister" onclick="handleStudentRegister()">
-              <i class="fa-solid fa-user-plus"></i> ส่งคำขอสมัครและรับรหัสยืนยัน
+              ส่งคำขอสมัคร
             </button>
             <div style="text-align: center; margin-top: 1.1rem; font-size: 0.85rem;">
               มีบัญชีอยู่แล้ว? <a href="javascript:void(0)" onclick="handleAuthModeSegmentChange('login')" style="color: var(--primary); font-weight: 700; text-decoration: underline;">เข้าสู่ระบบนักเรียน</a>
@@ -4327,7 +4335,7 @@
           <a href="javascript:void(0)" class="k8-auth-link-main" onclick="handleAuthModeSegmentChange('register')">สมัครบัญชีใหม่</a>
           <a href="javascript:void(0)" onclick="openOtpVerifyModalPrompt(typeof currentAuthRole!=='undefined'&&currentAuthRole==='teacher'?'teacher':'student')">มีรหัสยืนยัน 6 หลักจากอีเมลแล้ว</a>
         </div>
-        <p class="k8-secure-note"><i class="fa-solid fa-lock" aria-hidden="true"></i> ตรวจสอบรหัสที่เซิร์ฟเวอร์อย่างปลอดภัย · หากกรอกผิดหลายครั้ง ระบบจะล็อกชั่วคราว 15 นาที</p>
+        <p class="k8-secure-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span> ตรวจสอบรหัสที่เซิร์ฟเวอร์อย่างปลอดภัย · หากกรอกผิดหลายครั้ง ระบบจะล็อกชั่วคราว 15 นาที</span></p>
       </div>
     </div>
   </div>
@@ -4363,16 +4371,18 @@
         <div class="form-group">
           <label class="form-label" for="otpVerifyCodeInput">รหัสยืนยัน 6 หลัก</label>
           <div class="k8-otp-boxes" id="k8OtpBoxes" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          <input type="text" class="form-control otp-code-input-box" id="otpVerifyCodeInput" maxlength="6" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" placeholder="000000" onkeypress="if(event.key === 'Enter') verifyRegistrationOtpCode()">
+          <input type="text" class="form-control otp-code-input-box" id="otpVerifyCodeInput" maxlength="6" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" placeholder="" onkeypress="if(event.key === 'Enter') verifyRegistrationOtpCode()">
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1rem;">
           <button class="btn btn-primary btn-block btn-lg" onclick="verifyRegistrationOtpCode()">
             ยืนยันและเข้าสู่ระบบ
           </button>
-          <button class="btn btn-secondary btn-block btn-sm" onclick="checkOtpApprovalStatus()">
-            ตรวจสอบสถานะคำขอ
-          </button>
+          <div class="k8-otp-links">
+            <button type="button" onclick="k8OtpNoEmail()">ยังไม่ได้รับอีเมล?</button>
+            <button type="button" onclick="checkOtpApprovalStatus()">ตรวจสอบสถานะคำขอ</button>
+          </div>
+          <div class="k8-otp-pad" role="group" aria-label="แป้นตัวเลข"><button type="button" onclick="k8OtpKey('1')">1</button><button type="button" onclick="k8OtpKey('2')">2</button><button type="button" onclick="k8OtpKey('3')">3</button><button type="button" onclick="k8OtpKey('4')">4</button><button type="button" onclick="k8OtpKey('5')">5</button><button type="button" onclick="k8OtpKey('6')">6</button><button type="button" onclick="k8OtpKey('7')">7</button><button type="button" onclick="k8OtpKey('8')">8</button><button type="button" onclick="k8OtpKey('9')">9</button><span></span><button type="button" onclick="k8OtpKey('0')">0</button><button type="button" class="k8-otp-del" aria-label="ลบ" onclick="k8OtpKey('del')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1zM12 9l6 6M18 9l-6 6"/></svg></button></div>
         </div>
       </div>
     </div>
@@ -5365,7 +5375,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
-  <script defer src="app.js?v=8.5"></script>
-  <script defer src="ui-v8.js?v=8.5"></script>
+  <script defer src="app.js?v=8.6"></script>
+  <script defer src="ui-v8.js?v=8.6"></script>
 </body>
 </html>
