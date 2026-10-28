@@ -1898,6 +1898,7 @@ window.k8RegBirthChange = function (v) {
   const HEAD = {
     'admin-tab-subadmins': ['อาจารย์ & ผู้บริหาร', 'เพิ่มบัญชี กำหนดสิทธิ์ และรายวิชาที่รับผิดชอบ'],
     'admin-tab-prayers-monitor': ['ละหมาด', 'ติดตามการเช็คชื่อละหมาด 5 เวลา รายวันและรายบุคคล'],
+    'admin-tab-behavior': ['คะแนนพฤติกรรม', 'นักเรียนเริ่มที่ 100 คะแนนทุกภาคเรียน · ผู้ตรวจการหัก/เพิ่มคะแนนตามหัวข้อที่ตั้งไว้'],
     'admin-tab-prayer-rank': ['อันดับการละหมาด', 'ดูว่าใครละหมาดสม่ำเสมอ และใครที่ควรติดตามดูแล'],
     'admin-tab-activities-admin': ['กิจกรรม & สแกน QR', 'สร้างกิจกรรม เปิด QR ให้นักเรียนสแกน และดูผู้เข้าร่วม'],
     'admin-tab-calendar-admin': ['ปฏิทินโรงเรียน', 'วันสำคัญ วันสอบ และกิจกรรมที่แสดงให้นักเรียนและอาจารย์'],
@@ -2383,7 +2384,13 @@ window.k8RegBirthChange = function (v) {
     h.memorization = Object.assign({}, h.memorization, { memorizedSurahs: arr, count: arr.length, lastUpdated: new Date().toISOString() });
     h.dailyLogs = h.dailyLogs || {}; const dl = h.dailyLogs[S.date] = Object.assign({}, h.dailyLogs[S.date] || {}, { date: S.date });
     const nw = new Set(dl.memNew || []); if (on) nw.add(num); else nw.delete(num); dl.memNew = Array.from(nw);
-    saveH(h); render();
+    saveH(h);
+    // คงตำแหน่งเลื่อนของรายการซูเราะห์และหน้าจอไว้ ไม่ให้เด้งขึ้นด้านบนหลังติ๊ก
+    const ul = document.querySelector('.k8h-surahs'); const st = ul ? ul.scrollTop : 0; const wy = window.scrollY;
+    render();
+    const ul2 = document.querySelector('.k8h-surahs'); if (ul2) ul2.scrollTop = st;
+    if (Math.abs(window.scrollY - wy) > 1) window.scrollTo(0, wy);
+    const btn = ul2 && ul2.querySelector('button[onclick="k8HasToggleSurah(' + num + ')"]'); if (btn) try { btn.focus({ preventScroll: true }); } catch (e) {}
     clearTimeout(memTimer); memTimer = setTimeout(() => push(S.date, 'บันทึกการท่องจำแล้ว · รวม ' + arr.length + ' ซูเราะห์'), 900);
   };
   window.k8HasSun = function (k, v) { S.sun.rawatib[k] = !!v; render(); };
@@ -2662,6 +2669,7 @@ window.k8RegBirthChange = function (v) {
     ['TeacherAdmin', 'ครูประจำชั้น', 'เหมือนอาจารย์ + ดูสถิติห้องเรียน', false],
     ['EXECUTIVE', 'ผู้บริหาร', 'ดูสถิติภาพรวม รายงาน และผลประเมิน', false],
     ['ActivityAdmin', 'ฝ่ายกิจกรรม', 'สร้างกิจกรรมและเปิดสแกน QR', false],
+    ['INSPECTOR', 'ผู้ตรวจการ', 'ตรวจเครื่องแต่งกาย หอพัก ห้องน้ำ ความประพฤติ · หัก/เพิ่มคะแนนพฤติกรรม (เข้าทางแท็บแอดมิน)', false],
     ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ (ยกเว้นตั้งค่าระบบและจัดการแอดมิน)', true]
   ];
   let nfRole = 'TEACHER'; const nfSubj = new Set();
@@ -2697,7 +2705,7 @@ window.k8RegBirthChange = function (v) {
     document.querySelectorAll('#k8NewStaffModal input').forEach((e) => e.classList.remove('is-bad'));
     if (bad.length) { bad.forEach(([id]) => document.getElementById(id).classList.add('is-bad')); showErr('k8NfErr', bad.map((b) => b[1]).join(' · ')); document.getElementById(bad[0][0]).focus(); return; }
     const subjects = (nfRole === 'TEACHER' || nfRole === 'TeacherAdmin') ? Array.from(nfSubj) : [];
-    let allSubs = []; try { allSubs = (appSubjects || []).map((x) => String(x.id)); } catch (e) {}
+    let allSubs = []; try { allSubs = nfRole === 'INSPECTOR' ? [] : (appSubjects || []).map((x) => String(x.id)); } catch (e) {}
     const payload = { adminId: 'TCH-' + Date.now(), username: user, password: pass, fullName: name, email: email, phone: phone, role: nfRole, assignedSubjects: subjects.length ? subjects : allSubs, assignedSubject: (subjects[0] || allSubs[0] || ''), status: 'Active', approvalStatus: 'Verified', createdAt: new Date().toLocaleDateString('sv-SE') };
     const btn = document.getElementById('k8NfSaveBtn'); btn.disabled = true; btn.textContent = 'กำลังสร้าง…';
     let r = null; try { r = await gasApiCall('addSubAdmin', payload); } catch (e) { r = { success: false, message: (typeof describeNetworkError === 'function' ? describeNetworkError(e) : 'เชื่อมต่อไม่สำเร็จ') }; }
@@ -2707,7 +2715,7 @@ window.k8RegBirthChange = function (v) {
     try { staff.unshift(local); localStorage.setItem('khalifah_sub_admins', JSON.stringify(staff)); renderSubAdminsTable(); } catch (e) {}
     closeModal('k8NewStaffModal');
     const roleName = (ROLES.find((x) => x[0] === nfRole) || [])[1] || 'บุคลากร';
-    if (typeof showToast === 'function') showToast('สร้างบัญชี' + roleName + ' "' + name + '" แล้ว · ชื่อผู้ใช้ ' + user + (nfRole === 'SubAdmin' ? ' (เข้าทางแท็บแอดมิน)' : ' (เข้าทางแท็บอาจารย์)'), 'success');
+    if (typeof showToast === 'function') showToast('สร้างบัญชี' + roleName + ' "' + name + '" แล้ว · ชื่อผู้ใช้ ' + user + (nfRole === 'SubAdmin' || nfRole === 'INSPECTOR' ? ' (เข้าทางแท็บแอดมิน)' : ' (เข้าทางแท็บอาจารย์)'), 'success');
     try { if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(true); } catch (e) {}
   };
   // ปุ่มในหน้า "อาจารย์ & ผู้บริหาร"
@@ -2780,7 +2788,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.0';
+  const APP_VERSION = '10.1';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -2962,4 +2970,289 @@ window.k8RegBirthChange = function (v) {
     }
     return sv.apply(this, arguments);
   };
+})();
+
+/* ============ Round 11 · คะแนนพฤติกรรม (ผู้ตรวจการ / แอดมิน / นักเรียน) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const norm = (id) => String(id == null ? '' : id).replace(/^0+/, '');
+  const shortG = (g) => String(g || '').replace('มัธยมศึกษาปีที่ ', 'ม.');
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const fmtD = (s) => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON[d.getMonth()]; };
+  const ICO = {
+    dress: '<path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3a4 4 0 0 1-8 0z"/>',
+    dorm: '<path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 18h18M3 18v3M21 18v3M6 10V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/>',
+    toilet: '<path d="M7 3h6v7H7zM5 10h14a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6zM9 16l-1 5h8l-1-5"/>',
+    conduct: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+    good: '<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/>'
+  };
+  const CATS = [['dress', 'เครื่องแต่งกาย', '#1d4ed8', '#eff6ff'], ['dorm', 'ความสะอาดหอพัก', '#7c3aed', '#f5f3ff'], ['toilet', 'ห้องน้ำ', '#0e7490', '#ecfeff'], ['conduct', 'ความประพฤติ', '#b45309', '#fffbeb'], ['good', 'ทำความดี (เพิ่มคะแนน)', '#15803d', '#f0fdf4']];
+  const catOf = (k) => CATS.find((c) => c[0] === k) || CATS[3];
+  const svg = (k, s) => '<svg width="' + (s || 20) + '" height="' + (s || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICO[k] || ICO.conduct) + '</svg>';
+  function term() { const d = new Date(); const m = d.getMonth() + 1; const y = d.getFullYear() + 543; return ((m >= 5 && m <= 10) ? 1 : 2) + '/' + (m >= 5 ? y : y - 1); }
+  const level = (sc) => sc >= 90 ? ['ดีมาก', '#15803d', '#dcfce7'] : sc >= 70 ? ['ปกติ', '#1d4ed8', '#dbeafe'] : sc >= 50 ? ['ต้องดูแล', '#b45309', '#fef3c7'] : ['ต้องติดตามใกล้ชิด', '#b91c1c', '#fee2e2'];
+  const me = () => { try { return currentAdmin || null; } catch (e) { return null; } };
+  const isInspector = () => { const a = me(); return !!a && /INSPECTOR|ผู้ตรวจการ/i.test(String(a.realRole || a.role || '')); };
+  const isAdmin = () => { const a = me(); return !!a && a.role === 'SuperAdmin'; };
+  const api = (a, p) => (typeof gasApiCall === 'function' ? gasApiCall(a, p || {}, 25000) : Promise.reject(new Error('no api')));
+  const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t); };
+
+  const B = { rules: [], logs: [], students: [], loaded: false, loading: false, tab: 'record', cat: 'dress', ruleId: '', sel: new Set(), q: '', grade: 'ALL', note: '', date: ymd(new Date()), custom: { title: '', points: -5 }, saving: false, hq: '', hRange: 'today', hMine: true, sq: '', sGrade: 'ALL', sLevel: 'all', editRules: null };
+
+  function scoreMap() {
+    const t = term(); const m = {};
+    B.logs.forEach((l) => { if (!l || l.status === 'cancelled' || (l.term && l.term !== t)) return; const k = norm(l.studentId); m[k] = (m[k] || 0) + (Number(l.points) || 0); });
+    return m;
+  }
+  const clamp = (n) => Math.max(0, Math.min(100, n));
+  function students() { let list = B.students; if (!list || !list.length) { try { list = allStudents || []; } catch (e) { list = []; } } return list.filter((s) => s && s.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))); }
+  const GR = ['ALL', 'มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3', 'มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'];
+  const gradeSelect = (val, key) => '<select onchange="k8BhSet(\'' + key + '\', this.value)" aria-label="ระดับชั้น">' + GR.map((g) => '<option value="' + g + '"' + (g === val ? ' selected' : '') + '>' + (g === 'ALL' ? 'ทุกชั้น' : shortG(g)) + '</option>').join('') + '</select>';
+
+  async function load(force) {
+    if (B.loading || (B.loaded && !force)) return;
+    B.loading = true;
+    try {
+      const r = await api('getBehaviorData');
+      if (r && r.success) { B.rules = r.rules || []; B.logs = r.logs || []; if (r.students && r.students.length) B.students = r.students; B.loaded = true; try { localStorage.setItem('khalifah_behavior_cache', JSON.stringify({ rules: B.rules, logs: B.logs, students: B.students })); } catch (e) {} }
+      else if (r && r.message) toast(r.message, 'error');
+    } catch (e) {
+      try { const c = JSON.parse(localStorage.getItem('khalifah_behavior_cache') || 'null'); if (c) { B.rules = c.rules || []; B.logs = c.logs || []; B.students = c.students || []; } } catch (er) {}
+      toast('โหลดข้อมูลพฤติกรรมไม่สำเร็จ · แสดงข้อมูลล่าสุดในเครื่อง', 'warning');
+    }
+    B.loading = false; render();
+  }
+
+  function roots() { return ['k8BhInsp', 'k8BhAdmin'].map((id) => document.getElementById(id)).filter((el) => el && el.offsetParent !== null); }
+  function render() {
+    const keep = {}; ['.k8-bh-stu', '.k8-bh-list', '.k8-bh-hist'].forEach((sel) => { const el = document.querySelector(sel); if (el) keep[sel] = el.scrollTop; });
+    const wy = window.scrollY;
+    renderInner();
+    Object.keys(keep).forEach((sel) => { const el = document.querySelector(sel); if (el) el.scrollTop = keep[sel]; });
+    if (Math.abs(window.scrollY - wy) > 1) window.scrollTo(0, wy);
+  }
+  function renderInner() {
+    roots().forEach((root) => {
+      const admin = root.dataset.mode === 'admin';
+      const tabs = admin ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ'], ['rules', 'ตั้งค่าหัวข้อ']] : null;
+      if (!admin && B.tab === 'rules') B.tab = 'record';
+      let html = admin ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
+      if (!B.loaded && B.loading) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
+      else html += B.tab === 'record' ? recordHtml() : B.tab === 'scores' ? scoresHtml() : B.tab === 'history' ? historyHtml(admin) : rulesHtml();
+      root.innerHTML = html;
+    });
+    document.querySelectorAll('#k8InspNav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === B.tab));
+  }
+
+  function recordHtml() {
+    const sm = scoreMap();
+    const rules = B.rules.filter((r) => r.cat === B.cat);
+    const custom = B.ruleId === '__custom';
+    const rule = custom ? { title: B.custom.title, points: Number(B.custom.points) || 0, cat: B.cat } : B.rules.find((r) => r.id === B.ruleId);
+    const q = B.q.trim().toLowerCase();
+    const list = students().filter((s) => (B.grade === 'ALL' || s.grade === B.grade) && (!q || String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))))
+      .sort((a, b) => String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName), 'th'));
+    const selN = B.sel.size;
+    let h = '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">1</span>เลือกหมวดที่ตรวจ</h2><div class="k8-bh-cats">' +
+      CATS.map(([k, l, ink, bg]) => '<button type="button" aria-pressed="' + (B.cat === k) + '" style="--ink:' + ink + ';--bg:' + bg + '" onclick="k8BhSet(\'cat\',\'' + k + '\')">' + svg(k, 22) + '<span>' + l + '</span></button>').join('') + '</div></section>';
+    h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>เลือกหัวข้อ</h2><div class="k8-bh-rules">' +
+      rules.map((r) => '<button type="button" aria-pressed="' + (B.ruleId === r.id) + '" onclick="k8BhSet(\'ruleId\',\'' + js(r.id) + '\')"><span>' + esc(r.title) + '</span><b class="' + (r.points > 0 ? 'is-plus' : 'is-minus') + '">' + (r.points > 0 ? '+' : '') + r.points + '</b></button>').join('') +
+      '<button type="button" class="k8-bh-other" aria-pressed="' + custom + '" onclick="k8BhSet(\'ruleId\',\'__custom\')"><span>อื่น ๆ (ระบุเอง)</span><b>✎</b></button></div>' +
+      (custom ? '<div class="k8-bh-custom"><input type="text" maxlength="120" placeholder="ระบุสิ่งที่ตรวจพบ" value="' + esc(B.custom.title) + '" oninput="k8BhCustom(\'title\', this.value)"><label>คะแนน<input type="number" inputmode="numeric" min="-20" max="20" value="' + esc(B.custom.points) + '" oninput="k8BhCustom(\'points\', this.value)"></label><small>ติดลบ = หักคะแนน · บวก = เพิ่มคะแนน (ครั้งละไม่เกิน 20)</small></div>' : '') + '</section>';
+    h += '<section class="k8-bh-card"><div class="k8-bh-h-row"><h2 class="k8-bh-h"><span class="k8-bh-step">3</span>เลือกนักเรียน</h2>' + (selN ? '<button type="button" class="k8-bh-link" onclick="k8BhClearSel()">ล้างที่เลือก (' + selN + ')</button>' : '') + '</div>' +
+      '<div class="k8-bh-filter"><input type="search" id="k8BhQ" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(B.q) + '" oninput="k8BhQ(this)" autocomplete="off">' + gradeSelect(B.grade, 'grade') + '</div>' +
+      (list.length ? '<button type="button" class="k8-bh-link k8-bh-all" onclick="k8BhSelAll()">' + (list.every((s) => B.sel.has(norm(s.studentId))) ? 'ยกเลิกเลือกทั้งหมดในรายการ' : 'เลือกทั้งหมดในรายการ (' + list.length + ' คน)') + '</button>' : '') +
+      '<ul class="k8-bh-stu">' + (list.length ? list.slice(0, 200).map((s) => { const k = norm(s.studentId); const sc = clamp(100 + (sm[k] || 0)); const on = B.sel.has(k); const lv = level(sc);
+        return '<li><button type="button" role="checkbox" aria-checked="' + on + '" onclick="k8BhToggle(\'' + js(k) + '\')"><span class="k8-bh-chk">' + (on ? '✓' : '') + '</span><span class="k8-bh-who"><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(s.studentId) + '</small></span><span class="k8-bh-sc" style="color:' + lv[1] + ';background:' + lv[2] + '">' + sc + '</span></button></li>'; }).join('') : '<li class="k8-bh-empty">ไม่พบนักเรียน</li>') + '</ul></section>';
+    const ready = rule && rule.title && rule.points && selN;
+    h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">4</span>ยืนยันการบันทึก</h2>' +
+      '<div class="k8-bh-confirm"><label>วันที่<input type="date" value="' + B.date + '" max="' + ymd(new Date()) + '" onchange="k8BhSet(\'date\', this.value)"></label><label>หมายเหตุ (ถ้ามี)<input type="text" maxlength="300" placeholder="เช่น ห้อง 204 ตรวจรอบเช้า" value="' + esc(B.note) + '" oninput="k8BhNote(this.value)"></label></div>' +
+      '<p class="k8-bh-summary">' + (ready ? '<b class="' + (rule.points > 0 ? 'is-plus' : 'is-minus') + '">' + (rule.points > 0 ? 'เพิ่ม ' + rule.points : 'หัก ' + Math.abs(rule.points)) + ' คะแนน</b> · ' + esc(rule.title) + ' · นักเรียน ' + selN + ' คน' : 'เลือกหัวข้อและนักเรียนให้ครบก่อน') + '</p>' +
+      '<button type="button" class="k8-bh-go ' + (rule && rule.points > 0 ? 'is-plus' : '') + '" ' + (ready && !B.saving ? '' : 'disabled') + ' onclick="k8BhSubmit()">' + (B.saving ? 'กำลังบันทึก…' : ready ? (rule.points > 0 ? 'เพิ่มคะแนน' : 'หักคะแนน') + ' ' + selN + ' คน' : 'บันทึก') + '</button></section>';
+    return h;
+  }
+
+  function scoresHtml() {
+    const sm = scoreMap();
+    const q = B.sq.trim().toLowerCase();
+    const all = students().filter((s) => B.sGrade === 'ALL' || s.grade === B.sGrade).map((s) => { const sc = clamp(100 + (sm[norm(s.studentId)] || 0)); return { s, sc, lv: level(sc) }; });
+    const cnt = { all: all.length, good: 0, ok: 0, watch: 0 };
+    all.forEach((x) => { if (x.sc >= 90) cnt.good++; else if (x.sc >= 70) cnt.ok++; else cnt.watch++; });
+    let list = all.filter((x) => B.sLevel === 'all' || (B.sLevel === 'good' ? x.sc >= 90 : B.sLevel === 'ok' ? x.sc >= 70 && x.sc < 90 : x.sc < 70));
+    if (q) list = list.filter((x) => String(x.s.fullName || '').toLowerCase().includes(q) || norm(x.s.studentId).includes(q.replace(/^0+/, '')));
+    list.sort((a, b) => a.sc - b.sc || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
+    const lvBtn = (k, n, l, sub, c, bg) => '<button type="button" aria-pressed="' + (B.sLevel === k) + '" style="--c:' + c + ';--bg:' + bg + '" onclick="k8BhSet(\'sLevel\',\'' + k + '\')"><b>' + n + '</b><span>' + l + '</span>' + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
+    return '<section class="k8-bh-card"><p class="k8-bh-intro">คะแนนพฤติกรรมเริ่มที่ <b>100</b> ทุกภาคเรียน (ภาคเรียนที่ ' + term() + ') · เรียงจากคะแนนน้อยไปมาก เพื่อให้เห็นคนที่ต้องดูแลก่อน</p>' +
+      '<div class="k8-rk-levels">' + lvBtn('all', cnt.all, 'ทั้งหมด', '', '#0f172a', '#f8fafc') + lvBtn('good', cnt.good, 'ดีมาก', '90–100', '#15803d', '#dcfce7') + lvBtn('ok', cnt.ok, 'ปกติ', '70–89', '#1d4ed8', '#dbeafe') + lvBtn('watch', cnt.watch, 'ต้องดูแล', 'ต่ำกว่า 70', '#b91c1c', '#fee2e2') + '</div>' +
+      '<div class="k8-bh-filter"><input type="search" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(B.sq) + '" oninput="k8BhSQ(this)" id="k8BhSQ" autocomplete="off">' + gradeSelect(B.sGrade, 'sGrade') + '</div>' +
+      '<ul class="k8-bh-list">' + (list.length ? list.slice(0, 300).map((x) => '<li><button type="button" onclick="k8BhOpen(\'' + js(norm(x.s.studentId)) + '\')"><span class="k8-bh-ring" style="--p:' + x.sc + ';--c:' + x.lv[1] + '"><b>' + x.sc + '</b></span><span class="k8-bh-who"><b>' + esc(x.s.fullName) + '</b><small>' + esc(shortG(x.s.grade)) + ' · ' + esc(x.s.studentId) + '</small></span><span class="k8-bh-lv" style="color:' + x.lv[1] + ';background:' + x.lv[2] + '">' + x.lv[0] + '</span></button></li>').join('') : '<li class="k8-bh-empty">ไม่พบนักเรียน</li>') + '</ul></section>';
+  }
+
+  function historyHtml(admin) {
+    const a = me(); const uid = a ? String(a.username || a.adminId || '').toLowerCase() : '';
+    const today = ymd(new Date()); const wk = new Date(); wk.setDate(wk.getDate() - 6); const wkS = ymd(wk);
+    const q = B.hq.trim().toLowerCase();
+    let list = B.logs.slice().filter((l) => B.hRange === 'today' ? l.date === today : B.hRange === 'week' ? l.date >= wkS : l.term === term());
+    if (!admin || B.hMine) list = list.filter((l) => !admin || String(l.by || '').toLowerCase() === uid);
+    if (q) list = list.filter((l) => String(l.studentName || '').toLowerCase().includes(q) || String(l.title || '').toLowerCase().includes(q) || norm(l.studentId).includes(q.replace(/^0+/, '')));
+    list.sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
+    const minus = list.filter((l) => l.status !== 'cancelled' && l.points < 0).length, plus = list.filter((l) => l.status !== 'cancelled' && l.points > 0).length;
+    return '<section class="k8-bh-card"><div class="k8-bh-filter"><div class="k8h-mini-seg">' + [['today', 'วันนี้'], ['week', '7 วัน'], ['term', 'ภาคเรียนนี้']].map(([k, l]) => '<button type="button" aria-pressed="' + (B.hRange === k) + '" onclick="k8BhSet(\'hRange\',\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
+      (admin ? '<div class="k8h-mini-seg">' + [[true, 'ของฉัน'], [false, 'ทุกคน']].map(([k, l]) => '<button type="button" aria-pressed="' + (B.hMine === k) + '" onclick="k8BhSet(\'hMine\',' + k + ')">' + l + '</button>').join('') + '</div>' : '') +
+      '<input type="search" placeholder="ค้นหาชื่อนักเรียนหรือหัวข้อ" value="' + esc(B.hq) + '" oninput="k8BhHQ(this)" id="k8BhHQ" autocomplete="off"></div>' +
+      '<p class="k8-bh-intro">' + list.length + ' รายการ · หักคะแนน ' + minus + ' · เพิ่มคะแนน ' + plus + (admin ? '' : ' · ยกเลิกรายการที่บันทึกผิดได้') + '</p>' +
+      '<ul class="k8-bh-hist">' + (list.length ? list.slice(0, 300).map((l) => { const c = catOf(l.cat); const own = String(l.by || '').toLowerCase() === uid; const can = l.status !== 'cancelled' && (own || isAdmin());
+        return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span><span class="k8-bh-who"><b>' + esc(l.studentName || l.studentId) + ' <small>' + esc(shortG(l.grade)) + '</small></b><small>' + esc(l.title) + (l.note ? ' · ' + esc(l.note) : '') + '</small><small class="k8-bh-meta">' + fmtD(l.date) + ' ' + esc(String(l.time || '').slice(11, 16)) + ' · ' + esc(l.byName || l.by) + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span>' + (can ? '<button type="button" class="k8-bh-undo" onclick="k8BhCancel(\'' + js(l.id) + '\')" aria-label="ยกเลิกรายการนี้">ยกเลิก</button>' : '') + '</li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีรายการในช่วงนี้</li>') + '</ul></section>';
+  }
+
+  function rulesHtml() {
+    if (!B.editRules) B.editRules = B.rules.map((r) => Object.assign({}, r));
+    return '<section class="k8-bh-card"><p class="k8-bh-intro">ตั้งหัวข้อที่ผู้ตรวจการใช้ และกำหนดว่าแต่ละข้อหักหรือเพิ่มกี่คะแนน (1–50) · หมวด "ทำความดี" เป็นการเพิ่มคะแนน หมวดอื่นเป็นการหักคะแนน</p>' +
+      CATS.map(([k, l, ink, bg]) => { const rows = B.editRules.map((r, i) => [r, i]).filter(([r]) => r.cat === k);
+        return '<div class="k8-bh-rcat"><h3 style="color:' + ink + '">' + svg(k, 18) + ' ' + l + '</h3>' + rows.map(([r, i]) => '<div class="k8-bh-rrow"><input type="text" maxlength="120" value="' + esc(r.title) + '" oninput="k8BhRule(' + i + ',\'title\',this.value)" aria-label="หัวข้อ"><span class="k8-bh-rpts ' + (k === 'good' ? 'is-plus' : 'is-minus') + '">' + (k === 'good' ? '+' : '−') + '<input type="number" min="1" max="50" value="' + Math.abs(Number(r.points) || 0) + '" oninput="k8BhRule(' + i + ',\'points\',this.value)" aria-label="คะแนน"></span><button type="button" class="k8-bh-rdel" onclick="k8BhRuleDel(' + i + ')" aria-label="ลบหัวข้อ">✕</button></div>').join('') +
+          '<button type="button" class="k8-bh-link" onclick="k8BhRuleAdd(\'' + k + '\')">+ เพิ่มหัวข้อ</button></div>'; }).join('') +
+      '<button type="button" class="k8-bh-go" onclick="k8BhRulesSave()">บันทึกหัวข้อทั้งหมด</button></section>';
+  }
+
+  function openStudent(k) {
+    const s = students().find((x) => norm(x.studentId) === k) || { fullName: k, studentId: k };
+    const t = term();
+    const logs = B.logs.filter((l) => norm(l.studentId) === k && (!l.term || l.term === t)).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
+    const sc = clamp(100 + logs.filter((l) => l.status !== 'cancelled').reduce((a, l) => a + (Number(l.points) || 0), 0));
+    document.getElementById('k8BhModalTitle').textContent = s.fullName || k;
+    document.getElementById('k8BhModalSub').textContent = shortG(s.grade) + ' · ' + (s.studentId || k) + ' · ภาคเรียนที่ ' + t;
+    document.getElementById('k8BhModalBody').innerHTML = detailHtml(sc, logs) + (me() ? '<button type="button" class="k8-bh-go" onclick="k8BhRecordFor(\'' + js(k) + '\')">บันทึกพฤติกรรมให้คนนี้</button>' : '');
+    openModal('k8BhModal');
+  }
+  function detailHtml(sc, logs) {
+    const lv = level(sc); const act = logs.filter((l) => l.status !== 'cancelled');
+    const minus = act.filter((l) => l.points < 0).reduce((a, l) => a + l.points, 0), plus = act.filter((l) => l.points > 0).reduce((a, l) => a + l.points, 0);
+    return '<div class="k8-bh-hero"><span class="k8-bh-ring is-big" style="--p:' + sc + ';--c:' + lv[1] + '"><b>' + sc + '</b><small>/100</small></span><div><span class="k8-bh-lv" style="color:' + lv[1] + ';background:' + lv[2] + '">' + lv[0] + '</span><p>เริ่มต้น 100 · ถูกหัก <b class="is-minus">' + Math.abs(minus) + '</b> · ได้เพิ่ม <b class="is-plus">' + plus + '</b></p></div></div>' +
+      '<ul class="k8-bh-hist">' + (logs.length ? logs.map((l) => { const c = catOf(l.cat); return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span><span class="k8-bh-who"><b>' + esc(l.title) + '</b><small>' + fmtD(l.date) + ' · ' + esc(c[1]) + (l.note ? ' · ' + esc(l.note) : '') + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีบันทึกในภาคเรียนนี้ · รักษาคะแนนเต็มไว้นะ</li>') + '</ul>';
+  }
+
+  // ---------- actions ----------
+  window.k8BhTab = function (t) { B.tab = t; if (t !== 'rules') B.editRules = null; render(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (e) {} };
+  window.k8BhSet = function (k, v) { B[k] = v; if (k === 'cat') B.ruleId = ''; render(); };
+  window.k8BhCustom = function (k, v) { B.custom[k] = v; const sum = document.querySelector('.k8-bh-summary'); if (sum) { render(); const el = document.querySelector('.k8-bh-custom ' + (k === 'title' ? 'input[type=text]' : 'input[type=number]')); if (el) { el.focus(); try { const n = el.value.length; el.setSelectionRange && el.type === 'text' && el.setSelectionRange(n, n); } catch (e) {} } } };
+  window.k8BhNote = function (v) { B.note = v; };
+  function refocus(id, el) { const pos = el.selectionStart; render(); const n = document.getElementById(id); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }
+  let qt = null;
+  window.k8BhQ = function (el) { B.q = el.value; clearTimeout(qt); qt = setTimeout(() => refocus('k8BhQ', el), 150); };
+  window.k8BhSQ = function (el) { B.sq = el.value; clearTimeout(qt); qt = setTimeout(() => refocus('k8BhSQ', el), 150); };
+  window.k8BhHQ = function (el) { B.hq = el.value; clearTimeout(qt); qt = setTimeout(() => refocus('k8BhHQ', el), 150); };
+  window.k8BhToggle = function (k) { if (B.sel.has(k)) B.sel.delete(k); else B.sel.add(k); render(); };
+  window.k8BhClearSel = function () { B.sel.clear(); render(); };
+  window.k8BhSelAll = function () {
+    const q = B.q.trim().toLowerCase();
+    const list = students().filter((s) => (B.grade === 'ALL' || s.grade === B.grade) && (!q || String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))));
+    const allOn = list.every((s) => B.sel.has(norm(s.studentId)));
+    list.forEach((s) => { if (allOn) B.sel.delete(norm(s.studentId)); else B.sel.add(norm(s.studentId)); });
+    render();
+  };
+  window.k8BhSubmit = async function () {
+    const custom = B.ruleId === '__custom';
+    const rule = custom ? null : B.rules.find((r) => r.id === B.ruleId);
+    if (!B.sel.size || (!rule && !(custom && B.custom.title && Number(B.custom.points)))) return;
+    const ids = students().filter((s) => B.sel.has(norm(s.studentId))).map((s) => s.studentId);
+    B.saving = true; render();
+    try {
+      const payload = { studentIds: ids, note: B.note, date: B.date };
+      if (custom) { payload.title = B.custom.title; payload.points = Number(B.custom.points); } else payload.ruleId = rule.id;
+      const r = await api('addBehaviorLogs', { data: payload });
+      if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
+      B.logs = B.logs.concat(r.logs || []);
+      B.sel.clear(); B.note = '';
+      toast('บันทึกแล้ว · ' + r.message, 'success');
+    } catch (e) { toast(e.message || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
+    B.saving = false; render();
+  };
+  window.k8BhCancel = async function (id) {
+    const l = B.logs.find((x) => x.id === id); if (!l) return;
+    if (!window.confirm('ยกเลิกรายการ "' + l.title + '" ของ ' + (l.studentName || l.studentId) + ' ?\nคะแนนจะถูกคืนให้นักเรียน')) return;
+    try {
+      const r = await api('cancelBehaviorLog', { data: { logId: id } });
+      if (!r || !r.success) throw new Error((r && r.message) || 'ยกเลิกไม่สำเร็จ');
+      l.status = 'cancelled'; toast(r.message, 'success'); render();
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  window.k8BhOpen = openStudent;
+  window.k8BhRecordFor = function (k) { closeModal('k8BhModal'); B.sel = new Set([k]); B.tab = 'record'; render(); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} };
+  window.k8BhRule = function (i, k, v) { const r = B.editRules[i]; if (!r) return; if (k === 'points') { const n = Math.max(1, Math.min(50, Math.abs(parseInt(v, 10) || 0))); r.points = r.cat === 'good' ? n : -n; } else r.title = v; };
+  window.k8BhRuleAdd = function (cat) { B.editRules.push({ id: '', cat, title: '', points: cat === 'good' ? 3 : -5 }); render(); const ins = document.querySelectorAll('.k8-bh-rrow input[type=text]'); const last = Array.from(ins).filter((x) => !x.value).pop(); if (last) last.focus(); };
+  window.k8BhRuleDel = function (i) { B.editRules.splice(i, 1); render(); };
+  window.k8BhRulesSave = async function () {
+    const rules = B.editRules.filter((r) => String(r.title || '').trim());
+    try {
+      const r = await api('saveBehaviorRules', { data: { rules } });
+      if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
+      B.rules = r.rules; B.editRules = null; toast(r.message, 'success'); render();
+    } catch (e) { toast(e.message, 'error'); }
+  };
+
+  // ---------- นักเรียน: กล่องคะแนนพฤติกรรมหน้าแรก ----------
+  let mine = null;
+  try { mine = JSON.parse(localStorage.getItem('khalifah_behavior_me') || 'null'); } catch (e) {}
+  function myScore() { if (!mine) return 100; const t = term(); return clamp(100 + (mine.logs || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t)).reduce((a, l) => a + (Number(l.points) || 0), 0)); }
+  function paintMine() {
+    const el = document.getElementById('hfBehScore'); if (!el) return;
+    const sc = myScore(); const lv = level(sc);
+    el.textContent = sc;
+    const box = document.getElementById('hfBeh'); if (box) { box.style.setProperty('--c', lv[1]); box.style.setProperty('--bg', lv[2]); box.setAttribute('aria-label', 'คะแนนพฤติกรรม ' + sc + ' จาก 100 · ' + lv[0]); }
+  }
+  let mineAt = 0;
+  async function loadMine(force) {
+    let st = null; try { st = currentStudent; } catch (e) {}
+    if (!st || (!force && Date.now() - mineAt < 60000)) { paintMine(); return; }
+    mineAt = Date.now();
+    try { const r = await api('getMyBehavior'); if (r && r.success) { mine = { logs: r.logs || [], term: r.term }; try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} } } catch (e) {}
+    paintMine();
+  }
+  window.k8BehOpenMine = function () {
+    let st = null; try { st = currentStudent; } catch (e) {}
+    const t = term();
+    const logs = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
+    document.getElementById('k8BhModalTitle').textContent = 'คะแนนพฤติกรรมของฉัน';
+    document.getElementById('k8BhModalSub').textContent = 'ภาคเรียนที่ ' + t + ' · เริ่มต้น 100 คะแนน';
+    document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), logs) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>';
+    openModal('k8BhModal');
+    if (st) loadMine(true).then(() => { if (document.getElementById('k8BhModal').classList.contains('open')) { const l2 = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date))); document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), l2) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>'; } });
+  };
+
+  // ---------- บัญชีผู้ตรวจการ: ล็อกไว้ที่หน้าผู้ตรวจการเท่านั้น ----------
+  function paintHead() {
+    const a = me(); if (!a) return;
+    const n = document.getElementById('k8InspName'); if (n) n.textContent = a.fullName || a.username || 'ผู้ตรวจการ';
+    const av = document.getElementById('k8InspAvatar'); if (av) av.textContent = String(a.fullName || a.username || 'ต').trim().charAt(0);
+    const d = new Date(); const dt = document.getElementById('k8InspDate'); if (dt) dt.textContent = 'ผู้ตรวจการ · ' + DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()];
+  }
+  function markRole() { document.body.classList.toggle('k8-inspector', isInspector()); if (isInspector()) document.body.classList.remove('portal-mode-teacher', 'teacher-portal-active'); }
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) {
+    if (isInspector() && v !== 'inspector') v = 'inspector';
+    const r = sv.call(this, v);
+    markRole();
+    if (v === 'inspector') { paintHead(); render(); load(false); }
+    if (v === 'dashboard') loadMine(false);
+    return r;
+  };
+  const uav = window.updateAdminUIVisibility;
+  if (typeof uav === 'function') window.updateAdminUIVisibility = function () { const r = uav.apply(this, arguments); markRole(); return r; };
+  if (typeof window.switchAdminTab === 'function') {
+    const sat = window.switchAdminTab;
+    window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'behavior') { if (B.tab === 'rules') B.editRules = null; render(); load(true); } return r; };
+  }
+  function boot() {
+    markRole();
+    if (isInspector()) { try { window.switchView('inspector'); } catch (e) {} }
+    else { let st = null; try { st = currentStudent; } catch (e) {} if (st) loadMine(true); else paintMine(); }
+  }
+  if (document.readyState === 'complete') setTimeout(boot, 0); else window.addEventListener('load', () => setTimeout(boot, 0));
+  // ข้อมูลสด: เมื่อมีการเปลี่ยนแปลงจากเครื่องอื่น ให้โหลดใหม่ตอนเปิดหน้าอีกครั้ง
+  document.addEventListener('visibilitychange', () => { if (document.hidden) return; if (isInspector()) load(true); else loadMine(false); });
+  window.k8BehaviorReload = function () { B.loaded = false; load(true); loadMine(true); };
 })();

@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=10.0">
-  <link rel="stylesheet" href="ui-v8.css?v=10.0">
+  <link rel="stylesheet" href="style.css?v=10.1">
+  <link rel="stylesheet" href="ui-v8.css?v=10.1">
 </head>
 <body class="auth-locked">
   <script>
@@ -229,7 +229,12 @@
 
         <section class="hf-card hf-pad">
           <div class="hf-head"><h2>การมาเรียน</h2><span id="hfRange">-</span></div>
-          <div class="hf-att" id="hfAtt"></div>
+          <div class="hf-att-wrap">
+            <button type="button" class="hf-beh" id="hfBeh" onclick="k8BehOpenMine()" aria-label="คะแนนพฤติกรรม">
+              <b id="hfBehScore">100</b><small>/ 100</small><span>พฤติกรรม</span>
+            </button>
+            <div class="hf-att" id="hfAtt"></div>
+          </div>
           <div class="hf-attbar" id="hfAttBar" aria-hidden="true"></div>
         </section>
 
@@ -1603,6 +1608,27 @@
     </section>
 
     <!-- ==================== VIEW 5: TEACHER & EXECUTIVE PORTAL (ระบบอาจารย์และผู้บริหาร) ==================== -->
+    <section id="view-inspector" class="view-section">
+      <header class="k8-th-head k8-insp-head">
+        <div class="k8-th-titles">
+          <div class="k8-th-date" id="k8InspDate">ผู้ตรวจการ</div>
+          <h1 id="k8InspName">ผู้ตรวจการ</h1>
+        </div>
+        <details class="k8-acct">
+          <summary aria-label="บัญชีของฉัน" id="k8InspAvatar">ต</summary>
+          <div class="k8-acct-menu">
+            <button type="button" class="is-danger" onclick="adminLogout()">ออกจากระบบ</button>
+          </div>
+        </details>
+      </header>
+      <div class="k8-bh" id="k8BhInsp" data-mode="inspector"></div>
+      <nav class="k8-insp-nav" id="k8InspNav" aria-label="เมนูผู้ตรวจการ">
+        <button type="button" data-tab="record" onclick="k8BhTab('record')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6a1 1 0 0 1 1 1v1H8V4a1 1 0 0 1 1-1zM8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 13l2 2 4-4"/></svg><span>ตรวจ/บันทึก</span></button>
+        <button type="button" data-tab="scores" onclick="k8BhTab('scores')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM21 20v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span>คะแนนนักเรียน</span></button>
+        <button type="button" data-tab="history" onclick="k8BhTab('history')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/></svg><span>ประวัติ</span></button>
+      </nav>
+    </section>
+
     <section id="view-teacher" class="view-section">
       <!-- Teacher Mode Elegant Segmented Tab Bar (4 แท็บ: ภาพรวม, เช็คชื่อ, กรอกเกรด, ปฏิทิน) -->
       <div class="teacher-segmented-nav">
@@ -2342,6 +2368,9 @@
           <span class="k8-nav-label">ติดตามประจำวัน</span>
           <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
             <i class="fa-solid fa-person-praying" aria-hidden="true"></i> ละหมาด
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabBehavior" onclick="switchAdminTab('behavior', this)">
+            <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> คะแนนพฤติกรรม
           </button>
           <button class="admin-tab-btn" id="btnAdminTabRank" onclick="switchAdminTab('prayer-rank', this)">
             <i class="fa-solid fa-ranking-star" aria-hidden="true"></i> อันดับละหมาด
@@ -3085,6 +3114,11 @@
             </table>
           </div>
         </div>
+      </div>
+
+      <!-- Admin Tab: Behavior score -->
+      <div id="admin-tab-behavior" class="admin-content-tab" style="display: none;">
+        <div class="k8-bh" id="k8BhAdmin" data-mode="admin"></div>
       </div>
 
       <!-- Admin Tab: Prayer ranking -->
@@ -5554,13 +5588,20 @@
       </form>
     </div>
   </div>
+  <div class="modal-overlay" id="k8BhModal" onclick="if(event.target===this)closeModal('k8BhModal')">
+    <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8BhModalTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8BhModalTitle">คะแนนพฤติกรรม</h2><span id="k8BhModalSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8BhModal')">✕</button></header>
+      <div class="k8-sheet-body" id="k8BhModalBody"></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="k8TierModal" onclick="if(event.target===this)closeModal('k8TierModal')">
     <div class="modal-dialog k8-sheet k8-tier-sheet" role="dialog" aria-labelledby="k8TierTitle">
       <header class="k8-sheet-head"><div><h2 id="k8TierTitle">อันดับการละหมาด</h2><span id="k8TierSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8TierModal')">✕</button></header>
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=10.0"></script>
-  <script defer src="ui-v8.js?v=10.0"></script>
+  <script defer src="app.js?v=10.1"></script>
+  <script defer src="ui-v8.js?v=10.1"></script>
 </body>
 </html>

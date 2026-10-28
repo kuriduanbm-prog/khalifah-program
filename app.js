@@ -6887,7 +6887,7 @@ async function performStaffLogin({ username, password, btn, userEl, passEl, moda
     updateAdminUIVisibility(true);
     (modalsToClose || ['authModal']).forEach(id => closeModal(id));
     switchView(isSuper ? 'admin' : 'teacher');
-    const roleWelcome = isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : 'อาจารย์');
+    const roleWelcome = isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : (/INSPECTOR|ผู้ตรวจการ/i.test(String(profile.role)) ? 'ผู้ตรวจการ' : 'อาจารย์'));
     showToast(`ยินดีต้อนรับ${roleWelcome} ${profile.fullName || profile.username}`, 'success');
     if (res.securityWarning) {
       setTimeout(() => showToast('⚠️ ' + res.securityWarning, 'warning'), 1500);

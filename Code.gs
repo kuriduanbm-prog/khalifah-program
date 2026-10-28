@@ -55,6 +55,7 @@ const SHEETS = {
   PRAYER_APPROVALS: 'คำขออนุมัติละหมาด',
   ASSIGNMENT_SCORES: 'คะแนนชิ้นงาน',
   TEACHER_EVALS: 'ประเมินอาจารย์',
+  BEHAVIOR: 'บันทึกคะแนนพฤติกรรม',
   SETTINGS: 'การตั้งค่า',
   CALENDAR: 'ปฏิทินกิจกรรม'
 };
@@ -75,6 +76,7 @@ const SHEET_ORDER = [
   SHEETS.PRAYER_APPROVALS, // 12. คำขออนุมัติละหมาด
   SHEETS.ASSIGNMENT_SCORES, // คะแนนชิ้นงานรายวิชา
   SHEETS.TEACHER_EVALS,  // ประเมินอาจารย์ (ไม่ระบุชื่อ)
+  SHEETS.BEHAVIOR,       // บันทึกคะแนนพฤติกรรม (ผู้ตรวจการ)
   SHEETS.SETTINGS,       // 13. การตั้งค่า
   SHEETS.CALENDAR        // 14. ปฏิทินกิจกรรม
 ];
@@ -163,6 +165,10 @@ const HEADERS = {
   APPROVALS: [
     'รหัสคำขอ', 'ประเภทผู้ใช้', 'รหัสประจำตัว', 'ชื่อ-นามสกุล', 'อีเมล',
     'รายละเอียดเพิ่มเติม', 'รหัสยืนยันสุ่ม (OTP)', 'สถานะ', 'เวลาที่สมัคร', 'ข้อมูล JSON'
+  ],
+  BEHAVIOR: [
+    'รหัสบันทึก', 'วันที่', 'เวลาบันทึก', 'ภาคเรียน', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น',
+    'หมวด', 'รหัสหัวข้อ', 'หัวข้อ', 'คะแนน (+/-)', 'หมายเหตุ', 'ผู้บันทึก (username)', 'ชื่อผู้บันทึก', 'สถานะ', 'ผู้ยกเลิก'
   ],
   TEACHER_EVALS: [
     'รหัสประเมิน', 'ภาคเรียน', 'รหัสวิชา', 'ชื่อวิชา', 'อาจารย์ (username)', 'ชื่ออาจารย์',
@@ -372,6 +378,8 @@ function initializeSheets() {
   } catch (fmtErr) {}
 
   // 14. คำขออนุมัติละหมาด (กรณีลืมเช็คชื่อ)
+  const sheetBeh = getOrCreateSheetSmart(ss, 'BEHAVIOR', HEADERS.BEHAVIOR, '#0f766e');
+  try { sheetBeh.getRange('A:I').setNumberFormat('@'); } catch (fmtErr) {}
   const sheetEval = getOrCreateSheetSmart(ss, 'TEACHER_EVALS', HEADERS.TEACHER_EVALS, '#7c3aed');
   try { sheetEval.getRange('A:F').setNumberFormat('@'); sheetEval.getRange('L:L').setNumberFormat('@'); } catch (fmtErr) {}
   const sheetAsg = getOrCreateSheetSmart(ss, 'ASSIGNMENT_SCORES', HEADERS.ASSIGNMENT_SCORES, '#4338ca');
@@ -920,8 +928,11 @@ function verifyToken_(token) {
   }
 }
 
+const INSPECTOR_ROLE_VALUES = ['inspector', 'ผู้ตรวจการ'];
+function isInspectorRole_(v) { return INSPECTOR_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
 function staffTokenRole_(roleValue) {
   const r = cleanVal(roleValue).toLowerCase();
+  if (INSPECTOR_ROLE_VALUES.indexOf(r) !== -1) return 'inspector';
   return ADMIN_ROLE_VALUES.indexOf(r) !== -1 ? 'admin' : 'teacher';
 }
 
@@ -1112,6 +1123,9 @@ const ACTION_ACCESS = {
   updateProfilePhoto: 'student', prayerLateRequest: 'student', updateStudentGrade: 'student',
   resetMyHasanat: 'student', submitTeacherEvaluation: 'student', getMyEvaluationStatus: 'student', getEvaluationTargets: 'student',
   getTeacherEvaluationSummary: 'staff',
+  // คะแนนพฤติกรรม: ผู้ตรวจการ (และแอดมิน) บันทึก/ยกเลิก · แอดมินตั้งค่าหัวข้อ
+  addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
+  saveBehaviorRules: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', updateStudentStatus: 'staff',
@@ -1135,6 +1149,9 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'getHasanat', 'getSubjectGrades', 'getMyEvaluationStatus', 'getEvaluationTargets', 'getTeacherEvaluationSummary', 'getAssignmentScores', 'getStatusLogs', 'getActivityLogs', 'getPrayerApprovals', 'getAllStudents',
   'getSubAdmins', 'getTeachers', 'getPendingRegistrations', 'getAdmins', 'checkRegistrationStatus',
   'loginStudent', 'adminLogin', 'staffLogin'];
+
+const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami'];
+READ_ONLY_ACTIONS.push('getBehaviorData', 'getMyBehavior');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1183,7 +1200,12 @@ function routeRequest_(action, req, method) {
       if (!session) {
         return { success: false, authRequired: true, code: 'AUTH_REQUIRED', message: 'กรุณาเข้าสู่ระบบใหม่อีกครั้ง (เซสชันหมดอายุหรือไม่ได้เข้าสู่ระบบ)' };
       }
-      if ((access === 'staff' && !isStaff) || (access === 'admin' && !isAdmin) || (access === 'owner' && !isOwner)) {
+      const isInspector = session.role === 'inspector';
+      // ผู้ตรวจการใช้ได้เฉพาะคำสั่งของผู้ตรวจการเท่านั้น
+      if (isInspector && access !== 'inspector' && INSPECTOR_EXTRA_ACTIONS.indexOf(action) === -1) {
+        return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีผู้ตรวจการไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
+      }
+      if ((access === 'staff' && !isStaff) || (access === 'admin' && !isAdmin) || (access === 'owner' && !isOwner) || (access === 'inspector' && !isInspector && !isAdmin)) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
     }
@@ -1333,6 +1355,20 @@ function dispatchAction_(action, req, data, session, ctx) {
       return getAssignmentScores(ownStudentId_(session, ctx, pick('studentId')), pick('subjectId'));
     case 'saveSubjectAssignments':
       return saveSubjectAssignments(data);
+    case 'addBehaviorLogs':
+      return addBehaviorLogs_(data, session);
+    case 'cancelBehaviorLog':
+      return cancelBehaviorLog_(pick('logId'), session, ctx.isAdmin);
+    case 'getBehaviorData':
+      return { success: true, rules: getBehaviorRules_(), logs: getBehaviorLogs_(), term: currentTerm_(),
+        students: (getAllStudents().data || []).map(function (x) { return { studentId: x.studentId, fullName: x.fullName, grade: x.grade, status: x.status }; }) };
+    case 'getMyBehavior': {
+      const me = ownStudentId_(session, ctx, pick('studentId'));
+      if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
+      return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }) };
+    }
+    case 'saveBehaviorRules':
+      return saveBehaviorRules_(data.rules);
     case 'resetMyHasanat':
       if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
       return resetMyHasanat_(session.userId);
@@ -1501,6 +1537,8 @@ function buildFullDatabaseRaw_() {
       activities: getActivities().data || [],
       activityLogs: getActivityLogs().data || [],
       prayers: getPrayers().data || [],
+      behaviorLogs: getBehaviorLogs_(),
+      behaviorRules: getBehaviorRules_(),
       attendance: getAttendance().data || [],
       hasanat: getHasanat().data || [],
       subjectGrades: getSubjectGrades().data || [],
@@ -1517,6 +1555,17 @@ function buildFullDatabaseRaw_() {
 function scopeDatabase_(db, session) {
   const role = session.role;
   if (role === 'admin') return db;
+  if (role === 'inspector') {
+    return {
+      success: true, scope: 'inspector', timestamp: db.timestamp,
+      students: (db.students || []).map(function (x) { return { studentId: x.studentId, fullName: x.fullName, grade: x.grade, status: x.status, avatarUrl: x.avatarUrl || '' }; }),
+      behaviorLogs: db.behaviorLogs || [], behaviorRules: db.behaviorRules || getBehaviorRules_(),
+      teachers: [], admins: [], subAdmins: [], pendingRegistrations: [], statusLogs: [], activities: [], activityLogs: [],
+      prayers: [], attendance: [], hasanat: [], subjectGrades: [], assignmentScores: [], prayerApprovals: [],
+      calendarEvents: (db.calendarEvents || []).filter(function (ev) { return ev.targetAudience !== 'teachers'; }),
+      settings: db.settings || {}
+    };
+  }
   if (role === 'teacher') {
     const out = Object.assign({}, db);
     out.pendingRegistrations = (db.pendingRegistrations || []).map(function (x) { return publicRegistration_(x, false); });
@@ -1541,6 +1590,8 @@ function scopeDatabase_(db, session) {
     activities: db.activities || [],
     activityLogs: (db.activityLogs || []).filter(mine),
     prayers: (db.prayers || []).filter(mine),
+    behaviorLogs: (db.behaviorLogs || []).filter(mine),
+    behaviorRules: db.behaviorRules || [],
     attendance: (db.attendance || []).filter(mine),
     hasanat: (db.hasanat || []).filter(mine),
     subjectGrades: (db.subjectGrades || []).filter(mine),
@@ -5060,4 +5111,124 @@ function isAdminStaff_(username) {
   const tr = th ? th.getDataRange().getValues() : [];
   for (let i = 1; i < tr.length; i++) if (cleanVal(tr[i][1]).toLowerCase() === u && isAdminRole_(tr[i][4])) return true;
   return false;
+}
+
+
+// =====================================================================
+//  🧭 คะแนนพฤติกรรม (เต็ม 100 ต่อภาคเรียน) — ผู้ตรวจการหัก/เพิ่มคะแนนตามหัวข้อที่แอดมินตั้งไว้
+// =====================================================================
+const BEHAVIOR_CATS = ['dress', 'dorm', 'toilet', 'conduct', 'good'];
+const DEFAULT_BEHAVIOR_RULES = [
+  { id: 'd1', cat: 'dress', title: 'แต่งกายไม่ถูกระเบียบ', points: -5 },
+  { id: 'd2', cat: 'dress', title: 'ไม่สวมหมวก/ผ้าคลุมผมตามระเบียบ', points: -3 },
+  { id: 'd3', cat: 'dress', title: 'ทรงผม/เล็บไม่เรียบร้อย', points: -3 },
+  { id: 'r1', cat: 'dorm', title: 'หอพัก/เตียงไม่เรียบร้อย', points: -5 },
+  { id: 'r2', cat: 'dorm', title: 'ไม่ทำเวรทำความสะอาดหอพัก', points: -5 },
+  { id: 't1', cat: 'toilet', title: 'ห้องน้ำไม่สะอาด (เวรประจำวัน)', points: -5 },
+  { id: 'c1', cat: 'conduct', title: 'มาสาย / ไม่ตรงต่อเวลา', points: -3 },
+  { id: 'c2', cat: 'conduct', title: 'ไม่เข้าร่วมกิจกรรมโดยไม่แจ้ง', points: -5 },
+  { id: 'c3', cat: 'conduct', title: 'พูดจาไม่สุภาพ / ทะเลาะวิวาท', points: -10 },
+  { id: 'g1', cat: 'good', title: 'ละหมาดญะมาอะฮ์ครบทุกเวลา', points: 3 },
+  { id: 'g2', cat: 'good', title: 'มีน้ำใจ ช่วยเหลือผู้อื่น', points: 3 },
+  { id: 'g3', cat: 'good', title: 'มีวินัย เป็นแบบอย่างที่ดี', points: 5 }
+];
+function sanitizeBehaviorRules_(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = {}; const out = [];
+  list.forEach(function (r) {
+    if (!r) return;
+    const cat = BEHAVIOR_CATS.indexOf(cleanVal(r.cat)) !== -1 ? cleanVal(r.cat) : 'conduct';
+    const title = cleanVal(r.title).substring(0, 120);
+    let pts = Math.round(Number(r.points));
+    if (!title || !isFinite(pts) || pts === 0) return;
+    pts = Math.max(-50, Math.min(50, pts));
+    if (cat === 'good') pts = Math.abs(pts); else pts = -Math.abs(pts);
+    let id = cleanVal(r.id).substring(0, 40) || ('b' + Utilities.getUuid().slice(0, 8));
+    if (seen[id]) id = id + '_' + out.length;
+    seen[id] = true;
+    out.push({ id: id, cat: cat, title: title, points: pts });
+  });
+  return out.slice(0, 200);
+}
+function getBehaviorRules_() {
+  try {
+    const raw = (getSettings().data || {}).BehaviorRules;
+    if (raw) { const list = sanitizeBehaviorRules_(JSON.parse(raw)); if (list.length) return list; }
+  } catch (e) {}
+  return DEFAULT_BEHAVIOR_RULES.slice();
+}
+function saveBehaviorRules_(rules) {
+  const clean = sanitizeBehaviorRules_(rules);
+  if (!clean.length) return { success: false, message: 'ต้องมีหัวข้ออย่างน้อย 1 ข้อ' };
+  saveSetting({ key: 'BehaviorRules', value: JSON.stringify(clean), description: 'หัวข้อและคะแนนพฤติกรรม (JSON)' });
+  return { success: true, rules: clean, message: 'บันทึกหัวข้อคะแนนพฤติกรรมแล้ว' };
+}
+function getBehaviorLogs_() {
+  const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, HEADERS.BEHAVIOR.length).getValues();
+  return rows.filter(function (r) { return cleanVal(r[0]); }).map(function (r) {
+    return {
+      id: cleanVal(r[0]), date: normalizeDateStr_(r[1]), time: cleanVal(r[2]), term: cleanVal(r[3]), studentId: cleanVal(r[4]), studentName: cleanVal(r[5]),
+      grade: cleanVal(r[6]), cat: cleanVal(r[7]), ruleId: cleanVal(r[8]), title: cleanVal(r[9]), points: Number(r[10]) || 0, note: cleanVal(r[11]),
+      by: cleanVal(r[12]), byName: cleanVal(r[13]), status: cleanVal(r[14]) || 'active', cancelledBy: cleanVal(r[15])
+    };
+  });
+}
+function normalizeDateStr_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Bangkok', 'yyyy-MM-dd');
+  return cleanVal(v).slice(0, 10);
+}
+function addBehaviorLogs_(data, session) {
+  data = data || {};
+  const ids = (Array.isArray(data.studentIds) ? data.studentIds : [data.studentId]).map(cleanVal).filter(Boolean).slice(0, 300);
+  if (!ids.length) return { success: false, message: 'กรุณาเลือกนักเรียนอย่างน้อย 1 คน' };
+  const rules = getBehaviorRules_();
+  let rule = rules.filter(function (r) { return r.id === cleanVal(data.ruleId); })[0];
+  if (!rule) {
+    // หัวข้ออื่น ๆ ที่ผู้ตรวจการระบุเอง ต้องมีหมายเหตุ และจำกัดคะแนนครั้งละไม่เกิน 20
+    const title = cleanVal(data.title).substring(0, 120);
+    let pts = Math.round(Number(data.points));
+    if (!title || !isFinite(pts) || pts === 0) return { success: false, message: 'ไม่พบหัวข้อที่เลือก' };
+    pts = Math.max(-20, Math.min(20, pts));
+    rule = { id: 'custom', cat: pts > 0 ? 'good' : 'conduct', title: title, points: pts };
+  }
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(data.date)) ? cleanVal(data.date) : Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  if (date > today) return { success: false, message: 'บันทึกล่วงหน้าไม่ได้' };
+  const note = cleanVal(data.note).substring(0, 300);
+  ensureSchema();
+  const ss = getSpreadsheet();
+  const sh = ss.getSheetByName(SHEETS.BEHAVIOR);
+  const stuSheet = ss.getSheetByName(SHEETS.STUDENTS);
+  const info = {};
+  if (stuSheet && stuSheet.getLastRow() > 1) stuSheet.getRange(2, 1, stuSheet.getLastRow() - 1, 4).getValues().forEach(function (r) { info[cleanVal(r[0]).replace(/^0+/, '')] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]) }; });
+  const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+  const term = currentTerm_();
+  const rows = []; const missing = [];
+  ids.forEach(function (sid, i) {
+    const st = info[sid.replace(/^0+/, '')];
+    if (!st) { missing.push(sid); return; }
+    rows.push(['BHV-' + Date.now() + '-' + i, date, now, term, st.id, st.name, st.grade, rule.cat, rule.id, rule.title, rule.points, note, session.userId, session.name || session.userId, 'active', '']);
+  });
+  if (!rows.length) return { success: false, message: 'ไม่พบรหัสนักเรียนที่เลือก' };
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) {}
+  try { sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows); } finally { try { lock.releaseLock(); } catch (e) {} }
+  return { success: true, added: rows.length, missing: missing, points: rule.points, logs: rows.map(function (r) { return { id: r[0], date: r[1], time: r[2], term: r[3], studentId: r[4], studentName: r[5], grade: r[6], cat: r[7], ruleId: r[8], title: r[9], points: r[10], note: r[11], by: r[12], byName: r[13], status: 'active' }; }),
+    message: (rule.points < 0 ? 'หัก ' + Math.abs(rule.points) : 'เพิ่ม ' + rule.points) + ' คะแนน · ' + rows.length + ' คน' };
+}
+function cancelBehaviorLog_(logId, session, isAdmin) {
+  const id = cleanVal(logId);
+  const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);
+  if (!id || !sh || sh.getLastRow() < 2) return { success: false, message: 'ไม่พบรายการ' };
+  const vals = sh.getRange(2, 1, sh.getLastRow() - 1, HEADERS.BEHAVIOR.length).getValues();
+  for (let i = 0; i < vals.length; i++) {
+    if (cleanVal(vals[i][0]) !== id) continue;
+    if (!isAdmin && cleanVal(vals[i][12]).toLowerCase() !== cleanVal(session.userId).toLowerCase()) return { success: false, code: 'FORBIDDEN', message: 'ยกเลิกได้เฉพาะรายการที่ตนเองบันทึก' };
+    if (cleanVal(vals[i][14]) === 'cancelled') return { success: true, message: 'รายการนี้ถูกยกเลิกแล้ว' };
+    sh.getRange(i + 2, 15, 1, 2).setValues([['cancelled', (session.name || session.userId) + ' · ' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm')]]);
+    return { success: true, message: 'ยกเลิกรายการแล้ว คะแนนถูกคืนให้นักเรียน' };
+  }
+  return { success: false, message: 'ไม่พบรายการ' };
 }
