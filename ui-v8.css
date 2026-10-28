@@ -1639,3 +1639,43 @@ body.k8-subadmin #btnTabLogo, body.k8-subadmin .k8-admin-nav [onclick*="settings
 .tg-grid td input.is-bad { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
 .tg-grid .tg-grid-sum { font-weight: 700; color: #5b21b6; background: #faf5ff; }
 .tg-grid tbody tr:last-child > * { border-bottom: 0; }
+
+/* ---- Prayer ranking v2 (clearer) ---- */
+.k8-rk-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.k8-rk-tools select { height: 36px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0 10px; font: inherit; font-size: 14px; background: #fff; }
+.k8-rk-switch { margin-left: auto; height: 36px; padding: 0 12px; border: 0; background: transparent; color: #1d4ed8; font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
+.k8-rk-intro { margin: 14px 0 10px; }
+.k8-rk-intro p { margin: 0 0 10px; font-size: 14px; color: #334155; line-height: 1.6; }
+.k8-rk-levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.k8-rk-levels button { --c: #0f172a; --bg: #f8fafc; display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 10px 12px; border: 2px solid transparent; border-radius: 14px; background: var(--bg); color: var(--c); font: inherit; text-align: left; cursor: pointer; }
+.k8-rk-levels button[aria-pressed="true"] { border-color: var(--c); }
+.k8-rk-levels b { font-size: 22px; line-height: 1.2; }
+.k8-rk-levels span { font-size: 13px; font-weight: 600; }
+.k8-rk-levels small { font-size: 11px; opacity: .75; }
+@media (max-width: 560px) { .k8-rk-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); } .k8-rk-switch { margin-left: 0; } }
+.k8-rk-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: #475569; margin: 4px 0 8px; }
+.k8-rk-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.k8-rk-list { list-style: none; margin: 0; padding: 0; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background: #fff; }
+.k8-rk-row { display: grid; grid-template-columns: 44px minmax(140px, 1.2fr) minmax(0, 2fr) 110px; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; }
+.k8-rk-row:last-child { border-bottom: 0; }
+.k8-rk-no { font-size: 15px; font-weight: 700; color: #64748b; text-align: center; }
+.k8-rk-no.is-medal { font-size: 24px; }
+.k8-rk-who { min-width: 0; display: flex; flex-direction: column; }
+.k8-rk-who b { font-size: 15px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-rk-who small { font-size: 12px; color: #64748b; }
+.k8-rk-bar { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.k8-rk-track { display: flex; height: 10px; border-radius: 99px; background: #f1f5f9; overflow: hidden; }
+.k8-rk-track i { display: block; height: 100%; }
+.k8-rk-nums { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+.k8-rk-nums em { font-style: normal; } .k8-rk-nums .ok { color: #15803d; } .k8-rk-nums .late { color: #b45309; } .k8-rk-nums .ex { color: #1d4ed8; } .k8-rk-nums .miss { color: #b91c1c; }
+.k8-rk-score { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; text-align: right; }
+.k8-rk-score b { font-size: 20px; line-height: 1; color: #0f172a; }
+.k8-rk-score span { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+.k8-rk-score small { font-size: 11px; color: #64748b; }
+@media (max-width: 720px) {
+  .k8-rk-row { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px 10px; padding: 12px; }
+  .k8-rk-bar { grid-column: 2 / 4; grid-row: 2; }
+  .k8-rk-score { grid-column: 3; grid-row: 1; }
+}
+.k8-rk-foot { margin: 10px 0 0; font-size: 12px; color: #64748b; line-height: 1.6; }
+@media (max-width: 560px) { .k8-rk-levels button { flex-direction: row; align-items: baseline; gap: 6px; padding: 8px 10px; } .k8-rk-levels b { font-size: 18px; } .k8-rk-levels small { display: none; } }

@@ -1883,7 +1883,7 @@ window.k8RegBirthChange = function (v) {
   const HEAD = {
     'admin-tab-subadmins': ['อาจารย์ & ผู้บริหาร', 'เพิ่มบัญชี กำหนดสิทธิ์ และรายวิชาที่รับผิดชอบ'],
     'admin-tab-prayers-monitor': ['ละหมาด', 'ติดตามการเช็คชื่อละหมาด 5 เวลา รายวันและรายบุคคล'],
-    'admin-tab-prayer-rank': ['อันดับการละหมาด', 'จัดอันดับนักเรียนจากคะแนนละหมาด (ตรงเวลา 1 · สาย 0.5 · ลา/อุซุรไม่นำมาคิด)'],
+    'admin-tab-prayer-rank': ['อันดับการละหมาด', 'ดูว่าใครละหมาดสม่ำเสมอ และใครที่ควรติดตามดูแล'],
     'admin-tab-activities-admin': ['กิจกรรม & สแกน QR', 'สร้างกิจกรรม เปิด QR ให้นักเรียนสแกน และดูผู้เข้าร่วม'],
     'admin-tab-calendar-admin': ['ปฏิทินโรงเรียน', 'วันสำคัญ วันสอบ และกิจกรรมที่แสดงให้นักเรียนและอาจารย์'],
     'admin-tab-grading': ['เกรดรายวิชา', 'ดูและแก้ไขเกรดของนักเรียนแต่ละวิชา'],
@@ -2517,32 +2517,41 @@ window.k8RegBirthChange = function (v) {
     all.forEach((x, i) => { const key = x.score + '|' + x.on + '|' + x.miss + '|' + x.late; if (key !== prev) { rank = i + 1; prev = key; } x.rank = rank; });
     return { all, tiers, expected };
   }
+  T.level = 'all';
+  const LV = { good: ['ดีมาก', '#15803d', '#dcfce7'], mid: ['พอใช้', '#b45309', '#fef3c7'], low: ['ต้องติดตาม', '#b91c1c', '#fee2e2'] };
+  const levelOf = (score) => score >= 80 ? 'good' : score >= 50 ? 'mid' : 'low';
   function tools(id) {
-    return '<div class="k8-tier-tools"><div class="k8h-mini-seg">' + [[7, '7 วัน'], [14, '14 วัน'], [30, '30 วัน']].map(([n, l]) => '<button type="button" aria-pressed="' + (T.days === n) + '" onclick="k8TierSet(\'days\',' + n + ')">' + l + '</button>').join('') + '</div>' +
+    return '<div class="k8-rk-tools"><div class="k8h-mini-seg" aria-label="ช่วงเวลา">' + [[7, '7 วัน'], [14, '14 วัน'], [30, '30 วัน']].map(([n, l]) => '<button type="button" aria-pressed="' + (T.days === n) + '" onclick="k8TierSet(\'days\',' + n + ')">' + l + '</button>').join('') + '</div>' +
       '<select onchange="k8TierSet(\'grade\', this.value)" aria-label="ระดับชั้น">' + GR.map((g) => '<option value="' + g + '"' + (g === T.grade ? ' selected' : '') + '>' + (g === 'ALL' ? 'ทุกระดับชั้น' : shortG(g)) + '</option>').join('') + '</select>' +
-      '<div class="k8h-mini-seg">' + [['rank', 'จัดอันดับ'], ['group', 'แบ่งกลุ่ม']].map(([k, l]) => '<button type="button" aria-pressed="' + (T.view === k) + '" onclick="k8TierSet(\'view\',\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
-      (T.view === 'rank' ? '<input type="search" class="k8-rank-q" id="' + id + 'Q" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(T.q) + '" oninput="k8TierQ(this)" aria-label="ค้นหานักเรียน">' : '') + '</div>';
+      (T.view === 'rank' ? '<input type="search" class="k8-rank-q" id="' + id + 'Q" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(T.q) + '" oninput="k8TierQ(this)" aria-label="ค้นหานักเรียน">' : '') +
+      '<button type="button" class="k8-rk-switch" onclick="k8TierSet(\'view\',\'' + (T.view === 'rank' ? 'group' : 'rank') + '\')">' + (T.view === 'rank' ? 'ดูแบบแบ่งกลุ่ม' : 'ดูแบบจัดอันดับ') + '</button></div>';
   }
   function rankHtml(id) {
     const { all, expected } = ranked();
     if (!all.length) return tools(id) + '<p class="k8-tier-empty">ยังไม่มีข้อมูลนักเรียน</p>';
+    const cnt = { good: 0, mid: 0, low: 0 }; all.forEach((x) => { x.level = levelOf(x.score); cnt[x.level]++; });
     const q = T.q.trim().toLowerCase();
-    const list = q ? all.filter((x) => String(x.s.fullName || '').toLowerCase().includes(q) || norm(x.s.studentId).includes(q.replace(/^0+/, ''))) : all;
-    const dist = { S: 0, A: 0, B: 0, C: 0, D: 0 }; all.forEach((x) => { dist[tierOf(x.score)[0]]++; });
-    const avg = Math.round(all.reduce((t, x) => t + x.score, 0) / all.length);
-    const podium = q ? '' : '<div class="k8-podium">' + [1, 0, 2].map((i) => { const x = all[i]; if (!x) return '<div></div>'; return '<div class="k8-pod k8-pod-' + (i + 1) + '"><span class="k8-pod-medal">' + (['🥇', '🥈', '🥉'][x.rank - 1] || '🏅') + '</span><b title="' + esc(x.s.fullName) + '">' + esc(x.s.fullName) + '</b><small>' + esc(shortG(x.s.grade)) + '</small><span class="k8-pod-score">' + x.score + '</span><span class="k8-pod-bar">อันดับ ' + x.rank + '</span></div>'; }).join('') + '</div>';
-    const summary = '<div class="k8-rank-sum"><div><b>' + all.length + '</b><span>นักเรียน</span></div><div><b>' + avg + '</b><span>คะแนนเฉลี่ย</span></div>' + ['S', 'A', 'B', 'C', 'D'].map((k) => { const t = tierOf({ S: 95, A: 80, B: 65, C: 45, D: 0 }[k]); return '<div style="color:' + t[1] + ';background:' + t[2] + '"><b>' + dist[k] + '</b><span>ระดับ ' + k + '</span></div>'; }).join('') + '</div>';
+    let list = all.filter((x) => T.level === 'all' || x.level === T.level);
+    if (q) list = list.filter((x) => String(x.s.fullName || '').toLowerCase().includes(q) || norm(x.s.studentId).includes(q.replace(/^0+/, '')));
+    const intro = '<div class="k8-rk-intro"><p>ช่วง <b>' + T.days + ' วันล่าสุด</b> นักเรียนแต่ละคนควรละหมาด <b>' + expected + ' เวลา</b> · เรียงจากคนที่ละหมาดตรงเวลามากที่สุด</p>' +
+      '<div class="k8-rk-levels" role="group" aria-label="กรองตามระดับ">' +
+      '<button type="button" aria-pressed="' + (T.level === 'all') + '" onclick="k8TierSet(\'level\',\'all\')"><b>' + all.length + '</b><span>ทั้งหมด</span></button>' +
+      ['good', 'mid', 'low'].map((k) => '<button type="button" aria-pressed="' + (T.level === k) + '" style="--c:' + LV[k][1] + ';--bg:' + LV[k][2] + '" onclick="k8TierSet(\'level\',\'' + k + '\')"><b>' + cnt[k] + '</b><span>' + LV[k][0] + '</span><small>' + (k === 'good' ? '80% ขึ้นไป' : k === 'mid' ? '50–79%' : 'ต่ำกว่า 50%') + '</small></button>').join('') + '</div></div>';
+    const legend = '<div class="k8-rk-legend"><span><i style="background:#16a34a"></i>ตรงเวลา</span><span><i style="background:#f59e0b"></i>สาย</span><span><i style="background:#60a5fa"></i>ลา/อุซุร</span><span><i style="background:#ef4444"></i>ขาด</span></div>';
     const shown = list.slice(0, T.limit);
-    const rows = shown.map((x) => { const t = tierOf(x.score); const top = x.rank <= 3 ? ' is-top' : '';
-      return '<li class="k8-rank-row' + top + '"><span class="k8-rank-no">' + (x.rank <= 3 ? ['🥇', '🥈', '🥉'][x.rank - 1] : x.rank) + '</span>' +
-        '<span class="k8-rank-who"><b>' + esc(x.s.fullName) + '</b><small>' + esc(String(x.s.studentId || '')) + ' · ' + esc(shortG(x.s.grade)) + '</small>' +
-        '<span class="k8-rank-stats"><i class="ok">ตรงเวลา ' + x.on + '</i><i class="late">สาย ' + x.late + '</i><i class="miss">ขาด ' + x.miss + '</i>' + (x.excused ? '<i class="ex" title="' + esc(x.notes.slice(0, 3).join(' / ')) + '">ลา/อุซุร ' + x.excused + '</i>' : '') + '</span>' +
-        '<span class="k8-rank-bar"><span style="width:' + x.score + '%;background:' + t[1] + '"></span></span></span>' +
-        '<span class="k8-rank-score"><b>' + x.score + '</b><span class="k8-rank-tier" style="color:' + t[1] + ';background:' + t[2] + '">' + t[0] + '</span></span></li>'; }).join('');
-    return tools(id) + summary + podium +
-      '<p class="k8-rank-note">ย้อนหลัง ' + T.days + ' วัน · ควรละหมาด ' + expected + ' เวลา/คน · คะแนน = (ตรงเวลา + สาย×0.5) ÷ เวลาที่ต้องละหมาด (หักวันลา/อุซุร) · คะแนนเท่ากันได้อันดับเดียวกัน</p>' +
-      (list.length ? '<ol class="k8-rank-list">' + rows + '</ol>' : '<p class="k8-tier-empty">ไม่พบนักเรียนที่ค้นหา</p>') +
-      (list.length > shown.length ? '<button type="button" class="k8-rank-more" onclick="k8TierSet(\'limit\',' + (T.limit + 50) + ')">แสดงเพิ่ม (' + (list.length - shown.length) + ' คน)</button>' : '');
+    const pct = (n) => expected ? (n / expected * 100) : 0;
+    const rows = shown.map((x) => { const lv = LV[x.level]; const done = x.on + x.late;
+      return '<li class="k8-rk-row">' +
+        (function () { const medal = x.rank <= 3 && x.score > 0; return '<span class="k8-rk-no' + (medal ? ' is-medal' : '') + '" aria-label="อันดับ ' + x.rank + '">' + (medal ? ['🥇', '🥈', '🥉'][x.rank - 1] : x.rank) + '</span>'; })() +
+        '<span class="k8-rk-who"><b>' + esc(x.s.fullName) + '</b><small>' + esc(shortG(x.s.grade)) + ' · ' + esc(String(x.s.studentId || '')) + '</small></span>' +
+        '<span class="k8-rk-bar" role="img" aria-label="ตรงเวลา ' + x.on + ' สาย ' + x.late + ' ลา ' + x.excused + ' ขาด ' + x.miss + ' จาก ' + expected + ' เวลา">' +
+          '<span class="k8-rk-track"><i style="width:' + pct(x.on) + '%;background:#16a34a"></i><i style="width:' + pct(x.late) + '%;background:#f59e0b"></i><i style="width:' + pct(x.excused) + '%;background:#60a5fa"></i><i style="width:' + pct(x.miss) + '%;background:#ef4444"></i></span>' +
+          '<span class="k8-rk-nums"><em class="ok">ตรงเวลา ' + x.on + '</em><em class="late">สาย ' + x.late + '</em>' + (x.excused ? '<em class="ex" title="' + esc(x.notes.slice(0, 3).join(' / ')) + '">ลา ' + x.excused + '</em>' : '') + '<em class="miss">ขาด ' + x.miss + '</em></span></span>' +
+        '<span class="k8-rk-score"><b>' + Math.round(x.score) + '%</b><span style="color:' + lv[1] + ';background:' + lv[2] + '">' + lv[0] + '</span><small>ละหมาดแล้ว ' + done + '/' + expected + '</small></span></li>'; }).join('');
+    return tools(id) + intro + legend +
+      (list.length ? '<ol class="k8-rk-list">' + rows + '</ol>' : '<p class="k8-tier-empty">ไม่พบนักเรียน</p>') +
+      (list.length > shown.length ? '<button type="button" class="k8-rank-more" onclick="k8TierSet(\'limit\',' + (T.limit + 50) + ')">แสดงเพิ่ม (' + (list.length - shown.length) + ' คน)</button>' : '') +
+      '<p class="k8-rk-foot">คะแนน % คิดจากเวลาที่ละหมาดตรงเวลา (นับเต็ม) และมาสาย (นับครึ่ง) เทียบกับเวลาที่ต้องละหมาด โดยไม่นับเวลาที่ลาหรืออุซุร · คะแนนเท่ากันได้อันดับเดียวกัน</p>';
   }
   function groupHtml(id) {
     const { tiers } = compute();
@@ -2755,7 +2764,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '9.4';
+  const APP_VERSION = '9.5';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
