@@ -1563,3 +1563,79 @@ body.k8-subadmin #btnTabLogo, body.k8-subadmin .k8-admin-nav [onclick*="settings
 .k8-install { flex-wrap: wrap; }
 .k8-install-body { flex: 1 1 calc(100% - 52px); }
 .k8-install-btn { margin-left: 52px; align-self: flex-start; }
+.k8h-future { margin: 8px 0 0; padding: 8px 12px; border-radius: 12px; background: #fff7ed; color: #9a3412; font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.k8h-future.is-past { background: #eff6ff; color: #1e3a8a; }
+.k8h-future button { flex: none; border: 0; background: #fff; color: inherit; font: inherit; font-weight: 600; padding: 4px 10px; border-radius: 8px; cursor: pointer; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+.k8-ta-datenav { display: flex; align-items: stretch; gap: 6px; }
+.k8-ta-datenav input { flex: 1; min-width: 0; }
+.k8-ta-datenav button { flex: none; width: 40px; border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; font-size: 20px; line-height: 1; color: #334155; cursor: pointer; }
+
+/* ============ Prayer ranking (admin tab + teacher sheet) ============ */
+.k8-rank-wrap { background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 16px; }
+.k8-tier-tools { flex-wrap: wrap; }
+.k8-rank-q { flex: 1 1 180px; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid #e2e8f0; border-radius: 10px; font: inherit; font-size: 14px; background: #fff; }
+.k8-rank-sum { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.k8-rank-sum > div { background: #f8fafc; border-radius: 12px; padding: 8px 6px; text-align: center; display: flex; flex-direction: column; }
+.k8-rank-sum b { font-size: 18px; line-height: 1.2; }
+.k8-rank-sum span { font-size: 11px; opacity: .8; }
+@media (max-width: 600px) { .k8-rank-sum { grid-template-columns: repeat(4, minmax(0, 1fr)); } .k8-rank-sum > div:nth-child(-n+2) { grid-column: span 2; } }
+.k8-podium { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 8px; align-items: end; margin: 6px 0 10px; }
+.k8-pod { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 10px 6px 0; min-width: 0; }
+.k8-pod b { font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-pod small { font-size: 11px; color: #64748b; }
+.k8-pod-medal { font-size: 26px; line-height: 1; }
+.k8-pod-score { font-size: 20px; font-weight: 700; color: #0f172a; }
+.k8-pod-bar { width: 100%; border-radius: 12px 12px 0 0; color: #fff; font-size: 12px; font-weight: 600; display: flex; align-items: flex-start; justify-content: center; padding-top: 6px; }
+.k8-pod-1 .k8-pod-bar { height: 64px; background: linear-gradient(#f59e0b, #d97706); }
+.k8-pod-2 .k8-pod-bar { height: 46px; background: linear-gradient(#94a3b8, #64748b); }
+.k8-pod-3 .k8-pod-bar { height: 34px; background: linear-gradient(#d97706, #92400e); }
+.k8-rank-note { font-size: 12px; color: #64748b; margin: 0 0 8px; line-height: 1.5; }
+.k8-rank-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.k8-rank-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid #eef2f7; border-radius: 14px; background: #fff; }
+.k8-rank-row.is-top { background: #fffbeb; border-color: #fde68a; }
+.k8-rank-no { font-weight: 700; font-size: 16px; color: #334155; text-align: center; }
+.k8-rank-who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.k8-rank-who b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-rank-who small { font-size: 12px; color: #64748b; }
+.k8-rank-stats { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.k8-rank-stats i { font-style: normal; font-size: 11px; padding: 1px 7px; border-radius: 999px; }
+.k8-rank-stats .ok { background: #f0fdf4; color: #15803d; } .k8-rank-stats .late { background: #fffbeb; color: #b45309; }
+.k8-rank-stats .miss { background: #fef2f2; color: #b91c1c; } .k8-rank-stats .ex { background: #eff6ff; color: #1d4ed8; }
+.k8-rank-bar { height: 5px; border-radius: 99px; background: #f1f5f9; overflow: hidden; margin-top: 4px; }
+.k8-rank-bar span { display: block; height: 100%; border-radius: 99px; }
+.k8-rank-score { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.k8-rank-score b { font-size: 18px; color: #0f172a; }
+.k8-rank-tier { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 6px; }
+.k8-rank-more { display: block; width: 100%; margin-top: 10px; height: 40px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #fff; font: inherit; color: #1d4ed8; cursor: pointer; }
+.k8-podium { max-width: 520px; margin-left: auto; margin-right: auto; }
+
+/* ============ Student desktop / tablet top bar (≥993px) ============ */
+@media (min-width: 993px) {
+  .app-header { background: rgba(255,255,255,.92) !important; backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid #e2e8f0 !important; box-shadow: none !important; }
+  .app-header .desktop-nav { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; gap: 4px !important; }
+  .app-header .desktop-nav .nav-link { display: inline-flex !important; align-items: center; gap: 8px; height: 40px; padding: 0 14px !important; border-radius: 12px !important; border: 0 !important; background: transparent !important; color: #475569 !important; font-size: 14px !important; font-weight: 500 !important; box-shadow: none !important; transition: background .15s, color .15s; }
+  .app-header .desktop-nav .nav-link:hover { background: #f1f5f9 !important; color: #0f172a !important; }
+  .app-header .desktop-nav .nav-link.active { background: #eff6ff !important; color: #1d4ed8 !important; font-weight: 600 !important; }
+  .app-header .desktop-nav .nav-link svg { flex: none; }
+  .app-header .desktop-nav .nav-link:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+}
+
+/* ---- Teacher grades: grid mode (score per student per piece) ---- */
+.tg-mode { display: flex; gap: 4px; padding: 4px; margin: 10px 0; background: #f1f5f9; border-radius: 12px; }
+.tg-mode button { flex: 1; height: 36px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; }
+.tg-mode button[aria-selected="true"] { background: #fff; color: #5b21b6; font-weight: 600; box-shadow: 0 1px 3px rgba(15,23,42,.1); }
+.tg-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
+.tg-grid { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 13px; }
+.tg-grid th, .tg-grid td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; text-align: center; white-space: nowrap; }
+.tg-grid thead th { position: sticky; top: 0; background: #f8fafc; font-weight: 600; color: #334155; z-index: 1; }
+.tg-grid thead th span { display: block; max-width: 110px; overflow: hidden; text-overflow: ellipsis; margin: 0 auto; }
+.tg-grid thead small { display: block; font-weight: 400; color: #64748b; font-size: 11px; }
+.tg-grid .tg-grid-name { position: sticky; left: 0; background: #fff; text-align: left; min-width: 150px; max-width: 200px; z-index: 2; box-shadow: 1px 0 0 #e2e8f0; }
+.tg-grid thead .tg-grid-name { background: #f8fafc; z-index: 3; }
+.tg-grid tbody .tg-grid-name b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.tg-grid tbody .tg-grid-name small { color: #64748b; font-weight: 400; }
+.tg-grid td input { width: 58px; height: 36px; border: 1px solid #e2e8f0; border-radius: 9px; text-align: center; font: inherit; font-size: 14px; background: #fff; }
+.tg-grid td input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.15); }
+.tg-grid td input.is-bad { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
+.tg-grid .tg-grid-sum { font-weight: 700; color: #5b21b6; background: #faf5ff; }
+.tg-grid tbody tr:last-child > * { border-bottom: 0; }

@@ -740,7 +740,7 @@ function onKhatamInputChange() {
 }
 
 // ==================== HASANAT DATE NAVIGATOR & MANAGEMENT ==================== //
-let hasanatSelectedDate = new Date().toISOString().split('T')[0];
+let hasanatSelectedDate = new Date().toLocaleDateString('sv-SE');
 
 function triggerHasanatDatePicker() {
   const picker = document.getElementById('hasanatDatePicker');
@@ -763,7 +763,7 @@ function initHasanatDateControls() {
 
   if (picker) picker.value = hasanatSelectedDate;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   const d = new Date(hasanatSelectedDate + 'T00:00:00');
   
   if (display) {
@@ -806,13 +806,13 @@ function initHasanatDateControls() {
 function shiftHasanatDate(offsetDays) {
   const cur = new Date(hasanatSelectedDate + 'T00:00:00');
   cur.setDate(cur.getDate() + offsetDays);
-  hasanatSelectedDate = cur.toISOString().split('T')[0];
+  hasanatSelectedDate = cur.toLocaleDateString('sv-SE');
   initHasanatDateControls();
   initHasanatView();
 }
 
 function setHasanatTodayDate() {
-  hasanatSelectedDate = new Date().toISOString().split('T')[0];
+  hasanatSelectedDate = new Date().toLocaleDateString('sv-SE');
   initHasanatDateControls();
   initHasanatView();
 }
@@ -831,7 +831,7 @@ function initHasanatView() {
   if (!h) return;
 
   h.dailyLogs = h.dailyLogs || {};
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   const dayLog = h.dailyLogs[hasanatSelectedDate] || null;
 
   // 1. Quran tab
@@ -1116,7 +1116,7 @@ function saveQuranReadingLog() {
   }
 
   const stars = jComp; // 1 ยุซ = 1 ดาวในชั้นวาง
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
 
   const h = getStudentHasanat(currentStudent.studentId);
   h.dailyLogs = h.dailyLogs || {};
@@ -1492,7 +1492,7 @@ function saveSurahMemorizationLog() {
     studentId: currentStudent.studentId,
     studentName: currentStudent.fullName,
     grade: currentStudent.grade,
-    date: hasanatSelectedDate || new Date().toISOString().split('T')[0],
+    date: hasanatSelectedDate || new Date().toLocaleDateString('sv-SE'),
     count: h.memorization.count,
     memorizedCount: h.memorization.count,
     memorizedSurahs: h.memorization.memorizedSurahs,
@@ -1533,7 +1533,7 @@ function calculateDailySunnahRakaat(shouldSave = false) {
 
   total += duha + witr + tahajjud;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   const isToday = (hasanatSelectedDate === todayStr);
 
   const badge = document.getElementById('todayTotalSunnahRakaatBadge');
@@ -1606,7 +1606,7 @@ function saveDailySunnahPrayersLog() {
   }
   const total = calculateDailySunnahRakaat(true);
   playSuccessSound();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   const d = new Date(hasanatSelectedDate + 'T00:00:00');
   const dStr = (hasanatSelectedDate === todayStr) ? 'วันนี้' : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
   showToast(`บันทึกการละหมาดสุนัต (${dStr}) สำเร็จ! (${total} ร็อกอะฮ์)`, 'success');
@@ -1675,7 +1675,7 @@ function renderPrayerHistory(filterDate = null) {
   const bottomInput = document.getElementById('filterPrayerDateBottom');
 
   const now = new Date();
-  const todayYMD = now.toISOString().split('T')[0];
+  const todayYMD = now.toLocaleDateString('sv-SE');
 
   // ถ้าไม่ได้ระบุวันที่ ให้เริ่มต้นด้วยวันปัจจุบันเสมอ (ตามคำขอของผู้ใช้ ป้องกันขึ้น วว/ดด/ปปปป)
   if (filterDate === null) {
@@ -2321,7 +2321,7 @@ function loadStoredData() {
   // 4. Load today prayers (Clean start - เก็บเฉพาะของวันนี้เท่านั้น วันเก่าจะถูกย้ายเข้าประวัติอัตโนมัติ)
   const savedPrayers = localStorage.getItem('khalifah_today_prayers');
   const initNow = new Date();
-  const initTodayYMD = initNow.toISOString().split('T')[0];
+  const initTodayYMD = initNow.toLocaleDateString('sv-SE');
   if (savedPrayers) {
     try {
       let parsed = JSON.parse(savedPrayers);
@@ -2565,7 +2565,7 @@ function formatMinutesToHHMM(totalMins) {
 function getStudentTodayPrayersList() {
   if (!currentStudent) return [];
   const now = new Date();
-  const todayYMD = now.toISOString().split('T')[0];
+  const todayYMD = now.toLocaleDateString('sv-SE');
   let hist = [];
   try {
     hist = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
@@ -3393,7 +3393,7 @@ function openPrayerLateApprovalModal(defaultSlot = null) {
   if (nameEl) nameEl.innerText = currentStudent.fullName || currentStudent.name || '-';
   if (idEl) idEl.innerText = currentStudent.studentId || '-';
   if (gradeEl) gradeEl.innerText = currentStudent.grade || '-';
-  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  if (dateEl) dateEl.value = new Date().toLocaleDateString('sv-SE');
 
   // เลือก Slot เวลาละหมาดเริ่มต้น
   let slotToSelect = defaultSlot || selectedPrayerTime;
@@ -4132,7 +4132,7 @@ function exportPrayerApprovalsToExcel() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "คำขออนุมัติละหมาดย้อนหลัง");
-    const fileName = `Prayer_Approvals_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `Prayer_Approvals_${new Date().toLocaleDateString('sv-SE')}.xlsx`;
     XLSX.writeFile(wb, fileName);
     showToast('ส่งออกไฟล์ Excel สำเร็จ', 'success');
   } catch (err) {
@@ -4402,7 +4402,7 @@ async function executePrayerCaptureStep2() {
   const now = new Date();
   const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('th-TH');
-  const todayYMD = now.toISOString().split('T')[0];
+  const todayYMD = now.toLocaleDateString('sv-SE');
 
   const boxHeight = Math.round(canvas.height * 0.22);
   ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
@@ -4700,7 +4700,7 @@ function captureAndRecordPrayer() {
     status: prayerStatus,
     note: prayerNote,
     timestamp: now.toISOString(),
-    date: now.toISOString().split('T')[0],
+    date: now.toLocaleDateString('sv-SE'),
     time: timeStr,
     latitude: verifiedLocation.lat,
     longitude: verifiedLocation.lng,
@@ -4988,7 +4988,7 @@ async function savePrayerNoteOnly() {
   }
 
   const now = new Date();
-  const dateStr = now.toISOString().split('T')[0];
+  const dateStr = now.toLocaleDateString('sv-SE');
   const timeStr = now.toLocaleTimeString('th-TH');
 
   const lat = verifiedLocation ? verifiedLocation.lat : 6.78652;
@@ -5560,7 +5560,7 @@ function renderPrayerBarChart() {
     for (let i = 0; i < 7; i++) {
       const targetDate = new Date(monday);
       targetDate.setDate(monday.getDate() + i);
-      const ymd = targetDate.toISOString().split('T')[0];
+      const ymd = targetDate.toLocaleDateString('sv-SE');
       const uniquePrayers = new Set();
       combined.forEach(p => {
         const pDate = p.date || (p.timestamp ? p.timestamp.split('T')[0] : '');
@@ -5776,7 +5776,7 @@ function renderCurrentStudentProfile() {
 
   // Real stats calculation (คำนวณจำนวนเวลาละหมาดที่บันทึกครบถ้วนตามจริง ไม่ซ้ำซ้อน)
   const prayerSlotsRecorded = new Set();
-  const todayYMD = new Date().toISOString().split('T')[0];
+  const todayYMD = new Date().toLocaleDateString('sv-SE');
   let hList = [];
   try { hList = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]'); } catch(e) { hList = []; }
   [...todayPrayers, ...hList].forEach(p => {
@@ -7016,7 +7016,7 @@ function handleTeacherRegister() {
     status: 'PendingAdmin',
     approvalStatus: 'PendingAdmin',
     otpCode: otpCode,
-    createdAt: new Date().toISOString().split('T')[0]
+    createdAt: new Date().toLocaleDateString('sv-SE')
   };
 
 
@@ -7948,7 +7948,7 @@ function openStudentQuickStatusModal(studentId) {
   if (gradeEl) gradeEl.innerText = student.grade || '-';
 
   const curStatus = student.status || 'ปกติ (กำลังศึกษา)';
-  const curDate = student.statusEffectiveDate || student.statusDate || new Date().toISOString().split('T')[0];
+  const curDate = student.statusEffectiveDate || student.statusDate || new Date().toLocaleDateString('sv-SE');
   const curNote = student.statusNote || '';
 
   if (currentBadgeEl) {
@@ -7972,7 +7972,7 @@ async function submitQuickStudentStatusChange() {
   if (!hiddenId || !hiddenId.value) return;
   const targetId = hiddenId.value;
   const newStatus = selectEl ? selectEl.value : 'ปกติ (กำลังศึกษา)';
-  const effectiveDate = (dateEl && dateEl.value) ? dateEl.value : new Date().toISOString().split('T')[0];
+  const effectiveDate = (dateEl && dateEl.value) ? dateEl.value : new Date().toLocaleDateString('sv-SE');
   const note = noteEl ? noteEl.value.trim() : '';
 
   const sIdx = allStudents.findIndex(s => isIdMatch(s.studentId, targetId));
@@ -8436,7 +8436,7 @@ function executeBatchPromotion() {
   }
 
   const isGraduating = (toGrade === 'สำเร็จการศึกษา' || String(toGrade).includes('สำเร็จ'));
-  const todayStr = new Date().toISOString().substring(0, 10);
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   let count = 0;
 
   allStudents.forEach(s => {
@@ -8589,7 +8589,7 @@ function executeSingleStudentPromotion() {
   }
 
   const isGraduating = (toGrade === 'สำเร็จการศึกษา' || String(toGrade).includes('สำเร็จ'));
-  const todayStr = new Date().toISOString().substring(0, 10);
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   const oldGrade = s.grade;
   s.grade = toGrade;
   if (isGraduating) {
@@ -8632,7 +8632,7 @@ function executeFullSchoolBatchPromotion() {
     return;
   }
 
-  const todayStr = new Date().toISOString().substring(0, 10);
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   let countM6 = 0, countM5 = 0, countM4 = 0, countM3 = 0, countM2 = 0, countM1 = 0;
 
   // Process in strict top-down order to prevent double promotion
@@ -8817,7 +8817,7 @@ function submitQuickAddSubAdmin() {
     assignedSubjects: finalSubjects,
     status: 'Active',
     approvalStatus: 'Verified',
-    createdAt: new Date().toISOString().split('T')[0]
+    createdAt: new Date().toLocaleDateString('sv-SE')
   };
 
   const localRecord = { ...recordData };
@@ -8976,7 +8976,7 @@ function submitAddSubAdmin() {
     assignedSubjects: finalSubjects,
     status: 'Active',
     approvalStatus: 'Verified',
-    createdAt: new Date().toISOString().split('T')[0]
+    createdAt: new Date().toLocaleDateString('sv-SE')
   };
 
   if (!pass) delete recordData.password; // แก้ไขโดยไม่เปลี่ยนรหัสผ่าน: เซิร์ฟเวอร์คงรหัสเดิม
@@ -9263,7 +9263,7 @@ function initTeacherPortalView() {
   const heroAvatar = document.getElementById('teacherHeroAvatar');
   const chipsContainer = document.getElementById('teacherAssignedSubjectsChips');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   if (dateInput && !dateInput.value) {
     dateInput.value = todayStr;
   }
@@ -9405,7 +9405,7 @@ function renderTeacherOverviewBento() {
   const subjectsOverviewEl = document.getElementById('bentoGradesSubjectsOverview');
   const upcomingEventsEl = document.getElementById('bentoUpcomingEventsList');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   if (dateLabel) {
     dateLabel.innerText = `ข้อมูลประจำวันที่ ${formatThaiDateDisplay(todayStr)}`;
   }
@@ -9520,14 +9520,14 @@ function shiftTeacherAttDate(offsetDays) {
   if (!dateInput) return;
   const cur = dateInput.value ? new Date(dateInput.value) : new Date();
   cur.setDate(cur.getDate() + offsetDays);
-  dateInput.value = cur.toISOString().split('T')[0];
+  dateInput.value = cur.toLocaleDateString('sv-SE');
   renderTeacherAttendanceTable();
 }
 
 function setTeacherAttDateToday() {
   const dateInput = document.getElementById('teacherAttDateInput');
   if (!dateInput) return;
-  dateInput.value = new Date().toISOString().split('T')[0];
+  dateInput.value = new Date().toLocaleDateString('sv-SE');
   renderTeacherAttendanceTable();
 }
 
@@ -9540,7 +9540,7 @@ function renderTeacherAttendanceTable() {
   if (!tbody || !gradeSelect) return;
 
   const selectedGrade = gradeSelect.value || 'ALL';
-  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toLocaleDateString('sv-SE');
   const searchQuery = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
 
   // Reset attendance draft when date changes so historical data loads cleanly
@@ -9550,7 +9550,7 @@ function renderTeacherAttendanceTable() {
   }
 
   // Update History indicator badge and button text
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
   const historyIndicator = document.getElementById('teacherAttHistoryIndicator');
   const saveBtn = document.getElementById('btnSaveTeacherAttendance');
   if (saveBtn) {
@@ -9713,7 +9713,7 @@ function saveTeacherDailyAttendance() {
   if (!gradeSelect) return;
 
   const selectedGrade = gradeSelect.value || 'ALL';
-  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toLocaleDateString('sv-SE');
   const filtered = allStudents.filter(s => selectedGrade === 'ALL' || !selectedGrade || s.grade === selectedGrade);
 
   if (filtered.length === 0) {
@@ -10407,7 +10407,7 @@ function initExportDateDefaults() {
   const start = document.getElementById('exportStartDate');
   const end = document.getElementById('exportEndDate');
   if (start && end) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv-SE');
     start.value = today;
     end.value = today;
   }
@@ -10456,7 +10456,7 @@ function exportToExcel() {
   const wsPrayers = XLSX.utils.json_to_sheet(prayerRows);
   XLSX.utils.book_append_sheet(wb, wsPrayers, 'บันทึกการละหมาด');
 
-  XLSX.writeFile(wb, `รายงาน_Khalifah_Program_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.writeFile(wb, `รายงาน_Khalifah_Program_${new Date().toLocaleDateString('sv-SE')}.xlsx`);
   showToast('ส่งออกไฟล์ Excel สำเร็จ', 'success');
 }
 
@@ -10515,7 +10515,7 @@ function exportToWord() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `รายงาน_Khalifah_Program_${new Date().toISOString().split('T')[0]}.doc`;
+  a.download = `รายงาน_Khalifah_Program_${new Date().toLocaleDateString('sv-SE')}.doc`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -10680,7 +10680,7 @@ async function forceSyncAllToGoogleSheet() {
       studentId: stId,
       studentName: student ? student.fullName : '',
       grade: student ? student.grade : '',
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('sv-SE'),
       quran: h.quran,
       memorization: h.memorization,
       sunnah: h.sunnah,
@@ -11301,7 +11301,7 @@ function handleQrCodeDetected(qrData) {
       activityId: actId,
       title: actTitle,
       type: 'ทั่วไป',
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('sv-SE'),
       location: 'โรงเรียน/สถาบัน',
       checkedIn: true
     };
@@ -11530,7 +11530,7 @@ function adminQuickFillActivity(presetKey) {
   if (titleEl) titleEl.value = preset.title;
   if (typeEl) typeEl.value = preset.type;
   if (locEl) locEl.value = preset.location;
-  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  if (dateEl) dateEl.value = new Date().toLocaleDateString('sv-SE');
 
   showToast(`เลือกเทมเพลต "${preset.title}" แล้ว สามารถกด "บันทึกกิจกรรม" ได้ทันที`, 'info');
   if (titleEl) titleEl.focus();
@@ -11540,7 +11540,7 @@ function adminCreateNewActivity() {
   const title = document.getElementById('newActTitle').value.trim();
   const type = document.getElementById('newActType').value;
   const location = document.getElementById('newActLocation').value.trim() || 'มัสยิดอัลฮารอมัยน์';
-  const date = document.getElementById('newActDate').value || new Date().toISOString().split('T')[0];
+  const date = document.getElementById('newActDate').value || new Date().toLocaleDateString('sv-SE');
 
   if (!title) {
     showToast('กรุณากรอกชื่อกิจกรรม', 'warning');
@@ -11979,7 +11979,7 @@ async function syncAllDataFromCloud(showToastMsg = false) {
     // 5. ซิงค์บันทึกเวลาละหมาด (Prayers)
     if (Array.isArray(db.prayers) && db.prayers.length > 0) {
       localStorage.setItem('khalifah_prayer_history', JSON.stringify(db.prayers));
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = new Date().toLocaleDateString('sv-SE');
       todayPrayers = db.prayers.filter(p => p.date === todayStr);
       localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
     }
@@ -12129,7 +12129,7 @@ async function fetchActivitiesAndLogsFromCloud(showToastMsg = false) {
           title: cTitle || 'กิจกรรม',
           type: cloudAct.type || 'ทั่วไป',
           location: cloudAct.location || 'มัสยิดอัลฮารอมัยน์',
-          date: cloudAct.date || new Date().toISOString().split('T')[0],
+          date: cloudAct.date || new Date().toLocaleDateString('sv-SE'),
           checkedIn: idx !== -1 ? Boolean(localActs[idx].checkedIn) : false
         };
         if (idx !== -1) {
@@ -12406,7 +12406,7 @@ function exportAttendeesToExcel() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "รายชื่อผู้เข้าร่วม");
-    const fileName = `รายชื่อเข้าร่วม_${actTitle.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `รายชื่อเข้าร่วม_${actTitle.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toLocaleDateString('sv-SE')}.xlsx`;
     XLSX.writeFile(wb, fileName);
     showToast('ดาวน์โหลดไฟล์ Excel เรียบร้อยแล้ว', 'success');
   } catch (err) {
@@ -12688,21 +12688,21 @@ function adminPrayerChangeDate(offsetDays) {
   let d = curVal ? new Date(curVal + 'T00:00:00') : new Date();
   if (isNaN(d.getTime())) d = new Date();
   d.setDate(d.getDate() + offsetDays);
-  dateInput.value = d.toISOString().split('T')[0];
+  dateInput.value = d.toLocaleDateString('sv-SE');
   renderAdminPrayerDailyDashboard();
 }
 
 function adminPrayerSetToday() {
   const dateInput = document.getElementById('adminPrayerDateSelect');
   if (!dateInput) return;
-  dateInput.value = new Date().toISOString().split('T')[0];
+  dateInput.value = new Date().toLocaleDateString('sv-SE');
   renderAdminPrayerDailyDashboard();
 }
 
 function initAdminPrayerDashboard() {
   const dateInput = document.getElementById('adminPrayerDateSelect');
   if (dateInput && !dateInput.value) {
-    dateInput.value = new Date().toISOString().split('T')[0];
+    dateInput.value = new Date().toLocaleDateString('sv-SE');
   }
 
   // Populate grade dropdown
@@ -12750,7 +12750,7 @@ function renderAdminPrayerDailyDashboard() {
   const slotsContainer = document.getElementById('adminPrayerSlotsGridContainer');
   const dateDisplay = document.getElementById('dailyPrayerDateDisplay');
 
-  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toLocaleDateString('sv-SE');
   const selectedGrade = gradeSelect ? gradeSelect.value : 'ALL';
 
   if (dateDisplay) {
@@ -13041,7 +13041,7 @@ function renderAdminStudentPrayerHistory() {
   // Last 30 days calculation
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const thirtyDaysStr = thirtyDaysAgo.toISOString().split('T')[0];
+  const thirtyDaysStr = thirtyDaysAgo.toLocaleDateString('sv-SE');
   let last30DaysCount = 0;
 
   studentPrayers.forEach(p => {
@@ -13140,7 +13140,7 @@ function exportAdminDailyPrayerToExcel() {
   }
 
   const dateInput = document.getElementById('adminPrayerDateSelect');
-  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+  const selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toLocaleDateString('sv-SE');
 
   const exportData = cachedDailyFilteredStudents.map((s, idx) => {
     const sid = cleanIdString(s.studentId);
@@ -13204,7 +13204,7 @@ function exportAdminStudentPrayerToExcel() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "ประวัติละหมาดรายคน");
-    const fileName = `ประวัติละหมาด_${stdName.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `ประวัติละหมาด_${stdName.replace(/[\/\\?%*:|"<>]/g, '_')}_${new Date().toLocaleDateString('sv-SE')}.xlsx`;
     XLSX.writeFile(wb, fileName);
     showToast('ดาวน์โหลดไฟล์ Excel ประวัตินักเรียนเรียบร้อยแล้ว', 'success');
   } catch (err) {
@@ -13237,7 +13237,7 @@ async function fetchPrayersFromCloud() {
         localHist = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
       } catch (e) { localHist = []; }
 
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = new Date().toLocaleDateString('sv-SE');
 
       json.data.forEach(cp => {
         const sid = cleanIdString(cp.studentId || '');
@@ -13783,7 +13783,7 @@ function exportStaffAttendeesToExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'ผู้เข้าร่วมกิจกรรม');
     const safeTitle = (act ? act.title : 'กิจกรรม').replace(/[^a-zA-Z0-9ก-๙_-]/g, '_');
-    XLSX.writeFile(wb, `ผู้เข้าร่วม_${safeTitle}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `ผู้เข้าร่วม_${safeTitle}_${new Date().toLocaleDateString('sv-SE')}.xlsx`);
     showToast('ส่งออกไฟล์ Excel สำเร็จ!', 'success');
   } catch (err) {
     console.error('Export error:', err);
@@ -13812,7 +13812,7 @@ if (document.readyState === 'loading') {
 let calendarEvents = [];
 let calCurrentMonth = new Date().getMonth();
 let calCurrentYear = new Date().getFullYear();
-let calSelectedDate = new Date().toISOString().split('T')[0];
+let calSelectedDate = new Date().toLocaleDateString('sv-SE');
 let calViewMode = localStorage.getItem('khalifah_cal_view_mode') || 'full'; // 'full' or 'split'
 let currentViewingEventId = null;
 
@@ -14091,7 +14091,7 @@ function resetCalendarToToday(scope) {
   const now = new Date();
   calCurrentMonth = now.getMonth();
   calCurrentYear = now.getFullYear();
-  calSelectedDate = now.toISOString().split('T')[0];
+  calSelectedDate = now.toLocaleDateString('sv-SE');
   renderCalendar('all');
 }
 
@@ -14424,7 +14424,7 @@ function renderCalendar(targetScope = 'all') {
   const daysInMonth = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
   const prevMonthDays = new Date(calCurrentYear, calCurrentMonth, 0).getDate();
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString('sv-SE');
 
   scopes.forEach(scope => {
     const gridEl = document.getElementById(`calDaysGrid-${scope}`);
@@ -15416,7 +15416,7 @@ function openCalendarEventModal(eventId = null, defaultDate = null) {
     populateCalTargetTeachers();
     if (targetTeacherInput) targetTeacherInput.value = 'ALL';
 
-    const initDate = defaultDate || calSelectedDate || new Date().toISOString().split('T')[0];
+    const initDate = defaultDate || calSelectedDate || new Date().toLocaleDateString('sv-SE');
     if (sDateInput) sDateInput.value = initDate;
     if (eDateInput) eDateInput.value = '';
     if (sTimeInput) sTimeInput.value = '08:30';

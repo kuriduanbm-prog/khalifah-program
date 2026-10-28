@@ -1188,6 +1188,7 @@ function routeRequest_(action, req, method) {
       }
     }
 
+    stripMarkup_(req, 0);
     const data = (req.data && typeof req.data === 'object') ? req.data : req;
     if (data && data.token) delete data.token;
 
@@ -1200,6 +1201,17 @@ function routeRequest_(action, req, method) {
     Logger.log('routeRequest_ error [' + action + ']: ' + (error && error.stack ? error.stack : error));
     return { success: false, error: String(error && error.message ? error.message : error) };
   }
+}
+
+/** กัน XSS: ตัดเครื่องหมาย < > ออกจากข้อความทุกช่องที่ส่งเข้ามา (ยกเว้นรหัสผ่าน) ก่อนบันทึกลงชีต */
+const MARKUP_SKIP_KEYS_ = { password: 1, newPassword: 1, oldPassword: 1, token: 1 };
+function stripMarkup_(obj, depth) {
+  if (!obj || typeof obj !== 'object' || depth > 6) return;
+  Object.keys(obj).forEach(function (k) {
+    const v = obj[k];
+    if (typeof v === 'string') { if (!MARKUP_SKIP_KEYS_[k] && /[<>]/.test(v)) obj[k] = v.replace(/[<>]/g, ''); }
+    else if (v && typeof v === 'object') stripMarkup_(v, depth + 1);
+  });
 }
 
 /** สำหรับนักเรียน: บังคับให้ใช้รหัสของตนเองเสมอ */
@@ -1376,7 +1388,7 @@ function dispatchAction_(action, req, data, session, ctx) {
       }
       return savePrayerLateRequest(data);
     case 'updateStudentGrade':
-      return updateStudentGrade(ownStudentId_(session, ctx, pick('studentId')), pick('newGrade') || pick('grade'));
+      return updateStudentGrade(ownStudentId_(session, ctx, pick('studentId')), pick('newGrade') || pick('grade'), isStudent);
 
     // ---------- บุคลากร ----------
     case 'registerStudent':
@@ -2137,13 +2149,30 @@ function loginStudent(studentId, passOrPhone) {
   return { success: false, field: 'id', message: 'ไม่พบรหัสนักเรียนนี้ในระบบ' };
 }
 
-function updateStudentGrade(studentId, newGrade) {
+const GRADE_LEVELS_ = ['มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3', 'มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'];
+function gradeIndex_(g) {
+  const s = cleanVal(g);
+  let i = GRADE_LEVELS_.indexOf(s);
+  if (i === -1) { const m = s.match(/^ม\.?\s*([1-6])$/); if (m) i = Number(m[1]) - 1; }
+  return i;
+}
+function updateStudentGrade(studentId, newGrade, selfService) {
+  const target = gradeIndex_(newGrade);
+  if (target === -1) return { success: false, message: 'ระดับชั้นไม่ถูกต้อง' };
+  newGrade = GRADE_LEVELS_[target];
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.STUDENTS);
   const rows = sheet.getDataRange().getValues();
 
   for (let i = 1; i < rows.length; i++) {
     if (isCodeMatch(rows[i][0], studentId)) {
+      if (selfService) {
+        // นักเรียนเลื่อนชั้นตัวเองได้ครั้งละ 1 ชั้นเท่านั้น (ห้ามข้ามชั้นหรือย้อนชั้น)
+        const cur = gradeIndex_(rows[i][3]);
+        if (cur !== -1 && target !== cur && target !== cur + 1) {
+          return { success: false, code: 'FORBIDDEN', message: 'เลื่อนชั้นได้ครั้งละ 1 ชั้นเท่านั้น หากต้องการเปลี่ยนมากกว่านี้ กรุณาติดต่อแอดมิน' };
+        }
+      }
       sheet.getRange(i + 1, 4).setValue(newGrade);
       return { success: true, message: 'อัปเดตชั้นปีเป็น ' + newGrade + ' เรียบร้อยแล้ว' };
     }
@@ -4000,7 +4029,7 @@ function verifyUserOtp(data) {
   if (!/^\d{6}$/.test(enteredOtp)) {
     return { success: false, message: 'กรุณากรอกรหัสยืนยัน 6 หลักให้ครบถ้วน' };
   }
-  const rlKey = 'otp_' + (userId || reqId).toLowerCase();
+  let rlKey = 'otp_' + (userId || reqId).toLowerCase();
   if (loginLocked_(rlKey)) return { success: false, locked: true, message: LOCKED_MESSAGE };
 
   const rows = sheet.getDataRange().getValues();
@@ -4013,6 +4042,8 @@ function verifyUserOtp(data) {
 
     const matchUser = (reqId && rReqId === reqId) || (userId && isCodeMatch(rUserId, userId) && (!role || rRole === role));
     if (!matchUser) continue;
+    // นับการเดาผิดตามคำขอจริง ไม่ว่าจะอ้างด้วยรหัสคำขอหรือรหัสผู้ใช้ (กันสลับวิธีอ้างเพื่อเดาต่อ)
+    if (rReqId) { rlKey = 'otp_req_' + rReqId.toLowerCase(); if (loginLocked_(rlKey)) return { success: false, locked: true, message: LOCKED_MESSAGE }; }
 
     if (rStatus === 'PendingAdmin') {
       return {
