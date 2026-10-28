@@ -2832,7 +2832,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.5';
+  const APP_VERSION = '10.6';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3244,10 +3244,14 @@ window.k8RegBirthChange = function (v) {
   // ---------- นักเรียน: กล่องคะแนนพฤติกรรมหน้าแรก ----------
   let mine = null;
   try { mine = JSON.parse(localStorage.getItem('khalifah_behavior_me') || 'null'); } catch (e) {}
-  function myScore() { if (!mine) return 100; const t = mine.term || term(); return clamp(100 + (mine.logs || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t)).reduce((a, l) => a + (Number(l.points) || 0), 0)); }
+  const curSid = () => { try { return currentStudent ? norm(currentStudent.studentId) : ''; } catch (e) { return ''; } };
+  const mineOk = () => !!mine && (!mine.sid || mine.sid === curSid());
+  function myScore() { if (!mineOk()) return null; const t = mine.term || term(); return clamp(100 + (mine.logs || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t)).reduce((a, l) => a + (Number(l.points) || 0), 0)); }
   function paintMine() {
     const el = document.getElementById('hfBehScore'); if (!el) return;
-    const sc = myScore(); const lv = level(sc);
+    const sc = myScore();
+    if (sc == null) { el.textContent = '…'; const sub0 = document.getElementById('hfBehSub'); if (sub0) sub0.textContent = 'กำลังโหลดคะแนนล่าสุด'; const lv0 = document.getElementById('hfBehLv'); if (lv0) lv0.textContent = ''; return; }
+    const lv = level(sc);
     el.textContent = sc;
     const box = document.getElementById('hfBeh'); if (box) box.setAttribute('aria-label', 'คะแนนพฤติกรรม ' + sc + ' จาก 100 · ' + lv[0]);
     const ring = document.getElementById('hfBehRing'); if (ring) { ring.style.setProperty('--p', sc); ring.style.setProperty('--c', lv[1]); }
@@ -3261,7 +3265,7 @@ window.k8RegBirthChange = function (v) {
     let st = null; try { st = currentStudent; } catch (e) {}
     if (!st || (!force && Date.now() - mineAt < 15000)) { paintMine(); return; }
     mineAt = Date.now();
-    try { const r = await api('getMyBehavior'); if (r && r.success) { if (r.term) serverTerm = r.term; mine = { logs: r.logs || [], term: r.term }; try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} } } catch (e) {}
+    try { const r = await api('getMyBehavior'); if (r && r.success) { if (r.term) serverTerm = r.term; mine = { logs: r.logs || [], term: r.term, sid: curSid() }; try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} } } catch (e) {}
     paintMine();
   }
   window.k8BehOpenMine = function () {
@@ -3270,9 +3274,9 @@ window.k8RegBirthChange = function (v) {
     const logs = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
     document.getElementById('k8BhModalTitle').textContent = 'คะแนนพฤติกรรมของฉัน';
     document.getElementById('k8BhModalSub').textContent = window.k8Term().label + ' · เริ่มต้น 100 คะแนน';
-    document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), logs) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>';
+    document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore() == null ? 100 : myScore(), logs) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>';
     openModal('k8BhModal');
-    if (st) loadMine(true).then(() => { if (document.getElementById('k8BhModal').classList.contains('open')) { const t2 = (mine && mine.term) || term(); const l2 = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t2).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date))); document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore(), l2) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>'; } });
+    if (st) loadMine(true).then(() => { if (document.getElementById('k8BhModal').classList.contains('open')) { const t2 = (mine && mine.term) || term(); const l2 = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t2).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date))); document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore() == null ? 100 : myScore(), l2) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>'; } });
   };
 
   // ---------- บัญชีผู้ตรวจการ: ล็อกไว้ที่หน้าผู้ตรวจการเท่านั้น ----------
@@ -3306,6 +3310,8 @@ window.k8RegBirthChange = function (v) {
   if (document.readyState === 'complete') setTimeout(boot, 0); else window.addEventListener('load', () => setTimeout(boot, 0));
   // ข้อมูลสด: เมื่อมีการเปลี่ยนแปลงจากเครื่องอื่น ให้โหลดใหม่ตอนเปิดหน้าอีกครั้ง
   document.addEventListener('visibilitychange', () => { if (document.hidden) return; if (isInspector()) load(true); else loadMine(false); });
+  // แสดงคะแนนล่าสุดที่จำไว้ในเครื่องทันทีตอนเปิดแอป แล้วค่อยอัปเดตจากเซิร์ฟเวอร์
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(paintMine, 0)); else paintMine();
   window.k8BehaviorReload = function () { if (isInspector() || (document.getElementById('k8BhAdmin') && document.getElementById('k8BhAdmin').offsetParent)) load(true); loadMine(true); };
   document.addEventListener('k8-term-changed', () => { paintMine(); render(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMine(true); });
