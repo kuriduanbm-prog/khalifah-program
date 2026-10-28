@@ -291,7 +291,7 @@ function initializeSheets() {
 
   if (sheetAdmins.getLastRow() === 1) {
     sheetAdmins.appendRow([
-      'ADM001', 'admin', hashPassword_(getMasterPassword_()), 'ผู้ดูแลระบบหลัก (Master Administrator)', 'SuperAdmin',
+      'ADM001', 'admin', hashPassword_(getMasterPassword_() || Utilities.getUuid()), 'ผู้ดูแลระบบหลัก (Master Administrator)', 'SuperAdmin',
       '0800000000', 'admin@khalifah.local', 'ใช้งานปกติ', Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"), 'ระบบสร้างขึ้นอัตโนมัติ'
     ]);
     const rIdx = sheetAdmins.getLastRow();
@@ -776,7 +776,7 @@ function formatAttendanceStatusThai(status) {
 //  - รหัสผ่านอาจารย์/แอดมินถูกเก็บเป็นค่าแฮช (sha256$...) อัตโนมัติเมื่อเข้าสู่ระบบสำเร็จ
 // =====================================================================
 
-const LEGACY_MASTER_ADMIN_PASS = '096909'; // ใช้เฉพาะกรณียังไม่ได้ตั้ง Script Property (ควรตั้งทันที)
+const LEGACY_MASTER_ADMIN_PASS = '096909'; // รหัสเก่าที่เคยหลุดใน GitHub — ถูกปฏิเสธเสมอ ห้ามใช้อีก
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const ADMIN_ROLE_VALUES = ['superadmin', 'admin', 'ผู้ดูแลระบบหลัก', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ'];
 const LOGIN_MAX_FAILS = 8;          // ล็อกชั่วคราวหลังกรอกผิดติดกัน
@@ -817,7 +817,7 @@ function setupSecurity() {
   }
   bumpDataVersion_();
   const msg = 'ตั้งค่าความปลอดภัยสำเร็จ: แฮชรหัสผ่าน ' + hashed + ' บัญชี' +
-    (isUsingLegacyMaster_() ? ' ⚠️ ยังไม่ได้ตั้ง MASTER_ADMIN_PASS ใน Script Properties — ระบบยังใช้รหัสเดิมอยู่ กรุณาตั้งทันที' : ' ✅ ใช้รหัสแอดมินหลักจาก Script Properties');
+    (isUsingLegacyMaster_() ? ' ❌ ยังไม่ได้ตั้ง MASTER_ADMIN_PASS (หรือยังเป็นรหัสเก่า) — แอดมินหลักจะเข้าสู่ระบบไม่ได้จนกว่าจะตั้ง' : ' ✅ ใช้รหัสแอดมินหลักจาก Script Properties');
   Logger.log(msg);
   return msg;
 }
@@ -835,10 +835,24 @@ function setProp_(k, v) {
   PropertiesService.getScriptProperties().setProperty(k, String(v));
 }
 function getMasterPassword_() {
-  return getProp_('MASTER_ADMIN_PASS') || LEGACY_MASTER_ADMIN_PASS;
+  // ไม่มีรหัสสำรองอีกต่อไป: ถ้ายังไม่ตั้ง MASTER_ADMIN_PASS หรือยังตั้งเป็นรหัสเก่าที่หลุด แอดมินหลักจะเข้าสู่ระบบไม่ได้
+  const p = String(getProp_('MASTER_ADMIN_PASS') || '').trim();
+  if (!p || normalizePasswordInput_(p) === normalizePasswordInput_(LEGACY_MASTER_ADMIN_PASS)) return '';
+  return p;
 }
 function isUsingLegacyMaster_() {
-  return !getProp_('MASTER_ADMIN_PASS');
+  return !getMasterPassword_();
+}
+/** รันใน Apps Script เพื่อตรวจว่าตั้งรหัสแอดมินหลักถูกต้องหรือยัง (ไม่แสดงรหัส) */
+function checkSecurityStatus() {
+  const raw = String(getProp_('MASTER_ADMIN_PASS') || '');
+  let msg;
+  if (!raw) msg = '❌ ยังไม่พบ Script Property ชื่อ MASTER_ADMIN_PASS (ตรวจตัวสะกด/ช่องว่าง) — ตอนนี้แอดมินหลักเข้าสู่ระบบไม่ได้';
+  else if (!getMasterPassword_()) msg = '❌ MASTER_ADMIN_PASS ยังเป็นรหัสเก่า 096909 — กรุณาเปลี่ยนเป็นรหัสใหม่';
+  else msg = '✅ ตั้ง MASTER_ADMIN_PASS แล้ว (ยาว ' + raw.trim().length + ' ตัวอักษร) — รหัสเก่า 096909 ใช้ไม่ได้แล้ว';
+  const keys = PropertiesService.getScriptProperties().getKeys().join(', ');
+  Logger.log(msg + '\nชื่อ Script Properties ที่มีอยู่: ' + keys);
+  return msg;
 }
 function getTokenSecret_() {
   let s = getProp_('TOKEN_SECRET');
@@ -2835,7 +2849,8 @@ function verifyAdminLogin(password, username) {
   if (loginLocked_(rlKey)) return { success: false, locked: true, message: LOCKED_MESSAGE };
 
   // 1) แอดมินหลัก (Master)
-  if ((!targetUser || targetUser === 'masteradmin') && safeEquals_(normalizePasswordInput_(pass), normalizePasswordInput_(getMasterPassword_()))) {
+  const masterPass = getMasterPassword_();
+  if ((!targetUser || targetUser === 'masteradmin') && masterPass && safeEquals_(normalizePasswordInput_(pass), normalizePasswordInput_(masterPass))) {
     loginSucceeded_(rlKey);
     const out = {
       success: true,
@@ -2845,14 +2860,17 @@ function verifyAdminLogin(password, username) {
       fullName: 'ผู้ดูแลระบบหลัก (Master Administrator)',
       approvalStatus: 'Verified'
     };
-    if (isUsingLegacyMaster_()) {
-      out.securityWarning = 'ระบบยังใช้รหัสแอดมินหลักค่าเริ่มต้นที่เคยเปิดเผยใน GitHub กรุณาตั้ง MASTER_ADMIN_PASS ใหม่ใน Apps Script > Project Settings > Script Properties ทันที';
-    }
     return out;
   }
   if (!targetUser) {
     loginFailed_(rlKey);
-    return { success: false, field: 'password', message: 'รหัสแอดมินหลักไม่ถูกต้อง' };
+    return { success: false, field: 'password', message: masterPass ? 'รหัสแอดมินหลักไม่ถูกต้อง' : 'ยังไม่ได้ตั้งรหัสแอดมินหลักใหม่ (MASTER_ADMIN_PASS) ในระบบหลังบ้าน' };
+  }
+
+  // รหัสเก่าที่เคยหลุดใน GitHub ใช้ไม่ได้กับทุกบัญชี
+  if (normalizePasswordInput_(pass) === normalizePasswordInput_(LEGACY_MASTER_ADMIN_PASS)) {
+    loginFailed_(rlKey);
+    return { success: false, field: 'password', message: 'รหัสผ่านนี้ถูกยกเลิกเพื่อความปลอดภัย กรุณาติดต่อผู้ดูแลระบบหลักเพื่อตั้งรหัสใหม่' };
   }
 
   ensureSchema();
