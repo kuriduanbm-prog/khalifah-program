@@ -784,7 +784,7 @@ function formatAttendanceStatusThai(status) {
 //  - รหัสผ่านอาจารย์/แอดมินถูกเก็บเป็นค่าแฮช (sha256$...) อัตโนมัติเมื่อเข้าสู่ระบบสำเร็จ
 // =====================================================================
 
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const SESSION_TTL_MS = 400 * 24 * 60 * 60 * 1000; // จำการเข้าสู่ระบบจนกว่าจะกดออกจากระบบเอง (ต่ออายุอัตโนมัติเมื่อใช้งาน)
 const ADMIN_ROLE_VALUES = ['superadmin', 'admin', 'subadmin', 'ผู้ดูแลระบบหลัก', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง'];
 const OWNER_ROLE_VALUES = ['superadmin', 'ผู้ดูแลระบบหลัก'];
 function isOwnerRole_(v) { return OWNER_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
@@ -1216,7 +1216,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'ping':
     case 'checkSpreadsheet':
     case 'getSpreadsheetInfo': {
-      const out = { success: true, status: 'online', version: SCHEMA_VERSION };
+      const out = { success: true, status: 'online', version: SCHEMA_VERSION, dataVersion: getDataVersion_() };
       if (ctx.isAdmin) {
         const ss = getSpreadsheet();
         out.spreadsheetName = ss ? ss.getName() : 'none';
@@ -1225,7 +1225,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return out;
     }
     case 'whoami':
-      return session ? { success: true, session: session } : { success: false, authRequired: true };
+      // ต่ออายุโทเค็นทุกครั้งที่แอปเปิด เพื่อให้อยู่ในระบบได้ต่อเนื่องจนกว่าจะออกจากระบบเอง
+      return session ? { success: true, session: { role: session.role, userId: session.userId, name: session.name, owner: !!session.owner }, token: issueToken_(session.role, session.userId, session.name, !!session.owner) } : { success: false, authRequired: true, code: 'AUTH_REQUIRED' };
 
     // ---------- เข้าสู่ระบบ ----------
     case 'loginStudent':

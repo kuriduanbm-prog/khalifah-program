@@ -54,7 +54,7 @@
   //  1) หน้าแรกแบบ F
   // ================================================================
   const k8HideGrades = () => { try { return localStorage.getItem('k8_pref_hideGrades') !== '0'; } catch (e) { return true; } };
-  const hfState = { period: 'week', gradesOpen: !k8HideGrades(), openSubj: null };
+  const hfState = { period: 'day', gradesOpen: !k8HideGrades(), openSubj: null };
   window.k8HfSetGradesOpen = function (v) { hfState.gradesOpen = !!v; if (!v) hfState.openSubj = null; try { window.renderHomeF(); } catch (e) {} };
 
   const SLOT_ORDER = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
@@ -2114,7 +2114,7 @@ window.k8RegBirthChange = function (v) {
   const K = [['present', 'มา', '#15803d', '#f0fdf4'], ['late', 'สาย', '#b45309', '#fffbeb'], ['leave', 'ลา', '#1d4ed8', '#eff6ff'], ['absent', 'ขาด', '#b91c1c', '#fef2f2']];
   const toKey = (st) => { st = String(st || ''); return /สาย|late/i.test(st) ? 'late' : /ลา|leave|excuse/i.test(st) ? 'leave' : /ขาด|absent/i.test(st) ? 'absent' : 'present'; };
   const sameId = (a, b) => String(a || '').replace(/^0+/, '') === String(b || '').replace(/^0+/, '');
-  const st = { period: 'week', offset: 0, filter: 'all' };
+  const st = { period: 'day', offset: 0, filter: 'all' };
   function range() {
     const t = new Date(); const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
     if (st.period === 'day') { const d = new Date(today); d.setDate(d.getDate() + st.offset); return { s: d, e: d, label: DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + (d.getFullYear() + 543) }; }
@@ -2184,7 +2184,7 @@ window.k8RegBirthChange = function (v) {
   const sameId = (a, b) => String(a || '').replace(/^0+/, '') === String(b || '').replace(/^0+/, '');
   const RAWATIB = [['subhBefore', 'ก่อนซุบฮิ', 2, true], ['dhuhrBefore', 'ก่อนซุฮริ', 4, true], ['dhuhrAfter', 'หลังซุฮริ', 2, true], ['asrBefore', 'ก่อนอัศริ', 4, false], ['maghribBefore', 'ก่อนมัฆริบ', 2, false], ['maghribAfter', 'หลังมัฆริบ', 2, true], ['ishaBefore', 'ก่อนอิชาอ์', 2, false], ['ishaAfter', 'หลังอิชาอ์', 2, true]];
   const EXTRA = [['duha', 'ดุฮา', [0, 2, 4, 6, 8]], ['witr', 'วิตร์', [0, 1, 3, 5, 7]], ['tahajjud', 'ตะฮัจญุด', [0, 2, 4, 6, 8]]];
-  const S = { tab: 'quran', date: null, add: 0, editPage: false, period: 'week', memFilter: 'all', memQ: '', sun: null, sunDate: null };
+  const S = { tab: 'quran', date: null, add: 0, editPage: false, period: 'day', memFilter: 'all', memQ: '', sun: null, sunDate: null };
   window.k8HasState = S;
 
   function stu() { try { return currentStudent || null; } catch (e) { return null; } }
@@ -2624,4 +2624,201 @@ window.k8RegBirthChange = function (v) {
     head.appendChild(b);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(addStaffButton, 0)); else setTimeout(addStaffButton, 0);
+})();
+
+/* ============ Round 10 · Toasts that never cover content ============ */
+(function () {
+  const ICON = {
+    success: '<path d="m5 12 4 4 10-10"/>',
+    error: '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/>',
+    warning: '<path d="M12 3 2 20h20zM12 10v4M12 17h.01"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'
+  };
+  const queue = []; let showing = null, timer = null, lastMsg = '', lastAt = 0;
+  function container() {
+    let c = document.getElementById('k8Toasts');
+    if (!c) { c = document.createElement('div'); c.id = 'k8Toasts'; c.setAttribute('role', 'status'); c.setAttribute('aria-live', 'polite'); document.body.appendChild(c); }
+    return c;
+  }
+  // วางเหนือแถบเมนูล่างที่มองเห็นอยู่ เพื่อไม่ให้บังหัวข้อหรือปุ่มเมนู
+  function placeAbove(c) {
+    let top = window.innerHeight;
+    document.querySelectorAll('nav, [class*="bottom-nav"], [class*="bnav"]').forEach((n) => {
+      const cs = getComputedStyle(n); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
+      const r = n.getBoundingClientRect(); if (r.height && r.bottom >= window.innerHeight - 2 && r.top > window.innerHeight * 0.6) top = Math.min(top, r.top);
+    });
+    c.style.setProperty('--k8-toast-b', (window.innerHeight - top + 12) + 'px');
+  }
+  function next() {
+    if (showing || !queue.length) return;
+    const { msg, type } = queue.shift();
+    const el = document.createElement('button'); el.type = 'button'; el.className = 'k8-toast is-' + type;
+    el.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICON[type] || ICON.info) + '</svg><span></span>';
+    el.querySelector('span').textContent = String(msg).replace(/<[^>]*>/g, '');
+    el.setAttribute('aria-label', el.textContent + ' (แตะเพื่อปิด)');
+    el.onclick = hide;
+    let sx = null; el.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+    el.addEventListener('touchend', (e) => { if (sx != null && Math.abs(e.changedTouches[0].clientX - sx) > 50) hide(); sx = null; }, { passive: true });
+    const c = container(); placeAbove(c); c.appendChild(el); showing = el;
+    requestAnimationFrame(() => el.classList.add('in'));
+    const dur = Math.min(6000, 2200 + String(msg).length * 35) + (type === 'error' ? 1500 : 0);
+    timer = setTimeout(hide, dur);
+  }
+  function hide() {
+    clearTimeout(timer); const el = showing; if (!el) return;
+    el.classList.remove('in'); el.classList.add('out');
+    setTimeout(() => { el.remove(); showing = null; next(); }, 200);
+  }
+  window.showToast = function (message, type) {
+    type = type || 'info';
+    const msg = String(message == null ? '' : message);
+    const now = Date.now();
+    if (msg === lastMsg && now - lastAt < 2500) return; // กันแจ้งเตือนซ้ำ
+    lastMsg = msg; lastAt = now;
+    // ข้อความใหม่ที่สำคัญกว่าแทนที่ข้อความเดิมทันที, คิวไม่เกิน 2 ข้อความ
+    if (showing && (type === 'error' || type === 'warning' || queue.length >= 2)) { queue.length = Math.min(queue.length, 1); queue.unshift({ msg, type }); hide(); return; }
+    queue.push({ msg, type }); if (queue.length > 2) queue.splice(0, queue.length - 2);
+    next();
+  };
+})();
+
+/* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
+(function () {
+  const APP_VERSION = '9.3';
+  window.K8_APP_VERSION = APP_VERSION;
+  const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
+    localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
+  const call = (a, p, t) => (typeof gasApiCall === 'function' ? gasApiCall(a, p || {}, t || 10000) : Promise.reject(new Error('no api')));
+  const isBusy = () => !!(document.querySelector('.modal-overlay.active:not(#authModal)') ||
+    (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)));
+
+  /* ---- 1) จำการเข้าสู่ระบบ: ต่ออายุโทเค็นเงียบ ๆ (ออกจากระบบเฉพาะเมื่อเซิร์ฟเวอร์ปฏิเสธจริง หรือกดออกเอง) ---- */
+  const REFRESH_KEY = 'khalifah_token_refreshed_at';
+  function refreshToken(force) {
+    if (!loggedIn() || !navigator.onLine) return;
+    let last = 0; try { last = Number(localStorage.getItem(REFRESH_KEY) || 0); } catch (e) {}
+    if (!force && Date.now() - last < 12 * 3600 * 1000) return;
+    call('whoami', {}, 15000).then((r) => {
+      if (r && r.success && r.token && typeof setSessionToken === 'function') {
+        setSessionToken(r.token);
+        try { localStorage.setItem(REFRESH_KEY, String(Date.now())); } catch (e) {}
+      }
+    }).catch(() => { /* เครือข่ายมีปัญหา: คงสถานะเข้าสู่ระบบไว้ ไม่ออกจากระบบ */ });
+  }
+
+  /* ---- 2) เข้าสู่ระบบไว: ปลุกเซิร์ฟเวอร์ล่วงหน้าตั้งแต่เปิดหน้าเข้าสู่ระบบ ---- */
+  let lastWarm = 0;
+  function warm() {
+    if (!navigator.onLine || Date.now() - lastWarm < 90000) return;
+    lastWarm = Date.now();
+    call('ping', {}, 12000).then(onPing).catch(() => {});
+  }
+  document.addEventListener('focusin', (e) => {
+    if (e.target && e.target.closest && e.target.closest('#authModal')) warm();
+  });
+
+  /* ---- 3) ข้อมูลสด: ตรวจเวอร์ชันข้อมูลเป็นระยะ ดึงใหม่เมื่อมีคนแก้ไข ---- */
+  let dataVer = null, lastSyncAt = 0;
+  function onPing(r) {
+    if (!r || !r.dataVersion) return;
+    const changed = dataVer && r.dataVersion !== dataVer;
+    dataVer = r.dataVersion;
+    if (changed && loggedIn() && typeof syncAllDataFromCloud === 'function' && Date.now() - lastSyncAt > 20000) {
+      lastSyncAt = Date.now();
+      Promise.resolve(syncAllDataFromCloud(false)).catch(() => {});
+    }
+  }
+  function pollData() {
+    if (document.hidden || !navigator.onLine || !loggedIn()) return;
+    call('ping', {}, 12000).then(onPing).catch(() => {});
+  }
+
+  /* ---- 4) อัปเดตแอปทันทีเมื่อมีเวอร์ชันใหม่ ---- */
+  let swReg = null, pendingReload = false;
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistration().then((r) => { swReg = r || null; }).catch(() => {});
+    let hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) { hadController = true; return; }
+      scheduleReload();
+    });
+  }
+  function scheduleReload() {
+    if (pendingReload) return;
+    pendingReload = true;
+    showToast('มีเวอร์ชันใหม่ กำลังอัปเดตแอป...', 'info');
+    const tryReload = () => { if (isBusy()) return setTimeout(tryReload, 3000); location.reload(); };
+    setTimeout(tryReload, 1200);
+  }
+  function checkVersion() {
+    if (!navigator.onLine || pendingReload) return;
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).then((j) => {
+      if (!j || !j.v || j.v === APP_VERSION) return;
+      const reg = swReg;
+      if (reg) reg.update().catch(() => {}).finally(() => setTimeout(() => { if (!pendingReload) scheduleReload(); }, 4000));
+      else scheduleReload();
+    }).catch(() => {});
+  }
+
+  /* ---- 5) สถานะการเชื่อมต่อ ---- */
+  window.addEventListener('offline', () => showToast('ออฟไลน์อยู่ · ข้อมูลจะซิงค์อัตโนมัติเมื่อกลับมาออนไลน์', 'warning'));
+  window.addEventListener('online', () => {
+    showToast('กลับมาออนไลน์แล้ว · กำลังซิงค์ข้อมูล', 'success');
+    if (loggedIn() && typeof syncAllDataFromCloud === 'function') { lastSyncAt = Date.now(); syncAllDataFromCloud(false); }
+    refreshToken(false); checkVersion();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    checkVersion(); refreshToken(false); pollData();
+    if (document.body.classList.contains('auth-locked')) warm();
+  });
+  setInterval(pollData, 45000);
+  setInterval(checkVersion, 5 * 60000);
+
+  /* ---- 6) คำแนะนำติดตั้ง PWA บนหน้าเข้าสู่ระบบ ---- */
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  let bip = null;
+  window.addEventListener('beforeinstallprompt', (e) => { bip = e; renderInstall(); });
+  window.addEventListener('appinstalled', () => { const c = document.getElementById('k8Install'); if (c) c.hidden = true; showToast('ติดตั้งแอปเรียบร้อยแล้ว', 'success'); });
+  function renderInstall() {
+    const c = document.getElementById('k8Install'); if (!c) return;
+    let hidden = false; try { hidden = localStorage.getItem('khalifah_install_hint_hidden') === '1'; } catch (e) {}
+    if (standalone() || hidden) { c.hidden = true; return; }
+    const steps = document.getElementById('k8InstallSteps'), btn = document.getElementById('k8InstallBtn');
+    const inApp = /line\/|fbav|fban|instagram/i.test(ua);
+    if (bip || window.deferredPwaPrompt) { steps.hidden = true; btn.hidden = false; btn.textContent = 'ติดตั้ง'; }
+    else {
+      btn.hidden = false; btn.textContent = 'วิธีติดตั้ง';
+      steps.innerHTML = inApp
+        ? '<li>แตะเมนู ⋯ แล้วเลือก “เปิดในเบราว์เซอร์” (Safari / Chrome)</li><li>ทำตามขั้นตอนติดตั้งในเบราว์เซอร์</li>'
+        : isIOS
+          ? '<li>เปิดใน <b>Safari</b> แล้วแตะปุ่มแชร์ <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></li><li>เลือก <b>“เพิ่มไปยังหน้าจอโฮม”</b></li><li>แตะ <b>“เพิ่ม”</b> แล้วเปิดแอปจากไอคอน KHALIFAH</li>'
+          : '<li>แตะเมนู ⋮ ของ Chrome</li><li>เลือก <b>“ติดตั้งแอป”</b> หรือ “เพิ่มไปยังหน้าจอหลัก”</li><li>เปิดแอปจากไอคอน KHALIFAH</li>';
+    }
+    c.hidden = false;
+  }
+  window.k8InstallNow = function () {
+    const p = bip || window.deferredPwaPrompt;
+    if (p && p.prompt) {
+      p.prompt();
+      Promise.resolve(p.userChoice).then((ch) => { if (ch && ch.outcome === 'accepted') { const c = document.getElementById('k8Install'); if (c) c.hidden = true; } });
+      bip = null; window.deferredPwaPrompt = null; return;
+    }
+    const s = document.getElementById('k8InstallSteps'); if (s) s.hidden = !s.hidden;
+  };
+  window.k8InstallHide = function () {
+    const c = document.getElementById('k8Install'); if (c) c.hidden = true;
+    try { localStorage.setItem('khalifah_install_hint_hidden', '1'); } catch (e) {}
+  };
+
+  function start() {
+    renderInstall();
+    if (document.body.classList.contains('auth-locked')) warm();
+    else { refreshToken(false); pollData(); }
+    setTimeout(checkVersion, 4000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

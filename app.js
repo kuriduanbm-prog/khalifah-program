@@ -6640,7 +6640,7 @@ async function handleStudentLogin() {
     switchView('dashboard');
     showToast(`ยินดีต้อนรับ ${currentStudent.fullName}`, 'success');
     if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(false);
-  }, 250);
+  }, 0);
 }
 
 /** ส่งคำขอสมัครไปยังเซิร์ฟเวอร์ และแจ้งผลให้ผู้สมัครทราบทันที (เช่น รหัสนี้มีบัญชีแล้ว) */
@@ -6893,7 +6893,7 @@ async function performStaffLogin({ username, password, btn, userEl, passEl, moda
       setTimeout(() => showToast('⚠️ ' + res.securityWarning, 'warning'), 1500);
     }
     if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(false);
-  }, 250);
+  }, 0);
   return true;
 }
 
@@ -10923,7 +10923,7 @@ let deferredPwaPrompt = null;
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then((reg) => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
       console.log('[KHALIFAH] Service Worker registered with scope:', reg.scope);
       reg.update();
     }).catch((err) => {

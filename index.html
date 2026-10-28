@@ -29,6 +29,9 @@
   <meta name="twitter:image" content="https://iili.io/nAUqTpS.jpg">
   
   <!-- Fonts -->
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+  <link rel="dns-prefetch" href="https://script.googleusercontent.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap">
@@ -54,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=9.2">
-  <link rel="stylesheet" href="ui-v8.css?v=9.2">
+  <link rel="stylesheet" href="style.css?v=9.3">
+  <link rel="stylesheet" href="ui-v8.css?v=9.3">
 </head>
 <body class="auth-locked">
 
@@ -4441,6 +4444,16 @@
           <a href="javascript:void(0)" class="k8-auth-link-main" onclick="handleAuthModeSegmentChange('register')">สมัครบัญชีใหม่</a>
           <a href="javascript:void(0)" onclick="openOtpVerifyModalPrompt(typeof currentAuthRole!=='undefined'&&currentAuthRole==='teacher'?'teacher':'student')">มีรหัสยืนยัน 6 หลักจากอีเมลแล้ว</a>
         </div>
+        <div class="k8-install" id="k8Install" hidden>
+          <div class="k8-install-ico"><img src="assets/icon-192.png" alt="" width="40" height="40"></div>
+          <div class="k8-install-body">
+            <b>ติดตั้งแอป KHALIFAH บนมือถือ</b>
+            <span id="k8InstallText">เปิดได้จากหน้าจอโฮม เร็วขึ้น ใช้งานเต็มจอ และอยู่ในระบบตลอด</span>
+            <ol class="k8-install-steps" id="k8InstallSteps" hidden></ol>
+          </div>
+          <button type="button" class="k8-install-btn" id="k8InstallBtn" onclick="k8InstallNow()">ติดตั้ง</button>
+          <button type="button" class="k8-install-x" aria-label="ซ่อนคำแนะนำ" onclick="k8InstallHide()">×</button>
+        </div>
         <p class="k8-secure-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span> ตรวจสอบรหัสที่เซิร์ฟเวอร์อย่างปลอดภัย · หากกรอกผิดหลายครั้ง ระบบจะล็อกชั่วคราว 15 นาที</span></p>
       </div>
     </div>
@@ -5527,7 +5540,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=9.2"></script>
-  <script defer src="ui-v8.js?v=9.2"></script>
+  <script defer src="app.js?v=9.3"></script>
+  <script defer src="ui-v8.js?v=9.3"></script>
 </body>
 </html>

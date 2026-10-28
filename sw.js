@@ -1,5 +1,5 @@
 // KHALIFAH PROGRAM - Production PWA Service Worker (v7.7)
-const CACHE_NAME = 'khalifah-cache-v9.2';
+const CACHE_NAME = 'khalifah-cache-v9.3';
 
 // Critical local assets required for the app shell to function offline
 const PRECACHE_ASSETS = [
@@ -7,11 +7,11 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
-  'style.css?v=9.2',
-  'ui-v8.css?v=9.2',
-  'ui-v8.js?v=9.2',
+  'style.css?v=9.3',
+  'ui-v8.css?v=9.3',
+  'ui-v8.js?v=9.3',
   'app.js',
-  'app.js?v=9.2',
+  'app.js?v=9.3',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',
@@ -78,6 +78,8 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.hostname.includes('script.google.com') || url.hostname.includes('script.googleusercontent.com')) {
     return;
   }
+  // ไฟล์บอกเวอร์ชัน: ดึงจากเครือข่ายเสมอ เพื่อให้รู้ทันทีเมื่อมีการอัปเดต
+  if (url.pathname.endsWith('/version.json')) return;
 
   // 1. NAVIGATION REQUESTS (Opening the PWA, refreshing, or clicking links)
   // Strategy: Network-First with Cache Fallback -> Guaranteed to never show "Site can't be reached"
