@@ -2766,7 +2766,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '9.6';
+  const APP_VERSION = '9.7';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -2903,4 +2903,23 @@ window.k8RegBirthChange = function (v) {
     setTimeout(checkVersion, 4000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+/* ---- กันเบราว์เซอร์เติมรหัสผ่าน/ชื่อผู้ใช้ที่บันทึกไว้ลงในช่องค้นหา ---- */
+(function () {
+  function guard() {
+    document.querySelectorAll('input[type="search"], input[placeholder*="ค้นหา"]').forEach((el) => {
+      el.setAttribute('autocomplete', 'off'); el.setAttribute('data-lpignore', 'true'); el.setAttribute('data-1p-ignore', '');
+      if (!el.name) el.name = 'q-' + (el.id || Math.random().toString(36).slice(2, 8));
+      if (el.dataset.k8static && !el.dataset.k8typed) {
+        if (el.value && document.activeElement !== el) el.value = '';
+        if (!el.dataset.k8g) { el.dataset.k8g = '1'; el.addEventListener('keydown', () => { el.dataset.k8typed = '1'; }); }
+      }
+    });
+  }
+  function markStatic() { document.querySelectorAll('input[type="search"], input[placeholder*="ค้นหา"]').forEach((el) => { el.dataset.k8static = '1'; }); guard(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', markStatic); else markStatic();
+  [800, 2500, 5000].forEach((t) => setTimeout(guard, t));
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function () { const r = sv.apply(this, arguments); setTimeout(guard, 300); setTimeout(guard, 1500); return r; };
 })();

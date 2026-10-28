@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=9.6">
-  <link rel="stylesheet" href="ui-v8.css?v=9.6">
+  <link rel="stylesheet" href="style.css?v=9.7">
+  <link rel="stylesheet" href="ui-v8.css?v=9.7">
 </head>
 <body class="auth-locked">
 
@@ -2383,7 +2383,7 @@
               <p id="k8OvDate">-</p>
             </div>
             <label class="sr-only-k8" for="k8OvSearch">ค้นหา</label>
-            <input type="search" id="k8OvSearch" class="k8-ov-search" placeholder="ค้นหานักเรียน / อาจารย์ / รหัส" onkeydown="if(event.key==='Enter'){k8OvSearchGo(this.value)}">
+            <input type="search" id="k8OvSearch" name="k8-ov-q" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly onfocus="this.removeAttribute('readonly')" class="k8-ov-search" placeholder="ค้นหานักเรียน / อาจารย์ / รหัส" onkeydown="if(event.key==='Enter'){k8OvSearchGo(this.value)}">
           </div>
           <div class="k8-ov-kpis" id="k8OvKpis"></div>
           <div class="k8-ov-row">
@@ -5548,7 +5548,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=9.6"></script>
-  <script defer src="ui-v8.js?v=9.6"></script>
+  <script defer src="app.js?v=9.7"></script>
+  <script defer src="ui-v8.js?v=9.7"></script>
 </body>
 </html>
