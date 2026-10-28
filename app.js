@@ -6865,6 +6865,12 @@ async function performStaffLogin({ username, password, btn, userEl, passEl, moda
     status: 'Active',
     approvalStatus: 'Verified'
   };
+  if (res.isSubAdmin) {
+    // แอดมินรอง: เข้าระบบแอดมินได้ แต่เมนูเฉพาะแอดมินหลักจะถูกซ่อน (เซิร์ฟเวอร์ตรวจสิทธิ์ซ้ำทุกคำสั่ง)
+    profile.realRole = profile.role;
+    profile.role = 'SuperAdmin';
+    profile.isSubAdmin = true;
+  }
   const isSuper = profile.role === 'SuperAdmin';
 
   setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
@@ -7053,13 +7059,15 @@ async function handleInlineAdminLogin() {
   passEl?.classList.remove('is-invalid');
   document.querySelectorAll('#authAdminContainer .auth-field-error-msg').forEach(el => el.remove());
 
+  const userEl = document.getElementById('inlineAdminUserInput');
+  const rawUser = (userEl?.value || '').trim();
   if (!rawPass) {
-    triggerAuthError(passEl, 'กรุณากรอกรหัสแอดมินสูงสุด (Master Code)');
+    triggerAuthError(passEl, 'กรุณากรอกรหัสผ่าน');
     return;
   }
 
   setButtonLoading(btn, true, 'กำลังตรวจสอบสิทธิ์...');
-  await performStaffLogin({ username: '', password: rawPass, btn, passEl, modalsToClose: ['authModal'] });
+  await performStaffLogin({ username: rawUser ? cleanIdString(rawUser) : '', password: rawPass, btn, userEl, passEl, modalsToClose: ['authModal'] });
 }
 
 // ----------------- OTP VERIFICATION MODAL & ADMIN APPROVAL CENTER ----------------- //

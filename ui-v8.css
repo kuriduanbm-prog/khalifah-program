@@ -1498,3 +1498,36 @@ button.hf-att-item:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2
 @media (max-width: 992px) { .modal-overlay:has(> .k8-sheet) { padding: 0 !important; align-items: flex-end !important; } .k8-sheet { max-height: 88dvh !important; } }
 #view-teacher #teacher-tab-overview > .modal-overlay { display: flex !important; }
 #view-teacher #teacher-tab-overview > .k8-tier-btn, #view-teacher #teacher-tab-overview > .k8-eval-card { display: flex !important; }
+
+/* ============ Round 9 · Account creation forms + sub-admin ============ */
+#view-admin #admin-tab-subadmins > .bento-form-card { display: none !important; }
+.k8-page-head-row { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 12px; align-items: center; }
+.k8-page-head-row h1 { grid-column: 1; } .k8-page-head-row .k8-as-sub { grid-column: 1; } .k8-page-head-row > .k8-btn-pri { grid-column: 2; grid-row: 1 / span 2; }
+body.k8-subadmin #btnTabLogo, body.k8-subadmin .k8-admin-nav [onclick*="settingsModal"] { display: none !important; }
+.k8-opt { font-weight: 400; color: #64748b; font-size: 12px; }
+#k8NewStudentModal, #k8NewStaffModal { z-index: 2100; }
+.k8-form { display: flex; flex-direction: column; gap: 14px; }
+.k8-form-2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+@media (max-width: 420px) { .k8-form-2 { grid-template-columns: 1fr; } }
+.k8-f { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.k8-f > span:first-child { font-size: 14px; font-weight: 600; color: #0f172a; }
+.k8-f input { height: 48px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 14px; font-family: inherit; font-size: 16px; background: #fff; color: #0f172a; min-width: 0; width: 100%; box-sizing: border-box; }
+.k8-f input:focus { border-color: #0369a1; outline: 3px solid rgba(3,105,161,.15); }
+.k8-f input.is-bad { border: 2px solid #b91c1c; }
+.k8-f small { font-size: 12px; color: #64748b; }
+.k8-chipset { display: flex; flex-wrap: wrap; gap: 6px; }
+.k8-chipset button { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-chipset button[aria-pressed="true"] { background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.k8-role { text-align: left; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 10px 12px; font-family: inherit; cursor: pointer; color: #0f172a; }
+.k8-role b { display: block; font-size: 14px; font-weight: 600; }
+.k8-role small { display: block; font-size: 12px; color: #64748b; line-height: 1.4; margin-top: 2px; }
+.k8-role[aria-pressed="true"] { border: 2px solid #0369a1; background: #f0f9ff; }
+.k8-pass { display: flex; gap: 6px; }
+.k8-pass input { flex: 1; }
+.k8-pass button { flex: none; height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; color: #0369a1; }
+.k8-form-err { margin: 0; font-size: 13px; color: #b91c1c; background: #fef2f2; border-radius: 10px; padding: 8px 12px; }
+.k8-form-err[hidden] { display: none; }
+.k8-form-actions { display: flex; gap: 8px; position: sticky; bottom: 0; background: #fff; padding-top: 6px; }
+.k8-form-actions button { flex: 1; height: 50px; }
+#k8NfSubjWrap[hidden] { display: none; }

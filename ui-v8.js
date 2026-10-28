@@ -2495,3 +2495,133 @@ window.k8RegBirthChange = function (v) {
   window.k8TierSet = function (k, v) { if (k === 'toggle') { const cur = T.open[v] !== undefined ? T.open[v] : v !== 'mid'; T.open[v] = !cur; } else T[k] = v; render(); };
   window.k8TierOpen = function () { render(); openModal('k8TierModal'); };
 })();
+
+/* ============ Round 9 · Sub-admin UI + simple account creation (students / staff) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const me = () => { try { return currentAdmin || null; } catch (e) { return null; } };
+  const isOwner = () => { const a = me(); return !!a && a.role === 'SuperAdmin' && !a.isSubAdmin; };
+  function markRole() {
+    const a = me();
+    document.body.classList.toggle('k8-subadmin', !!(a && a.isSubAdmin));
+    const sub = document.querySelector('.k8-nav-brand-sub');
+    if (sub) sub.textContent = a && a.isSubAdmin ? 'แอดมินรอง · ' + (a.fullName || a.username) : 'ศูนย์ควบคุมแอดมิน';
+  }
+  const uv = window.updateAdminUIVisibility;
+  if (typeof uv === 'function') window.updateAdminUIVisibility = function () { const r = uv.apply(this, arguments); try { markRole(); } catch (e) {} return r; };
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); try { markRole(); } catch (e) {} return r; };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', markRole); else markRole();
+
+  function showErr(id, msg) { const e = document.getElementById(id); if (!e) return; e.hidden = !msg; e.textContent = msg || ''; }
+
+  // ---------- เพิ่มนักเรียน ----------
+  let nsGrade = 'มัธยมศึกษาปีที่ 1';
+  window.k8NsGrade = function (b) { nsGrade = b.dataset.g; document.querySelectorAll('#k8NsGrades button').forEach((x) => x.setAttribute('aria-pressed', x === b)); };
+  window.openAdminAddStudentModal = function () {
+    ['k8NsId', 'k8NsPhone', 'k8NsName', 'k8NsBirth', 'k8NsEmail'].forEach((id) => { const e = document.getElementById(id); if (e) { e.value = ''; e.classList.remove('is-bad'); } });
+    const all = (typeof allStudents !== 'undefined' ? allStudents : []);
+    const counts = {}; all.forEach((s) => { const n = s.schoolName || s.school; if (n) counts[n] = (counts[n] || 0) + 1; });
+    const schools = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    document.getElementById('k8SchoolList').innerHTML = schools.map((n) => '<option value="' + esc(n) + '">').join('');
+    document.getElementById('k8NsSchool').value = schools[0] || '';
+    const gf = document.getElementById('filterGradeSelect'); nsGrade = (gf && gf.value) || 'มัธยมศึกษาปีที่ 1';
+    document.querySelectorAll('#k8NsGrades button').forEach((x) => x.setAttribute('aria-pressed', x.dataset.g === nsGrade));
+    showErr('k8NsErr', '');
+    openModal('k8NewStudentModal');
+    setTimeout(() => document.getElementById('k8NsId').focus(), 80);
+  };
+  window.openAdminEditStudentModal = function (id) { if (!id) return window.openAdminAddStudentModal(); return viewStudentDetails(id); };
+  window.k8NsSave = async function () {
+    const v = (id) => (document.getElementById(id).value || '').trim();
+    const sid = (typeof cleanIdString === 'function' ? cleanIdString(v('k8NsId')) : v('k8NsId'));
+    const phone = v('k8NsPhone').replace(/\D/g, ''), name = v('k8NsName'), birth = v('k8NsBirth'), email = v('k8NsEmail'), school = v('k8NsSchool');
+    const bad = [];
+    if (!sid) bad.push(['k8NsId', 'กรอกรหัสนักเรียน']);
+    if (phone.length < 9 || phone.length > 10) bad.push(['k8NsPhone', 'เบอร์ผู้ปกครองต้องเป็นตัวเลข 9–10 หลัก']);
+    if (!name) bad.push(['k8NsName', 'กรอกชื่อ-นามสกุล']);
+    if (!birth) bad.push(['k8NsBirth', 'เลือกวันเกิด']);
+    if (!school) bad.push(['k8NsSchool', 'กรอกชื่อโรงเรียน']);
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad.push(['k8NsEmail', 'รูปแบบอีเมลไม่ถูกต้อง']);
+    const all = (typeof allStudents !== 'undefined' ? allStudents : []);
+    if (sid && all.some((s) => String(s.studentId).replace(/^0+/, '') === sid.replace(/^0+/, ''))) bad.push(['k8NsId', 'มีรหัสนักเรียนนี้ในระบบแล้ว']);
+    document.querySelectorAll('#k8NsForm input').forEach((e) => e.classList.remove('is-bad'));
+    if (bad.length) { bad.forEach(([id]) => document.getElementById(id).classList.add('is-bad')); showErr('k8NsErr', bad.map((b) => b[1]).join(' · ')); document.getElementById(bad[0][0]).focus(); return; }
+    const [y, m, d] = birth.split('-');
+    const payload = { createOnly: true, studentId: sid, fullName: name, grade: nsGrade, schoolName: school, school: school, parentPhone: phone, email: email, birthDate: d + m + (Number(y) + 543), status: 'Active', approvalStatus: 'Verified' };
+    const btn = document.getElementById('k8NsSaveBtn'); btn.disabled = true; btn.textContent = 'กำลังสร้าง…';
+    let r = null; try { r = await gasApiCall('registerStudent', payload); } catch (e) { r = { success: false, message: (typeof describeNetworkError === 'function' ? describeNetworkError(e) : 'เชื่อมต่อไม่สำเร็จ') }; }
+    btn.disabled = false; btn.textContent = 'สร้างบัญชีนักเรียน';
+    if (!r || !r.success) { if (r && r.field) document.getElementById('k8NsId').classList.add('is-bad'); showErr('k8NsErr', (r && r.message) || 'สร้างบัญชีไม่สำเร็จ'); return; }
+    all.unshift({ studentId: sid, fullName: name, grade: nsGrade, schoolName: school, parentPhone: phone, email: email, birthDate: payload.birthDate, status: 'ปกติ (กำลังศึกษา)', approvalStatus: 'Verified', registeredAt: new Date().toISOString(), attendance: { present: 0, late: 0, leave: 0, absent: 0 }, subjectGrades: {}, skills: {}, gpa: '0.00' });
+    try { localStorage.setItem('khalifah_all_students', JSON.stringify(all)); } catch (e) {}
+    closeModal('k8NewStudentModal');
+    try { renderAdminStudentsTable(); } catch (e) {}
+    if (typeof showToast === 'function') showToast('สร้างบัญชี ' + name + ' แล้ว · เข้าสู่ระบบด้วยเบอร์ ' + phone + ' + รหัส ' + sid, 'success');
+    try { if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(false); } catch (e) {}
+  };
+
+  // ---------- เพิ่มบุคลากร ----------
+  const ROLES = [
+    ['TEACHER', 'อาจารย์ผู้สอน', 'เช็คชื่อ กรอกคะแนนและเกรดวิชาที่สอน', false],
+    ['TeacherAdmin', 'ครูประจำชั้น', 'เหมือนอาจารย์ + ดูสถิติห้องเรียน', false],
+    ['EXECUTIVE', 'ผู้บริหาร', 'ดูสถิติภาพรวม รายงาน และผลประเมิน', false],
+    ['ActivityAdmin', 'ฝ่ายกิจกรรม', 'สร้างกิจกรรมและเปิดสแกน QR', false],
+    ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ (ยกเว้นตั้งค่าระบบและจัดการแอดมิน)', true]
+  ];
+  let nfRole = 'TEACHER'; const nfSubj = new Set();
+  function drawRoles() {
+    document.getElementById('k8NfRoles').innerHTML = ROLES.filter((r) => !r[3] || isOwner()).map(([k, t, d]) => '<button type="button" class="k8-role" aria-pressed="' + (nfRole === k) + '" onclick="k8NfRole(\'' + k + '\')"><b>' + t + '</b><small>' + d + '</small></button>').join('');
+    const showSubj = nfRole === 'TEACHER' || nfRole === 'TeacherAdmin';
+    document.getElementById('k8NfSubjWrap').hidden = !showSubj;
+  }
+  function drawSubj() {
+    let subs = []; try { subs = appSubjects || []; } catch (e) {}
+    document.getElementById('k8NfSubjects').innerHTML = subs.map((x) => '<button type="button" aria-pressed="' + nfSubj.has(String(x.id)) + '" onclick="k8NfSubj(\'' + esc(x.id) + '\')">' + esc(x.name) + '</button>').join('') || '<small>ยังไม่มีรายวิชา เพิ่มได้ที่เมนู "รายวิชา"</small>';
+  }
+  window.k8NfRole = function (k) { nfRole = k; drawRoles(); };
+  window.k8NfSubj = function (id) { id = String(id); if (nfSubj.has(id)) nfSubj.delete(id); else nfSubj.add(id); drawSubj(); };
+  window.k8NfGen = function () { const c = 'abcdefghjkmnpqrstuvwxyz23456789'; let p = ''; const a = new Uint32Array(8); (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => { a[i] = Math.random() * 1e9; }); a.forEach((n) => { p += c[n % c.length]; }); document.getElementById('k8NfPass').value = p; };
+  window.k8NewStaff = function () {
+    nfRole = 'TEACHER'; nfSubj.clear();
+    ['k8NfName', 'k8NfUser', 'k8NfPass', 'k8NfPhone', 'k8NfEmail'].forEach((id) => { const e = document.getElementById(id); e.value = ''; e.classList.remove('is-bad'); });
+    try { if (typeof loadAppSubjects === 'function') loadAppSubjects(); } catch (e) {}
+    drawRoles(); drawSubj(); showErr('k8NfErr', ''); openModal('k8NewStaffModal');
+    setTimeout(() => document.getElementById('k8NfName').focus(), 80);
+  };
+  window.k8NfSave = async function () {
+    const v = (id) => (document.getElementById(id).value || '').trim();
+    const name = v('k8NfName'), user = v('k8NfUser'), pass = v('k8NfPass'), phone = v('k8NfPhone').replace(/\D/g, ''), email = v('k8NfEmail');
+    const bad = [];
+    if (!name) bad.push(['k8NfName', 'กรอกชื่อ-นามสกุล']);
+    if (!/^[A-Za-z0-9._-]{3,30}$/.test(user)) bad.push(['k8NfUser', 'ชื่อผู้ใช้ 3–30 ตัว ใช้ a-z 0-9 . _ - เท่านั้น']);
+    if (pass.length < 6) bad.push(['k8NfPass', 'รหัสผ่านอย่างน้อย 6 ตัว']);
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) bad.push(['k8NfEmail', 'รูปแบบอีเมลไม่ถูกต้อง']);
+    let staff = []; try { staff = subAdmins || []; } catch (e) {}
+    if (user && staff.some((x) => String(x.username || '').toLowerCase() === user.toLowerCase())) bad.push(['k8NfUser', 'ชื่อผู้ใช้นี้มีอยู่แล้ว']);
+    document.querySelectorAll('#k8NewStaffModal input').forEach((e) => e.classList.remove('is-bad'));
+    if (bad.length) { bad.forEach(([id]) => document.getElementById(id).classList.add('is-bad')); showErr('k8NfErr', bad.map((b) => b[1]).join(' · ')); document.getElementById(bad[0][0]).focus(); return; }
+    const subjects = (nfRole === 'TEACHER' || nfRole === 'TeacherAdmin') ? Array.from(nfSubj) : [];
+    let allSubs = []; try { allSubs = (appSubjects || []).map((x) => String(x.id)); } catch (e) {}
+    const payload = { adminId: 'TCH-' + Date.now(), username: user, password: pass, fullName: name, email: email, phone: phone, role: nfRole, assignedSubjects: subjects.length ? subjects : allSubs, assignedSubject: (subjects[0] || allSubs[0] || ''), status: 'Active', approvalStatus: 'Verified', createdAt: new Date().toISOString().slice(0, 10) };
+    const btn = document.getElementById('k8NfSaveBtn'); btn.disabled = true; btn.textContent = 'กำลังสร้าง…';
+    let r = null; try { r = await gasApiCall('addSubAdmin', payload); } catch (e) { r = { success: false, message: (typeof describeNetworkError === 'function' ? describeNetworkError(e) : 'เชื่อมต่อไม่สำเร็จ') }; }
+    btn.disabled = false; btn.textContent = 'สร้างบัญชี';
+    if (!r || !r.success) { showErr('k8NfErr', (r && r.message) || 'สร้างบัญชีไม่สำเร็จ'); return; }
+    const local = Object.assign({}, payload); delete local.password;
+    try { staff.unshift(local); localStorage.setItem('khalifah_sub_admins', JSON.stringify(staff)); renderSubAdminsTable(); } catch (e) {}
+    closeModal('k8NewStaffModal');
+    const roleName = (ROLES.find((x) => x[0] === nfRole) || [])[1] || 'บุคลากร';
+    if (typeof showToast === 'function') showToast('สร้างบัญชี' + roleName + ' "' + name + '" แล้ว · ชื่อผู้ใช้ ' + user + (nfRole === 'SubAdmin' ? ' (เข้าทางแท็บแอดมิน)' : ' (เข้าทางแท็บอาจารย์)'), 'success');
+    try { if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(true); } catch (e) {}
+  };
+  // ปุ่มในหน้า "อาจารย์ & ผู้บริหาร"
+  function addStaffButton() {
+    const head = document.querySelector('#admin-tab-subadmins > .k8-page-head');
+    if (!head || head.querySelector('.k8-btn-pri')) return;
+    head.classList.add('k8-page-head-row');
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'k8-btn-pri'; b.textContent = '+ เพิ่มบัญชีบุคลากร'; b.onclick = window.k8NewStaff;
+    head.appendChild(b);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(addStaffButton, 0)); else setTimeout(addStaffButton, 0);
+})();

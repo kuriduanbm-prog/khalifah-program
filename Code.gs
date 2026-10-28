@@ -785,7 +785,10 @@ function formatAttendanceStatusThai(status) {
 // =====================================================================
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const ADMIN_ROLE_VALUES = ['superadmin', 'admin', 'ผู้ดูแลระบบหลัก', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ'];
+const ADMIN_ROLE_VALUES = ['superadmin', 'admin', 'subadmin', 'ผู้ดูแลระบบหลัก', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง'];
+const OWNER_ROLE_VALUES = ['superadmin', 'ผู้ดูแลระบบหลัก'];
+function isOwnerRole_(v) { return OWNER_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
+function isAdminRole_(v) { return ADMIN_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
 const LOGIN_MAX_FAILS = 8;          // ล็อกชั่วคราวหลังกรอกผิดติดกัน
 const LOGIN_LOCK_SECONDS = 15 * 60; // 15 นาที
 const FULL_DB_CACHE_SECONDS = 90;   // แคชผลลัพธ์ฐานข้อมูลรวม (ล้างอัตโนมัติเมื่อมีการบันทึก)
@@ -888,9 +891,10 @@ function signToken_(body) {
 }
 
 /** role: 'student' | 'teacher' | 'admin' */
-function issueToken_(role, userId, name) {
+function issueToken_(role, userId, name, owner) {
   const payload = {
     r: role,
+    o: owner ? 1 : 0,
     u: cleanVal(userId),
     n: cleanVal(name || ''),
     exp: Date.now() + SESSION_TTL_MS,
@@ -910,7 +914,7 @@ function verifyToken_(token) {
     if (!p || !p.r || !p.u) return null;
     if (Date.now() > Number(p.exp || 0)) return null;
     if ((p.ep || '0') !== (getProp_('SESSION_EPOCH') || '0')) return null;
-    return { role: p.r, userId: p.u, name: p.n || '' };
+    return { role: p.r, userId: p.u, name: p.n || '', owner: p.r === 'admin' && (!!p.o || p.u === 'MasterAdmin') };
   } catch (e) {
     return null;
   }
@@ -1116,11 +1120,13 @@ const ACTION_ACCESS = {
   createActivity: 'staff', deleteActivity: 'staff', deleteActivityAttendee: 'staff',
   saveCalendarEvent: 'staff', deleteCalendarEvent: 'staff', updatePrayerLateRequestStatus: 'staff',
   approveRegistrationAndSendEmail: 'staff', saveSubjectAssignments: 'staff', saveAssignmentScores: 'staff', deletePendingRegistration: 'staff', updateSubAdminPhoto: 'staff',
-  // แอดมินเท่านั้น
+  // แอดมิน (หลัก + รอง)
   getAdmins: 'admin', addSubAdmin: 'admin', deleteSubAdmin: 'admin', deleteStudent: 'admin',
-  batchPromote: 'admin', fullSchoolBatchPromote: 'admin', updateLogo: 'admin',
-  saveSetting: 'admin', saveSubjects: 'admin', batchSync: 'admin',
-  init: 'admin', convertToThai: 'admin', organizeSheets: 'admin', organizeGoogleSheets: 'admin'
+  batchPromote: 'admin', fullSchoolBatchPromote: 'admin',
+  saveSetting: 'admin', saveSubjects: 'admin',
+  // แอดมินหลักเท่านั้น
+  updateLogo: 'owner', batchSync: 'owner',
+  init: 'owner', convertToThai: 'owner', organizeSheets: 'owner', organizeGoogleSheets: 'owner'
 };
 
 // คำสั่งที่เขียนข้อมูล (ล้างแคชเมื่อสำเร็จ)
@@ -1171,12 +1177,13 @@ function routeRequest_(action, req, method) {
     const session = verifyToken_(token);
     const isStaff = !!session && (session.role === 'teacher' || session.role === 'admin');
     const isAdmin = !!session && session.role === 'admin';
+    const isOwner = !!session && !!session.owner;
 
     if (access !== 'public') {
       if (!session) {
         return { success: false, authRequired: true, code: 'AUTH_REQUIRED', message: 'กรุณาเข้าสู่ระบบใหม่อีกครั้ง (เซสชันหมดอายุหรือไม่ได้เข้าสู่ระบบ)' };
       }
-      if ((access === 'staff' && !isStaff) || (access === 'admin' && !isAdmin)) {
+      if ((access === 'staff' && !isStaff) || (access === 'admin' && !isAdmin) || (access === 'owner' && !isOwner)) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
     }
@@ -1184,7 +1191,7 @@ function routeRequest_(action, req, method) {
     const data = (req.data && typeof req.data === 'object') ? req.data : req;
     if (data && data.token) delete data.token;
 
-    const result = dispatchAction_(action, req, data, session, { isStaff: isStaff, isAdmin: isAdmin, method: method });
+    const result = dispatchAction_(action, req, data, session, { isStaff: isStaff, isAdmin: isAdmin, isOwner: isOwner, method: method });
     if (result && result.success !== false && READ_ONLY_ACTIONS.indexOf(action) === -1) {
       bumpDataVersion_();
     }
@@ -1372,6 +1379,10 @@ function dispatchAction_(action, req, data, session, ctx) {
 
     // ---------- บุคลากร ----------
     case 'registerStudent':
+      if (data && data.createOnly) {
+        const ex = getStudentForStaff_(data.studentId);
+        if (ex && ex.success) return { success: false, duplicate: true, field: 'studentId', message: 'มีรหัสนักเรียน ' + cleanVal(data.studentId) + ' ในระบบแล้ว' };
+      }
       return registerStudent(data);
     case 'updateStudentFull':
       return updateStudentFull(data);
@@ -1408,8 +1419,10 @@ function dispatchAction_(action, req, data, session, ctx) {
 
     // ---------- แอดมิน ----------
     case 'addSubAdmin':
+      if (!ctx.isOwner && (isAdminRole_(data.role) || isAdminStaff_(data.username))) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินหลักเท่านั้นที่สร้างหรือแก้ไขบัญชีแอดมินได้' };
       return addSubAdmin(data);
     case 'deleteSubAdmin':
+      if (!ctx.isOwner && isAdminStaff_(pick('username'))) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินหลักเท่านั้นที่ลบบัญชีแอดมินได้' };
       return deleteSubAdmin(pick('username'));
     case 'deleteStudent':
       return deleteStudent(pick('studentId'));
@@ -2876,8 +2889,9 @@ function verifyAdminLogin(password, username) {
     loginSucceeded_(rlKey);
     const out = {
       success: true,
-      token: issueToken_('admin', 'MasterAdmin', 'ผู้ดูแลระบบหลัก (Master Administrator)'),
+      token: issueToken_('admin', 'MasterAdmin', 'ผู้ดูแลระบบหลัก (Master Administrator)', true),
       role: 'SuperAdmin',
+      isOwner: true,
       username: 'MasterAdmin',
       fullName: 'ผู้ดูแลระบบหลัก (Master Administrator)',
       approvalStatus: 'Verified'
@@ -2942,7 +2956,9 @@ function verifyAdminLogin(password, username) {
       loginSucceeded_(rlKey);
       return {
         success: true,
-        token: issueToken_(tokenRole, cleanVal(rows[i][1]), cleanVal(rows[i][3])),
+        token: issueToken_(tokenRole, cleanVal(rows[i][1]), cleanVal(rows[i][3]), tokenRole === 'admin' && isOwnerRole_(roleVal)),
+        isSubAdmin: tokenRole === 'admin' && !isOwnerRole_(roleVal),
+        isOwner: tokenRole === 'admin' && isOwnerRole_(roleVal),
         role: roleVal,
         id: cleanVal(rows[i][0]),
         username: cleanVal(rows[i][1]),
@@ -4992,4 +5008,18 @@ function resetMyHasanat_(sid) {
     }
   } finally { try { lock.releaseLock(); } catch (e) {} }
   return { success: true, deleted: deleted, message: 'ล้างข้อมูลผลบุญแล้ว ' + deleted + ' รายการ' };
+}
+
+
+/** บัญชีนี้เป็นแอดมิน (ในแผ่นงานแอดมินหรือมีบทบาทแอดมิน) หรือไม่ */
+function isAdminStaff_(username) {
+  const u = cleanVal(username).toLowerCase(); if (!u) return false;
+  const ss = getSpreadsheet();
+  const sh = ss.getSheetByName(SHEETS.ADMINS);
+  const rows = sh ? sh.getDataRange().getValues() : [];
+  for (let i = 1; i < rows.length; i++) if (cleanVal(rows[i][1]).toLowerCase() === u && isAdminRole_(rows[i][4])) return true;
+  const th = ss.getSheetByName(SHEETS.TEACHERS);
+  const tr = th ? th.getDataRange().getValues() : [];
+  for (let i = 1; i < tr.length; i++) if (cleanVal(tr[i][1]).toLowerCase() === u && isAdminRole_(tr[i][4])) return true;
+  return false;
 }

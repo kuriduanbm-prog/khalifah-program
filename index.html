@@ -54,8 +54,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=9.1">
-  <link rel="stylesheet" href="ui-v8.css?v=9.1">
+  <link rel="stylesheet" href="style.css?v=9.2">
+  <link rel="stylesheet" href="ui-v8.css?v=9.2">
 </head>
 <body class="auth-locked">
 
@@ -4424,9 +4424,13 @@
             <i class="fa-solid fa-crown" style="color: var(--text-dark);"></i> <strong>สำหรับแอดมินสูงสุด (Super Admin):</strong> จัดการข้อมูลนักเรียน อาจารย์ อนุมัติรหัสยืนยันแบบสุ่ม และดูสถิติภาพรวมทั้งหมดของระบบ
           </div>
           <div class="form-group">
-            <label class="form-label" for="inlineAdminPassInput">รหัสแอดมินหลัก</label>
+            <label class="form-label" for="inlineAdminUserInput">ชื่อผู้ใช้ <span class="k8-opt">(แอดมินรอง)</span></label>
+            <input type="text" class="form-control" id="inlineAdminUserInput" autocomplete="username" placeholder="แอดมินหลักเว้นว่างได้" onkeypress="if(event.key === 'Enter') document.getElementById('inlineAdminPassInput').focus()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="inlineAdminPassInput">รหัสผ่าน</label>
             <input type="password" class="form-control" id="inlineAdminPassInput" autocomplete="current-password" placeholder="" onkeypress="if(event.key === 'Enter') handleInlineAdminLogin()">
-            <span class="k8-auth-hint">แอดมินรองเข้าผ่านแท็บ "อาจารย์" ด้วยชื่อผู้ใช้ของตนเอง</span>
+            <span class="k8-auth-hint">แอดมินหลัก: กรอกเฉพาะรหัสผ่าน · แอดมินรอง: กรอกชื่อผู้ใช้และรหัสผ่านของตนเอง</span>
           </div>
           <button class="btn btn-primary btn-block btn-lg" id="btnInlineAdminLogin" onclick="handleInlineAdminLogin()">
             เข้าสู่ระบบ
@@ -5477,13 +5481,53 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Logic -->
+  <div class="modal-overlay" id="k8NewStudentModal" onclick="if(event.target===this)closeModal('k8NewStudentModal')">
+    <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8NsTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8NsTitle">เพิ่มบัญชีนักเรียน</h2><span>นักเรียนเข้าสู่ระบบด้วยเบอร์ผู้ปกครอง + รหัสนักเรียน</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8NewStudentModal')">✕</button></header>
+      <form class="k8-sheet-body k8-form" id="k8NsForm" onsubmit="event.preventDefault(); k8NsSave()" novalidate>
+        <div class="k8-form-2">
+          <label class="k8-f"><span>รหัสนักเรียน *</span><input id="k8NsId" inputmode="numeric" autocomplete="off" placeholder="เช่น 00125" required><small>ใช้เป็นรหัสผ่าน</small></label>
+          <label class="k8-f"><span>เบอร์โทรศัพท์ผู้ปกครอง *</span><input id="k8NsPhone" type="tel" inputmode="numeric" placeholder="08x-xxx-xxxx" required><small>ใช้เป็นชื่อผู้ใช้</small></label>
+        </div>
+        <label class="k8-f"><span>ชื่อ-นามสกุล *</span><input id="k8NsName" autocomplete="off" placeholder="เช่น ด.ช.อับดุลเลาะ มะแอ" required></label>
+        <div class="k8-f"><span>ระดับชั้น *</span><div class="k8-chipset" id="k8NsGrades"><button type="button" data-g="มัธยมศึกษาปีที่ 1" onclick="k8NsGrade(this)">ม.1</button><button type="button" data-g="มัธยมศึกษาปีที่ 2" onclick="k8NsGrade(this)">ม.2</button><button type="button" data-g="มัธยมศึกษาปีที่ 3" onclick="k8NsGrade(this)">ม.3</button><button type="button" data-g="มัธยมศึกษาปีที่ 4" onclick="k8NsGrade(this)">ม.4</button><button type="button" data-g="มัธยมศึกษาปีที่ 5" onclick="k8NsGrade(this)">ม.5</button><button type="button" data-g="มัธยมศึกษาปีที่ 6" onclick="k8NsGrade(this)">ม.6</button></div></div>
+        <div class="k8-form-2">
+          <label class="k8-f"><span>วันเกิด *</span><input id="k8NsBirth" type="date" required></label>
+          <label class="k8-f"><span>อีเมล</span><input id="k8NsEmail" type="email" placeholder="ไม่บังคับ"></label>
+        </div>
+        <label class="k8-f"><span>โรงเรียน *</span><input id="k8NsSchool" list="k8SchoolList" placeholder="ชื่อโรงเรียน" required><datalist id="k8SchoolList"></datalist></label>
+        <p class="k8-form-err" id="k8NsErr" role="alert" hidden></p>
+        <div class="k8-form-actions"><button type="button" class="k8-btn-line" onclick="closeModal('k8NewStudentModal')">ยกเลิก</button><button type="submit" class="k8-btn-pri" id="k8NsSaveBtn">สร้างบัญชีนักเรียน</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="modal-overlay" id="k8NewStaffModal" onclick="if(event.target===this)closeModal('k8NewStaffModal')">
+    <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8NfTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8NfTitle">เพิ่มบัญชีบุคลากร</h2><span>ใช้งานได้ทันที ไม่ต้องยืนยันอีเมล</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8NewStaffModal')">✕</button></header>
+      <form class="k8-sheet-body k8-form" onsubmit="event.preventDefault(); k8NfSave()" novalidate>
+        <div class="k8-f"><span>ประเภทบัญชี *</span><div class="k8-roles" id="k8NfRoles"></div></div>
+        <label class="k8-f"><span>ชื่อ-นามสกุล *</span><input id="k8NfName" autocomplete="off" placeholder="เช่น อาจารย์อับดุลเลาะ มะแอ" required></label>
+        <div class="k8-form-2">
+          <label class="k8-f"><span>ชื่อผู้ใช้ *</span><input id="k8NfUser" autocomplete="off" autocapitalize="off" placeholder="เช่น teacher01" required><small>ใช้ตอนเข้าสู่ระบบ</small></label>
+          <label class="k8-f"><span>รหัสผ่าน *</span><span class="k8-pass"><input id="k8NfPass" type="text" autocomplete="new-password" placeholder="อย่างน้อย 6 ตัว" required><button type="button" onclick="k8NfGen()">สุ่ม</button></span><small>แจ้งรหัสนี้ให้เจ้าของบัญชี</small></label>
+        </div>
+        <div class="k8-form-2">
+          <label class="k8-f"><span>เบอร์โทรศัพท์</span><input id="k8NfPhone" type="tel" inputmode="numeric" placeholder="ไม่บังคับ"></label>
+          <label class="k8-f"><span>อีเมล</span><input id="k8NfEmail" type="email" placeholder="ไม่บังคับ"></label>
+        </div>
+        <div class="k8-f" id="k8NfSubjWrap"><span>รายวิชาที่สอน</span><div class="k8-chipset" id="k8NfSubjects"></div><small>ไม่เลือก = เห็นทุกวิชา</small></div>
+        <p class="k8-form-err" id="k8NfErr" role="alert" hidden></p>
+        <div class="k8-form-actions"><button type="button" class="k8-btn-line" onclick="closeModal('k8NewStaffModal')">ยกเลิก</button><button type="submit" class="k8-btn-pri" id="k8NfSaveBtn">สร้างบัญชี</button></div>
+      </form>
+    </div>
+  </div>
   <div class="modal-overlay" id="k8TierModal" onclick="if(event.target===this)closeModal('k8TierModal')">
     <div class="modal-dialog k8-sheet k8-tier-sheet" role="dialog" aria-labelledby="k8TierTitle">
       <header class="k8-sheet-head"><div><h2 id="k8TierTitle">เทียร์ลิสต์ละหมาด</h2><span id="k8TierSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8TierModal')">✕</button></header>
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=9.1"></script>
-  <script defer src="ui-v8.js?v=9.1"></script>
+  <script defer src="app.js?v=9.2"></script>
+  <script defer src="ui-v8.js?v=9.2"></script>
 </body>
 </html>
