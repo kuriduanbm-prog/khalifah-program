@@ -1168,7 +1168,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const cd = document.getElementById('k8CamDone');
       if (cd) cd.hidden = !done;
       const cs = document.getElementById('k8CamDoneSub');
-      if (cs) cs.textContent = 'ละหมาด' + slot + ((window.k8OutboxPendingRecords && window.k8OutboxPendingRecords(['prayerCheckIn', 'recordPrayer']).length) ? ' · เก็บในเครื่องแล้ว รอส่งขึ้นระบบ' : ' · ส่งถึงอาจารย์เรียบร้อย');
+      if (cs) cs.textContent = 'ละหมาด' + slot + ((window.k8OutboxStuck && window.k8OutboxStuck()) ? ' · เก็บในเครื่องแล้ว จะส่งอัตโนมัติเมื่อมีเน็ต' : ' · บันทึกเรียบร้อย');
     }
     // watermark (canvas)
     try {
@@ -2841,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.7';
+  const APP_VERSION = '11.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4628,6 +4628,10 @@ window.k8RegBirthChange = function (v) {
   function metaSet(m) { try { localStorage.setItem(META, JSON.stringify(m)); } catch (e) { try { localStorage.setItem(META, JSON.stringify(m.map((x) => Object.assign({}, x, { rec: Object.assign({}, x.rec, { photo: '', photoUrl: '', photoBase64: '' }) })))); } catch (e2) {} } paintBar(); }
   window.k8OutboxPendingRecords = function (actions) { return metaGet().filter((x) => !actions || actions.indexOf(x.action) !== -1).map((x) => x.rec); };
   const count = () => metaGet().length;
+  // แสดงแถบ "รอส่ง" เฉพาะเมื่อไม่มีเน็ต หรือส่งไม่สำเร็จนานเกิน 30 วินาที · ปกติส่งเงียบๆ เบื้องหลัง นักเรียนไม่ต้องกดอะไร
+  const STUCK_MS = 30000;
+  const stuckCount = () => { const m = metaGet(); if (navigator.onLine === false) return m.length; const now = Date.now(); return m.filter((x) => now - (x.at || 0) > STUCK_MS).length; };
+  window.k8OutboxStuck = () => stuckCount() > 0;
 
   function slim(action, data) {
     const d = Object.assign({}, data || {});
@@ -4659,7 +4663,7 @@ window.k8RegBirthChange = function (v) {
     if (t) { try { const b = JSON.parse(body); if (b.token !== t) { b.token = t; body = JSON.stringify(b); } } catch (e) {} }
     let r;
     try {
-      const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body, keepalive: body.length < 60000 });
+      const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
       r = await resp.json();
     } catch (e) { return 'retry'; }
     if (!r || r.success !== false) return 'ok';
@@ -4696,9 +4700,10 @@ window.k8RegBirthChange = function (v) {
   function paintBar() {
     const view = document.getElementById('view-prayer'); if (!view) return;
     let bar = document.getElementById('k8Outbox');
-    const n = count();
+    const n = stuckCount();
     const cs = document.getElementById('k8CamDoneSub');
-    if (cs) cs.textContent = cs.textContent.replace(n ? ' · ส่งถึงอาจารย์เรียบร้อย' : ' · เก็บในเครื่องแล้ว รอส่งขึ้นระบบ', n ? ' · เก็บในเครื่องแล้ว รอส่งขึ้นระบบ' : ' · ส่งถึงอาจารย์เรียบร้อย');
+    if (cs) cs.textContent = cs.textContent.replace(n ? ' · บันทึกเรียบร้อย' : ' · เก็บในเครื่องแล้ว จะส่งอัตโนมัติเมื่อมีเน็ต', n ? ' · เก็บในเครื่องแล้ว จะส่งอัตโนมัติเมื่อมีเน็ต' : ' · บันทึกเรียบร้อย');
+    if (count() && !n) setTimeout(paintBar, STUCK_MS + 500);
     if (!n) { if (bar) bar.hidden = true; return; }
     if (!bar) {
       bar = document.createElement('div'); bar.id = 'k8Outbox'; bar.className = 'k8-outbox'; bar.setAttribute('role', 'status');
@@ -4707,7 +4712,7 @@ window.k8RegBirthChange = function (v) {
     }
     bar.hidden = false;
     const off = navigator.onLine === false;
-    bar.innerHTML = '<span class="k8-outbox-ico" aria-hidden="true">' + (busy ? '⟳' : '⏳') + '</span><span class="k8-outbox-t"><b>รอส่ง ' + n + ' รายการ</b><small>' + (off ? 'ยังไม่มีเน็ต · รูปเก็บในเครื่องแล้ว ไม่หาย' : (busy ? 'กำลังส่งขึ้นระบบ…' : 'จะส่งให้อัตโนมัติ')) + '</small></span>' + (busy ? '' : '<button type="button" onclick="k8OutboxFlush()">ส่งตอนนี้</button>');
+    bar.innerHTML = '<span class="k8-outbox-ico" aria-hidden="true">' + (busy ? '⟳' : '⏳') + '</span><span class="k8-outbox-t"><b>รอส่ง ' + n + ' รายการ</b><small>' + (off ? 'ยังไม่มีเน็ต · รูปเก็บในเครื่องแล้ว ไม่หาย ระบบจะส่งให้เอง' : (busy ? 'กำลังส่งขึ้นระบบ…' : 'สัญญาณไม่ดี · ระบบจะลองส่งให้เองเรื่อยๆ')) + '</small></span>' + (busy || off ? '' : '<button type="button" onclick="k8OutboxFlush()">ลองส่งอีกครั้ง</button>');
   }
 
   window.addEventListener('online', () => { paintBar(); flush(); });
