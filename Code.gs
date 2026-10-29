@@ -1176,6 +1176,8 @@ const ACTION_ACCESS = {
   // คะแนนพฤติกรรม: ผู้ตรวจการ (และแอดมิน) บันทึก/ยกเลิก · แอดมินตั้งค่าหัวข้อ
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
   saveBehaviorRules: 'admin',
+  // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
+  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', updateStudentStatus: 'staff',
@@ -1547,6 +1549,12 @@ function dispatchAction_(action, req, data, session, ctx) {
       return updateStudentStatus(data);
     case 'deletePrayerRecord':
       return deletePrayerRecord(data);
+    case 'updatePrayerRecord':
+      return updatePrayerRecord_(data, session);
+    case 'addPrayerForStudent':
+      return addPrayerForStudent_(data, session);
+    case 'savePrayerWindows':
+      return savePrayerWindows_(data.windows);
     case 'recordAttendance':
       return recordAttendance(data);
     case 'saveDailyAttendance':
@@ -2665,6 +2673,74 @@ function deletePrayerRecord(data) {
     }
   }
   return { success: false, message: 'ไม่พบรายการละหมาดที่ต้องการลบ' };
+}
+
+/** แก้ไขบันทึกละหมาด (เวลาละหมาด วันที่ เวลา สถานะ หมายเหตุ) พร้อมบันทึกว่าใครแก้ไข */
+function updatePrayerRecord_(data, session) {
+  data = data || {};
+  ensureSchema();
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานบันทึกเวลาละหมาด' };
+  const logId = cleanVal(data.logId || data.id || '');
+  if (!logId) return { success: false, message: 'ไม่พบรหัสรายการ' };
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(10000); } catch (e) {}
+  try {
+    const n = sheet.getLastRow();
+    if (n < 2) return { success: false, message: 'ไม่พบรายการละหมาดที่ต้องการแก้ไข' };
+    const ids = sheet.getRange(2, 1, n - 1, 1).getValues();
+    let row = -1;
+    for (let i = ids.length - 1; i >= 0; i--) { if (cleanVal(ids[i][0]) === logId) { row = i + 2; break; } }
+    if (row === -1) return { success: false, message: 'ไม่พบรายการละหมาดที่ต้องการแก้ไข (อาจถูกลบไปแล้ว)' };
+    const cur = sheet.getRange(row, 1, 1, 16).getValues()[0];
+    const pt = data.prayerTime ? formatPrayerTimeThai(data.prayerTime) : cur[4];
+    const date = data.date ? formatSheetDate(data.date) : formatSheetDate(cur[6]);
+    if (data.date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { success: false, message: 'วันที่ไม่ถูกต้อง' };
+    let time = data.time ? String(data.time).trim() : formatSheetTime(cur[7]);
+    if (data.time) { if (!/^\d{1,2}:\d{2}(:\d{2})?$/.test(time)) return { success: false, message: 'เวลาไม่ถูกต้อง' }; if (time.length <= 5) time = ('0' + time).slice(-5) + ':00'; }
+    const status = data.status ? formatStatusThai(data.status) : cur[14];
+    let note = data.note !== undefined ? String(data.note).slice(0, 300) : String(cur[15] || '');
+    note = note.replace(/\s*\[แก้ไขโดย [^\]]*\]\s*$/, '');
+    const who = (session && (session.name || session.userId)) || 'แอดมิน';
+    note = (note ? note + ' ' : '') + '[แก้ไขโดย ' + who + ' ' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM HH:mm') + ']';
+    sheet.getRange(row, 5).setValue(pt);
+    sheet.getRange(row, 7, 1, 2).setNumberFormat('@').setValues([[date, time]]);
+    sheet.getRange(row, 15, 1, 2).setValues([[status, note]]);
+    return { success: true, message: 'แก้ไขบันทึกละหมาดแล้ว', record: { logId: logId, studentId: cleanVal(cur[1]), prayerTime: pt, date: date, time: time, status: status, note: note } };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/** แอดมิน/อาจารย์เพิ่มบันทึกละหมาดแทนนักเรียน (เช่น ลืมเช็คชื่อ เครื่องเสีย) */
+function addPrayerForStudent_(data, session) {
+  data = data || {};
+  const sid = cleanVal(data.studentId);
+  if (!sid || !data.prayerTime || !data.date) return { success: false, message: 'ข้อมูลไม่ครบ (นักเรียน เวลาละหมาด วันที่)' };
+  const who = (session && (session.name || session.userId)) || 'แอดมิน';
+  const id = 'PRY-ADM-' + Date.now();
+  const r = recordPrayer({
+    logId: id, studentId: sid, studentName: data.studentName || '', grade: data.grade || '',
+    prayerTime: data.prayerTime, date: data.date, time: data.time || '', timestamp: new Date().toISOString(),
+    status: data.status || 'ตรงเวลา', locationName: 'บันทึกโดยแอดมิน', isWithinZone: true,
+    note: (data.note ? String(data.note).slice(0, 300) + ' ' : '') + '[เพิ่มโดย ' + who + ']'
+  });
+  if (r && r.success) r.message = 'เพิ่มบันทึกละหมาดให้นักเรียนแล้ว';
+  return r;
+}
+
+/** ช่วงเวลาละหมาด 5 เวลา (แอดมินปรับได้ตามฤดูกาล) เก็บใน Settings: PrayerWindows */
+function savePrayerWindows_(windows) {
+  if (windows === null) { saveSetting({ key: 'PrayerWindows', value: '', description: 'ช่วงเวลาละหมาด (JSON) · ว่าง = ค่าเริ่มต้น' }); return { success: true, message: 'กลับไปใช้เวลาเริ่มต้นแล้ว' }; }
+  if (!Array.isArray(windows) || windows.length !== 5) return { success: false, message: 'ต้องมีครบ 5 เวลา' };
+  const toMin = function (t) { const m = String(t || '').match(/^(\d{1,2}):(\d{2})$/); if (!m) return NaN; const h = +m[1], mi = +m[2]; return (h < 24 && mi < 60) ? h * 60 + mi : NaN; };
+  const out = [];
+  for (let i = 0; i < 5; i++) {
+    const w = windows[i] || {}; const a = toMin(w.start), b = toMin(w.end);
+    if (isNaN(a) || isNaN(b) || b <= a) return { success: false, message: 'เวลาของ ' + cleanVal(w.key || ('ช่วงที่ ' + (i + 1))) + ' ไม่ถูกต้อง (เวลาสิ้นสุดต้องหลังเวลาเริ่ม)' };
+    if (out.length && a <= out[out.length - 1].endMin) return { success: false, message: 'ช่วงเวลา ' + cleanVal(w.key) + ' ซ้อนกับเวลาก่อนหน้า' };
+    out.push({ key: cleanVal(w.key), start: w.start, end: w.end, startMin: a, endMin: b });
+  }
+  saveSetting({ key: 'PrayerWindows', value: JSON.stringify(out.map(function (w) { return { key: w.key, start: w.start, end: w.end }; })), description: 'ช่วงเวลาละหมาด (JSON) · ว่าง = ค่าเริ่มต้น' });
+  return { success: true, message: 'บันทึกช่วงเวลาละหมาดแล้ว · นักเรียนจะเห็นเวลาใหม่ทันที' };
 }
 
 function getPrayers(studentId, date) {

@@ -2841,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.5';
+  const APP_VERSION = '11.6';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4720,4 +4720,214 @@ window.k8RegBirthChange = function (v) {
   // เมื่อเข้าสู่ระบบใหม่ (เช่น เซสชันหมดอายุ) ส่งรายการค้างต่อทันที
   const sv = window.switchView;
   if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'prayer') paintBar(); if (count()) setTimeout(flush, 300); return r; };
+})();
+
+/* ============ v11.6 · แอดมินแก้ไข/เพิ่มบันทึกละหมาด · ตั้งช่วงเวลาละหมาด · รูปโปรไฟล์นักเรียน ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t || 'info'); };
+  const cid = (v) => { try { return cleanIdString(v); } catch (e) { return String(v || '').trim(); } };
+  const slotOf = (p) => { try { return normalizePrayerSlotKey(p.prayerName || p.prayerTime || ''); } catch (e) { return p.prayerName || p.prayerTime || ''; } };
+  const isStaff = () => { try { return !!currentAdmin; } catch (e) { return false; } };
+  const readJ = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+  const STATUSES = ['ตรงเวลา (ญะมาอะฮ์/มัสยิด)', 'ตรงเวลา (ละหมาดคนเดียว)', 'มาสาย', 'อุซุร (มีประจำเดือน)', 'ลา/มีเหตุจำเป็น', 'ขาด'];
+  const slots = () => { try { return PRAYER_TIME_WINDOWS.map((w) => w.key); } catch (e) { return ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์']; } };
+
+  // ---------- ช่วงเวลาละหมาด (ตั้งค่าจากแอดมิน) ----------
+  let DEF = null;
+  try { DEF = PRAYER_TIME_WINDOWS.map((w) => ({ startMin: w.startMin, endMin: w.endMin, baseLabel: w.baseLabel })); } catch (e) {}
+  const hhmm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  function applyWindows(list) {
+    if (!DEF) return;
+    try {
+      PRAYER_TIME_WINDOWS.forEach((w, i) => {
+        const c = Array.isArray(list) && list[i];
+        const a = c ? toMin(c.start) : NaN, b = c ? toMin(c.end) : NaN;
+        if (c && !isNaN(a) && !isNaN(b) && b > a) { w.startMin = a; w.endMin = b; w.baseLabel = hhmm(a) + ' - ' + hhmm(b) + ' น.'; }
+        else { w.startMin = DEF[i].startMin; w.endMin = DEF[i].endMin; w.baseLabel = DEF[i].baseLabel; }
+        try { if (CANONICAL_PRAYERS[i]) CANONICAL_PRAYERS[i].range = w.baseLabel; } catch (e) {}
+      });
+    } catch (e) {}
+    const sum = document.getElementById('k8PwSummary');
+    if (sum) { try { sum.textContent = PRAYER_TIME_WINDOWS.map((w) => w.key + ' ' + hhmm(w.startMin) + '–' + hhmm(w.endMin)).join(' · '); } catch (e) {} }
+  }
+  let saved = null; try { saved = JSON.parse(localStorage.getItem('khalifah_prayer_windows') || 'null'); } catch (e) {}
+  applyWindows(saved);
+  function loadWindows() {
+    try {
+      const url = (typeof getGasUrl === 'function') ? getGasUrl() : ''; if (!url) return Promise.resolve();
+      return fetch(url + (url.indexOf('?') === -1 ? '?' : '&') + 'action=getSettings&_t=' + Date.now()).then((r) => r.json()).then((j) => {
+        const raw = j && j.data ? j.data.PrayerWindows : null; let v = null; try { v = raw ? JSON.parse(raw) : null; } catch (e) {}
+        if (JSON.stringify(v) === JSON.stringify(saved)) return;
+        saved = v; try { localStorage.setItem('khalifah_prayer_windows', JSON.stringify(v)); } catch (e) {}
+        applyWindows(v);
+        try { if (window.updatePrayerV8) window.updatePrayerV8(); } catch (e) {}
+        try { if (typeof renderHomeF === 'function') renderHomeF(); } catch (e) {}
+      }).catch(() => {});
+    } catch (e) { return Promise.resolve(); }
+  }
+  setTimeout(loadWindows, 1800);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadWindows(); });
+
+  window.k8PwOpen = function () {
+    const body = document.getElementById('k8PwBody'); if (!body) return;
+    let rows = ''; try { rows = PRAYER_TIME_WINDOWS.map((w, i) => '<div class="k8-pw-row"><b>' + esc(w.key) + '</b><label><span>เริ่ม</span><input type="time" id="k8PwS' + i + '" value="' + hhmm(w.startMin) + '"></label><label><span>สิ้นสุด</span><input type="time" id="k8PwE' + i + '" value="' + hhmm(w.endMin) + '"></label></div>').join(''); } catch (e) {}
+    body.innerHTML = '<p class="k8-pw-hint">เวลาที่นักเรียนเช็คชื่อได้ในแต่ละเวลาละหมาด · ก่อนเวลาเริ่มจะยังกดไม่ได้ และหลังเวลาสิ้นสุดจะนับว่าเลยเวลา</p>' + rows +
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="k8PwReset()">ใช้ค่าเริ่มต้น</button><button type="button" id="k8PwSave" onclick="k8PwSave()">บันทึกเวลา</button></div>';
+    openModal('k8PwModal');
+  };
+  async function sendWindows(list, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+    let r = null; try { r = await gasApiCall('savePrayerWindows', { data: { windows: list } }, 20000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง' }; }
+    if (btn) { btn.disabled = false; btn.textContent = 'บันทึกเวลา'; }
+    if (!r || !r.success) { toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); return; }
+    saved = list; try { localStorage.setItem('khalifah_prayer_windows', JSON.stringify(list)); } catch (e) {}
+    applyWindows(list); closeModal('k8PwModal'); toast(r.message, 'success');
+    try { if (typeof renderAdminPrayerDailyDashboard === 'function') renderAdminPrayerDailyDashboard(); } catch (e) {}
+  }
+  window.k8PwSave = function () {
+    const list = slots().map((k, i) => ({ key: k, start: (document.getElementById('k8PwS' + i) || {}).value || '', end: (document.getElementById('k8PwE' + i) || {}).value || '' }));
+    for (let i = 0; i < list.length; i++) {
+      const a = toMin(list[i].start), b = toMin(list[i].end);
+      if (isNaN(a) || isNaN(b) || b <= a) { toast('เวลา' + list[i].key + ': เวลาสิ้นสุดต้องหลังเวลาเริ่ม', 'warning'); return; }
+      if (i && a <= toMin(list[i - 1].end)) { toast('เวลา' + list[i].key + ' ซ้อนกับ' + list[i - 1].key, 'warning'); return; }
+    }
+    sendWindows(list, document.getElementById('k8PwSave'));
+  };
+  window.k8PwReset = function () { if (!DEF) return; DEF.forEach((d, i) => { const s = document.getElementById('k8PwS' + i), e = document.getElementById('k8PwE' + i); if (s) s.value = hhmm(d.startMin); if (e) e.value = hhmm(d.endMin); }); toast('ใส่ค่าเริ่มต้นแล้ว · กด "บันทึกเวลา" เพื่อใช้งาน', 'info'); };
+
+  // ---------- แก้ไข / เพิ่มบันทึกละหมาด ----------
+  function findRec(id) {
+    if (!id) return null;
+    const hit = (p) => p && (p.id === id || p.logId === id);
+    let r = readJ('khalifah_prayer_history').find(hit) || readJ('khalifah_today_prayers').find(hit);
+    if (!r) { try { r = (todayPrayers || []).find(hit); } catch (e) {} }
+    if (!r) { try { Object.values(cachedDailyStudentPrayerMap || {}).some((m) => Object.values(m || {}).some((p) => (hit(p) ? (r = p) : false))); } catch (e) {} }
+    if (!r) { try { r = getAllCombinedPrayerHistory().find(hit); } catch (e) {} }
+    return r || null;
+  }
+  const studentOf = (sid) => { try { return (allStudents || []).find((s) => cid(s.studentId) === cid(sid)) || null; } catch (e) { return null; } };
+  let E = null;
+  function form() {
+    const body = document.getElementById('k8PeBody'); if (!body) return;
+    const st = E.status || STATUSES[0]; const opts = STATUSES.indexOf(st) === -1 ? [st].concat(STATUSES) : STATUSES;
+    const sl = slots(); const cur = E.slot;
+    body.innerHTML = '<div class="k8-pe-slots" role="radiogroup" aria-label="เวลาละหมาด">' + sl.map((k) => '<button type="button" role="radio" aria-checked="' + (k === cur) + '" onclick="k8PeSlot(\'' + esc(k) + '\')">' + esc(k) + '</button>').join('') + '</div>' +
+      '<div class="k8-pe-2"><label class="k8-nf-f"><span>วันที่</span><input type="date" id="k8PeDate" value="' + esc(E.date) + '"></label><label class="k8-nf-f"><span>เวลาที่บันทึก</span><input type="time" id="k8PeTime" value="' + esc(String(E.time || '').slice(0, 5)) + '"></label></div>' +
+      '<label class="k8-nf-f"><span>สถานะ</span><select id="k8PeStatus" class="k8-pe-sel">' + opts.map((o) => '<option' + (o === st ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select></label>' +
+      '<label class="k8-nf-f"><span>หมายเหตุ (ไม่บังคับ)</span><textarea id="k8PeNote" rows="2" maxlength="300" placeholder="เช่น นักเรียนลืมเช็คชื่อ ยืนยันจากครูเวร">' + esc(String(E.note || '').replace(/\s*\[(แก้ไข|เพิ่ม)โดย [^\]]*\]\s*$/, '')) + '</textarea></label>' +
+      '<p class="k8-pw-hint">ระบบจะบันทึกชื่อผู้แก้ไขและเวลาไว้ในหมายเหตุโดยอัตโนมัติ</p>' +
+      '<div class="k8-dr-btns">' + (E.mode === 'edit' ? '<button type="button" class="is-alt k8-pe-del" onclick="k8PeDelete()">ลบรายการ</button>' : '') + '<button type="button" id="k8PeSave" onclick="k8PeSave()">' + (E.mode === 'edit' ? 'บันทึกการแก้ไข' : 'เพิ่มบันทึก') + '</button></div>';
+  }
+  function openE() {
+    const s = studentOf(E.studentId);
+    document.getElementById('k8PeTitle').textContent = E.mode === 'edit' ? 'แก้ไขบันทึกละหมาด' : 'เพิ่มบันทึกละหมาดแทนนักเรียน';
+    document.getElementById('k8PeSub').textContent = ((s && s.fullName) || E.studentName || '') + ' · ' + cid(E.studentId);
+    form(); openModal('k8PeModal');
+  }
+  window.k8PeEdit = function (id) {
+    if (!isStaff()) return;
+    const r = findRec(id); if (!r) { toast('ไม่พบรายการนี้ · ลองกดซิงค์ข้อมูลใหม่', 'warning'); return; }
+    closeModal('prayerDetailModal');
+    E = { mode: 'edit', id: r.logId || r.id, studentId: r.studentId, studentName: r.studentName, grade: r.grade, slot: slotOf(r), date: String(r.date || r.timestamp || '').slice(0, 10), time: r.time || '', status: r.status || '', note: r.note || '' };
+    openE();
+  };
+  window.k8PeAdd = function (sid, slot) {
+    if (!isStaff()) return;
+    const d = (document.getElementById('adminPrayerDateSelect') || {}).value || new Date().toLocaleDateString('sv-SE');
+    const s = studentOf(sid) || {};
+    E = { mode: 'add', studentId: sid, studentName: s.fullName || '', grade: s.grade || '', slot: slot, date: d, time: '', status: STATUSES[0], note: '' };
+    openE();
+  };
+  window.k8PeSlot = function (k) { pull(); E.slot = k; form(); };
+  function pull() {
+    const g = (id) => (document.getElementById(id) || {}).value;
+    E.date = g('k8PeDate') || E.date; E.time = g('k8PeTime') || ''; E.status = g('k8PeStatus') || E.status; E.note = g('k8PeNote') || '';
+  }
+  function patchLocal(id, fn) {
+    ['khalifah_prayer_history', 'khalifah_today_prayers'].forEach((k) => {
+      const list = readJ(k); let ch = false; const out = [];
+      list.forEach((p) => { if (p && (p.id === id || p.logId === id)) { ch = true; const n = fn(p); if (n) out.push(n); } else out.push(p); });
+      if (ch) try { localStorage.setItem(k, JSON.stringify(out)); } catch (e) {}
+    });
+    try { const i = todayPrayers.findIndex((p) => p.id === id || p.logId === id); if (i !== -1) { const n = fn(todayPrayers[i]); if (n) todayPrayers[i] = n; else todayPrayers.splice(i, 1); } } catch (e) {}
+  }
+  function rerender() {
+    try { if (typeof renderAdminPrayerDailyDashboard === 'function') renderAdminPrayerDailyDashboard(); } catch (e) {}
+    try { if (typeof renderAdminStudentPrayerHistory === 'function') renderAdminStudentPrayerHistory(); } catch (e) {}
+  }
+  window.k8PeSave = async function () {
+    pull();
+    if (!E.slot) { toast('เลือกเวลาละหมาดก่อน', 'warning'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(E.date)) { toast('เลือกวันที่ก่อน', 'warning'); return; }
+    const btn = document.getElementById('k8PeSave'); if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+    const time = E.time ? (E.time.length === 5 ? E.time + ':00' : E.time) : '';
+    let r = null;
+    try {
+      r = E.mode === 'edit'
+        ? await gasApiCall('updatePrayerRecord', { data: { logId: E.id, prayerTime: E.slot, date: E.date, time: time, status: E.status, note: E.note } }, 20000)
+        : await gasApiCall('addPrayerForStudent', { data: { studentId: E.studentId, studentName: E.studentName, grade: E.grade, prayerTime: E.slot, date: E.date, time: time, status: E.status, note: E.note } }, 20000);
+    } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง' }; }
+    if (btn) { btn.disabled = false; btn.textContent = E.mode === 'edit' ? 'บันทึกการแก้ไข' : 'เพิ่มบันทึก'; }
+    if (!r || !r.success) { toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); return; }
+    const today = new Date().toLocaleDateString('sv-SE');
+    if (E.mode === 'edit') {
+      const rec = r.record || {};
+      patchLocal(E.id, (p) => Object.assign({}, p, { prayerName: E.slot, prayerTime: E.slot, date: E.date, time: rec.time || time || p.time, status: E.status, note: rec.note || E.note }));
+    } else {
+      const now = new Date();
+      const rec = { id: r.logId, logId: r.logId, studentId: E.studentId, studentName: E.studentName, grade: E.grade, prayerName: E.slot, prayerTime: E.slot, date: E.date, time: time || now.toLocaleTimeString('th-TH'), timestamp: now.toISOString(), status: E.status, note: E.note, locationName: 'บันทึกโดยแอดมิน', isWithinZone: true };
+      const h = readJ('khalifah_prayer_history'); h.unshift(rec); try { localStorage.setItem('khalifah_prayer_history', JSON.stringify(h)); } catch (e) {}
+      if (E.date === today) { try { todayPrayers.unshift(rec); localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers)); } catch (e) {} }
+    }
+    closeModal('k8PeModal'); toast(r.message || 'บันทึกแล้ว', 'success'); rerender();
+  };
+  window.k8PeDelete = async function () {
+    if (!E || E.mode !== 'edit') return;
+    if (!confirm('ลบบันทึกละหมาดรายการนี้ใช่หรือไม่? ลบแล้วกู้คืนไม่ได้')) return;
+    let r = null; try { r = await gasApiCall('deletePrayerRecord', { data: { logId: E.id, studentId: E.studentId } }, 20000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้' }; }
+    if (!r || !r.success) { toast((r && (r.message || r.error)) || 'ลบไม่สำเร็จ', 'error'); return; }
+    patchLocal(E.id, () => null); closeModal('k8PeModal'); toast('ลบรายการแล้ว', 'success'); rerender();
+  };
+
+  // ปุ่ม "แก้ไข" ในหน้ารายละเอียดการละหมาด (เฉพาะแอดมิน/อาจารย์)
+  const od = window.openPrayerHistoryDetailModal;
+  if (typeof od === 'function') window.openPrayerHistoryDetailModal = function (id) {
+    window.k8PeLastDetailId = id; const r = od.apply(this, arguments);
+    const b = document.getElementById('k8PeDetailEdit'); if (b) b.hidden = !isStaff();
+    return r;
+  };
+
+  // ---------- รูปโปรไฟล์นักเรียนในหน้าแอดมิน ----------
+  function avatarUrl(s) { try { return getDirectImageUrl((s && (s.avatarUrl || s.profilePhoto)) || ''); } catch (e) { return ''; } }
+  function paintAvatars() {
+    const all = (typeof allStudents !== 'undefined' ? allStudents : []);
+    document.querySelectorAll('#k8AsRows .k8-as-name').forEach((btn) => {
+      if (btn.querySelector('.k8-as-pic')) return;
+      const idEl = btn.querySelector('span:not(.k8-as-pic)'); const id = idEl ? idEl.textContent.trim() : '';
+      const s = all.find((x) => cid(x.studentId) === id); const u = avatarUrl(s);
+      const pic = document.createElement('span'); pic.className = 'k8-as-pic' + (/^data:image\/(png|webp|gif)|#png$/i.test(u) ? ' is-png' : ''); pic.setAttribute('aria-hidden', 'true');
+      if (u) pic.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; else pic.textContent = String((s && s.fullName) || '?').replace(/^(นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.|เด็กชาย|เด็กหญิง)\s*/, '').charAt(0);
+      btn.insertBefore(pic, btn.firstChild); btn.classList.add('has-pic');
+    });
+    const av = document.querySelector('#k8AsDetail .k8-as-av');
+    if (av && !av.dataset.pic) {
+      av.dataset.pic = '1';
+      const name = (document.querySelector('#k8AsDetail .k8-as-dt b') || {}).textContent || '';
+      const idTxt = ((document.querySelector('#k8AsDetail .k8-as-dt span') || {}).textContent || '').split('·')[0].trim();
+      const s = all.find((x) => cid(x.studentId) === idTxt) || all.find((x) => x.fullName === name); const u = avatarUrl(s);
+      if (u) {
+        av.textContent = ''; av.classList.add('has-img'); if (/^data:image\/(png|webp|gif)|#png$/i.test(u)) av.classList.add('is-png');
+        av.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")';
+        av.setAttribute('role', 'button'); av.tabIndex = 0; av.title = 'แตะเพื่อดูรูปขยาย'; av.setAttribute('aria-label', 'ดูรูปโปรไฟล์ของ ' + name);
+        const open = () => { try { openPhotoViewerModal(u, name); } catch (e) {} };
+        av.onclick = open; av.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); } };
+      }
+    }
+  }
+  const ors = window.renderAdminStudentsTable;
+  if (typeof ors === 'function') window.renderAdminStudentsTable = function () { const r = ors.apply(this, arguments); try { paintAvatars(); } catch (e) {} return r; };
+  const osel = window.k8AsSelect;
+  if (typeof osel === 'function') window.k8AsSelect = function () { const r = osel.apply(this, arguments); try { paintAvatars(); } catch (e) {} return r; };
 })();

@@ -12942,7 +12942,7 @@ function renderAdminPrayerDailyTable() {
     const prayerCells = CANONICAL_PRAYERS.map(slot => {
       const rec = prayers[slot.key];
       if (!rec) {
-        return `<td style="text-align: center;"><span class="prayer-status-pill absent">-</span></td>`;
+        return `<td style="text-align: center;"><button type="button" class="prayer-status-pill absent k8-pe-add" onclick="k8PeAdd('${sid}','${slot.key}')" title="ยังไม่เช็คชื่อ · แตะเพื่อเพิ่มบันทึกแทนนักเรียน" aria-label="เพิ่มบันทึกละหมาด${slot.label}ให้ ${escapeHtml(s.fullName || sid)}">-</button></td>`;
       }
       const st = rec.status || '';
       let pillClass = 'ontime';
@@ -13153,6 +13153,9 @@ function renderAdminStudentPrayerHistory() {
         <td style="text-align: right; white-space: nowrap;">
           <button class="btn btn-secondary btn-sm" onclick="openPrayerHistoryDetailModal('${logId}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;" title="ดูรายละเอียดเต็ม พิกัด และภาพถ่าย">
             <i class="fa-solid fa-clipboard-check"></i> ตรวจสอบ
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="k8PeEdit('${logId}')" style="padding: 0.25rem 0.65rem; font-size: 0.76rem;" title="แก้ไขเวลาละหมาด วันที่ เวลา สถานะ">
+            <i class="fa-solid fa-pen"></i> แก้ไข
           </button>
         </td>
       </tr>

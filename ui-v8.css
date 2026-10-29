@@ -2178,3 +2178,28 @@ button.hf-card.hf-beh { padding: 12px; }
 .k8-outbox-t b { font-size: 14px; font-weight: 600; }
 .k8-outbox-t small { font-size: 12px; color: #9a3412; }
 .k8-outbox button { flex: none; min-height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: #c2410c; color: #fff; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+
+/* v11.6 · แก้ไขบันทึกละหมาด / ช่วงเวลาละหมาด / รูปนักเรียนในหน้าแอดมิน */
+#k8PeBody, #k8PwBody { display: flex; flex-direction: column; gap: 14px; }
+.k8-pe-slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.k8-pe-slots button { min-height: 44px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #334155; font: 600 14px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; padding: 0 2px; }
+.k8-pe-slots button[aria-checked="true"] { background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-pe-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.k8-pe-2 input, .k8-pw-row input { width: 100%; box-sizing: border-box; }
+.k8-pe-sel { height: 44px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 15px; color: #0f172a; background: #fff; }
+.k8-pe-del { color: #b91c1c !important; background: #fef2f2 !important; }
+.k8-pw-hint { margin: 0; font-size: 13px; color: #64748b; line-height: 1.5; }
+.k8-pw-row { display: grid; grid-template-columns: 70px 1fr 1fr; gap: 10px; align-items: end; }
+.k8-pw-row b { font-size: 15px; font-weight: 600; color: #0f172a; padding-bottom: 12px; }
+.k8-pw-row label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #64748b; }
+.k8-pw-row input { height: 44px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 10px; font: inherit; font-size: 15px; color: #0f172a; }
+button.prayer-status-pill.k8-pe-add { border: 1px dashed #cbd5e1; background: #f8fafc; cursor: pointer; min-width: 40px; min-height: 30px; font: inherit; }
+button.prayer-status-pill.k8-pe-add:hover { border-color: #0369a1; color: #0369a1; }
+.k8-as-name.has-pic { display: grid !important; grid-template-columns: 36px minmax(0, 1fr); column-gap: 10px; align-items: center; text-align: left; }
+.k8-as-name.has-pic .k8-as-pic { grid-row: span 2; }
+.k8-as-pic { width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe center/cover no-repeat; color: #0369a1; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; flex: none; }
+.k8-as-pic.is-png { background-color: transparent; background-size: contain; border-radius: 0; }
+.k8-as-av.has-img { background: center/cover no-repeat; cursor: zoom-in; color: transparent; }
+.k8-as-av.has-img.is-png { background-color: transparent !important; background-size: contain; border-radius: 0; }
+.k8-as-name .k8-as-pic { display: flex !important; align-items: center; justify-content: center; width: 36px; height: 36px; margin: 0 !important; font-size: 15px !important; font-weight: 600 !important; color: #0369a1 !important; line-height: 1 !important; }
+#k8PeBody .k8-dr-btns button:not(.is-alt), #k8PwBody .k8-dr-btns button:not(.is-alt) { background: #0369a1; }
