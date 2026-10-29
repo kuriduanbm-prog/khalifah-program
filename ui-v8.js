@@ -2841,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.8';
+  const APP_VERSION = '11.9';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4935,4 +4935,51 @@ window.k8RegBirthChange = function (v) {
   if (typeof ors === 'function') window.renderAdminStudentsTable = function () { const r = ors.apply(this, arguments); try { paintAvatars(); } catch (e) {} return r; };
   const osel = window.k8AsSelect;
   if (typeof osel === 'function') window.k8AsSelect = function () { const r = osel.apply(this, arguments); try { paintAvatars(); } catch (e) {} return r; };
+})();
+
+/* ============ v11.9 · ปุ่มย้อนกลับ (Android): ต้องกด 2 ครั้งจึงออกจากแอป ============
+   ลำดับ: ปิดหน้าต่างที่เปิดอยู่ → กลับหน้าแรกของบทบาท → แตะครั้งแรกขึ้นเตือน → แตะซ้ำภายใน 2 วินาทีจึงออก */
+(function () {
+  const GUARD = { k8guard: 1 };
+  let lastBack = 0, leaving = false;
+  const arm = () => { try { if (!(history.state && history.state.k8guard)) history.pushState(GUARD, ''); } catch (e) {} };
+  const activeView = () => { const v = document.querySelector('.view-section.active'); return v ? v.id.replace(/^view-/, '') : ''; };
+  const visible = (id) => { const el = document.getElementById(id); return !!(el && el.offsetParent !== null); };
+  function closeTopModal() {
+    const open = Array.from(document.querySelectorAll('.modal-overlay.open'));
+    if (!open.length) return false;
+    const top = open[open.length - 1];
+    if (top.id === 'authModal' && document.body.classList.contains('auth-locked')) return false; // หน้าเข้าสู่ระบบ: ปล่อยให้ออกจากแอปได้
+    try { closeModal(top.id); } catch (e) { top.classList.remove('open'); }
+    return true;
+  }
+  function goHome() {
+    let stu = false; try { stu = !!currentStudent; } catch (e) {}
+    const v = activeView();
+    if (stu) { if (v && v !== 'dashboard') { switchView('dashboard'); return true; } return false; }
+    if (v === 'admin') {
+      if (!visible('admin-tab-overview') && document.getElementById('btnAdminTabOverview') && document.getElementById('btnAdminTabOverview').offsetParent !== null) {
+        try { switchAdminTab('overview', document.getElementById('btnAdminTabOverview')); window.scrollTo(0, 0); return true; } catch (e) {}
+      }
+      return false;
+    }
+    if (v === 'teacher' || v === 'inspector' || v === 'dashboard' || !v) return false;
+    try { switchView(window.k8StaffHome || 'teacher'); return true; } catch (e) { return false; }
+  }
+  window.addEventListener('popstate', (e) => {
+    if (leaving) return;
+    const st = e.state || {};
+    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
+    if (closeTopModal() || goHome()) { arm(); return; }
+    const now = Date.now();
+    if (now - lastBack < 2000) { leaving = true; try { history.back(); } catch (e2) {} return; }
+    lastBack = now; arm();
+    if (typeof showToast === 'function') showToast('กดย้อนกลับอีกครั้งเพื่อออกจากแอป', 'info');
+  });
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { if (v === 'admin' || v === 'teacher' || v === 'inspector') window.k8StaffHome = v; return sv.apply(this, arguments); };
+  // ต้องมีการแตะหน้าจออย่างน้อย 1 ครั้งก่อน เบราว์เซอร์จึงจะนับรายการประวัติที่เพิ่มเข้ามา
+  const first = () => { arm(); };
+  if (document.readyState === 'complete') arm(); else window.addEventListener('load', arm);
+  ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, first, { once: true, capture: true }));
 })();
