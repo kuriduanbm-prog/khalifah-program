@@ -2118,3 +2118,29 @@ html.k8-docs-open, html.k8-docs-open body { overflow: hidden; }
 .k8-hq-opts button[aria-pressed="true"] { background: var(--bg); border-color: var(--c); color: var(--c); }
 @media (max-width: 420px) { .k8-hq-roster .k8-hq-main { flex-basis: 100%; } .k8-hq-opts { width: 100%; } .k8-hq-opts button { flex: 1; } }
 .k8-hq-roster ~ * {} .k8-bh-filter .k8-nf-f input[type=date] { flex: none !important; height: 44px; }
+
+/* ---- Home: school calendar week card (3A) ---- */
+.hf-week { display: flex; flex-direction: column; gap: 12px; padding: 16px !important; }
+.hf-week-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hf-week-ttl { display: flex; align-items: center; gap: 8px; }
+.hf-week-ttl b { font-size: 16px; font-weight: 600; color: #0f172a; }
+.hf-week-ico { width: 32px; height: 32px; border-radius: 10px; background: #e0f2fe; color: #0369a1; display: inline-flex; align-items: center; justify-content: center; }
+.hf-week-all { border: 0; background: transparent; color: #0369a1; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 2px; }
+.hf-week-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.hf-wd { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; border: 0; border-radius: 12px; background: #f8fafc; color: #334155; font: inherit; cursor: pointer; min-height: 64px; }
+.hf-wd span { font-size: 11px; color: #94a3b8; }
+.hf-wd b { font-size: 17px; font-weight: 600; line-height: 1.2; }
+.hf-wd i { width: 6px; height: 6px; border-radius: 50%; background: #f97316; }
+.hf-wd i.none { background: transparent; }
+.hf-wd.is-past { opacity: .55; }
+.hf-wd.is-today { background: #0369a1; color: #fff; opacity: 1; }
+.hf-wd.is-today span { color: #e0f2fe; }
+.hf-wd.is-today i:not(.none) { background: #fff; }
+.hf-wd:focus-visible, .hf-week-next:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+.hf-week-next { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 14px; background: #fff7ed; font: inherit; text-align: left; cursor: pointer; color: #9a3412; }
+.hf-week-next.is-empty { background: #f8fafc; color: #64748b; font-size: 13px; }
+.hf-wn-chip { flex: none; font-size: 12px; font-weight: 700; color: #fff; background: #ea580c; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.hf-wn-chip.is-now { background: #dc2626; }
+.hf-wn-txt { min-width: 0; display: flex; flex-direction: column; }
+.hf-wn-txt b { font-size: 14px; font-weight: 600; color: #9a3412; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hf-wn-txt small { font-size: 12px; color: #c2410c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

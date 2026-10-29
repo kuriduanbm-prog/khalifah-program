@@ -2838,7 +2838,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.1';
+  const APP_VERSION = '11.2';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4397,4 +4397,46 @@ window.k8RegBirthChange = function (v) {
     catch (e) { toast(e.message, 'error'); }
     H.saving = false; render(); loadRoster();
   };
+})();
+
+/* ============ Round 18 · หน้าแรก: ปฏิทินโรงเรียนแบบสัปดาห์นี้ (แบบ 3A) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const W = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'];
+  const WF = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+  const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  function events() { let evs = []; try { evs = getVisibleCalendarEvents() || []; } catch (e) { try { evs = calendarEvents || []; } catch (e2) {} } return evs.filter((e) => e && e.startDate); }
+  const onDay = (e, ds) => { const s = String(e.startDate).slice(0, 10), en = String(e.endDate || e.startDate).slice(0, 10); return s <= ds && ds <= en; };
+  function render() {
+    const box = document.getElementById('hfWeekDays'); if (!box) return;
+    const now = new Date(); const today = ymd(now);
+    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+    const evs = events();
+    let h = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i); const ds = ymd(d);
+      const list = evs.filter((e) => onDay(e, ds));
+      const label = WF[d.getDay()] + ' ' + d.getDate() + ' ' + M[d.getMonth()] + (list.length ? ' · ' + list.map((e) => e.title).join(', ') : ' · ไม่มีกิจกรรม');
+      h += '<button type="button" class="hf-wd' + (ds === today ? ' is-today' : '') + (ds < today ? ' is-past' : '') + '" onclick="openSchoolCalendarModal()" aria-label="' + esc(label) + '" title="' + esc(label) + '"><span>' + W[i] + '</span><b>' + d.getDate() + '</b><i' + (list.length ? '' : ' class="none"') + '></i></button>';
+    }
+    box.innerHTML = h;
+    // เรื่องถัดไป + นับวัน
+    const up = evs.filter((e) => String(e.endDate || e.startDate).slice(0, 10) >= today).sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)));
+    const next = document.getElementById('hfWeekNext');
+    if (!next) return;
+    if (!up.length) { next.classList.add('is-empty'); next.innerHTML = '<span>ยังไม่มีกิจกรรมที่กำลังจะมาถึง · ดูปฏิทินทั้งเดือน</span>'; return; }
+    next.classList.remove('is-empty');
+    const e = up[0]; const sd = String(e.startDate).slice(0, 10); const d0 = new Date(sd + 'T00:00:00');
+    const days = Math.round((new Date(sd + 'T00:00:00') - new Date(today + 'T00:00:00')) / 86400000);
+    const chip = days <= 0 ? 'วันนี้' : days === 1 ? 'พรุ่งนี้' : 'อีก ' + days + ' วัน';
+    const second = up[1] ? (() => { const d2 = new Date(String(up[1].startDate).slice(0, 10) + 'T00:00:00'); return '+ ' + up[1].title + ' ' + WF[d2.getDay()] + ' ' + d2.getDate() + ' ' + M[d2.getMonth()]; })() : '';
+    next.innerHTML = '<span class="hf-wn-chip' + (days <= 0 ? ' is-now' : '') + '">' + chip + '</span><span class="hf-wn-txt"><b>' + esc(WF[d0.getDay()] + ' ' + d0.getDate() + ' ' + M[d0.getMonth()] + ' · ' + (e.title || 'กิจกรรม')) + '</b>' + (second ? '<small>' + esc(second) + '</small>' : '') + '</span>';
+  }
+  const o = window.renderHomeF;
+  if (typeof o === 'function') window.renderHomeF = function () { const r = o.apply(this, arguments); try { render(); } catch (e) {} return r; };
+  ['renderCalendar', 'syncAllDataFromCloud'].forEach((fn) => { const f = window[fn]; if (typeof f === 'function') window[fn] = function () { const r = f.apply(this, arguments); try { Promise.resolve(r).then(() => setTimeout(render, 0)); } catch (e) {} return r; }; });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
+  setInterval(() => { if (!document.hidden) render(); }, 60000);
 })();
