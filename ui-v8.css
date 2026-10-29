@@ -2441,3 +2441,14 @@ body .k8-admin-nav .admin-tab-btn.active { box-shadow: inset 3px 0 0 var(--g, #7
 #teacher-tab-grades .tg-mode-hdr + .tg-note { margin: -10px 2px 0; font-size: 12px; }
 #teacher-tab-grades .tg-save { border-radius: 18px; padding: 12px 14px; }
 html.k8-narrow #teacher-tab-grades .tg-mode-hdr { flex-wrap: wrap; }
+/* ฟอร์มเพิ่มชิ้นงาน: ช่องกรอกตรงแนวเดียวกัน */
+#teacher-tab-grades .tg-form { border-color: #bae6fd; }
+#teacher-tab-grades .tg-form-row { grid-template-columns: minmax(0, 1fr) 112px; align-items: end; }
+#teacher-tab-grades .tg-form label { gap: 6px; font-size: 13px; color: #475569; white-space: nowrap; }
+#teacher-tab-grades .tg-form input { height: 48px; border-radius: 12px; box-sizing: border-box; width: 100%; }
+#teacher-tab-grades .tg-form input:disabled { background: #f1f5f9; }
+.tg-form-hint { margin: -2px 0 0; font-size: 12px; color: #475569; }
+.tg-form-hint.is-full { color: #b45309; font-weight: 600; }
+#teacher-tab-grades .tg-btns .tg-btn { min-height: 48px; }
+html.k8-narrow #teacher-tab-grades .tg-form-row { grid-template-columns: 1fr; }
+#teacher-tab-grades .tg-add { min-height: 44px; align-self: stretch; }

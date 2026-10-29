@@ -541,7 +541,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (tgState.adding) {
         html += '<div class="tg-form"><div class="tg-form-row">' +
           '<label>ชื่อชิ้นงาน<input type="text" id="tgNewTitle" maxlength="120" placeholder="เช่น ใบงานที่ 4"></label>' +
-          '<label>คะแนนเต็ม (ใส่ได้อีก ' + fmtNum(left) + ')<input type="text" inputmode="decimal" id="tgNewMax" placeholder="' + (left >= 10 ? '10' : fmtNum(left)) + '"></label></div>' +
+          '<label>คะแนนเต็ม<input type="text" inputmode="decimal" id="tgNewMax" placeholder="' + (left >= 10 ? '10' : fmtNum(left)) + '"' + (left <= 0 ? ' disabled' : '') + '></label></div>' +
+          '<p class="tg-form-hint' + (left <= 0 ? ' is-full' : '') + '">' + (left <= 0 ? 'คะแนนเต็มรวมครบ 100 แล้ว · ลดคะแนนชิ้นงานเดิมก่อนจึงจะเพิ่มชิ้นใหม่ได้' : 'ใส่คะแนนเต็มได้อีก ' + fmtNum(left) + ' คะแนน (รวมทุกชิ้นไม่เกิน 100)') + '</p>' +
           '<div class="tg-btns"><button type="button" class="tg-btn" data-act="cancel-add">ยกเลิก</button><button type="button" class="tg-btn is-primary" data-act="confirm-add">เพิ่มชิ้นงาน</button></div></div>';
       }
       // หัวการ์ดตาราง: ชื่อโหมดที่ใช้อยู่ + ลิงก์สลับไปอีกโหมด
@@ -2842,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.6';
+  const APP_VERSION = '12.7';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
