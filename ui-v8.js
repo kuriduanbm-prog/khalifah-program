@@ -2838,7 +2838,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.0';
+  const APP_VERSION = '11.1';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4211,4 +4211,190 @@ window.k8RegBirthChange = function (v) {
     if (V.open) close();
   });
   document.addEventListener('keydown', (e) => { if (!V.open) return; if (e.key === 'Escape') history.back(); if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); e.shiftKey ? window.k8PvRedo() : window.k8PvUndo(); } });
+})();
+
+/* ============ Round 17 · หะละเกาะฮฺอัลกุรอาน (สแกน QR + ประวัติ + จัดการโดยอาจารย์/แอดมิน) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const api = (a, p, t) => gasApiCall(a, p || {}, t || 25000);
+  const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t); };
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const DAYS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const fmtD = (s) => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00'); return isNaN(d) ? s : DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]; };
+  const SLOTS = [['subuh', 'หลังศุบฮิ'], ['zuhur', 'หลังซุฮริ'], ['asr', 'หลังอัศริ'], ['maghrib', 'หลังมัฆริบ'], ['isha', 'หลังอิชาอ์'], ['other', 'ช่วงเวลาอื่น']];
+  const ST = { present: ['มาแล้ว', '#15803d', '#dcfce7'], late: ['มาสาย', '#b45309', '#fef3c7'], excused: ['ลา', '#1d4ed8', '#dbeafe'], absent: ['ขาด', '#b91c1c', '#fee2e2'] };
+  const toMin = (t) => { const m = String(t || '').match(/(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : -1; };
+
+  // ================= นักเรียน: แท็บหะละเกาะฮฺในหน้ากิจกรรม =================
+  let hqOn = false; let my = null;
+  try { my = JSON.parse(localStorage.getItem('k8_hq_my') || 'null'); } catch (e) {}
+  function setTabs() { document.querySelectorAll('#k8ActTabs button').forEach((b) => { const on = hqOn ? b.dataset.tab === 'halaqah' : b.classList.contains('on') && b.dataset.tab !== 'halaqah'; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); }); }
+  function studentHtml() {
+    if (!my) return '<div class="k8-li-empty">กำลังโหลดหะละเกาะฮฺ…</div>';
+    const now = new Date(); const today = ymd(now), wd = String(now.getDay()), nowMin = now.getHours() * 60 + now.getMinutes();
+    const todays = (my.sessions || []).filter((s) => s.days.indexOf(wd) !== -1).sort((a, b) => toMin(a.start) - toMin(b.start));
+    const logT = {}; (my.logs || []).forEach((l) => { if (l.date === today) logT[l.sessionId] = l; });
+    // สถิติเดือนนี้: ครั้งที่ควรเข้า (วันที่ผ่านมาแล้วตามตาราง) เทียบกับที่บันทึกไว้
+    const first = new Date(now.getFullYear(), now.getMonth(), 1); let expected = 0;
+    for (let d = new Date(first); d <= now; d.setDate(d.getDate() + 1)) {
+      const k = String(d.getDay()), ds = ymd(d);
+      (my.sessions || []).forEach((s) => { if (s.days.indexOf(k) !== -1 && (!s.createdAt || ds >= s.createdAt) && (ds < today || toMin(s.end) < nowMin)) expected++; });
+    }
+    const monthLogs = (my.logs || []).filter((l) => l.date >= ymd(first));
+    const came = monthLogs.filter((l) => l.status === 'present' || l.status === 'late').length, excused = monthLogs.filter((l) => l.status === 'excused').length;
+    const pct = expected ? Math.min(100, Math.round(came / Math.max(1, expected - excused) * 100)) : 0;
+    let h = '<div class="k8-hq-stu">';
+    h += '<section class="k8-hq-sum"><div><b>' + came + '</b><span>ครั้งที่เข้าเดือนนี้</span></div><div><b>' + (expected ? pct + '%' : '–') + '</b><span>ความสม่ำเสมอ</span></div><div><b>' + monthLogs.filter((l) => l.status === 'late').length + '</b><span>มาสาย</span></div></section>';
+    h += '<h3 class="k8-hq-h">วันนี้ · ' + fmtD(today) + '</h3>';
+    if (!todays.length) h += '<div class="k8-li-empty">วันนี้ไม่มีหะละเกาะฮฺตามตาราง</div>';
+    else h += '<ul class="k8-hq-today">' + todays.map((s) => {
+      const l = logT[s.id]; const sMin = toMin(s.start), eMin = toMin(s.end);
+      let chip;
+      if (l) chip = '<span class="k8-hq-chip" style="color:' + ST[l.status][1] + ';background:' + ST[l.status][2] + '">' + ST[l.status][0] + (l.time ? ' ' + esc(l.time) : '') + '</span>';
+      else if (nowMin >= sMin - 20 && nowMin <= eMin + 10) chip = '<button type="button" class="k8-hq-scan" onclick="k8StartActScan()">สแกนเข้า</button>';
+      else if (nowMin < sMin - 20) chip = '<span class="k8-hq-chip is-wait">ยังไม่ถึงเวลา</span>';
+      else chip = '<span class="k8-hq-chip" style="color:#b91c1c;background:#fee2e2">ไม่ได้เข้า</span>';
+      return '<li><span class="k8-hq-time"><b>' + esc(s.start) + '</b><small>' + esc(s.end) + '</small></span><span class="k8-hq-main"><b>' + esc(s.name) + '</b><small>' + esc([s.location, s.teacherName].filter(Boolean).join(' · ') || 'หะละเกาะฮฺอัลกุรอาน') + '</small></span>' + chip + '</li>';
+    }).join('') + '</ul>';
+    h += '<p class="k8-hq-tip">สแกน QR ที่อาจารย์ผู้ดูแลเปิดให้ ตั้งแต่ 20 นาทีก่อนเริ่มจนถึง 10 นาทีหลังจบ · สแกนหลังเริ่มเกิน 15 นาทีนับเป็นมาสาย</p>';
+    const hist = (my.logs || []).slice(0, 40);
+    h += '<h3 class="k8-hq-h">ประวัติการเข้าหะละเกาะฮฺ</h3>';
+    h += hist.length ? '<ul class="k8-hq-hist">' + hist.map((l) => '<li><span class="k8-hq-d">' + fmtD(l.date) + '</span><span class="k8-hq-main"><b>' + esc(l.sessionName) + '</b><small>' + (l.time ? 'เวลา ' + esc(l.time) + ' · ' : '') + (l.method === 'qr' ? 'สแกน QR' : 'อาจารย์บันทึก') + '</small></span><span class="k8-hq-chip" style="color:' + (ST[l.status] || ST.present)[1] + ';background:' + (ST[l.status] || ST.present)[2] + '">' + (ST[l.status] || ST.present)[0] + '</span></li>').join('') + '</ul>' : '<div class="k8-li-empty">ยังไม่มีประวัติ · สแกน QR ครั้งแรกเมื่อเข้าหะละเกาะฮฺ</div>';
+    return h + '</div>';
+  }
+  function paintStudent() { if (!hqOn) return; const box = document.getElementById('k8ActList'); if (box) box.innerHTML = studentHtml(); setTabs(); }
+  async function loadMine() {
+    try { const r = await api('getMyHalaqah'); if (r && r.success) { my = r; try { localStorage.setItem('k8_hq_my', JSON.stringify({ sessions: r.sessions, logs: r.logs })); } catch (e) {} } } catch (e) {}
+    paintStudent();
+  }
+  window.k8HqTab = function () { hqOn = true; paintStudent(); loadMine(); };
+  const oTab = window.k8ActTab; window.k8ActTab = function (t) { hqOn = false; const r = oTab ? oTab.apply(this, arguments) : null; setTabs(); return r; };
+  const oRender = window.renderActivitiesV8; if (typeof oRender === 'function') window.renderActivitiesV8 = function () { if (hqOn) { paintStudent(); return; } return oRender.apply(this, arguments); };
+  // สแกน QR หะละเกาะฮฺด้วยกล้องเดียวกับกิจกรรม
+  const oQr = window.handleQrCodeDetected;
+  if (typeof oQr === 'function') window.handleQrCodeDetected = async function (data) {
+    if (String(data || '').indexOf('KHALIFAH_HLQ:') !== 0) return oQr.apply(this, arguments);
+    try { if (typeof stopQrScanner === 'function') stopQrScanner(); } catch (e) {}
+    try { if (window.k8StopActScan) window.k8StopActScan(); } catch (e) {}
+    hqOn = true; paintStudent();
+    try {
+      const r = await api('halaqahCheckIn', { qr: String(data) });
+      if (r && r.success) { toast(r.message, r.already ? 'info' : 'success'); try { if (navigator.vibrate) navigator.vibrate([30, 40, 30]); } catch (e) {} }
+      else toast((r && r.message) || 'บันทึกไม่สำเร็จ', 'error');
+    } catch (e) { toast('เชื่อมต่อไม่สำเร็จ ลองสแกนใหม่อีกครั้ง', 'error'); }
+    loadMine();
+  };
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { if (v === 'activities') hqOn = false; const r = sv.apply(this, arguments); if (H.open) closeHq(); return r; };
+
+  // ================= อาจารย์/แอดมิน: จัดการหะละเกาะฮฺ =================
+  const H = { open: false, view: 'list', sessions: [], edit: null, cur: null, date: ymd(new Date()), roster: null, marks: {}, qrTimer: null, clockTimer: null, saving: false };
+  function stack(tag) { try { history.pushState({ k8hq: tag }, ''); } catch (e) {} }
+  window.k8HqOpen = async function () {
+    const el = document.getElementById('k8Hq'); if (!el) return;
+    el.hidden = false; H.open = true; H.view = 'list'; document.documentElement.classList.add('k8-docs-open'); stack('list');
+    render(); await loadSessions(); render();
+  };
+  async function loadSessions() { try { const r = await api('getHalaqahSessions'); if (r && r.success) H.sessions = r.sessions || []; } catch (e) {} }
+  function stopTimers() { clearInterval(H.qrTimer); clearInterval(H.clockTimer); H.qrTimer = H.clockTimer = null; }
+  function closeHq() { stopTimers(); const el = document.getElementById('k8Hq'); if (el) el.hidden = true; H.open = false; document.documentElement.classList.remove('k8-docs-open'); }
+  window.k8HqBack = function () { history.back(); };
+  window.addEventListener('popstate', () => {
+    if (!H.open) return;
+    if (H.view !== 'list') { stopTimers(); H.view = 'list'; render(); loadSessions().then(render); return; }
+    closeHq();
+  });
+  const slotName = (k) => (SLOTS.find((x) => x[0] === k) || SLOTS[5])[1];
+  function render() {
+    const body = document.getElementById('k8HqBody'); if (!body) return;
+    const sub = document.getElementById('k8HqSub'), title = document.getElementById('k8HqTitle');
+    if (H.view === 'list') {
+      title.textContent = 'หะละเกาะฮฺอัลกุรอาน'; sub.textContent = H.sessions.length + ' รอบ · ตั้งเวลา แสดง QR และเช็ครายชื่อ';
+      const wd = String(new Date().getDay());
+      body.innerHTML = '<button type="button" class="k8-hq-add" onclick="k8HqEdit()">+ เพิ่มหะละเกาะฮฺ</button>' +
+        (H.sessions.length ? '<ul class="k8-hq-list">' + H.sessions.slice().sort((a, b) => toMin(a.start) - toMin(b.start)).map((s) => '<li><div class="k8-hq-li-top"><span class="k8-hq-slot">' + esc(slotName(s.slot)) + '</span>' + (s.days.indexOf(wd) !== -1 ? '<span class="k8-hq-chip" style="color:#047857;background:#d1fae5">มีวันนี้</span>' : '') + '</div><b>' + esc(s.name) + '</b><small>' + esc(s.start) + '–' + esc(s.end) + ' · ' + (s.days.length === 7 ? 'ทุกวัน' : s.days.map((d) => DAYS[+d]).join(' ')) + ' · ' + (s.grades.length ? s.grades.map((g) => 'ม.' + g).join(', ') : 'ทุกชั้น') + (s.location ? ' · ' + esc(s.location) : '') + '</small>' +
+          '<div class="k8-hq-acts"><button type="button" class="is-pri" onclick="k8HqQr(\'' + js(s.id) + '\')">แสดง QR</button><button type="button" onclick="k8HqRoster(\'' + js(s.id) + '\')">เช็ครายชื่อ</button><button type="button" onclick="k8HqEdit(\'' + js(s.id) + '\')">แก้ไข</button></div></li>').join('') + '</ul>'
+          : '<div class="k8-docs-empty"><b>ยังไม่มีหะละเกาะฮฺ</b><span>เพิ่มรอบแรก เช่น หะละเกาะฮฺหลังศุบฮิ 05:30–06:30 ทุกวัน</span></div>');
+    } else if (H.view === 'edit') {
+      const e = H.edit; title.textContent = e.id ? 'แก้ไขหะละเกาะฮฺ' : 'เพิ่มหะละเกาะฮฺ'; sub.textContent = 'กำหนดช่วงเวลา วัน และชั้นที่เข้าร่วม';
+      body.innerHTML = '<section class="k8-bh-card">' +
+        '<div class="k8-nf-f"><span>ช่วงเวลา</span><div class="k8-na-aud">' + SLOTS.map(([k, l]) => '<button type="button" aria-pressed="' + (e.slot === k) + '" onclick="k8HqSet(\'slot\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>' +
+        '<label class="k8-nf-f"><span>ชื่อ</span><input type="text" id="k8HqName" maxlength="80" value="' + esc(e.name) + '" placeholder="เช่น หะละเกาะฮฺหลังศุบฮิ"></label>' +
+        '<div class="k8-hq-times"><label class="k8-nf-f"><span>เริ่ม</span><input type="time" id="k8HqStart" value="' + esc(e.start) + '"></label><label class="k8-nf-f"><span>สิ้นสุด</span><input type="time" id="k8HqEnd" value="' + esc(e.end) + '"></label></div>' +
+        '<div class="k8-nf-f"><span>วัน</span><div class="k8-na-chips">' + DAYS.map((d, i) => '<button type="button" aria-pressed="' + (e.days.indexOf(String(i)) !== -1) + '" onclick="k8HqDay(\'' + i + '\')">' + d + '</button>').join('') + '<button type="button" onclick="k8HqDay(\'all\')">ทุกวัน</button></div></div>' +
+        '<div class="k8-nf-f"><span>ชั้นที่เข้าร่วม (ไม่เลือก = ทุกชั้น)</span><div class="k8-na-chips">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" aria-pressed="' + (e.grades.indexOf(g) !== -1) + '" onclick="k8HqGrade(\'' + g + '\')">ม.' + g + '</button>').join('') + '</div></div>' +
+        '<label class="k8-nf-f"><span>สถานที่ (ไม่บังคับ)</span><input type="text" id="k8HqLoc" maxlength="80" value="' + esc(e.location) + '" placeholder="เช่น มัสยิด ชั้น 2"></label>' +
+        '<div class="k8-dr-btns">' + (e.id ? '<button type="button" class="is-alt" onclick="k8HqDelete()">ลบ</button>' : '') + '<button type="button" class="k8-hq-save" ' + (H.saving ? 'disabled' : '') + ' onclick="k8HqSave()">' + (H.saving ? 'กำลังบันทึก…' : 'บันทึก') + '</button></div></section>';
+    } else if (H.view === 'qr') {
+      const s = H.cur; title.textContent = s.name; sub.textContent = s.start + '–' + s.end + ' · ' + fmtD(H.date);
+      const n = H.roster ? H.roster.students.filter((x) => x.status === 'present' || x.status === 'late').length : 0, total = H.roster ? H.roster.students.length : 0;
+      body.innerHTML = '<section class="k8-hq-qr"><div class="k8-hq-qrbox" id="k8HqQrBox" aria-label="QR สำหรับสแกนเข้าหะละเกาะฮฺ"></div><b class="k8-hq-clock" id="k8HqClock"></b><p>ให้นักเรียนเปิดแอป › กิจกรรม › สแกน QR</p><div class="k8-hq-count"><b>' + n + '</b> / ' + total + ' คน สแกนแล้ว</div>' +
+        '<ul class="k8-hq-recent">' + (H.roster ? H.roster.students.filter((x) => x.status).sort((a, b) => String(b.time).localeCompare(String(a.time))).slice(0, 8).map((x) => '<li><span>' + esc(x.fullName) + '</span><span class="k8-hq-chip" style="color:' + ST[x.status][1] + ';background:' + ST[x.status][2] + '">' + ST[x.status][0] + ' ' + esc(x.time) + '</span></li>').join('') : '') + '</ul>' +
+        '<button type="button" class="k8-bh-link" onclick="k8HqRoster(\'' + js(s.id) + '\')">เช็ครายชื่อ / บันทึกเอง</button></section>';
+      drawQr();
+    } else if (H.view === 'roster') {
+      const s = H.cur; title.textContent = 'เช็ครายชื่อ · ' + s.name; sub.textContent = s.start + '–' + s.end;
+      const R = H.roster; const list = R ? R.students : [];
+      const cnt = { present: 0, late: 0, excused: 0, absent: 0, none: 0 };
+      list.forEach((x) => { const st = H.marks[x.studentId] || x.status; cnt[st || 'none']++; });
+      const dirty = Object.keys(H.marks).length;
+      body.innerHTML = '<div class="k8-bh-filter"><label class="k8-nf-f" style="flex:1"><span>วันที่</span><input type="date" value="' + H.date + '" max="' + ymd(new Date()) + '" onchange="k8HqDate(this.value)"></label></div>' +
+        '<div class="k8-hq-sum k8-hq-sum5"><div style="color:#15803d"><b>' + cnt.present + '</b><span>มา</span></div><div style="color:#b45309"><b>' + cnt.late + '</b><span>สาย</span></div><div style="color:#1d4ed8"><b>' + cnt.excused + '</b><span>ลา</span></div><div style="color:#b91c1c"><b>' + cnt.absent + '</b><span>ขาด</span></div><div style="color:#64748b"><b>' + cnt.none + '</b><span>ยังไม่บันทึก</span></div></div>' +
+        (list.length && cnt.none ? '<button type="button" class="k8-bh-link" onclick="k8HqRest(\'absent\')">ตั้งคนที่ยังไม่บันทึกเป็น "ขาด" (' + cnt.none + ' คน)</button>' : '') +
+        '<ul class="k8-hq-roster">' + (R ? list.map((x) => { const st = H.marks[x.studentId] || x.status; return '<li><span class="k8-hq-main"><b>' + esc(x.fullName) + '</b><small>' + esc(String(x.grade).replace('มัธยมศึกษาปีที่ ', 'ม.')) + (x.time && !H.marks[x.studentId] ? ' · ' + (x.method === 'qr' ? 'สแกน ' : '') + esc(x.time) : '') + '</small></span><span class="k8-hq-opts">' + Object.keys(ST).map((k) => '<button type="button" aria-pressed="' + (st === k) + '" style="--c:' + ST[k][1] + ';--bg:' + ST[k][2] + '" onclick="k8HqMark(\'' + js(x.studentId) + '\',\'' + k + '\')">' + ST[k][0].replace('แล้ว', '') + '</button>').join('') + '</span></li>'; }).join('') : '<li class="k8-bh-empty">กำลังโหลด…</li>') + '</ul>' +
+        '<button type="button" class="k8-bh-go k8-hq-save" ' + (dirty && !H.saving ? '' : 'disabled') + ' onclick="k8HqSaveMarks()">' + (H.saving ? 'กำลังบันทึก…' : dirty ? 'บันทึก (' + dirty + ' คน)' : 'ไม่มีการเปลี่ยนแปลง') + '</button>';
+    }
+  }
+  window.k8HqEdit = function (id) {
+    const s = id ? H.sessions.find((x) => x.id === id) : null;
+    H.edit = s ? JSON.parse(JSON.stringify(s)) : { id: '', name: 'หะละเกาะฮฺหลังศุบฮิ', slot: 'subuh', start: '05:30', end: '06:30', days: ['0', '1', '2', '3', '4', '5', '6'], grades: [], location: '' };
+    H.view = 'edit'; stack('edit'); render();
+  };
+  function grab() { const e = H.edit; if (!e) return; const g = (id) => (document.getElementById(id) || {}).value; e.name = g('k8HqName') ?? e.name; e.start = g('k8HqStart') ?? e.start; e.end = g('k8HqEnd') ?? e.end; e.location = g('k8HqLoc') ?? e.location; }
+  window.k8HqSet = function (k, v) { grab(); const e = H.edit; const was = slotName(e.slot); e[k] = v; if (k === 'slot' && (!e.name || e.name === 'หะละเกาะฮฺ' + was)) e.name = 'หะละเกาะฮฺ' + slotName(v); render(); };
+  window.k8HqDay = function (d) { grab(); const e = H.edit; if (d === 'all') e.days = e.days.length === 7 ? [] : ['0', '1', '2', '3', '4', '5', '6']; else { const i = e.days.indexOf(d); if (i === -1) e.days.push(d); else e.days.splice(i, 1); } render(); };
+  window.k8HqGrade = function (g) { grab(); const e = H.edit; const i = e.grades.indexOf(g); if (i === -1) e.grades.push(g); else e.grades.splice(i, 1); render(); };
+  window.k8HqSave = async function () {
+    grab(); H.saving = true; render();
+    try { const r = await api('saveHalaqahSession', { data: H.edit }); if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ'); toast(r.message, 'success'); H.saving = false; history.back(); }
+    catch (e) { H.saving = false; toast(e.message, 'error'); render(); }
+  };
+  window.k8HqDelete = async function () {
+    if (!window.confirm('ลบหะละเกาะฮฺ "' + H.edit.name + '"? ประวัติการเข้าที่บันทึกไว้ยังเก็บไว้ใน Google Sheets')) return;
+    try { const r = await api('deleteHalaqahSession', { data: { id: H.edit.id } }); if (!r || !r.success) throw new Error((r && r.message) || 'ลบไม่สำเร็จ'); toast(r.message, 'success'); history.back(); } catch (e) { toast(e.message, 'error'); }
+  };
+  async function loadRoster() { try { const r = await api('getHalaqahRoster', { id: H.cur.id, date: H.date }); if (r && r.success) H.roster = r; } catch (e) {} if (H.open && (H.view === 'qr' || H.view === 'roster')) render(); }
+  let qrText = '';
+  async function drawQr() {
+    const box = document.getElementById('k8HqQrBox'); if (!box) return;
+    if (!qrText) { box.innerHTML = '<span class="k8-pv-spin"></span>'; return; }
+    box.innerHTML = '';
+    try { new QRCode(box, { text: qrText, width: 260, height: 260, correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.M : undefined }); }
+    catch (e) { box.innerHTML = '<p class="k8-hq-tip">แสดง QR ไม่ได้ในอุปกรณ์นี้</p>'; }
+    const tick = () => { const c = document.getElementById('k8HqClock'); if (c) { const d = new Date(); c.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); } };
+    tick(); clearInterval(H.clockTimer); H.clockTimer = setInterval(tick, 1000);
+  }
+  window.k8HqQr = async function (id) {
+    H.cur = H.sessions.find((x) => x.id === id); if (!H.cur) return;
+    H.date = ymd(new Date()); H.view = 'qr'; H.roster = null; qrText = ''; stack('qr'); render();
+    try { const r = await api('getHalaqahQr', { id }); if (!r || !r.success) throw new Error((r && r.message) || 'สร้าง QR ไม่สำเร็จ'); qrText = r.qr; } catch (e) { toast(e.message, 'error'); }
+    render(); loadRoster();
+    clearInterval(H.qrTimer); H.qrTimer = setInterval(() => { if (!document.hidden && H.view === 'qr') { if (ymd(new Date()) !== H.date) { k8HqQr(id); return; } loadRoster(); } }, 8000);
+  };
+  window.k8HqRoster = function (id) {
+    H.cur = H.sessions.find((x) => x.id === id) || H.cur; if (!H.cur) return;
+    stopTimers(); H.view = 'roster'; H.marks = {}; H.roster = null; stack('roster'); render(); loadRoster();
+  };
+  window.k8HqDate = function (v) { if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return; H.date = v; H.marks = {}; H.roster = null; render(); loadRoster(); };
+  window.k8HqMark = function (sid, st) { const x = H.roster && H.roster.students.find((s) => s.studentId === sid); if (x && x.status === st) delete H.marks[sid]; else H.marks[sid] = st; render(); };
+  window.k8HqRest = function (st) { (H.roster ? H.roster.students : []).forEach((x) => { if (!x.status && !H.marks[x.studentId]) H.marks[x.studentId] = st; }); render(); };
+  window.k8HqSaveMarks = async function () {
+    H.saving = true; render();
+    try { const r = await api('markHalaqah', { data: { id: H.cur.id, date: H.date, marks: H.marks } }, 45000); if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ'); toast(r.message, 'success'); H.marks = {}; }
+    catch (e) { toast(e.message, 'error'); }
+    H.saving = false; render(); loadRoster();
+  };
 })();
