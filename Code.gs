@@ -1180,7 +1180,7 @@ const ACTION_ACCESS = {
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', updateStudentStatus: 'staff',
@@ -1562,6 +1562,10 @@ function dispatchAction_(action, req, data, session, ctx) {
       return getTimetable_(session, isStudent, ctx.isAdmin);
     case 'saveTimetable':
       return saveTimetable_(data, session);
+    case 'saveTimetableExtra':
+      return saveTimetableExtra_(data, session);
+    case 'deleteTimetableExtra':
+      return deleteTimetableExtra_(data);
     case 'saveTimetableConfig':
       return saveTimetableConfig_(data);
     case 'recordAttendance':
@@ -2772,8 +2776,13 @@ function getTimetable_(session, isStudent, isAdmin) {
   const cfg = ttConfig_(st);
   const grades = {};
   ['1', '2', '3', '4', '5', '6'].forEach(function (g) { let v = null; try { v = JSON.parse(st['Timetable_M' + g] || 'null'); } catch (e) {} if (v && v.cells) grades[g] = v; });
+  // ตารางพิเศษ (แยกจากตารางชั้น) สำหรับนักเรียนที่เลือกเฉพาะ
+  let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
+  const extras = ids.map(function (id) { let v = null; try { v = JSON.parse(st['TimetableX_' + id] || 'null'); } catch (e) {} return v; }).filter(function (v) { return v && v.id; });
   if (isStudent) {
     const g = studentGradeNum_(session.userId).grade;
+    const meX = String(session.userId).replace(/\D/g, '').replace(/^0+/, '');
+    const myExtras = cfg.showStudents ? extras.filter(function (x) { return (x.students || []).indexOf(meX) !== -1; }).map(function (x) { return { id: x.id, name: x.name, cells: x.cells || {}, updatedAt: x.updatedAt }; }) : [];
     if (!cfg.showStudents) return { success: true, hidden: true, config: cfg, grade: g, grades: {} };
     const one = {};
     if (g && grades[g]) {
@@ -2787,10 +2796,51 @@ function getTimetable_(session, isStudent, isAdmin) {
       });
       one[g] = { grade: g, cells: cells, updatedAt: grades[g].updatedAt };
     }
-    return { success: true, config: cfg, grade: g, grades: one };
+    return { success: true, config: cfg, grade: g, grades: one, extras: myExtras };
   }
   if (!isAdmin && !cfg.showTeachers) return { success: true, hidden: true, config: cfg, grades: {} };
-  return { success: true, config: cfg, grades: grades };
+  return { success: true, config: cfg, grades: grades, extras: extras };
+}
+function ttCleanCells_(src) {
+  const cells = {};
+  src = (src && typeof src === 'object') ? src : {};
+  Object.keys(src).forEach(function (k) {
+    if (!/^[0-6]-([1-9]|1[0-2])$/.test(k)) return;
+    const c = Array.isArray(src[k]) ? src[k][0] : src[k]; if (!c) return;
+    const sn = cleanVal(c.subjectName || c.sn).slice(0, 80); if (!sn) return;
+    cells[k] = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
+  });
+  return cells;
+}
+/** ตารางพิเศษ: ตั้งชื่อ เลือกนักเรียน (ข้ามชั้นได้) และลงคาบแยกจากตารางชั้น */
+function saveTimetableExtra_(data, session) {
+  data = data || {};
+  const name = cleanVal(data.name).slice(0, 60);
+  if (!name) return { success: false, message: 'ตั้งชื่อตารางก่อน เช่น ภาษาจีน (วิชาเลือก)' };
+  const students = (Array.isArray(data.students) ? data.students : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean);
+  const uniq = students.filter(function (x, i) { return students.indexOf(x) === i; }).slice(0, 400);
+  if (!uniq.length) return { success: false, message: 'เลือกนักเรียนอย่างน้อย 1 คน' };
+  const st = (getSettings().data) || {};
+  let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
+  let id = cleanVal(data.id).replace(/[^A-Za-z0-9_-]/g, '');
+  if (!id || ids.indexOf(id) === -1) { id = 'X' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); ids.push(id); }
+  if (ids.length > 30) return { success: false, message: 'มีตารางพิเศษได้สูงสุด 30 ตาราง' };
+  const value = { id: id, name: name, students: uniq, cells: ttCleanCells_(data.cells), updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'), by: (session && (session.name || session.userId)) || '' };
+  const json = JSON.stringify(value);
+  if (json.length > 45000) return { success: false, message: 'ตารางยาวเกินไป' };
+  saveSetting({ key: 'TimetableX_' + id, value: json, description: 'ตารางพิเศษ: ' + name + ' (JSON)' });
+  saveSetting({ key: 'TimetableExtras', value: JSON.stringify(ids), description: 'รายการตารางพิเศษ (JSON)' });
+  return { success: true, message: 'บันทึกตาราง "' + name + '" แล้ว', extra: value };
+}
+function deleteTimetableExtra_(data) {
+  const id = cleanVal((data || {}).id);
+  const st = (getSettings().data) || {};
+  let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
+  if (ids.indexOf(id) === -1) return { success: false, message: 'ไม่พบตารางนี้' };
+  ids = ids.filter(function (x) { return x !== id; });
+  saveSetting({ key: 'TimetableExtras', value: JSON.stringify(ids), description: 'รายการตารางพิเศษ (JSON)' });
+  saveSetting({ key: 'TimetableX_' + id, value: '', description: 'ลบแล้ว' });
+  return { success: true, message: 'ลบตารางพิเศษแล้ว' };
 }
 function saveTimetable_(data, session) {
   data = data || {};

@@ -1364,6 +1364,7 @@ html[data-theme="dark"] .k8-tt-dh { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-tt-list li { border: 1px solid #323941 !important; background-color: #121212 !important; }
 html[data-theme="dark"] .k8-tt-list li.is-free { background-color: #181f26 !important; }
 html[data-theme="dark"] .k8-tt-time { border-right: 1px solid #2d363f !important; }
+html[data-theme="dark"] .k8-tt-time b { color: #69c8fc !important; }
 html[data-theme="dark"] .k8-tt-time small { color: #b6bcc3 !important; }
 html[data-theme="dark"] .k8-tt-cell b { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-tt-cell small { color: #a6b0bf !important; }
@@ -1374,6 +1375,7 @@ html[data-theme="dark"] .k8-tt-grid th, html[data-theme="dark"] .k8-tt-grid td {
 html[data-theme="dark"] .k8-tt-grid thead th { color: #c1c7cf !important; background-color: #181f26 !important; }
 html[data-theme="dark"] .k8-tt-grid thead th small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-tt-grid tbody th { background-color: #181f26 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-tt-grid tr.is-today th { color: #69c8fc !important; }
 html[data-theme="dark"] .k8-tt-grid td b { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-tt-grid td small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-tt-grid.is-edit td button { border: 1px dashed #393f46 !important; background-color: #121212 !important; }
@@ -1449,6 +1451,10 @@ html[data-theme="dark"] .k8-tt-stu label:hover { background-color: #0e2432 !impo
 html[data-theme="dark"] .k8-tt-stu small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-tt-grp-add { background-color: #121212 !important; color: #69c8fc !important; }
 html[data-theme="dark"] .k8-tt-grid.is-edit td button em { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-tt-xadd { background-color: #121212 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-tt-xinfo { background-color: #0e2432 !important; border: 1px solid #264555 !important; }
+html[data-theme="dark"] .k8-tt-xinfo b { color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-tt-xinfo small { color: #b6bcc3 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
