@@ -2842,7 +2842,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.1';
+  const APP_VERSION = '12.2';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4970,7 +4970,7 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', (e) => {
     if (leaving) return;
     const st = e.state || {};
-    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
+    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
     if (closeTopModal() || goHome()) { arm(); return; }
     const now = Date.now();
     if (now - lastBack < 2000) { leaving = true; try { history.back(); } catch (e2) {} return; }
@@ -5016,7 +5016,7 @@ window.k8RegBirthChange = function (v) {
       T.err = (r && /Unknown action/i.test(String(r.error || r.message || ''))) ? 'old-backend' : 'offline';
       if (!T.data) T.data = { success: true, config: { periods: [{ start: '08:30', end: '09:20' }, { start: '09:20', end: '10:10' }, { start: '10:20', end: '11:10' }, { start: '11:10', end: '12:00' }, { start: '13:00', end: '13:50' }, { start: '13:50', end: '14:40' }, { start: '14:50', end: '15:40' }, { start: '15:40', end: '16:30' }], days: [1, 2, 3, 4, 5], showStudents: true, showTeachers: true }, grades: {}, offline: true };
     }
-    T.loading = false; paintEntry(); if (document.getElementById('k8TtModal') && document.getElementById('k8TtModal').classList.contains('open')) renderView();
+    T.loading = false; paintEntry(); if (T.open) renderView();
     if (document.getElementById('k8TtAdmin') && document.getElementById('k8TtAdmin').offsetParent !== null) renderAdmin();
   }
 
@@ -5046,13 +5046,21 @@ window.k8RegBirthChange = function (v) {
   }
 
   // ---------- หน้าดูตาราง (นักเรียน / อาจารย์) ----------
+  // เปิดเป็นหน้าเต็ม (กดย้อนกลับเพื่อออก) · ค่าเริ่มต้นแสดงทั้งสัปดาห์
   window.k8TtOpen = function () {
+    const el = document.getElementById('k8TtPage'); if (!el) return;
     const c = cfg(); const d = new Date().getDay();
-    T.day = c.days.indexOf(d) !== -1 ? d : c.days[0]; T.view = 'day';
+    T.day = c.days.indexOf(d) !== -1 ? d : c.days[0]; T.view = 'week';
     if (role() === 'staff') { T.who = 'mine'; if (!T.grade) T.grade = '1'; }
     document.getElementById('k8TtTitle').textContent = role() === 'student' ? 'ตารางเรียน' : 'ตารางสอน';
-    renderView(); openModal('k8TtModal'); load(true);
+    el.hidden = false; T.open = true; document.documentElement.classList.add('k8-docs-open');
+    try { history.pushState({ k8tt: 1 }, ''); } catch (e) {}
+    const b = document.getElementById('k8TtBody'); if (b) b.scrollTop = 0;
+    renderView(); load(true);
   };
+  function closePage() { const el = document.getElementById('k8TtPage'); if (el) el.hidden = true; T.open = false; if (!document.querySelector('.k8-docs:not([hidden])')) document.documentElement.classList.remove('k8-docs-open'); }
+  window.k8TtBack = function () { history.back(); };
+  window.addEventListener('popstate', (e) => { if (T.open && !(e.state && e.state.k8tt)) closePage(); });
   function cellHtml(x, showGrade, g) {
     if (!x) return '<span class="k8-tt-free">ว่าง</span>';
     return '<b>' + esc(x.sn) + '</b><small>' + [showGrade ? 'ม.' + g : '', showGrade ? '' : x.tn, x.r ? 'ห้อง ' + x.r : ''].filter(Boolean).map(esc).join(' · ') + '</small>';
@@ -5082,7 +5090,7 @@ window.k8RegBirthChange = function (v) {
       h += '<h3 class="k8-tt-dh">วัน' + DAYN[T.day] + (today ? ' · วันนี้' : '') + '</h3>' + (any ? '<ol class="k8-tt-list">' + rows + '</ol>' : '<p class="k8-li-empty">' + (mine ? 'ไม่มีคาบสอนวันนี้' : 'ยังไม่มีคาบเรียนในวันนี้') + '</p>');
     } else {
       h += '<div class="k8-tt-gridwrap"><table class="k8-tt-grid"><thead><tr><th scope="col">วัน</th>' + c.periods.map((p, i) => '<th scope="col">คาบ ' + (i + 1) + '<small>' + esc(p.start) + '</small></th>').join('') + '</tr></thead><tbody>' +
-        c.days.map((d) => '<tr' + (d === new Date().getDay() ? ' class="is-today"' : '') + '><th scope="row">' + DAYS[d] + '</th>' + c.periods.map((p, i) => { const o = cellOf(d, i); return '<td>' + (o.x ? '<b>' + esc(o.x.sn) + '</b><small>' + esc(mine ? 'ม.' + o.g : (o.x.tn || '')) + '</small>' : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div>';
+        c.days.map((d) => '<tr' + (d === new Date().getDay() ? ' class="is-today"' : '') + '><th scope="row"><button type="button" class="k8-tt-dbtn" onclick="k8TtDay(' + d + ')" aria-label="ดูวัน' + DAYN[d] + 'แบบรายคาบ">' + DAYS[d] + '</button></th>' + c.periods.map((p, i) => { const o = cellOf(d, i); return '<td>' + (o.x ? '<b>' + esc(o.x.sn) + '</b><small>' + esc([mine ? 'ม.' + o.g : (o.x.tn || ''), o.x.r ? 'ห้อง ' + o.x.r : ''].filter(Boolean).join(' · ')) + '</small>' : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div><p class="k8-pw-hint">แตะชื่อวันเพื่อดูรายคาบของวันนั้น</p>';
     }
     body.innerHTML = h;
   }
