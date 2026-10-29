@@ -2569,3 +2569,15 @@ html.k8-narrow #k8TtPRows .k8-pw-row b { grid-column: 1 / -1; padding-bottom: 0;
 }
 html.k8-narrow #k8TtPRows .k8-pw-row { grid-template-columns: 1fr; grid-template-areas: "n" "x" "s" "e"; }
 html.k8-narrow #k8TtPRows .k8-pw-row .k8-pw-x { justify-self: start; }
+
+/* v13.4 · รูปโปรไฟล์อาจารย์ */
+.k8-acct summary { overflow: hidden; }
+.k8-acct summary.has-photo, .k8-acct-pic.has-photo { background: #fff; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #bae6fd; }
+.k8-acct summary img, .k8-acct-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.k8-acct-menu { min-width: 230px; }
+.k8-acct-menu button.k8-acct-photo { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 10px; border-bottom: 1px solid #f1f5f9; border-radius: 10px 10px 0 0; margin-bottom: 4px; }
+.k8-acct-pic { flex: none; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #e0f2fe; color: #0369a1; font-weight: 600; display: flex; align-items: center; justify-content: center; position: relative; }
+.k8-acct-pic::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 16px; height: 16px; border-radius: 50%; background: #0369a1 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E") center/10px no-repeat; border: 2px solid #fff; }
+.k8-acct-photo > span:last-child { display: flex; flex-direction: column; line-height: 1.3; }
+.k8-acct-photo b { font-weight: 600; font-size: 15px; color: #0369a1; }
+.k8-acct-photo small { font-size: 12px; color: #64748b; }

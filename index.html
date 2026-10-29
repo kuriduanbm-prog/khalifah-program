@@ -58,9 +58,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=13.3">
-  <link rel="stylesheet" href="ui-v8.css?v=13.3">
-  <link rel="stylesheet" href="dark.css?v=13.3">
+  <link rel="stylesheet" href="style.css?v=13.4">
+  <link rel="stylesheet" href="ui-v8.css?v=13.4">
+  <link rel="stylesheet" href="dark.css?v=13.4">
 </head>
 <body class="auth-locked">
   <script>
@@ -1698,6 +1698,7 @@
           <details class="k8-acct">
             <summary aria-label="บัญชีของฉัน" id="k8ThAvatar">อ</summary>
             <div class="k8-acct-menu">
+              <button type="button" class="k8-acct-photo" onclick="this.closest('details').open=false; k8ThPickPhoto()"><span class="k8-acct-pic" id="k8ThMenuPic" aria-hidden="true">อ</span><span><b>เปลี่ยนรูปโปรไฟล์</b><small>แตะเพื่อเลือกรูปหรือถ่ายรูป</small></span></button>
               <button type="button" onclick="this.closest('details').open=false; openTeacherAccountModal()">โปรไฟล์ของฉัน</button>
               <div class="k8-theme-seg is-menu" data-k8-theme></div>
               <button type="button" id="k8ThBackAdmin" onclick="switchView('admin')" hidden>ไปหน้าแอดมิน</button>
@@ -5783,7 +5784,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=13.3"></script>
-  <script defer src="ui-v8.js?v=13.3"></script>
+  <script defer src="app.js?v=13.4"></script>
+  <script defer src="ui-v8.js?v=13.4"></script>
 </body>
 </html>

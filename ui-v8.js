@@ -1426,7 +1426,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     document.getElementById('k8ThDate').textContent = DAYS_FULL[now.getDay()] + ' ' + now.getDate() + ' ' + MON[now.getMonth()] + ' · ' + (isExec ? 'ผู้บริหาร' : 'อาจารย์ผู้สอน');
     const nm = a ? (a.fullName || a.username || 'อาจารย์') : 'อาจารย์';
     nameEl.textContent = nm; nameEl.title = nm;
-    document.getElementById('k8ThAvatar').textContent = initialOf(nm);
+    window.k8ThAvatarPaint && window.k8ThAvatarPaint();
     const back = document.getElementById('k8ThBackAdmin'); if (back) back.hidden = !isSuper;
 
     const list = students(), total = list.length;
@@ -2843,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '13.3';
+  const APP_VERSION = '13.4';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5583,4 +5583,35 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('scroll', fit, { passive: true }); window.addEventListener('resize', fit);
   const o = window.switchAdminTab; if (typeof o === 'function') window.switchAdminTab = function () { const r = o.apply(this, arguments); setTimeout(fit, 0); return r; };
   setTimeout(fit, 500);
+})();
+
+/* ---------- v13.4 · รูปโปรไฟล์อาจารย์ที่มุมขวาบน ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function photoOf(a) {
+    if (!a) return '';
+    let u = a.avatarUrl || a.photo || '';
+    try { u = u || localStorage.getItem('khalifah_admin_avatar_' + a.username) || ''; } catch (e) {}
+    try { if (u && typeof getDirectImageUrl === 'function' && !/^data:/.test(u)) u = getDirectImageUrl(u) || u; } catch (e) {}
+    return u;
+  }
+  window.k8ThAvatarPaint = function () {
+    let a = null; try { a = currentAdmin; } catch (e) {}
+    const nm = a ? (a.fullName || a.username || 'อาจารย์') : 'อาจารย์';
+    const ini = (String(nm).replace(/^(อ\.|อาจารย์|ครู|นาย|นางสาว|นาง)\s*/, '').trim().charAt(0)) || 'อ';
+    const u = photoOf(a);
+    ['k8ThAvatar', 'k8ThMenuPic'].forEach((id) => {
+      const el = document.getElementById(id); if (!el) return;
+      el.classList.toggle('has-photo', !!u);
+      el.innerHTML = u ? '<img src="' + esc(u) + '" alt="" onerror="this.remove()">' : esc(ini);
+    });
+  };
+  window.k8ThPickPhoto = function () { const i = document.getElementById('inputTeacherPhotoModal'); if (i) { i.value = ''; i.click(); } };
+  const h = window.handleTeacherProfileUpload;
+  if (typeof h === 'function') window.handleTeacherProfileUpload = function () {
+    const r = h.apply(this, arguments);
+    let n = 0; const t = setInterval(() => { window.k8ThAvatarPaint(); if (++n > 10) clearInterval(t); }, 300);
+    return r;
+  };
+  document.addEventListener('DOMContentLoaded', () => window.k8ThAvatarPaint());
 })();
