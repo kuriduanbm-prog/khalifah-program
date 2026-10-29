@@ -1130,6 +1130,7 @@ function publicSettings_(settings) {
   const o = {};
   Object.keys(settings || {}).forEach(function (k) {
     if (/master|password|secret|token|otp/i.test(k)) return;
+    if (/^Timetable/.test(k)) return; // ตารางสอน: อ่านผ่าน getTimetable (มีสิทธิ์และการเปิด/ปิดการมองเห็น)
     o[k] = settings[k];
   });
   return o;
@@ -1178,6 +1179,8 @@ const ACTION_ACCESS = {
   saveBehaviorRules: 'admin',
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
+  // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', updateStudentStatus: 'staff',
@@ -1209,7 +1212,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead'];
-READ_ONLY_ACTIONS.push('getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getTimetable', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1555,6 +1558,12 @@ function dispatchAction_(action, req, data, session, ctx) {
       return addPrayerForStudent_(data, session);
     case 'savePrayerWindows':
       return savePrayerWindows_(data.windows);
+    case 'getTimetable':
+      return getTimetable_(session, isStudent, ctx.isAdmin);
+    case 'saveTimetable':
+      return saveTimetable_(data, session);
+    case 'saveTimetableConfig':
+      return saveTimetableConfig_(data);
     case 'recordAttendance':
       return recordAttendance(data);
     case 'saveDailyAttendance':
@@ -2741,6 +2750,76 @@ function savePrayerWindows_(windows) {
   }
   saveSetting({ key: 'PrayerWindows', value: JSON.stringify(out.map(function (w) { return { key: w.key, start: w.start, end: w.end }; })), description: 'ช่วงเวลาละหมาด (JSON) · ว่าง = ค่าเริ่มต้น' });
   return { success: true, message: 'บันทึกช่วงเวลาละหมาดแล้ว · นักเรียนจะเห็นเวลาใหม่ทันที' };
+}
+
+/* ===================== ตารางสอน ===================== */
+const TT_DEFAULT_PERIODS = [
+  { start: '08:30', end: '09:20' }, { start: '09:20', end: '10:10' }, { start: '10:20', end: '11:10' }, { start: '11:10', end: '12:00' },
+  { start: '13:00', end: '13:50' }, { start: '13:50', end: '14:40' }, { start: '14:50', end: '15:40' }, { start: '15:40', end: '16:30' }
+];
+function ttConfig_(settings) {
+  let c = null; try { c = JSON.parse(settings.TimetableConfig || 'null'); } catch (e) {}
+  c = c || {};
+  return {
+    periods: Array.isArray(c.periods) && c.periods.length ? c.periods : TT_DEFAULT_PERIODS,
+    days: Array.isArray(c.days) && c.days.length ? c.days : [1, 2, 3, 4, 5],
+    showStudents: c.showStudents !== false, showTeachers: c.showTeachers !== false,
+    updatedAt: c.updatedAt || ''
+  };
+}
+function getTimetable_(session, isStudent, isAdmin) {
+  const st = (getSettings().data) || {};
+  const cfg = ttConfig_(st);
+  const grades = {};
+  ['1', '2', '3', '4', '5', '6'].forEach(function (g) { let v = null; try { v = JSON.parse(st['Timetable_M' + g] || 'null'); } catch (e) {} if (v && v.cells) grades[g] = v; });
+  if (isStudent) {
+    const g = studentGradeNum_(session.userId).grade;
+    if (!cfg.showStudents) return { success: true, hidden: true, config: cfg, grade: g, grades: {} };
+    const one = {}; if (g && grades[g]) one[g] = grades[g];
+    return { success: true, config: cfg, grade: g, grades: one };
+  }
+  if (!isAdmin && !cfg.showTeachers) return { success: true, hidden: true, config: cfg, grades: {} };
+  return { success: true, config: cfg, grades: grades };
+}
+function saveTimetable_(data, session) {
+  data = data || {};
+  const g = String(cleanVal(data.grade)).replace(/\D/g, '');
+  if (!/^[1-6]$/.test(g)) return { success: false, message: 'เลือกชั้นเรียน ม.1–ม.6' };
+  const cells = {};
+  const src = (data.cells && typeof data.cells === 'object') ? data.cells : {};
+  Object.keys(src).forEach(function (k) {
+    if (!/^[0-6]-([1-9]|1[0-2])$/.test(k)) return;
+    const c = src[k] || {};
+    const sn = cleanVal(c.subjectName || c.sn).slice(0, 80);
+    if (!sn) return;
+    cells[k] = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
+  });
+  const value = { grade: g, cells: cells, updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'), by: (session && (session.name || session.userId)) || '' };
+  const json = JSON.stringify(value);
+  if (json.length > 45000) return { success: false, message: 'ตารางยาวเกินไป ลองย่อชื่อวิชาหรือห้องเรียน' };
+  saveSetting({ key: 'Timetable_M' + g, value: json, description: 'ตารางสอน ม.' + g + ' (JSON)' });
+  return { success: true, message: 'บันทึกตารางสอน ม.' + g + ' แล้ว', timetable: value };
+}
+function saveTimetableConfig_(data) {
+  data = data || {};
+  const toMin = function (t) { const m = String(t || '').match(/^(\d{1,2}):(\d{2})$/); return m && +m[1] < 24 && +m[2] < 60 ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  const cur = ttConfig_((getSettings().data) || {});
+  let periods = cur.periods;
+  if (Array.isArray(data.periods)) {
+    if (!data.periods.length || data.periods.length > 12) return { success: false, message: 'จำนวนคาบต้องอยู่ระหว่าง 1–12 คาบ' };
+    periods = [];
+    for (let i = 0; i < data.periods.length; i++) {
+      const p = data.periods[i] || {}; const a = toMin(p.start), b = toMin(p.end);
+      if (isNaN(a) || isNaN(b) || b <= a) return { success: false, message: 'เวลาคาบที่ ' + (i + 1) + ' ไม่ถูกต้อง (เวลาจบต้องหลังเวลาเริ่ม)' };
+      if (i && a < toMin(periods[i - 1].end)) return { success: false, message: 'คาบที่ ' + (i + 1) + ' เริ่มก่อนคาบที่ ' + i + ' จบ' };
+      periods.push({ start: p.start, end: p.end });
+    }
+  }
+  let days = cur.days;
+  if (Array.isArray(data.days)) { days = data.days.map(Number).filter(function (d) { return d >= 0 && d <= 6; }); days = days.filter(function (d, i) { return days.indexOf(d) === i; }).sort(function (a, b) { return ((a + 6) % 7) - ((b + 6) % 7); }); if (!days.length) return { success: false, message: 'เลือกวันเรียนอย่างน้อย 1 วัน' }; }
+  const value = { periods: periods, days: days, showStudents: data.showStudents !== undefined ? !!data.showStudents : cur.showStudents, showTeachers: data.showTeachers !== undefined ? !!data.showTeachers : cur.showTeachers, updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') };
+  saveSetting({ key: 'TimetableConfig', value: JSON.stringify(value), description: 'ตั้งค่าตารางสอน: คาบ วันเรียน การมองเห็น (JSON)' });
+  return { success: true, config: value, message: 'บันทึกการตั้งค่าตารางสอนแล้ว' };
 }
 
 function getPrayers(studentId, date) {
