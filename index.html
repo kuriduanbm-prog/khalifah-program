@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=10.9">
-  <link rel="stylesheet" href="ui-v8.css?v=10.9">
+  <link rel="stylesheet" href="style.css?v=11.0">
+  <link rel="stylesheet" href="ui-v8.css?v=11.0">
 </head>
 <body class="auth-locked">
   <script>
@@ -206,6 +206,7 @@
                 <dt>โรงเรียน</dt><dd id="hfSchool">-</dd>
               </dl>
               <span class="hf-status" id="hfStatus">กำลังศึกษา</span>
+              <button type="button" class="hf-dream" id="hfDream" hidden onclick="k8DreamEdit()"></button>
             </div>
           </div>
         </section>
@@ -1486,6 +1487,11 @@
           <span class="k8-policy-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"/></svg></span>
           <span class="k8-policy-txt"><b>กฎระเบียบหอพักนักเรียนและแนวทางส่งเสริมพฤติกรรม</b><span id="k8PolicyStatus">อ่านและกดยินยอมข้อตกลง</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <button type="button" class="k8-dream-card" id="k8DreamCard" onclick="k8DreamEdit()">
+          <span class="k8-dream-ico" id="k8DreamIco"><i class="fa-solid fa-star" aria-hidden="true"></i></span>
+          <span class="k8-dream-txt"><small>ความใฝ่ฝันของฉัน</small><b id="k8DreamText">ยังไม่ได้ระบุ</b><span id="k8DreamWhy">แตะเพื่อบอกอาชีพหรือสิ่งที่อยากเป็น</span></span>
+          <span class="k8-dream-edit">แก้ไข</span>
         </button>
         <section class="k8-box k8-links-box">
           <button type="button" class="k8-pl" onclick="switchView('dashboard')"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="k8-pl-t">แดชบอร์ดของฉัน</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -5642,6 +5648,12 @@
       <div class="k8-pop-btns"><button type="button" class="is-alt" onclick="k8PopClose()">ไว้ทีหลัง</button><button type="button" id="k8PopGo" onclick="k8PopGo()">เปิดดู</button></div>
     </div>
   </div>
+  <div class="modal-overlay" id="k8DreamModal" onclick="if(event.target===this)closeModal('k8DreamModal')">
+    <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8DreamTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8DreamTitle">ความใฝ่ฝันของฉัน</h2><span>อยากเป็นอะไรในอนาคต · เปลี่ยนได้ทุกเมื่อ</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8DreamModal')">✕</button></header>
+      <div class="k8-sheet-body" id="k8DreamBody"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="k8NotifModal" onclick="if(event.target===this)closeModal('k8NotifModal')">
     <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8NotifTitle">
       <header class="k8-sheet-head"><div><h2 id="k8NotifTitle">การแจ้งเตือน</h2><span id="k8NotifSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8NotifModal')">✕</button></header>
@@ -5686,7 +5698,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=10.9"></script>
-  <script defer src="ui-v8.js?v=10.9"></script>
+  <script defer src="app.js?v=11.0"></script>
+  <script defer src="ui-v8.js?v=11.0"></script>
 </body>
 </html>

@@ -2838,7 +2838,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.9';
+  const APP_VERSION = '11.0';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3436,7 +3436,7 @@ window.k8RegBirthChange = function (v) {
     const files = v.files.filter((f) => !q || f.name.toLowerCase().includes(q));
     let h = '';
     if (D.err[key]) h += '<p class="k8-docs-note">แสดงรายการล่าสุดที่จำไว้ · ' + esc(D.err[key]) + '</p>';
-    if (folders.length) h += '<h3 class="k8-docs-h">โฟลเดอร์ (' + folders.length + ')</h3><ul class="k8-docs-folders">' + folders.map((f) => '<li><button type="button" onclick="k8DocsFolder(\'' + js(f.id) + '\',\'' + js(f.name) + '\')"><span class="k8-docs-fic"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><b>' + esc(f.name) + '</b><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></li>').join('') + '</ul>';
+    if (folders.length) h += '<h3 class="k8-docs-h">โฟลเดอร์ (' + folders.length + ')</h3><ul class="k8-docs-folders">' + folders.map((f) => '<li><button type="button" onclick="k8DocsFolder(\'' + js(f.id) + '\',\'' + js(f.name) + '\')"><span class="k8-docs-fic"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="k8-docs-fname"><b>' + esc(f.name) + '</b>' + (f.files != null ? '<small>' + f.files + ' ไฟล์' + (f.folders ? ' · ' + f.folders + ' โฟลเดอร์' : '') + '</small>' : '') + '</span>' + (f.files != null ? '<span class="k8-docs-cnt' + (f.files ? '' : ' is-zero') + '">' + f.files + '</span>' : '') + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></li>').join('') + '</ul>';
     if (files.length) h += '<h3 class="k8-docs-h">ไฟล์ (' + files.length + ')</h3><ul class="k8-docs-files">' + files.map((f) => { const t = typeOf(f.mime);
       return '<li><button type="button" onclick="k8DocsFile(\'' + js(f.id) + '\')"><span class="k8-docs-tic" style="color:' + t[2] + ';background:' + t[3] + '">' + t[1] + '</span><span class="k8-docs-fn"><b>' + esc(f.name) + '</b><small>' + [fmtD(f.updated), fmtSize(f.size)].filter(Boolean).join(' · ') + '</small></span></button></li>'; }).join('') + '</ul>';
     if (!folders.length && !files.length) h += '<div class="k8-docs-empty"><b>' + (q ? 'ไม่พบเอกสารที่ค้นหา' : 'โฟลเดอร์นี้ยังว่าง') + '</b></div>';
@@ -3496,6 +3496,8 @@ window.k8RegBirthChange = function (v) {
   }
   window.k8DocsFile = function (id) {
     const v = D.view[curKey()]; const f = ((v && v.files) || []).find((x) => x.id === id); if (!f) return;
+    // เปิดผ่านระบบของแอป: ไม่ต้องเข้าสู่ระบบ Google ซูมและขีดเขียนได้
+    if (window.k8PvOpen) { window.k8PvOpen(f); return; }
     const t = typeOf(f.mime); const isGoogle = /google-apps/.test(f.mime || '');
     openViewer('https://drive.google.com/file/d/' + encodeURIComponent(id) + '/preview', f.name, t[1] + (f.size ? ' · ' + fmtSize(f.size) : ''), isGoogle ? '' : 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id));
   };
@@ -3506,6 +3508,7 @@ window.k8RegBirthChange = function (v) {
   window.k8DocsBack = function () { history.back(); };
   window.addEventListener('popstate', () => {
     if (!D.open) return;
+    if (window.k8PvIsOpen && window.k8PvIsOpen()) return;
     if (closeFile()) return;
     if (D.nav.length) { D.nav.pop(); D.q = ''; render(); const k = curKey(); if (D.view[k]) fetchFolder(k, true); else fetchFolder(k, false); return; }
     closeAll();
@@ -3789,4 +3792,423 @@ window.k8RegBirthChange = function (v) {
   function boot() { loadCache(); load(true); }
   if (document.readyState === 'complete') setTimeout(boot, 200); else window.addEventListener('load', () => setTimeout(boot, 200));
   setInterval(() => { if (!document.hidden) load(true); }, 120000);
+})();
+
+/* ============ Round 15 · ความใฝ่ฝัน (อาชีพในฝัน + ไอคอน) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  // [ชื่อ, ไอคอน Font Awesome, หมวด, คำค้นเพิ่มเติม]
+  const C = [
+    ['แพทย์', 'user-doctor', 'health', 'หมอ doctor ศัลยแพทย์ กุมาร'], ['พยาบาล', 'user-nurse', 'health', 'nurse'], ['ทันตแพทย์', 'tooth', 'health', 'หมอฟัน dentist'],
+    ['เภสัชกร', 'pills', 'health', 'ยา pharmacist'], ['สัตวแพทย์', 'paw', 'health', 'หมอสัตว์ vet'], ['นักกายภาพบำบัด', 'person-walking-with-cane', 'health', 'กายภาพ'],
+    ['นักจิตวิทยา', 'brain', 'health', 'จิตแพทย์ psychologist'], ['นักเทคนิคการแพทย์', 'microscope', 'health', 'แล็บ เทคนิคการแพทย์'], ['นักโภชนาการ', 'bowl-food', 'health', 'โภชนาการ อาหาร'],
+    ['โปรแกรมเมอร์', 'laptop-code', 'tech', 'นักพัฒนา developer coder เขียนโปรแกรม software'], ['นักวิทยาศาสตร์ข้อมูล', 'chart-line', 'tech', 'data scientist ข้อมูล'], ['วิศวกร AI', 'robot', 'tech', 'ai ปัญญาประดิษฐ์ หุ่นยนต์ machine learning'],
+    ['นักความปลอดภัยไซเบอร์', 'shield-halved', 'tech', 'cyber security แฮกเกอร์'], ['นักพัฒนาเกม', 'gamepad', 'tech', 'game developer เกม'], ['วิศวกร', 'helmet-safety', 'tech', 'engineer วิศวะ โยธา ไฟฟ้า เครื่องกล'],
+    ['นักบินอวกาศ', 'user-astronaut', 'tech', 'อวกาศ astronaut'], ['นักวิทยาศาสตร์', 'flask', 'tech', 'scientist เคมี ฟิสิกส์ ชีวะ'], ['นักวิจัย', 'magnifying-glass-chart', 'tech', 'research'],
+    ['ครู', 'chalkboard-user', 'faith', 'อาจารย์ teacher ครูสอน'], ['อุสตาซ / นักวิชาการศาสนา', 'mosque', 'faith', 'อุสตาซ อุสตาซะห์ บาบอ โต๊ะครู อิหม่าม ศาสนา imam'], ['ฮาฟิซอัลกุรอาน', 'book-quran', 'faith', 'ฮาฟิซ ฮาฟิซะห์ กุรอาน hafiz'],
+    ['นักแปล / ล่าม', 'language', 'faith', 'แปล ล่าม อาหรับ อังกฤษ translator'], ['นักการทูต', 'earth-asia', 'faith', 'ทูต diplomat ต่างประเทศ'], ['ศาสตราจารย์', 'graduation-cap', 'faith', 'อาจารย์มหาวิทยาลัย professor ด็อกเตอร์'],
+    ['ทหาร', 'person-military-rifle', 'safe', 'soldier'], ['ตำรวจ', 'user-shield', 'safe', 'police'], ['นักดับเพลิง', 'fire-extinguisher', 'safe', 'ดับเพลิง firefighter'],
+    ['ทนายความ', 'scale-balanced', 'safe', 'lawyer กฎหมาย นิติ'], ['ผู้พิพากษา', 'gavel', 'safe', 'judge ศาล'], ['ข้าราชการ', 'landmark', 'safe', 'รับราชการ ปลัด นายอำเภอ'],
+    ['นักบิน', 'plane', 'safe', 'pilot บิน'], ['พนักงานต้อนรับบนเครื่องบิน', 'plane-departure', 'safe', 'แอร์โฮสเตส สจ๊วต flight attendant'], ['กัปตันเรือ', 'ship', 'safe', 'เรือ กะลาสี'],
+    ['นักธุรกิจ', 'briefcase', 'biz', 'business เจ้าของกิจการ ผู้ประกอบการ ceo'], ['แม่ค้าออนไลน์', 'store', 'biz', 'ขายของออนไลน์ ค้าขาย ร้านค้า'], ['นักบัญชี', 'calculator', 'biz', 'บัญชี accountant'],
+    ['นักการตลาด', 'bullhorn', 'biz', 'marketing การตลาด'], ['นักการเงิน / นักลงทุน', 'sack-dollar', 'biz', 'การเงิน ลงทุน ธนาคาร investor'], ['สถาปนิก', 'compass-drafting', 'biz', 'architect ออกแบบบ้าน'],
+    ['ยูทูบเบอร์ / ครีเอเตอร์', 'video', 'art', 'youtuber tiktoker สตรีมเมอร์ อินฟลูเอนเซอร์ creator influencer'], ['นักกีฬาอีสปอร์ต', 'headset', 'art', 'esports เกมเมอร์ gamer'], ['นักออกแบบกราฟิก', 'pen-ruler', 'art', 'graphic designer ดีไซเนอร์ ux ui'],
+    ['ศิลปิน / นักวาด', 'palette', 'art', 'artist วาดรูป นักวาดการ์ตูน illustrator'], ['ช่างภาพ', 'camera', 'art', 'photographer ถ่ายรูป'], ['นักดนตรี / นักร้อง', 'music', 'art', 'นักร้อง ดนตรี singer อนาชีด'],
+    ['นักเขียน', 'pen-nib', 'art', 'writer นักเขียนนิยาย'], ['นักข่าว', 'newspaper', 'art', 'journalist ผู้ประกาศข่าว'], ['นักแสดง', 'film', 'art', 'ดารา actor'],
+    ['ดีไซเนอร์แฟชั่น', 'shirt', 'art', 'แฟชั่น fashion'], ['เชฟ', 'kitchen-set', 'art', 'chef ทำอาหาร พ่อครัว'], ['บาริสต้า', 'mug-hot', 'art', 'กาแฟ barista คาเฟ่'],
+    ['นักฟุตบอล', 'futbol', 'sport', 'ฟุตบอล นักบอล football'], ['นักกีฬา', 'medal', 'sport', 'sport athlete'], ['เทรนเนอร์ฟิตเนส', 'dumbbell', 'sport', 'fitness ออกกำลังกาย'],
+    ['เกษตรกร', 'seedling', 'other', 'ทำสวน ทำนา ยางพารา farmer'], ['ช่างยนต์', 'screwdriver-wrench', 'other', 'ช่าง mechanic ซ่อมรถ'], ['นักเดินทาง', 'suitcase-rolling', 'other', 'ท่องเที่ยว ไกด์ travel'],
+    ['ช่างตัดผม', 'scissors', 'other', 'barber ช่างเสริมสวย'], ['นักสังคมสงเคราะห์', 'hand-holding-heart', 'other', 'จิตอาสา ช่วยเหลือ social'], ['คนขับรถ / โลจิสติกส์', 'truck', 'other', 'ขนส่ง logistics']
+  ];
+  const CATS = [['all', 'ทั้งหมด'], ['health', 'สุขภาพ'], ['tech', 'วิทย์/เทคโนโลยี'], ['faith', 'การศึกษา/ศาสนา'], ['safe', 'ราชการ/ความปลอดภัย'], ['biz', 'ธุรกิจ'], ['art', 'ครีเอทีฟ/บันเทิง'], ['sport', 'กีฬา'], ['other', 'อื่น ๆ']];
+  const iconHtml = (ic) => '<i class="' + (ic === 'youtube' ? 'fa-brands' : 'fa-solid') + ' fa-' + esc(ic || 'star') + '" aria-hidden="true"></i>';
+  function match(text) {
+    const t = String(text || '').trim().toLowerCase(); if (!t) return null;
+    return C.find((c) => c[0].toLowerCase() === t) || C.find((c) => t.includes(c[0].toLowerCase()) || c[0].toLowerCase().includes(t)) || C.find((c) => c[3].toLowerCase().split(/\s+/).some((k) => k && (t.includes(k) || (k.length > 2 && k.includes(t))))) || null;
+  }
+  const S = { data: null, draft: null, cat: 'all', saving: false };
+  const sid = () => { try { return currentStudent ? String(currentStudent.studentId).replace(/^0+/, '') : ''; } catch (e) { return ''; } };
+  function cacheGet() { try { const c = JSON.parse(localStorage.getItem('k8_dream_' + sid()) || 'null'); return c; } catch (e) { return null; } }
+  function paint() {
+    const d = S.data || cacheGet() || { dream: '' };
+    const has = !!d.dream; const ic = d.icon || (match(d.dream) || [0, 'star'])[1];
+    const t = document.getElementById('k8DreamText'), w = document.getElementById('k8DreamWhy'), i = document.getElementById('k8DreamIco'), card = document.getElementById('k8DreamCard');
+    if (t) t.textContent = has ? d.dream : 'ยังไม่ได้ระบุ';
+    if (w) w.textContent = has ? (d.reason || 'แตะเพื่อเพิ่มเหตุผลหรือเป้าหมาย') : 'แตะเพื่อบอกอาชีพหรือสิ่งที่อยากเป็น';
+    if (i) i.innerHTML = iconHtml(has ? ic : 'star');
+    if (card) card.classList.toggle('is-empty', !has);
+    const chip = document.getElementById('hfDream');
+    if (chip) { chip.hidden = !has; if (has) { chip.innerHTML = iconHtml(ic) + '<span>' + esc(d.dream) + '</span>'; chip.setAttribute('aria-label', 'ความใฝ่ฝัน ' + d.dream + ' · แตะเพื่อแก้ไข'); } }
+  }
+  async function load() {
+    if (!sid()) return;
+    paint();
+    try { const r = await gasApiCall('getMyDream', {}, 20000); if (r && r.success) { S.data = r.dream; try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(r.dream)); } catch (e) {} paint(); } } catch (e) {}
+  }
+  function renderEditor() {
+    const body = document.getElementById('k8DreamBody'); if (!body) return;
+    const d = S.draft; const m = match(d.dream); const ic = d.icon || (m ? m[1] : 'star');
+    const q = String(d.dream || '').trim().toLowerCase();
+    let list = C.filter((c) => S.cat === 'all' || c[2] === S.cat);
+    if (q && S.cat === 'all') { const hit = list.filter((c) => (c[0] + ' ' + c[3]).toLowerCase().includes(q)); if (hit.length) list = hit.concat(list.filter((c) => hit.indexOf(c) === -1)); }
+    body.innerHTML = '<div class="k8-dr-input"><span class="k8-dr-big">' + iconHtml(ic) + '</span><label><span>อาชีพหรือสิ่งที่อยากเป็น</span><input type="text" id="k8DrIn" maxlength="80" placeholder="เช่น แพทย์ โปรแกรมเมอร์ อุสตาซ" value="' + esc(d.dream) + '" oninput="k8DreamType(this)" autocomplete="off"></label></div>' +
+      '<p class="k8-dr-hint">' + (d.dream ? (m ? 'ไอคอนจับคู่กับ "' + esc(m[0]) + '" · เลือกไอคอนอื่นจากรายการด้านล่างได้' : 'ไม่พบไอคอนที่ตรง ใช้ดาวแทน · เลือกจากรายการด้านล่างได้') : 'พิมพ์เอง หรือแตะเลือกจากอาชีพยอดนิยมด้านล่าง') + '</p>' +
+      '<div class="k8-dr-cats" role="tablist">' + CATS.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (S.cat === k) + '" onclick="k8DreamCat(\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
+      '<div class="k8-dr-grid">' + list.map((c) => '<button type="button" aria-pressed="' + (d.dream === c[0]) + '" onclick="k8DreamPick(\'' + js(c[0]) + '\',\'' + c[1] + '\')">' + iconHtml(c[1]) + '<span>' + esc(c[0]) + '</span></button>').join('') + '</div>' +
+      '<label class="k8-nf-f"><span>เหตุผลหรือเป้าหมาย (ไม่บังคับ)</span><textarea id="k8DrWhy" rows="2" maxlength="300" placeholder="เช่น อยากช่วยรักษาคนในชุมชน" oninput="k8DreamWhy(this.value)">' + esc(d.reason) + '</textarea></label>' +
+      '<div class="k8-dr-btns">' + ((S.data && S.data.dream) ? '<button type="button" class="is-alt" onclick="k8DreamClear()">ลบความใฝ่ฝัน</button>' : '') + '<button type="button" ' + (S.saving ? 'disabled' : '') + ' onclick="k8DreamSave()">' + (S.saving ? 'กำลังบันทึก…' : 'บันทึก') + '</button></div>';
+  }
+  window.k8DreamEdit = function () {
+    const d = S.data || cacheGet() || {};
+    S.draft = { dream: d.dream || '', icon: d.icon || '', reason: d.reason || '' }; S.cat = 'all';
+    renderEditor(); openModal('k8DreamModal');
+  };
+  let tt = null;
+  window.k8DreamType = function (el) { S.draft.dream = el.value; S.draft.icon = ''; clearTimeout(tt); tt = setTimeout(() => { const pos = el.selectionStart; const why = document.getElementById('k8DrWhy'); if (why) S.draft.reason = why.value; renderEditor(); const n = document.getElementById('k8DrIn'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 220); };
+  window.k8DreamWhy = function (v) { S.draft.reason = v; };
+  window.k8DreamCat = function (k) { const why = document.getElementById('k8DrWhy'); if (why) S.draft.reason = why.value; S.cat = k; renderEditor(); };
+  window.k8DreamPick = function (name, ic) { const why = document.getElementById('k8DrWhy'); if (why) S.draft.reason = why.value; S.draft.dream = name; S.draft.icon = ic; renderEditor(); };
+  async function save(d) {
+    S.saving = true; renderEditor();
+    try {
+      const r = await gasApiCall('saveMyDream', { data: d }, 20000);
+      if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
+      S.data = r.dream; try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(r.dream)); } catch (e) {}
+      paint(); closeModal('k8DreamModal'); if (typeof showToast === 'function') showToast(r.message, 'success');
+    } catch (e) { if (typeof showToast === 'function') showToast(e.message, 'error'); }
+    S.saving = false; if (document.getElementById('k8DreamModal').classList.contains('open')) renderEditor();
+  }
+  window.k8DreamSave = function () {
+    const why = document.getElementById('k8DrWhy'); if (why) S.draft.reason = why.value;
+    const d = S.draft; if (!String(d.dream || '').trim()) { if (typeof showToast === 'function') showToast('พิมพ์หรือเลือกอาชีพในฝันก่อน', 'warning'); return; }
+    const clean = d.dream.trim().replace(/^(ฉัน|หนู|ผม)?\s*(อยากเป็น|อยากจะเป็น|ฝันอยากเป็น|อยากทำงานเป็น)\s*/, '').trim() || d.dream.trim();
+    const m = match(clean); save({ dream: clean, icon: d.icon || (m ? m[1] : 'star'), reason: d.reason });
+  };
+  window.k8DreamClear = function () { save({ dream: '', icon: '', reason: '' }); };
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'profile' || v === 'dashboard') setTimeout(load, 0); return r; };
+  if (document.readyState === 'complete') setTimeout(load, 600); else window.addEventListener('load', () => setTimeout(load, 600));
+})();
+
+/* ============ Round 16 · ตัวอ่านเอกสารในแอป: ซูม + ขีดเขียน (บันทึกเฉพาะเครื่อง) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t); };
+  const PENS = ['#0f172a', '#1d4ed8', '#dc2626', '#15803d', '#7c3aed', '#ea580c'];
+  const HLS = ['#facc15', '#4ade80', '#f472b6', '#60a5fa', '#fb923c'];
+  const SIZES = { pen: [0.0025, 0.0045, 0.008], hl: [0.012, 0.02, 0.03], eraser: [0.02, 0.035, 0.06] };
+  const V = { open: false, file: null, bytes: null, kind: '', pages: [], ink: {}, undo: [], redo: [], tool: 'pan', color: PENS[1], hl: HLS[0], size: 1, zoom: 1, doc: null, img: null, penSeen: false, saveT: null, renderT: null };
+  let pdfjs = null, PDFLib = null;
+
+  // ---------- โหลดไลบรารีจากในแอปเอง (ไม่พึ่ง CDN) ----------
+  async function loadPdfjs() {
+    if (pdfjs) return pdfjs;
+    pdfjs = await import(new URL('vendor/pdfjs/pdf.min.mjs', location.href).href);
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL('vendor/pdfjs/pdf.worker.min.mjs', location.href).href;
+    return pdfjs;
+  }
+  function loadPdfLib() {
+    if (PDFLib || window.PDFLib) return Promise.resolve(PDFLib = window.PDFLib);
+    return new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'vendor/pdf-lib/pdf-lib.min.js'; s.onload = () => res(PDFLib = window.PDFLib); s.onerror = () => rej(new Error('โหลดตัวสร้าง PDF ไม่สำเร็จ')); document.head.appendChild(s); });
+  }
+  // ---------- เก็บไฟล์ไว้ในเครื่อง (IndexedDB) เปิดซ้ำได้ทันที ----------
+  function idb() { return new Promise((res, rej) => { const r = indexedDB.open('k8docs', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+  async function idbGet(k) { try { const db = await idb(); return await new Promise((res) => { const q = db.transaction('files').objectStore('files').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); } catch (e) { return null; } }
+  async function idbPut(k, v) { try { const db = await idb(); db.transaction('files', 'readwrite').objectStore('files').put(v, k); } catch (e) {} }
+  const inkKey = () => 'k8ink_' + V.file.id;
+  function loadInk() { try { V.ink = JSON.parse(localStorage.getItem(inkKey()) || '{}') || {}; } catch (e) { V.ink = {}; } }
+  function saveInk() {
+    clearTimeout(V.saveT);
+    V.saveT = setTimeout(() => {
+      try { localStorage.setItem(inkKey(), JSON.stringify(V.ink)); flash('บันทึกแล้ว'); }
+      catch (e) { flash('พื้นที่ในเครื่องเต็ม บันทึกไม่ได้'); }
+    }, 250);
+  }
+  function flash(t) { const el = document.getElementById('k8PvSaved'); if (!el) return; el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1200); }
+  const b64ToBytes = (b64) => { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+
+  // ---------- โครงหน้าจอ ----------
+  function shell() {
+    let el = document.getElementById('k8Pv'); if (el) return el;
+    el = document.createElement('div'); el.id = 'k8Pv'; el.className = 'k8-pv'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
+    el.innerHTML =
+      '<header class="k8-docs-bar"><button type="button" class="k8-docs-back" onclick="k8PvBack()" aria-label="กลับ"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>' +
+      '<div class="k8-docs-ttl"><h2 id="k8PvName">-</h2><span id="k8PvSub">-</span></div><span class="k8-pv-saved" id="k8PvSaved" aria-live="polite"></span>' +
+      '<button type="button" class="k8-docs-icon" onclick="k8PvDlMenu()" aria-label="ดาวน์โหลด"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></header>' +
+      '<div class="k8-pv-scroll" id="k8PvScroll"><div class="k8-pv-pages" id="k8PvPages"></div></div>' +
+      '<div class="k8-pv-tools" id="k8PvTools"></div>' +
+      '<div class="k8-pv-menu" id="k8PvMenu" hidden><div class="k8-pv-menu-card"><b>ดาวน์โหลดไฟล์</b>' +
+      '<button type="button" onclick="k8PvDownload(false)"><span>ไฟล์ต้นฉบับ</span><small>ไม่มีสิ่งที่ฉันขีดเขียน</small></button>' +
+      '<button type="button" onclick="k8PvDownload(true)"><span>ไฟล์พร้อมที่ฉันขีดเขียน</span><small>รวมปากกาและไฮไลต์ไว้ในไฟล์</small></button>' +
+      '<button type="button" class="is-alt" onclick="document.getElementById(\'k8PvMenu\').hidden=true">ยกเลิก</button></div></div>';
+    document.body.appendChild(el);
+    bindGestures(el.querySelector('#k8PvScroll'));
+    return el;
+  }
+  function tools() {
+    const t = document.getElementById('k8PvTools'); if (!t) return;
+    const canInk = V.kind === 'pdf' || V.kind === 'image';
+    const btn = (k, label, svgPath) => '<button type="button" class="k8-pv-t' + (V.tool === k ? ' on' : '') + '" onclick="k8PvTool(\'' + k + '\')" aria-pressed="' + (V.tool === k) + '" aria-label="' + label + '"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + svgPath + '</svg><span>' + label + '</span></button>';
+    const colors = V.tool === 'hl' ? HLS : PENS; const cur = V.tool === 'hl' ? V.hl : V.color;
+    t.innerHTML = '<div class="k8-pv-row">' +
+      btn('pan', 'เลื่อน', '<path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>') +
+      (canInk ? btn('pen', 'ปากกา', '<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>') + btn('hl', 'ไฮไลต์', '<path d="m9 11-6 6v3h9l3-3M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>') + btn('eraser', 'ยางลบ', '<path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4l10-10a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L13 19M22 21H7M5 11l9 9"/>') : '') +
+      '<span class="k8-pv-sep"></span>' +
+      '<button type="button" class="k8-pv-t" onclick="k8PvZoom(-1)" aria-label="ย่อ"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button><button type="button" class="k8-pv-zoom" onclick="k8PvZoomReset()" aria-label="ขนาดพอดีจอ">' + Math.round(V.zoom * 100) + '%</button><button type="button" class="k8-pv-t" onclick="k8PvZoom(1)" aria-label="ขยาย"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>' +
+      '</div>' +
+      (canInk && V.tool !== 'pan' ? '<div class="k8-pv-row k8-pv-sub">' +
+        (V.tool !== 'eraser' ? colors.map((c) => '<button type="button" class="k8-pv-c' + (c === cur ? ' on' : '') + '" style="--c:' + c + '" onclick="k8PvColor(\'' + c + '\')" aria-label="สี ' + c + '"></button>').join('') + '<span class="k8-pv-sep"></span>' : '') +
+        [0, 1, 2].map((i) => '<button type="button" class="k8-pv-s' + (V.size === i ? ' on' : '') + '" onclick="k8PvSize(' + i + ')" aria-label="ขนาด ' + (i + 1) + '"><i style="width:' + (6 + i * 5) + 'px;height:' + (6 + i * 5) + 'px"></i></button>').join('') +
+        '<span class="k8-pv-sep"></span><button type="button" class="k8-pv-t" onclick="k8PvUndo()" aria-label="ย้อนกลับ" ' + (V.undo.length ? '' : 'disabled') + '><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button><button type="button" class="k8-pv-t" onclick="k8PvRedo()" aria-label="ทำซ้ำ" ' + (V.redo.length ? '' : 'disabled') + '><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>' +
+        '</div>' : '');
+    const sc = document.getElementById('k8PvScroll'); if (sc) sc.dataset.tool = V.tool;
+  }
+
+  // ---------- เปิดไฟล์ ----------
+  window.k8PvIsOpen = () => V.open;
+  window.k8PvOpen = async function (f) {
+    const el = shell(); el.hidden = false; V.open = true; V.file = f; V.undo = []; V.redo = []; V.zoom = 1; V.tool = 'pan'; V.pages = []; V.doc = null; V.img = null; V.bytes = null;
+    try { history.pushState({ k8pv: 1 }, ''); } catch (e) {}
+    document.getElementById('k8PvName').textContent = f.name; document.getElementById('k8PvSub').textContent = 'กำลังโหลดไฟล์…';
+    document.getElementById('k8PvPages').innerHTML = '<div class="k8-pv-loading"><span class="k8-pv-spin" aria-hidden="true"></span>กำลังเปิดเอกสาร…</div>';
+    loadInk(); tools();
+    const key = f.id + '|' + (f.updated || '') + '|' + (f.size || '');
+    let rec = await idbGet(key);
+    if (!rec) {
+      try {
+        const r = await gasApiCall('getStudyFile', { fileId: f.id }, 120000);
+        if (!r || !r.success) throw new Error((r && r.message) || 'เปิดไฟล์ไม่สำเร็จ');
+        rec = { name: r.name, mime: r.mime, converted: r.converted, bytes: b64ToBytes(r.data) };
+        idbPut(key, rec);
+      } catch (e) {
+        if (!V.open || V.file !== f) return;
+        document.getElementById('k8PvSub').textContent = 'เปิดไม่สำเร็จ';
+        document.getElementById('k8PvPages').innerHTML = '<div class="k8-docs-empty is-err"><b>เปิดไฟล์ไม่สำเร็จ</b><span>' + esc(e.message || '') + '</span><button type="button" onclick="k8PvRetry()">ลองอีกครั้ง</button></div>';
+        return;
+      }
+    }
+    if (!V.open || V.file !== f) return;
+    V.bytes = rec.bytes; V.fileName = rec.name || f.name; V.mime = rec.mime;
+    if (/pdf/.test(rec.mime)) await openPdf();
+    else if (/^image\//.test(rec.mime)) await openImage();
+    else {
+      V.kind = 'other'; tools();
+      document.getElementById('k8PvSub').textContent = 'เปิดดูในแอปไม่ได้ · ดาวน์โหลดได้';
+      document.getElementById('k8PvPages').innerHTML = '<div class="k8-docs-empty"><b>ไฟล์ชนิดนี้แสดงในแอปไม่ได้</b><span>' + esc(V.fileName) + '</span><button type="button" onclick="k8PvDownload(false)">ดาวน์โหลดไฟล์</button></div>';
+    }
+  };
+  window.k8PvRetry = function () { if (V.file) window.k8PvOpen(V.file); };
+  async function openPdf() {
+    V.kind = 'pdf'; tools();
+    try {
+      const lib = await loadPdfjs();
+      V.doc = await lib.getDocument({ data: V.bytes.slice(0), cMapUrl: new URL('vendor/pdfjs/cmaps/', location.href).href, cMapPacked: true, standardFontDataUrl: new URL('vendor/pdfjs/standard_fonts/', location.href).href, wasmUrl: new URL('vendor/pdfjs/wasm/', location.href).href, isEvalSupported: false, enableScripting: false }).promise;
+    } catch (e) {
+      document.getElementById('k8PvPages').innerHTML = '<div class="k8-docs-empty is-err"><b>แสดงไฟล์ PDF ไม่สำเร็จ</b><span>' + esc(e.message || '') + '</span><button type="button" onclick="k8PvDownload(false)">ดาวน์โหลดไฟล์แทน</button></div>'; return;
+    }
+    const n = V.doc.numPages; const wrap = document.getElementById('k8PvPages'); wrap.innerHTML = '';
+    document.getElementById('k8PvSub').textContent = n + ' หน้า · แตะ "ปากกา" เพื่อจดบนเอกสาร';
+    for (let i = 1; i <= n; i++) {
+      const page = await V.doc.getPage(i); const vp = page.getViewport({ scale: 1 });
+      V.pages.push(makePage(i, vp.width, vp.height, page));
+    }
+    layout(); renderVisible();
+  }
+  async function openImage() {
+    V.kind = 'image'; tools();
+    const url = URL.createObjectURL(new Blob([V.bytes], { type: V.mime }));
+    const img = new Image(); img.src = url; await img.decode().catch(() => {});
+    V.img = img; const wrap = document.getElementById('k8PvPages'); wrap.innerHTML = '';
+    document.getElementById('k8PvSub').textContent = 'รูปภาพ · แตะ "ปากกา" เพื่อจด';
+    V.pages.push(makePage(1, img.naturalWidth || 800, img.naturalHeight || 600, null)); layout(); renderVisible();
+  }
+  function makePage(no, w, h, pdfPage) {
+    const box = document.createElement('div'); box.className = 'k8-pv-page'; box.dataset.no = no;
+    const c = document.createElement('canvas'); c.className = 'k8-pv-bg';
+    const ink = document.createElement('canvas'); ink.className = 'k8-pv-ink';
+    const lab = document.createElement('span'); lab.className = 'k8-pv-no'; lab.textContent = no;
+    box.appendChild(c); box.appendChild(ink); box.appendChild(lab);
+    document.getElementById('k8PvPages').appendChild(box);
+    const p = { no, w, h, pdfPage, box, c, ink, renderedAt: 0 };
+    bindDraw(p);
+    return p;
+  }
+  function baseWidth() { const sc = document.getElementById('k8PvScroll'); return Math.max(240, Math.min(980, (sc ? sc.clientWidth : 360) - 24)); }
+  function layout() {
+    const bw = baseWidth() * V.zoom;
+    V.pages.forEach((p) => { const cw = bw, ch = bw * p.h / p.w; p.cssW = cw; p.cssH = ch; p.box.style.width = cw + 'px'; p.box.style.height = ch + 'px'; });
+    const z = document.querySelector('#k8PvTools .k8-pv-zoom'); if (z) z.textContent = Math.round(V.zoom * 100) + '%';
+  }
+  function renderVisible() {
+    clearTimeout(V.renderT);
+    V.renderT = setTimeout(async () => {
+      const sc = document.getElementById('k8PvScroll'); if (!sc) return;
+      const top = sc.scrollTop - 600, bottom = sc.scrollTop + sc.clientHeight + 600;
+      for (const p of V.pages) {
+        const y = p.box.offsetTop, yb = y + p.box.offsetHeight;
+        const want = Math.round(p.cssW);
+        if (yb < top || y > bottom) continue;
+        drawInk(p);
+        if (p.renderedAt === want || p.rendering) continue;
+        p.rendering = true;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        const pxW = Math.min(4096, Math.round(p.cssW * dpr)), scale = pxW / p.w;
+        try {
+          if (p.pdfPage) {
+            const vp = p.pdfPage.getViewport({ scale });
+            const off = document.createElement('canvas'); off.width = Math.round(vp.width); off.height = Math.round(vp.height);
+            await p.pdfPage.render({ canvasContext: off.getContext('2d'), viewport: vp }).promise;
+            p.c.width = off.width; p.c.height = off.height; p.c.getContext('2d').drawImage(off, 0, 0);
+          } else if (V.img) {
+            p.c.width = pxW; p.c.height = Math.round(pxW * p.h / p.w); p.c.getContext('2d').drawImage(V.img, 0, 0, p.c.width, p.c.height);
+          }
+          p.renderedAt = want;
+        } catch (e) {}
+        p.rendering = false;
+      }
+    }, 60);
+  }
+  // ---------- วาดเส้น ----------
+  function strokePath(ctx, s, W, H) {
+    const pts = s.p; if (!pts.length) return;
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = s.c; ctx.lineWidth = Math.max(1, s.w * W);
+    if (s.t === 'hl') { ctx.globalAlpha = 0.38; ctx.globalCompositeOperation = 'multiply'; ctx.lineCap = 'butt'; }
+    ctx.beginPath(); ctx.moveTo(pts[0][0] * W, pts[0][1] * H);
+    if (pts.length === 1) ctx.lineTo(pts[0][0] * W + 0.1, pts[0][1] * H + 0.1);
+    for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i][0] + pts[i + 1][0]) / 2 * W, my = (pts[i][1] + pts[i + 1][1]) / 2 * H; ctx.quadraticCurveTo(pts[i][0] * W, pts[i][1] * H, mx, my); }
+    if (pts.length > 1) { const l = pts[pts.length - 1]; ctx.lineTo(l[0] * W, l[1] * H); }
+    ctx.stroke(); ctx.restore();
+  }
+  function drawInk(p, live) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = Math.round(p.cssW * dpr), H = Math.round(p.cssH * dpr);
+    if (p.ink.width !== W || p.ink.height !== H) { p.ink.width = W; p.ink.height = H; }
+    const ctx = p.ink.getContext('2d'); ctx.clearRect(0, 0, W, H);
+    (V.ink[p.no] || []).forEach((s) => strokePath(ctx, s, W, H));
+    if (live) strokePath(ctx, live, W, H);
+  }
+  function bindDraw(p) {
+    let cur = null, pid = null;
+    const pos = (e) => { const r = p.ink.getBoundingClientRect(); return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))]; };
+    p.ink.addEventListener('pointerdown', (e) => {
+      if (V.tool === 'pan' || V.pinching) return;
+      if (e.pointerType === 'pen') V.penSeen = true;
+      if (e.pointerType === 'touch' && V.penSeen) return; // มีปากกาสไตลัส: นิ้วใช้เลื่อนหน้า
+      if (V.touches > 1) return;
+      e.preventDefault(); pid = e.pointerId; try { p.ink.setPointerCapture(pid); } catch (er) {}
+      if (V.tool === 'eraser') { cur = { erase: true }; eraseAt(p, pos(e)); return; }
+      cur = { t: V.tool, c: V.tool === 'hl' ? V.hl : V.color, w: SIZES[V.tool][V.size], p: [pos(e)] };
+      drawInk(p, cur);
+    });
+    p.ink.addEventListener('pointermove', (e) => {
+      if (!cur || e.pointerId !== pid) return;
+      if (V.pinching) { cur = null; drawInk(p); return; }
+      e.preventDefault();
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      if (cur.erase) { evs.forEach((ev) => eraseAt(p, pos(ev))); return; }
+      evs.forEach((ev) => { const q = pos(ev); const l = cur.p[cur.p.length - 1]; if (Math.abs(q[0] - l[0]) + Math.abs(q[1] - l[1]) > 0.0012) cur.p.push(q); });
+      if (cur.t === 'hl' && cur.p.length > 2) { /* ไฮไลต์ให้เส้นตรงตามแนวนอนอ่านง่าย */ }
+      drawInk(p, cur);
+    });
+    const end = (e) => {
+      if (!cur || e.pointerId !== pid) return;
+      if (!cur.erase && !V.pinching) {
+        cur.p = cur.p.map((q) => [Math.round(q[0] * 10000) / 10000, Math.round(q[1] * 10000) / 10000]);
+        (V.ink[p.no] = V.ink[p.no] || []).push(cur); V.undo.push({ type: 'add', page: p.no, s: cur }); V.redo = []; saveInk(); tools();
+      }
+      cur = null; pid = null; drawInk(p);
+    };
+    p.ink.addEventListener('pointerup', end); p.ink.addEventListener('pointercancel', end);
+  }
+  function eraseAt(p, q) {
+    const list = V.ink[p.no] || []; const r = SIZES.eraser[V.size]; const ar = p.h / p.w;
+    const keep = [], gone = [];
+    list.forEach((s) => { const hit = s.p.some((pt) => Math.hypot(pt[0] - q[0], (pt[1] - q[1]) * ar) < r + s.w / 2); (hit ? gone : keep).push(s); });
+    if (gone.length) { V.ink[p.no] = keep; V.undo.push({ type: 'erase', page: p.no, list: gone }); V.redo = []; drawInk(p); saveInk(); tools(); }
+  }
+  window.k8PvUndo = function () { const a = V.undo.pop(); if (!a) return; const L = V.ink[a.page] = V.ink[a.page] || []; if (a.type === 'add') { const i = L.lastIndexOf(a.s); if (i !== -1) L.splice(i, 1); } else L.push(...a.list); V.redo.push(a); redrawAll(); saveInk(); tools(); };
+  window.k8PvRedo = function () { const a = V.redo.pop(); if (!a) return; const L = V.ink[a.page] = V.ink[a.page] || []; if (a.type === 'add') L.push(a.s); else V.ink[a.page] = L.filter((s) => a.list.indexOf(s) === -1); V.undo.push(a); redrawAll(); saveInk(); tools(); };
+  function redrawAll() { V.pages.forEach((p) => drawInk(p)); }
+  window.k8PvTool = function (t) { V.tool = t; tools(); };
+  window.k8PvColor = function (c) { if (V.tool === 'hl') V.hl = c; else V.color = c; tools(); };
+  window.k8PvSize = function (i) { V.size = i; tools(); };
+
+  // ---------- ซูม: ปุ่ม, ถ่างสองนิ้ว, Ctrl+ล้อเมาส์ ----------
+  function setZoom(z, fx, fy) {
+    const sc = document.getElementById('k8PvScroll'); const old = V.zoom; z = Math.max(0.5, Math.min(4, z)); if (Math.abs(z - old) < 0.001) return;
+    const r = sc.getBoundingClientRect(); fx = fx == null ? sc.clientWidth / 2 : fx - r.left; fy = fy == null ? sc.clientHeight / 2 : fy - r.top;
+    const cx = (sc.scrollLeft + fx) / old, cy = (sc.scrollTop + fy) / old;
+    V.zoom = z; layout(); redrawAll();
+    sc.scrollLeft = cx * z - fx; sc.scrollTop = cy * z - fy; renderVisible();
+  }
+  window.k8PvZoom = function (d) { setZoom(V.zoom * (d > 0 ? 1.25 : 0.8)); };
+  window.k8PvZoomReset = function () { setZoom(1); };
+  function bindGestures(sc) {
+    const pts = new Map(); let start = null;
+    sc.addEventListener('scroll', () => renderVisible(), { passive: true });
+    sc.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return; pts.set(e.pointerId, [e.clientX, e.clientY]); V.touches = pts.size;
+      if (pts.size === 2) { const [a, b] = Array.from(pts.values()); start = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: V.zoom }; V.pinching = true; }
+    }, true);
+    sc.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pts.size === 2 && start) { e.preventDefault(); const [a, b] = Array.from(pts.values()); const d = Math.hypot(a[0] - b[0], a[1] - b[1]); setZoom(start.z * d / start.d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); }
+    }, true);
+    const up = (e) => { pts.delete(e.pointerId); V.touches = pts.size; if (pts.size < 2) { start = null; setTimeout(() => { if (pts.size < 2) V.pinching = false; }, 50); } };
+    sc.addEventListener('pointerup', up, true); sc.addEventListener('pointercancel', up, true);
+    sc.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); setZoom(V.zoom * (e.deltaY < 0 ? 1.1 : 0.9), e.clientX, e.clientY); }, { passive: false });
+    window.addEventListener('resize', () => { if (V.open) { layout(); redrawAll(); renderVisible(); } });
+  }
+
+  // ---------- ดาวน์โหลด 2 แบบ ----------
+  window.k8PvDlMenu = function () { if (!V.bytes) return; const m = document.getElementById('k8PvMenu'); m.hidden = false; };
+  function save(blob, name) {
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
+  window.k8PvDownload = async function (withInk) {
+    document.getElementById('k8PvMenu').hidden = true;
+    if (!V.bytes) return;
+    const has = Object.keys(V.ink).some((k) => (V.ink[k] || []).length);
+    if (!withInk || !has) { if (withInk && !has) toast('ยังไม่มีสิ่งที่ขีดเขียน จึงดาวน์โหลดไฟล์ต้นฉบับ', 'info'); save(new Blob([V.bytes], { type: V.mime || 'application/octet-stream' }), V.fileName); return; }
+    try {
+      if (V.kind === 'image') {
+        const p = V.pages[0]; const c = document.createElement('canvas'); c.width = p.w; c.height = p.h; const ctx = c.getContext('2d'); ctx.drawImage(V.img, 0, 0, p.w, p.h);
+        (V.ink[1] || []).forEach((s) => strokePath(ctx, s, p.w, p.h));
+        c.toBlob((b) => save(b, V.fileName.replace(/\.[^.]+$/, '') + ' (โน้ตของฉัน).png'), 'image/png'); return;
+      }
+      toast('กำลังสร้างไฟล์พร้อมโน้ต…', 'info');
+      const L = await loadPdfLib();
+      const pdf = await L.PDFDocument.load(V.bytes.slice(0), { ignoreEncryption: true });
+      const pages = pdf.getPages();
+      pages.forEach((pg, i) => {
+        const strokes = V.ink[i + 1] || []; if (!strokes.length) return;
+        const { width: W, height: H } = pg.getSize();
+        strokes.forEach((s) => {
+          if (!s.p.length) return;
+          let d = 'M ' + (s.p[0][0] * W).toFixed(2) + ' ' + (s.p[0][1] * H).toFixed(2);
+          if (s.p.length === 1) d += ' L ' + (s.p[0][0] * W + 0.2).toFixed(2) + ' ' + (s.p[0][1] * H + 0.2).toFixed(2);
+          for (let k = 1; k < s.p.length; k++) d += ' L ' + (s.p[k][0] * W).toFixed(2) + ' ' + (s.p[k][1] * H).toFixed(2);
+          const [r, g, b] = hexRgb(s.c);
+          const opt = { x: 0, y: H, borderColor: L.rgb(r, g, b), borderWidth: Math.max(0.5, s.w * W), borderOpacity: s.t === 'hl' ? 0.38 : 1, borderLineCap: s.t === 'hl' ? L.LineCapStyle.Butt : L.LineCapStyle.Round };
+          if (s.t === 'hl' && L.BlendMode) opt.blendMode = L.BlendMode.Multiply;
+          pg.drawSvgPath(d, opt);
+        });
+      });
+      const out = await pdf.save();
+      save(new Blob([out], { type: 'application/pdf' }), V.fileName.replace(/\.pdf$/i, '') + ' (โน้ตของฉัน).pdf');
+    } catch (e) { toast('สร้างไฟล์พร้อมโน้ตไม่สำเร็จ: ' + (e.message || ''), 'error'); }
+  };
+
+  // ---------- ปิด / ปุ่มย้อนกลับของมือถือ ----------
+  function close() { const el = document.getElementById('k8Pv'); if (el) el.hidden = true; V.open = false; V.doc = null; V.pages = []; V.bytes = null; const w = document.getElementById('k8PvPages'); if (w) w.innerHTML = ''; }
+  window.k8PvBack = function () { history.back(); };
+  window.addEventListener('popstate', () => {
+    const m = document.getElementById('k8PvMenu'); if (m && !m.hidden) { m.hidden = true; }
+    if (V.open) close();
+  });
+  document.addEventListener('keydown', (e) => { if (!V.open) return; if (e.key === 'Escape') history.back(); if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); e.shiftKey ? window.k8PvRedo() : window.k8PvUndo(); } });
 })();

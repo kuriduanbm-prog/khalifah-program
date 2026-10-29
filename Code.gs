@@ -11,7 +11,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ⚠️ รหัสแอดมินหลักไม่ได้เก็บไว้ในโค้ดอีกต่อไป
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
-const SCHEMA_VERSION = '10.8';
+const SCHEMA_VERSION = '10.9';
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -59,6 +59,7 @@ const SHEETS = {
   NOTIFS: 'การแจ้งเตือน',
   NOTIF_READS: 'การอ่านแจ้งเตือน',
   POLICY_ACKS: 'การยินยอมข้อตกลง',
+  DREAMS: 'ความใฝ่ฝันนักเรียน',
   SETTINGS: 'การตั้งค่า',
   CALENDAR: 'ปฏิทินกิจกรรม'
 };
@@ -83,6 +84,7 @@ const SHEET_ORDER = [
   SHEETS.NOTIFS,         // การแจ้งเตือน (กระดิ่ง)
   SHEETS.NOTIF_READS,    // การอ่าน/ซ่อนแจ้งเตือนของแต่ละคน
   SHEETS.POLICY_ACKS,    // การยินยอมกฎระเบียบหอพัก
+  SHEETS.DREAMS,         // ความใฝ่ฝัน/อาชีพในฝันของนักเรียน
   SHEETS.SETTINGS,       // 13. การตั้งค่า
   SHEETS.CALENDAR        // 14. ปฏิทินกิจกรรม
 ];
@@ -177,6 +179,7 @@ const HEADERS = {
     'ผู้ส่ง (username)', 'ชื่อผู้ส่ง', 'สถานะ', 'หมดอายุ'
   ],
   NOTIF_READS: ['รหัสแจ้งเตือน', 'ผู้ใช้', 'อ่านเมื่อ', 'ซ่อน'],
+  DREAMS: ['รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ความใฝ่ฝัน', 'ไอคอน', 'เหตุผล/เป้าหมาย', 'อัปเดตเมื่อ'],
   POLICY_ACKS: ['รหัสยินยอม', 'รหัสข้อตกลง', 'ฉบับ', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ยินยอมเมื่อ'],
   BEHAVIOR: [
     'รหัสบันทึก', 'วันที่', 'เวลาบันทึก', 'ภาคเรียน', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น',
@@ -394,6 +397,8 @@ function initializeSheets() {
   try { sheetNo.getRange('A:B').setNumberFormat('@'); sheetNo.getRange('F:F').setNumberFormat('@'); } catch (fmtErr) {}
   const sheetNr = getOrCreateSheetSmart(ss, 'NOTIF_READS', HEADERS.NOTIF_READS, '#fb923c');
   try { sheetNr.getRange('A:C').setNumberFormat('@'); } catch (fmtErr) {}
+  const sheetDr = getOrCreateSheetSmart(ss, 'DREAMS', HEADERS.DREAMS, '#db2777');
+  try { sheetDr.getRange('A:A').setNumberFormat('@'); } catch (fmtErr) {}
   const sheetPa = getOrCreateSheetSmart(ss, 'POLICY_ACKS', HEADERS.POLICY_ACKS, '#16a34a');
   try { sheetPa.getRange('A:D').setNumberFormat('@'); } catch (fmtErr) {}
   const sheetBeh = getOrCreateSheetSmart(ss, 'BEHAVIOR', HEADERS.BEHAVIOR, '#0f766e');
@@ -1173,7 +1178,8 @@ const ACTION_ACCESS = {
   getAdmins: 'admin', addSubAdmin: 'admin', deleteSubAdmin: 'admin', deleteStudent: 'admin',
   batchPromote: 'admin', fullSchoolBatchPromote: 'admin',
   saveSetting: 'admin', saveSubjects: 'admin', saveCurrentTerm: 'admin', saveStudyDocsFolders: 'admin',
-  listStudyDocs: 'student', getStudyDocsConfig: 'student',
+  listStudyDocs: 'student', getStudyDocsConfig: 'student', getStudyFile: 'student',
+  getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getMyNotifications: 'student', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
@@ -1189,7 +1195,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead'];
-READ_ONLY_ACTIONS.push('getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1405,6 +1411,13 @@ function dispatchAction_(action, req, data, session, ctx) {
       if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
       return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }) };
     }
+    case 'getMyDream':
+      return { success: true, dream: getDreamOf_(ownStudentId_(session, ctx, pick('studentId'))) };
+    case 'saveMyDream':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return saveMyDream_(session.userId, data);
+    case 'getDreams':
+      return { success: true, data: sheetRows_(SHEETS.DREAMS, 7).filter(function (r) { return cleanVal(r[0]) && cleanVal(r[3]); }).map(function (r) { return { studentId: cleanVal(r[0]), fullName: cleanVal(r[1]), grade: cleanVal(r[2]), dream: cleanVal(r[3]), icon: cleanVal(r[4]), reason: cleanVal(r[5]), updatedAt: cleanVal(r[6]) }; }) };
     case 'getMyNotifications':
       return getMyNotifications_(session);
     case 'markNotificationRead':
@@ -1422,6 +1435,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return deleteNotification_(pick('id'));
     case 'getPolicyAckSummary':
       return getPolicyAckSummary_(pick('policyId'));
+    case 'getStudyFile':
+      return getStudyFile_(pick('fileId'), pick('asPdf'));
     case 'listStudyDocs':
       return listStudyDocs_(pick('grade'), pick('folderId'), pick('refresh'));
     case 'getStudyDocsConfig':
@@ -5403,7 +5418,12 @@ function listStudyDocs_(grade, folderId, refresh) {
   const folders = []; const files = [];
   const fi = folder.getFolders();
   while (fi.hasNext() && folders.length < 200) {
-    const f = fi.next(); folders.push({ id: f.getId(), name: f.getName(), updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
+    const f = fi.next();
+    // นับไฟล์และโฟลเดอร์ย่อยข้างใน เพื่อแสดงตัวเลขบนโฟลเดอร์ (0 = ว่าง)
+    let nFiles = 0, nDirs = 0;
+    try { const a = f.getFiles(); while (a.hasNext() && nFiles < 999) { const x = a.next(); if (!(x.isTrashed && x.isTrashed())) nFiles++; } } catch (e) {}
+    try { const b = f.getFolders(); while (b.hasNext() && nDirs < 999) { b.next(); nDirs++; } } catch (e) {}
+    folders.push({ id: f.getId(), name: f.getName(), files: nFiles, folders: nDirs, updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
     try { cache.put('DOCS_IN_' + f.getId(), JSON.stringify({ grade: where.grade, path: where.path.concat([{ id: f.getId(), name: f.getName() }]) }), 21600); } catch (e) {}
   }
   const it = folder.getFiles();
@@ -5411,6 +5431,7 @@ function listStudyDocs_(grade, folderId, refresh) {
     const f = it.next();
     if (f.isTrashed && f.isTrashed()) continue;
     files.push({ id: f.getId(), name: f.getName(), mime: f.getMimeType(), size: f.getSize ? f.getSize() : 0, updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
+    try { cache.put('DOCS_F_' + f.getId(), id, 21600); } catch (e) {}
   }
   const byName = function (a, b) { return String(a.name).localeCompare(String(b.name), 'th', { numeric: true }); };
   folders.sort(byName); files.sort(byName);
@@ -5585,4 +5606,68 @@ function getPolicyAckSummary_(policyId) {
   const students = sheetRows_(SHEETS.STUDENTS, 8).filter(function (r) { return cleanVal(r[0]) && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(r[7])); })
     .map(function (r) { const k = cleanVal(r[0]).replace(/^0+/, ''); return { studentId: cleanVal(r[0]), fullName: cleanVal(r[1]), grade: cleanVal(r[3]), ackAt: acked[k] || '' }; });
   return { success: true, policy: { id: p.id, title: p.title, version: p.version }, total: students.length, acknowledged: students.filter(function (s) { return s.ackAt; }).length, students: students };
+}
+
+
+// =====================================================================
+//  ✨ ความใฝ่ฝันของนักเรียน
+// =====================================================================
+function getDreamOf_(sid) {
+  const rows = sheetRows_(SHEETS.DREAMS, 7);
+  for (let i = 0; i < rows.length; i++) if (isCodeMatch(rows[i][0], sid)) return { dream: cleanVal(rows[i][3]), icon: cleanVal(rows[i][4]), reason: cleanVal(rows[i][5]), updatedAt: cleanVal(rows[i][6]) };
+  return { dream: '', icon: '', reason: '', updatedAt: '' };
+}
+function saveMyDream_(sid, data) {
+  data = data || {};
+  const dream = cleanVal(data.dream).substring(0, 80);
+  const icon = /^[a-z0-9-]{1,40}$/.test(cleanVal(data.icon)) ? cleanVal(data.icon) : '';
+  const reason = cleanVal(data.reason).substring(0, 300);
+  ensureSchema();
+  const sh = getSpreadsheet().getSheetByName(SHEETS.DREAMS);
+  const st = studentGradeNum_(sid);
+  const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+  const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues() : [];
+  const row = [sid, st.name, st.gradeText, dream, icon, reason, now];
+  for (let i = 0; i < rows.length; i++) if (isCodeMatch(rows[i][0], sid)) { sh.getRange(i + 2, 1, 1, 7).setValues([row]); return { success: true, dream: { dream: dream, icon: icon, reason: reason, updatedAt: now }, message: dream ? 'บันทึกความใฝ่ฝันแล้ว ขอให้ฝันเป็นจริง' : 'ลบความใฝ่ฝันแล้ว' }; }
+  sh.appendRow(row);
+  return { success: true, dream: { dream: dream, icon: icon, reason: reason, updatedAt: now }, message: 'บันทึกความใฝ่ฝันแล้ว ขอให้ฝันเป็นจริง' };
+}
+
+/** ส่งไฟล์เอกสารผ่านระบบ (นักเรียนไม่ต้องเข้าสู่ระบบ Google) — เฉพาะไฟล์ในโฟลเดอร์เอกสารที่ตั้งไว้ */
+const STUDY_FILE_MAX = 30 * 1024 * 1024;
+function studyFileAllowed_(fileId) {
+  const cache = CacheService.getScriptCache();
+  try { if (cache.get('DOCS_F_' + fileId)) return true; } catch (e) {}
+  // ยังไม่เคยเปิดโฟลเดอร์ของไฟล์นี้: ไล่ค้นจากโฟลเดอร์หลักลงไป
+  const roots = getStudyDocsFolders_(); const queue = []; let seen = 0;
+  Object.keys(roots).forEach(function (g) { try { queue.push({ f: DriveApp.getFolderById(roots[g]), d: 0 }); } catch (e) {} });
+  while (queue.length && seen < 300) {
+    const cur = queue.shift(); seen++;
+    const it = cur.f.getFiles();
+    while (it.hasNext()) { const x = it.next(); try { cache.put('DOCS_F_' + x.getId(), cur.f.getId(), 21600); } catch (e) {} if (x.getId() === fileId) return true; }
+    if (cur.d < 6) { const fi = cur.f.getFolders(); while (fi.hasNext()) queue.push({ f: fi.next(), d: cur.d + 1 }); }
+  }
+  return false;
+}
+function getStudyFile_(fileId, asPdf) {
+  const id = extractDriveId_(fileId);
+  if (!id) return { success: false, message: 'ไม่พบไฟล์' };
+  if (!studyFileAllowed_(id)) return { success: false, code: 'NOT_IN_TREE', message: 'ไฟล์นี้ไม่อยู่ในเอกสารประกอบการเรียน' };
+  let file;
+  try { file = DriveApp.getFileById(id); } catch (e) { return { success: false, message: 'เปิดไฟล์ไม่ได้ · ตรวจการแชร์โฟลเดอร์' }; }
+  const mime = file.getMimeType();
+  let blob = null, outMime = mime, converted = false;
+  const isGoogle = /^application\/vnd\.google-apps\./.test(mime);
+  try {
+    if (isGoogle || (asPdf && !/pdf|image\//.test(mime))) { blob = file.getAs('application/pdf'); outMime = 'application/pdf'; converted = true; }
+    else blob = file.getBlob();
+  } catch (e) {
+    if (isGoogle) return { success: false, message: 'ไฟล์ชนิดนี้แปลงเป็น PDF ไม่ได้' };
+    blob = file.getBlob(); outMime = mime; converted = false;
+  }
+  const bytes = blob.getBytes();
+  if (bytes.length > STUDY_FILE_MAX) return { success: false, tooBig: true, message: 'ไฟล์ใหญ่เกิน 30 MB เปิดในแอปไม่ได้' };
+  let name = file.getName();
+  if (converted && !/\.pdf$/i.test(name)) name = name.replace(/\.(docx?|pptx?|xlsx?)$/i, '') + '.pdf';
+  return { success: true, id: id, name: name, mime: outMime, originalMime: mime, converted: converted, size: bytes.length, data: Utilities.base64Encode(bytes) };
 }
