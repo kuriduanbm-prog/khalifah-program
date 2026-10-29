@@ -757,7 +757,7 @@ body.auth-locked #authModal, #authModal.modal-overlay { background-image: none !
 .k8-th-date { font-size: 13px; color: #475569; }
 .k8-th-head h1 { margin: 0; font-size: 22px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .k8-acct { position: relative; flex: none; }
-.k8-acct summary { list-style: none; width: 44px; height: 44px; border-radius: 50%; background: #ede9fe; color: #5b21b6; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.k8-acct summary { list-style: none; width: 44px; height: 44px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .k8-acct summary::-webkit-details-marker { display: none; }
 .k8-acct-menu { position: absolute; right: 0; top: 52px; z-index: 30; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 12px 32px rgba(15,23,42,.14); padding: 6px; min-width: 180px; display: flex; flex-direction: column; }
 .k8-acct-menu button { min-height: 44px; border: 0; background: transparent; text-align: left; padding: 0 12px; border-radius: 10px; font-family: inherit; font-size: 15px; color: #0f172a; cursor: pointer; }
@@ -1130,7 +1130,7 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
 
 /* ============ Round 4 · Teacher = canvas (purple accent, full-bleed bars) ============ */
 @media (max-width: 992px) {
-  body.teacher-portal-active .teacher-bottom-nav-bar .teacher-bottom-nav-item.active { background: #5b21b6 !important; }
+  body.teacher-portal-active .teacher-bottom-nav-bar .teacher-bottom-nav-item.active { background: #0369a1 !important; }
   .k8-ta-head { margin: -18px -16px 0; border-radius: 0; border: 0; border-bottom: 1px solid #e2e8f0; padding: 16px 16px 10px; }
   .k8-ta-foot { margin: 0 -16px; border-radius: 0; border: 0; border-top: 1px solid #e2e8f0; box-shadow: none; padding: 12px 16px 14px; }
   .k8-ta-list { padding-top: 0; }
@@ -1145,14 +1145,14 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
 #teacher-tab-grades .tg-top { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: 8px; }
 #teacher-tab-grades .tg-top label { font-size: 12px; font-weight: 400; color: #475569; }
 #teacher-tab-grades .tg-top select { height: 44px; font-size: 14px; min-width: 0; width: 100%; }
-#teacher-tab-grades .tg-seg { background: #ede9fe; }
-#teacher-tab-grades .tg-seg button[aria-selected="true"] { color: #5b21b6; }
-#teacher-tab-grades .tg-chip[aria-pressed="true"] { background: #5b21b6; border-color: #5b21b6; }
-#teacher-tab-grades .tg-add { border-color: #c4b5fd; color: #5b21b6; }
-#teacher-tab-grades .tg-g[aria-checked="true"] { background: #5b21b6; border-color: #5b21b6; }
-#teacher-tab-grades .tg-btn.is-primary { background: #5b21b6; border-color: #5b21b6; }
-#teacher-tab-grades .tg-save button { background: #5b21b6; }
-#teacher-tab-grades .tg-form { border-color: #ddd6fe; }
+#teacher-tab-grades .tg-seg { background: #e0f2fe; }
+#teacher-tab-grades .tg-seg button[aria-selected="true"] { color: #0369a1; }
+#teacher-tab-grades .tg-chip[aria-pressed="true"] { background: #0369a1; border-color: #0369a1; }
+#teacher-tab-grades .tg-add { border-color: #7dd3fc; color: #0369a1; }
+#teacher-tab-grades .tg-g[aria-checked="true"] { background: #0369a1; border-color: #0369a1; }
+#teacher-tab-grades .tg-btn.is-primary { background: #0369a1; border-color: #0369a1; }
+#teacher-tab-grades .tg-save button { background: #0369a1; }
+#teacher-tab-grades .tg-form { border-color: #bae6fd; }
 @media (max-width: 992px) {
   #teacher-tab-grades .tg-save { margin: 0 -16px; border-radius: 0; border: 0; border-top: 1px solid #e2e8f0; box-shadow: none; }
 }
@@ -1191,8 +1191,8 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
 /* ============ Round 6 · Admin remaining tabs = canvas theme ============ */
 .k8-page-head { margin: 0 0 16px; }
 .k8-page-head h1 { margin: 0; font-size: 26px; font-weight: 600; color: #0f172a; }
-.k8-tip { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: #f5f3ff; border: 1px solid #ddd6fe; color: #4c1d95; border-radius: 14px; padding: 12px 16px; margin: 0 0 16px; font-size: 14px; }
-.k8-tip .k8-btn-pri { background: #5b21b6; height: 40px; font-size: 14px; }
+.k8-tip { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: #f0f9ff; border: 1px solid #bae6fd; color: #0c4a6e; border-radius: 14px; padding: 12px 16px; margin: 0 0 16px; font-size: 14px; }
+.k8-tip .k8-btn-pri { background: #0369a1; height: 40px; font-size: 14px; }
 #view-admin .admin-content-tab .card { background: #fff !important; border: 1px solid #e2e8f0 !important; border-radius: 16px !important; box-shadow: none !important; padding: 18px !important; margin-bottom: 16px !important; }
 #view-admin .admin-content-tab .card::before, #view-admin .admin-content-tab .card::after { display: none !important; }
 #view-admin .admin-content-tab .card-header { border: 0 !important; padding: 0 0 12px !important; margin: 0 0 12px !important; background: transparent !important; }
@@ -1227,9 +1227,9 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
 .k8-tcal-head h1 { margin: 0; font-size: 21px; font-weight: 600; color: #0f172a; }
 .k8-cal-ev { width: 100%; border: 0; background: transparent; padding: 0; text-align: left; font-family: inherit; cursor: pointer; color: inherit; }
 @media (min-width: 993px) {
-  #view-teacher .teacher-segmented-nav { display: grid !important; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px; background: #ede9fe !important; border: 0 !important; border-radius: 14px !important; padding: 4px !important; box-shadow: none !important; margin: 0 0 16px !important; }
+  #view-teacher .teacher-segmented-nav { display: grid !important; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px; background: #e0f2fe !important; border: 0 !important; border-radius: 14px !important; padding: 4px !important; box-shadow: none !important; margin: 0 0 16px !important; }
   #view-teacher .teacher-segmented-nav .teacher-nav-tab { min-height: 44px; border: 0 !important; border-radius: 11px !important; background: transparent !important; color: #475569 !important; box-shadow: none !important; font-family: inherit; font-size: 14px !important; font-weight: 600; justify-content: center; }
-  #view-teacher .teacher-segmented-nav .teacher-nav-tab.active { background: #fff !important; color: #5b21b6 !important; }
+  #view-teacher .teacher-segmented-nav .teacher-nav-tab.active { background: #fff !important; color: #0369a1 !important; }
   #view-teacher .teacher-segmented-nav .teacher-nav-tab i, #view-teacher .teacher-segmented-nav .teacher-tab-badge { display: none !important; }
 }
 @media (min-width: 993px) { #view-teacher .teacher-bottom-nav-bar { display: none !important; } }
@@ -1271,7 +1271,7 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
 @media (prefers-reduced-motion: reduce) { body .k8-admin-nav.admin-tabs { transition: none; } }
 
 /* ============ Round 8 · Attendance per subject ============ */
-.k8-ta-hist-btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px; border-radius: 12px; border: 1px solid #ddd6fe; background: #f5f3ff; color: #5b21b6; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-ta-hist-btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px; border-radius: 12px; border: 1px solid #bae6fd; background: #f0f9ff; color: #0369a1; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .k8-ta-grid2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; }
 .k8-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .k8-field > span { font-size: 12px; color: #475569; }
@@ -1307,8 +1307,8 @@ body.portal-mode-admin .main-wrapper { margin-top: 0 !important; }
 /* ============ Round 8 · Teacher grades easier ============ */
 #teacher-tab-grades .tg-top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
 .tg-search input { width: 100%; box-sizing: border-box; height: 42px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 14px; font-family: inherit; font-size: 14px; background: #fff; }
-.tg-asg-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; color: #475569; background: #f5f3ff; border-radius: 12px; padding: 8px 12px; }
-.tg-asg-bar b { color: #4c1d95; }
+.tg-asg-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; color: #475569; background: #f0f9ff; border-radius: 12px; padding: 8px 12px; }
+.tg-asg-bar b { color: #0c4a6e; }
 .tg-link-danger { border: 0; background: transparent; color: #b91c1c; font-family: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; padding: 4px 0; }
 .tg-sum-tools { display: flex; gap: 8px; flex-wrap: wrap; }
 .tg-sum-tools .tg-btn { flex: 0 1 auto; padding: 0 14px; }
@@ -1399,7 +1399,7 @@ button.hf-att-item:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2
 .k8h-save { height: 52px; border: 0; border-radius: 14px; background: #0369a1; color: #fff; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 .k8h-save[disabled] { background: #e2e8f0; color: #64748b; cursor: default; }
 .k8h-save.is-purple { background: #6d28d9; }
-.k8h-save.is-purple[disabled] { background: #ede9fe; color: #5b21b6; }
+.k8h-save.is-purple[disabled] { background: #e0f2fe; color: #0369a1; }
 .k8h-juz { display: grid; grid-template-columns: repeat(10, minmax(0,1fr)); gap: 5px; }
 .k8h-juz span { height: 26px; border-radius: 7px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 .k8h-juz span.done { background: #0369a1; color: #fff; }
@@ -1444,7 +1444,7 @@ button.hf-att-item:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2
 #k8EvalModal.modal-overlay, #k8EvalSumModal.modal-overlay { align-items: flex-end; }
 @media (min-width: 993px) { #k8EvalModal.modal-overlay, #k8EvalSumModal.modal-overlay { align-items: center; } }
 #k8EvalBody, #k8EvalSumBody { display: flex; flex-direction: column; gap: 10px; }
-.k8-eval-note { margin: 0; font-size: 13px; color: #475569; background: #f5f3ff; border-radius: 12px; padding: 10px 12px; line-height: 1.5; }
+.k8-eval-note { margin: 0; font-size: 13px; color: #475569; background: #f0f9ff; border-radius: 12px; padding: 10px 12px; line-height: 1.5; }
 .k8-eval-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; text-align: left; font-family: inherit; cursor: pointer; color: #0f172a; }
 .k8-eval-row[disabled] { cursor: default; opacity: .85; }
 .k8-eval-main { flex: 1; min-width: 0; }
@@ -1456,8 +1456,8 @@ button.hf-att-item:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2
 .k8-eval-q { border: 0; margin: 0; padding: 0; }
 .k8-eval-q legend { font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 8px; padding: 0; }
 .k8-eval-scale { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 6px; }
-.k8-eval-scale button { height: 46px; border-radius: 12px; border: 1px solid #ddd6fe; background: #fff; color: #5b21b6; font-family: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
-.k8-eval-scale button[aria-pressed="true"] { background: #5b21b6; border-color: #5b21b6; color: #fff; }
+.k8-eval-scale button { height: 46px; border-radius: 12px; border: 1px solid #bae6fd; background: #fff; color: #0369a1; font-family: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
+.k8-eval-scale button[aria-pressed="true"] { background: #0369a1; border-color: #0369a1; color: #fff; }
 .k8-eval-scale-l { display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-top: 4px; }
 .k8-eval-c { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; color: #0f172a; }
 .k8-eval-c textarea { border-radius: 12px; border: 1px solid #cbd5e1; padding: 10px 12px; font-family: inherit; font-size: 15px; font-weight: 400; resize: vertical; }
@@ -1466,10 +1466,10 @@ button.hf-att-item:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2
 .k8-eval-res-top { display: flex; justify-content: space-between; gap: 8px; }
 .k8-eval-res-top b { display: block; font-size: 15px; }
 .k8-eval-res-top small { display: block; font-size: 12px; color: #64748b; }
-.k8-eval-avg { font-size: 26px; font-weight: 600; color: #5b21b6; }
+.k8-eval-avg { font-size: 26px; font-weight: 600; color: #0369a1; }
 .k8-eval-avg small { font-size: 13px; color: #64748b; }
 .k8-eval-bar { display: grid; grid-template-columns: minmax(0, 1fr) 90px 30px; gap: 8px; align-items: center; font-size: 12px; color: #334155; }
-.k8-eval-bar i { height: 8px; border-radius: 8px; background: #ede9fe; overflow: hidden; display: block; }
+.k8-eval-bar i { height: 8px; border-radius: 8px; background: #e0f2fe; overflow: hidden; display: block; }
 .k8-eval-bar em { display: block; height: 8px; background: #7c3aed; border-radius: 8px; }
 .k8-eval-res h4 { margin: 4px 0 0; font-size: 13px; color: #475569; }
 .k8-eval-cm { margin: 0; padding-left: 18px; font-size: 13px; color: #0f172a; display: flex; flex-direction: column; gap: 4px; }
@@ -1625,7 +1625,7 @@ body.k8-subadmin #btnTabLogo, body.k8-subadmin .k8-admin-nav [onclick*="settings
 /* ---- Teacher grades: grid mode (score per student per piece) ---- */
 .tg-mode { display: flex; gap: 4px; padding: 4px; margin: 10px 0; background: #f1f5f9; border-radius: 12px; }
 .tg-mode button { flex: 1; height: 36px; border: 0; border-radius: 9px; background: transparent; font: inherit; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; }
-.tg-mode button[aria-selected="true"] { background: #fff; color: #5b21b6; font-weight: 600; box-shadow: 0 1px 3px rgba(15,23,42,.1); }
+.tg-mode button[aria-selected="true"] { background: #fff; color: #0369a1; font-weight: 600; box-shadow: 0 1px 3px rgba(15,23,42,.1); }
 .tg-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
 .tg-grid { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 13px; }
 .tg-grid th, .tg-grid td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; text-align: center; white-space: nowrap; }
@@ -1639,7 +1639,7 @@ body.k8-subadmin #btnTabLogo, body.k8-subadmin .k8-admin-nav [onclick*="settings
 .tg-grid td input { width: 58px; height: 36px; border: 1px solid #e2e8f0; border-radius: 9px; text-align: center; font: inherit; font-size: 14px; background: #fff; }
 .tg-grid td input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.15); }
 .tg-grid td input.is-bad { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
-.tg-grid .tg-grid-sum { font-weight: 700; color: #5b21b6; background: #faf5ff; }
+.tg-grid .tg-grid-sum { font-weight: 700; color: #0369a1; background: #f0f9ff; }
 .tg-grid tbody tr:last-child > * { border-bottom: 0; }
 
 /* ---- Prayer ranking v2 (clearer) ---- */
@@ -2270,18 +2270,18 @@ button.prayer-status-pill.k8-pe-add:hover { border-color: #0369a1; color: #0369a
 #view-teacher #teacher-tab-overview > .k8-th-hero, #view-teacher #teacher-tab-overview > .k8-th-tl { display: flex !important; }
 #view-teacher #teacher-tab-overview > .k8-th-quick { display: grid !important; }
 #view-teacher #teacher-tab-overview > .k8-docs-btn, #view-teacher #teacher-tab-overview > .k8-hq-btn, #view-teacher #teacher-tab-overview > .k8-tt-btn { display: none !important; }
-.k8-th-hero { flex-direction: column; gap: 16px; margin: -16px -16px 0; padding: 20px 16px 22px; background: #5b21b6; color: #fff; border-radius: 0 0 28px 28px; }
+.k8-th-hero { flex-direction: column; gap: 16px; margin: -16px -16px 0; padding: 20px 16px 22px; background: #0369a1; color: #fff; border-radius: 0 0 28px 28px; }
 @media (min-width: 993px) { .k8-th-hero { margin: 0; border-radius: 24px; } }
 .k8-th-hero .k8-th-head { padding: 0; }
-.k8-th-hero .k8-th-date { color: #ede9fe; }
+.k8-th-hero .k8-th-date { color: #e0f2fe; }
 .k8-th-hero .k8-th-head h1 { color: #fff; }
 .k8-th-hero .k8-bell { background: rgba(255,255,255,.16); border-color: transparent; color: #fff; }
 .k8-th-hero .k8-acct summary { background: rgba(255,255,255,.18); color: #fff; }
 .k8-th-hero .k8-th-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
 .k8-th-hero .k8-th-kpi { background: rgba(255,255,255,.14); border: 0; color: #fff; padding: 10px; border-radius: 16px; gap: 2px; }
 .k8-th-hero .k8-th-kpi .k8-th-kpi-v b { font-size: 24px; color: #fff; }
-.k8-th-hero .k8-th-kpi .k8-th-kpi-v small { font-size: 13px; color: #ede9fe; }
-.k8-th-hero .k8-th-kpi .k8-th-kpi-l { font-size: 12px; color: #ede9fe; }
+.k8-th-hero .k8-th-kpi .k8-th-kpi-v small { font-size: 13px; color: #e0f2fe; }
+.k8-th-hero .k8-th-kpi .k8-th-kpi-l { font-size: 12px; color: #e0f2fe; }
 .k8-th-hero .k8-th-kpi .k8-th-bar { display: none; }
 .k8-th-hero .k8-th-kpi.is-hl { background: #fff; }
 .k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-v b { color: #b45309; }
@@ -2292,7 +2292,7 @@ button.prayer-status-pill.k8-pe-add:hover { border-color: #0369a1; color: #0369a
 .k8-th-tl { flex-direction: column; gap: 10px; padding: 16px; }
 .k8-th-tl-h { display: flex; justify-content: space-between; align-items: center; }
 .k8-th-tl-h h2 { margin: 0; font-size: 16px; font-weight: 600; color: #0f172a; }
-.k8-th-tl-all { border: 0; background: none; color: #5b21b6; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; min-height: 36px; }
+.k8-th-tl-all { border: 0; background: none; color: #0369a1; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; min-height: 36px; }
 .k8-th-tl-empty { margin: 0; font-size: 13px; color: #64748b; }
 .k8-th-tl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .k8-th-tl-list li { display: grid; grid-template-columns: 44px 18px minmax(0, 1fr); column-gap: 8px; position: relative; padding-bottom: 14px; }
@@ -2304,14 +2304,14 @@ button.prayer-status-pill.k8-pe-add:hover { border-color: #0369a1; color: #0369a
 .k8-th-tl-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .k8-th-tl-c b { font-size: 14px; font-weight: 600; color: #0f172a; }
 .k8-th-tl-c small { font-size: 12px; color: #475569; }
-.k8-th-tl-c em { flex: none; font-style: normal; font-size: 11px; font-weight: 700; color: #fff; background: #5b21b6; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.k8-th-tl-c em { flex: none; font-style: normal; font-size: 11px; font-weight: 700; color: #fff; background: #0369a1; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
 .k8-th-tl-list li.is-done .k8-th-tl-dot { background: #15803d; }
 .k8-th-tl-list li.is-done small { color: #15803d; }
 .k8-th-tl-list li.is-past .k8-th-tl-c b { color: #64748b; }
-.k8-th-tl-list li.is-focus .k8-th-tl-t { color: #5b21b6; font-weight: 700; }
-.k8-th-tl-list li.is-focus .k8-th-tl-dot { width: 14px; height: 14px; background: #fff; border: 3px solid #5b21b6; box-sizing: border-box; margin-top: 3px; }
-.k8-th-tl-list li.is-focus .k8-th-tl-c { padding: 10px 12px; border-radius: 14px; background: #f5f3ff; gap: 4px; }
-.k8-th-tl-go { align-self: flex-start; margin-top: 4px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: #5b21b6; color: #fff; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+.k8-th-tl-list li.is-focus .k8-th-tl-t { color: #0369a1; font-weight: 700; }
+.k8-th-tl-list li.is-focus .k8-th-tl-dot { width: 14px; height: 14px; background: #fff; border: 3px solid #0369a1; box-sizing: border-box; margin-top: 3px; }
+.k8-th-tl-list li.is-focus .k8-th-tl-c { padding: 10px 12px; border-radius: 14px; background: #f0f9ff; gap: 4px; }
+.k8-th-tl-go { align-self: flex-start; margin-top: 4px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: #0369a1; color: #fff; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
 
 /* ===== v12.5 · โหมดจอแคบ / ซูมใหญ่ (html.k8-narrow) ===== */
 html.k8-narrow body { overflow-wrap: anywhere; }
@@ -2421,3 +2421,23 @@ body .k8-admin-nav .admin-tab-btn .k8-nav-ico { flex: none; color: #94a3b8; }
 body .k8-admin-nav .admin-tab-btn.active .k8-nav-ico { color: var(--g, #7dd3fc); }
 body .k8-admin-nav .admin-tab-btn.active { box-shadow: inset 3px 0 0 var(--g, #7dd3fc) !important; }
 @media (prefers-reduced-motion: reduce) { body .k8-admin-nav .k8-nav-chev { transition: none; } }
+
+/* v12.6 · หน้าเกรดอาจารย์แบบ 11B (ส่วนเลือกอยู่ในการ์ดหัว · ธีมฟ้า) */
+#teacher-tab-grades { padding-top: 12px; }
+#teacher-tab-grades > .card { background: transparent !important; border: 0 !important; padding: 0 !important; box-shadow: none !important; }
+#teacher-tab-grades .tg { gap: 14px; }
+#teacher-tab-grades .tg-hdr { display: flex; flex-direction: column; gap: 12px; padding: 18px 16px 16px; border-radius: 22px; background: #fff; border: 1px solid #e2e8f0; }
+#teacher-tab-grades .tg-hdr .tg-head { align-items: baseline; }
+#teacher-tab-grades .tg-hdr .tg-title { font-size: 22px; font-weight: 600; margin: 0; }
+#teacher-tab-grades .tg-hdr .tg-term { font-size: 12px; color: #475569; }
+#teacher-tab-grades .tg-hdr select { background-color: #f8fafc; }
+#teacher-tab-grades .tg-hdr .tg-seg { background: #e0f2fe; }
+#teacher-tab-grades .tg-chips { gap: 6px; }
+#teacher-tab-grades .tg-chip { min-height: 44px; padding: 4px 12px; border-radius: 12px; font-size: 13px; }
+#teacher-tab-grades .tg-add { min-height: 36px; padding: 0 12px; border-radius: 12px; border: 2px dashed #7dd3fc; font-size: 13px; align-self: center; }
+#teacher-tab-grades .tg-mode-hdr { display: flex !important; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 2px 0; margin: 0; background: none !important; border: 0 !important; }
+#teacher-tab-grades .tg-mode-hdr button { flex: none; min-height: 40px; padding: 0 2px; border: 0 !important; background: none !important; box-shadow: none !important; font: 600 14px 'IBM Plex Sans Thai', sans-serif; color: #0369a1; cursor: pointer; }
+#teacher-tab-grades .tg-mode-hdr button[aria-selected="true"] { font-size: 16px; color: #0f172a; cursor: default; }
+#teacher-tab-grades .tg-mode-hdr + .tg-note { margin: -10px 2px 0; font-size: 12px; }
+#teacher-tab-grades .tg-save { border-radius: 18px; padding: 12px 14px; }
+html.k8-narrow #teacher-tab-grades .tg-mode-hdr { flex-wrap: wrap; }

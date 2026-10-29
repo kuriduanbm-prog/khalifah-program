@@ -537,16 +537,17 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const left = Math.max(0, Math.round((TG_TOTAL_MAX - totalMax) * 100) / 100);
       html += '<div class="tg-head"><h3>ชิ้นงาน (' + defs.length + ')</h3><span>คะแนนเต็มรวม <b>' + fmtNum(totalMax) + '</b> / ' + TG_TOTAL_MAX + (left > 0 ? ' · เหลือ ' + fmtNum(left) : ' · ครบแล้ว') + '</span></div>';
       html += '<div class="tg-chips">' + defs.map((a) => '<button type="button" class="tg-chip" data-asg="' + esc(a.id) + '" aria-pressed="' + (a.id === active) + '">' + esc(a.title) + '<small>เต็ม ' + fmtNum(a.maxScore) + '</small></button>').join('') +
-        '<button type="button" class="tg-add" data-act="open-add">+ เพิ่มชิ้นงาน</button></div>';
+        '<button type="button" class="tg-add" data-act="open-add" aria-label="เพิ่มชิ้นงาน">+ เพิ่ม</button></div>';
       if (tgState.adding) {
         html += '<div class="tg-form"><div class="tg-form-row">' +
           '<label>ชื่อชิ้นงาน<input type="text" id="tgNewTitle" maxlength="120" placeholder="เช่น ใบงานที่ 4"></label>' +
           '<label>คะแนนเต็ม (ใส่ได้อีก ' + fmtNum(left) + ')<input type="text" inputmode="decimal" id="tgNewMax" placeholder="' + (left >= 10 ? '10' : fmtNum(left)) + '"></label></div>' +
           '<div class="tg-btns"><button type="button" class="tg-btn" data-act="cancel-add">ยกเลิก</button><button type="button" class="tg-btn is-primary" data-act="confirm-add">เพิ่มชิ้นงาน</button></div></div>';
       }
-      if (defs.length) html += '<div class="tg-mode" role="tablist" aria-label="รูปแบบการกรอกคะแนน">' + [['grid', 'ตารางทุกชิ้นงาน'], ['one', 'กรอกทีละชิ้นงาน']].map(([k, l]) => '<button type="button" role="tab" data-mode="' + k + '" aria-selected="' + (tgState.mode === k) + '">' + l + '</button>').join('') + '</div>';
+      // หัวการ์ดตาราง: ชื่อโหมดที่ใช้อยู่ + ลิงก์สลับไปอีกโหมด
+      if (defs.length) html += '<div class="tg-mode tg-mode-hdr" role="tablist" aria-label="รูปแบบการกรอกคะแนน">' + [['grid', 'ตารางทุกชิ้นงาน', 'ดูตารางทุกชิ้น ›'], ['one', 'กรอกทีละชิ้นงาน', 'กรอกทีละชิ้น ›']].sort((a, b) => (b[0] === tgState.mode) - (a[0] === tgState.mode)).map(([k, l, link]) => '<button type="button" role="tab" data-mode="' + k + '" aria-selected="' + (tgState.mode === k) + '">' + (tgState.mode === k ? l : link) + '</button>').join('') + '</div>';
       if (defs.length && tgState.mode === 'grid') {
-        html += '<p class="tg-note">กรอกคะแนนของนักเรียนแต่ละคนแยกตามชิ้นงานได้ในตารางเดียว · กด Enter เพื่อลงไปคนถัดไปในชิ้นงานเดียวกัน</p>';
+        html += '<p class="tg-note tg-note-grid">กด Enter เพื่อลงไปคนถัดไปในชิ้นงานเดียวกัน</p>';
         html += '<div class="tg-grid-wrap"><table class="tg-grid"><thead><tr><th scope="col" class="tg-grid-name">นักเรียน</th>' + defs.map((a) => '<th scope="col"><span>' + esc(a.title) + '</span><small>เต็ม ' + fmtNum(a.maxScore) + '</small></th>').join('') + '<th scope="col" class="tg-grid-sum">รวม<small>' + fmtNum(totalMax) + '</small></th></tr></thead><tbody>' +
           students.map((s) => { const sid = cleanId(s.studentId); const t = tgTotals(sid, subj, defs);
             return '<tr><th scope="row" class="tg-grid-name"><b>' + esc(s.fullName || sid) + '</b><small>' + esc(sid) + '</small></th>' + defs.map((a) => { const v = tgScoreOf(sid, subj, a.id); const n = Number(v); const bad = v !== '' && (isNaN(n) || n < 0 || n > Number(a.maxScore));
@@ -2841,7 +2842,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.5';
+  const APP_VERSION = '12.6';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

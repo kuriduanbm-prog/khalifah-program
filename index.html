@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=12.5">
-  <link rel="stylesheet" href="ui-v8.css?v=12.5">
+  <link rel="stylesheet" href="style.css?v=12.6">
+  <link rel="stylesheet" href="ui-v8.css?v=12.6">
 </head>
 <body class="auth-locked">
   <script>
@@ -1781,7 +1781,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <button type="button" class="hf-cal-btn k8-eval-card" onclick="k8EvalSummary()">
-          <span class="hf-cal-ico" style="background:#ede9fe;color:#5b21b6"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.4l6-.9z"/></svg></span>
+          <span class="hf-cal-ico" style="background:#e0f2fe;color:#0369a1"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.4l6-.9z"/></svg></span>
           <span class="hf-cal-txt"><b>ผลประเมินจากนักเรียน</b><span>คะแนนเฉลี่ยรายวิชา ภาคเรียนนี้ (ไม่ระบุชื่อ)</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
@@ -2099,6 +2099,7 @@
       <div id="teacher-tab-grades" class="teacher-subcontent" style="display: none;">
         <div class="card" style="margin-bottom: 1.5rem;">
           <div class="tg" id="tgRoot">
+            <section class="tg-hdr" aria-label="เลือกวิชาและโหมด">
             <div class="tg-head">
               <h3 class="tg-title">คะแนน &amp; เกรด</h3>
               <span class="tg-term" id="tgTerm"></span>
@@ -2123,6 +2124,7 @@
               <button type="button" role="tab" data-tab="scores" aria-selected="true">กรอกคะแนนชิ้นงาน</button>
               <button type="button" role="tab" data-tab="summary" aria-selected="false">สรุปเกรด</button>
             </div>
+            </section>
             <div id="tgBody" style="display: flex; flex-direction: column; gap: 12px;"></div>
             <div class="tg-save">
               <span class="tg-save-text" id="tgSaveText" aria-live="polite"></span>
@@ -5776,7 +5778,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=12.5"></script>
-  <script defer src="ui-v8.js?v=12.5"></script>
+  <script defer src="app.js?v=12.6"></script>
+  <script defer src="ui-v8.js?v=12.6"></script>
 </body>
 </html>
