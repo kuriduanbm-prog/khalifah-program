@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=12.4">
-  <link rel="stylesheet" href="ui-v8.css?v=12.4">
+  <link rel="stylesheet" href="style.css?v=12.5">
+  <link rel="stylesheet" href="ui-v8.css?v=12.5">
 </head>
 <body class="auth-locked">
   <script>
@@ -2382,86 +2382,107 @@
           <span class="k8-nav-brand-name">KHALIFAH</span>
           <span class="k8-nav-brand-sub">ศูนย์ควบคุมแอดมิน</span>
         </div>
-        <div class="k8-nav-group">
+        <div class="k8-nav-group" data-g="main" style="--g:#38bdf8">
+          <button type="button" class="k8-nav-gh" aria-expanded="true" onclick="k8NavGroup(this)"><span class="k8-nav-gi"><svg class="k8-nav-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span><span class="k8-nav-gl">หน้าหลัก</span><span class="k8-nav-gc">3</span><svg class="k8-nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
           <span class="k8-nav-label">หน้าหลัก</span>
+          <div class="k8-nav-items">
           <button class="admin-tab-btn" id="btnAdminTabOverview" onclick="switchAdminTab('overview', this)">
-            <i class="fa-solid fa-gauge-high" aria-hidden="true"></i> ภาพรวม
-          </button>
-        </div>
-        <div class="k8-nav-group">
-          <span class="k8-nav-label">บุคคล</span>
-          <button class="admin-tab-btn active" id="btnAdminTabStudents" onclick="switchAdminTab('students', this)">
-            <i class="fa-solid fa-users" aria-hidden="true"></i> นักเรียน
-          </button>
-          <button class="admin-tab-btn" id="btnAdminTabTeachers" onclick="switchAdminTab('subadmins', this)">
-            <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i> อาจารย์ &amp; ผู้บริหาร
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg> ภาพรวม
           </button>
           <button class="admin-tab-btn" id="btnAdminTabApprovals" onclick="switchAdminTab('approvals', this)">
-            <i class="fa-solid fa-envelope-circle-check" aria-hidden="true"></i> อนุมัติบัญชี &amp; คำขอ <span class="admin-pending-pill" id="adminTabPendingBadge" style="display:none;">0</span>
-          </button>
-        </div>
-        <div class="k8-nav-group">
-          <span class="k8-nav-label">ติดตามประจำวัน</span>
-          <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
-            <i class="fa-solid fa-person-praying" aria-hidden="true"></i> ละหมาด
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> อนุมัติบัญชี &amp; คำขอ <span class="admin-pending-pill" id="adminTabPendingBadge" style="display:none;">0</span>
           </button>
           <button class="admin-tab-btn" id="btnAdminTabNotif" onclick="switchAdminTab('notify', this)">
-            <i class="fa-solid fa-bell" aria-hidden="true"></i> แจ้งเตือน &amp; ข้อตกลง
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> แจ้งเตือน &amp; ข้อตกลง
           </button>
-          <button class="admin-tab-btn" id="btnAdminTabBehavior" onclick="switchAdminTab('behavior', this)">
-            <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> คะแนนพฤติกรรม
-          </button>
-          <button class="admin-tab-btn" id="btnAdminTabRank" onclick="switchAdminTab('prayer-rank', this)">
-            <i class="fa-solid fa-ranking-star" aria-hidden="true"></i> อันดับละหมาด
-          </button>
-          <button class="admin-tab-btn" id="btnAdminTabHalaqah" onclick="k8HqOpen()">
-            <i class="fa-solid fa-book-quran" aria-hidden="true"></i> หะละเกาะฮฺ
-          </button>
-          <button class="admin-tab-btn" onclick="switchAdminTab('activities-admin', this)" id="btnTabActivitiesAdmin">
-            <i class="fa-solid fa-qrcode" aria-hidden="true"></i> กิจกรรม &amp; สแกน QR
-          </button>
-          <button class="admin-tab-btn" onclick="switchAdminTab('calendar-admin', this)" id="btnTabCalendarAdmin">
-            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> ปฏิทินโรงเรียน
-          </button>
+          </div>
         </div>
-        <div class="k8-nav-group">
-          <span class="k8-nav-label">วิชาการ</span>
-          <button class="admin-tab-btn" id="btnAdminTabGrading" onclick="switchAdminTab('grading', this)">
-            <i class="fa-solid fa-award" aria-hidden="true"></i> เกรดรายวิชา
+        <div class="k8-nav-group" data-g="people" style="--g:#a78bfa">
+          <button type="button" class="k8-nav-gh" aria-expanded="true" onclick="k8NavGroup(this)"><span class="k8-nav-gi"><svg class="k8-nav-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="k8-nav-gl">นักเรียน & บุคลากร</span><span class="k8-nav-gc">3</span><svg class="k8-nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <span class="k8-nav-label">นักเรียน & บุคลากร</span>
+          <div class="k8-nav-items">
+          <button class="admin-tab-btn active" id="btnAdminTabStudents" onclick="switchAdminTab('students', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> นักเรียน
           </button>
-          <button class="admin-tab-btn" id="btnAdminTabSubjects" onclick="switchAdminTab('subjects', this)">
-            <i class="fa-solid fa-book-open" aria-hidden="true"></i> รายวิชา
-          </button>
-          <button class="admin-tab-btn" id="btnAdminTabTimetable" onclick="switchAdminTab('timetable', this)">
-            <i class="fa-solid fa-table-cells" aria-hidden="true"></i> ตารางสอน
-          </button>
-          <button class="admin-tab-btn" id="btnAdminTabDocs" onclick="switchAdminTab('docs', this)">
-            <i class="fa-solid fa-folder-open" aria-hidden="true"></i> เอกสารการเรียน
+          <button class="admin-tab-btn" id="btnAdminTabTeachers" onclick="switchAdminTab('subadmins', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="13" rx="2"/><path d="M8 21h8M12 16v5"/></svg> อาจารย์ &amp; ผู้บริหาร
           </button>
           <button class="admin-tab-btn" id="btnAdminTabPromote" onclick="switchAdminTab('promote', this)">
-            <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> เลื่อนชั้น
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg> เลื่อนชั้น
+          </button>
+          </div>
+        </div>
+        <div class="k8-nav-group" data-g="faith" style="--g:#34d399">
+          <button type="button" class="k8-nav-gh" aria-expanded="true" onclick="k8NavGroup(this)"><span class="k8-nav-gi"><svg class="k8-nav-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-3 3-5 5-5 8a5 5 0 0 0 10 0c0-3-2-5-5-8z"/><path d="M4 21h16"/></svg></span><span class="k8-nav-gl">ละหมาด & อัลกุรอาน</span><span class="k8-nav-gc">3</span><svg class="k8-nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <span class="k8-nav-label">ละหมาด & อัลกุรอาน</span>
+          <div class="k8-nav-items">
+          <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-3 3-5 5-5 8a5 5 0 0 0 10 0c0-3-2-5-5-8z"/><path d="M4 21h16"/></svg> ละหมาด
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabRank" onclick="switchAdminTab('prayer-rank', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg> อันดับละหมาด
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabHalaqah" onclick="k8HqOpen()">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14M3 18V4h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5v14h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg> หะละเกาะฮฺ
+          </button>
+          </div>
+        </div>
+        <div class="k8-nav-group" data-g="life" style="--g:#fbbf24">
+          <button type="button" class="k8-nav-gh" aria-expanded="true" onclick="k8NavGroup(this)"><span class="k8-nav-gi"><svg class="k8-nav-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="k8-nav-gl">ความประพฤติ & กิจกรรม</span><span class="k8-nav-gc">3</span><svg class="k8-nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <span class="k8-nav-label">ความประพฤติ & กิจกรรม</span>
+          <div class="k8-nav-items">
+          <button class="admin-tab-btn" id="btnAdminTabBehavior" onclick="switchAdminTab('behavior', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg> คะแนนพฤติกรรม
+          </button>
+          <button class="admin-tab-btn" onclick="switchAdminTab('activities-admin', this)" id="btnTabActivitiesAdmin">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v7M14 20h3"/></svg> กิจกรรม &amp; สแกน QR
+          </button>
+          <button class="admin-tab-btn" onclick="switchAdminTab('calendar-admin', this)" id="btnTabCalendarAdmin">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg> ปฏิทินโรงเรียน
+          </button>
+          </div>
+        </div>
+        <div class="k8-nav-group" data-g="study" style="--g:#60a5fa">
+          <button type="button" class="k8-nav-gh" aria-expanded="true" onclick="k8NavGroup(this)"><span class="k8-nav-gi"><svg class="k8-nav-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span><span class="k8-nav-gl">การเรียนการสอน</span><span class="k8-nav-gc">5</span><svg class="k8-nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <span class="k8-nav-label">การเรียนการสอน</span>
+          <div class="k8-nav-items">
+          <button class="admin-tab-btn" id="btnAdminTabTimetable" onclick="switchAdminTab('timetable', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 4v17M3 14h18"/></svg> ตารางสอน
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabSubjects" onclick="switchAdminTab('subjects', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg> รายวิชา
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabGrading" onclick="switchAdminTab('grading', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/></svg> เกรดรายวิชา
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabDocs" onclick="switchAdminTab('docs', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> เอกสารการเรียน
           </button>
           <button class="admin-tab-btn" id="btnAdminTabReports" onclick="switchAdminTab('reports', this)">
-            <i class="fa-solid fa-file-export" aria-hidden="true"></i> ส่งออกรายงาน
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3 3 3-3"/></svg> ส่งออกรายงาน
           </button>
+          </div>
         </div>
-        <div class="k8-nav-group">
-          <span class="k8-nav-label">ระบบ</span>
+        <div class="k8-nav-group" data-g="sys" style="--g:#94a3b8">
+          <button type="button" class="k8-nav-gh" aria-expanded="true" onclick="k8NavGroup(this)"><span class="k8-nav-gi"><svg class="k8-nav-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-2.82-1.17l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.17 14H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.17-2.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9.9 3.17V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 2.82 1.17l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 20.83 10H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="k8-nav-gl">ตั้งค่าระบบ</span><span class="k8-nav-gc">5</span><svg class="k8-nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <span class="k8-nav-label">ตั้งค่าระบบ</span>
+          <div class="k8-nav-items">
           <button class="admin-tab-btn" onclick="switchAdminTab('term', this)" id="btnTabTerm">
-            <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> ภาคเรียน &amp; ปีการศึกษา
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ภาคเรียน &amp; ปีการศึกษา
           </button>
           <button class="admin-tab-btn" onclick="switchAdminTab('logo', this)" id="btnTabLogo">
-            <i class="fa-solid fa-image" aria-hidden="true"></i> ตั้งค่า &amp; โลโก้
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-2.82-1.17l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.17 14H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.17-2.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9.9 3.17V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 2.82 1.17l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 20.83 10H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> ตั้งค่า &amp; โลโก้
           </button>
           <button class="admin-tab-btn" onclick="openModal('settingsModal')">
-            <i class="fa-solid fa-database" aria-hidden="true"></i> ฐานข้อมูล Google Sheets
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg> ฐานข้อมูล Google Sheets
           </button>
           <button class="admin-tab-btn" onclick="switchView('teacher')">
-            <i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i> โหมดอาจารย์
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg> โหมดอาจารย์
           </button>
           <button class="admin-tab-btn k8-nav-logout" onclick="adminLogout()">
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> ออกจากระบบ
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> ออกจากระบบ
           </button>
+          </div>
         </div>
         <div class="k8-nav-sync" id="k8NavSync"><span class="k8-dot" aria-hidden="true"></span> เชื่อมต่อ Google Sheets</div>
       </nav>
@@ -5755,7 +5776,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=12.4"></script>
-  <script defer src="ui-v8.js?v=12.4"></script>
+  <script defer src="app.js?v=12.5"></script>
+  <script defer src="ui-v8.js?v=12.5"></script>
 </body>
 </html>

@@ -2841,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.4';
+  const APP_VERSION = '12.5';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5280,4 +5280,52 @@ window.k8RegBirthChange = function (v) {
   if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'teacher') { try { paint(); if (window.k8TtLoad) window.k8TtLoad(); } catch (e) {} } return r; };
   document.addEventListener('k8-tt-loaded', () => { try { paint(); } catch (e) {} });
   setInterval(() => { const v = document.getElementById('view-teacher'); if (v && v.classList.contains('active')) { try { paint(); } catch (e) {} } }, 60000);
+})();
+
+/* ============ v12.5 · โหมดจอแคบ / ตัวอักษรใหญ่ (สำหรับผู้ที่ซูมหรือขยายตัวหนังสือ) ============
+   เปิดอัตโนมัติเมื่อหน้าจอแคบกว่า 380px (เช่น ซูม 150–200%) หรือเมื่อเครื่องตั้งขนาดตัวอักษรใหญ่ */
+(function () {
+  function fontScale() {
+    try {
+      const p = document.createElement('span'); p.style.cssText = 'position:absolute;visibility:hidden;font-size:16px;line-height:1;'; p.textContent = 'ก';
+      document.body.appendChild(p); const fs = parseFloat(getComputedStyle(p).fontSize) || 16; const h = p.getBoundingClientRect().height || 16; p.remove();
+      return Math.max(fs / 16, h / 16 / 1.45);
+    } catch (e) { return 1; }
+  }
+  let scale = 1;
+  function apply() {
+    const narrow = window.innerWidth < 380 || scale > 1.2;
+    document.documentElement.classList.toggle('k8-narrow', narrow);
+    document.documentElement.classList.toggle('k8-xnarrow', window.innerWidth < 300 || scale > 1.6);
+  }
+  const start = () => { scale = fontScale(); apply(); };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  window.addEventListener('resize', apply);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', apply);
+})();
+
+/* v12.6 · เมนูแอดมิน: พับ/กางหมวด (จำค่าไว้ในเครื่อง) · หมวดของหน้าที่เปิดอยู่จะกางเสมอ */
+(function () {
+  const KEY = 'k8_nav_collapsed';
+  const get = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
+  const set = (a) => { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} };
+  function paint() {
+    const c = get();
+    document.querySelectorAll('#k8AdminNav .k8-nav-group[data-g]').forEach((g) => {
+      const hasActive = !!g.querySelector('.admin-tab-btn.active');
+      const col = c.indexOf(g.dataset.g) !== -1 && !hasActive;
+      g.classList.toggle('is-collapsed', col);
+      const h = g.querySelector('.k8-nav-gh'); if (h) h.setAttribute('aria-expanded', String(!col));
+    });
+  }
+  window.k8NavGroup = function (btn) {
+    const g = btn.closest('.k8-nav-group'); if (!g) return;
+    const c = get().filter((x) => x !== g.dataset.g);
+    if (!g.classList.contains('is-collapsed')) c.push(g.dataset.g);
+    set(c);
+    g.classList.toggle('is-collapsed'); btn.setAttribute('aria-expanded', String(!g.classList.contains('is-collapsed')));
+  };
+  const o = window.switchAdminTab;
+  if (typeof o === 'function') window.switchAdminTab = function () { const r = o.apply(this, arguments); setTimeout(paint, 0); return r; };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint); else paint();
 })();
