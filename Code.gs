@@ -1154,7 +1154,8 @@ const ACTION_ACCESS = {
   // แอดมิน (หลัก + รอง)
   getAdmins: 'admin', addSubAdmin: 'admin', deleteSubAdmin: 'admin', deleteStudent: 'admin',
   batchPromote: 'admin', fullSchoolBatchPromote: 'admin',
-  saveSetting: 'admin', saveSubjects: 'admin', saveCurrentTerm: 'admin',
+  saveSetting: 'admin', saveSubjects: 'admin', saveCurrentTerm: 'admin', saveStudyDocsFolders: 'admin',
+  listStudyDocs: 'student', getStudyDocsConfig: 'student',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
   init: 'owner', convertToThai: 'owner', organizeSheets: 'owner', organizeGoogleSheets: 'owner'
@@ -1168,7 +1169,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami'];
-READ_ONLY_ACTIONS.push('getBehaviorData', 'getMyBehavior');
+READ_ONLY_ACTIONS.push('getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1384,6 +1385,12 @@ function dispatchAction_(action, req, data, session, ctx) {
       if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
       return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }) };
     }
+    case 'listStudyDocs':
+      return listStudyDocs_(pick('grade'), pick('folderId'), pick('refresh'));
+    case 'getStudyDocsConfig':
+      return { success: true, folders: getStudyDocsFolders_() };
+    case 'saveStudyDocsFolders':
+      return saveStudyDocsFolders_(data.folders);
     case 'saveCurrentTerm':
       return saveCurrentTerm_(data);
     case 'saveBehaviorRules':
@@ -5281,4 +5288,83 @@ function cancelBehaviorLog_(logId, session, isAdmin) {
     return { success: true, message: 'ยกเลิกรายการแล้ว คะแนนถูกคืนให้นักเรียน' };
   }
   return { success: false, message: 'ไม่พบรายการ' };
+}
+
+
+// =====================================================================
+//  📚 เอกสารประกอบการเรียน (Google Drive แยกโฟลเดอร์ ม.1–ม.6) — แสดงในแอปโดยไม่ต้องออกไปหน้า Drive
+// =====================================================================
+const DEFAULT_STUDY_FOLDERS = { '4': '1TUpCLYOzp3P_Wf3iRhLfmMLvLsYn3OPZ', '5': '1JbvNPhCkJz-we9qZE1NVKBrd9v-Aa74A' };
+function extractDriveId_(v) {
+  const s = cleanVal(v);
+  if (!s) return '';
+  const m = s.match(/\/folders\/([A-Za-z0-9_-]{10,})/) || s.match(/[?&]id=([A-Za-z0-9_-]{10,})/) || s.match(/^([A-Za-z0-9_-]{10,})$/);
+  return m ? m[1] : '';
+}
+function getStudyDocsFolders_() {
+  let map = {};
+  try { const raw = (getSettings().data || {}).StudyDocsFolders; if (raw) map = JSON.parse(raw) || {}; else map = DEFAULT_STUDY_FOLDERS; } catch (e) { map = DEFAULT_STUDY_FOLDERS; }
+  const out = {};
+  ['1', '2', '3', '4', '5', '6'].forEach(function (g) { const id = extractDriveId_(map[g]); if (id) out[g] = id; });
+  return out;
+}
+function saveStudyDocsFolders_(folders) {
+  const out = {}; const bad = [];
+  ['1', '2', '3', '4', '5', '6'].forEach(function (g) {
+    const raw = cleanVal(folders && folders[g]);
+    if (!raw) return;
+    const id = extractDriveId_(raw);
+    if (!id) { bad.push('ม.' + g); return; }
+    out[g] = id;
+  });
+  if (bad.length) return { success: false, message: 'ลิงก์โฟลเดอร์ไม่ถูกต้อง: ' + bad.join(', ') };
+  saveSetting({ key: 'StudyDocsFolders', value: JSON.stringify(out), description: 'โฟลเดอร์เอกสารประกอบการเรียน ม.1–ม.6 (Google Drive)' });
+  try { const c = CacheService.getScriptCache(); Object.keys(out).forEach(function (g) { c.remove('DOCS_' + out[g]); }); } catch (e) {}
+  return { success: true, folders: out, message: 'บันทึกโฟลเดอร์เอกสารแล้ว' };
+}
+/** ตรวจว่าโฟลเดอร์อยู่ภายใต้โฟลเดอร์ ม.1–ม.6 ที่ตั้งไว้ (กันการใช้แอปเปิดโฟลเดอร์อื่นใน Drive) */
+function studyFolderRootGrade_(folder, roots) {
+  const rootIds = {}; Object.keys(roots).forEach(function (g) { rootIds[roots[g]] = g; });
+  let f = folder; const path = [];
+  for (let depth = 0; depth < 10 && f; depth++) {
+    path.unshift({ id: f.getId(), name: f.getName() });
+    if (rootIds[f.getId()]) return { grade: rootIds[f.getId()], path: path };
+    const ps = f.getParents();
+    f = ps.hasNext() ? ps.next() : null;
+  }
+  return null;
+}
+function listStudyDocs_(grade, folderId, refresh) {
+  const roots = getStudyDocsFolders_();
+  const g = String(cleanVal(grade)).replace(/\D/g, '');
+  let id = extractDriveId_(folderId);
+  if (!id) {
+    if (!roots[g]) return { success: true, empty: true, grade: g, folders: [], files: [], message: 'ยังไม่มีเอกสารสำหรับ ม.' + g };
+    id = roots[g];
+  }
+  const cache = CacheService.getScriptCache();
+  const key = 'DOCS_' + id;
+  if (!refresh) { try { const hit = cache.get(key); if (hit) return JSON.parse(hit); } catch (e) {} }
+  let folder;
+  try { folder = DriveApp.getFolderById(id); } catch (e) {
+    return { success: false, code: 'DRIVE_ACCESS', folderId: id, message: 'ระบบยังเปิดโฟลเดอร์นี้ไม่ได้ · ตรวจว่าแชร์โฟลเดอร์เป็น "ทุกคนที่มีลิงก์" หรือแชร์ให้บัญชีเจ้าของระบบ' };
+  }
+  let where = null;
+  if (roots[g] === id) where = { grade: g, path: [{ id: id, name: folder.getName() }] };
+  else where = studyFolderRootGrade_(folder, roots);
+  if (!where) return { success: false, code: 'FORBIDDEN', message: 'โฟลเดอร์นี้ไม่อยู่ในเอกสารประกอบการเรียน' };
+  const folders = []; const files = [];
+  const fi = folder.getFolders();
+  while (fi.hasNext() && folders.length < 200) { const f = fi.next(); folders.push({ id: f.getId(), name: f.getName(), updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' }); }
+  const it = folder.getFiles();
+  while (it.hasNext() && files.length < 500) {
+    const f = it.next();
+    if (f.isTrashed && f.isTrashed()) continue;
+    files.push({ id: f.getId(), name: f.getName(), mime: f.getMimeType(), size: f.getSize ? f.getSize() : 0, updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
+  }
+  const byName = function (a, b) { return String(a.name).localeCompare(String(b.name), 'th', { numeric: true }); };
+  folders.sort(byName); files.sort(byName);
+  const out = { success: true, grade: where.grade, folder: { id: id, name: folder.getName() }, path: where.path, folders: folders, files: files, cachedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'HH:mm') };
+  try { const js = JSON.stringify(out); if (js.length < 90000) cache.put(key, js, 600); } catch (e) {}
+  return out;
 }

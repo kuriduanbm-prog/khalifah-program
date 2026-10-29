@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=10.6">
-  <link rel="stylesheet" href="ui-v8.css?v=10.6">
+  <link rel="stylesheet" href="style.css?v=10.7">
+  <link rel="stylesheet" href="ui-v8.css?v=10.7">
 </head>
 <body class="auth-locked">
   <script>
@@ -218,6 +218,12 @@
         <button type="button" class="hf-cal-btn" onclick="openSchoolCalendarModal()">
           <span class="hf-cal-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM16 3v4M8 3v4M3 11h18"/></svg></span>
           <span class="hf-cal-txt"><b>ปฏิทินโรงเรียน</b><span id="hfCalNext">ดูวันสำคัญและกิจกรรมทั้งเดือน</span></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+
+        <button type="button" class="hf-cal-btn k8-docs-btn" onclick="k8DocsOpen()">
+          <span class="hf-cal-ico" style="background:#ecfeff;color:#0e7490"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h8l6 6v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5zM14 3v6h6M8 13h8M8 17h5"/></svg></span>
+          <span class="hf-cal-txt"><b>เอกสารประกอบการเรียน</b><span id="hfDocsSub">ชีท ใบงาน สไลด์ แยกตามชั้น ม.1–ม.6</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
 
@@ -1741,6 +1747,11 @@
           <div class="hf-head"><h2 id="k8FollowTitle">ต้องติดตาม</h2><span>ขาดหรือมาสายตั้งแต่ 3 ครั้งในสัปดาห์นี้</span></div>
           <div class="k8-follow-list" id="k8FollowList"></div>
         </section>
+        <button type="button" class="hf-cal-btn k8-docs-btn" onclick="k8DocsOpen()">
+          <span class="hf-cal-ico" style="background:#ecfeff;color:#0e7490"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h8l6 6v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5zM14 3v6h6M8 13h8M8 17h5"/></svg></span>
+          <span class="hf-cal-txt"><b>เอกสารประกอบการเรียน</b><span >ชีท ใบงาน สไลด์ แยกตามชั้น ม.1–ม.6</span></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
         <button type="button" class="hf-cal-btn k8-tier-btn" onclick="k8TierOpen()">
           <span class="hf-cal-ico" style="background:#fef3c7;color:#b45309"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span>
           <span class="hf-cal-txt"><b>อันดับการละหมาด</b><span>จัดอันดับนักเรียนตามคะแนนละหมาด · ตรงเวลา สาย ขาด</span></span>
@@ -2391,6 +2402,9 @@
           </button>
           <button class="admin-tab-btn" id="btnAdminTabSubjects" onclick="switchAdminTab('subjects', this)">
             <i class="fa-solid fa-book-open" aria-hidden="true"></i> รายวิชา
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabDocs" onclick="switchAdminTab('docs', this)">
+            <i class="fa-solid fa-folder-open" aria-hidden="true"></i> เอกสารการเรียน
           </button>
           <button class="admin-tab-btn" id="btnAdminTabPromote" onclick="switchAdminTab('promote', this)">
             <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> เลื่อนชั้น
@@ -3119,6 +3133,11 @@
             </table>
           </div>
         </div>
+      </div>
+
+      <!-- Admin Tab: Study documents -->
+      <div id="admin-tab-docs" class="admin-content-tab" style="display: none;">
+        <div class="k8-term" id="k8DocsAdmin"></div>
       </div>
 
       <!-- Admin Tab: Term & academic year -->
@@ -5598,6 +5617,23 @@
       </form>
     </div>
   </div>
+  <div class="k8-docs" id="k8Docs" hidden role="dialog" aria-modal="true" aria-labelledby="k8DocsTitle">
+    <header class="k8-docs-bar">
+      <button type="button" class="k8-docs-back" onclick="k8DocsBack()" aria-label="ย้อนกลับ"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="k8-docs-ttl"><h2 id="k8DocsTitle">เอกสารประกอบการเรียน</h2><span id="k8DocsSub">-</span></div>
+      <button type="button" class="k8-docs-icon" onclick="k8DocsRefresh()" aria-label="โหลดใหม่"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button>
+    </header>
+    <div class="k8-docs-body" id="k8DocsBody"></div>
+    <div class="k8-docs-viewer" id="k8DocsViewer" hidden>
+      <header class="k8-docs-bar">
+        <button type="button" class="k8-docs-back" onclick="k8DocsCloseFile()" aria-label="กลับไปที่รายการ"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+        <div class="k8-docs-ttl"><h2 id="k8DocsFileName">-</h2><span id="k8DocsFileSub">-</span></div>
+        <a class="k8-docs-icon" id="k8DocsDl" href="#" target="_blank" rel="noopener" aria-label="ดาวน์โหลด"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></a>
+      </header>
+      <div class="k8-docs-frame"><div class="k8-docs-loading" id="k8DocsFrameLoading">กำลังเปิดเอกสาร…</div><iframe id="k8DocsFrame" title="ตัวอย่างเอกสาร" allow="autoplay; fullscreen" referrerpolicy="no-referrer"></iframe></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="k8BhModal" onclick="if(event.target===this)closeModal('k8BhModal')">
     <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8BhModalTitle">
       <header class="k8-sheet-head"><div><h2 id="k8BhModalTitle">คะแนนพฤติกรรม</h2><span id="k8BhModalSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8BhModal')">✕</button></header>
@@ -5611,7 +5647,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=10.6"></script>
-  <script defer src="ui-v8.js?v=10.6"></script>
+  <script defer src="app.js?v=10.7"></script>
+  <script defer src="ui-v8.js?v=10.7"></script>
 </body>
 </html>

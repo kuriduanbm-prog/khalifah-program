@@ -1921,6 +1921,7 @@ window.k8RegBirthChange = function (v) {
   const HEAD = {
     'admin-tab-subadmins': ['อาจารย์ & ผู้บริหาร', 'เพิ่มบัญชี กำหนดสิทธิ์ และรายวิชาที่รับผิดชอบ'],
     'admin-tab-prayers-monitor': ['ละหมาด', 'ติดตามการเช็คชื่อละหมาด 5 เวลา รายวันและรายบุคคล'],
+    'admin-tab-docs': ['เอกสารประกอบการเรียน', 'เชื่อมโฟลเดอร์ Google Drive ของ ม.1–ม.6 ให้นักเรียนเปิดดูในแอป'],
     'admin-tab-term': ['ภาคเรียน & ปีการศึกษา', 'เลือกว่าตอนนี้เป็นภาคเรียนไหน ปีการศึกษาอะไร ทั้งระบบจะใช้ค่านี้'],
     'admin-tab-behavior': ['คะแนนพฤติกรรม', 'นักเรียนเริ่มที่ 100 คะแนนทุกภาคเรียน · ผู้ตรวจการหัก/เพิ่มคะแนนตามหัวข้อที่ตั้งไว้'],
     'admin-tab-prayer-rank': ['อันดับการละหมาด', 'ดูว่าใครละหมาดสม่ำเสมอ และใครที่ควรติดตามดูแล'],
@@ -2832,7 +2833,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.6';
+  const APP_VERSION = '10.7';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3371,4 +3372,147 @@ window.k8RegBirthChange = function (v) {
     try { if (typeof renderCurrentStudentProfile === 'function') renderCurrentStudentProfile(); } catch (e) {}
     try { if (typeof window.renderAdminOverviewV8 === 'function' && document.getElementById('admin-tab-overview') && document.getElementById('admin-tab-overview').style.display !== 'none') window.renderAdminOverviewV8(); } catch (e) {}
   });
+})();
+
+/* ============ Round 13 · เอกสารประกอบการเรียน (Google Drive ในแอป) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const fmtD = (s) => { const d = new Date(String(s || '').slice(0, 10) + 'T00:00:00'); return isNaN(d) ? '' : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); };
+  const fmtSize = (n) => !n ? '' : n < 1024 * 1024 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1024 / 1024).toFixed(1) + ' MB';
+  const api = (a, p) => gasApiCall(a, p || {}, 30000);
+  const D = { grade: '', folderId: '', stack: [], data: null, loading: false, error: '', q: '', config: null, file: null };
+  const TYPES = [
+    [/pdf/, 'PDF', '#b91c1c', '#fee2e2'], [/presentation|powerpoint/, 'สไลด์', '#c2410c', '#ffedd5'], [/spreadsheet|excel|csv/, 'ตาราง', '#15803d', '#dcfce7'],
+    [/document|word|text/, 'เอกสาร', '#1d4ed8', '#dbeafe'], [/image/, 'รูปภาพ', '#7c3aed', '#ede9fe'], [/video/, 'วิดีโอ', '#be123c', '#ffe4e6'], [/audio/, 'เสียง', '#0e7490', '#cffafe']
+  ];
+  const typeOf = (m) => TYPES.find((t) => t[0].test(String(m || ''))) || [null, 'ไฟล์', '#475569', '#f1f5f9'];
+  const myGrade = () => { try { const g = String((currentStudent && currentStudent.grade) || '').match(/([1-6])/); return g ? g[1] : ''; } catch (e) { return ''; } };
+  const cacheKey = (id) => 'khalifah_docs_' + id;
+
+  async function loadConfig() {
+    if (D.config) return D.config;
+    try { D.config = JSON.parse(localStorage.getItem('khalifah_docs_cfg') || 'null'); } catch (e) {}
+    try { const r = await api('getStudyDocsConfig'); if (r && r.success) { D.config = r.folders || {}; try { localStorage.setItem('khalifah_docs_cfg', JSON.stringify(D.config)); } catch (e) {} } } catch (e) {}
+    return D.config || {};
+  }
+  async function load(refresh) {
+    const key = D.folderId || ('g' + D.grade);
+    const cfg = D.config || {};
+    if (!D.folderId && !cfg[D.grade]) { D.data = { empty: true, folders: [], files: [] }; D.error = ''; render(); return; }
+    let cached = null; try { cached = JSON.parse(localStorage.getItem(cacheKey(key)) || 'null'); } catch (e) {}
+    if (cached && !refresh) { D.data = cached; render(); }
+    D.loading = true; D.error = ''; if (!cached || refresh) render();
+    try {
+      const r = await api('listStudyDocs', D.folderId ? { folderId: D.folderId, refresh: refresh ? 1 : '' } : { grade: D.grade, refresh: refresh ? 1 : '' });
+      if (!r || !r.success) throw Object.assign(new Error((r && r.message) || 'โหลดเอกสารไม่สำเร็จ'), { code: r && r.code });
+      D.data = r; try { localStorage.setItem(cacheKey(key), JSON.stringify(r)); } catch (e) {}
+    } catch (e) { if (!cached) D.data = null; D.error = e.message || 'โหลดเอกสารไม่สำเร็จ'; D.errorCode = e.code || ''; }
+    D.loading = false; render();
+  }
+  function render() {
+    const body = document.getElementById('k8DocsBody'); if (!body) return;
+    const cfg = D.config || {};
+    document.getElementById('k8DocsSub').textContent = 'ม.' + D.grade + (D.data && D.data.path && D.data.path.length > 1 ? ' · ' + D.data.path[D.data.path.length - 1].name : '');
+    let h = '<div class="k8-docs-grades" role="tablist" aria-label="ระดับชั้น">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" role="tab" aria-selected="' + (D.grade === g && !D.folderId ? 'true' : D.grade === g ? 'true' : 'false') + '" class="' + (cfg[g] ? 'has' : 'none') + '" onclick="k8DocsGrade(\'' + g + '\')">ม.' + g + (g === myGrade() ? '<small>ชั้นของฉัน</small>' : '') + '</button>').join('') + '</div>';
+    const path = (D.data && D.data.path) || [];
+    if (path.length > 1) h += '<nav class="k8-docs-crumb" aria-label="ตำแหน่งโฟลเดอร์">' + path.map((p, i) => i === path.length - 1 ? '<b>' + esc(i === 0 ? 'ม.' + D.grade : p.name) + '</b>' : '<button type="button" onclick="k8DocsCrumb(' + i + ')">' + esc(i === 0 ? 'ม.' + D.grade : p.name) + '</button>').join('<span>›</span>') + '</nav>';
+    if (D.data && !D.data.empty && (D.data.files.length + D.data.folders.length) > 6) h += '<input type="search" class="k8-docs-q" id="k8DocsQ" placeholder="ค้นหาชื่อเอกสาร" value="' + esc(D.q) + '" oninput="k8DocsQ(this)" autocomplete="off">';
+    if (D.loading && !D.data) h += '<div class="k8-docs-skel">' + '<div></div>'.repeat(5) + '</div>';
+    else if (D.data && D.data.empty) h += '<div class="k8-docs-empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><b>ยังไม่มีเอกสารสำหรับ ม.' + D.grade + '</b><span>อาจารย์จะเพิ่มเอกสารเร็ว ๆ นี้ · ลองดูชั้นอื่นที่มีเอกสารแล้วได้</span></div>';
+    else if (D.error && !D.data) h += '<div class="k8-docs-empty is-err"><b>เปิดโฟลเดอร์ไม่สำเร็จ</b><span>' + esc(D.error) + '</span><button type="button" onclick="k8DocsRefresh()">ลองอีกครั้ง</button>' + (cfg[D.grade] && !D.folderId ? '<button type="button" class="is-alt" onclick="k8DocsEmbed()">เปิดแบบสำรอง</button>' : '') + '</div>';
+    else if (D.data) {
+      const q = D.q.trim().toLowerCase();
+      const folders = D.data.folders.filter((f) => !q || f.name.toLowerCase().includes(q));
+      const files = D.data.files.filter((f) => !q || f.name.toLowerCase().includes(q));
+      if (D.error) h += '<p class="k8-docs-note">แสดงรายการที่จำไว้ล่าสุด · ' + esc(D.error) + '</p>';
+      if (folders.length) h += '<h3 class="k8-docs-h">โฟลเดอร์ (' + folders.length + ')</h3><ul class="k8-docs-folders">' + folders.map((f) => '<li><button type="button" onclick="k8DocsFolder(\'' + js(f.id) + '\')"><span class="k8-docs-fic"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><b>' + esc(f.name) + '</b><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></li>').join('') + '</ul>';
+      if (files.length) h += '<h3 class="k8-docs-h">ไฟล์ (' + files.length + ')</h3><ul class="k8-docs-files">' + files.map((f) => { const t = typeOf(f.mime);
+        return '<li><button type="button" onclick="k8DocsFile(\'' + js(f.id) + '\')"><span class="k8-docs-tic" style="color:' + t[2] + ';background:' + t[3] + '">' + t[1] + '</span><span class="k8-docs-fn"><b>' + esc(f.name) + '</b><small>' + [fmtD(f.updated), fmtSize(f.size)].filter(Boolean).join(' · ') + '</small></span></button></li>'; }).join('') + '</ul>';
+      if (!folders.length && !files.length) h += '<div class="k8-docs-empty"><b>' + (q ? 'ไม่พบเอกสารที่ค้นหา' : 'โฟลเดอร์นี้ยังว่าง') + '</b></div>';
+      if (D.loading) h += '<p class="k8-docs-note">กำลังตรวจหาเอกสารใหม่…</p>';
+    }
+    body.innerHTML = h;
+  }
+  function pushHist(tag) { try { history.pushState({ k8docs: tag }, ''); } catch (e) {} }
+  window.k8DocsOpen = async function (grade) {
+    const el = document.getElementById('k8Docs'); if (!el) return;
+    el.hidden = false; document.documentElement.classList.add('k8-docs-open'); pushHist('list');
+    D.q = ''; D.folderId = ''; D.stack = []; D.data = null;
+    await loadConfig();
+    const cfg = D.config || {};
+    D.grade = grade || myGrade() || Object.keys(cfg)[0] || '1';
+    render(); load(false);
+  };
+  window.k8DocsGrade = function (g) { D.grade = g; D.folderId = ''; D.stack = []; D.q = ''; D.data = null; load(false); };
+  window.k8DocsFolder = function (id) { D.stack.push(D.folderId); D.folderId = id; D.q = ''; D.data = null; pushHist('folder'); load(false); try { document.getElementById('k8DocsBody').scrollTop = 0; } catch (e) {} };
+  window.k8DocsCrumb = function (i) { const path = (D.data && D.data.path) || []; D.folderId = i === 0 ? '' : path[i].id; D.stack = D.stack.slice(0, i); D.data = null; load(false); };
+  window.k8DocsRefresh = function () { if (!document.getElementById('k8DocsViewer').hidden) return; load(true); };
+  let qt = null;
+  window.k8DocsQ = function (el) { D.q = el.value; clearTimeout(qt); qt = setTimeout(() => { const pos = el.selectionStart; render(); const n = document.getElementById('k8DocsQ'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };
+  function openViewer(src, name, sub, dl) {
+    const v = document.getElementById('k8DocsViewer'), ld = document.getElementById('k8DocsFrameLoading');
+    // สร้าง iframe ใหม่ทุกครั้ง เพื่อไม่ให้เพิ่มประวัติการย้อนกลับของเบราว์เซอร์
+    const old = document.getElementById('k8DocsFrame'); const f = document.createElement('iframe');
+    f.id = 'k8DocsFrame'; f.title = 'ตัวอย่างเอกสาร'; f.setAttribute('allow', 'autoplay; fullscreen'); f.setAttribute('referrerpolicy', 'no-referrer');
+    if (old) old.replaceWith(f);
+    document.getElementById('k8DocsFileName').textContent = name; document.getElementById('k8DocsFileSub').textContent = sub || '';
+    const a = document.getElementById('k8DocsDl'); a.hidden = !dl; if (dl) a.href = dl;
+    ld.hidden = false; f.onload = () => { ld.hidden = true; }; f.src = src; v.hidden = false; pushHist('file');
+  }
+  window.k8DocsFile = function (id) {
+    const f = ((D.data && D.data.files) || []).find((x) => x.id === id); if (!f) return;
+    const t = typeOf(f.mime);
+    const isGoogle = /google-apps/.test(f.mime || '');
+    openViewer('https://drive.google.com/file/d/' + encodeURIComponent(id) + '/preview', f.name, t[1] + (f.size ? ' · ' + fmtSize(f.size) : ''), isGoogle ? '' : 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id));
+  };
+  window.k8DocsEmbed = function () { const id = (D.config || {})[D.grade]; if (id) openViewer('https://drive.google.com/embeddedfolderview?id=' + encodeURIComponent(id) + '#list', 'เอกสาร ม.' + D.grade, 'โหมดสำรอง (แสดงจาก Google Drive)', ''); };
+  function closeFile() { const v = document.getElementById('k8DocsViewer'); if (!v || v.hidden) return false; v.hidden = true; const f = document.getElementById('k8DocsFrame'); if (f) { const n = document.createElement('iframe'); n.id = 'k8DocsFrame'; n.title = 'ตัวอย่างเอกสาร'; f.replaceWith(n); } return true; }
+  function closeAll() { const el = document.getElementById('k8Docs'); if (el) el.hidden = true; closeFile(); document.documentElement.classList.remove('k8-docs-open'); }
+  window.k8DocsCloseFile = function () { try { history.back(); } catch (e) { closeFile(); } };
+  window.k8DocsBack = function () { try { history.back(); } catch (e) { closeAll(); } };
+  // ปุ่มย้อนกลับของมือถือ: ปิดเอกสาร → ขึ้นโฟลเดอร์ → ปิดหน้าเอกสาร (ไม่ออกจากแอป)
+  window.addEventListener('popstate', () => {
+    const el = document.getElementById('k8Docs'); if (!el || el.hidden) return;
+    if (closeFile()) return;
+    if (D.folderId) { D.folderId = D.stack.pop() || ''; D.data = null; load(false); return; }
+    closeAll();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('k8Docs').hidden) window.k8DocsBack(); });
+
+  // จำนวนเอกสารบนปุ่มหน้าแรกนักเรียน
+  async function paintHomeBtn() {
+    const sub = document.getElementById('hfDocsSub'); if (!sub) return;
+    const g = myGrade(); if (!g) return;
+    const cfg = await loadConfig();
+    sub.textContent = cfg[g] ? 'ของชั้น ม.' + g + ' · แตะเพื่อเปิดดูในแอป' : 'ม.' + g + ' ยังไม่มีเอกสาร · ดูชั้นอื่นได้';
+  }
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { closeAll(); const r = sv.apply(this, arguments); if (v === 'dashboard') paintHomeBtn(); return r; };
+
+  // ---------- แอดมิน: ตั้งค่าโฟลเดอร์ ม.1–ม.6 ----------
+  async function renderAdmin() {
+    const root = document.getElementById('k8DocsAdmin'); if (!root) return;
+    D.config = null; const cfg = await loadConfig();
+    root.innerHTML = '<section class="k8-bh-card"><h2 class="k8-bh-h">โฟลเดอร์ Google Drive ของแต่ละชั้น</h2>' +
+      '<p class="k8-bh-intro">วางลิงก์โฟลเดอร์ Google Drive ของแต่ละชั้น นักเรียนและอาจารย์จะเปิดดูเอกสารได้ในแอปทันที โดยไม่ต้องออกไปหน้า Drive · เพิ่มหรือลบไฟล์ในโฟลเดอร์นั้นได้ตามปกติ แอปจะแสดงไฟล์ใหม่ภายใน 10 นาที (หรือกดโหลดใหม่)</p>' +
+      '<div class="k8-docs-cfg">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<label><span>ม.' + g + '</span><input type="url" id="k8DocsCfg' + g + '" placeholder="https://drive.google.com/drive/folders/…" value="' + (cfg[g] ? 'https://drive.google.com/drive/folders/' + esc(cfg[g]) : '') + '" autocomplete="off"><button type="button" class="k8-bh-link" ' + (cfg[g] ? '' : 'disabled') + ' onclick="k8DocsOpen(\'' + g + '\')">เปิดดู</button></label>').join('') + '</div>' +
+      '<div class="k8-term-preview">สำคัญ: ตั้งค่าแชร์โฟลเดอร์เป็น <b>"ทุกคนที่มีลิงก์ · ผู้มีสิทธิ์อ่าน"</b> เพื่อให้นักเรียนเปิดดูไฟล์ได้โดยไม่ต้องเข้าสู่ระบบ Google</div>' +
+      '<button type="button" class="k8-bh-go k8-term-save" onclick="k8DocsCfgSave()">บันทึกโฟลเดอร์</button></section>';
+  }
+  window.k8DocsCfgSave = async function () {
+    const folders = {}; ['1', '2', '3', '4', '5', '6'].forEach((g) => { const v = (document.getElementById('k8DocsCfg' + g).value || '').trim(); if (v) folders[g] = v; });
+    try {
+      const r = await api('saveStudyDocsFolders', { data: { folders } });
+      if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
+      D.config = r.folders; try { localStorage.setItem('khalifah_docs_cfg', JSON.stringify(r.folders)); Object.keys(localStorage).filter((k) => k.indexOf('khalifah_docs_g') === 0).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+      showToast(r.message, 'success'); renderAdmin();
+    } catch (e) { showToast(e.message, 'error'); }
+  };
+  if (typeof window.switchAdminTab === 'function') {
+    const sat = window.switchAdminTab;
+    window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'docs') renderAdmin(); return r; };
+  }
+  if (document.readyState === 'complete') setTimeout(paintHomeBtn, 800); else window.addEventListener('load', () => setTimeout(paintHomeBtn, 800));
 })();
