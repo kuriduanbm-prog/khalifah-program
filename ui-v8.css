@@ -33,6 +33,8 @@
 .hf-idcard-band { background: var(--k8-primary); color: #fff; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .3px; }
 .hf-idcard-brand { font-family: 'IBM Plex Sans Thai', sans-serif; font-weight: 600; font-size: 14px; }
 .hf-idcard-body { display: flex; gap: 14px; padding: 16px; }
+.hf-photo.has-img { background-color: transparent; }
+.hf-photo.is-png { background-size: contain; border-radius: 0; }
 .hf-photo { width: 84px; height: 104px; border-radius: 14px; background: var(--k8-primary-soft) center/cover no-repeat; color: var(--k8-primary); display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 34px; font-weight: 600; flex: none; overflow: hidden; }
 .hf-idcard-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .hf-name { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 20px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -2156,3 +2158,15 @@ html.k8-modal-open, html.k8-modal-open body { overflow: hidden !important; overs
 #k8DreamBody .k8-dr-cats { position: sticky; top: -16px; z-index: 2; background: #fff; padding: 6px 0; margin: 0 -2px; }
 #k8DreamBody .k8-dr-gh { top: 30px; }
 #k8DreamBody .k8-dr-btns { position: sticky; bottom: -16px; background: #fff; padding: 8px 0 4px; z-index: 2; }
+
+/* v11.4 · กล่องคะแนนพฤติกรรมแบบ 4A (กล่องสีทึบซ้าย + ตัวเลขใหญ่) */
+button.hf-card.hf-beh { padding: 12px; }
+.hf-beh-box { flex: none; width: 72px; height: 72px; border-radius: 18px; background: #5b21b6; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.hf-beh-box b { font-size: 30px; font-weight: 700; color: #fff; margin: 0; }
+.hf-beh-box small { font-size: 11px; opacity: .85; margin-top: 3px; }
+.hf-beh-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hf-beh-top b { font-size: 16px; font-weight: 600; margin: 0; color: #0f172a; }
+.hf-beh-txt { gap: 3px; }
+.hf-beh-txt #hfBehSub { font-size: 13px; color: #475569; }
+.hf-beh-txt .hf-beh-term { font-size: 12px; color: #64748b; }
+.hf-beh-top .hf-beh-lv { padding: 1px 9px; }

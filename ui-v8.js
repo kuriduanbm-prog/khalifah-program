@@ -201,8 +201,11 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (url) {
       photo.style.backgroundImage = 'url("' + String(url).replace(/"/g, '%22') + '")';
       photo.textContent = '';
+      photo.classList.add('has-img');
+      photo.classList.toggle('is-png', /^data:image\/(png|webp|gif)|#png$|\.png(\?|$)/i.test(url));
     } else {
       photo.style.backgroundImage = '';
+      photo.classList.remove('has-img', 'is-png');
       const bare = name.replace(/^(นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.|เด็กชาย|เด็กหญิง)\s*/, '');
       photo.textContent = bare.charAt(0) || '?';
     }
@@ -2838,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.3';
+  const APP_VERSION = '11.4';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3260,11 +3263,12 @@ window.k8RegBirthChange = function (v) {
     const lv = level(sc);
     el.textContent = sc;
     const box = document.getElementById('hfBeh'); if (box) box.setAttribute('aria-label', 'คะแนนพฤติกรรม ' + sc + ' จาก 100 · ' + lv[0]);
-    const ring = document.getElementById('hfBehRing'); if (ring) { ring.style.setProperty('--p', sc); ring.style.setProperty('--c', lv[1]); }
+    
     const lvEl = document.getElementById('hfBehLv'); if (lvEl) { lvEl.textContent = lv[0]; lvEl.style.color = lv[1]; lvEl.style.background = lv[2]; }
     const t = (mine && mine.term) || term(); const act = ((mine && mine.logs) || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t));
     const minus = act.filter((l) => l.points < 0).reduce((a, l) => a + l.points, 0), plus = act.filter((l) => l.points > 0).reduce((a, l) => a + l.points, 0);
-    const sub = document.getElementById('hfBehSub'); if (sub) sub.textContent = act.length ? 'ถูกหัก ' + Math.abs(minus) + ' · ได้เพิ่ม ' + plus + ' · ภาคเรียนนี้' : 'เต็ม 100 · ยังไม่มีการหักคะแนนภาคเรียนนี้';
+    const sub = document.getElementById('hfBehSub'); if (sub) sub.textContent = act.length ? 'ถูกหัก ' + Math.abs(minus) + ' · ได้เพิ่ม ' + plus : 'ยังไม่มีการหักคะแนน';
+    const tEl = document.getElementById('hfBehTerm'); if (tEl) { let lb = ''; try { lb = window.k8Term().label; } catch (e) {} tEl.textContent = lb ? 'ภาคเรียนนี้ · ' + lb : 'ภาคเรียนนี้'; }
   }
   let mineAt = 0;
   async function loadMine(force) {

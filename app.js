@@ -133,6 +133,11 @@ function isPhoneMatch(p1, p2) {
  * แปลงลิงก์รูปภาพ Google Drive ทุกรูปแบบให้เป็น Direct CDN (lh3.googleusercontent.com)
  * เพื่อให้สามารถแสดงผลบนแท็ก <img> ได้ 100% โดยไม่ติด CORS หรือ X-Frame-Options
  */
+// รูปโปรไฟล์: ไฟล์ PNG/WebP/GIF เก็บเป็น PNG เพื่อคงพื้นหลังโปร่งใส ส่วนภาพถ่ายทั่วไปบีบเป็น JPEG
+function k8AvatarOut(canvas, file) {
+  return (file && /png|webp|gif|svg/i.test(file.type || '')) ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.85);
+}
+
 function getDirectImageUrl(url) {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
@@ -160,7 +165,7 @@ function getDirectImageUrl(url) {
   for (const re of drivePatterns) {
     const match = trimmed.match(re);
     if (match && match[1]) {
-      return `https://lh3.googleusercontent.com/d/${match[1]}`;
+      return `https://lh3.googleusercontent.com/d/${match[1]}` + (/#png$/i.test(trimmed) ? '#png' : '');
     }
   }
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
@@ -5970,7 +5975,7 @@ function handleTeacherProfileUpload(event) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
-      const base64Data = canvas.toDataURL('image/jpeg', 0.85);
+      const base64Data = k8AvatarOut(canvas, file);
 
       // Save locally
       currentAdmin.avatarUrl = base64Data;
@@ -6077,7 +6082,7 @@ function previewRegisterAvatar(event) {
       const startY = (img.height - minDim) / 2;
       ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
 
-      registerAvatarBase64 = canvas.toDataURL('image/jpeg', 0.85);
+      registerAvatarBase64 = k8AvatarOut(canvas, file);
       const preview = document.getElementById('regAvatarPreview');
       if (preview) {
         preview.innerHTML = `<img src="${registerAvatarBase64}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
@@ -6117,7 +6122,7 @@ function handleProfilePhotoUpload(event) {
       ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
 
       // Convert to compressed JPEG data url (~15-20KB)
-      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+      const compressedBase64 = k8AvatarOut(canvas, file);
 
       currentStudent.avatarUrl = compressedBase64;
       localStorage.setItem('khalifah_current_student', JSON.stringify(currentStudent));

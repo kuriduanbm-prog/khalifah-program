@@ -3634,22 +3634,20 @@ function saveStudentPhotoToDrive(studentId, photoBase64) {
     } else {
       folder = DriveApp.createFolder(folderName);
     }
-    
-    const contentType = "image/jpeg";
+
+    // PNG คงพื้นหลังโปร่งใสไว้ · อื่นๆ เก็บเป็น JPEG
+    const isPng = /^data:image\/png/i.test(trimmed);
+    const contentType = isPng ? "image/png" : "image/jpeg";
     const cleanBase64 = trimmed.includes(',') ? trimmed.split(',')[1] : trimmed;
     const bytes = Utilities.base64Decode(cleanBase64);
-    const fileName = `profile_${studentId}.jpg`;
-    
-    const existingFiles = folder.getFilesByName(fileName);
-    let file;
-    if (existingFiles.hasNext()) {
-      file = existingFiles.next();
-      file.setContent(bytes);
-    } else {
-      file = folder.createFile(Utilities.newBlob(bytes, contentType, fileName));
-    }
+    const baseName = `profile_${studentId}`;
+    ['.jpg', '.png'].forEach(function (ext) {
+      const old = folder.getFilesByName(baseName + ext);
+      while (old.hasNext()) { try { old.next().setTrashed(true); } catch (e) {} }
+    });
+    const file = folder.createFile(Utilities.newBlob(bytes, contentType, baseName + (isPng ? '.png' : '.jpg')));
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return `https://lh3.googleusercontent.com/d/${file.getId()}`;
+    return `https://lh3.googleusercontent.com/d/${file.getId()}` + (isPng ? '#png' : '');
   } catch (err) {
     Logger.log('saveStudentPhotoToDrive error: ' + err.message);
     return '';
