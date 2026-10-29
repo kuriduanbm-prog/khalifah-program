@@ -2262,3 +2262,6 @@ button.prayer-status-pill.k8-pe-add:hover { border-color: #0369a1; color: #0369a
 #k8TtBody { display: flex; flex-direction: column; gap: 12px; max-width: 980px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 .k8-ttp .k8-tt-grid td { min-width: 110px; height: 54px; }
 .k8-tt-dbtn { border: 0; background: none; padding: 4px 2px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; text-decoration: underline dotted #94a3b8; text-underline-offset: 3px; min-height: 40px; }
+/* v12.3 · หน้าภาพรวมอาจารย์: สลับแท็บแล้วระยะห่างการ์ดยังเท่าเดิม · KPI เหลือการ์ดเดียวเต็มแถว */
+#teacher-tab-overview[style*="display: block"], #teacher-tab-overview[style*="display:block"] { display: flex !important; flex-direction: column; gap: 14px; }
+.k8-th-kpis { grid-template-columns: 1fr !important; }

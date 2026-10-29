@@ -883,9 +883,6 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         const left = my.filter((x) => !done.has(String(x.id)));
         return { n: left.length, title: 'เช็คชื่อรายวิชาวันนี้', sub: left.length ? 'ยังไม่เช็ค: ' + left.map((x) => x.name).join(', ') : 'เช็คครบทุกวิชาแล้ว', bg: left.length ? '#fffbeb' : '#f0fdf4', ink: left.length ? '#b45309' : '#15803d', go: "switchTeacherTab('attendance')" };
       })(),
-      (typeof currentAdmin !== 'undefined' && currentAdmin && currentAdmin.role === 'SuperAdmin')
-        ? { n: pendingLate, title: 'คำขอละหมาดย้อนหลัง', sub: pendingLate ? 'รออนุมัติ ' + pendingLate + ' รายการ' : 'ไม่มีคำขอค้าง', bg: '#eff6ff', ink: '#1d4ed8', go: "openPrayerApprovalsV8()" }
-        : null,
       { n: subjId ? students.length - graded : 0, title: 'เกรด' + (subjName ? ' ' + subjName.replace(/^[A-Z0-9]+ - /, '') : ''), sub: subjId ? 'ให้เกรดแล้ว ' + graded + ' จาก ' + students.length + ' คน' : 'ยังไม่มีวิชาที่รับผิดชอบ', bg: '#e0f2fe', ink: '#0369a1', go: "switchTeacherTab('grades')" },
       { n: soon, title: 'กิจกรรมใกล้ถึง', sub: soon ? soon + ' กิจกรรมภายใน 7 วัน' : 'ไม่มีกิจกรรมใน 7 วัน', bg: '#f0fdf4', ink: '#15803d', go: "switchTeacherTab('calendar')" }
     ];
@@ -1456,10 +1453,12 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (nk(p.prayerTime || p.prayerName || '') === slot && ids[norm(p.studentId)]) done[norm(p.studentId)] = 1;
     });
     const pn = Object.keys(done).length;
-    document.getElementById('k8ThPrayL').textContent = 'ละหมาด' + slot;
-    document.getElementById('k8ThPrayN').textContent = pn;
-    document.getElementById('k8ThPrayT').textContent = ' / ' + total;
-    document.getElementById('k8ThPrayBar').style.width = (total ? Math.round(pn / total * 100) : 0) + '%';
+    if (document.getElementById('k8ThPrayN')) {
+      document.getElementById('k8ThPrayL').textContent = 'ละหมาด' + slot;
+      document.getElementById('k8ThPrayN').textContent = pn;
+      document.getElementById('k8ThPrayT').textContent = ' / ' + total;
+      document.getElementById('k8ThPrayBar').style.width = (total ? Math.round(pn / total * 100) : 0) + '%';
+    }
   }
   window.renderTeacherHomeV8 = function () { try { renderTeacherHome(); } catch (e) { console.warn('teacher home', e); } };
 
@@ -2842,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.2';
+  const APP_VERSION = '12.3';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
