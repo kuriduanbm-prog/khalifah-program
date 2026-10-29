@@ -2256,3 +2256,6 @@ button.prayer-status-pill.k8-pe-add:hover { border-color: #0369a1; color: #0369a
 #k8TtCellBody { display: flex; flex-direction: column; gap: 14px; }
 #k8TtPRows { display: flex; flex-direction: column; gap: 10px; }
 .k8-tt-seg, .k8-tt-dh, .k8-tt-list, .k8-tt-gridwrap { flex-shrink: 0; }
+.k8-tt-warn { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-size: 13px; line-height: 1.5; }
+.k8-tt-warn b { font-size: 14px; color: #7c2d12; }
+.k8-tt-warn .k8-bh-link { color: #c2410c; font-weight: 600; text-decoration: underline; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }

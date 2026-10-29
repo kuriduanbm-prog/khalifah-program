@@ -2842,7 +2842,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.0';
+  const APP_VERSION = '12.1';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5008,8 +5008,16 @@ window.k8RegBirthChange = function (v) {
   async function load(force) {
     if (T.loading) return; if (!force && T.data && Date.now() - (T.at || 0) < 60000) return;
     T.loading = true;
-    try { const r = await gasApiCall('getTimetable', {}, 20000); if (r && r.success) { T.data = r; T.at = Date.now(); try { localStorage.setItem(CACHE, JSON.stringify(r)); } catch (e) {} } } catch (e) {}
+    let r = null;
+    try { r = await gasApiCall('getTimetable', {}, 20000); } catch (e) { r = null; }
+    if (r && r.success) { T.data = r; T.at = Date.now(); T.err = ''; try { localStorage.setItem(CACHE, JSON.stringify(r)); } catch (e) {} }
+    else {
+      // โหลดไม่ได้ (ระบบหลังบ้านยังไม่อัปเดต / เน็ตหลุด): ใช้ค่าเริ่มต้นให้ทำงานต่อได้ ไม่ค้างที่ "กำลังโหลด"
+      T.err = (r && /Unknown action/i.test(String(r.error || r.message || ''))) ? 'old-backend' : 'offline';
+      if (!T.data) T.data = { success: true, config: { periods: [{ start: '08:30', end: '09:20' }, { start: '09:20', end: '10:10' }, { start: '10:20', end: '11:10' }, { start: '11:10', end: '12:00' }, { start: '13:00', end: '13:50' }, { start: '13:50', end: '14:40' }, { start: '14:50', end: '15:40' }, { start: '15:40', end: '16:30' }], days: [1, 2, 3, 4, 5], showStudents: true, showTeachers: true }, grades: {}, offline: true };
+    }
     T.loading = false; paintEntry(); if (document.getElementById('k8TtModal') && document.getElementById('k8TtModal').classList.contains('open')) renderView();
+    if (document.getElementById('k8TtAdmin') && document.getElementById('k8TtAdmin').offsetParent !== null) renderAdmin();
   }
 
   // ---------- ปุ่มทางเข้า: บอกคาบถัดไปของวันนี้ ----------
@@ -5054,6 +5062,7 @@ window.k8RegBirthChange = function (v) {
     const r = role(); const c = cfg();
     const sub = document.getElementById('k8TtSub');
     if (!T.data) { body.innerHTML = '<p class="k8-li-empty">กำลังโหลดตาราง…</p>'; if (sub) sub.textContent = '-'; return; }
+    if (T.data.offline && !Object.keys(T.data.grades || {}).length) { body.innerHTML = '<div class="k8-tt-empty"><b>ยังโหลดตารางไม่ได้</b><span>' + (T.err === 'old-backend' ? 'ระบบกำลังอัปเดต ลองใหม่ภายหลัง' : 'ตรวจสอบอินเทอร์เน็ต แล้วเปิดใหม่อีกครั้ง') + '</span></div>'; if (sub) sub.textContent = ''; return; }
     if (T.data.hidden) { body.innerHTML = '<div class="k8-tt-empty"><b>ยังไม่เปิดให้ดูตาราง</b><span>แอดมินกำลังจัดตาราง จะแจ้งให้ทราบเมื่อพร้อม</span></div>'; if (sub) sub.textContent = ''; return; }
     const staff = r !== 'student';
     const grade = staff ? T.grade : T.data.grade;
@@ -5094,8 +5103,10 @@ window.k8RegBirthChange = function (v) {
     if (!T.data) { el.innerHTML = '<p class="k8-li-empty">กำลังโหลดตาราง…</p>'; return; }
     const c = cfg(); if (!T.grade || !T.draft) startDraft(T.grade || '1');
     const filled = Object.keys(T.draft).length;
+    const warn = T.err === 'old-backend' ? '<div class="k8-tt-warn" role="alert"><b>ระบบหลังบ้านยังไม่รองรับตารางสอน</b><span>กรุณา Deploy ไฟล์ Code.gs ตัวล่าสุด (Manage deployments → New version) แล้วกด <button type="button" class="k8-bh-link" onclick="k8TtReload()">โหลดใหม่</button> · ระหว่างนี้จัดตารางได้ แต่ยังบันทึกไม่ได้</span></div>'
+      : T.err === 'offline' ? '<div class="k8-tt-warn" role="alert"><b>เชื่อมต่อระบบไม่ได้</b><span>ตรวจสอบอินเทอร์เน็ต แล้วกด <button type="button" class="k8-bh-link" onclick="k8TtReload()">โหลดใหม่</button></span></div>' : '';
     const cnt = (g) => Object.keys(gradeOf(g).cells || {}).length;
-    el.innerHTML =
+    el.innerHTML = warn +
       '<section class="k8-bh-card k8-tt-vis"><h2 class="k8-bh-h">การมองเห็น</h2>' +
       '<label class="k8-tt-sw"><input type="checkbox" ' + (c.showStudents ? 'checked' : '') + ' onchange="k8TtVis(\'showStudents\',this.checked)"><span><b>นักเรียนเห็นตารางเรียน</b><small>นักเรียนเห็นเฉพาะชั้นของตัวเอง</small></span></label>' +
       '<label class="k8-tt-sw"><input type="checkbox" ' + (c.showTeachers ? 'checked' : '') + ' onchange="k8TtVis(\'showTeachers\',this.checked)"><span><b>อาจารย์เห็นตารางสอน</b><small>อาจารย์เห็นคาบที่ตัวเองสอน และตารางทุกชั้น</small></span></label>' +
@@ -5108,6 +5119,7 @@ window.k8RegBirthChange = function (v) {
       '</tbody></table></div>' +
       '<div class="k8-dr-btns k8-tt-save"><button type="button" class="is-alt" onclick="k8TtCopyFrom()">คัดลอกจากชั้นอื่น</button><button type="button" id="k8TtSaveBtn" ' + (T.dirty ? '' : 'disabled') + ' onclick="k8TtSave()">' + (T.dirty ? 'บันทึกตาราง ม.' + T.grade : 'บันทึกแล้ว') + '</button></div></section>';
   }
+  window.k8TtReload = function () { T.err = ''; T.at = 0; const el = adminRoot(); if (el) el.innerHTML = '<p class="k8-li-empty">กำลังโหลดตาราง…</p>'; load(true).then(() => { if (!T.dirty) startDraft(T.grade || '1'); renderAdmin(); }); };
   window.k8TtGrade = function (g) { if (T.dirty && !confirm('ตาราง ม.' + T.grade + ' ยังไม่ได้บันทึก ต้องการเปลี่ยนชั้นโดยไม่บันทึกใช่ไหม?')) return; startDraft(g); renderAdmin(); };
   window.k8TtCell = async function (k) {
     await loadTeachers();
