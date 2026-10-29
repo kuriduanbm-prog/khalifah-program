@@ -2472,3 +2472,23 @@ html.k8-np-open .teacher-bottom-nav-bar, html.k8-np-open #teacher-tab-grades .tg
 #teacher-tab-grades input.k8-np-cur { border: 2px solid #0369a1 !important; box-shadow: 0 0 0 3px #bae6fd; }
 .k8-np-on { align-self: flex-start; min-height: 36px; padding: 0 12px; border: 1px solid #bae6fd; border-radius: 10px; background: #f0f9ff; color: #0369a1; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
 html.k8-xnarrow .k8-np-keys button { height: 46px; font-size: 20px; }
+
+/* v12.9 · แท็บบาร์ล่างแบบกระจกขาวฝ้า ลอย (13A) · นักเรียน อาจารย์ แอดมิน ผู้ตรวจการ */
+html body .mobile-nav, html body.teacher-portal-active .teacher-bottom-nav-bar, html body.k8-inspector #view-inspector.active .k8-insp-nav {
+  background: rgba(255,255,255,.94) !important;
+  border: 1px solid rgba(255,255,255,.7) !important;
+  border-radius: 30px !important;
+  box-shadow: 0 10px 30px rgba(15,23,42,.14), inset 0 1px 0 rgba(255,255,255,.8) !important;
+}
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  html body .mobile-nav, html body.teacher-portal-active .teacher-bottom-nav-bar, html body.k8-inspector #view-inspector.active .k8-insp-nav {
+    background: rgba(255,255,255,.62) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+    backdrop-filter: blur(18px) saturate(180%) !important;
+  }
+}
+html body .mobile-nav .mobile-nav-item:not(.active), html body .teacher-bottom-nav-bar .teacher-bottom-nav-item:not(.active), html body .k8-insp-nav button:not([aria-current="page"]):not(.active) { color: #1e293b !important; }
+html body .mobile-nav .mobile-nav-item.active, html body .teacher-bottom-nav-bar .teacher-bottom-nav-item.active { border-radius: 22px !important; }
+@media (prefers-reduced-transparency: reduce) {
+  html body .mobile-nav, html body.teacher-portal-active .teacher-bottom-nav-bar, html body.k8-inspector #view-inspector.active .k8-insp-nav { background: #fff !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
