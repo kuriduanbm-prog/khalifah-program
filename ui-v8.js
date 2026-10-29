@@ -2065,7 +2065,7 @@ window.k8RegBirthChange = function (v) {
     if (!list.length) list = subs.slice();
     return [{ id: '', code: '', name: 'โฮมรูม / ทั้งวัน' }].concat(list);
   }
-  function subjLabel(id) { const x = subjects().find((s) => String(s.id) === String(id)); return x ? (x.code ? x.code + ' · ' : '') + x.name : (id || 'โฮมรูม / ทั้งวัน'); }
+  function subjLabel(id) { const x = subjects().find((s) => String(s.id) === String(id)); return x ? x.name : (id || 'โฮมรูม / ทั้งวัน'); }
   function logs() { return readJSON('khalifah_attendance_logs', []); }
   function savedMap(date, subj) {
     const m = {};
@@ -2081,7 +2081,7 @@ window.k8RegBirthChange = function (v) {
     const subs = subjects();
     if (S.subject == null || !subs.some((x) => String(x.id) === String(S.subject))) S.subject = subs[1] ? subs[1].id : '';
     const ss = document.getElementById('k8TaSubject');
-    if (ss) ss.innerHTML = subs.map((x) => '<option value="' + esc(x.id) + '"' + (String(x.id) === String(S.subject) ? ' selected' : '') + '>' + esc((x.code ? x.code + ' · ' : '') + x.name) + '</option>').join('');
+    if (ss) ss.innerHTML = subs.map((x) => '<option value="' + esc(x.id) + '"' + (String(x.id) === String(S.subject) ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('');
     const di = document.getElementById('k8TaDateInput'); if (di) { di.value = S.date; di.removeAttribute('max'); }
     const all = (typeof allStudents !== 'undefined' ? allStudents : []);
     const gs = document.getElementById('k8TaGrade');
@@ -2841,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.6';
+  const APP_VERSION = '11.7';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

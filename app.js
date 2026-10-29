@@ -6377,7 +6377,7 @@ function populateTeacherRegisterSubjectsChecklist() {
   container.innerHTML = appSubjects.map(s => `
     <label class="subject-checkbox-item">
       <input type="checkbox" name="regTeacherSubjChk" value="${escapeHtml(s.id)}">
-      <span>${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</span>
+      <span>${escapeHtml(s.name)}</span>
     </label>
   `).join('');
 }
@@ -8763,7 +8763,7 @@ function renderSubAdminModalSubjectsChecklist(selectedIds = []) {
     return `
       <label class="subject-checkbox-item">
         <input type="checkbox" name="subModalSubjChk" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''}>
-        <span>${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</span>
+        <span>${escapeHtml(s.name)}</span>
       </label>
     `;
   }).join('');
@@ -8778,7 +8778,7 @@ function renderQuickSubAdminSubjectsChecklist(selectedIds = []) {
     return `
       <label class="subject-checkbox-item">
         <input type="checkbox" name="quickSubModalSubjChk" value="${escapeHtml(s.id)}" ${isChecked ? 'checked' : ''}>
-        <span>${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</span>
+        <span>${escapeHtml(s.name)}</span>
       </label>
     `;
   }).join('');
@@ -9113,7 +9113,7 @@ function populateGradingSubjectSelect() {
   const subSelect = document.getElementById('subAssignedSubject');
   loadAppSubjects();
 
-  const options = appSubjects.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</option>`).join('');
+  const options = appSubjects.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join('');
 
   if (select) {
     select.innerHTML = options;
@@ -9325,7 +9325,7 @@ function initTeacherPortalView() {
         chipsContainer.innerHTML = assignedSubjObjs.map(s => `
           <span class="teacher-subj-chip" title="${escapeHtml(s.description || s.name)}">
             <i class="fa-solid fa-book-bookmark" style="color: var(--primary);"></i>
-            ${escapeHtml(s.name)}${s.code ? ` (${escapeHtml(s.code)})` : ''}
+            ${escapeHtml(s.name)}
           </span>
         `).join('');
       }
@@ -9338,7 +9338,7 @@ function initTeacherPortalView() {
 
     const portalSubjSel = document.getElementById('teacherPortalSubjectSelect');
     if (portalSubjSel) {
-      portalSubjSel.innerHTML = assignedSubjObjs.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.code ? s.code + ' - ' : '')}${escapeHtml(s.name)}</option>`).join('');
+      portalSubjSel.innerHTML = assignedSubjObjs.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join('');
     }
   }
 
@@ -10320,14 +10320,13 @@ function renderAdminSubjectsTable() {
   loadAppSubjects();
 
   if (appSubjects.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีข้อมูลรายวิชา</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">ยังไม่มีข้อมูลรายวิชา</td></tr>`;
     return;
   }
 
   tbody.innerHTML = appSubjects.map(s => `
     <tr>
-      <td><b>${s.code || '-'}</b></td>
-      <td style="font-weight: 600; color: var(--text-dark);">${s.name}</td>
+      <td style="font-weight: 600; color: var(--text-dark);">${escapeHtml(s.name)}</td>
       <td><span class="activity-badge badge-active">${s.id}</span></td>
       <td style="text-align: right; white-space: nowrap;">
         <button class="btn btn-secondary btn-sm" onclick="openAddSubjectModal('${s.id}')" style="margin-right: 0.35rem; padding: 0.25rem 0.55rem; font-size: 0.78rem;">
@@ -10366,7 +10365,6 @@ function openAddSubjectModal(editId = null) {
 
 function submitSaveSubject() {
   const hiddenId = document.getElementById('editSubjectId').value;
-  const code = document.getElementById('subjectCodeInput').value.trim();
   const name = document.getElementById('subjectNameInput').value.trim();
 
   if (!name) {
@@ -10379,12 +10377,11 @@ function submitSaveSubject() {
   if (hiddenId) {
     const idx = appSubjects.findIndex(x => x.id === hiddenId);
     if (idx !== -1) {
-      appSubjects[idx].code = code;
-      appSubjects[idx].name = name;
+      appSubjects[idx].name = name; // รหัสวิชาเดิม (ถ้ามี) เก็บไว้เบื้องหลังเพื่อจับคู่คะแนนเก่า
     }
   } else {
     const newId = 'subj_' + Date.now();
-    appSubjects.push({ id: newId, code: code || ('SUB-' + (appSubjects.length + 1)), name: name });
+    appSubjects.push({ id: newId, code: '', name: name });
   }
 
   localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
