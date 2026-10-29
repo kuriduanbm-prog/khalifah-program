@@ -2333,9 +2333,9 @@ html.k8-narrow .k8-th-tl-row { flex-wrap: wrap; }
 html.k8-narrow .k8-todo-row { flex-wrap: wrap; }
 html.k8-narrow .k8-todo-text { flex: 1 1 140px; min-width: 0; }
 html.k8-narrow .k8-follow .hf-head, html.k8-narrow .hf-head { flex-wrap: wrap; gap: 4px; }
-html.k8-narrow .hf-cal-btn { flex-wrap: wrap; }
-html.k8-narrow .hf-cal-txt { flex: 1 1 140px; min-width: 0; }
-html.k8-narrow .hf-cal-txt span { white-space: normal !important; overflow: visible !important; }
+html.k8-xnarrow .hf-cal-btn { flex-wrap: wrap; }
+html.k8-xnarrow .hf-cal-txt { flex: 1 1 140px; min-width: 0; }
+html.k8-xnarrow .hf-cal-txt span { white-space: normal !important; overflow: visible !important; }
 /* อาจารย์: เช็คชื่อ */
 html.k8-narrow .k8-ta-row { flex-wrap: wrap; }
 html.k8-narrow .k8-ta-row h1 { font-size: 19px; }
@@ -2360,14 +2360,14 @@ html.k8-narrow .tg-grades { grid-template-columns: repeat(4, minmax(0, 1fr)); ga
 html.k8-narrow .tg-sum-top { flex-wrap: wrap; }
 html.k8-narrow .tg-sum-top span:last-child { white-space: normal; }
 /* นักเรียน: หน้าแรก */
-html.k8-narrow .hf-idcard-body { flex-direction: column; align-items: flex-start; }
-html.k8-narrow .hf-dl { grid-template-columns: 1fr !important; }
-html.k8-narrow .hf-beh { flex-wrap: wrap; }
-html.k8-narrow .hf-att { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-html.k8-narrow .hf-week-days { gap: 2px !important; }
-html.k8-narrow .hf-week-days > * { padding-left: 0 !important; padding-right: 0 !important; min-width: 0; }
-html.k8-narrow .hf-next { flex-wrap: wrap; gap: 8px; }
-html.k8-narrow .hf-seg { flex-wrap: wrap; }
+html.k8-xnarrow .hf-idcard-body { flex-direction: column; align-items: flex-start; }
+html.k8-xnarrow .hf-dl { grid-template-columns: 1fr !important; }
+html.k8-xnarrow .hf-beh { flex-wrap: wrap; }
+html.k8-xnarrow .hf-att { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+html.k8-xnarrow .hf-week-days { gap: 2px !important; }
+html.k8-xnarrow .hf-week-days > * { padding-left: 0 !important; padding-right: 0 !important; min-width: 0; }
+html.k8-xnarrow .hf-next { flex-wrap: wrap; gap: 8px; }
+html.k8-xnarrow .hf-seg { flex-wrap: wrap; }
 /* หน้าต่างล่าง/ทั่วไป */
 html.k8-narrow .k8-sheet-head { gap: 8px; }
 html.k8-narrow .k8-pe-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -2390,16 +2390,16 @@ html.k8-narrow #teacher-tab-grades .tg-top, html.k8-narrow #teacher-tab-grades .
 html.k8-narrow .k8-ta-datenav { flex-wrap: wrap; }
 html.k8-narrow .k8-ta-datenav input { order: -1; flex: 1 1 100%; height: 44px; }
 html.k8-narrow .k8-ta-datenav button { flex: 1 1 40%; height: 44px; }
-html.k8-narrow .hf-week-head { flex-wrap: wrap; gap: 4px; }
-html.k8-narrow .hf-week-days b, html.k8-narrow .hf-week-days span { font-size: 11px !important; }
-html.k8-narrow button.hf-card.hf-beh { flex-wrap: wrap !important; }
-html.k8-narrow .hf-beh-txt { flex: 1 1 100% !important; }
-html.k8-narrow .hf-beh > svg { display: none; }
-html.k8-narrow .hf-grades-toggle { flex-wrap: wrap !important; }
-html.k8-narrow .hf-grades-label { flex: 1 1 100% !important; min-width: 0; }
-html.k8-narrow .hf-deeds { grid-template-columns: 1fr !important; display: grid !important; }
-html.k8-narrow .hf-deed { flex-wrap: wrap; }
-html.k8-narrow .hf-cal-btn > svg:last-child { display: none; }
+html.k8-xnarrow .hf-week-head { flex-wrap: wrap; gap: 4px; }
+html.k8-xnarrow .hf-week-days b, html.k8-xnarrow .hf-week-days span { font-size: 11px !important; }
+html.k8-xnarrow button.hf-card.hf-beh { flex-wrap: wrap !important; }
+html.k8-xnarrow .hf-beh-txt { flex: 1 1 100% !important; }
+html.k8-xnarrow .hf-beh > svg { display: none; }
+html.k8-xnarrow .hf-grades-toggle { flex-wrap: wrap !important; }
+html.k8-xnarrow .hf-grades-label { flex: 1 1 100% !important; min-width: 0; }
+html.k8-xnarrow .hf-deeds { grid-template-columns: 1fr !important; display: grid !important; }
+html.k8-xnarrow .hf-deed { flex-wrap: wrap; }
+html.k8-xnarrow .hf-cal-btn > svg:last-child { display: none; }
 
 /* v12.6 · เมนูแอดมินแบ่งหมวดชัดเจน (หัวหมวดมีไอคอนสี · พับ/กางได้ · ไอคอนทุกเมนู) */
 body .k8-admin-nav .k8-nav-label { display: none !important; }
@@ -2452,3 +2452,23 @@ html.k8-narrow #teacher-tab-grades .tg-mode-hdr { flex-wrap: wrap; }
 #teacher-tab-grades .tg-btns .tg-btn { min-height: 48px; }
 html.k8-narrow #teacher-tab-grades .tg-form-row { grid-template-columns: 1fr; }
 #teacher-tab-grades .tg-add { min-height: 44px; align-self: stretch; }
+
+/* v12.8 · แป้นตัวเลขในแอป */
+.k8-numpad { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2000; background: #fff; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(15,23,42,.16); padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; font-family: 'IBM Plex Sans Thai', sans-serif; max-width: 640px; margin: 0 auto; }
+.k8-numpad[hidden] { display: none !important; }
+.k8-np-top { display: flex; align-items: center; gap: 8px; }
+.k8-np-t { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-np-kb { flex: none; min-height: 36px; padding: 0 10px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; color: #475569; font: 500 12px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+.k8-np-keys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.k8-np-keys button { height: 52px; border: 0; border-radius: 14px; background: #f1f5f9; color: #0f172a; font: 600 24px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; touch-action: manipulation; }
+.k8-np-keys button:active { background: #e0f2fe; }
+.k8-np-keys button.is-del { color: #b91c1c; background: #fef2f2; font-size: 22px; }
+.k8-np-act { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 6px; }
+.k8-np-act button { min-height: 50px; border: 0; border-radius: 14px; font: 600 16px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; touch-action: manipulation; }
+.k8-np-act button.is-alt { background: #f1f5f9; color: #334155; }
+.k8-np-act button.is-next { background: #0369a1; color: #fff; }
+html.k8-np-open body { padding-bottom: 340px; }
+html.k8-np-open .teacher-bottom-nav-bar, html.k8-np-open #teacher-tab-grades .tg-save { visibility: hidden; }
+#teacher-tab-grades input.k8-np-cur { border: 2px solid #0369a1 !important; box-shadow: 0 0 0 3px #bae6fd; }
+.k8-np-on { align-self: flex-start; min-height: 36px; padding: 0 12px; border: 1px solid #bae6fd; border-radius: 10px; background: #f0f9ff; color: #0369a1; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+html.k8-xnarrow .k8-np-keys button { height: 46px; font-size: 20px; }

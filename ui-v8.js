@@ -2843,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.7';
+  const APP_VERSION = '12.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5291,14 +5291,15 @@ window.k8RegBirthChange = function (v) {
     try {
       const p = document.createElement('span'); p.style.cssText = 'position:absolute;visibility:hidden;font-size:16px;line-height:1;'; p.textContent = 'ก';
       document.body.appendChild(p); const fs = parseFloat(getComputedStyle(p).fontSize) || 16; const h = p.getBoundingClientRect().height || 16; p.remove();
-      return Math.max(fs / 16, h / 16 / 1.45);
+      return fs / 16;
     } catch (e) { return 1; }
   }
   let scale = 1;
   function apply() {
-    const narrow = window.innerWidth < 380 || scale > 1.2;
+    // มือถือทั่วไปกว้าง 360–430px ต้องไม่เข้าโหมดนี้ · เข้าเฉพาะเมื่อซูมจนจอแคบจริงๆ หรือขยายตัวอักษรมาก
+    const narrow = window.innerWidth < 340 || scale > 1.25;
     document.documentElement.classList.toggle('k8-narrow', narrow);
-    document.documentElement.classList.toggle('k8-xnarrow', window.innerWidth < 300 || scale > 1.6);
+    document.documentElement.classList.toggle('k8-xnarrow', window.innerWidth < 280 || scale > 1.6);
   }
   const start = () => { scale = fontScale(); apply(); };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
@@ -5330,4 +5331,80 @@ window.k8RegBirthChange = function (v) {
   const o = window.switchAdminTab;
   if (typeof o === 'function') window.switchAdminTab = function () { const r = o.apply(this, arguments); setTimeout(paint, 0); return r; };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint); else paint();
+})();
+
+/* ============ v12.8 · แป้นตัวเลขในแอปสำหรับกรอกคะแนน + ช่องตัวเลขทั้งแอปเปิดแป้นตัวเลขของเครื่อง ============
+   - ช่องคะแนน (หน้าเกรด) บนมือถือ/แท็บเล็ต: แสดงแป้นตัวเลขขนาดใหญ่ของแอปแทนแป้นพิมพ์เครื่อง
+   - ช่องตัวเลขอื่นๆ: บอกเครื่องให้เปิดแป้นตัวเลข · ช่องข้อความ (เช่น ชื่อชิ้นงาน) ใช้แป้นพิมพ์ปกติของผู้ใช้ */
+(function () {
+  // 1) ช่องตัวเลขทั่วแอป → แป้นตัวเลขของเครื่อง
+  function tune(root) {
+    (root.querySelectorAll ? root.querySelectorAll('input[type="number"]:not([inputmode])') : []).forEach((el) => {
+      const step = String(el.getAttribute('step') || ''); const dec = step.indexOf('.') !== -1 || step === 'any';
+      el.setAttribute('inputmode', dec ? 'decimal' : 'numeric'); if (!dec && !(Number(el.min) < 0)) el.setAttribute('pattern', '[0-9]*');
+    });
+    (root.querySelectorAll ? root.querySelectorAll('input[type="tel"]:not([inputmode])') : []).forEach((el) => el.setAttribute('inputmode', 'tel'));
+    (root.querySelectorAll ? root.querySelectorAll('#manualStudentIdInput:not([inputmode])') : []).forEach((el) => el.setAttribute('inputmode', 'numeric'));
+  }
+  const startTune = () => { tune(document); new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) tune(n.parentNode || n); }))).observe(document.body, { childList: true, subtree: true }); };
+  if (document.body) startTune(); else document.addEventListener('DOMContentLoaded', startTune);
+
+  // 2) แป้นตัวเลขในแอป สำหรับช่องคะแนน
+  const touch = () => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } };
+  const PREF = 'k8_numpad_off';
+  const off = () => { try { return localStorage.getItem(PREF) === '1'; } catch (e) { return false; } };
+  let pad = null, cur = null;
+  const SEL = '#teacher-tab-grades input[data-sid][data-asg]';
+  function build() {
+    if (pad) return pad;
+    pad = document.createElement('div'); pad.id = 'k8Numpad'; pad.className = 'k8-numpad'; pad.hidden = true; pad.setAttribute('role', 'group'); pad.setAttribute('aria-label', 'แป้นตัวเลข');
+    const k = (v, l, cls, aria) => '<button type="button" data-k="' + v + '"' + (cls ? ' class="' + cls + '"' : '') + (aria ? ' aria-label="' + aria + '"' : '') + '>' + l + '</button>';
+    pad.innerHTML = '<div class="k8-np-top"><span class="k8-np-t" id="k8NpT">-</span><button type="button" class="k8-np-kb" data-k="kb">ใช้แป้นของเครื่อง</button></div>' +
+      '<div class="k8-np-keys">' + ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => k(d, d)).join('') + k('.', '.', '', 'จุดทศนิยม') + k('0', '0') + k('bs', '⌫', 'is-del', 'ลบ') + '</div>' +
+      '<div class="k8-np-act">' + k('clear', 'ล้าง', 'is-alt') + k('done', 'เสร็จ', 'is-alt') + k('next', 'ถัดไป ↓', 'is-next') + '</div>';
+    pad.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) e.preventDefault(); }); // ไม่ให้ช่องกรอกหลุดโฟกัส
+    pad.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-k]'); if (!b || !cur) return;
+      const v = b.dataset.k; let s = cur.value || '';
+      if (v === 'kb') { try { localStorage.setItem(PREF, '1'); } catch (e2) {} const el = cur; hide(); el.setAttribute('inputmode', 'decimal'); el.blur(); setTimeout(() => el.focus(), 60); if (typeof showToast === 'function') showToast('เปลี่ยนเป็นแป้นของเครื่องแล้ว · เปิดแป้นแอปได้อีกจากปุ่ม "แป้นตัวเลขแอป" ในหน้าเกรด', 'info'); return; }
+      if (v === 'done') { cur.blur(); hide(); return; }
+      if (v === 'next') { cur.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return; }
+      if (v === 'bs') s = s.slice(0, -1); else if (v === 'clear') s = ''; else if (v === '.') { if (s.indexOf('.') === -1) s = (s || '0') + '.'; } else s = (s === '0' ? '' : s) + v;
+      if (s.replace('.', '').length > 5) return;
+      cur.value = s; cur.dispatchEvent(new Event('input', { bubbles: true }));
+      if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e3) {} }
+    });
+    document.body.appendChild(pad); return pad;
+  }
+  function label(inp) {
+    const row = inp.closest('tr, .tg-row, li'); let name = '';
+    if (row) { const n = row.querySelector('.tg-grid-name b, .tg-row-name, b'); if (n) name = n.textContent.trim(); }
+    const max = inp.dataset.max || inp.getAttribute('data-max') || '';
+    let piece = ''; try { const chip = document.querySelector('#teacher-tab-grades .tg-chip[data-asg="' + CSS.escape(inp.dataset.asg) + '"]'); if (chip) piece = chip.childNodes[0].textContent.trim(); } catch (e) {}
+    return (name || 'นักเรียน') + (piece ? ' · ' + piece : '') + (max ? ' (เต็ม ' + max + ')' : '');
+  }
+  function show(inp) {
+    build(); cur = inp; pad.hidden = false; document.documentElement.classList.add('k8-np-open');
+    document.getElementById('k8NpT').textContent = label(inp);
+    document.querySelectorAll(SEL + '.k8-np-cur').forEach((x) => x.classList.remove('k8-np-cur')); inp.classList.add('k8-np-cur');
+    setTimeout(() => { const r = inp.getBoundingClientRect(); const top = pad.getBoundingClientRect().top; if (r.bottom > top - 12 || r.top < 70) window.scrollBy({ top: r.bottom - top + 80, behavior: 'smooth' }); }, 30);
+  }
+  function hide() { if (pad) pad.hidden = true; document.documentElement.classList.remove('k8-np-open'); if (cur) cur.classList.remove('k8-np-cur'); cur = null; }
+  document.addEventListener('focusin', (e) => {
+    const inp = e.target.closest && e.target.closest(SEL);
+    if (inp && touch() && !off()) { inp.setAttribute('inputmode', 'none'); show(inp); return; }
+    if (pad && !pad.hidden && !(e.target.closest && e.target.closest('#k8Numpad'))) hide();
+  });
+  document.addEventListener('pointerdown', (e) => { if (pad && !pad.hidden && !e.target.closest('#k8Numpad') && !e.target.closest(SEL)) hide(); });
+  const stt = window.switchTeacherTab; if (typeof stt === 'function') window.switchTeacherTab = function () { hide(); return stt.apply(this, arguments); };
+  // ปุ่มเปิดแป้นตัวเลขแอปกลับมา (เมื่อผู้ใช้เคยเลือกใช้แป้นของเครื่อง)
+  window.k8NumpadOn = function () { try { localStorage.removeItem(PREF); } catch (e) {} document.querySelectorAll(SEL).forEach((x) => x.setAttribute('inputmode', 'decimal')); if (typeof showToast === 'function') showToast('เปิดแป้นตัวเลขของแอปแล้ว · แตะช่องคะแนนเพื่อกรอก', 'success'); paintToggle(); };
+  function paintToggle() {
+    const note = document.querySelector('#teacher-tab-grades .tg-note-grid, #teacher-tab-grades .tg-mode-hdr'); if (!note || !touch()) return;
+    let b = document.getElementById('k8NpOn');
+    if (!off()) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('button'); b.type = 'button'; b.id = 'k8NpOn'; b.className = 'k8-np-on'; b.textContent = 'แป้นตัวเลขแอป'; b.onclick = window.k8NumpadOn; note.after(b); }
+  }
+  const r0 = window.renderTeacherPortalGradesTable;
+  if (typeof r0 === 'function') window.renderTeacherPortalGradesTable = function () { const r = r0.apply(this, arguments); setTimeout(paintToggle, 0); return r; };
 })();
