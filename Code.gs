@@ -2782,7 +2782,7 @@ function getTimetable_(session, isStudent, isAdmin) {
   if (isStudent) {
     const g = studentGradeNum_(session.userId).grade;
     const meX = String(session.userId).replace(/\D/g, '').replace(/^0+/, '');
-    const myExtras = cfg.showStudents ? extras.filter(function (x) { return (x.students || []).indexOf(meX) !== -1; }).map(function (x) { return { id: x.id, name: x.name, cells: x.cells || {}, updatedAt: x.updatedAt }; }) : [];
+    const myExtras = cfg.showStudents ? extras.filter(function (x) { return (x.students || []).indexOf(meX) !== -1; }).map(function (x) { const cs = {}; Object.keys(x.cells || {}).forEach(function (k) { const e = x.cells[k]; if (!e || (e.x && e.x.indexOf(meX) !== -1)) return; const c = Object.assign({}, e); delete c.x; cs[k] = c; }); return { id: x.id, name: x.name, cells: cs, updatedAt: x.updatedAt }; }) : [];
     if (!cfg.showStudents) return { success: true, hidden: true, config: cfg, grade: g, grades: {} };
     const one = {};
     if (g && grades[g]) {
@@ -2791,8 +2791,8 @@ function getTimetable_(session, isStudent, isAdmin) {
       const cells = {};
       Object.keys(grades[g].cells || {}).forEach(function (k) {
         const list = Array.isArray(grades[g].cells[k]) ? grades[g].cells[k] : [grades[g].cells[k]];
-        const mine = list.filter(function (e) { return e && (!e.o || !e.o.length || e.o.indexOf(me) !== -1); });
-        if (mine.length) { const e = Object.assign({}, mine[0]); if (e.o) { e.only = true; delete e.o; } cells[k] = e; }
+        const mine = list.filter(function (e) { return e && (!e.o || !e.o.length || e.o.indexOf(me) !== -1) && !(e.x && e.x.indexOf(me) !== -1); });
+        if (mine.length) { const e = Object.assign({}, mine[0]); if (e.o) { e.only = true; delete e.o; } delete e.x; cells[k] = e; }
       });
       one[g] = { grade: g, cells: cells, updatedAt: grades[g].updatedAt };
     }
@@ -2801,6 +2801,7 @@ function getTimetable_(session, isStudent, isAdmin) {
   if (!isAdmin && !cfg.showTeachers) return { success: true, hidden: true, config: cfg, grades: {} };
   return { success: true, config: cfg, grades: grades, extras: extras };
 }
+function ttIds_(a) { const o = (Array.isArray(a) ? a : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean).slice(0, 300); return o.filter(function (x, i) { return o.indexOf(x) === i; }); }
 function ttCleanCells_(src) {
   const cells = {};
   src = (src && typeof src === 'object') ? src : {};
@@ -2809,6 +2810,7 @@ function ttCleanCells_(src) {
     const c = Array.isArray(src[k]) ? src[k][0] : src[k]; if (!c) return;
     const sn = cleanVal(c.subjectName || c.sn).slice(0, 80); if (!sn) return;
     cells[k] = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
+    const x = ttIds_(c.x); if (x.length) cells[k].x = x;
   });
   return cells;
 }
@@ -2856,6 +2858,7 @@ function saveTimetable_(data, session) {
     const o = (Array.isArray(c.o) ? c.o : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean).slice(0, 300);
     const e = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
     if (o.length) e.o = o.filter(function (x, i) { return o.indexOf(x) === i; });
+    const x = ttIds_(c.x); if (x.length) e.x = x; // x = นักเรียนที่ละเว้นวิชานี้
     return e;
   };
   Object.keys(src).forEach(function (k) {
@@ -2882,6 +2885,18 @@ function saveTimetableConfig_(data) {
       if (isNaN(a) || isNaN(b) || b <= a) return { success: false, message: 'เวลาคาบที่ ' + (i + 1) + ' ไม่ถูกต้อง (เวลาจบต้องหลังเวลาเริ่ม)' };
       if (i && a < toMin(periods[i - 1].end)) return { success: false, message: 'คาบที่ ' + (i + 1) + ' เริ่มก่อนคาบที่ ' + i + ' จบ' };
       periods.push({ start: p.start, end: p.end });
+    }
+  }
+  // ลบคาบ: map[i] = เลขคาบเดิมของคาบใหม่ที่ i (0 = คาบใหม่) · ย้ายข้อมูลในตารางทุกชั้นและตารางพิเศษให้ตรงคาบ
+  if (Array.isArray(data.map) && data.map.length === periods.length) {
+    const map = data.map.map(Number);
+    const ident = map.every(function (v, i) { return v === i + 1; }) && periods.length >= cur.periods.length;
+    if (!ident) {
+      const st = (getSettings().data) || {};
+      const remap = function (cells) { const out = {}; Object.keys(cells || {}).forEach(function (k) { const m = k.match(/^(\d)-(\d+)$/); if (!m) return; const ni = map.indexOf(+m[2]); if (ni !== -1) out[m[1] + '-' + (ni + 1)] = cells[k]; }); return out; };
+      ['1', '2', '3', '4', '5', '6'].forEach(function (g) { let v = null; try { v = JSON.parse(st['Timetable_M' + g] || 'null'); } catch (e) {} if (v && v.cells) { v.cells = remap(v.cells); saveSetting({ key: 'Timetable_M' + g, value: JSON.stringify(v), description: 'ตารางสอน ม.' + g + ' (JSON)' }); } });
+      let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
+      ids.forEach(function (id) { let v = null; try { v = JSON.parse(st['TimetableX_' + id] || 'null'); } catch (e) {} if (v && v.cells) { v.cells = remap(v.cells); saveSetting({ key: 'TimetableX_' + id, value: JSON.stringify(v), description: 'ตารางพิเศษ ' + (v.name || '') + ' (JSON)' }); } });
     }
   }
   let days = cur.days;

@@ -2546,3 +2546,26 @@ html.k8-xnarrow .k8-theme-seg { grid-template-columns: 1fr; }
 .k8-theme-seg.is-menu button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .k8-theme-seg.is-menu button { min-height: 44px; }
 .k8-theme-seg.is-menu button svg { width: 20px; height: 20px; }
+
+/* v13.3 · ลบคาบ + ละเว้นวิชาให้นักเรียนบางคน */
+#k8TtPRows .k8-pw-row { grid-template-columns: 62px 1fr 1fr 44px; }
+.k8-pw-x { width: 44px; height: 44px; border: 1px solid #fecaca; border-radius: 12px; background: #fff; color: #b91c1c; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.k8-pw-x:hover { background: #fef2f2; }
+html.k8-narrow #k8TtPRows .k8-pw-row { grid-template-columns: 1fr 1fr 44px; }
+html.k8-narrow #k8TtPRows .k8-pw-row b { grid-column: 1 / -1; padding-bottom: 0; }
+.k8-tt-exbtn { align-self: flex-start; min-height: 44px; padding: 0 14px; border: 1px dashed #93c5fd; border-radius: 12px; background: #fff; color: #0369a1; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-tt-exbtn span { margin-right: 4px; }
+.k8-tt-ex legend small { color: #64748b; font-weight: 400; }
+.k8-tt-xn { font-size: 13px; color: #0369a1; font-weight: 600; }
+.k8-tt-xlist label:has(input:checked) { background: #fef2f2; }
+.k8-tt-xlist input { accent-color: #b91c1c; }
+#k8TtPRows .k8-pw-row > * { min-width: 0; }
+@media (max-width: 520px) {
+  #k8TtPRows .k8-pw-row { grid-template-columns: 1fr 1fr; grid-template-areas: "n x" "s e"; row-gap: 6px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  #k8TtPRows .k8-pw-row b { grid-area: n; padding-bottom: 0; align-self: center; }
+  #k8TtPRows .k8-pw-row .k8-pw-x { grid-area: x; justify-self: end; width: 40px; height: 36px; }
+  #k8TtPRows .k8-pw-row label:nth-of-type(1) { grid-area: s; }
+  #k8TtPRows .k8-pw-row label:nth-of-type(2) { grid-area: e; }
+}
+html.k8-narrow #k8TtPRows .k8-pw-row { grid-template-columns: 1fr; grid-template-areas: "n" "x" "s" "e"; }
+html.k8-narrow #k8TtPRows .k8-pw-row .k8-pw-x { justify-self: start; }
