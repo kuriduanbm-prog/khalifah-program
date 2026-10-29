@@ -2079,7 +2079,7 @@ function handleSessionExpired(message) {
             if (!json || json.success !== false) return;
             if (json.code === 'AUTH_REQUIRED' && (currentStudent || currentAdmin)) {
               handleSessionExpired(json.message);
-            } else if (json.code === 'FORBIDDEN' && method === 'POST') {
+            } else if (json.code === 'FORBIDDEN' && method === 'POST' && !/"action"\s*:\s*"(get|list)/.test(String(opts.body || ''))) {
               showToast(json.message || 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้', 'error');
             }
           }).catch(() => {});

@@ -1985,3 +1985,8 @@ html.k8-docs-open, html.k8-docs-open body { overflow: hidden; }
 .k8-na-read { flex: none; font-size: 12px; font-weight: 600; color: #0369a1; background: #e0f2fe; padding: 3px 8px; border-radius: 999px; }
 .k8-docs-up { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 10px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: #0e7490; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #k8DocsList { display: flex; flex-direction: column; gap: 10px; }
+/* id card band: one line always */
+.hf-idcard-band { flex-wrap: nowrap !important; white-space: nowrap; }
+.hf-idcard-brand { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#hfYear { flex: none; white-space: nowrap; font-size: 12px; }
+@media (max-width: 380px) { .hf-idcard-brand { font-size: 13px !important; } #hfYear { font-size: 11px; } }

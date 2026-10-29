@@ -190,7 +190,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     document.getElementById('hfGrade').textContent = s.grade || '-';
     document.getElementById('hfSchool').textContent = s.schoolName || '-';
     const tm = window.k8Term();
-    document.getElementById('hfYear').textContent = 'ปีการศึกษา ' + tm.year + (tm.term === 3 ? ' · ภาคฤดูร้อน' : ' · เทอม ' + tm.term);
+    document.getElementById('hfYear').textContent = (tm.term === 3 ? 'ภาคฤดูร้อน ' : 'เทอม ' + tm.term + '/') + tm.year;
     const statusText = String(s.status || 'ปกติ (กำลังศึกษา)');
     const stEl = document.getElementById('hfStatus');
     const normal = /ปกติ|กำลังศึกษา|active/i.test(statusText);
@@ -2815,10 +2815,14 @@ window.k8RegBirthChange = function (v) {
     timer = setTimeout(hide, dur);
   }
   function hide() {
+    // ปลดกล่องที่กำลังแสดงทันที กันการซ้อนกันจนมีแจ้งเตือนค้างบนจอ
     clearTimeout(timer); const el = showing; if (!el) return;
+    showing = null;
     el.classList.remove('in'); el.classList.add('out');
-    setTimeout(() => { el.remove(); showing = null; next(); }, 200);
+    setTimeout(() => { el.remove(); next(); }, 200);
   }
+  // กันพลาด: กล่องแจ้งเตือนที่ค้างเกิน 8 วินาทีจะถูกเก็บออก
+  setInterval(() => { document.querySelectorAll('#k8Toasts .k8-toast').forEach((t) => { if (t !== showing) { if (!t.dataset.born) t.dataset.born = Date.now(); else if (Date.now() - t.dataset.born > 3000) t.remove(); } else if (!t.dataset.born) t.dataset.born = Date.now(); else if (Date.now() - t.dataset.born > 8000) hide(); }); }, 1000);
   window.showToast = function (message, type) {
     type = type || 'info';
     const msg = String(message == null ? '' : message);
@@ -2834,7 +2838,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.8';
+  const APP_VERSION = '10.9';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
