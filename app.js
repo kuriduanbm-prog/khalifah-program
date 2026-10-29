@@ -4528,7 +4528,11 @@ async function executePrayerCaptureStep2() {
 
   // แจ้งเตือนข้อความเดียว ชัดเจน สวยงาม ไม่เด้งซ้อนกัน
   const repeatText = isRepeat ? ` (บันทึกซ้ำครั้งที่ ${attemptCount})` : '';
-  showToast(`✓ บันทึกภาพและเช็คชื่อละหมาดเวลา ${selectedPrayerTime}${repeatText} สำเร็จเรียบร้อย!`, 'success');
+  if (navigator.onLine === false) {
+    showToast(`✓ บันทึกรูปละหมาด${selectedPrayerTime}ไว้ในเครื่องแล้ว · ยังไม่มีเน็ต ระบบจะส่งให้อัตโนมัติเมื่อเชื่อมต่อได้`, 'info');
+  } else {
+    showToast(`✓ บันทึกภาพและเช็คชื่อละหมาดเวลา ${selectedPrayerTime}${repeatText} สำเร็จเรียบร้อย!`, 'success');
+  }
 
   // Feedback ปุ่มเมื่อบันทึกเสร็จสิ้น
   if (btnCapture) {
@@ -10764,6 +10768,11 @@ async function convertGoogleSheetToThai() {
 
 
 async function syncRecordToGoogleSheet(action, data) {
+  // ข้อมูลสำคัญของนักเรียน (รูปละหมาด/เช็คชื่อ) เข้าคิวในเครื่องก่อนเสมอ
+  // ถ้าเน็ตหลุด ปิดจอ หรือปัดแอปทิ้ง จะส่งให้อัตโนมัติภายหลัง ไม่หาย
+  if (typeof window.k8OutboxSend === 'function' && /^(prayerCheckIn|recordPrayer|activityCheckIn)$/.test(action)) {
+    return window.k8OutboxSend(action, data);
+  }
   let url = gasApiUrl || localStorage.getItem('khalifah_gas_url') || DEFAULT_GAS_API_URL;
   if (!url || url.includes('docs.google.com/spreadsheets')) {
     url = DEFAULT_GAS_API_URL;
@@ -11986,6 +11995,19 @@ async function syncAllDataFromCloud(showToastMsg = false) {
       localStorage.setItem('khalifah_prayer_history', JSON.stringify(db.prayers));
       const todayStr = new Date().toLocaleDateString('sv-SE');
       todayPrayers = db.prayers.filter(p => p.date === todayStr);
+      // รายการที่ถ่ายแล้วแต่ยังส่งไม่ถึงระบบ (อยู่ในคิว) ต้องไม่หายไปจากหน้าจอ
+      try {
+        const pend = (typeof window.k8OutboxPendingRecords === 'function') ? window.k8OutboxPendingRecords(['prayerCheckIn', 'recordPrayer']) : [];
+        if (pend.length) {
+          const have = new Set(db.prayers.map(p => String(p.logId || p.id || '')));
+          const add = pend.filter(r => !have.has(String(r.logId || r.id || '')));
+          if (add.length) {
+            const hist = add.concat(db.prayers);
+            localStorage.setItem('khalifah_prayer_history', JSON.stringify(hist));
+            todayPrayers = add.filter(p => p.date === todayStr).concat(todayPrayers);
+          }
+        }
+      } catch (e) {}
       localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
     }
 

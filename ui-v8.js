@@ -1168,7 +1168,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const cd = document.getElementById('k8CamDone');
       if (cd) cd.hidden = !done;
       const cs = document.getElementById('k8CamDoneSub');
-      if (cs) cs.textContent = 'ละหมาด' + slot + ' · ส่งถึงอาจารย์เรียบร้อย';
+      if (cs) cs.textContent = 'ละหมาด' + slot + ((window.k8OutboxPendingRecords && window.k8OutboxPendingRecords(['prayerCheckIn', 'recordPrayer']).length) ? ' · เก็บในเครื่องแล้ว รอส่งขึ้นระบบ' : ' · ส่งถึงอาจารย์เรียบร้อย');
     }
     // watermark (canvas)
     try {
@@ -2841,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.4';
+  const APP_VERSION = '11.5';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4008,26 +4008,24 @@ window.k8RegBirthChange = function (v) {
     S.data = Object.assign({}, d, { updatedAt: new Date().toISOString(), pending: !!pending });
     try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(S.data)); } catch (e) {}
   }
+  // บันทึกแบบทันใจ: แสดงผลและปิดหน้าต่างทันที แล้วส่งขึ้นระบบเบื้องหลัง
+  // ถ้าส่งไม่สำเร็จ (เน็ตหลุด/ระบบยังไม่อัปเดต) เก็บเป็นรายการค้าง แล้วส่งใหม่อัตโนมัติ
+  let sendSeq = 0;
   async function save(d) {
-    S.saving = true; renderEditor();
-    try {
-      let r = null;
-      try { r = await gasApiCall('saveMyDream', { data: d }, 20000); }
-      catch (netErr) { r = { success: false, offline: true }; }
-      if (!r || !r.success) {
-        // ระบบหลังบ้านยังไม่อัปเดต หรือออฟไลน์: เก็บไว้ในเครื่องก่อน แล้วส่งให้อัตโนมัติภายหลัง
-        if (r && (r.offline || /Unknown action/i.test(String(r.error || r.message || '')))) {
-          saveLocal(d, true); paint(); closeModal('k8DreamModal');
-          if (typeof showToast === 'function') showToast('บันทึกในเครื่องแล้ว · จะส่งขึ้นระบบอัตโนมัติเมื่อเชื่อมต่อได้', 'info');
-          S.saving = false; return;
-        }
-        throw new Error((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ');
-      }
-      S.data = r.dream; try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(r.dream)); } catch (e) {}
-      paint(); closeModal('k8DreamModal'); if (typeof showToast === 'function') showToast(r.message, 'success');
-    } catch (e) { if (typeof showToast === 'function') showToast(e.message, 'error'); }
-    S.saving = false; if (document.getElementById('k8DreamModal').classList.contains('open')) renderEditor();
+    const prev = S.data ? Object.assign({}, S.data) : null;
+    saveLocal(d, true); paint(); closeModal('k8DreamModal');
+    if (typeof showToast === 'function') showToast(d.dream ? 'บันทึกความใฝ่ฝันแล้ว' : 'ลบความใฝ่ฝันแล้ว', 'success');
+    const my = ++sendSeq;
+    let r = null;
+    try { r = await gasApiCall('saveMyDream', { data: d }, 20000); } catch (e) { r = null; }
+    if (my !== sendSeq) return; // มีการบันทึกใหม่กว่าแล้ว
+    if (r && r.success && r.dream) { S.data = r.dream; try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(r.dream)); } catch (e) {} paint(); return; }
+    if (!r || r.code === 'AUTH_REQUIRED' || /Unknown action/i.test(String(r.error || r.message || ''))) return; // คงสถานะค้างส่งไว้ ส่งใหม่ภายหลัง
+    // ระบบปฏิเสธข้อมูล: คืนค่าเดิมและแจ้ง
+    S.data = prev; try { if (prev) localStorage.setItem('k8_dream_' + sid(), JSON.stringify(prev)); else localStorage.removeItem('k8_dream_' + sid()); } catch (e) {}
+    paint(); if (typeof showToast === 'function') showToast(r.message || r.error || 'บันทึกไม่สำเร็จ', 'error');
   }
+  window.addEventListener('online', () => { const c = cacheGet(); if (c && c.pending) load(); });
   window.k8DreamSave = function () {
     const why = document.getElementById('k8DrWhy'); if (why) S.draft.reason = why.value;
     const d = S.draft; if (!String(d.dream || '').trim()) { if (typeof showToast === 'function') showToast('พิมพ์หรือเลือกอาชีพในฝันก่อน', 'warning'); return; }
@@ -4598,4 +4596,128 @@ window.k8RegBirthChange = function (v) {
     const start = () => document.querySelectorAll('.modal-overlay').forEach((m) => new MutationObserver(sync).observe(m, { attributes: true, attributeFilter: ['class'] }));
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   }
+})();
+
+/* ============ v11.5 · คิวส่งข้อมูลกันหาย (รูปละหมาด / เช็คชื่อ) ============
+   ทุกรายการถูกเก็บลง IndexedDB ในเครื่องก่อนส่งเสมอ แล้วค่อยส่งขึ้นระบบ
+   - เน็ตหลุด: เก็บไว้ ส่งให้เองเมื่อกลับมาออนไลน์
+   - ปิดจอ / ปัดแอปทิ้ง: Android ส่งต่อเบื้องหลังผ่าน Service Worker (Background Sync)
+     ส่วน iPhone จะส่งให้ทันทีที่เปิดแอปครั้งถัดไป
+   - ระบบหลังบ้านกันข้อมูลซ้ำด้วยรหัสรายการ (logId) ส่งซ้ำได้ปลอดภัย */
+(function () {
+  const DB = 'khalifah-outbox', ST = 'q', META = 'khalifah_outbox_meta';
+  let dbp = null;
+  function idb() {
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      try {
+        const r = indexedDB.open(DB, 1);
+        r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(ST)) r.result.createObjectStore(ST, { keyPath: 'id' }); };
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+      } catch (e) { rej(e); }
+    }).catch((e) => { dbp = null; throw e; });
+    return dbp;
+  }
+  const tx = (mode, fn) => idb().then((db) => new Promise((res, rej) => { const t = db.transaction(ST, mode); const out = fn(t.objectStore(ST)); t.oncomplete = () => res(out && out.result !== undefined ? out.result : out); t.onerror = () => rej(t.error); }));
+  const put = (it) => tx('readwrite', (s) => s.put(it));
+  const del = (id) => tx('readwrite', (s) => s.delete(id));
+  const all = () => tx('readonly', (s) => s.getAll()).then((r) => (Array.isArray(r) ? r : []).sort((a, b) => a.createdAt - b.createdAt));
+
+  // สำเนาแบบเบาใน localStorage: ให้หน้าจอรู้ทันที (แบบ sync) ว่ามีรายการค้างส่งอะไรบ้าง
+  function metaGet() { try { const m = JSON.parse(localStorage.getItem(META) || '[]'); return Array.isArray(m) ? m : []; } catch (e) { return []; } }
+  function metaSet(m) { try { localStorage.setItem(META, JSON.stringify(m)); } catch (e) { try { localStorage.setItem(META, JSON.stringify(m.map((x) => Object.assign({}, x, { rec: Object.assign({}, x.rec, { photo: '', photoUrl: '', photoBase64: '' }) })))); } catch (e2) {} } paintBar(); }
+  window.k8OutboxPendingRecords = function (actions) { return metaGet().filter((x) => !actions || actions.indexOf(x.action) !== -1).map((x) => x.rec); };
+  const count = () => metaGet().length;
+
+  function slim(action, data) {
+    const d = Object.assign({}, data || {});
+    if (d.photoBase64) { delete d.photo; if (String(d.photoUrl || '').indexOf('data:') === 0) delete d.photoUrl; }
+    return d;
+  }
+  const tok = () => { try { return getSessionToken() || ''; } catch (e) { return ''; } };
+  const gasUrl = () => { try { return getGasUrl(); } catch (e) { return ''; } };
+
+  function askBgSync() {
+    try { if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then((r) => r.sync && r.sync.register('k8-outbox')).catch(() => {}); } catch (e) {}
+  }
+
+  window.k8OutboxSend = async function (action, data) {
+    const d = slim(action, data);
+    const id = String(d.logId || d.id || (action + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
+    const item = { id, action, url: gasUrl(), body: JSON.stringify({ action, data: d, token: tok() }), createdAt: Date.now(), tries: 0 };
+    const m = metaGet().filter((x) => x.id !== id); m.push({ id, action, rec: data, at: item.createdAt }); metaSet(m);
+    try { await put(item); } catch (e) { /* IndexedDB ใช้ไม่ได้ (โหมดส่วนตัวบางรุ่น): ส่งตรง */ return sendOne(item, true); }
+    askBgSync();
+    return flush();
+  };
+
+  // ผลลัพธ์: 'ok' ลบออกจากคิว · 'retry' เก็บไว้ส่งใหม่ · 'drop' ข้อมูลถูกปฏิเสธถาวร
+  async function sendOne(item, noQueue) {
+    const url = gasUrl() || item.url; if (!url) return 'retry';
+    let body = item.body;
+    const t = tok();
+    if (t) { try { const b = JSON.parse(body); if (b.token !== t) { b.token = t; body = JSON.stringify(b); } } catch (e) {} }
+    let r;
+    try {
+      const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body, keepalive: body.length < 60000 });
+      r = await resp.json();
+    } catch (e) { return 'retry'; }
+    if (!r || r.success !== false) return 'ok';
+    if (r.code === 'AUTH_REQUIRED') return 'retry';
+    if (noQueue) return 'drop';
+    item.tries = (item.tries || 0) + 1;
+    if (item.tries >= 5 || r.code === 'FORBIDDEN' || r.code === 'VALIDATION') return 'drop';
+    try { await put(item); } catch (e) {}
+    return 'retry';
+  }
+
+  let busy = null;
+  function flush() {
+    if (busy) return busy;
+    busy = (async () => {
+      let items = []; try { items = await all(); } catch (e) { return; }
+      // ซิงค์สำเนา meta ให้ตรงกับคิวจริง (Service Worker อาจส่งไปแล้วตอนแอปปิดอยู่)
+      const ids = new Set(items.map((x) => x.id)); const m0 = metaGet(); const m1 = m0.filter((x) => ids.has(x.id));
+      if (m1.length !== m0.length) metaSet(m1);
+      for (const it of items) {
+        if (navigator.onLine === false) break;
+        const res = await sendOne(it);
+        if (res === 'retry') break;
+        try { await del(it.id); } catch (e) {}
+        metaSet(metaGet().filter((x) => x.id !== it.id));
+        if (res === 'drop' && typeof showToast === 'function') showToast('มี 1 รายการที่ระบบไม่รับ จึงนำออกจากคิวแล้ว', 'warning');
+      }
+    })().finally(() => { busy = null; paintBar(); });
+    return busy;
+  }
+  window.k8OutboxFlush = function () { if (navigator.onLine === false) { if (typeof showToast === 'function') showToast('ยังไม่มีอินเทอร์เน็ต · จะส่งให้อัตโนมัติเมื่อเชื่อมต่อได้', 'info'); return; } flush(); };
+
+  // แถบบอกสถานะบนหน้าละหมาด
+  function paintBar() {
+    const view = document.getElementById('view-prayer'); if (!view) return;
+    let bar = document.getElementById('k8Outbox');
+    const n = count();
+    const cs = document.getElementById('k8CamDoneSub');
+    if (cs) cs.textContent = cs.textContent.replace(n ? ' · ส่งถึงอาจารย์เรียบร้อย' : ' · เก็บในเครื่องแล้ว รอส่งขึ้นระบบ', n ? ' · เก็บในเครื่องแล้ว รอส่งขึ้นระบบ' : ' · ส่งถึงอาจารย์เรียบร้อย');
+    if (!n) { if (bar) bar.hidden = true; return; }
+    if (!bar) {
+      bar = document.createElement('div'); bar.id = 'k8Outbox'; bar.className = 'k8-outbox'; bar.setAttribute('role', 'status');
+      const head = view.querySelector('.k8-pg-head');
+      if (head && head.parentNode) head.parentNode.insertBefore(bar, head.nextSibling); else view.insertBefore(bar, view.firstChild);
+    }
+    bar.hidden = false;
+    const off = navigator.onLine === false;
+    bar.innerHTML = '<span class="k8-outbox-ico" aria-hidden="true">' + (busy ? '⟳' : '⏳') + '</span><span class="k8-outbox-t"><b>รอส่ง ' + n + ' รายการ</b><small>' + (off ? 'ยังไม่มีเน็ต · รูปเก็บในเครื่องแล้ว ไม่หาย' : (busy ? 'กำลังส่งขึ้นระบบ…' : 'จะส่งให้อัตโนมัติ')) + '</small></span>' + (busy ? '' : '<button type="button" onclick="k8OutboxFlush()">ส่งตอนนี้</button>');
+  }
+
+  window.addEventListener('online', () => { paintBar(); flush(); });
+  window.addEventListener('offline', paintBar);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') flush(); else if (count()) askBgSync(); });
+  window.addEventListener('pagehide', () => { if (count()) { askBgSync(); flush(); } });
+  setInterval(() => { if (count() && document.visibilityState === 'visible') flush(); }, 45000);
+  const start = () => { paintBar(); setTimeout(flush, 1500); };
+  if (document.readyState === 'complete') start(); else window.addEventListener('load', start);
+  // เมื่อเข้าสู่ระบบใหม่ (เช่น เซสชันหมดอายุ) ส่งรายการค้างต่อทันที
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'prayer') paintBar(); if (count()) setTimeout(flush, 300); return r; };
 })();

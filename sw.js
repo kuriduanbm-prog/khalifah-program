@@ -1,5 +1,5 @@
 // KHALIFAH PROGRAM - Production PWA Service Worker (v7.7)
-const CACHE_NAME = 'khalifah-cache-v11.4';
+const CACHE_NAME = 'khalifah-cache-v11.5';
 
 // Critical local assets required for the app shell to function offline
 const PRECACHE_ASSETS = [
@@ -7,11 +7,11 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
-  'style.css?v=11.4',
-  'ui-v8.css?v=11.4',
-  'ui-v8.js?v=11.4',
+  'style.css?v=11.5',
+  'ui-v8.css?v=11.5',
+  'ui-v8.js?v=11.5',
   'app.js',
-  'app.js?v=11.4',
+  'app.js?v=11.5',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',
@@ -129,4 +129,33 @@ self.addEventListener('fetch', (event) => {
       return cachedResponse || fetchPromise;
     })
   );
+});
+
+// v11.5 · Background Sync: ส่งรูปละหมาด/เช็คชื่อที่ค้างในคิว แม้ผู้ใช้ปิดแอปไปแล้ว (Android/Chrome)
+function k8OutboxDb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('khalifah-outbox', 1);
+    r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('q')) r.result.createObjectStore('q', { keyPath: 'id' }); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function k8OutboxFlushSw() {
+  const db = await k8OutboxDb();
+  const items = await new Promise((res, rej) => { const t = db.transaction('q', 'readonly'); const q = t.objectStore('q').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error); });
+  items.sort((a, b) => a.createdAt - b.createdAt);
+  let left = 0;
+  for (const it of items) {
+    let ok = false;
+    try {
+      const resp = await fetch(it.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: it.body });
+      const j = await resp.json();
+      ok = !!j && (j.success !== false || (j.code && j.code !== 'AUTH_REQUIRED'));
+    } catch (e) { ok = false; }
+    if (ok) await new Promise((res) => { const t = db.transaction('q', 'readwrite'); t.objectStore('q').delete(it.id); t.oncomplete = res; t.onerror = res; });
+    else { left++; break; }
+  }
+  if (left) throw new Error('outbox pending'); // ให้เบราว์เซอร์ลองใหม่ภายหลัง
+}
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'k8-outbox') event.waitUntil(k8OutboxFlushSw());
 });
