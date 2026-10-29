@@ -2843,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '13.4';
+  const APP_VERSION = '13.5';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5090,6 +5090,8 @@ window.k8RegBirthChange = function (v) {
     h += '<div class="k8-tt-seg k8-tt-days" role="tablist">' + c.days.map((d) => '<button type="button" role="tab" aria-selected="' + (T.view === 'day' && T.day === d) + '" onclick="k8TtDay(' + d + ')">' + DAYS[d] + (d === new Date().getDay() ? '<i aria-hidden="true"></i>' : '') + '</button>').join('') + '<button type="button" role="tab" aria-selected="' + (T.view === 'week') + '" onclick="k8TtWeek()">ทั้งสัปดาห์</button></div>';
     const merge = (list) => { if (!list.length) return null; if (list.length === 1) return Object.assign({}, list[0], { only: list[0].only || (list[0].o && list[0].o.length) }); return { sn: list.map((e) => e.sn).join(' / '), tn: list.length + ' กลุ่ม', r: '', only: true }; };
     const cellOf = (d, i) => { if (!mine) return { x: merge(arr((gradeOf(grade).cells || {})[d + '-' + (i + 1)])), g: grade }; for (const g of allKeys()) { const x = arr((gradeOf(g).cells || {})[d + '-' + (i + 1)]).find(isMine); if (x) return { x: Object.assign({}, x, { only: x.o && x.o.length }), g }; } return { x: null, g: '' }; };
+    let me = null; try { me = currentAdmin; } catch (e) {}
+    T.exp = { title: mine ? 'ตารางสอน ' + ((me && (me.fullName || me.username)) || '') : (String(grade).indexOf('x:') === 0 ? 'ตารางเรียน ' + lbl(grade) : 'ตารางเรียน ชั้น ' + lbl(grade)), cell: (d, i) => { const o = cellOf(d, i); return o.x ? { sn: o.x.sn, sub: [mine ? lbl(o.g) : (o.x.tn || ''), o.x.r ? 'ห้อง ' + o.x.r : ''].filter(Boolean).join(' · ') } : null; } };
     if (!mine && !grade) { body.innerHTML = h + '<p class="k8-li-empty">ไม่พบชั้นเรียนของคุณ · ติดต่อแอดมิน</p>'; return; }
     if (!mine && !Object.keys(gradeOf(grade).cells || {}).length) { body.innerHTML = h + '<div class="k8-tt-empty"><b>ยังไม่มีตาราง ' + esc(lbl(grade)) + '</b><span>แอดมินยังไม่ได้ลงตารางของชั้นนี้</span></div>'; return; }
     if (T.view === 'day') {
@@ -5102,9 +5104,92 @@ window.k8RegBirthChange = function (v) {
       h += '<div class="k8-tt-gridwrap"><table class="k8-tt-grid"><thead><tr><th scope="col">วัน</th>' + c.periods.map((p, i) => '<th scope="col">คาบ ' + (i + 1) + '<small>' + esc(p.start) + '</small></th>').join('') + '</tr></thead><tbody>' +
         c.days.map((d) => '<tr' + (d === new Date().getDay() ? ' class="is-today"' : '') + '><th scope="row"><button type="button" class="k8-tt-dbtn" onclick="k8TtDay(' + d + ')" aria-label="ดูวัน' + DAYN[d] + 'แบบรายคาบ">' + DAYS[d] + '</button></th>' + c.periods.map((p, i) => { const o = cellOf(d, i); return '<td>' + (o.x ? '<b>' + esc(o.x.sn) + '</b><small>' + esc([mine ? lbl(o.g) : (o.x.tn || ''), o.x.r ? 'ห้อง ' + o.x.r : ''].filter(Boolean).join(' · ')) + '</small>' : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div><p class="k8-pw-hint">แตะชื่อวันเพื่อดูรายคาบของวันนั้น</p>';
     }
+    if (T.view === 'week' && (mine || Object.keys(gradeOf(grade).cells || {}).length)) h += '<button type="button" class="k8-tt-img" onclick="k8TtImage(\'view\')">' + IMG_ICON + 'บันทึกเป็นรูปภาพ (A4 แนวนอน)</button>';
     body.innerHTML = h;
   }
   window.k8TtWho = function (w) { if (w === 'mine') T.who = 'mine'; else { T.who = 'grade'; T.grade = w; } renderView(); };
+  // ---------- บันทึกตารางเป็นรูปภาพ A4 แนวนอน ----------
+  const IMG_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>';
+  function wrapLines(ctx, text, maxW, maxLines) {
+    const segs = (typeof Intl !== 'undefined' && Intl.Segmenter) ? Array.from(new Intl.Segmenter('th', { granularity: 'word' }).segment(text), (s) => s.segment) : String(text).split(/(\s+)/);
+    const lines = []; let cur = '';
+    segs.forEach((w) => {
+      const t = cur + w;
+      if (ctx.measureText(t).width <= maxW || !cur) { cur = t; return; }
+      lines.push(cur.trim()); cur = w.trimStart();
+    });
+    if (cur.trim()) lines.push(cur.trim());
+    const out = lines.slice(0, maxLines);
+    if (lines.length > maxLines) { let l = out[maxLines - 1]; while (l && ctx.measureText(l + '…').width > maxW) l = l.slice(0, -1); out[maxLines - 1] = l + '…'; }
+    return out.map((l) => { while (ctx.measureText(l).width > maxW && l.length > 1) l = l.slice(0, -2) + '…'; return l; });
+  }
+  window.k8TtImage = async function (src) {
+    const c = cfg(); let model;
+    if (src === 'admin') {
+      const isX = String(T.grade).indexOf('x:') === 0;
+      model = { title: isX ? 'ตารางเรียน ' + ((T.xmeta && T.xmeta.name) || lbl(T.grade)) : 'ตารางเรียน ชั้น ' + lbl(T.grade), cell: (d, i) => { const L = arr(T.draft[d + '-' + (i + 1)]); if (!L.length) return null; if (L.length === 1) return { sn: L[0].sn, sub: [L[0].tn, L[0].r ? 'ห้อง ' + L[0].r : ''].filter(Boolean).join(' · ') }; return { sn: L.map((e) => e.sn).join(' / '), sub: L.length + ' กลุ่ม' }; } };
+    } else model = T.exp;
+    if (!model) return;
+    toast('กำลังสร้างรูปภาพ…', 'info');
+    const FONT = '"IBM Plex Sans Thai", sans-serif';
+    try { await Promise.all(['400', '600', '700'].map((w) => document.fonts.load(w + ' 40px "IBM Plex Sans Thai"', 'กขค'))); } catch (e) {}
+    const W = 3508, H = 2480, M = 140;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+    // หัวกระดาษ
+    ctx.fillStyle = '#0369a1'; ctx.fillRect(0, 0, W, 26);
+    ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#0369a1'; ctx.font = '600 44px ' + FONT; ctx.fillText('KHALIFAH', M, M + 30);
+    ctx.fillStyle = '#0f172a'; ctx.font = '700 104px ' + FONT; ctx.fillText(model.title, M, M + 150);
+    const now = new Date(); const MONS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    ctx.textAlign = 'right'; ctx.fillStyle = '#475569'; ctx.font = '400 42px ' + FONT;
+    ctx.fillText('ข้อมูล ณ ' + now.getDate() + ' ' + MONS[now.getMonth()] + ' ' + (now.getFullYear() + 543), W - M, M + 150);
+    ctx.textAlign = 'left';
+    // ตาราง
+    const top = M + 230, bottom = H - M - 40, left = M, right = W - M;
+    const dayW = 250, hdrH = 150; const nP = c.periods.length, nD = c.days.length;
+    const colW = (right - left - dayW) / Math.max(1, nP); const rowH = (bottom - top - hdrH) / Math.max(1, nD);
+    const rr = (x, y, w, h, r, fill, stroke) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 3; ctx.stroke(); } };
+    rr(left, top, right - left, bottom - top, 28, '#ffffff', '#cbd5e1');
+    ctx.save(); ctx.beginPath(); ctx.rect(left, top, right - left, hdrH); ctx.clip(); rr(left, top, right - left, hdrH + 40, 28, '#0369a1'); ctx.restore();
+    ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff';
+    ctx.font = '600 46px ' + FONT; ctx.fillText('วัน / คาบ', left + dayW / 2, top + hdrH / 2 + 16);
+    c.periods.forEach((p, i) => { const cx = left + dayW + colW * i + colW / 2; ctx.font = '600 50px ' + FONT; ctx.fillText('คาบ ' + (i + 1), cx, top + 68); ctx.font = '400 36px ' + FONT; ctx.fillText(p.start + '–' + p.end, cx, top + 120); });
+    const DAYC = { 1: '#fef9c3', 2: '#fce7f3', 3: '#dcfce7', 4: '#ffedd5', 5: '#e0f2fe', 6: '#ede9fe', 0: '#fee2e2' };
+    c.days.forEach((d, r) => {
+      const y = top + hdrH + rowH * r;
+      if (r % 2 === 1) { ctx.fillStyle = '#f8fafc'; ctx.fillRect(left + dayW, y, right - left - dayW, rowH); }
+      ctx.save(); if (r === nD - 1) { ctx.beginPath(); ctx.rect(left, y, dayW, rowH); ctx.clip(); rr(left, y - 40, dayW + 40, rowH + 40, 28, DAYC[d]); } else { ctx.fillStyle = DAYC[d]; ctx.fillRect(left, y, dayW, rowH); } ctx.restore();
+      ctx.fillStyle = '#0f172a'; ctx.font = '700 56px ' + FONT; ctx.fillText(DAYN[d], left + dayW / 2, y + rowH / 2 + 20);
+      c.periods.forEach((p, i) => {
+        const x = left + dayW + colW * i; const e = model.cell(d, i); if (!e) return;
+        const pad = 22, mw = colW - pad * 2;
+        let fs = Math.min(52, rowH * 0.2); ctx.font = '600 ' + fs + 'px ' + FONT;
+        let L1 = wrapLines(ctx, e.sn, mw, 3);
+        ctx.font = '400 ' + Math.round(fs * 0.7) + 'px ' + FONT; const L2 = e.sub ? wrapLines(ctx, e.sub, mw, 2) : [];
+        const lh1 = fs * 1.3, lh2 = fs * 0.7 * 1.35; const tot = L1.length * lh1 + L2.length * lh2;
+        let ty = y + rowH / 2 - tot / 2 + fs;
+        ctx.fillStyle = '#0f172a'; ctx.font = '600 ' + fs + 'px ' + FONT; L1.forEach((l) => { ctx.fillText(l, x + colW / 2, ty); ty += lh1; });
+        ty += lh2 - lh1 + 4; ctx.fillStyle = '#475569'; ctx.font = '400 ' + Math.round(fs * 0.7) + 'px ' + FONT; L2.forEach((l) => { ctx.fillText(l, x + colW / 2, ty); ty += lh2; });
+      });
+    });
+    // เส้นตาราง
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 3;
+    for (let i = 1; i <= nP; i++) { const x = left + dayW + colW * (i - 1); ctx.beginPath(); ctx.moveTo(x, top + hdrH); ctx.lineTo(x, bottom); ctx.stroke(); }
+    for (let r = 1; r < nD; r++) { const y = top + hdrH + rowH * r; ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke(); }
+    rr(left, top, right - left, bottom - top, 28, null, '#94a3b8');
+    ctx.textAlign = 'left'; ctx.fillStyle = '#94a3b8'; ctx.font = '400 32px ' + FONT; ctx.fillText('khalifah-program.vercel.app', M, H - M + 30);
+    const name = (model.title.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_') || 'timetable') + '.png';
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+    if (!blob) { toast('สร้างรูปไม่สำเร็จ', 'error'); return; }
+    const file = (typeof File === 'function') ? new File([blob], name, { type: 'image/png' }) : null;
+    const touch = matchMedia('(pointer: coarse)').matches;
+    if (touch && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: model.title }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    toast('บันทึกรูปตารางแล้ว (A4 แนวนอน)', 'success');
+  };
   window.k8TtVg = function (g) { T.vg = g; renderView(); };
   window.k8TtDay = function (d) { T.view = 'day'; T.day = d; renderView(); };
   window.k8TtWeek = function () { T.view = 'week'; renderView(); };
@@ -5138,7 +5223,7 @@ window.k8RegBirthChange = function (v) {
       '<div class="k8-tt-gridwrap"><table class="k8-tt-grid is-edit"><thead><tr><th scope="col">วัน</th>' + c.periods.map((p, i) => '<th scope="col">คาบ ' + (i + 1) + '<small>' + esc(p.start) + '–' + esc(p.end) + '</small></th>').join('') + '</tr></thead><tbody>' +
       c.days.map((d) => '<tr><th scope="row">' + DAYS[d] + '</th>' + c.periods.map((p, i) => { const k = d + '-' + (i + 1); const L = arr(T.draft[k]); const x = L[0]; const extra = L.length > 1 ? '+' + (L.length - 1) + ' กลุ่ม' : (x && x.o && x.o.length ? 'เฉพาะ ' + x.o.length + ' คน' : (x && x.x && x.x.length ? 'ละเว้น ' + x.x.length + ' คน' : '')); return '<td><button type="button" class="' + (x ? 'has' : '') + (extra ? ' is-group' : '') + '" onclick="k8TtCell(\'' + k + '\')" aria-label="วัน' + DAYN[d] + ' คาบ ' + (i + 1) + (x ? ' ' + esc(L.map((e) => e.sn).join(' และ ')) : ' ว่าง') + '">' + (x ? '<b>' + esc(x.sn) + '</b><small>' + esc(x.tn || '') + (x.r ? ' · ' + esc(x.r) : '') + '</small>' + (extra ? '<em>' + esc(extra) + '</em>' : '') : '<span aria-hidden="true">+</span>') + '</button></td>'; }).join('') + '</tr>').join('') +
       '</tbody></table></div>' +
-      '<div class="k8-dr-btns k8-tt-save"><button type="button" class="is-alt" onclick="k8TtCopyFrom()">คัดลอกจากชั้นอื่น</button><button type="button" id="k8TtSaveBtn" ' + (T.dirty ? '' : 'disabled') + ' onclick="k8TtSave()">' + (T.dirty ? 'บันทึก' + (isX ? 'ตาราง "' + esc(xm.name || '') + '"' : 'ตาราง ม.' + T.grade) : 'บันทึกแล้ว') + '</button></div></section>';
+      '<div class="k8-dr-btns k8-tt-save"><button type="button" class="is-alt" onclick="k8TtCopyFrom()">คัดลอกจากชั้นอื่น</button><button type="button" class="is-alt k8-tt-img-a" onclick="k8TtImage(\'admin\')"' + (filled ? '' : ' disabled') + '>' + IMG_ICON + 'บันทึกเป็นรูป A4</button><button type="button" id="k8TtSaveBtn" ' + (T.dirty ? '' : 'disabled') + ' onclick="k8TtSave()">' + (T.dirty ? 'บันทึก' + (isX ? 'ตาราง "' + esc(xm.name || '') + '"' : 'ตาราง ม.' + T.grade) : 'บันทึกแล้ว') + '</button></div></section>';
   }
   window.k8TtReload = function () { T.err = ''; T.at = 0; const el = adminRoot(); if (el) el.innerHTML = '<p class="k8-li-empty">กำลังโหลดตาราง…</p>'; load(true).then(() => { if (!T.dirty) startDraft(T.grade || '1'); renderAdmin(); }); };
   window.k8TtGrade = function (g) { if (T.dirty && !confirm('ตาราง ' + lbl(T.grade) + ' ยังไม่ได้บันทึก ต้องการเปลี่ยนโดยไม่บันทึกใช่ไหม?')) return; if (T.newX && g !== T.newX.key) T.newX = null; startDraft(g); renderAdmin(); };

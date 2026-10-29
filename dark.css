@@ -1470,6 +1470,7 @@ html[data-theme="dark"] .k8-acct-pic { background-color: #122938 !important; col
 html[data-theme="dark"] .k8-acct-pic::after { border: 2px solid #333333 !important; }
 html[data-theme="dark"] .k8-acct-photo b { color: #69c8fc !important; }
 html[data-theme="dark"] .k8-acct-photo small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-tt-img { border: 1px solid #264555 !important; background-color: #0e2432 !important; color: #69c8fc !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
