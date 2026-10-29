@@ -2843,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.9';
+  const APP_VERSION = '13.0';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5407,4 +5407,28 @@ window.k8RegBirthChange = function (v) {
   }
   const r0 = window.renderTeacherPortalGradesTable;
   if (typeof r0 === 'function') window.renderTeacherPortalGradesTable = function () { const r = r0.apply(this, arguments); setTimeout(paintToggle, 0); return r; };
+})();
+
+/* ============ v13.0 · โหมดมืด / สว่าง / ตามเครื่อง (จำไว้ในเครื่อง) ============ */
+(function () {
+  const KEY = 'k8_theme';
+  const get = () => { try { return localStorage.getItem(KEY) || 'light'; } catch (e) { return 'light'; } };
+  const mq = (() => { try { return matchMedia('(prefers-color-scheme: dark)'); } catch (e) { return null; } })();
+  function apply() {
+    const m = get(); const dark = m === 'dark' || (m === 'auto' && mq && mq.matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute('content', dark ? '#0b1220' : '#0284c7');
+    paint();
+  }
+  const OPTS = [['light', 'สว่าง', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'], ['dark', 'มืด', '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'], ['auto', 'ตามเครื่อง', '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/>']];
+  function paint() {
+    const m = get();
+    document.querySelectorAll('[data-k8-theme]').forEach((box) => {
+      box.setAttribute('role', 'radiogroup'); box.setAttribute('aria-label', 'ธีมแอป');
+      box.innerHTML = OPTS.map(([k, l, p]) => '<button type="button" role="radio" aria-checked="' + (m === k) + '" onclick="event.stopPropagation();k8ThemeSet(\'' + k + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg><span>' + l + '</span></button>').join('');
+    });
+  }
+  window.k8ThemeSet = function (m) { try { localStorage.setItem(KEY, m); } catch (e) {} apply(); };
+  if (mq) { const on = () => { if (get() === 'auto') apply(); }; if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply); else apply();
 })();

@@ -2492,3 +2492,13 @@ html body .mobile-nav .mobile-nav-item.active, html body .teacher-bottom-nav-bar
 @media (prefers-reduced-transparency: reduce) {
   html body .mobile-nav, html body.teacher-portal-active .teacher-bottom-nav-bar, html body.k8-inspector #view-inspector.active .k8-insp-nav { background: #fff !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 }
+
+/* v13.0 · ปุ่มเลือกธีม */
+.k8-theme-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #f1f5f9; }
+.k8-theme-seg button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 6px; border: 0; border-radius: 11px; background: transparent; color: #475569; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+.k8-theme-seg button[aria-checked="true"] { background: #ffffff; color: #0369a1; box-shadow: 0 1px 3px rgba(15,23,42,.12); }
+.k8-theme-seg.is-menu { margin: 6px 4px; }
+.k8-theme-seg.is-nav { margin: 4px 0; background: rgba(255,255,255,.06); }
+.k8-theme-seg.is-nav button { color: #cbd5e1; }
+.k8-theme-seg.is-nav button[aria-checked="true"] { background: #1e3a5f; color: #ffffff; box-shadow: none; }
+html.k8-xnarrow .k8-theme-seg { grid-template-columns: 1fr; }
