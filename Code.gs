@@ -11,7 +11,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ⚠️ รหัสแอดมินหลักไม่ได้เก็บไว้ในโค้ดอีกต่อไป
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
-const SCHEMA_VERSION = '9.0';
+const SCHEMA_VERSION = '10.8';
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -56,6 +56,9 @@ const SHEETS = {
   ASSIGNMENT_SCORES: 'คะแนนชิ้นงาน',
   TEACHER_EVALS: 'ประเมินอาจารย์',
   BEHAVIOR: 'บันทึกคะแนนพฤติกรรม',
+  NOTIFS: 'การแจ้งเตือน',
+  NOTIF_READS: 'การอ่านแจ้งเตือน',
+  POLICY_ACKS: 'การยินยอมข้อตกลง',
   SETTINGS: 'การตั้งค่า',
   CALENDAR: 'ปฏิทินกิจกรรม'
 };
@@ -77,6 +80,9 @@ const SHEET_ORDER = [
   SHEETS.ASSIGNMENT_SCORES, // คะแนนชิ้นงานรายวิชา
   SHEETS.TEACHER_EVALS,  // ประเมินอาจารย์ (ไม่ระบุชื่อ)
   SHEETS.BEHAVIOR,       // บันทึกคะแนนพฤติกรรม (ผู้ตรวจการ)
+  SHEETS.NOTIFS,         // การแจ้งเตือน (กระดิ่ง)
+  SHEETS.NOTIF_READS,    // การอ่าน/ซ่อนแจ้งเตือนของแต่ละคน
+  SHEETS.POLICY_ACKS,    // การยินยอมกฎระเบียบหอพัก
   SHEETS.SETTINGS,       // 13. การตั้งค่า
   SHEETS.CALENDAR        // 14. ปฏิทินกิจกรรม
 ];
@@ -166,6 +172,12 @@ const HEADERS = {
     'รหัสคำขอ', 'ประเภทผู้ใช้', 'รหัสประจำตัว', 'ชื่อ-นามสกุล', 'อีเมล',
     'รายละเอียดเพิ่มเติม', 'รหัสยืนยันสุ่ม (OTP)', 'สถานะ', 'เวลาที่สมัคร', 'ข้อมูล JSON'
   ],
+  NOTIFS: [
+    'รหัสแจ้งเตือน', 'เวลาสร้าง', 'หัวข้อ', 'ข้อความ', 'ผู้รับ (ประเภท)', 'ผู้รับ (ค่า)', 'ความสำคัญ',
+    'ผู้ส่ง (username)', 'ชื่อผู้ส่ง', 'สถานะ', 'หมดอายุ'
+  ],
+  NOTIF_READS: ['รหัสแจ้งเตือน', 'ผู้ใช้', 'อ่านเมื่อ', 'ซ่อน'],
+  POLICY_ACKS: ['รหัสยินยอม', 'รหัสข้อตกลง', 'ฉบับ', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ยินยอมเมื่อ'],
   BEHAVIOR: [
     'รหัสบันทึก', 'วันที่', 'เวลาบันทึก', 'ภาคเรียน', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น',
     'หมวด', 'รหัสหัวข้อ', 'หัวข้อ', 'คะแนน (+/-)', 'หมายเหตุ', 'ผู้บันทึก (username)', 'ชื่อผู้บันทึก', 'สถานะ', 'ผู้ยกเลิก'
@@ -378,6 +390,12 @@ function initializeSheets() {
   } catch (fmtErr) {}
 
   // 14. คำขออนุมัติละหมาด (กรณีลืมเช็คชื่อ)
+  const sheetNo = getOrCreateSheetSmart(ss, 'NOTIFS', HEADERS.NOTIFS, '#ea580c');
+  try { sheetNo.getRange('A:B').setNumberFormat('@'); sheetNo.getRange('F:F').setNumberFormat('@'); } catch (fmtErr) {}
+  const sheetNr = getOrCreateSheetSmart(ss, 'NOTIF_READS', HEADERS.NOTIF_READS, '#fb923c');
+  try { sheetNr.getRange('A:C').setNumberFormat('@'); } catch (fmtErr) {}
+  const sheetPa = getOrCreateSheetSmart(ss, 'POLICY_ACKS', HEADERS.POLICY_ACKS, '#16a34a');
+  try { sheetPa.getRange('A:D').setNumberFormat('@'); } catch (fmtErr) {}
   const sheetBeh = getOrCreateSheetSmart(ss, 'BEHAVIOR', HEADERS.BEHAVIOR, '#0f766e');
   try { sheetBeh.getRange('A:I').setNumberFormat('@'); } catch (fmtErr) {}
   const sheetEval = getOrCreateSheetSmart(ss, 'TEACHER_EVALS', HEADERS.TEACHER_EVALS, '#7c3aed');
@@ -1156,6 +1174,8 @@ const ACTION_ACCESS = {
   batchPromote: 'admin', fullSchoolBatchPromote: 'admin',
   saveSetting: 'admin', saveSubjects: 'admin', saveCurrentTerm: 'admin', saveStudyDocsFolders: 'admin',
   listStudyDocs: 'student', getStudyDocsConfig: 'student',
+  getMyNotifications: 'student', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
   init: 'owner', convertToThai: 'owner', organizeSheets: 'owner', organizeGoogleSheets: 'owner'
@@ -1168,8 +1188,8 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'getSubAdmins', 'getTeachers', 'getPendingRegistrations', 'getAdmins', 'checkRegistrationStatus',
   'loginStudent', 'adminLogin', 'staffLogin'];
 
-const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami'];
-READ_ONLY_ACTIONS.push('getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig');
+const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead'];
+READ_ONLY_ACTIONS.push('getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1385,6 +1405,23 @@ function dispatchAction_(action, req, data, session, ctx) {
       if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
       return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }) };
     }
+    case 'getMyNotifications':
+      return getMyNotifications_(session);
+    case 'markNotificationRead':
+      return markNotificationRead_(session, data.ids || [pick('id')], !!(data.hide || pick('hide')));
+    case 'getPolicy':
+      return getPolicyForSession_(session, pick('policyId'));
+    case 'acknowledgePolicy':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return acknowledgePolicy_(session, pick('policyId'), pick('version'));
+    case 'sendNotification':
+      return sendNotification_(data, session);
+    case 'listSentNotifications':
+      return listSentNotifications_();
+    case 'deleteNotification':
+      return deleteNotification_(pick('id'));
+    case 'getPolicyAckSummary':
+      return getPolicyAckSummary_(pick('policyId'));
     case 'listStudyDocs':
       return listStudyDocs_(pick('grade'), pick('folderId'), pick('refresh'));
     case 'getStudyDocsConfig':
@@ -5322,15 +5359,24 @@ function saveStudyDocsFolders_(folders) {
   try { const c = CacheService.getScriptCache(); Object.keys(out).forEach(function (g) { c.remove('DOCS_' + out[g]); }); } catch (e) {}
   return { success: true, folders: out, message: 'บันทึกโฟลเดอร์เอกสารแล้ว' };
 }
-/** ตรวจว่าโฟลเดอร์อยู่ภายใต้โฟลเดอร์ ม.1–ม.6 ที่ตั้งไว้ (กันการใช้แอปเปิดโฟลเดอร์อื่นใน Drive) */
-function studyFolderRootGrade_(folder, roots) {
-  const rootIds = {}; Object.keys(roots).forEach(function (g) { rootIds[roots[g]] = g; });
-  let f = folder; const path = [];
-  for (let depth = 0; depth < 10 && f; depth++) {
-    path.unshift({ id: f.getId(), name: f.getName() });
-    if (rootIds[f.getId()]) return { grade: rootIds[f.getId()], path: path };
-    const ps = f.getParents();
-    f = ps.hasNext() ? ps.next() : null;
+/** ตำแหน่งของโฟลเดอร์ย่อยในต้นไม้เอกสาร (จำจากการเปิดโฟลเดอร์แม่ หรือค้นจากโฟลเดอร์ ม.1–ม.6 ลงไป)
+ *  ใช้วิธีไล่ลงจากโฟลเดอร์หลัก เพราะโฟลเดอร์ที่แชร์มาจากบัญชีอื่นมักอ่านโฟลเดอร์แม่ไม่ได้ */
+function docsPlace_(id, roots) {
+  const cache = CacheService.getScriptCache();
+  try { const hit = cache.get('DOCS_IN_' + id); if (hit) return JSON.parse(hit); } catch (e) {}
+  const queue = [];
+  Object.keys(roots).forEach(function (g) { try { const f = DriveApp.getFolderById(roots[g]); queue.push({ f: f, grade: g, path: [{ id: roots[g], name: f.getName() }] }); } catch (e) {} });
+  let seen = 0;
+  while (queue.length && seen < 400) {
+    const cur = queue.shift(); seen++;
+    if (cur.path.length > 6) continue;
+    const it = cur.f.getFolders();
+    while (it.hasNext()) {
+      const c = it.next(); const place = { grade: cur.grade, path: cur.path.concat([{ id: c.getId(), name: c.getName() }]) };
+      try { cache.put('DOCS_IN_' + c.getId(), JSON.stringify(place), 21600); } catch (e) {}
+      if (c.getId() === id) return place;
+      queue.push({ f: c, grade: place.grade, path: place.path });
+    }
   }
   return null;
 }
@@ -5350,12 +5396,16 @@ function listStudyDocs_(grade, folderId, refresh) {
     return { success: false, code: 'DRIVE_ACCESS', folderId: id, message: 'ระบบยังเปิดโฟลเดอร์นี้ไม่ได้ · ตรวจว่าแชร์โฟลเดอร์เป็น "ทุกคนที่มีลิงก์" หรือแชร์ให้บัญชีเจ้าของระบบ' };
   }
   let where = null;
-  if (roots[g] === id) where = { grade: g, path: [{ id: id, name: folder.getName() }] };
-  else where = studyFolderRootGrade_(folder, roots);
-  if (!where) return { success: false, code: 'FORBIDDEN', message: 'โฟลเดอร์นี้ไม่อยู่ในเอกสารประกอบการเรียน' };
+  const rootGrade = Object.keys(roots).filter(function (k) { return roots[k] === id; })[0];
+  if (rootGrade) where = { grade: rootGrade, path: [{ id: id, name: folder.getName() }] };
+  else where = docsPlace_(id, roots);
+  if (!where) return { success: false, code: 'NOT_IN_TREE', message: 'ไม่พบโฟลเดอร์นี้ในเอกสารประกอบการเรียน (อาจถูกย้ายหรือลบไปแล้ว)' };
   const folders = []; const files = [];
   const fi = folder.getFolders();
-  while (fi.hasNext() && folders.length < 200) { const f = fi.next(); folders.push({ id: f.getId(), name: f.getName(), updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' }); }
+  while (fi.hasNext() && folders.length < 200) {
+    const f = fi.next(); folders.push({ id: f.getId(), name: f.getName(), updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
+    try { cache.put('DOCS_IN_' + f.getId(), JSON.stringify({ grade: where.grade, path: where.path.concat([{ id: f.getId(), name: f.getName() }]) }), 21600); } catch (e) {}
+  }
   const it = folder.getFiles();
   while (it.hasNext() && files.length < 500) {
     const f = it.next();
@@ -5365,6 +5415,174 @@ function listStudyDocs_(grade, folderId, refresh) {
   const byName = function (a, b) { return String(a.name).localeCompare(String(b.name), 'th', { numeric: true }); };
   folders.sort(byName); files.sort(byName);
   const out = { success: true, grade: where.grade, folder: { id: id, name: folder.getName() }, path: where.path, folders: folders, files: files, cachedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'HH:mm') };
-  try { const js = JSON.stringify(out); if (js.length < 90000) cache.put(key, js, 600); } catch (e) {}
+  try { const js = JSON.stringify(out); if (js.length < 90000) cache.put(key, js, 60); } catch (e) {}
   return out;
+}
+
+
+// =====================================================================
+//  🔔 การแจ้งเตือน (กระดิ่ง) + ข้อตกลงที่ต้องกดยินยอม
+// =====================================================================
+const POLICIES = {
+  'dorm-rules-2569': {
+    id: 'dorm-rules-2569', version: '1',
+    title: 'กฎระเบียบหอพักนักเรียนและแนวทางส่งเสริมพฤติกรรม',
+    subtitle: 'ปีการศึกษา 2569–2570',
+    place: 'โปรแกรมห้องเรียนคอลีฟะห์ คณะวิทยาศาสตร์และเทคโนโลยี',
+    effective: '1 พฤศจิกายน 2569',
+    purpose: 'เพื่อกำหนดแนวปฏิบัติที่ชัดเจน ส่งเสริมวินัย ความรับผิดชอบ การเรียนรู้ และการอยู่ร่วมกันอย่างปลอดภัย โดยเคารพหลักศาสนา',
+    items: [
+      { t: 'ตารางชีวิตประจำวัน', d: ['กำหนดเวลาตื่นนอน อาบน้ำ รับประทานอาหาร เรียน ทำกิจกรรม และเข้านอนให้ชัดเจน'], m: 'ครั้งแรกตักเตือน ครั้งต่อไปบันทึกพฤติกรรมและร่วมวางแผนแก้ไข โดยพิจารณาเหตุจำเป็น' },
+      { t: 'การล็อกประตูหอพัก', d: ['กำหนดเวลาเข้า–ออกและเวลาปิดประตู พร้อมแจ้งให้ทราบล่วงหน้า'], m: 'ตรวจสอบเหตุผล บันทึกเหตุการณ์ และพูดคุยเมื่อฝ่าฝืนซ้ำ' },
+      { t: 'การเก็บโทรศัพท์มือถือ', d: ['กำหนดเวลาส่งคืนและรับโทรศัพท์อย่างชัดเจน และจัดเก็บอย่างปลอดภัย', 'อนุญาตให้ติดต่อผู้ปกครองได้ในกรณีจำเป็น'], m: 'หากใช้ผิดเวลา ให้ตักเตือนและดำเนินการตามระเบียบที่ประกาศ' },
+      { t: 'การใช้รถและการออกนอกสถานที่', d: ['ต้องได้รับอนุญาตก่อนออกนอกสถานที่นอกเวลาที่กำหนด'], m: 'ตรวจสอบเหตุผล บันทึกเหตุการณ์ และประสานผู้ปกครองเมื่อจำเป็น หากมีความเสี่ยงให้ทบทวนสิทธิ์เป็นรายกรณี' },
+      { t: 'การละหมาดศุบฮิ', d: ['จัดระบบปลุกและเตรียมตัวให้ทันเวลาละหมาด'], m: 'สอบถามสาเหตุเมื่อขาดหรือมาสาย หากขาดหรือสายครบ 3 ครั้งภายในสัปดาห์เดียวกัน จะแจ้งผู้ปกครอง' },
+      { t: 'การอ่านหนังสือตอนกลางคืน', d: ['กำหนดเวลาอ่านหนังสือ ทบทวนบทเรียน และเวลาเข้านอน', 'ปรับตามความเหมาะสมเมื่อเจ็บป่วยหรืออ่อนล้า'], m: 'ติดตามงานและตักเตือนเมื่อไม่เข้าร่วมโดยไม่มีเหตุผล' },
+      { t: 'การเล่นฟุตบอลและกีฬา', d: ['กำหนดวัน เวลา สนาม และการใช้อุปกรณ์ให้เหมาะสม'], m: 'หากฝ่าฝืนเวลา อาจพักการใช้สนามชั่วคราวตามความเหมาะสม', r: 'ผู้มีน้ำใจนักกีฬาและรักษากติกาจะได้รับคำชื่นชม' },
+      { t: 'แอปติดตามพฤติกรรม', d: ['บันทึกการเข้าเรียน การละหมาด ความรับผิดชอบ การเข้าร่วมกิจกรรม และความก้าวหน้า'], m: 'ใช้เพื่อแจ้งเตือนและช่วยเหลือนักเรียน ตรวจสอบความถูกต้องของข้อมูล จำกัดผู้เข้าถึงข้อมูล และใช้ข้อมูลเพื่อพัฒนานักเรียนร่วมกับผู้ปกครอง' },
+      { t: 'วันหยุดภาคเรียนที่ 2', d: ['แจ้งวันหยุดและแผนการเดินทางล่วงหน้า', 'วันหยุดที่กำหนด: 11–13 ธันวาคม 2569 และ 12–14 กุมภาพันธ์ 2570'], m: 'กรณีกลับช้า ให้แจ้งเหตุผลและประสานผู้ปกครอง โดยพิจารณาเหตุจำเป็น' },
+      { t: 'การอยู่หอพักและการทำความสะอาด', d: ['จัดเวรทำความสะอาดห้องนอน ห้องน้ำ และพื้นที่ส่วนกลางอย่างทั่วถึง'], m: 'ผู้ที่ไม่ทำเวร ให้รับผิดชอบงานที่ค้างหรือทำเวรชดเชยอย่างเป็นธรรม' },
+      { t: 'รางวัลพฤติกรรมดี', d: ['พิจารณารางวัลจากเกณฑ์ที่ชัดเจน เช่น ท่องจำอัลกุรอานได้ตามเป้าหมาย อ่านอัซการ์สม่ำเสมอ มีวินัย ขยัน และช่วยเหลือส่วนรวม'], r: 'เกียรติบัตร ของรางวัล คะแนนความดี หรือการยกย่องตามความเหมาะสม' },
+      { t: 'การแต่งกายประจำวัน', d: ['กำหนดชุดนักเรียน ชุดศาสนา ชุดกีฬา และความเรียบร้อยตามวันที่กำหนด'], m: 'แจ้งเตือนและให้แก้ไขอย่างสุภาพ หากไม่มีชุดหรือมีเหตุจำเป็น ให้ช่วยกันหาทางออก' },
+      { t: 'ฮะละเกาะฮ์ประจำสัปดาห์', d: ['จัดวงเรียนรู้ศาสนา ทบทวนอัลกุรอาน อัซการ์ มารยาท และแลกเปลี่ยนปัญหาการใช้ชีวิต'], m: 'ผู้ที่ขาดโดยไม่มีเหตุผล ให้ติดตามเนื้อหาที่พลาดไป', r: 'ผู้เข้าร่วมสม่ำเสมอและช่วยเหลือผู้อื่นจะได้รับคำชื่นชม' }
+    ],
+    consent: 'ข้าพเจ้าได้อ่านและเข้าใจกฎระเบียบหอพักนักเรียนและแนวทางส่งเสริมพฤติกรรมทั้งหมดแล้ว และยินยอมปฏิบัติตาม'
+  }
+};
+const REQUIRED_POLICY_IDS = ['dorm-rules-2569'];
+
+function sheetRows_(name, width) {
+  const sh = getSpreadsheet().getSheetByName(name);
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, width).getValues();
+}
+function userKey_(session) { return (session.role === 'student' ? 'S:' + cleanVal(session.userId).replace(/^0+/, '') : 'U:' + cleanVal(session.userId).toLowerCase()); }
+function studentGradeNum_(sid) {
+  const rows = sheetRows_(SHEETS.STUDENTS, 4);
+  for (let i = 0; i < rows.length; i++) if (isCodeMatch(rows[i][0], sid)) { const m = String(rows[i][3]).match(/([1-6])/); return { grade: m ? m[1] : '', name: cleanVal(rows[i][1]), gradeText: cleanVal(rows[i][3]) }; }
+  return { grade: '', name: '', gradeText: '' };
+}
+function notifMatches_(n, session, gradeNum) {
+  const type = n.audience;
+  const vals = String(n.audienceValue || '').split(',').map(function (x) { return cleanVal(x); }).filter(Boolean);
+  if (session.role === 'student') {
+    if (type === 'all' || type === 'everyone') return true;
+    if (type === 'grade') return vals.indexOf(gradeNum) !== -1;
+    if (type === 'students') return vals.some(function (v) { return isCodeMatch(v, session.userId); });
+    return false;
+  }
+  return type === 'staff' || type === 'everyone';
+}
+function readNotifs_() {
+  return sheetRows_(SHEETS.NOTIFS, HEADERS.NOTIFS.length).filter(function (r) { return cleanVal(r[0]); }).map(function (r) {
+    return { id: cleanVal(r[0]), createdAt: cleanVal(r[1]), title: cleanVal(r[2]), body: cleanVal(r[3]), audience: cleanVal(r[4]), audienceValue: cleanVal(r[5]), priority: cleanVal(r[6]) || 'normal', by: cleanVal(r[7]), byName: cleanVal(r[8]), status: cleanVal(r[9]) || 'active', expires: cleanVal(r[10]) };
+  });
+}
+function getMyNotifications_(session) {
+  ensureSchema();
+  const g = session.role === 'student' ? studentGradeNum_(session.userId).grade : '';
+  const key = userKey_(session);
+  const reads = {};
+  sheetRows_(SHEETS.NOTIF_READS, 4).forEach(function (r) { if (cleanVal(r[1]) === key) reads[cleanVal(r[0])] = { at: cleanVal(r[2]), hidden: cleanVal(r[3]) === '1' }; });
+  const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  const list = readNotifs_().filter(function (n) { return n.status === 'active' && (!n.expires || n.expires >= today) && notifMatches_(n, session, g); })
+    .map(function (n) { const rd = reads[n.id] || {}; return { id: n.id, createdAt: n.createdAt, title: n.title, body: n.body, priority: n.priority, byName: n.byName, read: !!rd.at, hidden: !!rd.hidden }; })
+    .filter(function (n) { return !n.hidden; })
+    .sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }).slice(0, 100);
+  const pending = [];
+  if (session.role === 'student') {
+    const acks = myPolicyAcks_(session.userId);
+    REQUIRED_POLICY_IDS.forEach(function (pid) { const p = POLICIES[pid]; if (p && !acks[pid + '|' + p.version]) pending.push({ id: pid, version: p.version, title: p.title, subtitle: p.subtitle }); });
+  }
+  return { success: true, notifications: list, pendingPolicies: pending, unread: list.filter(function (n) { return !n.read; }).length + pending.length };
+}
+function markNotificationRead_(session, ids, hide) {
+  ids = (Array.isArray(ids) ? ids : [ids]).map(cleanVal).filter(Boolean).slice(0, 200);
+  if (!ids.length) return { success: false, message: 'ไม่พบรายการ' };
+  const sh = getSpreadsheet().getSheetByName(SHEETS.NOTIF_READS);
+  const key = userKey_(session);
+  const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+  const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) {}
+  try {
+    const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues() : [];
+    const at = {}; rows.forEach(function (r, i) { if (cleanVal(r[1]) === key) at[cleanVal(r[0])] = i; });
+    const add = [];
+    ids.forEach(function (id) {
+      if (at[id] !== undefined) { if (hide) sh.getRange(at[id] + 2, 4).setValue('1'); }
+      else add.push([id, key, now, hide ? '1' : '']);
+    });
+    if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, 4).setValues(add);
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+  return { success: true };
+}
+function sendNotification_(data, session) {
+  data = data || {};
+  const title = cleanVal(data.title).substring(0, 120), body = cleanVal(data.body).substring(0, 2000);
+  if (!title) return { success: false, message: 'กรุณาใส่หัวข้อแจ้งเตือน' };
+  const aud = ['all', 'grade', 'students', 'staff', 'everyone'].indexOf(cleanVal(data.audience)) !== -1 ? cleanVal(data.audience) : 'all';
+  let vals = (Array.isArray(data.values) ? data.values : String(data.values || '').split(',')).map(cleanVal).filter(Boolean);
+  if (aud === 'grade') { vals = vals.map(function (v) { return String(v).replace(/\D/g, ''); }).filter(function (v) { return /^[1-6]$/.test(v); }); if (!vals.length) return { success: false, message: 'กรุณาเลือกชั้นปีอย่างน้อย 1 ชั้น' }; }
+  if (aud === 'students' && !vals.length) return { success: false, message: 'กรุณาเลือกนักเรียนอย่างน้อย 1 คน' };
+  const priority = data.priority === 'urgent' ? 'urgent' : 'normal';
+  const expires = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(data.expires)) ? cleanVal(data.expires) : '';
+  ensureSchema();
+  const id = 'NTF-' + Date.now();
+  const row = [id, Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), title, body, aud, vals.slice(0, 500).join(','), priority, session.userId, session.name || session.userId, 'active', expires];
+  getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(row);
+  return { success: true, id: id, message: 'ส่งแจ้งเตือนแล้ว' };
+}
+function listSentNotifications_() {
+  const reads = {};
+  sheetRows_(SHEETS.NOTIF_READS, 4).forEach(function (r) { const id = cleanVal(r[0]); reads[id] = (reads[id] || 0) + 1; });
+  const students = sheetRows_(SHEETS.STUDENTS, 8).filter(function (r) { return cleanVal(r[0]) && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(r[7])); });
+  const count = function (n) {
+    const vals = String(n.audienceValue || '').split(',').filter(Boolean);
+    if (n.audience === 'all' || n.audience === 'everyone') return students.length;
+    if (n.audience === 'grade') return students.filter(function (r) { const m = String(r[3]).match(/([1-6])/); return m && vals.indexOf(m[1]) !== -1; }).length;
+    if (n.audience === 'students') return vals.length;
+    return 0;
+  };
+  const list = readNotifs_().filter(function (n) { return n.status === 'active'; }).map(function (n) { return Object.assign(n, { reads: reads[n.id] || 0, recipients: count(n) }); })
+    .sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
+  return { success: true, data: list.slice(0, 200) };
+}
+function deleteNotification_(id) {
+  id = cleanVal(id);
+  const sh = getSpreadsheet().getSheetByName(SHEETS.NOTIFS);
+  const rows = sheetRows_(SHEETS.NOTIFS, 1);
+  for (let i = 0; i < rows.length; i++) if (cleanVal(rows[i][0]) === id) { sh.getRange(i + 2, 10).setValue('deleted'); return { success: true, message: 'ลบแจ้งเตือนแล้ว' }; }
+  return { success: false, message: 'ไม่พบแจ้งเตือน' };
+}
+function myPolicyAcks_(sid) {
+  const out = {};
+  sheetRows_(SHEETS.POLICY_ACKS, 7).forEach(function (r) { if (isCodeMatch(r[3], sid)) out[cleanVal(r[1]) + '|' + cleanVal(r[2])] = cleanVal(r[6]); });
+  return out;
+}
+function getPolicyForSession_(session, policyId) {
+  const p = POLICIES[cleanVal(policyId) || REQUIRED_POLICY_IDS[0]];
+  if (!p) return { success: false, message: 'ไม่พบข้อตกลง' };
+  let ackAt = '';
+  if (session.role === 'student') ackAt = myPolicyAcks_(session.userId)[p.id + '|' + p.version] || '';
+  return { success: true, policy: p, acknowledgedAt: ackAt };
+}
+function acknowledgePolicy_(session, policyId, version) {
+  const p = POLICIES[cleanVal(policyId)];
+  if (!p) return { success: false, message: 'ไม่พบข้อตกลง' };
+  if (cleanVal(version) && cleanVal(version) !== p.version) return { success: false, message: 'ข้อตกลงมีการปรับปรุง กรุณาเปิดอ่านฉบับล่าสุดอีกครั้ง' };
+  const prev = myPolicyAcks_(session.userId)[p.id + '|' + p.version];
+  if (prev) return { success: true, acknowledgedAt: prev, message: 'ยินยอมข้อตกลงนี้แล้ว' };
+  ensureSchema();
+  const st = studentGradeNum_(session.userId);
+  const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+  getSpreadsheet().getSheetByName(SHEETS.POLICY_ACKS).appendRow(['ACK-' + Date.now(), p.id, p.version, session.userId, st.name || session.name || '', st.gradeText, now]);
+  return { success: true, acknowledgedAt: now, message: 'บันทึกการยินยอมแล้ว ขอบคุณที่อ่านข้อตกลง' };
+}
+function getPolicyAckSummary_(policyId) {
+  const p = POLICIES[cleanVal(policyId) || REQUIRED_POLICY_IDS[0]];
+  if (!p) return { success: false, message: 'ไม่พบข้อตกลง' };
+  const acked = {};
+  sheetRows_(SHEETS.POLICY_ACKS, 7).forEach(function (r) { if (cleanVal(r[1]) === p.id && cleanVal(r[2]) === p.version) acked[cleanVal(r[3]).replace(/^0+/, '')] = cleanVal(r[6]); });
+  const students = sheetRows_(SHEETS.STUDENTS, 8).filter(function (r) { return cleanVal(r[0]) && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(r[7])); })
+    .map(function (r) { const k = cleanVal(r[0]).replace(/^0+/, ''); return { studentId: cleanVal(r[0]), fullName: cleanVal(r[1]), grade: cleanVal(r[3]), ackAt: acked[k] || '' }; });
+  return { success: true, policy: { id: p.id, title: p.title, version: p.version }, total: students.length, acknowledged: students.filter(function (s) { return s.ackAt; }).length, students: students };
 }

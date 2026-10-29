@@ -1921,6 +1921,7 @@ window.k8RegBirthChange = function (v) {
   const HEAD = {
     'admin-tab-subadmins': ['อาจารย์ & ผู้บริหาร', 'เพิ่มบัญชี กำหนดสิทธิ์ และรายวิชาที่รับผิดชอบ'],
     'admin-tab-prayers-monitor': ['ละหมาด', 'ติดตามการเช็คชื่อละหมาด 5 เวลา รายวันและรายบุคคล'],
+    'admin-tab-notify': ['แจ้งเตือน & ข้อตกลง', 'ส่งแจ้งเตือนถึงทุกคน รายชั้นปี หรือรายบุคคล และติดตามการยินยอมกฎระเบียบหอพัก'],
     'admin-tab-docs': ['เอกสารประกอบการเรียน', 'เชื่อมโฟลเดอร์ Google Drive ของ ม.1–ม.6 ให้นักเรียนเปิดดูในแอป'],
     'admin-tab-term': ['ภาคเรียน & ปีการศึกษา', 'เลือกว่าตอนนี้เป็นภาคเรียนไหน ปีการศึกษาอะไร ทั้งระบบจะใช้ค่านี้'],
     'admin-tab-behavior': ['คะแนนพฤติกรรม', 'นักเรียนเริ่มที่ 100 คะแนนทุกภาคเรียน · ผู้ตรวจการหัก/เพิ่มคะแนนตามหัวข้อที่ตั้งไว้'],
@@ -2833,7 +2834,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '10.7';
+  const APP_VERSION = '10.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -2872,7 +2873,7 @@ window.k8RegBirthChange = function (v) {
     if (!r || !r.dataVersion) return;
     const changed = dataVer && r.dataVersion !== dataVer;
     dataVer = r.dataVersion;
-    if (changed && loggedIn()) { try { if (window.k8BehaviorReload) window.k8BehaviorReload(); } catch (e) {} }
+    if (changed && loggedIn()) { try { if (window.k8BehaviorReload) window.k8BehaviorReload(); } catch (e) {} try { if (window.k8NotifReload) window.k8NotifReload(); } catch (e) {} }
     if (changed && loggedIn() && typeof syncAllDataFromCloud === 'function' && Date.now() - lastSyncAt > 20000) {
       lastSyncAt = Date.now();
       Promise.resolve(syncAllDataFromCloud(false)).catch(() => {});
@@ -3374,129 +3375,155 @@ window.k8RegBirthChange = function (v) {
   });
 })();
 
-/* ============ Round 13 · เอกสารประกอบการเรียน (Google Drive ในแอป) ============ */
+/* ============ Round 13 · เอกสารประกอบการเรียน (Google Drive ในแอป) v2 ============ */
 (function () {
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
   const fmtD = (s) => { const d = new Date(String(s || '').slice(0, 10) + 'T00:00:00'); return isNaN(d) ? '' : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); };
   const fmtSize = (n) => !n ? '' : n < 1024 * 1024 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1024 / 1024).toFixed(1) + ' MB';
+  // เรียก API แบบไม่ให้ตัวดักข้อผิดพลาดกลางแสดงแจ้งเตือนซ้ำ (หน้าเอกสารแสดงข้อความเอง)
   const api = (a, p) => gasApiCall(a, p || {}, 30000);
-  const D = { grade: '', folderId: '', stack: [], data: null, loading: false, error: '', q: '', config: null, file: null };
   const TYPES = [
     [/pdf/, 'PDF', '#b91c1c', '#fee2e2'], [/presentation|powerpoint/, 'สไลด์', '#c2410c', '#ffedd5'], [/spreadsheet|excel|csv/, 'ตาราง', '#15803d', '#dcfce7'],
     [/document|word|text/, 'เอกสาร', '#1d4ed8', '#dbeafe'], [/image/, 'รูปภาพ', '#7c3aed', '#ede9fe'], [/video/, 'วิดีโอ', '#be123c', '#ffe4e6'], [/audio/, 'เสียง', '#0e7490', '#cffafe']
   ];
   const typeOf = (m) => TYPES.find((t) => t[0].test(String(m || ''))) || [null, 'ไฟล์', '#475569', '#f1f5f9'];
   const myGrade = () => { try { const g = String((currentStudent && currentStudent.grade) || '').match(/([1-6])/); return g ? g[1] : ''; } catch (e) { return ''; } };
-  const cacheKey = (id) => 'khalifah_docs_' + id;
+  // nav = รายการโฟลเดอร์ที่เปิดซ้อนกัน [{id, name}] (ว่าง = โฟลเดอร์หลักของชั้น)
+  const D = { grade: '', nav: [], view: {}, loading: '', err: {}, q: '', config: null, open: false, timer: null, seq: 0 };
+  const curKey = () => D.nav.length ? D.nav[D.nav.length - 1].id : 'g' + D.grade;
+  const store = (k, v) => { try { localStorage.setItem('khalifah_docs_' + k, JSON.stringify(v)); } catch (e) {} };
+  const restore = (k) => { try { return JSON.parse(localStorage.getItem('khalifah_docs_' + k) || 'null'); } catch (e) { return null; } };
 
-  async function loadConfig() {
-    if (D.config) return D.config;
-    try { D.config = JSON.parse(localStorage.getItem('khalifah_docs_cfg') || 'null'); } catch (e) {}
-    try { const r = await api('getStudyDocsConfig'); if (r && r.success) { D.config = r.folders || {}; try { localStorage.setItem('khalifah_docs_cfg', JSON.stringify(D.config)); } catch (e) {} } } catch (e) {}
+  async function loadConfig(force) {
+    if (D.config && !force) return D.config;
+    if (!D.config) D.config = restore('cfg');
+    try { const r = await api('getStudyDocsConfig'); if (r && r.success) { D.config = r.folders || {}; store('cfg', D.config); } } catch (e) {}
     return D.config || {};
   }
-  async function load(refresh) {
-    const key = D.folderId || ('g' + D.grade);
+  async function fetchFolder(key, quiet) {
     const cfg = D.config || {};
-    if (!D.folderId && !cfg[D.grade]) { D.data = { empty: true, folders: [], files: [] }; D.error = ''; render(); return; }
-    let cached = null; try { cached = JSON.parse(localStorage.getItem(cacheKey(key)) || 'null'); } catch (e) {}
-    if (cached && !refresh) { D.data = cached; render(); }
-    D.loading = true; D.error = ''; if (!cached || refresh) render();
+    if (key.charAt(0) === 'g' && !cfg[key.slice(1)]) { D.view[key] = { empty: true, folders: [], files: [] }; if (key === curKey()) render(); return; }
+    if (!D.view[key]) { const c = restore(key); if (c) D.view[key] = c; }
+    const seq = ++D.seq;
+    if (!quiet) { D.loading = key; render(); }
     try {
-      const r = await api('listStudyDocs', D.folderId ? { folderId: D.folderId, refresh: refresh ? 1 : '' } : { grade: D.grade, refresh: refresh ? 1 : '' });
-      if (!r || !r.success) throw Object.assign(new Error((r && r.message) || 'โหลดเอกสารไม่สำเร็จ'), { code: r && r.code });
-      D.data = r; try { localStorage.setItem(cacheKey(key), JSON.stringify(r)); } catch (e) {}
-    } catch (e) { if (!cached) D.data = null; D.error = e.message || 'โหลดเอกสารไม่สำเร็จ'; D.errorCode = e.code || ''; }
-    D.loading = false; render();
+      const r = await api('listStudyDocs', key.charAt(0) === 'g' ? { grade: key.slice(1), refresh: quiet ? 1 : '' } : { folderId: key, refresh: quiet ? 1 : '' });
+      if (!r || !r.success) throw new Error((r && r.message) || 'โหลดเอกสารไม่สำเร็จ');
+      const before = JSON.stringify(D.view[key] && { f: D.view[key].folders, x: D.view[key].files });
+      D.view[key] = r; store(key, r); delete D.err[key];
+      if (D.loading === key) D.loading = '';
+      // วาดใหม่เฉพาะเมื่อรายการเปลี่ยนจริง เพื่อไม่ให้หน้ากระพริบ
+      if (key === curKey() && (!quiet || before !== JSON.stringify({ f: r.folders, x: r.files }))) render();
+    } catch (e) {
+      if (D.loading === key) D.loading = '';
+      if (!quiet) { D.err[key] = e.message || 'โหลดเอกสารไม่สำเร็จ'; if (key === curKey()) render(); }
+    }
+  }
+  function listHtml() {
+    const key = curKey(); const v = D.view[key]; const cfg = D.config || {};
+    if (!v && D.loading === key) return '<div class="k8-docs-skel">' + '<div></div>'.repeat(5) + '</div>';
+    if (!v && D.err[key]) return '<div class="k8-docs-empty is-err"><b>เปิดโฟลเดอร์ไม่สำเร็จ</b><span>' + esc(D.err[key]) + '</span><button type="button" onclick="k8DocsRefresh()">ลองอีกครั้ง</button>' + (!D.nav.length && cfg[D.grade] ? '<button type="button" class="is-alt" onclick="k8DocsEmbed()">เปิดแบบสำรอง</button>' : '') + '</div>';
+    if (!v) return '<div class="k8-docs-skel">' + '<div></div>'.repeat(5) + '</div>';
+    if (v.empty) return '<div class="k8-docs-empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><b>ยังไม่มีเอกสารสำหรับ ม.' + D.grade + '</b><span>อาจารย์จะเพิ่มเอกสารเร็ว ๆ นี้ · ลองดูชั้นอื่นที่มีเอกสารแล้วได้</span></div>';
+    const q = D.q.trim().toLowerCase();
+    const folders = v.folders.filter((f) => !q || f.name.toLowerCase().includes(q));
+    const files = v.files.filter((f) => !q || f.name.toLowerCase().includes(q));
+    let h = '';
+    if (D.err[key]) h += '<p class="k8-docs-note">แสดงรายการล่าสุดที่จำไว้ · ' + esc(D.err[key]) + '</p>';
+    if (folders.length) h += '<h3 class="k8-docs-h">โฟลเดอร์ (' + folders.length + ')</h3><ul class="k8-docs-folders">' + folders.map((f) => '<li><button type="button" onclick="k8DocsFolder(\'' + js(f.id) + '\',\'' + js(f.name) + '\')"><span class="k8-docs-fic"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><b>' + esc(f.name) + '</b><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></li>').join('') + '</ul>';
+    if (files.length) h += '<h3 class="k8-docs-h">ไฟล์ (' + files.length + ')</h3><ul class="k8-docs-files">' + files.map((f) => { const t = typeOf(f.mime);
+      return '<li><button type="button" onclick="k8DocsFile(\'' + js(f.id) + '\')"><span class="k8-docs-tic" style="color:' + t[2] + ';background:' + t[3] + '">' + t[1] + '</span><span class="k8-docs-fn"><b>' + esc(f.name) + '</b><small>' + [fmtD(f.updated), fmtSize(f.size)].filter(Boolean).join(' · ') + '</small></span></button></li>'; }).join('') + '</ul>';
+    if (!folders.length && !files.length) h += '<div class="k8-docs-empty"><b>' + (q ? 'ไม่พบเอกสารที่ค้นหา' : 'โฟลเดอร์นี้ยังว่าง') + '</b></div>';
+    return h;
   }
   function render() {
-    const body = document.getElementById('k8DocsBody'); if (!body) return;
-    const cfg = D.config || {};
-    document.getElementById('k8DocsSub').textContent = 'ม.' + D.grade + (D.data && D.data.path && D.data.path.length > 1 ? ' · ' + D.data.path[D.data.path.length - 1].name : '');
-    let h = '<div class="k8-docs-grades" role="tablist" aria-label="ระดับชั้น">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" role="tab" aria-selected="' + (D.grade === g && !D.folderId ? 'true' : D.grade === g ? 'true' : 'false') + '" class="' + (cfg[g] ? 'has' : 'none') + '" onclick="k8DocsGrade(\'' + g + '\')">ม.' + g + (g === myGrade() ? '<small>ชั้นของฉัน</small>' : '') + '</button>').join('') + '</div>';
-    const path = (D.data && D.data.path) || [];
-    if (path.length > 1) h += '<nav class="k8-docs-crumb" aria-label="ตำแหน่งโฟลเดอร์">' + path.map((p, i) => i === path.length - 1 ? '<b>' + esc(i === 0 ? 'ม.' + D.grade : p.name) + '</b>' : '<button type="button" onclick="k8DocsCrumb(' + i + ')">' + esc(i === 0 ? 'ม.' + D.grade : p.name) + '</button>').join('<span>›</span>') + '</nav>';
-    if (D.data && !D.data.empty && (D.data.files.length + D.data.folders.length) > 6) h += '<input type="search" class="k8-docs-q" id="k8DocsQ" placeholder="ค้นหาชื่อเอกสาร" value="' + esc(D.q) + '" oninput="k8DocsQ(this)" autocomplete="off">';
-    if (D.loading && !D.data) h += '<div class="k8-docs-skel">' + '<div></div>'.repeat(5) + '</div>';
-    else if (D.data && D.data.empty) h += '<div class="k8-docs-empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><b>ยังไม่มีเอกสารสำหรับ ม.' + D.grade + '</b><span>อาจารย์จะเพิ่มเอกสารเร็ว ๆ นี้ · ลองดูชั้นอื่นที่มีเอกสารแล้วได้</span></div>';
-    else if (D.error && !D.data) h += '<div class="k8-docs-empty is-err"><b>เปิดโฟลเดอร์ไม่สำเร็จ</b><span>' + esc(D.error) + '</span><button type="button" onclick="k8DocsRefresh()">ลองอีกครั้ง</button>' + (cfg[D.grade] && !D.folderId ? '<button type="button" class="is-alt" onclick="k8DocsEmbed()">เปิดแบบสำรอง</button>' : '') + '</div>';
-    else if (D.data) {
-      const q = D.q.trim().toLowerCase();
-      const folders = D.data.folders.filter((f) => !q || f.name.toLowerCase().includes(q));
-      const files = D.data.files.filter((f) => !q || f.name.toLowerCase().includes(q));
-      if (D.error) h += '<p class="k8-docs-note">แสดงรายการที่จำไว้ล่าสุด · ' + esc(D.error) + '</p>';
-      if (folders.length) h += '<h3 class="k8-docs-h">โฟลเดอร์ (' + folders.length + ')</h3><ul class="k8-docs-folders">' + folders.map((f) => '<li><button type="button" onclick="k8DocsFolder(\'' + js(f.id) + '\')"><span class="k8-docs-fic"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><b>' + esc(f.name) + '</b><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></li>').join('') + '</ul>';
-      if (files.length) h += '<h3 class="k8-docs-h">ไฟล์ (' + files.length + ')</h3><ul class="k8-docs-files">' + files.map((f) => { const t = typeOf(f.mime);
-        return '<li><button type="button" onclick="k8DocsFile(\'' + js(f.id) + '\')"><span class="k8-docs-tic" style="color:' + t[2] + ';background:' + t[3] + '">' + t[1] + '</span><span class="k8-docs-fn"><b>' + esc(f.name) + '</b><small>' + [fmtD(f.updated), fmtSize(f.size)].filter(Boolean).join(' · ') + '</small></span></button></li>'; }).join('') + '</ul>';
-      if (!folders.length && !files.length) h += '<div class="k8-docs-empty"><b>' + (q ? 'ไม่พบเอกสารที่ค้นหา' : 'โฟลเดอร์นี้ยังว่าง') + '</b></div>';
-      if (D.loading) h += '<p class="k8-docs-note">กำลังตรวจหาเอกสารใหม่…</p>';
-    }
+    const body = document.getElementById('k8DocsBody'); if (!body || !D.open) return;
+    const cfg = D.config || {}; const key = curKey(); const v = D.view[key];
+    const here = D.nav.length ? D.nav[D.nav.length - 1].name : 'ม.' + D.grade;
+    document.getElementById('k8DocsTitle').textContent = D.nav.length ? here : 'เอกสารประกอบการเรียน';
+    document.getElementById('k8DocsSub').textContent = D.nav.length ? 'ม.' + D.grade + ' › ' + D.nav.map((n) => n.name).join(' › ') : 'ม.' + D.grade + (v && !v.empty ? ' · ' + (v.folders.length + v.files.length) + ' รายการ' : '');
+    let h = '';
+    if (!D.nav.length) h += '<div class="k8-docs-grades" role="tablist" aria-label="ระดับชั้น">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" role="tab" aria-selected="' + (D.grade === g) + '" class="' + (cfg[g] ? 'has' : 'none') + '" onclick="k8DocsGrade(\'' + g + '\')">ม.' + g + (g === myGrade() ? '<small>ชั้นของฉัน</small>' : '') + '</button>').join('') + '</div>';
+    else h += '<button type="button" class="k8-docs-up" onclick="k8DocsBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>ย้อนกลับไป ' + esc(D.nav.length > 1 ? D.nav[D.nav.length - 2].name : 'ม.' + D.grade) + '</button>';
+    if (v && !v.empty && (v.files.length + v.folders.length) > 6) h += '<input type="search" class="k8-docs-q" id="k8DocsQ" placeholder="ค้นหาชื่อเอกสาร" value="' + esc(D.q) + '" oninput="k8DocsQ(this)" autocomplete="off">';
+    h += '<div id="k8DocsList">' + listHtml() + '</div>';
+    if (D.loading === key && v) h += '<p class="k8-docs-note">กำลังตรวจหาเอกสารใหม่…</p>';
+    const keepQ = document.activeElement && document.activeElement.id === 'k8DocsQ';
     body.innerHTML = h;
+    if (keepQ) { const n = document.getElementById('k8DocsQ'); if (n) { n.focus(); try { n.setSelectionRange(n.value.length, n.value.length); } catch (e) {} } }
   }
-  function pushHist(tag) { try { history.pushState({ k8docs: tag }, ''); } catch (e) {} }
+  function startLive() { stopLive(); D.timer = setInterval(() => { if (D.open && !document.hidden && document.getElementById('k8DocsViewer').hidden) fetchFolder(curKey(), true); }, 30000); }
+  function stopLive() { if (D.timer) { clearInterval(D.timer); D.timer = null; } }
+
+  // ประวัติการย้อนกลับ: ทุกครั้งที่เข้าโฟลเดอร์/เปิดไฟล์ จะเพิ่ม 1 ขั้น ปุ่มย้อนกลับของมือถือจึงถอยทีละขั้น
+  const push = (tag) => { try { history.pushState({ k8docs: tag }, ''); } catch (e) {} };
   window.k8DocsOpen = async function (grade) {
     const el = document.getElementById('k8Docs'); if (!el) return;
-    el.hidden = false; document.documentElement.classList.add('k8-docs-open'); pushHist('list');
-    D.q = ''; D.folderId = ''; D.stack = []; D.data = null;
-    await loadConfig();
-    const cfg = D.config || {};
-    D.grade = grade || myGrade() || Object.keys(cfg)[0] || '1';
-    render(); load(false);
+    el.hidden = false; D.open = true; document.documentElement.classList.add('k8-docs-open'); push('root');
+    D.q = ''; D.nav = [];
+    if (!D.config) D.config = restore('cfg');
+    D.grade = grade || myGrade() || Object.keys(D.config || {})[0] || '4';
+    render();
+    const before = JSON.stringify(D.config || {});
+    await loadConfig(true);
+    if (!grade && !(D.config || {})[D.grade] && Object.keys(D.config || {}).length && !myGrade()) D.grade = Object.keys(D.config)[0];
+    if (before !== JSON.stringify(D.config || {})) render();
+    fetchFolder(curKey(), false); startLive();
   };
-  window.k8DocsGrade = function (g) { D.grade = g; D.folderId = ''; D.stack = []; D.q = ''; D.data = null; load(false); };
-  window.k8DocsFolder = function (id) { D.stack.push(D.folderId); D.folderId = id; D.q = ''; D.data = null; pushHist('folder'); load(false); try { document.getElementById('k8DocsBody').scrollTop = 0; } catch (e) {} };
-  window.k8DocsCrumb = function (i) { const path = (D.data && D.data.path) || []; D.folderId = i === 0 ? '' : path[i].id; D.stack = D.stack.slice(0, i); D.data = null; load(false); };
-  window.k8DocsRefresh = function () { if (!document.getElementById('k8DocsViewer').hidden) return; load(true); };
+  window.k8DocsGrade = function (g) { if (D.grade === g) return; D.grade = g; D.q = ''; if (!D.view[curKey()]) { const c = restore(curKey()); if (c) D.view[curKey()] = c; } render(); fetchFolder(curKey(), !!D.view[curKey()]); };
+  window.k8DocsFolder = function (id, name) {
+    D.nav.push({ id, name }); D.q = ''; push('folder');
+    render(); try { document.getElementById('k8DocsBody').scrollTop = 0; } catch (e) {}
+    fetchFolder(id, false);
+  };
+  window.k8DocsRefresh = function () { if (!document.getElementById('k8DocsViewer').hidden) return; delete D.err[curKey()]; fetchFolder(curKey(), false); };
   let qt = null;
-  window.k8DocsQ = function (el) { D.q = el.value; clearTimeout(qt); qt = setTimeout(() => { const pos = el.selectionStart; render(); const n = document.getElementById('k8DocsQ'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };
+  window.k8DocsQ = function (el) { D.q = el.value; clearTimeout(qt); qt = setTimeout(() => { const l = document.getElementById('k8DocsList'); if (l) l.innerHTML = listHtml(); }, 120); };
   function openViewer(src, name, sub, dl) {
     const v = document.getElementById('k8DocsViewer'), ld = document.getElementById('k8DocsFrameLoading');
-    // สร้าง iframe ใหม่ทุกครั้ง เพื่อไม่ให้เพิ่มประวัติการย้อนกลับของเบราว์เซอร์
     const old = document.getElementById('k8DocsFrame'); const f = document.createElement('iframe');
     f.id = 'k8DocsFrame'; f.title = 'ตัวอย่างเอกสาร'; f.setAttribute('allow', 'autoplay; fullscreen'); f.setAttribute('referrerpolicy', 'no-referrer');
     if (old) old.replaceWith(f);
     document.getElementById('k8DocsFileName').textContent = name; document.getElementById('k8DocsFileSub').textContent = sub || '';
     const a = document.getElementById('k8DocsDl'); a.hidden = !dl; if (dl) a.href = dl;
-    ld.hidden = false; f.onload = () => { ld.hidden = true; }; f.src = src; v.hidden = false; pushHist('file');
+    ld.hidden = false; f.onload = () => { ld.hidden = true; }; f.src = src; v.hidden = false; push('file');
   }
   window.k8DocsFile = function (id) {
-    const f = ((D.data && D.data.files) || []).find((x) => x.id === id); if (!f) return;
-    const t = typeOf(f.mime);
-    const isGoogle = /google-apps/.test(f.mime || '');
+    const v = D.view[curKey()]; const f = ((v && v.files) || []).find((x) => x.id === id); if (!f) return;
+    const t = typeOf(f.mime); const isGoogle = /google-apps/.test(f.mime || '');
     openViewer('https://drive.google.com/file/d/' + encodeURIComponent(id) + '/preview', f.name, t[1] + (f.size ? ' · ' + fmtSize(f.size) : ''), isGoogle ? '' : 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(id));
   };
   window.k8DocsEmbed = function () { const id = (D.config || {})[D.grade]; if (id) openViewer('https://drive.google.com/embeddedfolderview?id=' + encodeURIComponent(id) + '#list', 'เอกสาร ม.' + D.grade, 'โหมดสำรอง (แสดงจาก Google Drive)', ''); };
   function closeFile() { const v = document.getElementById('k8DocsViewer'); if (!v || v.hidden) return false; v.hidden = true; const f = document.getElementById('k8DocsFrame'); if (f) { const n = document.createElement('iframe'); n.id = 'k8DocsFrame'; n.title = 'ตัวอย่างเอกสาร'; f.replaceWith(n); } return true; }
-  function closeAll() { const el = document.getElementById('k8Docs'); if (el) el.hidden = true; closeFile(); document.documentElement.classList.remove('k8-docs-open'); }
-  window.k8DocsCloseFile = function () { try { history.back(); } catch (e) { closeFile(); } };
-  window.k8DocsBack = function () { try { history.back(); } catch (e) { closeAll(); } };
-  // ปุ่มย้อนกลับของมือถือ: ปิดเอกสาร → ขึ้นโฟลเดอร์ → ปิดหน้าเอกสาร (ไม่ออกจากแอป)
+  function closeAll() { const el = document.getElementById('k8Docs'); if (el) el.hidden = true; D.open = false; stopLive(); closeFile(); document.documentElement.classList.remove('k8-docs-open'); }
+  window.k8DocsCloseFile = function () { history.back(); };
+  window.k8DocsBack = function () { history.back(); };
   window.addEventListener('popstate', () => {
-    const el = document.getElementById('k8Docs'); if (!el || el.hidden) return;
+    if (!D.open) return;
     if (closeFile()) return;
-    if (D.folderId) { D.folderId = D.stack.pop() || ''; D.data = null; load(false); return; }
+    if (D.nav.length) { D.nav.pop(); D.q = ''; render(); const k = curKey(); if (D.view[k]) fetchFolder(k, true); else fetchFolder(k, false); return; }
     closeAll();
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('k8Docs').hidden) window.k8DocsBack(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && D.open) history.back(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && D.open) fetchFolder(curKey(), true); });
 
-  // จำนวนเอกสารบนปุ่มหน้าแรกนักเรียน
   async function paintHomeBtn() {
     const sub = document.getElementById('hfDocsSub'); if (!sub) return;
     const g = myGrade(); if (!g) return;
-    const cfg = await loadConfig();
+    const cfg = await loadConfig(false);
     sub.textContent = cfg[g] ? 'ของชั้น ม.' + g + ' · แตะเพื่อเปิดดูในแอป' : 'ม.' + g + ' ยังไม่มีเอกสาร · ดูชั้นอื่นได้';
   }
   const sv = window.switchView;
-  if (typeof sv === 'function') window.switchView = function (v) { closeAll(); const r = sv.apply(this, arguments); if (v === 'dashboard') paintHomeBtn(); return r; };
+  if (typeof sv === 'function') window.switchView = function (v) { if (D.open) closeAll(); const r = sv.apply(this, arguments); if (v === 'dashboard') paintHomeBtn(); return r; };
 
   // ---------- แอดมิน: ตั้งค่าโฟลเดอร์ ม.1–ม.6 ----------
   async function renderAdmin() {
     const root = document.getElementById('k8DocsAdmin'); if (!root) return;
-    D.config = null; const cfg = await loadConfig();
+    const cfg = await loadConfig(true);
     root.innerHTML = '<section class="k8-bh-card"><h2 class="k8-bh-h">โฟลเดอร์ Google Drive ของแต่ละชั้น</h2>' +
-      '<p class="k8-bh-intro">วางลิงก์โฟลเดอร์ Google Drive ของแต่ละชั้น นักเรียนและอาจารย์จะเปิดดูเอกสารได้ในแอปทันที โดยไม่ต้องออกไปหน้า Drive · เพิ่มหรือลบไฟล์ในโฟลเดอร์นั้นได้ตามปกติ แอปจะแสดงไฟล์ใหม่ภายใน 10 นาที (หรือกดโหลดใหม่)</p>' +
+      '<p class="k8-bh-intro">วางลิงก์โฟลเดอร์ Google Drive ของแต่ละชั้น นักเรียนและอาจารย์จะเปิดดูเอกสารได้ในแอปทันทีโดยไม่ต้องออกไปหน้า Drive · เพิ่มหรือลบไฟล์ในโฟลเดอร์ได้ตามปกติ แอปจะอัปเดตรายการเองภายในไม่ถึง 1 นาทีขณะเปิดดูอยู่</p>' +
       '<div class="k8-docs-cfg">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<label><span>ม.' + g + '</span><input type="url" id="k8DocsCfg' + g + '" placeholder="https://drive.google.com/drive/folders/…" value="' + (cfg[g] ? 'https://drive.google.com/drive/folders/' + esc(cfg[g]) : '') + '" autocomplete="off"><button type="button" class="k8-bh-link" ' + (cfg[g] ? '' : 'disabled') + ' onclick="k8DocsOpen(\'' + g + '\')">เปิดดู</button></label>').join('') + '</div>' +
       '<div class="k8-term-preview">สำคัญ: ตั้งค่าแชร์โฟลเดอร์เป็น <b>"ทุกคนที่มีลิงก์ · ผู้มีสิทธิ์อ่าน"</b> เพื่อให้นักเรียนเปิดดูไฟล์ได้โดยไม่ต้องเข้าสู่ระบบ Google</div>' +
       '<button type="button" class="k8-bh-go k8-term-save" onclick="k8DocsCfgSave()">บันทึกโฟลเดอร์</button></section>';
@@ -3506,7 +3533,8 @@ window.k8RegBirthChange = function (v) {
     try {
       const r = await api('saveStudyDocsFolders', { data: { folders } });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
-      D.config = r.folders; try { localStorage.setItem('khalifah_docs_cfg', JSON.stringify(r.folders)); Object.keys(localStorage).filter((k) => k.indexOf('khalifah_docs_g') === 0).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+      D.config = r.folders; D.view = {}; store('cfg', r.folders);
+      try { Object.keys(localStorage).filter((k) => k.indexOf('khalifah_docs_g') === 0).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
       showToast(r.message, 'success'); renderAdmin();
     } catch (e) { showToast(e.message, 'error'); }
   };
@@ -3515,4 +3543,246 @@ window.k8RegBirthChange = function (v) {
     window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'docs') renderAdmin(); return r; };
   }
   if (document.readyState === 'complete') setTimeout(paintHomeBtn, 800); else window.addEventListener('load', () => setTimeout(paintHomeBtn, 800));
+})();
+
+/* ============ Round 14 · แจ้งเตือน (กระดิ่ง) + ข้อตกลงหอพัก ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const norm = (id) => String(id == null ? '' : id).replace(/^0+/, '');
+  const shortG = (g) => String(g || '').replace('มัธยมศึกษาปีที่ ', 'ม.');
+  const api = (a, p) => gasApiCall(a, p || {}, 25000);
+  const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t); };
+  const stu = () => { try { return currentStudent || null; } catch (e) { return null; } };
+  const adm = () => { try { return currentAdmin || null; } catch (e) { return null; } };
+  const isSuper = () => { const a = adm(); return !!a && a.role === 'SuperAdmin'; };
+  const N = { list: [], pending: [], unread: 0, loaded: false, loading: false, pop: null };
+  function ago(s) {
+    const d = new Date(String(s).replace(' ', 'T')); if (isNaN(d)) return s || '';
+    const m = Math.round((Date.now() - d.getTime()) / 60000);
+    if (m < 1) return 'เมื่อสักครู่'; if (m < 60) return m + ' นาทีที่แล้ว'; const h = Math.round(m / 60); if (h < 24) return h + ' ชั่วโมงที่แล้ว';
+    const dd = Math.round(h / 24); if (dd < 7) return dd + ' วันที่แล้ว';
+    const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; return d.getDate() + ' ' + MON[d.getMonth()];
+  }
+  const popped = () => { try { return JSON.parse(localStorage.getItem('k8_notif_popped') || '[]'); } catch (e) { return []; } };
+  const markPopped = (id) => { try { const a = popped(); if (a.indexOf(id) === -1) { a.push(id); localStorage.setItem('k8_notif_popped', JSON.stringify(a.slice(-200))); } } catch (e) {} };
+
+  // ---------- วางกระดิ่งในส่วนหัวของแต่ละหน้า ----------
+  function placeBell() {
+    const bell = document.getElementById('k8Bell'); if (!bell) return;
+    const s = stu(), a = adm();
+    if (!(s || (a && !isSuper()))) { bell.hidden = true; return; }
+    let host = null;
+    if (s) {
+      let row = document.getElementById('k8HomeTop');
+      const hf = document.getElementById('homeF');
+      if (!row && hf) { row = document.createElement('div'); row.id = 'k8HomeTop'; row.className = 'k8-home-top'; row.innerHTML = '<div><span class="k8-home-hi">อัสลามุอะลัยกุม</span><b id="k8HomeName"></b></div>'; hf.insertBefore(row, hf.firstChild); }
+      const nm = document.getElementById('k8HomeName'); if (nm) nm.textContent = String(s.fullName || '').replace(/^(นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.|เด็กชาย|เด็กหญิง)\s*/, '').split(/\s+/)[0] || '';
+      host = row;
+    } else {
+      const ins = document.querySelector('#view-inspector.active .k8-insp-head') || document.querySelector('#view-teacher .k8-th-head');
+      host = ins;
+    }
+    if (host && bell.parentElement !== host) { const acct = host.querySelector('.k8-acct'); if (acct) host.insertBefore(bell, acct); else host.appendChild(bell); }
+    bell.hidden = !host;
+  }
+  function paintBadge() {
+    const n = N.unread, el = document.getElementById('k8BellN');
+    if (el) { el.hidden = !n; el.textContent = n > 99 ? '99+' : String(n); }
+    const b = document.getElementById('k8Bell'); if (b) { b.setAttribute('aria-label', 'การแจ้งเตือน' + (n ? ' ยังไม่อ่าน ' + n + ' รายการ' : '')); b.classList.toggle('has-new', !!n); }
+    try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (e) {}
+    const ps = document.getElementById('k8PolicyStatus'), pc = document.getElementById('k8PolicyCard');
+    if (ps && stu()) { const pend = N.pending.length > 0; ps.textContent = pend ? 'ยังไม่ได้ยินยอม · แตะเพื่ออ่านและกดยินยอม' : (N.ackAt ? 'ยินยอมแล้ว · ' + N.ackAt.slice(0, 16) : 'อ่านข้อตกลงได้ทุกเมื่อ'); if (pc) pc.classList.toggle('is-pending', pend); }
+  }
+  async function load(force) {
+    const s = stu(), a = adm();
+    if (!(s || (a && !isSuper())) || N.loading) { placeBell(); return; }
+    if (!force && N.loaded && Date.now() - N.at < 15000) { placeBell(); paintBadge(); return; }
+    N.loading = true;
+    try {
+      const r = await api('getMyNotifications');
+      if (r && r.success) {
+        N.list = r.notifications || []; N.pending = r.pendingPolicies || []; N.unread = r.unread || 0; N.loaded = true; N.at = Date.now();
+        try { localStorage.setItem('k8_notif_cache_' + (s ? 'S' + norm(s.studentId) : 'U' + (a.username || '')), JSON.stringify({ list: N.list, pending: N.pending, unread: N.unread })); } catch (e) {}
+      }
+    } catch (e) {}
+    N.loading = false; placeBell(); paintBadge(); maybePop();
+    if (document.getElementById('k8NotifModal') && document.getElementById('k8NotifModal').classList.contains('open')) renderSheet();
+  }
+  function loadCache() {
+    const s = stu(), a = adm(); if (!(s || a)) return;
+    try { const c = JSON.parse(localStorage.getItem('k8_notif_cache_' + (s ? 'S' + norm(s.studentId) : 'U' + (a.username || ''))) || 'null'); if (c) { N.list = c.list || []; N.pending = c.pending || []; N.unread = c.unread || 0; } } catch (e) {}
+    placeBell(); paintBadge();
+  }
+
+  // ---------- ป๊อปอัปเด้งเมื่อมีแจ้งเตือนใหม่ ----------
+  function maybePop() {
+    if (!document.getElementById('k8Pop').hidden || document.querySelector('.modal-overlay.open') || !document.getElementById('k8Policy').hidden) return;
+    const done = popped();
+    let item = null;
+    if (N.pending.length && done.indexOf('policy:' + N.pending[0].id + ':' + new Date().toDateString()) === -1) item = { kind: 'policy', id: 'policy:' + N.pending[0].id + ':' + new Date().toDateString(), title: N.pending[0].title, body: 'กรุณาอ่านและกดยินยอมข้อตกลงฉบับ ' + (N.pending[0].subtitle || '') + ' แจ้งเตือนนี้จะยังอยู่จนกว่าจะกดยินยอม', tag: 'ต้องอ่านและกดยินยอม' };
+    else { const n = N.list.find((x) => !x.read && done.indexOf(x.id) === -1); if (n) item = { kind: 'notif', id: n.id, nid: n.id, title: n.title, body: n.body, tag: n.priority === 'urgent' ? 'แจ้งเตือนสำคัญ' : 'แจ้งเตือนใหม่', urgent: n.priority === 'urgent' }; }
+    if (!item) return;
+    N.pop = item; markPopped(item.id);
+    document.getElementById('k8PopTag').textContent = item.tag;
+    document.getElementById('k8PopTitle').textContent = item.title;
+    document.getElementById('k8PopBody').textContent = String(item.body || '').slice(0, 220) + (String(item.body || '').length > 220 ? '…' : '');
+    document.getElementById('k8PopGo').textContent = item.kind === 'policy' ? 'อ่านข้อตกลง' : 'เปิดดู';
+    const pop = document.getElementById('k8Pop'); pop.classList.toggle('is-urgent', !!item.urgent || item.kind === 'policy'); pop.hidden = false;
+    try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
+  }
+  window.k8PopClose = function () { document.getElementById('k8Pop').hidden = true; };
+  window.k8PopGo = function () { const it = N.pop; window.k8PopClose(); if (!it) return; if (it.kind === 'policy') window.k8PolicyOpen(); else window.k8NotifOpen(it.nid); };
+
+  // ---------- รายการแจ้งเตือน ----------
+  function renderSheet(focusId) {
+    const body = document.getElementById('k8NotifBody'); if (!body) return;
+    document.getElementById('k8NotifSub').textContent = N.unread ? 'ยังไม่อ่าน ' + N.unread + ' รายการ' : 'อ่านครบแล้ว';
+    let h = '';
+    N.pending.forEach((p) => { h += '<button type="button" class="k8-nt-pin" onclick="k8PolicyOpen(\'' + js(p.id) + '\')"><span class="k8-nt-pin-tag">ต้องอ่านและกดยินยอม · ลบไม่ได้จนกว่าจะยินยอม</span><b>' + esc(p.title) + '</b><small>' + esc(p.subtitle || '') + ' · แตะเพื่ออ่าน</small></button>'; });
+    if (!N.list.length && !N.pending.length) h += '<div class="k8-docs-empty"><b>ยังไม่มีการแจ้งเตือน</b><span>เมื่อโรงเรียนประกาศข่าวสาร จะแสดงที่นี่</span></div>';
+    h += '<ul class="k8-nt-list">' + N.list.map((n) => '<li class="' + (n.read ? '' : 'is-new') + (n.priority === 'urgent' ? ' is-urgent' : '') + (focusId === n.id ? ' is-focus' : '') + '" id="k8nt-' + esc(n.id) + '"><div class="k8-nt-top">' + (n.priority === 'urgent' ? '<span class="k8-nt-tag">สำคัญ</span>' : '') + '<b>' + esc(n.title) + '</b></div>' + (n.body ? '<p>' + esc(n.body).replace(/\n/g, '<br>') + '</p>' : '') + '<div class="k8-nt-meta"><span>' + esc(ago(n.createdAt)) + (n.byName ? ' · ' + esc(n.byName) : '') + '</span><button type="button" onclick="k8NotifHide(\'' + js(n.id) + '\')">ลบ</button></div></li>').join('') + '</ul>';
+    body.innerHTML = h;
+    if (focusId) { const el = document.getElementById('k8nt-' + focusId); if (el) try { el.scrollIntoView({ block: 'center' }); } catch (e) {} }
+  }
+  window.k8NotifOpen = function (focusId) {
+    renderSheet(focusId); openModal('k8NotifModal');
+    const ids = N.list.filter((n) => !n.read).map((n) => n.id);
+    if (ids.length) {
+      N.list.forEach((n) => { n.read = true; }); N.unread = N.pending.length; paintBadge();
+      api('markNotificationRead', { data: { ids } }).catch(() => {});
+      setTimeout(() => renderSheet(), 1600);
+    }
+    load(true);
+  };
+  window.k8NotifHide = function (id) {
+    N.list = N.list.filter((n) => n.id !== id); renderSheet(); paintBadge();
+    api('markNotificationRead', { data: { ids: [id], hide: true } }).catch(() => {});
+  };
+
+  // ---------- อ่านข้อตกลงและกดยินยอม ----------
+  const P = { data: null, ackAt: '', canAgree: false };
+  window.k8PolicyOpen = async function (pid) {
+    closeModal('k8NotifModal');
+    const el = document.getElementById('k8Policy'); el.hidden = false; document.documentElement.classList.add('k8-docs-open');
+    try { history.pushState({ k8policy: 1 }, ''); } catch (e) {}
+    const body = document.getElementById('k8PolicyBody');
+    try { P.data = JSON.parse(localStorage.getItem('k8_policy_cache') || 'null'); } catch (e) {}
+    if (P.data) renderPolicy(); else body.innerHTML = '<div class="k8-docs-skel"><div></div><div></div><div></div></div>';
+    try {
+      const r = await api('getPolicy', { policyId: pid || '' });
+      if (r && r.success) { P.data = r.policy; P.ackAt = r.acknowledgedAt || ''; N.ackAt = P.ackAt; try { localStorage.setItem('k8_policy_cache', JSON.stringify(r.policy)); } catch (e) {} renderPolicy(); paintBadge(); }
+      else if (!P.data) body.innerHTML = '<div class="k8-docs-empty is-err"><b>เปิดข้อตกลงไม่สำเร็จ</b><span>' + esc((r && r.message) || '') + '</span></div>';
+    } catch (e) { if (!P.data) body.innerHTML = '<div class="k8-docs-empty is-err"><b>เปิดข้อตกลงไม่สำเร็จ</b><span>ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่</span></div>'; }
+  };
+  function renderPolicy() {
+    const p = P.data; if (!p) return;
+    const isStu = !!stu();
+    document.getElementById('k8PolicyTitle').textContent = p.title; document.getElementById('k8PolicySub').textContent = p.subtitle;
+    const body = document.getElementById('k8PolicyBody');
+    body.innerHTML = '<section class="k8-pol-head"><h1>' + esc(p.title) + '</h1><p class="k8-pol-sub">' + esc(p.subtitle) + '</p><dl><div><dt>สถานศึกษา/หอพัก</dt><dd>' + esc(p.place) + '</dd></div><div><dt>ประกาศใช้วันที่</dt><dd>' + esc(p.effective) + '</dd></div></dl><p class="k8-pol-purpose"><b>วัตถุประสงค์</b> ' + esc(p.purpose) + '</p></section>' +
+      '<ol class="k8-pol-list">' + p.items.map((it, i) => '<li><h3><span>' + (i + 1) + '</span>' + esc(it.t) + '</h3><ul>' + it.d.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' + (it.m ? '<p class="k8-pol-m"><b>มาตรการ</b> ' + esc(it.m) + '</p>' : '') + (it.r ? '<p class="k8-pol-r"><b>รางวัล/คำชื่นชม</b> ' + esc(it.r) + '</p>' : '') + '</li>').join('') + '</ol>' +
+      (isStu ? (P.ackAt ? '<section class="k8-pol-done"><b>✓ ยินยอมข้อตกลงแล้ว</b><span>เมื่อ ' + esc(P.ackAt) + '</span></section>' :
+        '<section class="k8-pol-agree" id="k8PolAgree"><label class="k8-pol-check"><input type="checkbox" id="k8PolChk" disabled onchange="k8PolicyChk(this)"><span>' + esc(p.consent) + '</span></label><p class="k8-pol-hint" id="k8PolHint">เลื่อนอ่านให้ถึงข้อสุดท้ายก่อน จึงจะกดยินยอมได้</p><button type="button" class="k8-bh-go" id="k8PolBtn" disabled onclick="k8PolicyAgree()">ยินยอมข้อตกลง</button></section>') : '');
+    body.scrollTop = 0;
+    if (isStu && !P.ackAt) {
+      const check = () => { if (body.scrollTop + body.clientHeight >= body.scrollHeight - 80) { const c = document.getElementById('k8PolChk'); if (c && c.disabled) { c.disabled = false; const h = document.getElementById('k8PolHint'); if (h) h.textContent = 'ติ๊กช่องด้านบนแล้วกด "ยินยอมข้อตกลง"'; } } };
+      body.onscroll = check; setTimeout(check, 300);
+    }
+  }
+  window.k8PolicyChk = function (c) { const b = document.getElementById('k8PolBtn'); if (b) b.disabled = !c.checked; };
+  window.k8PolicyAgree = async function () {
+    const b = document.getElementById('k8PolBtn'); if (!b || b.disabled) return;
+    b.disabled = true; b.textContent = 'กำลังบันทึก…';
+    try {
+      const r = await api('acknowledgePolicy', { policyId: P.data.id, version: P.data.version });
+      if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
+      P.ackAt = r.acknowledgedAt; N.ackAt = P.ackAt; N.pending = N.pending.filter((x) => x.id !== P.data.id); N.unread = Math.max(0, N.unread - 1);
+      renderPolicy(); paintBadge(); toast(r.message, 'success');
+      try { document.getElementById('k8PolicyBody').scrollTop = document.getElementById('k8PolicyBody').scrollHeight; } catch (e) {}
+    } catch (e) { b.disabled = false; b.textContent = 'ยินยอมข้อตกลง'; toast(e.message, 'error'); }
+  };
+  function closePolicy() { const el = document.getElementById('k8Policy'); if (!el || el.hidden) return false; el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); return true; }
+  window.k8PolicyClose = function () { try { history.back(); } catch (e) { closePolicy(); } };
+  window.addEventListener('popstate', () => { closePolicy(); });
+
+  // ---------- แอดมิน: ส่งแจ้งเตือน + ติดตามการยินยอม ----------
+  const A = { title: '', body: '', priority: 'normal', audience: 'all', grades: new Set(), people: new Map(), q: '', expires: '', sent: [], summary: null, sending: false, ackGrade: 'ALL', showNot: true };
+  const AUD = [['all', 'นักเรียนทุกคน'], ['grade', 'รายชั้นปี'], ['students', 'รายบุคคล'], ['staff', 'อาจารย์/บุคลากร'], ['everyone', 'ทุกคน (นักเรียน+บุคลากร)']];
+  const audLabel = (n) => n.audience === 'grade' ? 'ชั้น ' + String(n.audienceValue).split(',').map((g) => 'ม.' + g).join(', ') : n.audience === 'students' ? 'นักเรียน ' + String(n.audienceValue).split(',').filter(Boolean).length + ' คน' : (AUD.find((x) => x[0] === n.audience) || [0, n.audience])[1];
+  function allStu() { try { return (allStudents || []).filter((s) => s && s.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))); } catch (e) { return []; } }
+  function renderAdmin() {
+    const root = document.getElementById('k8NotifAdmin'); if (!root) return;
+    const q = A.q.trim().toLowerCase();
+    const found = A.audience === 'students' && q ? allStu().filter((s) => String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))).slice(0, 8) : [];
+    const sum = A.summary;
+    let h = '<section class="k8-bh-card"><h2 class="k8-bh-h">ส่งแจ้งเตือนใหม่</h2>' +
+      '<label class="k8-nf-f"><span>หัวข้อ *</span><input type="text" maxlength="120" id="k8NaTitle" value="' + esc(A.title) + '" placeholder="เช่น งดเรียนวันศุกร์นี้" oninput="k8NaSet(\'title\', this.value, 1)"></label>' +
+      '<label class="k8-nf-f"><span>ข้อความ</span><textarea rows="4" maxlength="2000" id="k8NaBody" placeholder="รายละเอียดที่ต้องการแจ้ง" oninput="k8NaSet(\'body\', this.value, 1)">' + esc(A.body) + '</textarea></label>' +
+      '<div class="k8-nf-f"><span>ความสำคัญ</span><div class="k8h-mini-seg">' + [['normal', 'ทั่วไป'], ['urgent', 'สำคัญ (เด้งเด่นชัด)']].map(([k, l]) => '<button type="button" aria-pressed="' + (A.priority === k) + '" onclick="k8NaSet(\'priority\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>' +
+      '<div class="k8-nf-f"><span>ส่งถึง</span><div class="k8-na-aud">' + AUD.map(([k, l]) => '<button type="button" aria-pressed="' + (A.audience === k) + '" onclick="k8NaSet(\'audience\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>';
+    if (A.audience === 'grade') h += '<div class="k8-na-chips">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" aria-pressed="' + A.grades.has(g) + '" onclick="k8NaGrade(\'' + g + '\')">ม.' + g + ' <small>' + allStu().filter((s) => String(s.grade || '').indexOf(g) !== -1).length + ' คน</small></button>').join('') + '</div>';
+    if (A.audience === 'students') h += '<div class="k8-na-people">' + Array.from(A.people.entries()).map(([id, nm]) => '<span>' + esc(nm) + '<button type="button" aria-label="เอาออก" onclick="k8NaPerson(\'' + js(id) + '\')">✕</button></span>').join('') + '</div><input type="search" class="k8-docs-q" id="k8NaQ" placeholder="พิมพ์ชื่อหรือรหัสนักเรียนเพื่อเพิ่ม" value="' + esc(A.q) + '" oninput="k8NaQ(this)" autocomplete="off">' + (found.length ? '<ul class="k8-na-found">' + found.map((s) => '<li><button type="button" onclick="k8NaPerson(\'' + js(s.studentId) + '\',\'' + js(s.fullName) + '\')"><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(s.studentId) + '</small><span>' + (A.people.has(String(s.studentId)) ? '✓' : '+ เพิ่ม') + '</span></button></li>').join('') + '</ul>' : '');
+    h += '<label class="k8-nf-f"><span>แสดงถึงวันที่ (ไม่บังคับ)</span><input type="date" value="' + esc(A.expires) + '" onchange="k8NaSet(\'expires\', this.value)"></label>' +
+      '<button type="button" class="k8-bh-go k8-term-save" ' + (A.sending ? 'disabled' : '') + ' onclick="k8NaSend()">' + (A.sending ? 'กำลังส่ง…' : 'ส่งแจ้งเตือน') + '</button></section>';
+    h += '<section class="k8-bh-card"><h2 class="k8-bh-h">การยินยอมกฎระเบียบหอพัก</h2>';
+    if (!sum) h += '<p class="k8-bh-intro">กำลังโหลด…</p>';
+    else {
+      const pct = sum.total ? Math.round(sum.acknowledged / sum.total * 100) : 0;
+      const list = sum.students.filter((s) => (A.ackGrade === 'ALL' || s.grade === A.ackGrade) && (A.showNot ? !s.ackAt : !!s.ackAt));
+      h += '<div class="k8-na-prog"><b>' + sum.acknowledged + ' / ' + sum.total + ' คน</b><span>ยินยอมแล้ว ' + pct + '%</span><i><em style="width:' + pct + '%"></em></i></div>' +
+        '<div class="k8-bh-filter"><div class="k8h-mini-seg">' + [[true, 'ยังไม่ยินยอม'], [false, 'ยินยอมแล้ว']].map(([k, l]) => '<button type="button" aria-pressed="' + (A.showNot === k) + '" onclick="k8NaSet(\'showNot\',' + k + ')">' + l + '</button>').join('') + '</div><select onchange="k8NaSet(\'ackGrade\', this.value)">' + ['ALL', 'มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3', 'มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'].map((g) => '<option value="' + g + '"' + (g === A.ackGrade ? ' selected' : '') + '>' + (g === 'ALL' ? 'ทุกชั้น' : shortG(g)) + '</option>').join('') + '</select></div>' +
+        '<ul class="k8-na-acks">' + (list.length ? list.slice(0, 300).map((s) => '<li><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(s.studentId) + (s.ackAt ? ' · ' + esc(s.ackAt.slice(0, 16)) : '') + '</small></li>').join('') : '<li class="k8-bh-empty">' + (A.showNot ? 'ทุกคนยินยอมแล้ว' : 'ยังไม่มีผู้ยินยอม') + '</li>') + '</ul>' +
+        (A.showNot && list.length ? '<button type="button" class="k8-bh-link" onclick="k8NaRemind()">ส่งแจ้งเตือนถึงคนที่ยังไม่ยินยอม (' + list.length + ' คน)</button>' : '');
+    }
+    h += '</section><section class="k8-bh-card"><h2 class="k8-bh-h">แจ้งเตือนที่ส่งแล้ว</h2><ul class="k8-na-sent">' + (A.sent.length ? A.sent.map((n) => '<li><div><b>' + (n.priority === 'urgent' ? '<span class="k8-nt-tag">สำคัญ</span> ' : '') + esc(n.title) + '</b><small>' + esc(audLabel(n)) + ' · ' + esc(ago(n.createdAt)) + (n.expires ? ' · ถึง ' + esc(n.expires) : '') + '</small></div><span class="k8-na-read">' + (n.recipients ? 'อ่าน ' + Math.min(n.reads, n.recipients) + '/' + n.recipients : 'อ่าน ' + n.reads) + '</span><button type="button" class="k8-bh-undo" onclick="k8NaDel(\'' + js(n.id) + '\')">ลบ</button></li>').join('') : '<li class="k8-bh-empty">ยังไม่มีแจ้งเตือนที่ส่ง</li>') + '</ul></section>';
+    root.innerHTML = h;
+  }
+  async function loadAdmin() {
+    renderAdmin();
+    try { const [a, b] = await Promise.all([api('listSentNotifications'), api('getPolicyAckSummary')]); if (a && a.success) A.sent = a.data || []; if (b && b.success) A.summary = b; } catch (e) {}
+    renderAdmin();
+  }
+  window.k8NaSet = function (k, v, quiet) { A[k] = v; if (!quiet) renderAdmin(); };
+  window.k8NaGrade = function (g) { if (A.grades.has(g)) A.grades.delete(g); else A.grades.add(g); renderAdmin(); };
+  window.k8NaPerson = function (id, nm) { id = String(id); if (A.people.has(id) && !nm) A.people.delete(id); else if (nm) { if (A.people.has(id)) A.people.delete(id); else A.people.set(id, nm); } renderAdmin(); const q = document.getElementById('k8NaQ'); if (q) q.focus(); };
+  let qt = null;
+  window.k8NaQ = function (el) { A.q = el.value; clearTimeout(qt); qt = setTimeout(() => { const pos = el.selectionStart; renderAdmin(); const n = document.getElementById('k8NaQ'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };
+  window.k8NaRemind = function () {
+    const list = A.summary.students.filter((s) => !s.ackAt && (A.ackGrade === 'ALL' || s.grade === A.ackGrade));
+    A.audience = 'students'; A.people = new Map(list.map((s) => [String(s.studentId), s.fullName]));
+    A.title = 'กรุณาอ่านและกดยินยอมกฎระเบียบหอพัก'; A.body = 'เข้าไปที่เมนู "ฉัน" แล้วแตะ "กฎระเบียบหอพักนักเรียนและแนวทางส่งเสริมพฤติกรรม" อ่านให้ครบแล้วกดยินยอมข้อตกลง'; A.priority = 'urgent';
+    renderAdmin(); try { document.getElementById('k8NaTitle').scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+  };
+  window.k8NaSend = async function () {
+    const title = A.title.trim(); if (!title) { toast('กรุณาใส่หัวข้อแจ้งเตือน', 'warning'); document.getElementById('k8NaTitle').focus(); return; }
+    const values = A.audience === 'grade' ? Array.from(A.grades) : A.audience === 'students' ? Array.from(A.people.keys()) : [];
+    if (A.audience === 'grade' && !values.length) { toast('เลือกชั้นปีอย่างน้อย 1 ชั้น', 'warning'); return; }
+    if (A.audience === 'students' && !values.length) { toast('เพิ่มนักเรียนอย่างน้อย 1 คน', 'warning'); return; }
+    A.sending = true; renderAdmin();
+    try {
+      const r = await api('sendNotification', { data: { title, body: A.body, priority: A.priority, audience: A.audience, values, expires: A.expires } });
+      if (!r || !r.success) throw new Error((r && r.message) || 'ส่งไม่สำเร็จ');
+      toast('ส่งแจ้งเตือนแล้ว', 'success'); A.title = ''; A.body = ''; A.people = new Map(); A.q = ''; A.expires = '';
+      await loadAdmin();
+    } catch (e) { toast(e.message, 'error'); }
+    A.sending = false; renderAdmin();
+  };
+  window.k8NaDel = async function (id) {
+    if (!window.confirm('ลบแจ้งเตือนนี้? ผู้รับจะไม่เห็นอีก')) return;
+    try { const r = await api('deleteNotification', { data: { id } }); if (!r || !r.success) throw new Error((r && r.message) || 'ลบไม่สำเร็จ'); A.sent = A.sent.filter((n) => n.id !== id); renderAdmin(); toast(r.message, 'success'); } catch (e) { toast(e.message, 'error'); }
+  };
+  if (typeof window.switchAdminTab === 'function') {
+    const sat = window.switchAdminTab;
+    window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'notify') loadAdmin(); return r; };
+  }
+
+  // ---------- ผูกกับวงจรของแอป ----------
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function () { const r = sv.apply(this, arguments); setTimeout(() => { placeBell(); load(false); }, 0); return r; };
+  window.k8NotifReload = function () { load(true); };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
+  function boot() { loadCache(); load(true); }
+  if (document.readyState === 'complete') setTimeout(boot, 200); else window.addEventListener('load', () => setTimeout(boot, 200));
+  setInterval(() => { if (!document.hidden) load(true); }, 120000);
 })();

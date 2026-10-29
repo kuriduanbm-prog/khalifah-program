@@ -57,8 +57,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=10.7">
-  <link rel="stylesheet" href="ui-v8.css?v=10.7">
+  <link rel="stylesheet" href="style.css?v=10.8">
+  <link rel="stylesheet" href="ui-v8.css?v=10.8">
 </head>
 <body class="auth-locked">
   <script>
@@ -1482,6 +1482,11 @@
             <div><dt>อีเมล</dt><dd id="k8ProfEmail">-</dd></div>
           </dl>
         </section>
+        <button type="button" class="k8-policy-card" id="k8PolicyCard" onclick="k8PolicyOpen()">
+          <span class="k8-policy-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"/></svg></span>
+          <span class="k8-policy-txt"><b>กฎระเบียบหอพักนักเรียนและแนวทางส่งเสริมพฤติกรรม</b><span id="k8PolicyStatus">อ่านและกดยินยอมข้อตกลง</span></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
         <section class="k8-box k8-links-box">
           <button type="button" class="k8-pl" onclick="switchView('dashboard')"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="k8-pl-t">แดชบอร์ดของฉัน</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
           <button type="button" class="k8-pl" onclick="k8OpenGrades()"><span class="k8-pl-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5"/></svg></span><span class="k8-pl-t">ผลการเรียน</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -2382,6 +2387,9 @@
           <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
             <i class="fa-solid fa-person-praying" aria-hidden="true"></i> ละหมาด
           </button>
+          <button class="admin-tab-btn" id="btnAdminTabNotif" onclick="switchAdminTab('notify', this)">
+            <i class="fa-solid fa-bell" aria-hidden="true"></i> แจ้งเตือน &amp; ข้อตกลง
+          </button>
           <button class="admin-tab-btn" id="btnAdminTabBehavior" onclick="switchAdminTab('behavior', this)">
             <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> คะแนนพฤติกรรม
           </button>
@@ -3133,6 +3141,11 @@
             </table>
           </div>
         </div>
+      </div>
+
+      <!-- Admin Tab: Notifications -->
+      <div id="admin-tab-notify" class="admin-content-tab" style="display: none;">
+        <div class="k8-term" id="k8NotifAdmin"></div>
       </div>
 
       <!-- Admin Tab: Study documents -->
@@ -4312,7 +4325,7 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="loginStudentId">รหัสนักเรียน</label>
-              <input type="text" class="form-control" id="loginStudentId" placeholder="เช่น 00125" onkeypress="if(event.key === 'Enter') handleStudentLogin()">
+              <input type="password" inputmode="numeric" autocomplete="current-password" class="form-control" id="loginStudentId" placeholder="เช่น 00125" onkeypress="if(event.key === 'Enter') handleStudentLogin()">
               <div class="form-hint" style="color: var(--text-muted); font-size: 0.76rem; margin-top: 0.2rem;">
                 ใช้รหัสนักเรียนที่กรอกไว้ตอนสมัครเป็นรหัสผ่านเข้าสู่ระบบ
               </div>
@@ -4528,10 +4541,10 @@
           <a href="javascript:void(0)" onclick="openOtpVerifyModalPrompt(typeof currentAuthRole!=='undefined'&&currentAuthRole==='teacher'?'teacher':'student')">มีรหัสยืนยัน 6 หลักจากอีเมลแล้ว</a>
         </div>
         <div class="k8-install" id="k8Install" hidden>
-          <div class="k8-install-ico"><img src="assets/icon-192.png" alt="" width="40" height="40"></div>
+          <div class="k8-install-ico"><img src="assets/icon-192.png" alt="" width="32" height="32"></div>
           <div class="k8-install-body">
-            <b>ติดตั้งแอป KHALIFAH บนมือถือ</b>
-            <span id="k8InstallText">เปิดได้จากหน้าจอโฮม เร็วขึ้น ใช้งานเต็มจอ และอยู่ในระบบตลอด</span>
+            <b>ติดตั้งแอปบนมือถือ</b>
+            <span id="k8InstallText">เปิดจากหน้าจอโฮมได้ทันที</span>
             <ol class="k8-install-steps" id="k8InstallSteps" hidden></ol>
           </div>
           <button type="button" class="k8-install-btn" id="k8InstallBtn" onclick="k8InstallNow()">ติดตั้ง</button>
@@ -5617,6 +5630,32 @@
       </form>
     </div>
   </div>
+  <button type="button" class="k8-bell" id="k8Bell" hidden onclick="k8NotifOpen()" aria-label="การแจ้งเตือน">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    <span class="k8-bell-n" id="k8BellN" hidden>0</span>
+  </button>
+  <div class="k8-pop" id="k8Pop" hidden role="alertdialog" aria-labelledby="k8PopTitle">
+    <div class="k8-pop-card">
+      <span class="k8-pop-tag" id="k8PopTag">แจ้งเตือนใหม่</span>
+      <h3 id="k8PopTitle">-</h3>
+      <p id="k8PopBody"></p>
+      <div class="k8-pop-btns"><button type="button" class="is-alt" onclick="k8PopClose()">ไว้ทีหลัง</button><button type="button" id="k8PopGo" onclick="k8PopGo()">เปิดดู</button></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="k8NotifModal" onclick="if(event.target===this)closeModal('k8NotifModal')">
+    <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8NotifTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8NotifTitle">การแจ้งเตือน</h2><span id="k8NotifSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8NotifModal')">✕</button></header>
+      <div class="k8-sheet-body" id="k8NotifBody"></div>
+    </div>
+  </div>
+  <div class="k8-docs k8-policy" id="k8Policy" hidden role="dialog" aria-modal="true" aria-labelledby="k8PolicyTitle">
+    <header class="k8-docs-bar">
+      <button type="button" class="k8-docs-back" onclick="k8PolicyClose()" aria-label="ปิด"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="k8-docs-ttl"><h2 id="k8PolicyTitle">ข้อตกลง</h2><span id="k8PolicySub">-</span></div>
+    </header>
+    <div class="k8-docs-body" id="k8PolicyBody"></div>
+  </div>
+
   <div class="k8-docs" id="k8Docs" hidden role="dialog" aria-modal="true" aria-labelledby="k8DocsTitle">
     <header class="k8-docs-bar">
       <button type="button" class="k8-docs-back" onclick="k8DocsBack()" aria-label="ย้อนกลับ"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -5647,7 +5686,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=10.7"></script>
-  <script defer src="ui-v8.js?v=10.7"></script>
+  <script defer src="app.js?v=10.8"></script>
+  <script defer src="ui-v8.js?v=10.8"></script>
 </body>
 </html>
