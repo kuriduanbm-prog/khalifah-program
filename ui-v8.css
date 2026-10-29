@@ -2144,3 +2144,15 @@ html.k8-docs-open, html.k8-docs-open body { overflow: hidden; }
 .hf-wn-txt { min-width: 0; display: flex; flex-direction: column; }
 .hf-wn-txt b { font-size: 14px; font-weight: 600; color: #9a3412; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hf-wn-txt small { font-size: 12px; color: #c2410c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* modal scroll containment */
+html.k8-modal-open, html.k8-modal-open body { overflow: hidden !important; overscroll-behavior: none; }
+.modal-overlay, .k8-sheet-body, .k8-dr-grid, .k8-docs-body, .k8-pv-scroll { overscroll-behavior: contain; }
+.k8-dr-gh { grid-column: 1 / -1; margin: 8px 2px 0; font-size: 13px; font-weight: 600; color: #be185d; position: sticky; top: -2px; background: #fff; padding: 4px 0; z-index: 1; }
+.k8-dr-gh small { font-weight: 400; color: #94a3b8; font-size: 11px; }
+.k8-dr-cats button small { font-size: 10px; opacity: .7; }
+.k8-dr-grid { max-height: 340px !important; }
+#k8DreamBody > * { flex: none; }
+#k8DreamBody .k8-dr-grid { max-height: none !important; overflow: visible; }
+#k8DreamBody .k8-dr-cats { position: sticky; top: -16px; z-index: 2; background: #fff; padding: 6px 0; margin: 0 -2px; }
+#k8DreamBody .k8-dr-gh { top: 30px; }
+#k8DreamBody .k8-dr-btns { position: sticky; bottom: -16px; background: #fff; padding: 8px 0 4px; z-index: 2; }

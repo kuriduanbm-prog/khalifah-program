@@ -2838,7 +2838,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '11.2';
+  const APP_VERSION = '11.3';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3798,30 +3798,153 @@ window.k8RegBirthChange = function (v) {
 (function () {
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  // [ชื่อ, ไอคอน Font Awesome, หมวด, คำค้นเพิ่มเติม]
+  // [ชื่อ, ไอคอน Font Awesome, หมวด, คำค้นเพิ่มเติม] · จัดเป็นหมวดเพื่อให้เด็กเห็นว่าโลกนี้มีอาชีพหลากหลาย
   const C = [
-    ['แพทย์', 'user-doctor', 'health', 'หมอ doctor ศัลยแพทย์ กุมาร'], ['พยาบาล', 'user-nurse', 'health', 'nurse'], ['ทันตแพทย์', 'tooth', 'health', 'หมอฟัน dentist'],
-    ['เภสัชกร', 'pills', 'health', 'ยา pharmacist'], ['สัตวแพทย์', 'paw', 'health', 'หมอสัตว์ vet'], ['นักกายภาพบำบัด', 'person-walking-with-cane', 'health', 'กายภาพ'],
-    ['นักจิตวิทยา', 'brain', 'health', 'จิตแพทย์ psychologist'], ['นักเทคนิคการแพทย์', 'microscope', 'health', 'แล็บ เทคนิคการแพทย์'], ['นักโภชนาการ', 'bowl-food', 'health', 'โภชนาการ อาหาร'],
-    ['โปรแกรมเมอร์', 'laptop-code', 'tech', 'นักพัฒนา developer coder เขียนโปรแกรม software'], ['นักวิทยาศาสตร์ข้อมูล', 'chart-line', 'tech', 'data scientist ข้อมูล'], ['วิศวกร AI', 'robot', 'tech', 'ai ปัญญาประดิษฐ์ หุ่นยนต์ machine learning'],
-    ['นักความปลอดภัยไซเบอร์', 'shield-halved', 'tech', 'cyber security แฮกเกอร์'], ['นักพัฒนาเกม', 'gamepad', 'tech', 'game developer เกม'], ['วิศวกร', 'helmet-safety', 'tech', 'engineer วิศวะ โยธา ไฟฟ้า เครื่องกล'],
-    ['นักบินอวกาศ', 'user-astronaut', 'tech', 'อวกาศ astronaut'], ['นักวิทยาศาสตร์', 'flask', 'tech', 'scientist เคมี ฟิสิกส์ ชีวะ'], ['นักวิจัย', 'magnifying-glass-chart', 'tech', 'research'],
-    ['ครู', 'chalkboard-user', 'faith', 'อาจารย์ teacher ครูสอน'], ['อุสตาซ / นักวิชาการศาสนา', 'mosque', 'faith', 'อุสตาซ อุสตาซะห์ บาบอ โต๊ะครู อิหม่าม ศาสนา imam'], ['ฮาฟิซอัลกุรอาน', 'book-quran', 'faith', 'ฮาฟิซ ฮาฟิซะห์ กุรอาน hafiz'],
-    ['นักแปล / ล่าม', 'language', 'faith', 'แปล ล่าม อาหรับ อังกฤษ translator'], ['นักการทูต', 'earth-asia', 'faith', 'ทูต diplomat ต่างประเทศ'], ['ศาสตราจารย์', 'graduation-cap', 'faith', 'อาจารย์มหาวิทยาลัย professor ด็อกเตอร์'],
-    ['ทหาร', 'person-military-rifle', 'safe', 'soldier'], ['ตำรวจ', 'user-shield', 'safe', 'police'], ['นักดับเพลิง', 'fire-extinguisher', 'safe', 'ดับเพลิง firefighter'],
-    ['ทนายความ', 'scale-balanced', 'safe', 'lawyer กฎหมาย นิติ'], ['ผู้พิพากษา', 'gavel', 'safe', 'judge ศาล'], ['ข้าราชการ', 'landmark', 'safe', 'รับราชการ ปลัด นายอำเภอ'],
-    ['นักบิน', 'plane', 'safe', 'pilot บิน'], ['พนักงานต้อนรับบนเครื่องบิน', 'plane-departure', 'safe', 'แอร์โฮสเตส สจ๊วต flight attendant'], ['กัปตันเรือ', 'ship', 'safe', 'เรือ กะลาสี'],
-    ['นักธุรกิจ', 'briefcase', 'biz', 'business เจ้าของกิจการ ผู้ประกอบการ ceo'], ['แม่ค้าออนไลน์', 'store', 'biz', 'ขายของออนไลน์ ค้าขาย ร้านค้า'], ['นักบัญชี', 'calculator', 'biz', 'บัญชี accountant'],
-    ['นักการตลาด', 'bullhorn', 'biz', 'marketing การตลาด'], ['นักการเงิน / นักลงทุน', 'sack-dollar', 'biz', 'การเงิน ลงทุน ธนาคาร investor'], ['สถาปนิก', 'compass-drafting', 'biz', 'architect ออกแบบบ้าน'],
-    ['ยูทูบเบอร์ / ครีเอเตอร์', 'video', 'art', 'youtuber tiktoker สตรีมเมอร์ อินฟลูเอนเซอร์ creator influencer'], ['นักกีฬาอีสปอร์ต', 'headset', 'art', 'esports เกมเมอร์ gamer'], ['นักออกแบบกราฟิก', 'pen-ruler', 'art', 'graphic designer ดีไซเนอร์ ux ui'],
-    ['ศิลปิน / นักวาด', 'palette', 'art', 'artist วาดรูป นักวาดการ์ตูน illustrator'], ['ช่างภาพ', 'camera', 'art', 'photographer ถ่ายรูป'], ['นักดนตรี / นักร้อง', 'music', 'art', 'นักร้อง ดนตรี singer อนาชีด'],
-    ['นักเขียน', 'pen-nib', 'art', 'writer นักเขียนนิยาย'], ['นักข่าว', 'newspaper', 'art', 'journalist ผู้ประกาศข่าว'], ['นักแสดง', 'film', 'art', 'ดารา actor'],
-    ['ดีไซเนอร์แฟชั่น', 'shirt', 'art', 'แฟชั่น fashion'], ['เชฟ', 'kitchen-set', 'art', 'chef ทำอาหาร พ่อครัว'], ['บาริสต้า', 'mug-hot', 'art', 'กาแฟ barista คาเฟ่'],
-    ['นักฟุตบอล', 'futbol', 'sport', 'ฟุตบอล นักบอล football'], ['นักกีฬา', 'medal', 'sport', 'sport athlete'], ['เทรนเนอร์ฟิตเนส', 'dumbbell', 'sport', 'fitness ออกกำลังกาย'],
-    ['เกษตรกร', 'seedling', 'other', 'ทำสวน ทำนา ยางพารา farmer'], ['ช่างยนต์', 'screwdriver-wrench', 'other', 'ช่าง mechanic ซ่อมรถ'], ['นักเดินทาง', 'suitcase-rolling', 'other', 'ท่องเที่ยว ไกด์ travel'],
-    ['ช่างตัดผม', 'scissors', 'other', 'barber ช่างเสริมสวย'], ['นักสังคมสงเคราะห์', 'hand-holding-heart', 'other', 'จิตอาสา ช่วยเหลือ social'], ['คนขับรถ / โลจิสติกส์', 'truck', 'other', 'ขนส่ง logistics']
+    ['แพทย์', 'user-doctor', 'health', 'หมอ doctor ศัลยแพทย์'],
+    ['พยาบาล', 'user-nurse', 'health', 'nurse'],
+    ['ทันตแพทย์', 'tooth', 'health', 'หมอฟัน dentist'],
+    ['เภสัชกร', 'pills', 'health', 'ยา pharmacist'],
+    ['สัตวแพทย์', 'paw', 'health', 'หมอสัตว์ vet'],
+    ['กุมารแพทย์', 'baby', 'health', 'หมอเด็ก'],
+    ['จักษุแพทย์ / นักทัศนมาตร', 'eye', 'health', 'หมอตา แว่นตา'],
+    ['แพทย์ฉุกเฉิน / กู้ชีพ', 'truck-medical', 'health', 'กู้ภัย paramedic ฉุกเฉิน'],
+    ['นักกายภาพบำบัด', 'person-walking-with-cane', 'health', 'กายภาพ'],
+    ['นักจิตวิทยา', 'brain', 'health', 'จิตแพทย์ psychologist'],
+    ['นักเทคนิคการแพทย์', 'microscope', 'health', 'แล็บ'],
+    ['นักโภชนาการ', 'bowl-food', 'health', 'อาหาร'],
+    ['นักรังสีเทคนิค', 'heart-pulse', 'health', 'เอกซเรย์ x-ray'],
+    ['แพทย์แผนไทย', 'leaf', 'health', 'สมุนไพร นวดแผนไทย'],
+    ['นักพันธุศาสตร์', 'dna', 'health', 'ยีน dna'],
+    ['นักบำบัดสปา', 'spa', 'health', 'สปา นวด'],
+    ['นักวิทยาศาสตร์', 'flask', 'sci', 'scientist เคมี ฟิสิกส์ ชีวะ'],
+    ['นักวิจัย', 'magnifying-glass-chart', 'sci', 'research'],
+    ['นักดาราศาสตร์', 'satellite', 'sci', 'ดาว อวกาศ astronomer'],
+    ['นักบินอวกาศ', 'user-astronaut', 'sci', 'อวกาศ astronaut'],
+    ['นักธรณีวิทยา', 'mountain-sun', 'sci', 'หิน แร่ ภูเขาไฟ'],
+    ['นักอุตุนิยมวิทยา', 'cloud-sun-rain', 'sci', 'พยากรณ์อากาศ'],
+    ['นักกีฏวิทยา', 'bugs', 'sci', 'แมลง'],
+    ['นักชีววิทยาทางทะเล', 'fish', 'sci', 'ทะเล ปลา'],
+    ['โปรแกรมเมอร์', 'laptop-code', 'tech', 'นักพัฒนา developer coder เขียนโปรแกรม software'],
+    ['นักพัฒนาแอปมือถือ', 'mobile-screen', 'tech', 'app แอป mobile'],
+    ['นักวิทยาศาสตร์ข้อมูล', 'chart-line', 'tech', 'data scientist ข้อมูล'],
+    ['วิศวกร AI', 'robot', 'tech', 'ai ปัญญาประดิษฐ์ machine learning'],
+    ['นักความปลอดภัยไซเบอร์', 'shield-halved', 'tech', 'cyber security แฮกเกอร์'],
+    ['นักพัฒนาเกม', 'gamepad', 'tech', 'game developer เกม'],
+    ['วิศวกรคลาวด์', 'cloud', 'tech', 'cloud'],
+    ['ผู้ดูแลฐานข้อมูล', 'database', 'tech', 'database'],
+    ['วิศวกรเครือข่าย', 'network-wired', 'tech', 'network'],
+    ['DevOps', 'code-branch', 'tech', 'devops'],
+    ['นักพัฒนา AR/VR', 'vr-cardboard', 'tech', 'vr ar metaverse'],
+    ['ผู้ดูแลระบบ', 'server', 'tech', 'system admin it'],
+    ['วิศวกรโยธา', 'helmet-safety', 'eng', 'engineer วิศวะ โยธา ก่อสร้าง'],
+    ['วิศวกรไฟฟ้า', 'bolt', 'eng', 'ไฟฟ้า electrical'],
+    ['วิศวกรเครื่องกล', 'gears', 'eng', 'เครื่องกล mechanical'],
+    ['วิศวกรคอมพิวเตอร์', 'microchip', 'eng', 'ชิป hardware'],
+    ['วิศวกรการบิน', 'plane', 'eng', 'อากาศยาน aerospace'],
+    ['วิศวกรพลังงานทดแทน', 'solar-panel', 'eng', 'โซลาร์ พลังงาน'],
+    ['สถาปนิก', 'compass-drafting', 'eng', 'architect ออกแบบบ้าน'],
+    ['มัณฑนากร', 'swatchbook', 'eng', 'ออกแบบภายใน interior'],
+    ['ครู', 'chalkboard-user', 'edu', 'อาจารย์ teacher'],
+    ['ครูอนุบาล', 'children', 'edu', 'เด็กเล็ก'],
+    ['ติวเตอร์', 'person-chalkboard', 'edu', 'สอนพิเศษ tutor'],
+    ['ศาสตราจารย์', 'graduation-cap', 'edu', 'อาจารย์มหาวิทยาลัย professor ด็อกเตอร์'],
+    ['บรรณารักษ์', 'book', 'edu', 'ห้องสมุด librarian'],
+    ['นักแปล / ล่าม', 'language', 'edu', 'แปล ล่าม อาหรับ อังกฤษ translator'],
+    ['นักประวัติศาสตร์', 'scroll', 'edu', 'ประวัติศาสตร์'],
+    ['นักการทูต', 'earth-asia', 'edu', 'ทูต diplomat ต่างประเทศ'],
+    ['อุสตาซ / อุสตาซะห์', 'mosque', 'faith', 'อุสตาซ อุสตาซะห์ บาบอ โต๊ะครู อิหม่าม ศาสนา imam'],
+    ['ฮาฟิซอัลกุรอาน', 'book-quran', 'faith', 'ฮาฟิซ ฮาฟิซะห์ กุรอาน hafiz'],
+    ['นักเผยแผ่ศาสนา (ดาอี)', 'hands-praying', 'faith', 'ดะอ์วะห์ ดาอี'],
+    ['ผู้นำทัวร์ฮัจญ์/อุมเราะห์', 'kaaba', 'faith', 'ฮัจญ์ อุมเราะห์ มักกะห์'],
+    ['ทหาร', 'person-military-rifle', 'gov', 'soldier ทหารบก'],
+    ['ทหารอากาศ / นักบินขับไล่', 'jet-fighter', 'gov', 'กองทัพอากาศ'],
+    ['ทหารเรือ', 'anchor', 'gov', 'กองทัพเรือ navy'],
+    ['ตำรวจ', 'user-shield', 'gov', 'police'],
+    ['นักสืบ', 'user-secret', 'gov', 'สืบสวน detective'],
+    ['นักดับเพลิง', 'fire-extinguisher', 'gov', 'ดับเพลิง firefighter'],
+    ['ทนายความ', 'scale-balanced', 'gov', 'lawyer กฎหมาย นิติ'],
+    ['ผู้พิพากษา / อัยการ', 'gavel', 'gov', 'judge ศาล'],
+    ['ข้าราชการ', 'landmark', 'gov', 'รับราชการ ปลัด นายอำเภอ'],
+    ['เจ้าหน้าที่ตรวจคนเข้าเมือง', 'passport', 'gov', 'ตม. ศุลกากร'],
+    ['เจ้าหน้าที่ราชทัณฑ์', 'handcuffs', 'gov', 'เรือนจำ'],
+    ['นักบิน', 'plane-departure', 'gov', 'pilot บิน'],
+    ['กัปตันเรือ', 'ship', 'gov', 'เรือ กะลาสี'],
+    ['นักธุรกิจ', 'briefcase', 'biz', 'business เจ้าของกิจการ ผู้ประกอบการ'],
+    ['ผู้บริหาร / CEO', 'user-tie', 'biz', 'ceo ผู้จัดการ manager'],
+    ['แม่ค้าออนไลน์', 'store', 'biz', 'ขายของออนไลน์ ค้าขาย ร้านค้า'],
+    ['อีคอมเมิร์ซ', 'cart-shopping', 'biz', 'e-commerce ร้านออนไลน์'],
+    ['นักบัญชี', 'calculator', 'biz', 'บัญชี accountant'],
+    ['ผู้สอบบัญชี', 'file-invoice-dollar', 'biz', 'audit'],
+    ['นักการเงิน / นักลงทุน', 'sack-dollar', 'biz', 'การเงิน ลงทุน investor'],
+    ['พนักงานธนาคาร', 'coins', 'biz', 'ธนาคาร bank'],
+    ['นักวิเคราะห์การเงิน', 'chart-pie', 'biz', 'analyst'],
+    ['นักการตลาด', 'bullhorn', 'biz', 'marketing การตลาด'],
+    ['นักขาย / ฝ่ายบุคคล', 'handshake', 'biz', 'sales hr'],
+    ['ผู้จัดการโครงการ', 'clipboard-list', 'biz', 'project manager pm'],
+    ['นักโลจิสติกส์', 'box', 'biz', 'ขนส่ง logistics'],
+    ['นายหน้าอสังหาริมทรัพย์', 'building', 'biz', 'อสังหา บ้าน คอนโด'],
+    ['ยูทูบเบอร์ / ครีเอเตอร์', 'video', 'art', 'youtuber tiktoker สตรีมเมอร์ อินฟลูเอนเซอร์ creator'],
+    ['นักกีฬาอีสปอร์ต', 'headset', 'art', 'esports เกมเมอร์ gamer'],
+    ['นักออกแบบกราฟิก', 'pen-ruler', 'art', 'graphic designer ดีไซเนอร์ ux ui'],
+    ['ศิลปิน / นักวาด', 'palette', 'art', 'artist วาดรูป การ์ตูน illustrator'],
+    ['แอนิเมเตอร์', 'wand-magic-sparkles', 'art', 'animation แอนิเมชัน'],
+    ['นักออกแบบ 3 มิติ', 'cube', 'art', '3d'],
+    ['ช่างภาพ', 'camera', 'art', 'photographer ถ่ายรูป'],
+    ['ตัดต่อวิดีโอ', 'photo-film', 'art', 'editor ตัดต่อ'],
+    ['ผู้กำกับ', 'clapperboard', 'art', 'director ภาพยนตร์'],
+    ['นักแสดง', 'masks-theater', 'art', 'ดารา actor ละคร'],
+    ['นักร้อง / พิธีกร', 'microphone', 'art', 'singer นักร้อง อนาชีด mc'],
+    ['นักดนตรี', 'guitar', 'art', 'ดนตรี musician'],
+    ['มือกลอง', 'drum', 'art', 'กลอง'],
+    ['นักจัดพอดแคสต์', 'podcast', 'art', 'podcast'],
+    ['นักเขียน', 'pen-nib', 'art', 'writer นิยาย'],
+    ['นักข่าว', 'newspaper', 'art', 'journalist ผู้ประกาศข่าว'],
+    ['ดีไซเนอร์แฟชั่น', 'shirt', 'art', 'แฟชั่น fashion'],
+    ['นักออกแบบเครื่องประดับ', 'gem', 'art', 'จิวเวลรี่'],
+    ['เชฟ', 'kitchen-set', 'svc', 'chef ทำอาหาร พ่อครัว'],
+    ['เจ้าของร้านอาหาร', 'utensils', 'svc', 'ร้านอาหาร restaurant'],
+    ['บาริสต้า', 'mug-hot', 'svc', 'กาแฟ barista คาเฟ่'],
+    ['เบเกอร์', 'bread-slice', 'svc', 'ขนมปัง เบเกอรี่'],
+    ['นักทำขนม / เค้ก', 'cake-candles', 'svc', 'ขนม เค้ก'],
+    ['มัคคุเทศก์', 'suitcase-rolling', 'svc', 'ไกด์ ท่องเที่ยว travel'],
+    ['พนักงานโรงแรม', 'bell-concierge', 'svc', 'โรงแรม hotel'],
+    ['ผู้จัดการโรงแรม', 'hotel', 'svc', 'โรงแรม รีสอร์ท'],
+    ['พนักงานต้อนรับบนเครื่องบิน', 'plane', 'svc', 'แอร์โฮสเตส สจ๊วต flight attendant'],
+    ['นักฟุตบอล', 'futbol', 'sport', 'ฟุตบอล นักบอล football'],
+    ['นักบาสเกตบอล', 'basketball', 'sport', 'บาส'],
+    ['นักวอลเลย์บอล', 'volleyball', 'sport', 'วอลเลย์'],
+    ['นักว่ายน้ำ', 'person-swimming', 'sport', 'ว่ายน้ำ'],
+    ['นักวิ่ง', 'person-running', 'sport', 'วิ่ง กรีฑา'],
+    ['นักปั่นจักรยาน', 'person-biking', 'sport', 'จักรยาน'],
+    ['นักเทเบิลเทนนิส', 'table-tennis-paddle-ball', 'sport', 'ปิงปอง'],
+    ['นักหมากรุก', 'chess', 'sport', 'หมากรุก'],
+    ['โค้ช / ผู้ฝึกสอน', 'stopwatch', 'sport', 'โค้ช coach'],
+    ['เทรนเนอร์ฟิตเนส', 'dumbbell', 'sport', 'fitness ออกกำลังกาย'],
+    ['นักกีฬา', 'medal', 'sport', 'sport athlete'],
+    ['ไกด์เดินป่า', 'person-hiking', 'sport', 'เดินป่า'],
+    ['เกษตรกร', 'seedling', 'agri', 'ทำสวน ทำนา ยางพารา farmer'],
+    ['นักเกษตรสมัยใหม่', 'tractor', 'agri', 'smart farm ฟาร์ม'],
+    ['ชาวประมง', 'fish', 'agri', 'ประมง ทะเล'],
+    ['ปศุสัตว์', 'cow', 'agri', 'เลี้ยงวัว ฟาร์ม'],
+    ['นักวิชาการป่าไม้', 'tree', 'agri', 'ป่าไม้'],
+    ['นักสิ่งแวดล้อม', 'recycle', 'agri', 'สิ่งแวดล้อม รีไซเคิล'],
+    ['นักทรัพยากรน้ำ', 'water', 'agri', 'น้ำ'],
+    ['นักปรับปรุงพันธุ์พืช', 'wheat-awn', 'agri', 'ข้าว พันธุ์พืช'],
+    ['ช่างยนต์', 'screwdriver-wrench', 'trade', 'ช่าง mechanic ซ่อมรถ'],
+    ['ช่างไฟฟ้า', 'plug', 'trade', 'ช่างไฟ'],
+    ['ช่างประปา', 'faucet-drip', 'trade', 'ประปา'],
+    ['ช่างไม้', 'hammer', 'trade', 'ไม้ เฟอร์นิเจอร์'],
+    ['ช่างทาสี', 'paint-roller', 'trade', 'ทาสี'],
+    ['ช่างตัดผม', 'scissors', 'trade', 'barber ช่างเสริมสวย'],
+    ['คนขับรถ', 'car', 'trade', 'ขับรถ แท็กซี่'],
+    ['ไรเดอร์', 'motorcycle', 'trade', 'ส่งอาหาร rider'],
+    ['คนขับรถบรรทุก', 'truck', 'trade', 'ขนส่ง'],
+    ['พี่เลี้ยงเด็ก', 'baby-carriage', 'trade', 'เลี้ยงเด็ก'],
+    ['นักสังคมสงเคราะห์', 'hand-holding-heart', 'trade', 'จิตอาสา ช่วยเหลือ social'],
+    ['นักพัฒนาชุมชน', 'people-roof', 'trade', 'ชุมชน'],
+    ['อาสากู้ภัย', 'hand-holding-medical', 'trade', 'กู้ภัย มูลนิธิ']
   ];
-  const CATS = [['all', 'ทั้งหมด'], ['health', 'สุขภาพ'], ['tech', 'วิทย์/เทคโนโลยี'], ['faith', 'การศึกษา/ศาสนา'], ['safe', 'ราชการ/ความปลอดภัย'], ['biz', 'ธุรกิจ'], ['art', 'ครีเอทีฟ/บันเทิง'], ['sport', 'กีฬา'], ['other', 'อื่น ๆ']];
+  const CATS = [['all', 'ทั้งหมด'], ['health', 'สุขภาพ/การแพทย์'], ['sci', 'วิทยาศาสตร์'], ['tech', 'เทคโนโลยี/ดิจิทัล'], ['eng', 'วิศวกรรม/พลังงาน'], ['edu', 'การศึกษา/ภาษา'], ['faith', 'ศาสนา'], ['gov', 'ราชการ/กฎหมาย/ความปลอดภัย'], ['biz', 'ธุรกิจ/การเงิน'], ['art', 'สื่อ/ศิลปะ/บันเทิง'], ['svc', 'อาหาร/ท่องเที่ยว/บริการ'], ['sport', 'กีฬา'], ['agri', 'เกษตร/สิ่งแวดล้อม'], ['trade', 'ช่าง/อาชีพอิสระ/สังคม']];
   const iconHtml = (ic) => '<i class="' + (ic === 'youtube' ? 'fa-brands' : 'fa-solid') + ' fa-' + esc(ic || 'star') + '" aria-hidden="true"></i>';
   function match(text) {
     const t = String(text || '').trim().toLowerCase(); if (!t) return null;
@@ -3844,6 +3967,8 @@ window.k8RegBirthChange = function (v) {
   async function load() {
     if (!sid()) return;
     paint();
+    const c = cacheGet();
+    if (c && c.pending) { try { const r = await gasApiCall('saveMyDream', { data: { dream: c.dream, icon: c.icon, reason: c.reason } }, 20000); if (r && r.success) { S.data = r.dream; try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(r.dream)); } catch (e) {} paint(); return; } } catch (e) {} return; }
     try { const r = await gasApiCall('getMyDream', {}, 20000); if (r && r.success) { S.data = r.dream; try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(r.dream)); } catch (e) {} paint(); } } catch (e) {}
   }
   function renderEditor() {
@@ -3854,10 +3979,16 @@ window.k8RegBirthChange = function (v) {
     if (q && S.cat === 'all') { const hit = list.filter((c) => (c[0] + ' ' + c[3]).toLowerCase().includes(q)); if (hit.length) list = hit.concat(list.filter((c) => hit.indexOf(c) === -1)); }
     body.innerHTML = '<div class="k8-dr-input"><span class="k8-dr-big">' + iconHtml(ic) + '</span><label><span>อาชีพหรือสิ่งที่อยากเป็น</span><input type="text" id="k8DrIn" maxlength="80" placeholder="เช่น แพทย์ โปรแกรมเมอร์ อุสตาซ" value="' + esc(d.dream) + '" oninput="k8DreamType(this)" autocomplete="off"></label></div>' +
       '<p class="k8-dr-hint">' + (d.dream ? (m ? 'ไอคอนจับคู่กับ "' + esc(m[0]) + '" · เลือกไอคอนอื่นจากรายการด้านล่างได้' : 'ไม่พบไอคอนที่ตรง ใช้ดาวแทน · เลือกจากรายการด้านล่างได้') : 'พิมพ์เอง หรือแตะเลือกจากอาชีพยอดนิยมด้านล่าง') + '</p>' +
-      '<div class="k8-dr-cats" role="tablist">' + CATS.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (S.cat === k) + '" onclick="k8DreamCat(\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
-      '<div class="k8-dr-grid">' + list.map((c) => '<button type="button" aria-pressed="' + (d.dream === c[0]) + '" onclick="k8DreamPick(\'' + js(c[0]) + '\',\'' + c[1] + '\')">' + iconHtml(c[1]) + '<span>' + esc(c[0]) + '</span></button>').join('') + '</div>' +
+      '<div class="k8-dr-cats" role="tablist">' + CATS.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (S.cat === k) + '" onclick="k8DreamCat(\'' + k + '\')">' + l + ' <small>' + (k === 'all' ? C.length : C.filter((c) => c[2] === k).length) + '</small></button>').join('') + '</div>' +
+      '<div class="k8-dr-grid" id="k8DrGrid">' + gridHtml(list, d, q) + '</div>' +
       '<label class="k8-nf-f"><span>เหตุผลหรือเป้าหมาย (ไม่บังคับ)</span><textarea id="k8DrWhy" rows="2" maxlength="300" placeholder="เช่น อยากช่วยรักษาคนในชุมชน" oninput="k8DreamWhy(this.value)">' + esc(d.reason) + '</textarea></label>' +
       '<div class="k8-dr-btns">' + ((S.data && S.data.dream) ? '<button type="button" class="is-alt" onclick="k8DreamClear()">ลบความใฝ่ฝัน</button>' : '') + '<button type="button" ' + (S.saving ? 'disabled' : '') + ' onclick="k8DreamSave()">' + (S.saving ? 'กำลังบันทึก…' : 'บันทึก') + '</button></div>';
+  }
+  const card = (c, d) => '<button type="button" aria-pressed="' + (d.dream === c[0]) + '" onclick="k8DreamPick(\'' + js(c[0]) + '\',\'' + c[1] + '\')">' + iconHtml(c[1]) + '<span>' + esc(c[0]) + '</span></button>';
+  // หมวด "ทั้งหมด": แสดงหัวข้อหมวดคั่น เพื่อให้เห็นว่ามีสายงานหลากหลาย
+  function gridHtml(list, d, q) {
+    if (S.cat !== 'all' || q) return list.map((c) => card(c, d)).join('');
+    return CATS.slice(1).map(([k, l]) => { const items = C.filter((c) => c[2] === k); return '<h4 class="k8-dr-gh">' + esc(l) + ' <small>' + items.length + ' อาชีพ</small></h4>' + items.map((c) => card(c, d)).join(''); }).join('');
   }
   window.k8DreamEdit = function () {
     const d = S.data || cacheGet() || {};
@@ -3869,11 +4000,25 @@ window.k8RegBirthChange = function (v) {
   window.k8DreamWhy = function (v) { S.draft.reason = v; };
   window.k8DreamCat = function (k) { const why = document.getElementById('k8DrWhy'); if (why) S.draft.reason = why.value; S.cat = k; renderEditor(); };
   window.k8DreamPick = function (name, ic) { const why = document.getElementById('k8DrWhy'); if (why) S.draft.reason = why.value; S.draft.dream = name; S.draft.icon = ic; renderEditor(); };
+  function saveLocal(d, pending) {
+    S.data = Object.assign({}, d, { updatedAt: new Date().toISOString(), pending: !!pending });
+    try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(S.data)); } catch (e) {}
+  }
   async function save(d) {
     S.saving = true; renderEditor();
     try {
-      const r = await gasApiCall('saveMyDream', { data: d }, 20000);
-      if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
+      let r = null;
+      try { r = await gasApiCall('saveMyDream', { data: d }, 20000); }
+      catch (netErr) { r = { success: false, offline: true }; }
+      if (!r || !r.success) {
+        // ระบบหลังบ้านยังไม่อัปเดต หรือออฟไลน์: เก็บไว้ในเครื่องก่อน แล้วส่งให้อัตโนมัติภายหลัง
+        if (r && (r.offline || /Unknown action/i.test(String(r.error || r.message || '')))) {
+          saveLocal(d, true); paint(); closeModal('k8DreamModal');
+          if (typeof showToast === 'function') showToast('บันทึกในเครื่องแล้ว · จะส่งขึ้นระบบอัตโนมัติเมื่อเชื่อมต่อได้', 'info');
+          S.saving = false; return;
+        }
+        throw new Error((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ');
+      }
       S.data = r.dream; try { localStorage.setItem('k8_dream_' + sid(), JSON.stringify(r.dream)); } catch (e) {}
       paint(); closeModal('k8DreamModal'); if (typeof showToast === 'function') showToast(r.message, 'success');
     } catch (e) { if (typeof showToast === 'function') showToast(e.message, 'error'); }
@@ -4439,4 +4584,14 @@ window.k8RegBirthChange = function (v) {
   ['renderCalendar', 'syncAllDataFromCloud'].forEach((fn) => { const f = window[fn]; if (typeof f === 'function') window[fn] = function () { const r = f.apply(this, arguments); try { Promise.resolve(r).then(() => setTimeout(render, 0)); } catch (e) {} return r; }; });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
   setInterval(() => { if (!document.hidden) render(); }, 60000);
+})();
+
+/* ---- ล็อกการเลื่อนหน้าหลังเมื่อเปิดหน้าต่าง (ไม่ให้พื้นหลังเลื่อนตาม) ---- */
+(function () {
+  function sync() { document.documentElement.classList.toggle('k8-modal-open', !!document.querySelector('.modal-overlay.open')); }
+  ['openModal', 'closeModal'].forEach((fn) => { const f = window[fn]; if (typeof f === 'function') window[fn] = function () { const r = f.apply(this, arguments); setTimeout(sync, 0); return r; }; });
+  if ('MutationObserver' in window) {
+    const start = () => document.querySelectorAll('.modal-overlay').forEach((m) => new MutationObserver(sync).observe(m, { attributes: true, attributeFilter: ['class'] }));
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  }
 })();
