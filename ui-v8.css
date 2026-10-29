@@ -2265,3 +2265,50 @@ button.prayer-status-pill.k8-pe-add:hover { border-color: #0369a1; color: #0369a
 /* v12.3 · หน้าภาพรวมอาจารย์: สลับแท็บแล้วระยะห่างการ์ดยังเท่าเดิม · KPI เหลือการ์ดเดียวเต็มแถว */
 #teacher-tab-overview[style*="display: block"], #teacher-tab-overview[style*="display:block"] { display: flex !important; flex-direction: column; gap: 14px; }
 .k8-th-kpis { grid-template-columns: 1fr !important; }
+
+/* v12.4 · ภาพรวมอาจารย์แบบ 7C */
+#view-teacher #teacher-tab-overview > .k8-th-hero, #view-teacher #teacher-tab-overview > .k8-th-tl { display: flex !important; }
+#view-teacher #teacher-tab-overview > .k8-th-quick { display: grid !important; }
+#view-teacher #teacher-tab-overview > .k8-docs-btn, #view-teacher #teacher-tab-overview > .k8-hq-btn, #view-teacher #teacher-tab-overview > .k8-tt-btn { display: none !important; }
+.k8-th-hero { flex-direction: column; gap: 16px; margin: -16px -16px 0; padding: 20px 16px 22px; background: #5b21b6; color: #fff; border-radius: 0 0 28px 28px; }
+@media (min-width: 993px) { .k8-th-hero { margin: 0; border-radius: 24px; } }
+.k8-th-hero .k8-th-head { padding: 0; }
+.k8-th-hero .k8-th-date { color: #ede9fe; }
+.k8-th-hero .k8-th-head h1 { color: #fff; }
+.k8-th-hero .k8-bell { background: rgba(255,255,255,.16); border-color: transparent; color: #fff; }
+.k8-th-hero .k8-acct summary { background: rgba(255,255,255,.18); color: #fff; }
+.k8-th-hero .k8-th-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
+.k8-th-hero .k8-th-kpi { background: rgba(255,255,255,.14); border: 0; color: #fff; padding: 10px; border-radius: 16px; gap: 2px; }
+.k8-th-hero .k8-th-kpi .k8-th-kpi-v b { font-size: 24px; color: #fff; }
+.k8-th-hero .k8-th-kpi .k8-th-kpi-v small { font-size: 13px; color: #ede9fe; }
+.k8-th-hero .k8-th-kpi .k8-th-kpi-l { font-size: 12px; color: #ede9fe; }
+.k8-th-hero .k8-th-kpi .k8-th-bar { display: none; }
+.k8-th-hero .k8-th-kpi.is-hl { background: #fff; }
+.k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-v b { color: #b45309; }
+.k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-l { color: #92400e; }
+.k8-th-quick { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.k8-th-quick button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; border: 0; background: transparent; font: 500 12px 'IBM Plex Sans Thai', sans-serif; color: #0f172a; cursor: pointer; }
+.k8-th-quick button > span { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+.k8-th-tl { flex-direction: column; gap: 10px; padding: 16px; }
+.k8-th-tl-h { display: flex; justify-content: space-between; align-items: center; }
+.k8-th-tl-h h2 { margin: 0; font-size: 16px; font-weight: 600; color: #0f172a; }
+.k8-th-tl-all { border: 0; background: none; color: #5b21b6; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; min-height: 36px; }
+.k8-th-tl-empty { margin: 0; font-size: 13px; color: #64748b; }
+.k8-th-tl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.k8-th-tl-list li { display: grid; grid-template-columns: 44px 18px minmax(0, 1fr); column-gap: 8px; position: relative; padding-bottom: 14px; }
+.k8-th-tl-list li:last-child { padding-bottom: 0; }
+.k8-th-tl-list li:not(:last-child)::after { content: ''; position: absolute; left: 60px; top: 18px; bottom: 0; width: 2px; background: #e2e8f0; }
+.k8-th-tl-t { font-size: 12px; color: #475569; padding-top: 2px; }
+.k8-th-tl-dot { width: 12px; height: 12px; border-radius: 50%; background: #cbd5e1; margin: 4px auto 0; position: relative; z-index: 1; }
+.k8-th-tl-c { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.k8-th-tl-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.k8-th-tl-c b { font-size: 14px; font-weight: 600; color: #0f172a; }
+.k8-th-tl-c small { font-size: 12px; color: #475569; }
+.k8-th-tl-c em { flex: none; font-style: normal; font-size: 11px; font-weight: 700; color: #fff; background: #5b21b6; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.k8-th-tl-list li.is-done .k8-th-tl-dot { background: #15803d; }
+.k8-th-tl-list li.is-done small { color: #15803d; }
+.k8-th-tl-list li.is-past .k8-th-tl-c b { color: #64748b; }
+.k8-th-tl-list li.is-focus .k8-th-tl-t { color: #5b21b6; font-weight: 700; }
+.k8-th-tl-list li.is-focus .k8-th-tl-dot { width: 14px; height: 14px; background: #fff; border: 3px solid #5b21b6; box-sizing: border-box; margin-top: 3px; }
+.k8-th-tl-list li.is-focus .k8-th-tl-c { padding: 10px 12px; border-radius: 14px; background: #f5f3ff; gap: 4px; }
+.k8-th-tl-go { align-self: flex-start; margin-top: 4px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: #5b21b6; color: #fff; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }

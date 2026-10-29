@@ -2841,7 +2841,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '12.3';
+  const APP_VERSION = '12.4';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5016,6 +5016,7 @@ window.k8RegBirthChange = function (v) {
       if (!T.data) T.data = { success: true, config: { periods: [{ start: '08:30', end: '09:20' }, { start: '09:20', end: '10:10' }, { start: '10:20', end: '11:10' }, { start: '11:10', end: '12:00' }, { start: '13:00', end: '13:50' }, { start: '13:50', end: '14:40' }, { start: '14:50', end: '15:40' }, { start: '15:40', end: '16:30' }], days: [1, 2, 3, 4, 5], showStudents: true, showTeachers: true }, grades: {}, offline: true };
     }
     T.loading = false; paintEntry(); if (T.open) renderView();
+    document.dispatchEvent(new CustomEvent('k8-tt-loaded'));
     if (document.getElementById('k8TtAdmin') && document.getElementById('k8TtAdmin').offsetParent !== null) renderAdmin();
   }
 
@@ -5194,7 +5195,89 @@ window.k8RegBirthChange = function (v) {
   const sv = window.switchView;
   if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'dashboard' || v === 'teacher') { paintEntry(); load(false); } return r; };
   setInterval(paintEntry, 60000);
+  window.k8TtMineToday = function () { return (T.data && !T.data.hidden) ? todayList('', true) : null; };
+  window.k8TtLoad = function () { return load(false); };
   window.addEventListener('beforeunload', (e) => { if (T.dirty) { e.preventDefault(); e.returnValue = ''; } });
   const start = () => setTimeout(() => { if (role()) { paintEntry(); load(false); } }, 2500);
   if (document.readyState === 'complete') start(); else window.addEventListener('load', start);
+})();
+
+/* ============ v12.4 · หน้าภาพรวมอาจารย์แบบ 7C + ไทม์ไลน์คาบสอนวันนี้ ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const readJ = (k, f) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? f : v; } catch (e) { return f; } };
+  const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  const ymd = (d) => d.toLocaleDateString('sv-SE');
+  const I = {
+    check: '<path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
+    tt: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 4v17M3 14h18"/>',
+    doc: '<path d="M4 19.5V5a2 2 0 0 1 2-2h8l6 6v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5zM14 3v6h6"/>',
+    hq: '<path d="M12 7v14M3 18V4h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5v14h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>'
+  };
+  const svg = (k) => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + I[k] + '</svg>';
+
+  function build() {
+    const ov = document.getElementById('teacher-tab-overview'); if (!ov) return false;
+    if (document.getElementById('k8ThHero')) return true;
+    const head = ov.querySelector('.k8-th-head'), kpis = ov.querySelector('.k8-th-kpis'); if (!head || !kpis) return false;
+    const hero = document.createElement('div'); hero.id = 'k8ThHero'; hero.className = 'k8-th-hero';
+    ov.insertBefore(hero, head); hero.appendChild(head); hero.appendChild(kpis);
+    // ตัวเลขสรุป 3 ช่อง: มาเรียนวันนี้ (เดิม) · คาบสอนวันนี้ · เกรดค้าง
+    kpis.insertAdjacentHTML('beforeend',
+      '<button type="button" class="k8-th-kpi" onclick="k8TtOpen()"><span class="k8-th-kpi-v"><b id="k8ThPerN">-</b></span><span class="k8-th-kpi-l">คาบสอนวันนี้</span></button>' +
+      '<button type="button" class="k8-th-kpi is-hl" onclick="switchTeacherTab(\'grades\')"><span class="k8-th-kpi-v"><b id="k8ThGradeN">-</b></span><span class="k8-th-kpi-l">เกรดค้าง</span></button>');
+    const att = kpis.querySelector('.k8-th-kpi'); if (att) { const l = att.querySelector('.k8-th-kpi-l'); if (l) att.appendChild(l); }
+    const quick = document.createElement('nav'); quick.className = 'k8-th-quick'; quick.setAttribute('aria-label', 'ทางลัด');
+    quick.innerHTML = [['check', 'เช็คชื่อ', "switchTeacherTab('attendance')", '#fffbeb', '#b45309'], ['tt', 'ตารางสอน', 'k8TtOpen()', '#eef2ff', '#4338ca'], ['doc', 'เอกสาร', 'k8DocsOpen()', '#ecfeff', '#0e7490'], ['hq', 'หะละเกาะฮฺ', 'k8HqOpen()', '#d1fae5', '#047857']]
+      .map(([k, l, go, bg, ink]) => '<button type="button" onclick="' + go + '"><span style="background:' + bg + ';color:' + ink + '">' + svg(k) + '</span>' + l + '</button>').join('');
+    hero.after(quick);
+    const tl = document.createElement('section'); tl.className = 'hf-card k8-th-tl'; tl.id = 'k8ThTl'; tl.setAttribute('aria-labelledby', 'k8ThTlTitle');
+    quick.after(tl);
+    const todo = ov.querySelector('.k8-todo'); if (todo) { const h = todo.querySelector('h2'); if (h) h.textContent = 'ต้องทำ'; }
+    return true;
+  }
+
+  function doneSubjects() {
+    const today = ymd(new Date());
+    return new Set(readJ('khalifah_attendance_logs', []).filter((r) => r && r.date === today && r.subjectCode).map((r) => String(r.subjectCode)));
+  }
+  function paint() {
+    if (!build()) return;
+    // เกรดค้าง (วิชาที่เลือกในหน้าเกรด)
+    try {
+      const sel = document.getElementById('teacherPortalSubjectSelect'); const sid = sel && sel.value;
+      const st = (typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents.filter((s) => !/ลาออก|สำเร็จ/.test(String(s.status || ''))) : [];
+      let left = 0; if (sid) st.forEach((s) => { const g = s.subjectGrades && s.subjectGrades[sid]; if (!(g !== undefined && g !== null && g !== '' && Number(g) > 0)) left++; });
+      document.getElementById('k8ThGradeN').textContent = sid ? left : '0';
+    } catch (e) {}
+    const list = window.k8TtMineToday ? window.k8TtMineToday() : null;
+    const perN = document.getElementById('k8ThPerN'); if (perN) perN.textContent = list ? list.length : '-';
+    const tl = document.getElementById('k8ThTl'); if (!tl) return;
+    const head = '<div class="k8-th-tl-h"><h2 id="k8ThTlTitle">คาบสอนวันนี้</h2><button type="button" class="k8-th-tl-all" onclick="k8TtOpen()">ทั้งสัปดาห์ ›</button></div>';
+    if (!list) { tl.innerHTML = head + '<p class="k8-th-tl-empty">กำลังโหลดตารางสอน…</p>'; return; }
+    if (!list.length) { tl.innerHTML = head + '<p class="k8-th-tl-empty">วันนี้ไม่มีคาบสอน · ดูตารางทั้งสัปดาห์ได้ที่ปุ่มด้านบน</p>'; return; }
+    const n = (() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
+    const done = doneSubjects();
+    let focus = list.findIndex((x) => n < toMin(x.end)); // คาบที่กำลังสอนหรือถัดไป
+    tl.innerHTML = head + '<ol class="k8-th-tl-list">' + list.map((x, i) => {
+      const checked = x.c.s && done.has(String(x.c.s)); const past = n >= toMin(x.end); const now = toMin(x.start) <= n && n < toMin(x.end);
+      const isFocus = i === focus;
+      const mins = toMin(x.start) - n;
+      const tag = now ? 'กำลังสอน' : (isFocus && mins <= 120 ? 'อีก ' + mins + ' นาที' : '');
+      const meta = isFocus ? 'ห้อง ' + (x.c.r || '-') + ' · ' + x.start + '–' + x.end : (checked ? 'เช็คชื่อแล้ว' + (x.c.r ? ' · ห้อง ' + x.c.r : '') : (x.c.r ? 'ห้อง ' + x.c.r + ' · ' : '') + x.start + '–' + x.end);
+      return '<li class="' + (isFocus ? 'is-focus ' : '') + (checked ? 'is-done ' : '') + (past && !checked && !isFocus ? 'is-past' : '') + '">' +
+        '<span class="k8-th-tl-t">' + esc(x.start) + '</span><span class="k8-th-tl-dot" aria-hidden="true"></span>' +
+        '<span class="k8-th-tl-c"><span class="k8-th-tl-row"><b>' + esc(x.c.sn) + ' · ม.' + esc(x.g) + '</b>' + (tag ? '<em>' + esc(tag) + '</em>' : '') + '</span><small>' + esc(meta) + '</small>' +
+        (isFocus && !checked ? '<button type="button" class="k8-th-tl-go" onclick="switchTeacherTab(\'attendance\')">เช็คชื่อคาบนี้</button>' : '') + '</span></li>';
+    }).join('') + '</ol>';
+  }
+  window.k8ThPaint = paint;
+  const r0 = window.renderTeacherHomeV8;
+  if (typeof r0 === 'function') window.renderTeacherHomeV8 = function () { const r = r0.apply(this, arguments); try { paint(); } catch (e) {} return r; };
+  const stt = window.switchTeacherTab;
+  if (typeof stt === 'function') window.switchTeacherTab = function (t) { const r = stt.apply(this, arguments); if (t === 'overview') { try { paint(); } catch (e) {} } return r; };
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'teacher') { try { paint(); if (window.k8TtLoad) window.k8TtLoad(); } catch (e) {} } return r; };
+  document.addEventListener('k8-tt-loaded', () => { try { paint(); } catch (e) {} });
+  setInterval(() => { const v = document.getElementById('view-teacher'); if (v && v.classList.contains('active')) { try { paint(); } catch (e) {} } }, 60000);
 })();
