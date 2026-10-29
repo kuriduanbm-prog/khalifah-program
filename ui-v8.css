@@ -2502,3 +2502,23 @@ html body .mobile-nav .mobile-nav-item.active, html body .teacher-bottom-nav-bar
 .k8-theme-seg.is-nav button { color: #cbd5e1; }
 .k8-theme-seg.is-nav button[aria-checked="true"] { background: #1e3a5f; color: #ffffff; box-shadow: none; }
 html.k8-xnarrow .k8-theme-seg { grid-template-columns: 1fr; }
+
+/* v13.1 · ตารางสอน: หลายกลุ่มต่อคาบ / เลือกนักเรียนเฉพาะบางคน */
+.k8-tt-grp { display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 16px; background: #f8fafc; }
+.k8-tt-grp-h { display: flex; justify-content: space-between; align-items: center; }
+.k8-tt-grp-h b { font-size: 14px; color: #0f172a; }
+.k8-tt-who { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #0f172a; }
+.k8-tt-who legend { font-size: 13px; color: #475569; margin-bottom: 4px; padding: 0; }
+.k8-tt-who > label { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.k8-tt-who input[type=radio], .k8-tt-stu input { width: 20px; height: 20px; accent-color: #0369a1; flex: none; }
+.k8-tt-stu-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.k8-tt-stu-tools input { flex: 1 1 160px; min-width: 0; height: 40px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0 10px; font: inherit; font-size: 14px; }
+.k8-tt-stu { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 4px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+.k8-tt-stu label { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 8px; border-radius: 10px; cursor: pointer; }
+.k8-tt-stu label:hover { background: #f0f9ff; }
+.k8-tt-stu label[hidden] { display: none; }
+.k8-tt-stu small { color: #64748b; font-size: 12px; }
+.k8-tt-grp-add { min-height: 48px; border: 2px dashed #7dd3fc; border-radius: 14px; background: #fff; color: #0369a1; font: 600 14px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+.k8-tt-grid.is-edit td button em { display: block; margin-top: 2px; font-style: normal; font-size: 10px; font-weight: 700; color: #0369a1; }
+.k8-tt-grid.is-edit td button.is-group { border-color: #7dd3fc; }
+.k8-tt-grp [hidden], #k8TtCellBody [hidden] { display: none !important; }

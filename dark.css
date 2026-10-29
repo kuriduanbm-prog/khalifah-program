@@ -1439,6 +1439,16 @@ html[data-theme="dark"] .k8-theme-seg { background-color: #1a2229 !important; }
 html[data-theme="dark"] .k8-theme-seg button { color: #b6bcc3 !important; }
 html[data-theme="dark"] .k8-theme-seg button[aria-checked="true"] { background-color: #121212 !important; color: #69c8fc !important; }
 html[data-theme="dark"] .k8-theme-seg.is-nav { background-color: rgba(31,31,31,0.11) !important; }
+html[data-theme="dark"] .k8-tt-grp { border: 1px solid #323941 !important; background-color: #181f26 !important; }
+html[data-theme="dark"] .k8-tt-grp-h b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-tt-who { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-tt-who legend { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-tt-stu-tools input { border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-tt-stu { border: 1px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-tt-stu label:hover { background-color: #0e2432 !important; }
+html[data-theme="dark"] .k8-tt-stu small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-tt-grp-add { background-color: #121212 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-tt-grid.is-edit td button em { color: #69c8fc !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

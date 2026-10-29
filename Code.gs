@@ -2775,7 +2775,18 @@ function getTimetable_(session, isStudent, isAdmin) {
   if (isStudent) {
     const g = studentGradeNum_(session.userId).grade;
     if (!cfg.showStudents) return { success: true, hidden: true, config: cfg, grade: g, grades: {} };
-    const one = {}; if (g && grades[g]) one[g] = grades[g];
+    const one = {};
+    if (g && grades[g]) {
+      // นักเรียนเห็นเฉพาะกลุ่มที่ตัวเองเรียน · ไม่ส่งรายชื่อคนอื่นกลับไป
+      const me = String(session.userId).replace(/\D/g, '').replace(/^0+/, '');
+      const cells = {};
+      Object.keys(grades[g].cells || {}).forEach(function (k) {
+        const list = Array.isArray(grades[g].cells[k]) ? grades[g].cells[k] : [grades[g].cells[k]];
+        const mine = list.filter(function (e) { return e && (!e.o || !e.o.length || e.o.indexOf(me) !== -1); });
+        if (mine.length) { const e = Object.assign({}, mine[0]); if (e.o) { e.only = true; delete e.o; } cells[k] = e; }
+      });
+      one[g] = { grade: g, cells: cells, updatedAt: grades[g].updatedAt };
+    }
     return { success: true, config: cfg, grade: g, grades: one };
   }
   if (!isAdmin && !cfg.showTeachers) return { success: true, hidden: true, config: cfg, grades: {} };
@@ -2787,12 +2798,20 @@ function saveTimetable_(data, session) {
   if (!/^[1-6]$/.test(g)) return { success: false, message: 'เลือกชั้นเรียน ม.1–ม.6' };
   const cells = {};
   const src = (data.cells && typeof data.cells === 'object') ? data.cells : {};
+  // แต่ละคาบมีได้หลายกลุ่ม (เช่น วิชาเลือก) · o = รหัสนักเรียนที่เรียนกลุ่มนี้ (ว่าง = ทั้งชั้น)
+  const clean1 = function (c) {
+    c = c || {};
+    const sn = cleanVal(c.subjectName || c.sn).slice(0, 80);
+    if (!sn) return null;
+    const o = (Array.isArray(c.o) ? c.o : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean).slice(0, 300);
+    const e = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
+    if (o.length) e.o = o.filter(function (x, i) { return o.indexOf(x) === i; });
+    return e;
+  };
   Object.keys(src).forEach(function (k) {
     if (!/^[0-6]-([1-9]|1[0-2])$/.test(k)) return;
-    const c = src[k] || {};
-    const sn = cleanVal(c.subjectName || c.sn).slice(0, 80);
-    if (!sn) return;
-    cells[k] = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
+    const list = (Array.isArray(src[k]) ? src[k] : [src[k]]).map(clean1).filter(Boolean).slice(0, 6);
+    if (list.length) cells[k] = list.length === 1 && !list[0].o ? list[0] : list;
   });
   const value = { grade: g, cells: cells, updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'), by: (session && (session.name || session.userId)) || '' };
   const json = JSON.stringify(value);
