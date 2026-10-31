@@ -2843,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '13.8';
+  const APP_VERSION = '13.9';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3085,7 +3085,7 @@ window.k8RegBirthChange = function (v) {
     B.loading = false; render();
   }
 
-  function roots() { return ['k8BhInsp', 'k8BhAdmin'].map((id) => document.getElementById(id)).filter((el) => el && el.offsetParent !== null); }
+  function roots() { return ['k8BhInsp', 'k8BhAdmin', 'k8BhTeach'].map((id) => document.getElementById(id)).filter((el) => el && el.offsetParent !== null); }
   function render() {
     const keep = {}; ['.k8-bh-stu', '.k8-bh-list', '.k8-bh-hist'].forEach((sel) => { const el = document.querySelector(sel); if (el) keep[sel] = el.scrollTop; });
     const wy = window.scrollY;
@@ -3095,10 +3095,10 @@ window.k8RegBirthChange = function (v) {
   }
   function renderInner() {
     roots().forEach((root) => {
-      const admin = root.dataset.mode === 'admin';
-      const tabs = admin ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ'], ['rules', 'ตั้งค่าหัวข้อ']] : null;
+      const admin = root.dataset.mode === 'admin'; const teach = root.dataset.mode === 'teacher';
+      const tabs = admin ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ'], ['rules', 'ตั้งค่าหัวข้อ']] : teach ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ']] : null;
       if (!admin && B.tab === 'rules') B.tab = 'record';
-      let html = admin ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
+      let html = tabs ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
       if (!B.loaded && B.loading) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
       else html += B.tab === 'record' ? recordHtml() : B.tab === 'scores' ? scoresHtml() : B.tab === 'history' ? historyHtml(admin) : rulesHtml();
       root.innerHTML = html;
@@ -3173,7 +3173,7 @@ window.k8RegBirthChange = function (v) {
       CATS.map(([k, l, ink, bg]) => { const rows = B.editRules.map((r, i) => [r, i]).filter(([r]) => r.cat === k);
         return '<div class="k8-bh-rcat"><h3 style="color:' + ink + '">' + svg(k, 18) + ' ' + l + '</h3>' + rows.map(([r, i]) => '<div class="k8-bh-rrow"><input type="text" maxlength="120" value="' + esc(r.title) + '" oninput="k8BhRule(' + i + ',\'title\',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();k8BhRulesSave()}" enterkeyhint="done" aria-label="หัวข้อ"><span class="k8-bh-rpts ' + (k === 'good' ? 'is-plus' : 'is-minus') + '">' + (k === 'good' ? '+' : '−') + '<input type="number" min="1" max="50" value="' + Math.abs(Number(r.points) || 0) + '" oninput="k8BhRule(' + i + ',\'points\',this.value)" aria-label="คะแนน"></span><button type="button" class="k8-bh-rdel" onclick="k8BhRuleDel(' + i + ')" aria-label="ลบหัวข้อ">✕</button></div>').join('') +
           '<button type="button" class="k8-bh-link" onclick="k8BhRuleAdd(\'' + k + '\')">+ เพิ่มหัวข้อ</button></div>'; }).join('') +
-      '<button type="button" class="k8-bh-go" onclick="k8BhRulesSave()">บันทึกหัวข้อทั้งหมด</button></section>' +
+      '</section>' +
       '<div class="k8-bh-rsave" id="k8BhRSave"' + (B.rulesDirty ? '' : ' hidden') + ' role="status"><span><b>ยังไม่ได้บันทึก</b><small>แก้ไขหัวข้อแล้ว กดบันทึกเพื่อใช้งานจริง</small></span><button type="button" onclick="k8BhRulesSave()">บันทึก</button></div>';
   }
 
@@ -3247,7 +3247,7 @@ window.k8RegBirthChange = function (v) {
   window.k8BhRuleDel = function (i) { B.rulesDirty = true; B.editRules.splice(i, 1); render(); };
   window.k8BhRulesSave = async function () {
     const rules = B.editRules.filter((r) => String(r.title || '').trim());
-    const btns = document.querySelectorAll('#k8BhRSave button, .k8-bh-go[onclick="k8BhRulesSave()"]'); btns.forEach((b) => { b.disabled = true; b.dataset.t = b.textContent; b.textContent = 'กำลังบันทึก…'; });
+    const btns = document.querySelectorAll('#k8BhRSave button'); btns.forEach((b) => { b.disabled = true; b.dataset.t = b.textContent; b.textContent = 'กำลังบันทึก…'; });
     try {
       const r = await api('saveBehaviorRules', { data: { rules } });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
@@ -3317,6 +3317,19 @@ window.k8RegBirthChange = function (v) {
     const sat = window.switchAdminTab;
     window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'behavior') { if (B.tab === 'rules') B.editRules = null; render(); load(true); } return r; };
   }
+  // ---------- อาจารย์: เปิดหน้าบันทึกพฤติกรรมแบบเต็มหน้า ----------
+  let teachOpen = false;
+  window.k8BhTeachOpen = function () {
+    const el = document.getElementById('k8BhPage'); if (!el) return;
+    if (B.tab === 'rules') B.tab = 'record';
+    el.hidden = false; teachOpen = true; document.documentElement.classList.add('k8-docs-open');
+    try { history.pushState({ k8bh: 1 }, ''); } catch (e) {}
+    const b = document.getElementById('k8BhPageBody'); if (b) b.scrollTop = 0;
+    render(); load(true);
+  };
+  function closeTeach() { const el = document.getElementById('k8BhPage'); if (el) el.hidden = true; teachOpen = false; if (!document.querySelector('.k8-docs:not([hidden])')) document.documentElement.classList.remove('k8-docs-open'); }
+  window.k8BhTeachBack = function () { history.back(); };
+  window.addEventListener('popstate', (e) => { if (teachOpen && !(e.state && e.state.k8bh)) closeTeach(); });
   function boot() {
     markRole();
     if (isInspector()) { try { window.switchView('inspector'); } catch (e) {} }
@@ -4974,7 +4987,7 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', (e) => {
     if (leaving) return;
     const st = e.state || {};
-    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
+    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt || st.k8bh) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
     if (closeTopModal() || goHome()) { arm(); return; }
     const now = Date.now();
     if (now - lastBack < 2000) { leaving = true; try { history.back(); } catch (e2) {} return; }
@@ -5442,6 +5455,7 @@ window.k8RegBirthChange = function (v) {
   const ymd = (d) => d.toLocaleDateString('sv-SE');
   const I = {
     check: '<path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',
+    bh: '<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
     tt: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 4v17M3 14h18"/>',
     doc: '<path d="M4 19.5V5a2 2 0 0 1 2-2h8l6 6v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5zM14 3v6h6"/>',
     hq: '<path d="M12 7v14M3 18V4h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5v14h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>'
@@ -5460,7 +5474,7 @@ window.k8RegBirthChange = function (v) {
       '<button type="button" class="k8-th-kpi is-hl" onclick="switchTeacherTab(\'grades\')"><span class="k8-th-kpi-v"><b id="k8ThGradeN">-</b></span><span class="k8-th-kpi-l">เกรดค้าง</span></button>');
     const att = kpis.querySelector('.k8-th-kpi'); if (att) { const l = att.querySelector('.k8-th-kpi-l'); if (l) att.appendChild(l); }
     const quick = document.createElement('nav'); quick.className = 'k8-th-quick'; quick.setAttribute('aria-label', 'ทางลัด');
-    quick.innerHTML = [['check', 'เช็คชื่อ', "switchTeacherTab('attendance')", '#fffbeb', '#b45309'], ['tt', 'ตารางสอน', 'k8TtOpen()', '#eef2ff', '#4338ca'], ['doc', 'เอกสาร', 'k8DocsOpen()', '#ecfeff', '#0e7490'], ['hq', 'หะละเกาะฮฺ', 'k8HqOpen()', '#d1fae5', '#047857']]
+    quick.innerHTML = [['check', 'เช็คชื่อ', "switchTeacherTab('attendance')", '#fffbeb', '#b45309'], ['tt', 'ตารางสอน', 'k8TtOpen()', '#eef2ff', '#4338ca'], ['doc', 'เอกสาร', 'k8DocsOpen()', '#ecfeff', '#0e7490'], ['hq', 'หะละเกาะฮฺ', 'k8HqOpen()', '#d1fae5', '#047857'], ['bh', 'พฤติกรรม', 'k8BhTeachOpen()', '#f3e8ff', '#6d28d9']]
       .map(([k, l, go, bg, ink]) => '<button type="button" onclick="' + go + '"><span style="background:' + bg + ';color:' + ink + '">' + svg(k) + '</span>' + l + '</button>').join('');
     hero.after(quick);
     const tl = document.createElement('section'); tl.className = 'hf-card k8-th-tl'; tl.id = 'k8ThTl'; tl.setAttribute('aria-labelledby', 'k8ThTlTitle');

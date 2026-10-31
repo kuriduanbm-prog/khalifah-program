@@ -1174,7 +1174,7 @@ const ACTION_ACCESS = {
   updateProfilePhoto: 'student', prayerLateRequest: 'student', updateStudentGrade: 'student',
   resetMyHasanat: 'student', submitTeacherEvaluation: 'student', getMyEvaluationStatus: 'student', getEvaluationTargets: 'student',
   getTeacherEvaluationSummary: 'staff',
-  // คะแนนพฤติกรรม: ผู้ตรวจการ (และแอดมิน) บันทึก/ยกเลิก · แอดมินตั้งค่าหัวข้อ
+  // คะแนนพฤติกรรม: ผู้ตรวจการ อาจารย์ และแอดมิน บันทึก/ยกเลิก (ยกเลิกได้เฉพาะรายการของตนเอง ยกเว้นแอดมิน) · แอดมินตั้งค่าหัวข้อ
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
   saveBehaviorRules: 'admin',
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
@@ -1266,7 +1266,7 @@ function routeRequest_(action, req, method) {
       if (isInspector && access !== 'inspector' && INSPECTOR_EXTRA_ACTIONS.indexOf(action) === -1) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีผู้ตรวจการไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
-      if ((access === 'staff' && !isStaff) || (access === 'admin' && !isAdmin) || (access === 'owner' && !isOwner) || (access === 'inspector' && !isInspector && !isAdmin)) {
+      if ((access === 'staff' && !isStaff) || (access === 'admin' && !isAdmin) || (access === 'owner' && !isOwner) || (access === 'inspector' && !isInspector && !isStaff)) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
     }

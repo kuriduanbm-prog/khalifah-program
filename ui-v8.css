@@ -2286,7 +2286,7 @@ button.prayer-status-pill.k8-pe-add:hover { border-color: #0369a1; color: #0369a
 .k8-th-hero .k8-th-kpi.is-hl { background: #fff; }
 .k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-v b { color: #b45309; }
 .k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-l { color: #92400e; }
-.k8-th-quick { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.k8-th-quick { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
 .k8-th-quick button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; border: 0; background: transparent; font: 500 12px 'IBM Plex Sans Thai', sans-serif; color: #0f172a; cursor: pointer; }
 .k8-th-quick button > span { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
 .k8-th-tl { flex-direction: column; gap: 10px; padding: 16px; }
@@ -2324,7 +2324,7 @@ html.k8-narrow .k8-th-titles { flex-basis: 100%; order: -1; }
 html.k8-narrow .k8-th-head h1 { white-space: normal; overflow: visible; font-size: 20px; }
 html.k8-narrow .k8-th-hero .k8-th-kpis { grid-template-columns: 1fr !important; }
 html.k8-narrow .k8-th-hero .k8-th-kpi { flex-direction: row !important; align-items: baseline; justify-content: space-between; gap: 8px; }
-html.k8-narrow .k8-th-quick { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; row-gap: 12px; }
+html.k8-narrow .k8-th-quick { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; row-gap: 12px; }
 html.k8-narrow .k8-th-tl-list li { grid-template-columns: 14px minmax(0, 1fr); }
 html.k8-narrow .k8-th-tl-t { grid-column: 2; order: 2; }
 html.k8-narrow .k8-th-tl-dot { grid-row: 1 / span 2; }
@@ -2598,3 +2598,6 @@ html.k8-narrow #k8TtPRows .k8-pw-row .k8-pw-x { justify-self: start; }
 .k8-bh-rsave button { flex: none; min-height: 48px; padding: 0 22px; border: 0; border-radius: 14px; background: #fff; color: #0c4a6e; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 @media (min-width: 993px) { .k8-bh-rsave { bottom: 24px; left: 264px; } }
 .k8-bh-rsave:not([hidden]) ~ * , .k8-bh-card:has(~ .k8-bh-rsave:not([hidden])) { margin-bottom: 96px; }
+.k8-th-quick button > span { width: 48px; height: 48px; }
+.k8-bhp .k8-docs-body { padding-bottom: 40px; }
+.k8-bhp .k8-bh { padding: 0; }

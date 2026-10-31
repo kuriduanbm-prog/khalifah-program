@@ -58,9 +58,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=13.8">
-  <link rel="stylesheet" href="ui-v8.css?v=13.8">
-  <link rel="stylesheet" href="dark.css?v=13.8">
+  <link rel="stylesheet" href="style.css?v=13.9">
+  <link rel="stylesheet" href="ui-v8.css?v=13.9">
+  <link rel="stylesheet" href="dark.css?v=13.9">
 </head>
 <body class="auth-locked">
   <script>
@@ -5701,6 +5701,13 @@
       <div class="k8-pop-btns"><button type="button" class="is-alt" onclick="k8PopClose()">ไว้ทีหลัง</button><button type="button" id="k8PopGo" onclick="k8PopGo()">เปิดดู</button></div>
     </div>
   </div>
+  <div class="k8-docs k8-bhp" id="k8BhPage" hidden role="dialog" aria-modal="true" aria-labelledby="k8BhPageTitle">
+    <header class="k8-docs-bar">
+      <button type="button" class="k8-docs-back" onclick="k8BhTeachBack()" aria-label="ย้อนกลับ"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="k8-docs-ttl"><h2 id="k8BhPageTitle">คะแนนพฤติกรรม</h2><span>บันทึกหัก/เพิ่มคะแนนตามหัวข้อที่แอดมินตั้งไว้</span></div>
+    </header>
+    <div class="k8-docs-body" id="k8BhPageBody"><div class="k8-bh" id="k8BhTeach" data-mode="teacher"></div></div>
+  </div>
   <div class="k8-docs k8-ttp" id="k8TtPage" hidden role="dialog" aria-modal="true" aria-labelledby="k8TtTitle">
     <header class="k8-docs-bar">
       <button type="button" class="k8-docs-back" onclick="k8TtBack()" aria-label="ย้อนกลับ"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -5784,7 +5791,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=13.8"></script>
-  <script defer src="ui-v8.js?v=13.8"></script>
+  <script defer src="app.js?v=13.9"></script>
+  <script defer src="ui-v8.js?v=13.9"></script>
 </body>
 </html>
