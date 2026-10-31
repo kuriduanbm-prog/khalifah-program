@@ -1472,6 +1472,15 @@ html[data-theme="dark"] .k8-acct-photo b { color: #69c8fc !important; }
 html[data-theme="dark"] .k8-acct-photo small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-tt-img { border: 1px solid #264555 !important; background-color: #0e2432 !important; color: #69c8fc !important; }
 html[data-theme="dark"] .k8-bh-rsave button { background-color: #121212 !important; color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-blue { background: linear-gradient(135deg, #0f1e32, #12233a) !important; border-color: #253a54 !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-green { background: linear-gradient(135deg, #132e1b, #153821) !important; border-color: #2b5238 !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-green .k8-kpi-val { color: #79eca4 !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-teal { background: linear-gradient(135deg, #132e28, #173f37) !important; border-color: #2d5a52 !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-teal .k8-kpi-val { color: #76efe6 !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-orange { background: linear-gradient(135deg, #33230f, #3d2b12) !important; border-color: #594227 !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-orange .k8-kpi-val { color: #f7966e !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi .k8-kpi-label { color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi .k8-kpi-sub { color: #b6bcc3 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

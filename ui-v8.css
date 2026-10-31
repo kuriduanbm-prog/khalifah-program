@@ -2625,3 +2625,28 @@ html.k8-narrow .k8-ov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !i
 html.k8-narrow .k8-kpi { padding: 10px; }
 html.k8-narrow .k8-kpi-val { font-size: 22px; }
 html.k8-xnarrow .k8-ov-kpis { grid-template-columns: 1fr !important; }
+
+/* v14.1 · กล่องตัวเลขภาพรวมแอดมินแบบมีสีสัน */
+.k8-ov-kpis .k8-kpi { position: relative; overflow: hidden; border: 1px solid transparent; padding-right: 52px; }
+.k8-ov-kpis .k8-kpi-ico { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; }
+.k8-ov-kpis .k8-kpi.is-blue { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #bfdbfe; }
+.k8-ov-kpis .k8-kpi.is-blue .k8-kpi-ico { background: #2563eb; }
+.k8-ov-kpis .k8-kpi.is-blue .k8-kpi-val { color: #1d4ed8; }
+.k8-ov-kpis .k8-kpi.is-green { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #bbf7d0; }
+.k8-ov-kpis .k8-kpi.is-green .k8-kpi-ico { background: #16a34a; }
+.k8-ov-kpis .k8-kpi.is-green .k8-kpi-val { color: #15803d; }
+.k8-ov-kpis .k8-kpi.is-teal { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); border-color: #99f6e4; }
+.k8-ov-kpis .k8-kpi.is-teal .k8-kpi-ico { background: #0d9488; }
+.k8-ov-kpis .k8-kpi.is-teal .k8-kpi-val { color: #0f766e; }
+.k8-ov-kpis .k8-kpi.is-orange { background: linear-gradient(135deg, #fff7ed, #ffedd5); border-color: #fed7aa; }
+.k8-ov-kpis .k8-kpi.is-orange .k8-kpi-ico { background: #ea580c; }
+.k8-ov-kpis .k8-kpi.is-orange .k8-kpi-val { color: #c2410c; }
+.k8-ov-kpis .k8-kpi .k8-kpi-label { color: #334155; font-weight: 500; }
+.k8-ov-kpis .k8-kpi .k8-kpi-sub { color: #475569; }
+@media (max-width: 600px) {
+  .k8-ov-kpis .k8-kpi { padding-right: 12px; padding-top: 50px; }
+  .k8-ov-kpis .k8-kpi-ico { top: 10px; left: 10px; right: auto; width: 32px; height: 32px; border-radius: 10px; }
+  .k8-ov-kpis .k8-kpi-ico svg { width: 18px; height: 18px; }
+}
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-blue .k8-kpi-val { color: #93c5fd !important; }
+html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-orange .k8-kpi-val { color: #fdba74 !important; }
