@@ -2843,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '13.7';
+  const APP_VERSION = '13.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3171,9 +3171,10 @@ window.k8RegBirthChange = function (v) {
     if (!B.editRules) B.editRules = B.rules.map((r) => Object.assign({}, r));
     return '<section class="k8-bh-card"><p class="k8-bh-intro">ตั้งหัวข้อที่ผู้ตรวจการใช้ และกำหนดว่าแต่ละข้อหักหรือเพิ่มกี่คะแนน (1–50) · หมวด "ทำความดี" เป็นการเพิ่มคะแนน หมวดอื่นเป็นการหักคะแนน</p>' +
       CATS.map(([k, l, ink, bg]) => { const rows = B.editRules.map((r, i) => [r, i]).filter(([r]) => r.cat === k);
-        return '<div class="k8-bh-rcat"><h3 style="color:' + ink + '">' + svg(k, 18) + ' ' + l + '</h3>' + rows.map(([r, i]) => '<div class="k8-bh-rrow"><input type="text" maxlength="120" value="' + esc(r.title) + '" oninput="k8BhRule(' + i + ',\'title\',this.value)" aria-label="หัวข้อ"><span class="k8-bh-rpts ' + (k === 'good' ? 'is-plus' : 'is-minus') + '">' + (k === 'good' ? '+' : '−') + '<input type="number" min="1" max="50" value="' + Math.abs(Number(r.points) || 0) + '" oninput="k8BhRule(' + i + ',\'points\',this.value)" aria-label="คะแนน"></span><button type="button" class="k8-bh-rdel" onclick="k8BhRuleDel(' + i + ')" aria-label="ลบหัวข้อ">✕</button></div>').join('') +
+        return '<div class="k8-bh-rcat"><h3 style="color:' + ink + '">' + svg(k, 18) + ' ' + l + '</h3>' + rows.map(([r, i]) => '<div class="k8-bh-rrow"><input type="text" maxlength="120" value="' + esc(r.title) + '" oninput="k8BhRule(' + i + ',\'title\',this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();k8BhRulesSave()}" enterkeyhint="done" aria-label="หัวข้อ"><span class="k8-bh-rpts ' + (k === 'good' ? 'is-plus' : 'is-minus') + '">' + (k === 'good' ? '+' : '−') + '<input type="number" min="1" max="50" value="' + Math.abs(Number(r.points) || 0) + '" oninput="k8BhRule(' + i + ',\'points\',this.value)" aria-label="คะแนน"></span><button type="button" class="k8-bh-rdel" onclick="k8BhRuleDel(' + i + ')" aria-label="ลบหัวข้อ">✕</button></div>').join('') +
           '<button type="button" class="k8-bh-link" onclick="k8BhRuleAdd(\'' + k + '\')">+ เพิ่มหัวข้อ</button></div>'; }).join('') +
-      '<button type="button" class="k8-bh-go" onclick="k8BhRulesSave()">บันทึกหัวข้อทั้งหมด</button></section>';
+      '<button type="button" class="k8-bh-go" onclick="k8BhRulesSave()">บันทึกหัวข้อทั้งหมด</button></section>' +
+      '<div class="k8-bh-rsave" id="k8BhRSave"' + (B.rulesDirty ? '' : ' hidden') + ' role="status"><span><b>ยังไม่ได้บันทึก</b><small>แก้ไขหัวข้อแล้ว กดบันทึกเพื่อใช้งานจริง</small></span><button type="button" onclick="k8BhRulesSave()">บันทึก</button></div>';
   }
 
   function openStudent(k) {
@@ -3194,7 +3195,7 @@ window.k8RegBirthChange = function (v) {
   }
 
   // ---------- actions ----------
-  window.k8BhTab = function (t) { B.tab = t; if (t !== 'rules') B.editRules = null; render(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (e) {} };
+  window.k8BhTab = function (t) { if (B.tab === 'rules' && t !== 'rules' && B.rulesDirty && !confirm('หัวข้อที่แก้ไว้ยังไม่ได้บันทึก ออกโดยไม่บันทึกใช่ไหม?')) return; B.tab = t; if (t !== 'rules') { B.editRules = null; B.rulesDirty = false; } render(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (e) {} };
   window.k8BhSet = function (k, v) { B[k] = v; if (k === 'cat') B.ruleId = ''; render(); };
   window.k8BhCustom = function (k, v) { B.custom[k] = v; const sum = document.querySelector('.k8-bh-summary'); if (sum) { render(); const el = document.querySelector('.k8-bh-custom ' + (k === 'title' ? 'input[type=text]' : 'input[type=number]')); if (el) { el.focus(); try { const n = el.value.length; el.setSelectionRange && el.type === 'text' && el.setSelectionRange(n, n); } catch (e) {} } } };
   window.k8BhNote = function (v) { B.note = v; };
@@ -3240,16 +3241,18 @@ window.k8RegBirthChange = function (v) {
   };
   window.k8BhOpen = openStudent;
   window.k8BhRecordFor = function (k) { closeModal('k8BhModal'); B.sel = new Set([k]); B.tab = 'record'; render(); try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {} };
-  window.k8BhRule = function (i, k, v) { const r = B.editRules[i]; if (!r) return; if (k === 'points') { const n = Math.max(1, Math.min(50, Math.abs(parseInt(v, 10) || 0))); r.points = r.cat === 'good' ? n : -n; } else r.title = v; };
-  window.k8BhRuleAdd = function (cat) { B.editRules.push({ id: '', cat, title: '', points: cat === 'good' ? 3 : -5 }); render(); const ins = document.querySelectorAll('.k8-bh-rrow input[type=text]'); const last = Array.from(ins).filter((x) => !x.value).pop(); if (last) last.focus(); };
-  window.k8BhRuleDel = function (i) { B.editRules.splice(i, 1); render(); };
+  const rulesDirty = () => { B.rulesDirty = true; const bar = document.getElementById('k8BhRSave'); if (bar) bar.hidden = false; };
+  window.k8BhRule = function (i, k, v) { const r = B.editRules[i]; if (!r) return; rulesDirty(); if (k === 'points') { const n = Math.max(1, Math.min(50, Math.abs(parseInt(v, 10) || 0))); r.points = r.cat === 'good' ? n : -n; } else r.title = v; };
+  window.k8BhRuleAdd = function (cat) { B.rulesDirty = true; B.editRules.push({ id: '', cat, title: '', points: cat === 'good' ? 3 : -5 }); render(); const ins = document.querySelectorAll('.k8-bh-rrow input[type=text]'); const last = Array.from(ins).filter((x) => !x.value).pop(); if (last) last.focus(); };
+  window.k8BhRuleDel = function (i) { B.rulesDirty = true; B.editRules.splice(i, 1); render(); };
   window.k8BhRulesSave = async function () {
     const rules = B.editRules.filter((r) => String(r.title || '').trim());
+    const btns = document.querySelectorAll('#k8BhRSave button, .k8-bh-go[onclick="k8BhRulesSave()"]'); btns.forEach((b) => { b.disabled = true; b.dataset.t = b.textContent; b.textContent = 'กำลังบันทึก…'; });
     try {
       const r = await api('saveBehaviorRules', { data: { rules } });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
-      B.rules = r.rules; B.editRules = null; toast(r.message, 'success'); render();
-    } catch (e) { toast(e.message, 'error'); }
+      B.rules = r.rules; B.editRules = null; B.rulesDirty = false; toast(r.message, 'success'); render();
+    } catch (e) { toast(e.message, 'error'); btns.forEach((b) => { b.disabled = false; b.textContent = b.dataset.t || 'บันทึก'; }); }
   };
 
   // ---------- นักเรียน: กล่องคะแนนพฤติกรรมหน้าแรก ----------
