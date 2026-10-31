@@ -2757,15 +2757,17 @@ function savePrayerWindows_(windows) {
 }
 
 /* ===================== ตารางสอน ===================== */
+// วันละ 5 วิชา = 5 คาบ
+const TT_MAX_PERIODS = 5;
 const TT_DEFAULT_PERIODS = [
-  { start: '08:30', end: '09:20' }, { start: '09:20', end: '10:10' }, { start: '10:20', end: '11:10' }, { start: '11:10', end: '12:00' },
-  { start: '13:00', end: '13:50' }, { start: '13:50', end: '14:40' }, { start: '14:50', end: '15:40' }, { start: '15:40', end: '16:30' }
+  { start: '08:30', end: '09:30' }, { start: '09:40', end: '10:40' }, { start: '10:50', end: '11:50' },
+  { start: '13:00', end: '14:00' }, { start: '14:10', end: '15:10' }
 ];
 function ttConfig_(settings) {
   let c = null; try { c = JSON.parse(settings.TimetableConfig || 'null'); } catch (e) {}
   c = c || {};
   return {
-    periods: Array.isArray(c.periods) && c.periods.length ? c.periods : TT_DEFAULT_PERIODS,
+    periods: (Array.isArray(c.periods) && c.periods.length ? c.periods : TT_DEFAULT_PERIODS).slice(0, TT_MAX_PERIODS),
     days: Array.isArray(c.days) && c.days.length ? c.days : [1, 2, 3, 4, 5],
     showStudents: c.showStudents !== false, showTeachers: c.showTeachers !== false,
     updatedAt: c.updatedAt || ''
@@ -2878,7 +2880,7 @@ function saveTimetableConfig_(data) {
   const cur = ttConfig_((getSettings().data) || {});
   let periods = cur.periods;
   if (Array.isArray(data.periods)) {
-    if (!data.periods.length || data.periods.length > 12) return { success: false, message: 'จำนวนคาบต้องอยู่ระหว่าง 1–12 คาบ' };
+    if (!data.periods.length || data.periods.length > TT_MAX_PERIODS) return { success: false, message: 'จำนวนคาบต้องอยู่ระหว่าง 1–' + TT_MAX_PERIODS + ' คาบ' };
     periods = [];
     for (let i = 0; i < data.periods.length; i++) {
       const p = data.periods[i] || {}; const a = toMin(p.start), b = toMin(p.end);

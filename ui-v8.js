@@ -2843,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '13.5';
+  const APP_VERSION = '13.6';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5001,7 +5001,8 @@ window.k8RegBirthChange = function (v) {
   const me = () => { try { return currentAdmin || {}; } catch (e) { return {}; } };
   const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
   const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
-  const cfg = () => (T.data && T.data.config) || { periods: [], days: [1, 2, 3, 4, 5], showStudents: true, showTeachers: true };
+  const MAXP = 5; // วันละ 5 วิชา
+  const cfg = () => { const c = (T.data && T.data.config) || { periods: [], days: [1, 2, 3, 4, 5], showStudents: true, showTeachers: true }; return (c.periods || []).length > MAXP ? Object.assign({}, c, { periods: c.periods.slice(0, MAXP) }) : c; };
   const extrasOf = () => (T.data && Array.isArray(T.data.extras)) ? T.data.extras : [];
   const xOf = (key) => extrasOf().find((x) => 'x:' + x.id === key) || (T.newX && T.newX.key === key ? T.newX : null);
   const gradeOf = (g) => { if (String(g).indexOf('x:') === 0) return xOf(g) || { cells: {} }; return (T.data && T.data.grades && T.data.grades[g]) || { cells: {} }; };
@@ -5021,7 +5022,7 @@ window.k8RegBirthChange = function (v) {
     else {
       // โหลดไม่ได้ (ระบบหลังบ้านยังไม่อัปเดต / เน็ตหลุด): ใช้ค่าเริ่มต้นให้ทำงานต่อได้ ไม่ค้างที่ "กำลังโหลด"
       T.err = (r && /Unknown action/i.test(String(r.error || r.message || ''))) ? 'old-backend' : 'offline';
-      if (!T.data) T.data = { success: true, config: { periods: [{ start: '08:30', end: '09:20' }, { start: '09:20', end: '10:10' }, { start: '10:20', end: '11:10' }, { start: '11:10', end: '12:00' }, { start: '13:00', end: '13:50' }, { start: '13:50', end: '14:40' }, { start: '14:50', end: '15:40' }, { start: '15:40', end: '16:30' }], days: [1, 2, 3, 4, 5], showStudents: true, showTeachers: true }, grades: {}, offline: true };
+      if (!T.data) T.data = { success: true, config: { periods: [{ start: '08:30', end: '09:30' }, { start: '09:40', end: '10:40' }, { start: '10:50', end: '11:50' }, { start: '13:00', end: '14:00' }, { start: '14:10', end: '15:10' }], days: [1, 2, 3, 4, 5], showStudents: true, showTeachers: true }, grades: {}, offline: true };
     }
     T.loading = false; paintEntry(); if (T.open) renderView();
     document.dispatchEvent(new CustomEvent('k8-tt-loaded'));
@@ -5388,9 +5389,9 @@ window.k8RegBirthChange = function (v) {
   window.k8TtPeriods = function () {
     const ps = cfg().periods;
     document.getElementById('k8TtCellTitle').textContent = 'เวลาคาบเรียน';
-    document.getElementById('k8TtCellSub').textContent = 'ใช้เหมือนกันทุกชั้น · สูงสุด 12 คาบ';
+    document.getElementById('k8TtCellSub').textContent = 'ใช้เหมือนกันทุกชั้น · วันละ ' + MAXP + ' คาบ (5 วิชา)';
     document.getElementById('k8TtCellBody').innerHTML = '<div id="k8TtPRows">' + ps.map((p, i) => prow(i, p)).join('') + '</div>' +
-      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="k8TtPAdd()">+ เพิ่มคาบ</button><button type="button" onclick="k8TtPSave()">บันทึกเวลา</button></div>';
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" id="k8TtPAddBtn" onclick="k8TtPAdd()"' + (ps.length >= MAXP ? ' hidden' : '') + '>+ เพิ่มคาบ</button><button type="button" onclick="k8TtPSave()">บันทึกเวลา</button></div>';
     openModal('k8TtCellModal');
   };
   const prow = (i, p, src) => '<div class="k8-pw-row" data-src="' + (src === undefined ? i + 1 : src) + '"><b>คาบ ' + (i + 1) + '</b><label><span>เริ่ม</span><input type="time" class="k8TtPs" value="' + esc(p.start) + '"></label><label><span>จบ</span><input type="time" class="k8TtPe" value="' + esc(p.end) + '"></label><button type="button" class="k8-pw-x" onclick="k8TtPDel(this)" aria-label="ลบคาบ ' + (i + 1) + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div>';
@@ -5401,10 +5402,11 @@ window.k8RegBirthChange = function (v) {
     const row = btn.closest('.k8-pw-row'); const n = Array.from(box.children).indexOf(row) + 1; const src = +row.dataset.src;
     if (src && periodUsed(src) && !confirm('คาบ ' + n + ' มีวิชาลงไว้ในตารางแล้ว ถ้าลบ วิชาในคาบนี้จะหายจากทุกตาราง และคาบถัดไปจะเลื่อนขึ้นมาแทน · ลบเลยไหม?')) return;
     row.remove();
+    { const ab = document.getElementById('k8TtPAddBtn'); if (ab) ab.hidden = box.children.length >= MAXP; }
     Array.from(box.children).forEach((r, i) => { const b = r.querySelector('b'); if (b) b.textContent = 'คาบ ' + (i + 1); const x = r.querySelector('.k8-pw-x'); if (x) x.setAttribute('aria-label', 'ลบคาบ ' + (i + 1)); });
     toast('ลบคาบแล้ว · กด "บันทึกเวลา" เพื่อยืนยัน', 'info');
   };
-  window.k8TtPAdd = function () { const box = document.getElementById('k8TtPRows'); const n = box.children.length; if (n >= 12) { toast('สูงสุด 12 คาบ', 'warning'); return; } const ends = box.querySelectorAll('.k8TtPe'); const last = ends.length ? ends[ends.length - 1].value : '08:00'; const m = toMin(last) || 480; const f = (x) => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); box.insertAdjacentHTML('beforeend', prow(n, { start: f(m), end: f(m + 50) }, 0)); };
+  window.k8TtPAdd = function () { const box = document.getElementById('k8TtPRows'); const n = box.children.length; if (n >= MAXP) { toast('สูงสุด ' + MAXP + ' คาบต่อวัน', 'warning'); return; } const ends = box.querySelectorAll('.k8TtPe'); const last = ends.length ? ends[ends.length - 1].value : '08:00'; const m = toMin(last) || 480; const f = (x) => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); box.insertAdjacentHTML('beforeend', prow(n, { start: f(m), end: f(m + 50) }, 0)); const ab = document.getElementById('k8TtPAddBtn'); if (ab) ab.hidden = box.children.length >= MAXP; };
   window.k8TtPSave = async function () {
     const s = Array.from(document.querySelectorAll('.k8TtPs')).map((x) => x.value), e = Array.from(document.querySelectorAll('.k8TtPe')).map((x) => x.value);
     const src = Array.from(document.querySelectorAll('#k8TtPRows .k8-pw-row')).map((r) => +r.dataset.src || 0);

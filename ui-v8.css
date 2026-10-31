@@ -2587,3 +2587,4 @@ html.k8-narrow #k8TtPRows .k8-pw-row .k8-pw-x { justify-self: start; }
 .k8-tt-img:active { transform: scale(.99); }
 .k8-tt-img-a { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .k8-tt-img-a:disabled { opacity: .5; }
+#k8TtCellBody .k8-dr-btns button[hidden] { display: none !important; }
