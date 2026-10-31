@@ -2843,7 +2843,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '13.9';
+  const APP_VERSION = '14.0';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4574,8 +4574,12 @@ window.k8RegBirthChange = function (v) {
   const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   function events() { let evs = []; try { evs = getVisibleCalendarEvents() || []; } catch (e) { try { evs = calendarEvents || []; } catch (e2) {} } return evs.filter((e) => e && e.startDate); }
   const onDay = (e, ds) => { const s = String(e.startDate).slice(0, 10), en = String(e.endDate || e.startDate).slice(0, 10); return s <= ds && ds <= en; };
-  function render() {
-    const box = document.getElementById('hfWeekDays'); if (!box) return;
+  // นักเรียน (หน้าแรก) และอาจารย์ (ภาพรวม) ใช้การ์ดเดียวกัน
+  const SLOTS = [['hfWeekDays', 'hfWeekNext', 'openSchoolCalendarModal()'], ['k8ThWeekDays', 'k8ThWeekNext', "switchTeacherTab('calendar')"]];
+  function render() { SLOTS.forEach((s) => { try { renderOne(s[0], s[1], s[2]); } catch (e) {} }); }
+  window.k8WeekCalRender = render;
+  function renderOne(daysId, nextId, go) {
+    const box = document.getElementById(daysId); if (!box) return;
     const now = new Date(); const today = ymd(now);
     const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
     const evs = events();
@@ -4584,12 +4588,12 @@ window.k8RegBirthChange = function (v) {
       const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i); const ds = ymd(d);
       const list = evs.filter((e) => onDay(e, ds));
       const label = WF[d.getDay()] + ' ' + d.getDate() + ' ' + M[d.getMonth()] + (list.length ? ' · ' + list.map((e) => e.title).join(', ') : ' · ไม่มีกิจกรรม');
-      h += '<button type="button" class="hf-wd' + (ds === today ? ' is-today' : '') + (ds < today ? ' is-past' : '') + '" onclick="openSchoolCalendarModal()" aria-label="' + esc(label) + '" title="' + esc(label) + '"><span>' + W[i] + '</span><b>' + d.getDate() + '</b><i' + (list.length ? '' : ' class="none"') + '></i></button>';
+      h += '<button type="button" class="hf-wd' + (ds === today ? ' is-today' : '') + (ds < today ? ' is-past' : '') + '" onclick="' + go + '" aria-label="' + esc(label) + '" title="' + esc(label) + '"><span>' + W[i] + '</span><b>' + d.getDate() + '</b><i' + (list.length ? '' : ' class="none"') + '></i></button>';
     }
     box.innerHTML = h;
     // เรื่องถัดไป + นับวัน
     const up = evs.filter((e) => String(e.endDate || e.startDate).slice(0, 10) >= today).sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)));
-    const next = document.getElementById('hfWeekNext');
+    const next = document.getElementById(nextId);
     if (!next) return;
     if (!up.length) { next.classList.add('is-empty'); next.innerHTML = '<span>ยังไม่มีกิจกรรมที่กำลังจะมาถึง · ดูปฏิทินทั้งเดือน</span>'; return; }
     next.classList.remove('is-empty');
@@ -5479,6 +5483,12 @@ window.k8RegBirthChange = function (v) {
     hero.after(quick);
     const tl = document.createElement('section'); tl.className = 'hf-card k8-th-tl'; tl.id = 'k8ThTl'; tl.setAttribute('aria-labelledby', 'k8ThTlTitle');
     quick.after(tl);
+    // ปฏิทินโรงเรียนสัปดาห์นี้ (แบบเดียวกับหน้าแรกนักเรียน)
+    const wk = document.createElement('section'); wk.className = 'hf-card hf-week k8-th-week'; wk.setAttribute('aria-label', 'ปฏิทินโรงเรียน สัปดาห์นี้');
+    wk.innerHTML = '<div class="hf-week-head"><span class="hf-week-ttl"><span class="hf-week-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM16 3v4M8 3v4M3 11h18"/></svg></span><b>ปฏิทินโรงเรียน</b></span><button type="button" class="hf-week-all" onclick="switchTeacherTab(\'calendar\')">ดูทั้งเดือน ›</button></div>' +
+      '<div class="hf-week-days" id="k8ThWeekDays"></div><button type="button" class="hf-week-next" id="k8ThWeekNext" onclick="switchTeacherTab(\'calendar\')"><span>ดูวันสำคัญและกิจกรรมทั้งเดือน</span></button>';
+    tl.after(wk);
+    setTimeout(() => { try { window.k8WeekCalRender && window.k8WeekCalRender(); } catch (e) {} }, 0);
     const todo = ov.querySelector('.k8-todo'); if (todo) { const h = todo.querySelector('h2'); if (h) h.textContent = 'ต้องทำ'; }
     return true;
   }
@@ -5489,6 +5499,7 @@ window.k8RegBirthChange = function (v) {
   }
   function paint() {
     if (!build()) return;
+    try { window.k8WeekCalRender && window.k8WeekCalRender(); } catch (e) {}
     // เกรดค้าง (วิชาที่เลือกในหน้าเกรด)
     try {
       const sel = document.getElementById('teacherPortalSubjectSelect'); const sid = sel && sel.value;

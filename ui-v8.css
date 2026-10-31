@@ -2601,3 +2601,27 @@ html.k8-narrow #k8TtPRows .k8-pw-row .k8-pw-x { justify-self: start; }
 .k8-th-quick button > span { width: 48px; height: 48px; }
 .k8-bhp .k8-docs-body { padding-bottom: 40px; }
 .k8-bhp .k8-bh { padding: 0; }
+#view-teacher #teacher-tab-overview > .k8-th-week { display: flex !important; }
+
+/* v14.0 · ภาพรวมแอดมินบนมือถือ: กระชับ 2 คอลัมน์ */
+@media (max-width: 600px) {
+  .k8-admin-overview { gap: 12px; }
+  .k8-ov-head { gap: 10px; }
+  .k8-ov-head > div:first-child { width: 100%; }
+  .k8-ov-head h2 { font-size: 22px; line-height: 1.3; }
+  .k8-ov-head p { font-size: 13px; }
+  .k8-ov-search { flex: 1 1 100% !important; width: 100%; height: 44px; }
+  .k8-ov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
+  .k8-kpi { padding: 12px 12px 10px; border-radius: 14px; gap: 2px; min-width: 0; }
+  .k8-kpi-label { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .k8-kpi-val { font-size: 24px; line-height: 1.25; }
+  .k8-kpi-sub { font-size: 11px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .k8-ov-row { gap: 12px; }
+  .k8-ov-row > section { flex-basis: 100%; }
+  .k8-ov-grades, .k8-ov-feed { padding: 14px !important; }
+  .k8-ov-feed { margin-top: 0; }
+}
+html.k8-narrow .k8-ov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
+html.k8-narrow .k8-kpi { padding: 10px; }
+html.k8-narrow .k8-kpi-val { font-size: 22px; }
+html.k8-xnarrow .k8-ov-kpis { grid-template-columns: 1fr !important; }
