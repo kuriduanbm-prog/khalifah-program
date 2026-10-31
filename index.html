@@ -58,9 +58,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=14.1">
-  <link rel="stylesheet" href="ui-v8.css?v=14.1">
-  <link rel="stylesheet" href="dark.css?v=14.1">
+  <link rel="stylesheet" href="style.css?v=14.2">
+  <link rel="stylesheet" href="ui-v8.css?v=14.2">
+  <link rel="stylesheet" href="dark.css?v=14.2">
 </head>
 <body class="auth-locked">
   <script>
@@ -2420,11 +2420,14 @@
           </div>
         </div>
         <div class="k8-nav-group" data-g="faith" style="--g:#34d399">
-          <button type="button" class="k8-nav-gh" aria-expanded="true" onclick="k8NavGroup(this)"><span class="k8-nav-gi"><svg class="k8-nav-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-3 3-5 5-5 8a5 5 0 0 0 10 0c0-3-2-5-5-8z"/><path d="M4 21h16"/></svg></span><span class="k8-nav-gl">ละหมาด & อัลกุรอาน</span><span class="k8-nav-gc">3</span><svg class="k8-nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button type="button" class="k8-nav-gh" aria-expanded="true" onclick="k8NavGroup(this)"><span class="k8-nav-gi"><svg class="k8-nav-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-3 3-5 5-5 8a5 5 0 0 0 10 0c0-3-2-5-5-8z"/><path d="M4 21h16"/></svg></span><span class="k8-nav-gl">ละหมาด & อัลกุรอาน</span><span class="k8-nav-gc">4</span><svg class="k8-nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
           <span class="k8-nav-label">ละหมาด & อัลกุรอาน</span>
           <div class="k8-nav-items">
           <button class="admin-tab-btn" id="btnAdminTabPrayers" onclick="switchAdminTab('prayers-monitor', this)">
             <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-3 3-5 5-5 8a5 5 0 0 0 10 0c0-3-2-5-5-8z"/><path d="M4 21h16"/></svg> ละหมาด
+          </button>
+          <button class="admin-tab-btn" id="btnAdminTabPrayerRoll" onclick="switchAdminTab('prayer-roll', this)">
+            <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg> เช็คชื่อซุบฮิ
           </button>
           <button class="admin-tab-btn" id="btnAdminTabRank" onclick="switchAdminTab('prayer-rank', this)">
             <svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg> อันดับละหมาด
@@ -3206,6 +3209,9 @@
       </div>
 
       <!-- Admin Tab: Term & academic year -->
+      <div id="admin-tab-prayer-roll" class="admin-content-tab" style="display: none;">
+        <div class="k8-pr" id="k8PrAdmin"></div>
+      </div>
       <div id="admin-tab-timetable" class="admin-content-tab" style="display: none;">
         <div class="k8-tt" id="k8TtAdmin"></div>
       </div>
@@ -5791,7 +5797,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=14.1"></script>
-  <script defer src="ui-v8.js?v=14.1"></script>
+  <script defer src="app.js?v=14.2"></script>
+  <script defer src="ui-v8.js?v=14.2"></script>
 </body>
 </html>

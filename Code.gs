@@ -1179,6 +1179,8 @@ const ACTION_ACCESS = {
   saveBehaviorRules: 'admin',
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
+  // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
+  getPrayerRoll: 'staff', savePrayerRoll: 'staff',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
@@ -1212,7 +1214,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead'];
-READ_ONLY_ACTIONS.push('getTimetable', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1560,6 +1562,10 @@ function dispatchAction_(action, req, data, session, ctx) {
       return savePrayerWindows_(data.windows);
     case 'getTimetable':
       return getTimetable_(session, isStudent, ctx.isAdmin);
+    case 'getPrayerRoll':
+      return getPrayerRoll_(data || req);
+    case 'savePrayerRoll':
+      return savePrayerRoll_(data, session);
     case 'saveTimetable':
       return saveTimetable_(data, session);
     case 'saveTimetableExtra':
@@ -2720,6 +2726,90 @@ function updatePrayerRecord_(data, session) {
     sheet.getRange(row, 7, 1, 2).setNumberFormat('@').setValues([[date, time]]);
     sheet.getRange(row, 15, 1, 2).setValues([[status, note]]);
     return { success: true, message: 'แก้ไขบันทึกละหมาดแล้ว', record: { logId: logId, studentId: cleanVal(cur[1]), prayerTime: pt, date: date, time: time, status: status, note: note } };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/* ===================== เช็คชื่อละหมาดแทนนักเรียน (ทั้งห้อง) =====================
+   ใช้กับละหมาดที่นักเรียนบันทึกเองไม่ได้ เช่น ซุบฮิ (โทรศัพท์ถูกเก็บ) · สถานะ: ตรงเวลา / มาสาย / ขาด */
+const PRAYER_SLOTS_ = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+function prayerRollKey_(sid, date, slot) { return String(sid).replace(/\D/g, '').replace(/^0+/, '') + '|' + date + '|' + slot; }
+function readPrayerRows_(sheet) {
+  const n = sheet.getLastRow();
+  return n < 2 ? [] : sheet.getRange(2, 1, n - 1, 16).getValues();
+}
+function getPrayerRoll_(data) {
+  data = data || {};
+  ensureSchema();
+  const date = formatSheetDate(data.date) || Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  const slot = formatPrayerTimeThai(data.slot || 'ซุบฮิ');
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
+  const marks = {};
+  if (sheet) readPrayerRows_(sheet).forEach(function (r) {
+    if (formatSheetDate(r[6]) !== date || formatPrayerTimeThai(r[4]) !== slot) return;
+    const k = String(r[1]).replace(/\D/g, '').replace(/^0+/, ''); if (!k) return;
+    const st = String(r[14] || '');
+    marks[k] = { status: /ขาด/.test(st) ? 'absent' : /สาย/.test(st) ? 'late' : 'ontime', logId: cleanVal(r[0]), by: /\[เช็คโดย/.test(String(r[15] || '')) ? 'roll' : 'self' };
+  });
+  return { success: true, date: date, slot: slot, marks: marks };
+}
+function savePrayerRoll_(data, session) {
+  data = data || {};
+  ensureSchema();
+  const date = formatSheetDate(data.date);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return { success: false, message: 'วันที่ไม่ถูกต้อง' };
+  const slot = formatPrayerTimeThai(data.slot || 'ซุบฮิ');
+  const si = PRAYER_SLOTS_.map(formatPrayerTimeThai).indexOf(slot);
+  if (si === -1) return { success: false, message: 'ไม่รู้จักเวลาละหมาดนี้' };
+  const marks = (data.marks && typeof data.marks === 'object') ? data.marks : {};
+  const keys = Object.keys(marks).slice(0, 600);
+  if (!keys.length) return { success: false, message: 'ยังไม่ได้เช็คชื่อนักเรียน' };
+  const ST = { ontime: 'ตรงเวลา', late: 'มาสาย', absent: 'ขาด' };
+  const roster = {};
+  (getAllStudents().data || []).forEach(function (s) { roster[String(s.studentId).replace(/\D/g, '').replace(/^0+/, '')] = s; });
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานบันทึกละหมาด' };
+  const who = (session && (session.name || session.userId)) || 'แอดมิน';
+  const stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM HH:mm');
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(20000); } catch (e) {}
+  try {
+    const rows = readPrayerRows_(sheet);
+    const at = {};
+    rows.forEach(function (r, i) { if (formatSheetDate(r[6]) === date && formatPrayerTimeThai(r[4]) === slot) { const k = prayerRollKey_(r[1], date, slot); if (at[k] === undefined) at[k] = i; } });
+    const adds = [], dels = [], out = [];
+    let updated = 0;
+    keys.forEach(function (raw) {
+      const nid = String(raw).replace(/\D/g, '').replace(/^0+/, ''); if (!nid) return;
+      const v = String(marks[raw] || '');
+      const k = prayerRollKey_(nid, date, slot); const idx = at[k];
+      if (!v) { // ล้างการเช็ค: ลบเฉพาะรายการที่เช็คแทน ไม่ลบรายการที่นักเรียนบันทึกเอง
+        if (idx !== undefined && /\[เช็คโดย/.test(String(rows[idx][15] || ''))) { dels.push(idx + 2); out.push({ studentId: nid, removed: true, logId: cleanVal(rows[idx][0]) }); }
+        return;
+      }
+      if (!ST[v]) return;
+      const note = '[เช็คโดย ' + who + ' ' + stamp + ']';
+      if (idx !== undefined) {
+        const keepNote = String(rows[idx][15] || '').replace(/\s*\[เช็คโดย [^\]]*\]\s*$/, '');
+        sheet.getRange(idx + 2, 15, 1, 2).setValues([[ST[v], (keepNote ? keepNote + ' ' : '') + note]]);
+        updated++;
+        out.push({ studentId: cleanVal(rows[idx][1]), logId: cleanVal(rows[idx][0]), status: ST[v] });
+        return;
+      }
+      const s = roster[nid] || {};
+      const sid = s.studentId ? formatAsText(s.studentId) : String(raw);
+      const logId = 'PRY-ROLL-' + date.replace(/-/g, '') + '-' + si + '-' + nid;
+      adds.push([logId, sid, s.fullName || '', s.grade || '', slot, new Date().toISOString(), date, Utilities.formatDate(new Date(), 'Asia/Bangkok', 'HH:mm:ss'), '', '', 'เช็คชื่อโดยแอดมิน', 0, 'ใช่', '', ST[v], note]);
+      out.push({ studentId: sid, logId: logId, status: ST[v], studentName: s.fullName || '', grade: s.grade || '' });
+    });
+    if (adds.length) {
+      const start = sheet.getLastRow() + 1;
+      sheet.getRange(start, 1, adds.length, 16).setValues(adds);
+      sheet.getRange(start, 2, adds.length, 1).setNumberFormat('@');
+      sheet.getRange(start, 7, adds.length, 2).setNumberFormat('@');
+    }
+    dels.sort(function (a, b) { return b - a; }).forEach(function (r) { sheet.deleteRow(r); });
+    try { if (typeof bumpDataVersion_ === 'function') bumpDataVersion_(); } catch (e) {}
+    return { success: true, date: date, slot: slot, added: adds.length, updated: updated, removed: dels.length, records: out, message: 'บันทึกการเช็คชื่อละหมาด' + slot + 'แล้ว ' + (adds.length + updated) + ' คน' };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 

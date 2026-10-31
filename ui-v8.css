@@ -2650,3 +2650,49 @@ html.k8-xnarrow .k8-ov-kpis { grid-template-columns: 1fr !important; }
 }
 html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-blue .k8-kpi-val { color: #93c5fd !important; }
 html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-orange .k8-kpi-val { color: #fdba74 !important; }
+
+/* v14.2 · เช็คชื่อละหมาดซุบฮิ (แอดมิน) */
+.k8-pr { display: flex; flex-direction: column; gap: 12px; padding-bottom: 110px; }
+.k8-pr-head h1 { margin: 0; font-size: 24px; font-weight: 600; color: #0f172a; }
+.k8-pr-head p { margin: 4px 0 0; font-size: 13px; color: #475569; }
+.k8-pr-bar { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 18px; background: #fff; border: 1px solid #e2e8f0; }
+.k8-pr-date { display: flex; align-items: center; gap: 8px; }
+.k8-pr-date > button { flex: none; width: 44px; height: 44px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; font-size: 22px; color: #0369a1; cursor: pointer; }
+.k8-pr-date > button:disabled { opacity: .35; }
+.k8-pr-date label { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 12px; background: #e0f2fe; color: #0c4a6e; font-weight: 600; font-size: 15px; cursor: pointer; }
+.k8-pr-date input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.k8-pr-grades { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.k8-pr-grades button { flex: none; min-height: 40px; padding: 0 14px; border: 1px solid #e2e8f0; border-radius: 999px; background: #fff; font: inherit; font-size: 14px; color: #334155; cursor: pointer; }
+.k8-pr-grades button[aria-selected="true"] { background: #0369a1; border-color: #0369a1; color: #fff; font-weight: 600; }
+.k8-pr-q { height: 44px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 15px; }
+.k8-pr-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.k8-pr-sum span { display: flex; flex-direction: column; align-items: center; padding: 8px 2px; border-radius: 14px; font-size: 12px; font-weight: 500; }
+.k8-pr-sum b { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.k8-pr-sum .is-ontime { background: #dcfce7; color: #15803d; }
+.k8-pr-sum .is-late { background: #fef3c7; color: #b45309; }
+.k8-pr-sum .is-absent { background: #fee2e2; color: #b91c1c; }
+.k8-pr-sum .is-none { background: #f1f5f9; color: #475569; }
+.k8-pr-all { min-height: 48px; border: 1px dashed #86efac; border-radius: 14px; background: #f0fdf4; color: #15803d; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.k8-pr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.k8-pr-list li { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 16px; background: #fff; border: 1px solid #e2e8f0; border-left-width: 5px; }
+.k8-pr-list li.is-ontime { border-left-color: #16a34a; }
+.k8-pr-list li.is-late { border-left-color: #f59e0b; }
+.k8-pr-list li.is-absent { border-left-color: #dc2626; }
+.k8-pr-list li.is-changed { box-shadow: 0 0 0 2px #bae6fd; }
+.k8-pr-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.k8-pr-who b { font-size: 15px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-pr-who small { font-size: 12px; color: #64748b; }
+.k8-pr-seg { flex: none; display: flex; gap: 4px; }
+.k8-pr-seg button { min-width: 62px; min-height: 44px; padding: 0 8px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; font: inherit; font-size: 13px; font-weight: 600; color: #475569; cursor: pointer; }
+.k8-pr-seg button.is-ontime[aria-pressed="true"] { background: #16a34a; border-color: #16a34a; color: #fff; }
+.k8-pr-seg button.is-late[aria-pressed="true"] { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+.k8-pr-seg button.is-absent[aria-pressed="true"] { background: #dc2626; border-color: #dc2626; color: #fff; }
+@media (max-width: 480px) {
+  .k8-pr-list li { flex-direction: column; align-items: stretch; gap: 8px; }
+  .k8-pr-seg button { flex: 1; min-width: 0; }
+}
+.k8-subuh-note { margin: 0 0 10px; padding: 12px 14px; border-radius: 16px; background: #0c4a6e; color: #fff; display: flex; flex-direction: column; gap: 2px; }
+.k8-subuh-note[hidden] { display: none !important; }
+.k8-subuh-note b { font-size: 15px; font-weight: 600; }
+.k8-subuh-note span { font-size: 13px; opacity: .9; }
+html.k8-subuh-roll #btnCaptureInstant, html.k8-subuh-roll #btnCenterVerifyGeo { opacity: .45; }

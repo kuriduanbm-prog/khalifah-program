@@ -5960,7 +5960,7 @@ function handleTeacherProfileUpload(event) {
     img.onload = function() {
       // Resize to square avatar max 320x320
       const canvas = document.createElement('canvas');
-      const maxDim = 320;
+      const maxDim = 640;
       let width = img.width;
       let height = img.height;
       if (width > height) {
@@ -6077,7 +6077,7 @@ function previewRegisterAvatar(event) {
     const img = new Image();
     img.onload = function() {
       const canvas = document.createElement('canvas');
-      const size = 150;
+      const size = Math.max(150, Math.min(640, img.width, img.height)); // เก็บละเอียดพอให้กดดูรูปขยายได้
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
@@ -6114,7 +6114,7 @@ function handleProfilePhotoUpload(event) {
     img.onload = function() {
       // Create thumbnail canvas 150x150
       const canvas = document.createElement('canvas');
-      const size = 150;
+      const size = Math.max(150, Math.min(640, img.width, img.height)); // เก็บละเอียดพอให้กดดูรูปขยายได้
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
