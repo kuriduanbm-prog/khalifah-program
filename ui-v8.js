@@ -357,12 +357,15 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (!open) { body.innerHTML = ''; return; }
 
     if (typeof loadAppSubjects === 'function') loadAppSubjects();
-    const subjects = (typeof appSubjects !== 'undefined' && Array.isArray(appSubjects)) ? appSubjects : [];
+    const allSubj = (typeof appSubjects !== 'undefined' && Array.isArray(appSubjects)) ? appSubjects : [];
+    const subjects = typeof window.k8MySubjects === 'function' ? window.k8MySubjects(allSubj) : allSubj;
     const defsMap = readJSON('khalifah_subject_assignments', {});
     const scoreMap = (readJSON('khalifah_student_assignment_scores', {})[sid]) || {};
     let gpax = Number(s.gpax || s.gpa);
     if (!(gpax > 0) && typeof recalculateStudentGpa === 'function') gpax = Number(recalculateStudentGpa(s));
     let html = '<div class="hf-gpax"><span>เกรดเฉลี่ยสะสม (GPAX)</span><b>' + (gpax > 0 ? gpax.toFixed(2) : '–') + '</b></div>';
+    try { const info = window.k8MySubjectsInfo && window.k8MySubjectsInfo(); if (info) html += '<p class="hf-subj-note">' + esc(info) + '</p>'; } catch (e) {}
+    if (!subjects.length) html += '<p class="hf-subj-note">ยังไม่มีรายวิชาของชั้นนี้ในตารางเรียน</p>';
     html += subjects.map((subj) => {
       const g = subjectGradeFor(s, subj);
       const [bg, ink] = gradeTone(g.grade);
@@ -2913,7 +2916,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.11';
+  const APP_VERSION = '17.12';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7383,4 +7386,45 @@ window.k8RegBirthChange = function (v) {
   const st = window.switchTeacherTab;
   if (typeof st === 'function') window.switchTeacherTab = function (t) { const r = st.apply(this, arguments); if (t === 'overview') load(); return r; };
   setInterval(() => { const v = document.getElementById('view-teacher'); if (v && v.classList.contains('active') && document.visibilityState === 'visible') load(); }, 60000);
+})();
+
+/* ---------- v17.12 · วิชาของนักเรียนตามชั้นปี (จากตารางเรียนของชั้น) ---------- */
+(function () {
+  let busy = false;
+  const sidOf = () => { try { return currentStudent && currentStudent.studentId ? String(currentStudent.studentId) : ''; } catch (e) { return ''; } };
+  const key = (sid) => 'k8_mysubj_' + sid;
+  const read = (sid) => { try { return JSON.parse(localStorage.getItem(key(sid)) || 'null'); } catch (e) { return null; } };
+  async function refresh(sid) {
+    if (busy || !sid) return; busy = true;
+    let r = null; try { r = await gasApiCall('getMySubjects', {}, 20000); } catch (e) {}
+    busy = false;
+    if (!r || !r.success) return;
+    const prev = read(sid);
+    const v = { grade: r.grade, subjects: r.subjects, at: Date.now() };
+    try { localStorage.setItem(key(sid), JSON.stringify(v)); } catch (e) {}
+    if (!prev || JSON.stringify(prev.subjects) !== JSON.stringify(v.subjects)) {
+      try { if (typeof renderHomeF === 'function') renderHomeF(); } catch (e) {}
+      try { if (typeof renderSkillRadarChart === 'function' && document.getElementById('skillRadarChart')) renderSkillRadarChart(); } catch (e) {}
+    }
+  }
+  window.k8MySubjects = function (all) {
+    all = Array.isArray(all) ? all : [];
+    const sid = sidOf(); if (!sid) return all;
+    let adm = null; try { adm = currentAdmin; } catch (e) {}
+    const c = read(sid);
+    if (!c || Date.now() - (c.at || 0) > 10 * 60 * 1000) refresh(sid);
+    if (!c || !Array.isArray(c.subjects)) return all; // ยังไม่มีตารางของชั้นนี้ → แสดงทุกวิชาเหมือนเดิม
+    const out = [], used = {};
+    c.subjects.forEach((t) => {
+      const m = all.find((s) => (t.id && (String(s.id) === t.id || String(s.code) === t.id)) || String(s.name).trim() === String(t.name).trim());
+      const x = m || { id: t.id || ('tt:' + t.name), name: t.name };
+      if (used[x.id]) return; used[x.id] = 1; out.push(x);
+    });
+    return out;
+  };
+  window.k8MySubjectsInfo = function () {
+    const sid = sidOf(); const c = sid ? read(sid) : null;
+    if (!c || !Array.isArray(c.subjects)) return '';
+    return 'วิชาของชั้น ม.' + (c.grade || '-') + ' ตามตารางเรียน · ' + c.subjects.length + ' วิชา';
+  };
 })();

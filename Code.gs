@@ -1173,7 +1173,7 @@ const ACTION_ACCESS = {
   recordHasanat: 'student', saveQuranLog: 'student', saveSunnahLog: 'student', saveSurahMemorizationLog: 'student',
   saveSurahLog: 'student', saveHasanatLog: 'student',
   checkInActivity: 'student', activityCheckIn: 'student',
-  updateProfilePhoto: 'student', prayerLateRequest: 'student', updateStudentGrade: 'student',
+  updateProfilePhoto: 'student', prayerLateRequest: 'student', getMySubjects: 'student', updateStudentGrade: 'student',
   resetMyHasanat: 'student', submitTeacherEvaluation: 'student', getMyEvaluationStatus: 'student', getEvaluationTargets: 'student',
   getTeacherEvaluationSummary: 'staff',
   // คะแนนพฤติกรรม: ผู้ตรวจการ อาจารย์ และแอดมิน บันทึก/ยกเลิก (ยกเลิกได้เฉพาะรายการของตนเอง ยกเว้นแอดมิน) · แอดมินตั้งค่าหัวข้อ
@@ -1216,7 +1216,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getMySubjects', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1584,6 +1584,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return savePrayerWindows_(data.windows);
     case 'getTimetable':
       return getTimetable_(session, isStudent, ctx.isAdmin);
+    case 'getMySubjects':
+      return getMySubjects_(isStudent ? session.userId : (data.studentId || ''));
     case 'saveGeoZones': {
       const zs = (Array.isArray((data || {}).zones) ? data.zones : []).slice(0, 20);
       const out = [];
@@ -3019,6 +3021,27 @@ function ttConfig_(settings) {
     updatedAt: c.updatedAt || ''
   };
 }
+/** v17.12 · วิชาของนักเรียนตามชั้นปี (จากตารางเรียนของชั้น + ตารางพิเศษที่ตัวเองอยู่ · ไม่รวมวิชาที่ถูกละเว้น)
+ *  ไม่ขึ้นกับการเปิด/ปิดการมองเห็นตาราง · ถ้ายังไม่มีตารางของชั้นนั้น subjects = null (ให้แสดงทุกวิชาเหมือนเดิม) */
+function getMySubjects_(sid) {
+  const st = (getSettings().data) || {};
+  const g = studentGradeNum_(sid).grade;
+  const me = String(sid).replace(/\D/g, '').replace(/^0+/, '');
+  const out = {}; let has = false;
+  const add = function (e) { if (!e) return; const sn = cleanVal(e.sn || ''); if (!sn) return; const k = cleanVal(e.s || '') || sn; if (!out[k]) out[k] = { id: cleanVal(e.s || ''), name: sn }; };
+  const take = function (cells, checkOnly) {
+    Object.keys(cells || {}).forEach(function (k) {
+      const list = Array.isArray(cells[k]) ? cells[k] : [cells[k]];
+      list.forEach(function (e) { if (!e) return; if (e.x && e.x.indexOf(me) !== -1) return; if (checkOnly && e.o && e.o.length && e.o.indexOf(me) === -1) return; add(e); });
+    });
+  };
+  let v = null; try { v = JSON.parse(st['Timetable_M' + g] || 'null'); } catch (e) {}
+  if (v && v.cells && Object.keys(v.cells).length) { has = true; take(v.cells, true); }
+  let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
+  ids.forEach(function (id) { let x = null; try { x = JSON.parse(st['TimetableX_' + id] || 'null'); } catch (e) {} if (x && (x.students || []).indexOf(me) !== -1) { has = true; take(x.cells, false); } });
+  return { success: true, grade: g, subjects: has ? Object.keys(out).map(function (k) { return out[k]; }) : null };
+}
+
 function getTimetable_(session, isStudent, isAdmin) {
   const st = (getSettings().data) || {};
   const cfg = ttConfig_(st);

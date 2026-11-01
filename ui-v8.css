@@ -3221,3 +3221,4 @@ html.k8-narrow .k8-pt-img span { display: none; }
 .k8-lv-pchips button.on { background: #0369a1; border-color: #0369a1; color: #fff; }
 .k8-lv-form .k8-dr-btns button:not(.is-alt) { background: #0369a1 !important; color: #fff !important; }
 #view-teacher #teacher-tab-overview > .k8-lv { display: block !important; }
+.hf-subj-note { margin: 4px 0 8px; font-size: 12.5px; color: #64748b; }

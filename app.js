@@ -5337,22 +5337,24 @@ function renderSkillRadarChart() {
   if (skillChartInstance) skillChartInstance.destroy();
 
   loadAppSubjects();
+  // v17.12 · นักเรียนเห็นเฉพาะวิชาของชั้นตัวเอง
+  const subjList = (currentStudent && typeof window.k8MySubjects === 'function') ? window.k8MySubjects(appSubjects) : appSubjects;
 
   // If no subjects exist, handle gracefully
-  if (!appSubjects || appSubjects.length === 0) {
+  if (!subjList || subjList.length === 0) {
     if (container) container.style.height = '180px';
     return;
   }
 
   // Adjust container height dynamically based on subject count (approx 44px per subject + padding)
-  const calcHeight = Math.max(260, appSubjects.length * 44 + 65);
+  const calcHeight = Math.max(260, subjList.length * 44 + 65);
   if (container) {
     container.style.height = `${calcHeight}px`;
   }
   canvas.style.height = `${calcHeight}px`;
 
-  const labels = appSubjects.map(s => s.name);
-  const dataGrades = appSubjects.map(s => {
+  const labels = subjList.map(s => s.name);
+  const dataGrades = subjList.map(s => {
     if (currentStudent) {
       const gradesMap = currentStudent.subjectGrades || {};
       const skillsMap = currentStudent.skills || {};
@@ -5386,7 +5388,7 @@ function renderSkillRadarChart() {
   // Render subject grade pills below horizontal bar chart with enhanced readability
   const pillsContainer = document.getElementById('studentSubjectGradesPills');
   if (pillsContainer) {
-    pillsContainer.innerHTML = appSubjects.map((s, idx) => {
+    pillsContainer.innerHTML = subjList.map((s, idx) => {
       const g = dataGrades[idx];
       let gradeText = 'รอผล';
       let badgeStyle = 'background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;';
