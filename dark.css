@@ -1648,6 +1648,15 @@ html[data-theme="dark"] .k8-pd-card.n5 .k8-pd-n { color: #79eca4 !important; }
 html[data-theme="dark"] .k8-pd-card.n0 .k8-pd-n { color: #ed7878 !important; }
 html[data-theme="dark"] .k8-pd-b.is-none { background-color: #121212 !important; border: 1.5px dashed #393f46 !important; }
 html[data-theme="dark"] .k8-pd-b.is-none:hover { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-pt-late { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-pt-late.is-late { color: #f8a96d !important; }
+html[data-theme="dark"] .k8-pt-tbl { border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-pt-h { background-color: #181f26 !important; color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pt-r + .k8-pt-r { border-top: 1px solid #2d363f !important; }
+html[data-theme="dark"] .k8-pt-r b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-pt-c { color: #f8a96d !important; }
+html[data-theme="dark"] .k8-pt-rule label { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-pt-rule input { border: 1.5px solid #323941 !important; color: #d6dae5 !important; background-color: #121212 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

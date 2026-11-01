@@ -3102,3 +3102,15 @@ html.k8-narrow .k8-pd-per { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .k8-pd-grid { grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)) !important; }
 .k8-pd-card, .k8-pd, .k8-pd-row, .k8-pd-who { min-width: 0; max-width: 100%; }
 .k8-pd-per { display: none !important; }
+/* v17.5 · เวลาละหมาดจริง + เกณฑ์มาสาย */
+.k8-pt-late { color: #0369a1; font-weight: 600; }
+.k8-pt-late.is-late { color: #b45309; }
+.k8-pt-tbl { display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin: 4px 0 10px; }
+.k8-pt-h, .k8-pt-r { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: 6px; padding: 10px 12px; align-items: center; font-size: 14px; }
+.k8-pt-h { background: #f8fafc; color: #64748b; font-size: 12.5px; font-weight: 600; }
+.k8-pt-r + .k8-pt-r { border-top: 1px solid #f1f5f9; }
+.k8-pt-r b { font-weight: 600; color: #0f172a; }
+.k8-pt-c { color: #b45309; font-weight: 700; }
+.k8-pt-rule { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 6px 0 12px; }
+.k8-pt-rule label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #475569; }
+.k8-pt-rule input { height: 44px; padding: 0 10px; border: 1.5px solid #e2e8f0; border-radius: 12px; font: inherit; font-size: 15px; color: #0f172a; background: #fff; }

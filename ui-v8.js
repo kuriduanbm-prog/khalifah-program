@@ -2912,7 +2912,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.4';
+  const APP_VERSION = '17.5';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4869,6 +4869,7 @@ window.k8RegBirthChange = function (v) {
   const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
   function applyWindows(list) {
     if (!DEF) return;
+    if (typeof window.k8PtApply === 'function') { window.k8PtApply(); return; } // v17.5 · ใช้เวลาละหมาดจริงแบบเรียลไทม์
     try {
       PRAYER_TIME_WINDOWS.forEach((w, i) => {
         const c = Array.isArray(list) && list[i];
@@ -6801,7 +6802,7 @@ window.k8RegBirthChange = function (v) {
   const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const jsq = (t) => String(t == null ? '' : t).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const SHORT = { 'ซุบฮิ': 'ซุบฮิ', 'ซุฮริ': 'ซุฮริ', 'อัศรฺ': 'อัศรฺ', 'มัฆริบ': 'มัฆริบ', 'อีชาอ์': 'อีชาอ์' };
-  function kind(st) { st = String(st || ''); if (/อุซุร|ป่วย|ลา/.test(st)) return 'ex'; if (/สาย|ช้า/.test(st)) return 'late'; if (/ไม่มา|ขาด/.test(st)) return 'abs'; return 'ok'; }
+  function kind(st) { st = String(st || ''); if (/อุซุร|ประจำเดือน|ป่วย|^ลา|ลากิจ|ลาหยุด/.test(st)) return 'ex'; if (/สาย|ช้า/.test(st)) return 'late'; if (/ไม่มา|ขาด/.test(st)) return 'abs'; return 'ok'; }
   function host() {
     let el = document.getElementById('k8PdWrap');
     if (el) return el;
@@ -6854,4 +6855,139 @@ window.k8RegBirthChange = function (v) {
   window.k8PdRender = render;
   const o = window.renderAdminPrayerDailyTable;
   if (typeof o === 'function') window.renderAdminPrayerDailyTable = function () { const r = o.apply(this, arguments); try { render(); } catch (e) { console.warn('k8pd', e); } return r; };
+})();
+
+/* ---------- v17.5 · เวลาละหมาดจริงแบบเรียลไทม์ (ต.เขาตูม อ.ยะรัง จ.ปัตตานี) + เกณฑ์มาสาย ---------- */
+(function () {
+  // พิกัดมัสยิดอัลฮารอมัยน์ มหาวิทยาลัยฟาฏอนี ต.เขาตูม อ.ยะรัง จ.ปัตตานี · เวลาไทย UTC+7
+  const LAT = 6.5967, LNG = 101.3444, TZ = 7;
+  // ฟัจร์ 20° · อีชาอ์ 18° · อัศรฺแบบชาฟิอี · บวกเผื่อ (อิห์ติยาฏ) 2 นาที (แบบที่ใช้ในภาคใต้/มาเลเซีย)
+  const FAJR = 20, ISHA = 18, IHT = 2;
+  const DEF_RULE = { zuhr: '12:51', asr: '16:21', offset: 10 };
+  const KEYS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+  const rad = (d) => d * Math.PI / 180, deg = (r) => r * 180 / Math.PI;
+  const fixA = (a) => { a = a - 360 * Math.floor(a / 360); return a < 0 ? a + 360 : a; };
+  const fixH = (a) => { a = a - 24 * Math.floor(a / 24); return a < 0 ? a + 24 : a; };
+  const pad = (n) => String(n).padStart(2, '0');
+  const hhmm = (m) => pad(Math.floor(((m % 1440) + 1440) % 1440 / 60)) + ':' + pad(((m % 1440) + 1440) % 1440 % 60);
+  const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  function julian(y, m, d) { if (m <= 2) { y -= 1; m += 12; } const A = Math.floor(y / 100), B = 2 - A + Math.floor(A / 4); return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + B - 1524.5; }
+  function sun(jd) {
+    const D = jd - 2451545.0, g = fixA(357.529 + 0.98560028 * D), q = fixA(280.459 + 0.98564736 * D);
+    const L = fixA(q + 1.915 * Math.sin(rad(g)) + 0.020 * Math.sin(rad(2 * g))), e = 23.439 - 0.00000036 * D;
+    const RA = deg(Math.atan2(Math.cos(rad(e)) * Math.sin(rad(L)), Math.cos(rad(L)))) / 15;
+    return { decl: deg(Math.asin(Math.sin(rad(e)) * Math.sin(rad(L)))), eqt: q / 15 - fixH(RA) };
+  }
+  function times(date) {
+    const d = date || new Date();
+    const jd = julian(d.getFullYear(), d.getMonth() + 1, d.getDate()) - LNG / (15 * 24);
+    const mid = (t) => fixH(12 - sun(jd + t).eqt);
+    const ang = (a, t, ccw) => { const s = sun(jd + t), n = mid(t); const v = deg(Math.acos((-Math.sin(rad(a)) - Math.sin(rad(s.decl)) * Math.sin(rad(LAT))) / (Math.cos(rad(s.decl)) * Math.cos(rad(LAT))))) / 15; return n + (ccw ? -v : v); };
+    const asrT = (f, t) => { const s = sun(jd + t); const a = -deg(Math.atan(1 / (f + Math.tan(rad(Math.abs(LAT - s.decl)))))); return ang(a, t, false); };
+    // ทำ 2 รอบให้ค่าแม่นขึ้น
+    let r = { fajr: 5, sunrise: 6, dhuhr: 12, asr: 13, maghrib: 18, isha: 18 };
+    for (let i = 0; i < 2; i++) {
+      r = { fajr: ang(FAJR, r.fajr / 24, true), sunrise: ang(0.833, r.sunrise / 24, true), dhuhr: mid(r.dhuhr / 24), asr: asrT(1, r.asr / 24), maghrib: ang(0.833, r.maghrib / 24, false), isha: ang(ISHA, r.isha / 24, false) };
+    }
+    const adj = (h) => h + TZ - LNG / 15;
+    const out = {};
+    Object.keys(r).forEach((k) => { const m = adj(r[k]) * 60; out[k] = k === 'sunrise' ? Math.floor(m) - IHT : Math.ceil(m) + IHT; });
+    return out; // นาทีนับจาก 00:00
+  }
+  let RULE = Object.assign({}, DEF_RULE);
+  try { const v = JSON.parse(localStorage.getItem('khalifah_prayer_late_rule') || 'null'); if (v) RULE = Object.assign({}, DEF_RULE, v); } catch (e) {}
+  function cutoffs(date) {
+    const t = times(date), off = Math.max(0, Math.min(120, parseInt(RULE.offset, 10) || 0));
+    const z = toMin(RULE.zuhr), a = toMin(RULE.asr);
+    return { 'ซุบฮิ': t.fajr + off, 'ซุฮริ': isNaN(z) ? t.dhuhr + off : z, 'อัศรฺ': isNaN(a) ? t.asr + off : a, 'มัฆริบ': t.maghrib + off, 'อีชาอ์': t.isha + off };
+  }
+  window.k8PrayerTimes = times;
+  window.k8LateCutoffs = cutoffs;
+  const norm = (k) => { try { return normalizePrayerSlotKey(k); } catch (e) { return k; } };
+  window.k8IsLateNow = function (slot, at) {
+    const now = at || new Date(), cur = now.getHours() * 60 + now.getMinutes(), k = norm(slot);
+    const c = cutoffs(now)[k]; if (c == null) return false;
+    if (k === 'อีชาอ์' && cur < 12 * 60) return true; // หลังเที่ยงคืนถือว่าสาย
+    return cur > c;
+  };
+  window.k8PrayerStatusNow = function (slot) { return window.k8IsLateNow(slot) ? 'มาสาย' : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)'; };
+  // ช่วงเวลาเช็คชื่อ = เวลาละหมาดจริงของวันนี้
+  window.k8PtApply = function () {
+    let t; try { t = times(new Date()); } catch (e) { return; }
+    const W = [[t.fajr, t.sunrise], [t.dhuhr, t.asr - 1], [t.asr, t.maghrib - 1], [t.maghrib, t.isha - 1], [t.isha, 23 * 60 + 59]];
+    try {
+      PRAYER_TIME_WINDOWS.forEach((w, i) => { w.startMin = W[i][0]; w.endMin = W[i][1]; w.baseLabel = hhmm(W[i][0]) + ' - ' + hhmm(W[i][1]) + ' น.'; try { if (CANONICAL_PRAYERS[i]) CANONICAL_PRAYERS[i].range = w.baseLabel; } catch (e) {} });
+    } catch (e) {}
+    const c = cutoffs(new Date());
+    const sum = document.getElementById('k8PwSummary');
+    if (sum) sum.textContent = 'เวลาจริง ต.เขาตูม · ' + KEYS.map((k, i) => k + ' ' + hhmm(W[i][0])).join(' · ');
+    return { windows: W, cutoffs: c };
+  };
+  window.k8PtApply();
+  let lastDay = new Date().getDate();
+  setInterval(() => { const d = new Date().getDate(); if (d !== lastDay) { lastDay = d; window.k8PtApply(); try { window.updatePrayerV8 && window.updatePrayerV8(); } catch (e) {} } }, 60000);
+
+  // โหลดเกณฑ์สายจากแอดมิน
+  function loadRule() {
+    try {
+      const url = (typeof getGasUrl === 'function') ? getGasUrl() : ''; if (!url) return;
+      fetch(url + (url.indexOf('?') === -1 ? '?' : '&') + 'action=getSettings&_t=' + Date.now()).then((r) => r.json()).then((j) => {
+        let v = null; try { v = j && j.data && j.data.PrayerLateRule ? JSON.parse(j.data.PrayerLateRule) : null; } catch (e) {}
+        RULE = Object.assign({}, DEF_RULE, v || {});
+        try { localStorage.setItem('khalifah_prayer_late_rule', JSON.stringify(RULE)); } catch (e) {}
+        window.k8PtApply(); try { window.updatePrayerV8 && window.updatePrayerV8(); } catch (e) {}
+      }).catch(() => {});
+    } catch (e) {}
+  }
+  setTimeout(loadRule, 2200);
+
+  // หน้าเช็คชื่อ: บอก "สายหลัง HH:MM"
+  const up = window.updatePrayerV8;
+  if (typeof up === 'function') window.updatePrayerV8 = function () {
+    const r = up.apply(this, arguments);
+    try {
+      const sub = document.getElementById('k8PrSub'); if (!sub) return r;
+      let slot = ''; try { slot = selectedPrayerTime; } catch (e) {}
+      const k = norm(slot || ''); const c = cutoffs(new Date())[k];
+      if (c != null) {
+        const late = window.k8IsLateNow(k);
+        let tag = sub.querySelector('.k8-pt-late'); if (!tag) { tag = document.createElement('span'); tag.className = 'k8-pt-late'; sub.appendChild(tag); }
+        tag.textContent = late ? ' · เลย ' + hhmm(c) + ' น. แล้ว (นับว่ามาสาย)' : ' · สายหลัง ' + hhmm(c) + ' น.';
+        tag.classList.toggle('is-late', late);
+      }
+    } catch (e) {}
+    return r;
+  };
+
+  // แอดมิน: หน้าต่าง "ช่วงเวลาละหมาด" → แสดงเวลาจริงวันนี้ + ตั้งเกณฑ์สาย
+  window.k8PwOpen = function () {
+    const body = document.getElementById('k8PwBody'); if (!body) return;
+    const t = window.k8PtApply() || {}; const W = t.windows || [], C = t.cutoffs || {};
+    const d = new Date(), M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const tt = document.getElementById('k8PwTitle'); if (tt) tt.textContent = 'เวลาละหมาด & เกณฑ์มาสาย';
+    body.innerHTML = '<p class="k8-pw-hint">เวลาละหมาดจริงของ <b>ต.เขาตูม อ.ยะรัง จ.ปัตตานี</b> คำนวณอัตโนมัติทุกวัน · วันนี้ ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543) + '</p>' +
+      '<div class="k8-pt-tbl"><div class="k8-pt-h"><span>เวลา</span><span>เข้าเวลา</span><span>เช็คได้ถึง</span><span>สายหลัง</span></div>' +
+      KEYS.map((k, i) => '<div class="k8-pt-r"><b>' + k + '</b><span>' + hhmm(W[i][0]) + '</span><span>' + (k === 'อีชาอ์' ? 'ก่อนรุ่งอรุณ' : hhmm(W[i][1])) + '</span><span class="k8-pt-c">' + hhmm(C[k]) + '</span></div>').join('') + '</div>' +
+      '<p class="k8-pw-hint">ซุบฮิเป็นการเช็คชื่อโดยแอดมิน · เวลาอื่นนับว่า "มาสาย" เมื่อเช็คชื่อหลังเวลาในคอลัมน์ "สายหลัง"</p>' +
+      '<div class="k8-pt-rule"><label><span>ซุฮริ สายหลัง</span><input type="time" id="k8PtZ" value="' + (RULE.zuhr || '') + '"></label>' +
+      '<label><span>อัศรฺ สายหลัง</span><input type="time" id="k8PtA" value="' + (RULE.asr || '') + '"></label>' +
+      '<label><span>เวลาอื่น: สายเมื่อเลยเวลาเข้า (นาที)</span><input type="number" id="k8PtO" min="0" max="120" inputmode="numeric" value="' + (parseInt(RULE.offset, 10) || 0) + '"></label></div>' +
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="k8PtReset()">ค่าเริ่มต้น (12:51 · 16:21 · 10 นาที)</button><button type="button" id="k8PtSave" onclick="k8PtSave()">บันทึกเกณฑ์</button></div>';
+    try { openModal('k8PwModal'); } catch (e) {}
+  };
+  async function saveRule(v) {
+    const b = document.getElementById('k8PtSave'); if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก…'; }
+    let r = null; try { r = await gasApiCall('saveSetting', { data: { key: 'PrayerLateRule', value: JSON.stringify(v), description: 'เกณฑ์มาสายละหมาด (ซุฮริ/อัศรฺ เวลาตายตัว · เวลาอื่น = เข้าเวลา + นาที)' } }, 20000); } catch (e) {}
+    if (b) { b.disabled = false; b.textContent = 'บันทึกเกณฑ์'; }
+    if (r && r.success !== false) {
+      RULE = Object.assign({}, DEF_RULE, v); try { localStorage.setItem('khalifah_prayer_late_rule', JSON.stringify(RULE)); } catch (e) {}
+      try { showToast('บันทึกเกณฑ์มาสายแล้ว', 'success'); } catch (e) {} window.k8PwOpen();
+    } else { try { showToast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); } catch (e) {} }
+  }
+  window.k8PtSave = function () {
+    const z = (document.getElementById('k8PtZ') || {}).value, a = (document.getElementById('k8PtA') || {}).value, o = parseInt((document.getElementById('k8PtO') || {}).value, 10);
+    if (isNaN(toMin(z)) || isNaN(toMin(a)) || isNaN(o) || o < 0 || o > 120) { try { showToast('กรอกเวลาและจำนวนนาทีให้ถูกต้อง', 'warning'); } catch (e) {} return; }
+    saveRule({ zuhr: z, asr: a, offset: o });
+  };
+  window.k8PtReset = function () { saveRule(Object.assign({}, DEF_RULE)); };
 })();

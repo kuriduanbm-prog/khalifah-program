@@ -2878,6 +2878,35 @@ function verifyGeolocation() {
  * ดึงพิกัด GPS สดใหม่แบบเรียลไทม์ (ป้องกัน Fake GPS และการเดินออกจากพิกัด)
  * คืนค่า Promise ของ verifiedLocation
  */
+const GPS_TOLERANCE_MAX_M = 30;
+/**
+ * v17.5 · อ่าน GPS หลายครั้ง (สูงสุด ~8 วินาที) แล้วใช้ค่าที่แม่นที่สุด
+ * ค่าแรกของมือถือมักมาจาก Wi-Fi/เสาสัญญาณ คลาดเคลื่อนหลายสิบเมตร
+ * หยุดทันทีเมื่อความแม่นยำดีพอ (≤ 15 ม.) หรืออยู่ในรัศมีจุดละหมาดแล้ว
+ */
+function k8BestPosition(onOk, onErr, opts) {
+  const MAX_MS = 8000, GOOD_M = 15;
+  let best = null, done = false, wid = null, timer = null;
+  const finish = (err) => {
+    if (done) return; done = true;
+    try { if (wid !== null) navigator.geolocation.clearWatch(wid); } catch (e) {}
+    clearTimeout(timer);
+    if (best) onOk(best); else onErr(err || { code: 3, message: 'หาตำแหน่งไม่ทันเวลา' });
+  };
+  const inZone = (p) => {
+    try {
+      return Object.values(GEOFENCE_TARGETS).some(t => calculateDistanceInMeters(p.coords.latitude, p.coords.longitude, t.lat, t.lng) <= t.radius);
+    } catch (e) { return false; }
+  };
+  try {
+    wid = navigator.geolocation.watchPosition((p) => {
+      if (!best || (p.coords.accuracy || 9999) <= (best.coords.accuracy || 9999)) best = p;
+      if ((p.coords.accuracy || 9999) <= GOOD_M || inZone(p)) finish();
+    }, (e) => { if (e && e.code === 1) finish(e); /* อื่น ๆ รอค่าถัดไป */ }, { enableHighAccuracy: true, timeout: MAX_MS, maximumAge: 0 });
+  } catch (e) { navigator.geolocation.getCurrentPosition(onOk, onErr, opts); return; }
+  timer = setTimeout(() => finish(), MAX_MS);
+}
+
 function fetchFreshPrayerLocation() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -2890,7 +2919,7 @@ function fetchFreshPrayerLocation() {
       maximumAge: 0
     };
 
-    navigator.geolocation.getCurrentPosition(
+    k8BestPosition(
       (position) => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
@@ -2904,7 +2933,9 @@ function fetchFreshPrayerLocation() {
         let bestIn = Infinity;
         for (const target of targetEntries) {
           const dist = calculateDistanceInMeters(userLat, userLng, target.lat, target.lng);
-          if (dist <= target.radius && dist < bestIn) {
+          // v17.5 · เผื่อค่าคลาดเคลื่อนของ GPS (สูงสุด 30 ม.) เพราะในอาคาร/ใต้หลังคามัสยิด GPS มักคลาดเคลื่อน 10–40 ม.
+          const tol = Math.min(Math.max(Number(accuracy) || 0, 0), GPS_TOLERANCE_MAX_M);
+          if (dist - tol <= target.radius && dist < bestIn) {
             matchedTarget = target; bestIn = dist;
             minDistance = Math.round(dist);
           }
@@ -2925,7 +2956,7 @@ function fetchFreshPrayerLocation() {
           isWithinZone = true;
         } else {
           isWithinZone = false;
-          locationName = `ห่างจาก${mosqueTarget.name || 'จุดละหมาด'} ${formattedMosqueDist}`;
+          locationName = `ห่างจาก${mosqueTarget.name || 'จุดละหมาด'} ${formattedMosqueDist}` + (accuracy ? ` (GPS คลาดเคลื่อน ±${Math.round(accuracy)} ม.)` : '');
         }
 
         verifiedLocation = {
@@ -4457,7 +4488,7 @@ async function executePrayerCaptureStep2() {
   const statusSelect = document.getElementById('prayerStatusSelect');
   const locSelect = document.getElementById('prayerLocationSelect');
   const noteInput = document.getElementById('prayerNoteInput');
-  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  const prayerStatus = statusSelect ? statusSelect.value : (typeof window.k8PrayerStatusNow === 'function' ? window.k8PrayerStatusNow(selectedPrayerTime) : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)');
   const prayerNote = noteInput ? noteInput.value.trim() : '';
   const chosenLoc = locSelect ? locSelect.value : (verifiedLocation ? verifiedLocation.locationName : 'พิกัด GPS');
   let accurateLocName = chosenLoc;
@@ -4704,7 +4735,7 @@ function captureAndRecordPrayer() {
 
   const statusSelect = document.getElementById('prayerStatusSelect');
   const noteInput = document.getElementById('prayerNoteInput');
-  const prayerStatus = statusSelect ? statusSelect.value : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  const prayerStatus = statusSelect ? statusSelect.value : (typeof window.k8PrayerStatusNow === 'function' ? window.k8PrayerStatusNow(selectedPrayerTime) : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)');
   const prayerNote = noteInput ? noteInput.value.trim() : '';
 
   // สร้าง Object ข้อมูลการบันทึก
