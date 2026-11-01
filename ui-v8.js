@@ -2901,7 +2901,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '16.1';
+  const APP_VERSION = '16.2';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3736,6 +3736,7 @@ window.k8RegBirthChange = function (v) {
 
   // ---------- ป๊อปอัปเด้งเมื่อมีแจ้งเตือนใหม่ ----------
   function maybePop() {
+    if (window.k8IsPreview && window.k8IsPreview()) return; // โหมดดูตัวอย่างของแอดมิน: ไม่บังคับอ่าน/ยอมรับข้อตกลง
     if (!document.getElementById('k8Pop').hidden || document.querySelector('.modal-overlay.open') || !document.getElementById('k8Policy').hidden) return;
     const done = popped();
     let item = null;
