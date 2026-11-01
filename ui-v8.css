@@ -2898,3 +2898,5 @@ html body.k8-inspector .main-wrapper { padding-top: calc(28px + env(safe-area-in
 #otpVerifyUserSummary > div { grid-column: 2; min-width: 0; }
 #otpVerifyUserSummary > div:first-child { display: flex !important; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start !important; margin: 0 !important; }
 #otpVerifyUserSummary > div:first-child > span:first-child { font-size: 15px; }
+.k8-rk-row.is-new { opacity: .85; }
+.k8-rk-newtxt { font-size: 13px; color: #64748b; }

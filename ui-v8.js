@@ -2586,6 +2586,10 @@ window.k8RegBirthChange = function (v) {
     const cur = now.getHours() * 60 + now.getMinutes();
     const todaySlots = Math.max(0, wins.filter((w) => cur >= w.endMin).length);
     const expected = (T.days - 1) * 5 + todaySlots;
+    // นักเรียนที่เพิ่งสมัคร/เพิ่งเข้าระบบ: นับเวลาที่ต้องละหมาดตั้งแต่วันถัดจากวันที่สมัครเท่านั้น
+    const joinOf = (st) => { const m = String(st.registeredAt || st.createdAt || '').match(/(\d{4})-(\d{2})-(\d{2})/); if (!m) return ''; let y = +m[1]; if (y > 2400) y -= 543; return y + '-' + m[2] + '-' + m[3]; };
+    const dayDiff = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+    const expFor = (st) => { const j = joinOf(st); if (!j || j < start) return expected; if (j >= end) return 0; return Math.max(0, dayDiff(j, end) - 1) * 5 + todaySlots; };
     let tp = []; try { tp = todayPrayers || []; } catch (e) {}
     const recs = {};
     [...readJSON('khalifah_prayer_history', []), ...tp].forEach((p) => {
@@ -2593,7 +2597,7 @@ window.k8RegBirthChange = function (v) {
       const k = norm(p.studentId) + '|' + d + '|' + slotKey(p.prayerTime || p.prayerName || ''); recs[k] = p;
     });
     readJSON('khalifah_prayer_approvals', []).forEach((a) => { if (!a || !/approved|อนุมัติ/i.test(String(a.status || '')) || !a.date || a.date < start || a.date > end) return; const k = norm(a.studentId) + '|' + a.date + '|' + slotKey(a.prayerSlot || ''); if (!recs[k]) recs[k] = { studentId: a.studentId, status: 'อนุมัติย้อนหลัง', note: [a.reasonPreset, a.reasonDetail].filter(Boolean).join(' · '), date: a.date }; });
-    const by = {}; studs.forEach((s) => { by[norm(s.studentId)] = { s, on: 0, late: 0, excused: 0, notes: [] }; });
+    const by = {}; studs.forEach((s) => { by[norm(s.studentId)] = { s, on: 0, late: 0, excused: 0, notes: [], exp: expFor(s), join: joinOf(s) }; });
     Object.keys(recs).forEach((k) => {
       const x = by[k.split('|')[0]]; if (!x) return; const p = recs[k]; const st = String(p.status || '');
       // ระวัง: "ตรงเวลา" มีคำว่า "ลา" อยู่ข้างใน จึงต้องตรวจสถานะตรงเวลา/สายก่อน
@@ -2604,11 +2608,13 @@ window.k8RegBirthChange = function (v) {
     });
     const tiers = { s: [], late: [], miss: [], note: [], mid: [] };
     Object.values(by).forEach((x) => {
-      const done = x.on + x.late; const miss = Math.max(0, expected - done - x.excused);
-      x.miss = miss; x.rate = expected ? Math.round(x.on / expected * 100) : 0;
-      if (expected && miss / expected >= 0.4) (x.notes.length ? tiers.note : tiers.miss).push(x);
+      const E = Math.max(x.exp, x.on + x.late + x.excused); x.exp = E; x.isNew = x.exp === 0;
+      const done = x.on + x.late; const miss = Math.max(0, E - done - x.excused);
+      x.miss = miss; x.rate = E ? Math.round(x.on / E * 100) : 0;
+      if (x.isNew) tiers.mid.push(x);
+      else if (E && miss / E >= 0.4) (x.notes.length ? tiers.note : tiers.miss).push(x);
       else if (x.late >= 3 && done && x.late / done >= 0.3) tiers.late.push(x);
-      else if (expected && x.on / expected >= 0.8) tiers.s.push(x);
+      else if (E && x.on / E >= 0.8) tiers.s.push(x);
       else if (x.excused && x.notes.length) tiers.note.push(x);
       else tiers.mid.push(x);
     });
@@ -2622,8 +2628,8 @@ window.k8RegBirthChange = function (v) {
   function ranked() {
     const { tiers, expected } = compute();
     const all = [].concat(tiers.s, tiers.late, tiers.miss, tiers.note, tiers.mid);
-    all.forEach((x) => { const denom = Math.max(0, expected - x.excused); x.score = denom ? Math.min(100, Math.round((x.on + 0.5 * x.late) / denom * 1000) / 10) : 100; x.denom = denom; });
-    all.sort((a, b) => b.score - a.score || b.on - a.on || a.miss - b.miss || a.late - b.late || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
+    all.forEach((x) => { const denom = Math.max(0, x.exp - x.excused); x.score = denom ? Math.min(100, Math.round((x.on + 0.5 * x.late) / denom * 1000) / 10) : (x.isNew ? -1 : 100); x.denom = denom; });
+    all.sort((a, b) => (a.isNew - b.isNew) || b.score - a.score || b.on - a.on || a.miss - b.miss || a.late - b.late || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
     let rank = 0, prev = null;
     all.forEach((x, i) => { const key = x.score + '|' + x.on + '|' + x.miss + '|' + x.late; if (key !== prev) { rank = i + 1; prev = key; } x.rank = rank; });
     return { all, tiers, expected };
@@ -2640,25 +2646,25 @@ window.k8RegBirthChange = function (v) {
   function rankHtml(id) {
     const { all, expected } = ranked();
     if (!all.length) return tools(id) + '<p class="k8-tier-empty">ยังไม่มีข้อมูลนักเรียน</p>';
-    const cnt = { good: 0, mid: 0, low: 0 }; all.forEach((x) => { x.level = levelOf(x.score); cnt[x.level]++; });
+    const cnt = { good: 0, mid: 0, low: 0, new: 0 }; all.forEach((x) => { x.level = x.isNew ? 'new' : levelOf(x.score); cnt[x.level]++; });
     const q = T.q.trim().toLowerCase();
     let list = all.filter((x) => T.level === 'all' || x.level === T.level);
     if (q) list = list.filter((x) => String(x.s.fullName || '').toLowerCase().includes(q) || norm(x.s.studentId).includes(q.replace(/^0+/, '')));
-    const intro = '<div class="k8-rk-intro"><p>ช่วง <b>' + T.days + ' วันล่าสุด</b> นักเรียนแต่ละคนควรละหมาด <b>' + expected + ' เวลา</b> · เรียงจากคนที่ละหมาดตรงเวลามากที่สุด</p>' +
+    const intro = '<div class="k8-rk-intro"><p>ช่วง <b>' + T.days + ' วันล่าสุด</b> นักเรียนแต่ละคนควรละหมาด <b>' + expected + ' เวลา</b>' + (cnt.new ? ' · <b>' + cnt.new + ' คน</b>เพิ่งเข้าระบบ ยังไม่นับ' : '') + ' · คนที่สมัครระหว่างช่วงนี้นับตั้งแต่วันที่สมัคร'+' · เรียงจากคนที่ละหมาดตรงเวลามากที่สุด</p>' +
       '<div class="k8-rk-levels" role="group" aria-label="กรองตามระดับ">' +
       '<button type="button" aria-pressed="' + (T.level === 'all') + '" onclick="k8TierSet(\'level\',\'all\')"><b>' + all.length + '</b><span>ทั้งหมด</span></button>' +
       ['good', 'mid', 'low'].map((k) => '<button type="button" aria-pressed="' + (T.level === k) + '" style="--c:' + LV[k][1] + ';--bg:' + LV[k][2] + '" onclick="k8TierSet(\'level\',\'' + k + '\')"><b>' + cnt[k] + '</b><span>' + LV[k][0] + '</span><small>' + (k === 'good' ? '80% ขึ้นไป' : k === 'mid' ? '50–79%' : 'ต่ำกว่า 50%') + '</small></button>').join('') + '</div></div>';
     const legend = '<div class="k8-rk-legend"><span><i style="background:#16a34a"></i>ตรงเวลา</span><span><i style="background:#f59e0b"></i>สาย</span><span><i style="background:#60a5fa"></i>ลา/อุซุร</span><span><i style="background:#ef4444"></i>ขาด</span></div>';
     const shown = list.slice(0, T.limit);
-    const pct = (n) => expected ? (n / expected * 100) : 0;
-    const rows = shown.map((x) => { const lv = LV[x.level]; const done = x.on + x.late;
+    const rows = shown.map((x) => { const lv = LV[x.level] || ['เพิ่งเข้าระบบ', '#475569', '#f1f5f9']; const done = x.on + x.late; const pct = (n) => x.exp ? (n / x.exp * 100) : 0;
+      if (x.isNew) return '<li class="k8-rk-row is-new"><span class="k8-rk-no">–</span><span class="k8-rk-who"><b>' + esc(x.s.fullName) + '</b><small>' + esc(shortG(x.s.grade)) + ' · ' + esc(String(x.s.studentId || '')) + '</small></span><span class="k8-rk-bar"><span class="k8-rk-newtxt">เพิ่งเข้าระบบ' + (x.join ? ' เมื่อ ' + (function () { const p = x.join.split('-'); return +p[2] + '/' + +p[1] + '/' + (+p[0] + 543); })() : '') + ' · เริ่มนับตั้งแต่วันถัดไป</span></span><span class="k8-rk-score"><b>–</b><span style="color:#475569;background:#f1f5f9">ใหม่</span><small>ละหมาดแล้ว ' + done + '</small></span></li>';
       return '<li class="k8-rk-row">' +
         (function () { const medal = x.rank <= 3 && x.score > 0; return '<span class="k8-rk-no' + (medal ? ' is-medal' : '') + '" aria-label="อันดับ ' + x.rank + '">' + (medal ? ['🥇', '🥈', '🥉'][x.rank - 1] : x.rank) + '</span>'; })() +
         '<span class="k8-rk-who"><b>' + esc(x.s.fullName) + '</b><small>' + esc(shortG(x.s.grade)) + ' · ' + esc(String(x.s.studentId || '')) + '</small></span>' +
-        '<span class="k8-rk-bar" role="img" aria-label="ตรงเวลา ' + x.on + ' สาย ' + x.late + ' ลา ' + x.excused + ' ขาด ' + x.miss + ' จาก ' + expected + ' เวลา">' +
+        '<span class="k8-rk-bar" role="img" aria-label="ตรงเวลา ' + x.on + ' สาย ' + x.late + ' ลา ' + x.excused + ' ขาด ' + x.miss + ' จาก ' + x.exp + ' เวลา">' +
           '<span class="k8-rk-track"><i style="width:' + pct(x.on) + '%;background:#16a34a"></i><i style="width:' + pct(x.late) + '%;background:#f59e0b"></i><i style="width:' + pct(x.excused) + '%;background:#60a5fa"></i><i style="width:' + pct(x.miss) + '%;background:#ef4444"></i></span>' +
           '<span class="k8-rk-nums"><em class="ok">ตรงเวลา ' + x.on + '</em><em class="late">สาย ' + x.late + '</em>' + (x.excused ? '<em class="ex" title="' + esc(x.notes.slice(0, 3).join(' / ')) + '">ลา ' + x.excused + '</em>' : '') + '<em class="miss">ขาด ' + x.miss + '</em></span></span>' +
-        '<span class="k8-rk-score"><b>' + Math.round(x.score) + '%</b><span style="color:' + lv[1] + ';background:' + lv[2] + '">' + lv[0] + '</span><small>ละหมาดแล้ว ' + done + '/' + expected + '</small></span></li>'; }).join('');
+        '<span class="k8-rk-score"><b>' + Math.round(x.score) + '%</b><span style="color:' + lv[1] + ';background:' + lv[2] + '">' + lv[0] + '</span><small>ละหมาดแล้ว ' + done + '/' + x.exp + (x.exp < expected ? ' · นับตั้งแต่สมัคร' : '') + '</small></span></li>'; }).join('');
     return tools(id) + intro + legend +
       (list.length ? '<ol class="k8-rk-list">' + rows + '</ol>' : '<p class="k8-tier-empty">ไม่พบนักเรียน</p>') +
       (list.length > shown.length ? '<button type="button" class="k8-rank-more" onclick="k8TierSet(\'limit\',' + (T.limit + 50) + ')">แสดงเพิ่ม (' + (list.length - shown.length) + ' คน)</button>' : '') +
@@ -2901,7 +2907,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '16.3';
+  const APP_VERSION = '16.4';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
