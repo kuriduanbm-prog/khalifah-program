@@ -1,5 +1,5 @@
 // KHALIFAH PROGRAM - Production PWA Service Worker (v7.7)
-const CACHE_NAME = 'khalifah-cache-v17.13';
+const CACHE_NAME = 'khalifah-cache-v17.14';
 
 // Critical local assets required for the app shell to function offline
 const PRECACHE_ASSETS = [
@@ -7,12 +7,12 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
-  'style.css?v=17.13',
-  'ui-v8.css?v=17.13',
-  'dark.css?v=17.13',
-  'ui-v8.js?v=17.13',
+  'style.css?v=17.14',
+  'ui-v8.css?v=17.14',
+  'dark.css?v=17.14',
+  'ui-v8.js?v=17.14',
   'app.js',
-  'app.js?v=17.13',
+  'app.js?v=17.14',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',
@@ -161,4 +161,13 @@ async function k8OutboxFlushSw() {
 }
 self.addEventListener('sync', (event) => {
   if (event.tag === 'k8-outbox') event.waitUntil(k8OutboxFlushSw());
+});
+
+// v17.14 · แตะการแจ้งเตือนแล้วเปิด/สลับมาที่แอป
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const c of list) { if ('focus' in c) { try { c.postMessage({ type: 'k8-open-notif' }); } catch (e) {} return c.focus(); } }
+    return self.clients.openWindow('./');
+  }));
 });
