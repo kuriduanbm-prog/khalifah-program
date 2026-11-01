@@ -1560,6 +1560,12 @@ html[data-theme="dark"] .k8-adm-me { border: 2px solid rgba(51,51,51,0.35) !impo
 html[data-theme="dark"] #k8AsModal .k8-as-av { border: 4px solid #333333 !important; outline: 1px solid #323941 !important; }
 html[data-theme="dark"] #k8AsModal .k8-as-av.is-png { background-color: #181f26 !important; }
 html[data-theme="dark"] #k8AsModal .k8-as-dt span { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-otp-spin { border: 3px solid rgba(51,51,51,0.4) !important; border-top-color: #333333 !important; }
+html[data-theme="dark"] #k8OtpBoxes.is-bad span { color: #ed7878 !important; background-color: #2f1111 !important; }
+html[data-theme="dark"] #k8OtpOk { background-color: rgba(19,46,27,0.88) !important; }
+html[data-theme="dark"] .k8-otpok-c { color: #79eca4 !important; }
+html[data-theme="dark"] .k8-otpok-c circle { fill: #76efa3 !important; }
+html[data-theme="dark"] .k8-otpok-c span { color: #bbdcc7 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

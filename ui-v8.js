@@ -2901,7 +2901,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '16.2';
+  const APP_VERSION = '16.3';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6515,4 +6515,41 @@ window.k8RegBirthChange = function (v) {
   const paint = () => { try { window.k8ThAvatarPaint && window.k8ThAvatarPaint(); } catch (e) {} };
   ['switchView', 'updateAdminUIVisibility'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(paint, 0); return r; }; });
   window.addEventListener('load', () => setTimeout(paint, 400));
+})();
+
+/* ---------- v16.3 · ยืนยันรหัส 6 หลัก: มีภาพเคลื่อนไหวระหว่างตรวจสอบ / สำเร็จ / ผิด ---------- */
+(function () {
+  const orig = window.verifyRegistrationOtpCode;
+  if (typeof orig !== 'function') return;
+  let busy = false;
+  const btn = () => document.querySelector('#otpVerifyModal .btn-primary.btn-block');
+  const boxes = () => document.getElementById('k8OtpBoxes');
+  const isOpen = () => { const m = document.getElementById('otpVerifyModal'); return !!(m && m.classList.contains('open')); };
+  function done() {
+    let o = document.getElementById('k8OtpOk');
+    if (!o) { o = document.createElement('div'); o.id = 'k8OtpOk'; o.setAttribute('role', 'status'); o.innerHTML = '<div class="k8-otpok-c"><svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-15"/></svg><b>ยืนยันสำเร็จ</b><span>กำลังเข้าสู่ระบบ…</span></div>'; document.body.appendChild(o); }
+    o.classList.remove('is-on'); void o.offsetWidth; o.classList.add('is-on');
+    setTimeout(() => o.classList.remove('is-on'), 1500);
+  }
+  window.verifyRegistrationOtpCode = async function () {
+    if (busy) return;
+    const inp = document.getElementById('otpVerifyCodeInput');
+    if (!/^\d{6}$/.test(String((inp && inp.value) || '').trim())) return orig.apply(this, arguments);
+    busy = true;
+    const b = btn(), bx = boxes(); const label = b ? b.innerHTML : '';
+    if (b) { b.classList.add('is-checking'); b.disabled = true; b.innerHTML = '<span class="k8-otp-spin" aria-hidden="true"></span>กำลังตรวจสอบรหัส…'; }
+    if (bx) { bx.classList.remove('is-bad', 'is-good'); bx.classList.add('is-checking'); }
+    const t0 = Date.now(); let r;
+    try { r = await orig.apply(this, arguments); } finally {
+      const wait = Math.max(0, 700 - (Date.now() - t0)); // ให้เห็นว่าระบบตรวจสอบจริง
+      await new Promise((res) => setTimeout(res, wait));
+      if (bx) bx.classList.remove('is-checking');
+      if (b) { b.classList.remove('is-checking'); b.disabled = false; b.innerHTML = label; }
+      const ok = !isOpen() && !!(window.getSessionToken && getSessionToken());
+      if (ok) done();
+      else if (isOpen() && bx) { bx.classList.add('is-bad'); try { if (navigator.vibrate) navigator.vibrate([60, 40, 60]); } catch (e) {} setTimeout(() => bx.classList.remove('is-bad'), 700); }
+      busy = false;
+    }
+    return r;
+  };
 })();
