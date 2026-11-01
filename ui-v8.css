@@ -2838,3 +2838,9 @@ html.k8-preview body.portal-mode-student .main-wrapper { padding-top: calc(78px 
 .k8-geo-r { grid-template-columns: minmax(0, 1fr) 80px; }
 .k8-geo-rn { width: 100%; box-sizing: border-box; }
 .k8-geo-card { min-width: 0; overflow: hidden; }
+.k8-geo-mapwrap { position: sticky; top: 8px; z-index: 5; display: flex; flex-direction: column; gap: 6px; background: var(--k8-bg, #f4f6f9); padding-bottom: 4px; }
+.k8-geo-map { height: min(46vh, 380px); }
+.k8-geo-hint { font-size: 12.5px; color: #334155; line-height: 1.5; padding: 0 2px; }
+.k8-geo-hint b { color: #0369a1; }
+.k8-geo-map .leaflet-tooltip { font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 12px; font-weight: 600; }
+@media (min-width: 993px) { .k8-geo-mapwrap { top: 16px; } }

@@ -2901,7 +2901,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '15.4';
+  const APP_VERSION = '15.5';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6394,7 +6394,7 @@ window.k8RegBirthChange = function (v) {
     const el = root(); if (!el) return;
     const zs = G.zones || [];
     el.innerHTML = '<header class="k8-geo-head"><h1>พิกัดเช็คชื่อละหมาด</h1><p>นักเรียนที่กดระบุตำแหน่งในหน้าละหมาด ถ้าอยู่ในวงรัศมีของจุดใด ระบบจะขึ้นชื่อจุดนั้น · จุดหลักใช้บอกระยะห่างเมื่ออยู่นอกทุกจุด</p></header>' +
-      '<div class="k8-geo-map" id="k8GeoMap"><p class="k8-li-empty">กำลังโหลดแผนที่… (แตะบนแผนที่เพื่อย้ายจุดที่เลือก)</p></div>' +
+      '<div class="k8-geo-mapwrap"><div class="k8-geo-map" id="k8GeoMap"><p class="k8-li-empty">กำลังโหลดแผนที่…</p></div><div class="k8-geo-hint" id="k8GeoHint"></div></div>' +
       '<div class="k8-geo-list">' + zs.map((z, i) => '<section class="k8-geo-card' + (i === G.sel ? ' is-sel' : '') + '" onclick="k8GeoSel(' + i + ',event)">' +
         '<div class="k8-geo-ch"><span class="k8-geo-no">' + (i + 1) + '</span><input type="text" class="k8-geo-name" value="' + esc(z.name) + '" placeholder="ชื่อจุด เช่น มัสยิดประจำโรงเรียน" maxlength="80" oninput="k8GeoSet(' + i + ',\'name\',this.value)">' + (z.main ? '<span class="k8-geo-main">จุดหลัก</span>' : '<button type="button" class="k8-geo-mk" onclick="k8GeoMain(' + i + ')">ตั้งเป็นจุดหลัก</button>') + '</div>' +
         '<div class="k8-geo-ll"><label><span>ละติจูด</span><input type="text" inputmode="decimal" value="' + esc(z.lat) + '" oninput="k8GeoSet(' + i + ',\'lat\',this.value)" onpaste="k8GeoPaste(' + i + ',event)"></label><label><span>ลองจิจูด</span><input type="text" inputmode="decimal" value="' + esc(z.lng) + '" oninput="k8GeoSet(' + i + ',\'lng\',this.value)"></label></div>' +
@@ -6405,12 +6405,12 @@ window.k8RegBirthChange = function (v) {
     drawMap();
   }
   const dirty = () => { G.dirty = true; const b = document.querySelector('#k8GeoAdmin .k8-bh-rsave'); if (b) b.hidden = false; };
-  window.k8GeoSel = function (i, e) { if (e && e.target.closest('input,button,a')) { if (G.sel !== i) { G.sel = i; document.querySelectorAll('.k8-geo-card').forEach((c, j) => c.classList.toggle('is-sel', j === i)); drawMap(); } return; } G.sel = i; document.querySelectorAll('.k8-geo-card').forEach((c, j) => c.classList.toggle('is-sel', j === i)); drawMap(true); };
+  window.k8GeoSel = function (i, e) { if (e && e.target.closest('input,button,a')) { if (G.sel !== i) { G.sel = i; document.querySelectorAll('.k8-geo-card').forEach((c, j) => c.classList.toggle('is-sel', j === i)); drawMap(); } return; } G.sel = i; document.querySelectorAll('.k8-geo-card').forEach((c, j) => c.classList.toggle('is-sel', j === i)); drawMap('fit'); const mp = document.getElementById('k8GeoMap'); if (mp) mp.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   window.k8GeoSet = function (i, k, v) {
     const z = G.zones[i]; if (!z) return;
     if (k === 'name') z.name = v; else if (k === 'radius') { z.radius = Math.max(5, Math.min(2000, parseInt(v, 10) || 5)); const b = document.getElementById('k8GeoR' + i); if (b) b.textContent = z.radius; const card = document.querySelectorAll('.k8-geo-card')[i]; if (card) { card.querySelectorAll('input[type=range],.k8-geo-rn').forEach((x) => { if (x !== document.activeElement) x.value = z.radius; }); } }
     else { const p = parseLatLng(v); if (p && k === 'lat' && /,/.test(v)) { z.lat = p.lat; z.lng = p.lng; render(); dirty(); return; } z[k] = v.trim(); }
-    G.sel = i; dirty(); drawMap();
+    G.sel = i; dirty(); drawMap(k === 'radius' ? 'fit' : (k === 'lat' || k === 'lng') ? true : false);
   };
   window.k8GeoPaste = function (i, e) { const t = (e.clipboardData || window.clipboardData).getData('text'); const p = parseLatLng(t); if (p && /,|maps|@/.test(t)) { e.preventDefault(); Object.assign(G.zones[i], p); G.sel = i; dirty(); render(); } };
   window.k8GeoPasteAsk = function (i) { const t = prompt('วางลิงก์ Google Maps หรือพิกัด เช่น 6.5967, 101.3443', ''); if (!t) return; const p = parseLatLng(t); if (!p) { toast('อ่านพิกัดจากข้อความนี้ไม่ได้ · ลิงก์แบบย่อ (maps.app.goo.gl) ให้เปิดในเบราว์เซอร์ก่อน แล้วคัดลอกลิงก์เต็ม', 'warning'); return; } Object.assign(G.zones[i], p); G.sel = i; dirty(); render(); };
@@ -6438,6 +6438,12 @@ window.k8RegBirthChange = function (v) {
     await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); setTimeout(rej, 12000); });
     return window.L;
   }
+  function setPoint(i, lat, lng) {
+    const z = G.zones[i]; if (!z) return;
+    z.lat = Math.round(lat * 1e7) / 1e7; z.lng = Math.round(lng * 1e7) / 1e7; dirty();
+    const card = document.querySelectorAll('.k8-geo-card')[i]; if (card) { const ins = card.querySelectorAll('.k8-geo-ll input'); ins[0].value = z.lat; ins[1].value = z.lng; const a = card.querySelector('.k8-geo-acts a'); if (a) a.href = 'https://www.google.com/maps?q=' + encodeURIComponent(z.lat + ',' + z.lng); }
+    drawMap();
+  }
   async function drawMap(fly) {
     const box = document.getElementById('k8GeoMap'); if (!box) return;
     let L; try { L = await leaflet(); } catch (e) { box.innerHTML = '<p class="k8-li-empty">โหลดแผนที่ไม่ได้ · กรอกพิกัดหรือใช้ปุ่ม "ใช้ตำแหน่งปัจจุบันของฉัน" ได้ตามปกติ</p>'; return; }
@@ -6445,18 +6451,33 @@ window.k8RegBirthChange = function (v) {
       box.innerHTML = ''; const z0 = G.zones[G.sel] || G.zones[0];
       G.map = L.map(box, { zoomControl: true }).setView([+z0.lat, +z0.lng], 18);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, maxNativeZoom: 19, attribution: '© OpenStreetMap' }).addTo(G.map);
-      G.map.on('click', (e) => { const z = G.zones[G.sel]; if (!z) return; z.lat = Math.round(e.latlng.lat * 1e7) / 1e7; z.lng = Math.round(e.latlng.lng * 1e7) / 1e7; dirty(); const card = document.querySelectorAll('.k8-geo-card')[G.sel]; if (card) { const ins = card.querySelectorAll('.k8-geo-ll input'); ins[0].value = z.lat; ins[1].value = z.lng; } drawMap(); });
+      G.map.on('click', (e) => setPoint(G.sel, e.latlng.lat, e.latlng.lng));
     }
     G.layers.forEach((l) => l.remove()); G.layers = [];
+    let selCircle = null;
     G.zones.forEach((z, i) => {
       if (!isFinite(+z.lat) || !isFinite(+z.lng)) return;
       const on = i === G.sel;
-      const c = L.circle([+z.lat, +z.lng], { radius: +z.radius, color: on ? '#0369a1' : '#64748b', weight: on ? 3 : 1.5, fillOpacity: on ? 0.18 : 0.08 }).addTo(G.map);
-      const m = L.circleMarker([+z.lat, +z.lng], { radius: 6, color: '#fff', weight: 2, fillColor: on ? '#0369a1' : '#64748b', fillOpacity: 1 }).addTo(G.map).bindTooltip((i + 1) + '. ' + (z.name || 'ยังไม่ตั้งชื่อ'), { permanent: on, direction: 'top', offset: [0, -8] });
-      c.on('click', () => window.k8GeoSel(i)); m.on('click', () => window.k8GeoSel(i));
-      G.layers.push(c, m);
+      const c = L.circle([+z.lat, +z.lng], { radius: +z.radius, color: on ? '#0369a1' : '#64748b', weight: on ? 3 : 1.5, fillOpacity: on ? 0.2 : 0.08, dashArray: on ? null : '4 4' }).addTo(G.map);
+      c.on('click', (e) => { if (i !== G.sel) { L.DomEvent.stop(e); window.k8GeoSel(i); } });
+      G.layers.push(c);
+      if (on) {
+        selCircle = c;
+        // หมุดของจุดที่เลือก: ลากเพื่อย้ายได้
+        const pin = L.marker([+z.lat, +z.lng], { draggable: true, autoPan: true, title: 'ลากเพื่อย้ายจุด' }).addTo(G.map).bindTooltip((i + 1) + '. ' + (z.name || 'ยังไม่ตั้งชื่อ') + ' · ' + z.radius + ' ม.', { permanent: true, direction: 'top', offset: [0, -34] });
+        pin.on('drag', (e) => { const p = e.target.getLatLng(); c.setLatLng(p); });
+        pin.on('dragend', (e) => { const p = e.target.getLatLng(); setPoint(i, p.lat, p.lng); });
+        G.layers.push(pin);
+      } else {
+        const m = L.circleMarker([+z.lat, +z.lng], { radius: 6, color: '#fff', weight: 2, fillColor: '#64748b', fillOpacity: 1 }).addTo(G.map).bindTooltip((i + 1) + '. ' + (z.name || 'ยังไม่ตั้งชื่อ'), { direction: 'top', offset: [0, -8] });
+        m.on('click', (e) => { L.DomEvent.stop(e); window.k8GeoSel(i); });
+        G.layers.push(m);
+      }
     });
-    const z = G.zones[G.sel]; if (z && fly) G.map.setView([+z.lat, +z.lng], Math.max(G.map.getZoom(), 17));
+    const z = G.zones[G.sel];
+    const hint = document.getElementById('k8GeoHint'); if (hint && z) hint.innerHTML = '<b>จุดที่ ' + (G.sel + 1) + (z.name ? ' · ' + esc(z.name) : '') + '</b> · แตะบนแผนที่เพื่อวางจุด หรือลากหมุด · วงสีฟ้าคือรัศมี ' + z.radius + ' ม.';
+    if (z && fly === 'fit' && selCircle) G.map.fitBounds(selCircle.getBounds(), { padding: [30, 30], maxZoom: 19 });
+    else if (z && fly) G.map.setView([+z.lat, +z.lng], Math.max(G.map.getZoom(), 17));
     setTimeout(() => G.map && G.map.invalidateSize(), 50);
   }
   const sat = window.switchAdminTab;
