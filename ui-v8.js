@@ -2766,9 +2766,10 @@ window.k8RegBirthChange = function (v) {
     ['EXECUTIVE', 'ผู้บริหาร', 'ดูสถิติภาพรวม รายงาน และผลประเมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['ActivityAdmin', 'ฝ่ายกิจกรรม', 'สร้างกิจกรรมและเปิดสแกน QR', false],
     ['INSPECTOR', 'ผู้ตรวจการ', 'ตรวจเครื่องแต่งกาย หอพัก ห้องน้ำ ความประพฤติ · หัก/เพิ่มคะแนนพฤติกรรม (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
-    ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ ยกเว้นตั้งค่าระบบและจัดการแอดมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', true]
+    ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ ยกเว้นตั้งค่าระบบและจัดการแอดมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', true],
+    ['SuperAdmin', 'แอดมิน (สิทธิ์เท่าแอดมินหลัก)', 'ทำได้ทุกอย่างเหมือนแอดมินหลัก รวมถึงตั้งค่าระบบ จัดการแอดมิน และให้สิทธิ์ผู้อื่น (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว) · เฉพาะแอดมินหลักเลือกได้', true]
   ];
-  const PW_ONLY = ['EXECUTIVE', 'INSPECTOR', 'SubAdmin'];
+  const PW_ONLY = ['EXECUTIVE', 'INSPECTOR', 'SubAdmin', 'SuperAdmin'];
   const pwOnly = () => PW_ONLY.indexOf(nfRole) !== -1;
   let nfRole = 'TEACHER'; const nfSubj = new Set();
   function drawRoles() {
@@ -2800,7 +2801,7 @@ window.k8RegBirthChange = function (v) {
     const v = (id) => (document.getElementById(id).value || '').trim();
     const name = v('k8NfName'), pass = v('k8NfPass'), phone = v('k8NfPhone').replace(/\D/g, ''), email = v('k8NfEmail');
     let user = v('k8NfUser');
-    if (pwOnly()) { const pre = { EXECUTIVE: 'exec', INSPECTOR: 'insp', SubAdmin: 'sub' }[nfRole] || 'staff'; const c = 'abcdefghjkmnpqrstuvwxyz23456789'; let r = ''; for (let i = 0; i < 5; i++) r += c[Math.floor(Math.random() * c.length)]; user = pre + '-' + r; }
+    if (pwOnly()) { const pre = { EXECUTIVE: 'exec', INSPECTOR: 'insp', SubAdmin: 'sub', SuperAdmin: 'adm' }[nfRole] || 'staff'; const c = 'abcdefghjkmnpqrstuvwxyz23456789'; let r = ''; for (let i = 0; i < 5; i++) r += c[Math.floor(Math.random() * c.length)]; user = pre + '-' + r; }
     const bad = [];
     if (!name) bad.push(['k8NfName', 'กรอกชื่อ-นามสกุล']);
     if (!pwOnly() && !/^[A-Za-z0-9._-]{3,30}$/.test(user)) bad.push(['k8NfUser', 'ชื่อผู้ใช้ 3–30 ตัว ใช้ a-z 0-9 . _ - เท่านั้น']);
@@ -2908,7 +2909,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.0';
+  const APP_VERSION = '17.1';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

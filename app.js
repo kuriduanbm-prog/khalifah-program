@@ -8964,8 +8964,11 @@ function openEditTeacherModal(username) {
   if (document.getElementById('subPhone')) document.getElementById('subPhone').value = normalizePhone(t.phone || '');
   if (document.getElementById('subRole')) {
     const sel = document.getElementById('subRole'); const r = String(t.role || 'TEACHER'); const l = r.toLowerCase();
+    // ตัวเลือก "สิทธิ์เท่าแอดมินหลัก" แสดงเฉพาะแอดมินหลัก
+    const ownerNow = !!currentAdmin && currentAdmin.role === 'SuperAdmin' && !currentAdmin.isSubAdmin;
+    Array.from(sel.options).forEach((o) => { if (o.dataset.ownerOnly) { o.hidden = !ownerNow; o.disabled = !ownerNow; } });
     sel.value = r;
-    if (sel.value !== r) sel.value = /inspector|ผู้ตรวจการ/.test(l) ? 'INSPECTOR' : /executive|ผู้บริหาร/.test(l) ? 'EXECUTIVE' : /teacheradmin|homeroom|ประจำชั้น/.test(l) ? 'TeacherAdmin' : /activity|กิจกรรม/.test(l) ? 'ActivityAdmin' : /subadmin|admin|ผู้ช่วย/.test(l) ? 'SubAdmin' : 'TEACHER';
+    if (sel.value !== r) sel.value = /super/.test(l) ? 'SuperAdmin' : /inspector|ผู้ตรวจการ/.test(l) ? 'INSPECTOR' : /executive|ผู้บริหาร/.test(l) ? 'EXECUTIVE' : /teacheradmin|homeroom|ประจำชั้น/.test(l) ? 'TeacherAdmin' : /activity|กิจกรรม/.test(l) ? 'ActivityAdmin' : /subadmin|admin|ผู้ช่วย/.test(l) ? 'SubAdmin' : 'TEACHER';
   }
 
   const assignedArr = Array.isArray(t.assignedSubjects)
