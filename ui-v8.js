@@ -2917,7 +2917,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.15';
+  const APP_VERSION = '17.16';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6115,12 +6115,17 @@ window.k8RegBirthChange = function (v) {
   const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
   const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
   const ST = [['ontime', 'ตรงเวลา'], ['late', 'มาช้า'], ['absent', 'ไม่มา']];
-  const R = { date: ymd(new Date()), grade: 'ALL', q: '', saved: {}, edits: {}, loading: false, saving: false, err: '' };
+  const R = { date: ymd(new Date()), grade: 'ALL', q: '', saved: {}, edits: {}, loading: false, saving: false, err: '', girls: false };
 
   const isSubuh = (t) => { try { return normalizePrayerSlotKey(t || '') === ROLL_SLOT; } catch (e) { return /ซุบฮิ|ศุบฮิ/.test(String(t || '')); } };
+  // v17.16 · นักเรียนหญิง (ดูจากเพศ/คำนำหน้าชื่อ) เช็คชื่อซุบฮิเองตามปกติ · นักเรียนชายแอดมินเช็คให้
+  const isGirl = (st) => { if (!st) return false; const g = String(st.gender || st.sex || ''); if (/หญิง|^f/i.test(g)) return true; if (/ชาย|^m/i.test(g)) return false; return /^\s*(นางสาว|น\.ส\.|นาง|เด็กหญิง|ด\.ญ\.)/.test(String(st.fullName || st.name || '')); };
+  window.k8IsGirl = isGirl;
+  const meGirl = () => { try { return isGirl(currentStudent); } catch (e) { return false; } };
+  const rollForMe = (t) => isSubuh(t) && !meGirl();
   function students() {
     let all = []; try { all = allStudents || []; } catch (e) {}
-    return all.filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))).sort((a, b) => (gnum(a.grade) + String(a.fullName || '')).localeCompare(gnum(b.grade) + String(b.fullName || ''), 'th'));
+    return all.filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || '')) && (R.girls || !isGirl(s))).sort((a, b) => (gnum(a.grade) + String(a.fullName || '')).localeCompare(gnum(b.grade) + String(b.fullName || ''), 'th'));
   }
   const cur = (k) => (R.edits[k] !== undefined ? R.edits[k] : (R.saved[k] || ''));
   const dirtyN = () => Object.keys(R.edits).filter((k) => R.edits[k] !== (R.saved[k] || '')).length;
@@ -6145,7 +6150,9 @@ window.k8RegBirthChange = function (v) {
     const d = new Date(R.date + 'T00:00:00');
     const today = R.date === ymd(new Date());
     const grades = ['ALL', '1', '2', '3', '4', '5', '6'];
-    let h = '<header class="k8-pr-head"><div><h1>เช็คชื่อละหมาดซุบฮิ</h1><p>นักเรียนไม่มีโทรศัพท์ช่วงเช้ามืด · แอดมินเช็คชื่อแทน แล้วกราฟของนักเรียนจะแสดงตามนี้</p></div></header>' +
+    let girlsN = 0; try { girlsN = (allStudents || []).filter((x) => x && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(x.status || '')) && isGirl(x)).length; } catch (e) {}
+    let h = '<header class="k8-pr-head"><div><h1>เช็คชื่อละหมาดซุบฮิ</h1><p>นักเรียนชายไม่มีโทรศัพท์ช่วงเช้ามืด · แอดมินเช็คชื่อแทน แล้วกราฟของนักเรียนจะแสดงตามนี้</p></div></header>' +
+      (girlsN ? '<label class="k8-pr-girls"><input type="checkbox"' + (R.girls ? ' checked' : '') + ' onchange="k8PrGirls(this.checked)"><span>แสดงนักเรียนหญิงด้วย <small>(' + girlsN + ' คน · ปกติเช็คชื่อซุบฮิเองในแอป)</small></span></label>' : '') +
       '<section class="k8-pr-bar">' +
       '<div class="k8-pr-date"><button type="button" aria-label="วันก่อนหน้า" onclick="k8PrShift(-1)">‹</button><label><span>' + DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + (d.getFullYear() + 543) + (today ? ' · วันนี้' : '') + '</span><input type="date" value="' + R.date + '" max="' + ymd(new Date()) + '" onchange="k8PrDate(this.value)" aria-label="เลือกวันที่"></label><button type="button" aria-label="วันถัดไป" onclick="k8PrShift(1)"' + (today ? ' disabled' : '') + '>›</button></div>' +
       '<div class="k8-pr-grades" role="tablist">' + grades.map((g) => '<button type="button" role="tab" aria-selected="' + (R.grade === g) + '" onclick="k8PrGrade(\'' + g + '\')">' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + g) + '</button>').join('') + '</div>' +
@@ -6169,6 +6176,7 @@ window.k8RegBirthChange = function (v) {
   window.k8PrMark = function (k, v) { const c = cur(k); R.edits[k] = c === v ? '' : v; render(); };
   window.k8PrAll = function () { students().filter((s) => (R.grade === 'ALL' || gnum(s.grade) === R.grade) && (!R.q || (String(s.fullName || '') + ' ' + s.studentId).toLowerCase().indexOf(R.q.toLowerCase()) !== -1)).forEach((s) => { const k = nid(s.studentId); if (!cur(k)) R.edits[k] = 'ontime'; }); render(); };
   window.k8PrGrade = function (g) { R.grade = g; render(); };
+  window.k8PrGirls = function (on) { R.girls = !!on; render(); };
   window.k8PrQ = function (v) { R.q = v; render(); const q = document.querySelector('.k8-pr-q'); if (q) { q.focus(); q.setSelectionRange(v.length, v.length); } };
   window.k8PrDate = function (v) { if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || !confirmLeave()) { render(); return; } R.date = v; R.edits = {}; load(); };
   window.k8PrShift = function (n) { const d = new Date(R.date + 'T00:00:00'); d.setDate(d.getDate() + n); if (ymd(d) > ymd(new Date())) return; window.k8PrDate(ymd(d)); };
@@ -6209,19 +6217,19 @@ window.k8RegBirthChange = function (v) {
     let el = document.getElementById('k8SubuhNote');
     const box = document.getElementById('cameraBox');
     if (!el && box) { el = document.createElement('div'); el.id = 'k8SubuhNote'; el.className = 'k8-subuh-note'; el.setAttribute('role', 'status'); el.innerHTML = '<b>ซุบฮิ · แอดมินเช็คชื่อให้</b><span>ช่วงเช้ามืดนักเรียนไม่ต้องถ่ายรูปบันทึกเอง ผลจะขึ้นในกราฟหลังแอดมินเช็คชื่อ (ตรงเวลา / มาช้า / ไม่มา)</span>'; box.parentNode.insertBefore(el, box); }
-    const on = isSubuh(sel);
+    const on = rollForMe(sel);
     if (el) el.hidden = !on;
     document.documentElement.classList.toggle('k8-subuh-roll', on);
   }
   const hp = window.handlePrayerMainButtonClick;
-  if (typeof hp === 'function') window.handlePrayerMainButtonClick = function () { let sel = null; try { sel = selectedPrayerTime; } catch (e) {} if (isSubuh(sel)) { toast(note, 'info'); paintNote(); return; } return hp.apply(this, arguments); };
+  if (typeof hp === 'function') window.handlePrayerMainButtonClick = function () { let sel = null; try { sel = selectedPrayerTime; } catch (e) {} if (rollForMe(sel)) { toast(note, 'info'); paintNote(); return; } return hp.apply(this, arguments); };
   const lr = window.submitPrayerLateApprovalRequest;
-  if (typeof lr === 'function') window.submitPrayerLateApprovalRequest = function () { let sel = null; try { sel = selectedPrayerTime; } catch (e) {} if (isSubuh(sel)) { toast(note, 'info'); return; } return lr.apply(this, arguments); };
+  if (typeof lr === 'function') window.submitPrayerLateApprovalRequest = function () { let sel = null; try { sel = selectedPrayerTime; } catch (e) {} if (rollForMe(sel)) { toast(note, 'info'); return; } return lr.apply(this, arguments); };
   const spt = window.selectPrayerTime;
   if (typeof spt === 'function') window.selectPrayerTime = function () { const r = spt.apply(this, arguments); try { paintNote(); } catch (e) {} return r; };
   const sv = window.switchView;
   if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'prayer') setTimeout(paintNote, 50); return r; };
-  window.k8IsRollSlot = isSubuh;
+  window.k8IsRollSlot = rollForMe;
 })();
 
 /* ---------- v14.2 · แตะรูปโปรไฟล์เพื่อดูภาพขนาดจริง ---------- */
@@ -6997,7 +7005,7 @@ window.k8RegBirthChange = function (v) {
     body.innerHTML = '<p class="k8-pw-hint">เวลาละหมาดจริงของ <b>ต.เขาตูม อ.ยะรัง จ.ปัตตานี</b> คำนวณอัตโนมัติทุกวัน · วันนี้ ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543) + '</p>' +
       '<div class="k8-pt-tbl"><div class="k8-pt-h"><span>เวลา</span><span>เข้าเวลา</span><span>เช็คได้ถึง</span><span>สายหลัง</span></div>' +
       KEYS.map((k, i) => '<div class="k8-pt-r"><b>' + k + '</b><span>' + hhmm(W[i][0]) + '</span><span>' + (k === 'อีชาอ์' ? 'ก่อนรุ่งอรุณ' : hhmm(W[i][1])) + '</span><span class="k8-pt-c">' + hhmm(C[k]) + '</span></div>').join('') + '</div>' +
-      '<p class="k8-pw-hint">ซุบฮิเป็นการเช็คชื่อโดยแอดมิน · เวลาอื่นนับว่า "มาสาย" เมื่อเช็คชื่อหลังเวลาในคอลัมน์ "สายหลัง"</p>' +
+      '<p class="k8-pw-hint">ซุบฮิ: นักเรียนชายแอดมินเช็คชื่อให้ · นักเรียนหญิงเช็คเอง · ทุกเวลานับว่า "มาสาย" เมื่อเช็คชื่อหลังเวลาในคอลัมน์ "สายหลัง"</p>' +
       '<div class="k8-pt-rule"><label><span>ซุฮริ สายหลัง</span><input type="time" id="k8PtZ" value="' + (RULE.zuhr || '') + '"></label>' +
       '<label><span>อัศรฺ สายหลัง</span><input type="time" id="k8PtA" value="' + (RULE.asr || '') + '"></label>' +
       '<label><span>เวลาอื่น: สายเมื่อเลยเวลาเข้า (นาที)</span><input type="number" id="k8PtO" min="0" max="120" inputmode="numeric" value="' + (parseInt(RULE.offset, 10) || 0) + '"></label></div>' +
@@ -7224,7 +7232,7 @@ window.k8RegBirthChange = function (v) {
     const date = String(p.date || ''); if (!date || date < FROM) return false;
     const id = String(p.logId || p.id || '');
     if (/^PRY-(ROLL|ADM|APPR)/.test(id) || /แก้ไขโดย|อนุมัติ/.test(String(p.note || '') + String(p.time || ''))) return false;
-    const slot = norm(p.prayerName || p.prayerTime || ''); if (!slot || slot === 'ซุบฮิ') return false;
+    const slot = norm(p.prayerName || p.prayerTime || ''); if (!slot) return false;
     const t = hm(p.time); if (isNaN(t)) return false;
     const c = window.k8LateCutoffs(new Date(date + 'T12:00:00'))[slot]; if (c == null) return false;
     if (slot === 'อีชาอ์' && t < 12 * 60) return true;
@@ -7273,7 +7281,7 @@ window.k8RegBirthChange = function (v) {
       const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
       try {
         PRAYER_TIME_WINDOWS.forEach((w) => {
-          const k = norm(w.key || w.name); if (k === 'ซุบฮิ' || hit) return;
+          const k = norm(w.key || w.name); if ((k === 'ซุบฮิ' && !(window.k8IsGirl && window.k8IsGirl(st))) || hit) return;
           const left = w.endMin - cur;
           if (cur >= w.startMin && left >= 0 && left <= WARN && !done(k)) hit = { k: k, left: left, end: w.endMin };
         });

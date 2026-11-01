@@ -3290,3 +3290,7 @@ html[data-theme="dark"] .k8-bh-stick { background: #1e1e1e; }
 .k8-bh-stick .k8-bh-editbtns { margin-left: auto; }
 .k8-inspector { overflow-x: clip !important; overflow-y: visible !important; }
 .k8-bh-stick { top: 0; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); border-radius: 0 0 14px 14px; }
+/* v17.16 · ซุบฮิ: นักเรียนหญิงเช็คเอง */
+.k8-pr-girls { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fdf2f8; font-size: 14px; color: #0f172a; cursor: pointer; }
+.k8-pr-girls input { width: 20px; height: 20px; accent-color: #0369a1; flex: none; }
+.k8-pr-girls small { color: #64748b; }
