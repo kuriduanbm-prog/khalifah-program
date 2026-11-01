@@ -2901,7 +2901,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '15.9';
+  const APP_VERSION = '16.0';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3323,14 +3323,25 @@ window.k8RegBirthChange = function (v) {
     B.editCat = !!on; B.editRules = on ? B.rules.map((r) => Object.assign({}, r)) : null; B.rulesDirty = false; render();
   };
   window.k8BhRuleDel = function (i) { B.rulesDirty = true; B.editRules.splice(i, 1); render(); };
+  // บันทึกหัวข้อแบบทันใจ: ใช้ค่าที่แก้ทันทีในเครื่อง แล้วส่งขึ้นระบบเบื้องหลัง (ถ้าไม่สำเร็จจะคืนค่าเดิมและแจ้ง)
   window.k8BhRulesSave = async function () {
-    const rules = B.editRules.filter((r) => String(r.title || '').trim());
-    const btns = document.querySelectorAll('#k8BhRSave button, .k8-bh-editbtns button:not(.is-alt)'); btns.forEach((b) => { b.disabled = true; b.dataset.t = b.textContent; b.textContent = 'กำลังบันทึก…'; });
-    try {
-      const r = await api('saveBehaviorRules', { data: { rules } });
-      if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
-      B.rules = r.rules; B.editRules = null; B.rulesDirty = false; B.editCat = false; if (B.ruleId && B.ruleId !== '__custom' && !B.rules.some((x) => x.id === B.ruleId)) B.ruleId = ''; toast(r.message, 'success'); render();
-    } catch (e) { toast(e.message, 'error'); btns.forEach((b) => { b.disabled = false; b.textContent = b.dataset.t || 'บันทึก'; }); }
+    const prev = B.rules.slice();
+    const rules = B.editRules.filter((r) => String(r.title || '').trim()).map((r, i) => Object.assign({}, r, { title: String(r.title).trim(), id: r.id || ('tmp' + Date.now().toString(36) + i) }));
+    if (!rules.length) { toast('ต้องมีหัวข้ออย่างน้อย 1 ข้อ', 'warning'); return; }
+    B.rules = rules; B.editRules = null; B.rulesDirty = false; B.editCat = false;
+    if (B.ruleId && B.ruleId !== '__custom' && !B.rules.some((x) => x.id === B.ruleId)) B.ruleId = '';
+    const cache = () => { try { const c = JSON.parse(localStorage.getItem('khalifah_behavior_cache') || '{}'); c.rules = B.rules; localStorage.setItem('khalifah_behavior_cache', JSON.stringify(c)); } catch (e) {} };
+    cache(); render(); toast('บันทึกหัวข้อแล้ว', 'success');
+    let r = null; try { r = await api('saveBehaviorRules', { data: { rules: rules.map((x) => Object.assign({}, x, { id: /^tmp/.test(x.id) ? '' : x.id })) } }); } catch (e) { r = { success: false, message: e.message }; }
+    if (r && r.success && Array.isArray(r.rules)) {
+      // แทนรหัสชั่วคราวด้วยรหัสจากระบบ (จับคู่ตามหมวด+ชื่อ) โดยคงหัวข้อที่เลือกอยู่ไว้
+      const sel = B.rules.find((x) => x.id === B.ruleId);
+      B.rules = r.rules; if (sel) { const m = r.rules.find((x) => x.cat === sel.cat && x.title === sel.title); B.ruleId = m ? m.id : ''; }
+      cache(); render();
+    } else {
+      B.rules = prev; cache(); render();
+      toast(((r && (r.message || r.error)) || 'บันทึกหัวข้อไม่สำเร็จ') + ' · คืนค่าเดิมแล้ว' + (r && r.code === 'FORBIDDEN' ? ' (ให้แอดมิน Deploy Code.gs ตัวล่าสุด)' : ''), 'error');
+    }
   };
 
   // ---------- นักเรียน: กล่องคะแนนพฤติกรรมหน้าแรก ----------
