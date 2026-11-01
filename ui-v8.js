@@ -2925,7 +2925,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.18';
+  const APP_VERSION = '17.19';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6908,7 +6908,7 @@ window.k8RegBirthChange = function (v) {
   const LAT = 6.5967, LNG = 101.3444, TZ = 7;
   // ฟัจร์ 20° · อีชาอ์ 18° · อัศรฺแบบชาฟิอี · บวกเผื่อ (อิห์ติยาฏ) 2 นาที (แบบที่ใช้ในภาคใต้/มาเลเซีย)
   const FAJR = 20, ISHA = 18, IHT = 2;
-  const DEF_RULE = { zuhr: '12:51', asr: '16:21', offset: 10 };
+  const DEF_RULE = { zuhr: '12:51', asr: '16:21', maghrib: '19:14', offset: 10 };
   const KEYS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
   const rad = (d) => d * Math.PI / 180, deg = (r) => r * 180 / Math.PI;
   const fixA = (a) => { a = a - 360 * Math.floor(a / 360); return a < 0 ? a + 360 : a; };
@@ -6941,10 +6941,16 @@ window.k8RegBirthChange = function (v) {
   }
   let RULE = Object.assign({}, DEF_RULE);
   try { const v = JSON.parse(localStorage.getItem('khalifah_prayer_late_rule') || 'null'); if (v) RULE = Object.assign({}, DEF_RULE, v); } catch (e) {}
+  // v17.19 · มัฆริบมีเวลาสายตายตัว (เช่น 19:14) → ช่วงเช็คมัฆริบยืดถึงเวลานั้น และอีชาอ์เริ่มหลังจากนั้น
+  function bounds(t) {
+    const m = toMin(RULE.maghrib);
+    const mEnd = isNaN(m) ? t.isha - 1 : Math.max(t.isha - 1, m);
+    return { mEnd: mEnd, iStart: Math.max(t.isha, mEnd + 1) };
+  }
   function cutoffs(date) {
     const t = times(date), off = Math.max(0, Math.min(120, parseInt(RULE.offset, 10) || 0));
-    const z = toMin(RULE.zuhr), a = toMin(RULE.asr);
-    return { 'ซุบฮิ': t.fajr + off, 'ซุฮริ': isNaN(z) ? t.dhuhr + off : z, 'อัศรฺ': isNaN(a) ? t.asr + off : a, 'มัฆริบ': t.maghrib + off, 'อีชาอ์': t.isha + off };
+    const z = toMin(RULE.zuhr), a = toMin(RULE.asr), m = toMin(RULE.maghrib), b = bounds(t);
+    return { 'ซุบฮิ': t.fajr + off, 'ซุฮริ': isNaN(z) ? t.dhuhr + off : z, 'อัศรฺ': isNaN(a) ? t.asr + off : a, 'มัฆริบ': isNaN(m) ? t.maghrib + off : m, 'อีชาอ์': b.iStart + off };
   }
   window.k8PrayerTimes = times;
   window.k8LateCutoffs = cutoffs;
@@ -6959,7 +6965,8 @@ window.k8RegBirthChange = function (v) {
   // ช่วงเวลาเช็คชื่อ = เวลาละหมาดจริงของวันนี้
   window.k8PtApply = function () {
     let t; try { t = times(new Date()); } catch (e) { return; }
-    const W = [[t.fajr, t.sunrise], [t.dhuhr, t.asr - 1], [t.asr, t.maghrib - 1], [t.maghrib, t.isha - 1], [t.isha, 23 * 60 + 59]];
+    const bd = bounds(t);
+    const W = [[t.fajr, t.sunrise], [t.dhuhr, t.asr - 1], [t.asr, t.maghrib - 1], [t.maghrib, bd.mEnd], [bd.iStart, 23 * 60 + 59]];
     try {
       PRAYER_TIME_WINDOWS.forEach((w, i) => { w.startMin = W[i][0]; w.endMin = W[i][1]; w.baseLabel = hhmm(W[i][0]) + ' - ' + hhmm(W[i][1]) + ' น.'; try { if (CANONICAL_PRAYERS[i]) CANONICAL_PRAYERS[i].range = w.baseLabel; } catch (e) {} });
     } catch (e) {}
@@ -7016,13 +7023,14 @@ window.k8RegBirthChange = function (v) {
       '<p class="k8-pw-hint">ซุบฮิ: นักเรียนชายแอดมินเช็คชื่อให้ · นักเรียนหญิงเช็คเอง · ทุกเวลานับว่า "มาสาย" เมื่อเช็คชื่อหลังเวลาในคอลัมน์ "สายหลัง"</p>' +
       '<div class="k8-pt-rule"><label><span>ซุฮริ สายหลัง</span><input type="time" id="k8PtZ" value="' + (RULE.zuhr || '') + '"></label>' +
       '<label><span>อัศรฺ สายหลัง</span><input type="time" id="k8PtA" value="' + (RULE.asr || '') + '"></label>' +
+      '<label><span>มัฆริบ สายหลัง</span><input type="time" id="k8PtM" value="' + (RULE.maghrib || '') + '"></label>' +
       '<label><span>เวลาอื่น: สายเมื่อเลยเวลาเข้า (นาที)</span><input type="number" id="k8PtO" min="0" max="120" inputmode="numeric" value="' + (parseInt(RULE.offset, 10) || 0) + '"></label></div>' +
-      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="k8PtReset()">ค่าเริ่มต้น (12:51 · 16:21 · 10 นาที)</button><button type="button" id="k8PtSave" onclick="k8PtSave()">บันทึกเกณฑ์</button></div>';
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="k8PtReset()">ค่าเริ่มต้น (12:51 · 16:21 · 19:14 · 10 นาที)</button><button type="button" id="k8PtSave" onclick="k8PtSave()">บันทึกเกณฑ์</button></div>';
     try { openModal('k8PwModal'); } catch (e) {}
   };
   async function saveRule(v) {
     const b = document.getElementById('k8PtSave'); if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก…'; }
-    let r = null; try { r = await gasApiCall('saveSetting', { data: { key: 'PrayerLateRule', value: JSON.stringify(v), description: 'เกณฑ์มาสายละหมาด (ซุฮริ/อัศรฺ เวลาตายตัว · เวลาอื่น = เข้าเวลา + นาที)' } }, 20000); } catch (e) {}
+    let r = null; try { r = await gasApiCall('saveSetting', { data: { key: 'PrayerLateRule', value: JSON.stringify(v), description: 'เกณฑ์มาสายละหมาด (ซุฮริ/อัศรฺ/มัฆริบ เวลาตายตัว · เวลาอื่น = เข้าเวลา + นาที)' } }, 20000); } catch (e) {}
     if (b) { b.disabled = false; b.textContent = 'บันทึกเกณฑ์'; }
     if (r && r.success !== false) {
       RULE = Object.assign({}, DEF_RULE, v); try { localStorage.setItem('khalifah_prayer_late_rule', JSON.stringify(RULE)); } catch (e) {}
@@ -7030,9 +7038,9 @@ window.k8RegBirthChange = function (v) {
     } else { try { showToast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); } catch (e) {} }
   }
   window.k8PtSave = function () {
-    const z = (document.getElementById('k8PtZ') || {}).value, a = (document.getElementById('k8PtA') || {}).value, o = parseInt((document.getElementById('k8PtO') || {}).value, 10);
-    if (isNaN(toMin(z)) || isNaN(toMin(a)) || isNaN(o) || o < 0 || o > 120) { try { showToast('กรอกเวลาและจำนวนนาทีให้ถูกต้อง', 'warning'); } catch (e) {} return; }
-    saveRule({ zuhr: z, asr: a, offset: o });
+    const z = (document.getElementById('k8PtZ') || {}).value, a = (document.getElementById('k8PtA') || {}).value, m = (document.getElementById('k8PtM') || {}).value, o = parseInt((document.getElementById('k8PtO') || {}).value, 10);
+    if (isNaN(toMin(z)) || isNaN(toMin(a)) || isNaN(toMin(m)) || isNaN(o) || o < 0 || o > 120) { try { showToast('กรอกเวลาและจำนวนนาทีให้ถูกต้อง', 'warning'); } catch (e) {} return; }
+    saveRule({ zuhr: z, asr: a, maghrib: m, offset: o });
   };
   window.k8PtReset = function () { saveRule(Object.assign({}, DEF_RULE)); };
 })();
