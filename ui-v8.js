@@ -2908,7 +2908,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '16.7';
+  const APP_VERSION = '16.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6596,8 +6596,19 @@ window.k8RegBirthChange = function (v) {
     const sel = document.getElementById('prayerNoteTimeSelectedText'); if (sel && !n) sel.innerHTML = '';
     const sv = document.querySelector('.k8-pn-save'); if (sv) { sv.textContent = n ? 'บันทึกหมายเหตุ · ' + (n === 5 ? 'ครบ 5 เวลา' : n + ' เวลา') : 'เลือกเวลาละหมาดก่อน'; sv.classList.toggle('is-off', !n); }
     const v = ((document.getElementById('prayerNoteInput') || {}).value || '');
-    document.querySelectorAll('.k8-pn-reasons .prayer-preset-btn').forEach((b) => { const t = (b.querySelector('b') || {}).textContent || ''; const key = t.split('/')[0].trim().replace('กำลังเดินทาง', 'เดินทาง'); b.classList.toggle('is-on', !!key && v.indexOf(key) !== -1); });
+    let any = false;
+    document.querySelectorAll('.k8-pn-reasons .prayer-preset-btn:not(.k8-pn-other)').forEach((b) => { const t = (b.querySelector('b') || {}).textContent || ''; const key = t.split('/')[0].trim().replace('กำลังเดินทาง', 'เดินทาง'); const on = !!key && v.indexOf(key) !== -1; b.classList.toggle('is-on', on); if (on) any = true; });
+    const ot = document.querySelector('.k8-pn-other'); const otherOn = !any && (otherMode || !!v.trim()); if (ot) ot.classList.toggle('is-on', otherOn);
+    const s3 = document.getElementById('k8PnStep3'); if (s3) s3.innerHTML = otherOn ? 'ระบุเหตุผล <small style="color:#b91c1c">(จำเป็น)</small>' : 'รายละเอียด <small>(ไม่บังคับ)</small>';
   };
+  let otherMode = false;
+  window.k8PnOther = function () {
+    otherMode = true; const inp = document.getElementById('prayerNoteInput');
+    if (inp) { inp.value = ''; inp.placeholder = 'พิมพ์เหตุผล เช่น ไปงานศพ, ช่วยงานที่บ้าน'; setTimeout(() => { inp.focus(); inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 50); }
+    try { updatePrayerNoteChipsUI(); } catch (e) {} sync();
+  };
+  const ap = window.applyPrayerNotePreset; if (typeof ap === 'function') window.applyPrayerNotePreset = function () { otherMode = false; return ap.apply(this, arguments); };
+  const sv0 = window.savePrayerNoteOnly; if (typeof sv0 === 'function') window.savePrayerNoteOnly = function () { const inp = document.getElementById('prayerNoteInput'); if (otherMode && inp && !inp.value.trim()) { try { showToast('พิมพ์เหตุผลในข้อ 3 ก่อนบันทึก', 'warning'); } catch (e) {} inp.focus(); return; } return sv0.apply(this, arguments); };
   ['updatePrayerNoteChipsUI', 'applyPrayerNotePreset', 'togglePrayerNoteTime', 'selectAllPrayerNoteTimes', 'togglePrayerNotesCollapse'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(sync, 0); return r; }; });
   document.addEventListener('input', (e) => { if (e.target && e.target.id === 'prayerNoteInput') sync(); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sync); else sync();

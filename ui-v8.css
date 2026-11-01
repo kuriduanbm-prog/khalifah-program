@@ -2973,3 +2973,6 @@ html.k8-narrow .k8-pn-reasons { grid-template-columns: 1fr; }
 @media (min-width: 993px) {
   #k8PvBar { top: auto; bottom: 20px; left: auto; right: 20px; margin: 0; width: min(440px, calc(100vw - 40px)); }
 }
+.k8-pn-reasons .k8-pn-other { grid-column: 1 / -1; flex-direction: row !important; align-items: center !important; gap: 10px !important; border-style: dashed !important; }
+.k8-pn-reasons .k8-pn-other small { margin-left: auto; }
+.k8-pn-step h3 em { font-style: normal; }
