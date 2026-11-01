@@ -2976,3 +2976,6 @@ html.k8-narrow .k8-pn-reasons { grid-template-columns: 1fr; }
 .k8-pn-reasons .k8-pn-other { grid-column: 1 / -1; flex-direction: row !important; align-items: center !important; gap: 10px !important; border-style: dashed !important; }
 .k8-pn-reasons .k8-pn-other small { margin-left: auto; }
 .k8-pn-step h3 em { font-style: normal; }
+/* v16.9 · การ์ดหมายเหตุละหมาดและประวัติแสดงตลอด · เอาลิงก์ "บันทึกหมายเหตุ · ประวัติ" ออก */
+#view-prayer #prayerNotesCard, #view-prayer #prayerHistoryBottomSection { display: block !important; }
+#view-prayer #k8PrMoreBtn { display: none !important; }
