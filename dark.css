@@ -1497,6 +1497,10 @@ html[data-theme="dark"] .k8-pr-list li { background-color: #121212 !important; b
 html[data-theme="dark"] .k8-pr-who b { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-pr-who small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-pr-seg button { border: 1px solid #323941 !important; background-color: #181f26 !important; color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-ta-datenav > button { color: #69c8fc !important; background-color: #0e2432 !important; border-color: #264555 !important; }
+html[data-theme="dark"] .k8-ta-dpill { background-color: #121212 !important; border: 1px solid #393f46 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-ta-dpill.is-today { background-color: #122938 !important; color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-ta-dpill svg { color: #69c8fc !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

@@ -2696,3 +2696,18 @@ html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-orange .k8-kpi-val { color: #fdba
 .k8-subuh-note b { font-size: 15px; font-weight: 600; }
 .k8-subuh-note span { font-size: 13px; opacity: .9; }
 html.k8-subuh-roll #btnCaptureInstant, html.k8-subuh-roll #btnCenterVerifyGeo { opacity: .45; }
+
+/* v14.3 · เลือกวันที่เช็คชื่อ (อาจารย์) ให้ใหญ่ กดง่าย */
+.k8-ta-grid2 { grid-template-columns: 1fr !important; }
+.k8-ta-datenav { gap: 8px; }
+.k8-ta-datenav > button { width: 48px; min-height: 48px; border-radius: 14px; font-size: 24px; color: #0369a1; background: #f0f9ff; border-color: #bae6fd; }
+.k8-ta-dpill { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 12px; border-radius: 14px; background: #fff; border: 1px solid #cbd5e1; color: #0f172a; font-size: 16px; font-weight: 600; cursor: pointer; }
+.k8-ta-dpill.is-today { background: #e0f2fe; border-color: #7dd3fc; color: #0c4a6e; }
+.k8-ta-dpill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-ta-dpill svg { flex: none; color: #0369a1; }
+.k8-ta-dpill input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; }
+.k8-ta-dpill input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+html.k8-narrow .k8-ta-datenav { flex-wrap: nowrap !important; }
+html.k8-narrow .k8-ta-datenav > button { flex: none !important; width: 44px; }
+html.k8-narrow .k8-ta-dpill { font-size: 14px; }
+html.k8-narrow .k8-ta-dpill svg { display: none; }

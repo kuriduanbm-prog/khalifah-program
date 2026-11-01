@@ -2090,6 +2090,8 @@ window.k8RegBirthChange = function (v) {
     const ss = document.getElementById('k8TaSubject');
     if (ss) ss.innerHTML = subs.map((x) => '<option value="' + esc(x.id) + '"' + (String(x.id) === String(S.subject) ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('');
     const di = document.getElementById('k8TaDateInput'); if (di) { di.value = S.date; di.removeAttribute('max'); }
+    const dl = document.getElementById('k8TaDateLbl');
+    if (dl) { const dd = new Date(S.date + 'T00:00:00'); const TD = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์']; const TM = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; const t = ymd(new Date()); dl.textContent = TD[dd.getDay()] + ' ' + dd.getDate() + ' ' + TM[dd.getMonth()] + (dd.getFullYear() !== new Date().getFullYear() ? ' ' + (dd.getFullYear() + 543) : '') + (S.date === t ? ' · วันนี้' : ''); dl.parentElement.title = 'แตะเพื่อเลือกวันที่'; dl.parentElement.classList.toggle('is-today', S.date === t); }
     const all = (typeof allStudents !== 'undefined' ? allStudents : []);
     const gs = document.getElementById('k8TaGrade');
     const GR = ['ALL', 'มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3', 'มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'];
@@ -2848,7 +2850,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '14.2';
+  const APP_VERSION = '14.3';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
