@@ -1604,12 +1604,13 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const id = cid(s.studentId); const ap = attPct(s); const a = s.attendance || {};
     box.innerHTML = '<div class="k8-as-dh"><span class="k8-as-av">' + esc(initialOf(s.fullName)) + '</span><span class="k8-as-dt"><b>' + esc(s.fullName) + '</b><span>' + esc(id) + ' · ' + esc(shortG(s.grade)) + '</span></span></div>' +
       '<dl class="k8-as-dl"><dt>ผู้ปกครอง</dt><dd>' + esc(s.parentPhone || '-') + '</dd><dt>มาเรียน</dt><dd>' + (ap == null ? '-' : ap + '% (มา ' + (a.present || 0) + ' · สาย ' + (a.late || 0) + ' · ลา ' + (a.leave || 0) + ' · ขาด ' + (a.absent || 0) + ')') + '</dd>' +
+      '<dt>วันเกิด</dt><dd>' + (function () { const a = window.k8AgeOf && window.k8AgeOf(s.birthDate); if (!a) return '-'; const MN = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; return a.d + ' ' + MN[a.mo - 1] + ' ' + a.be + ' · <b>อายุ ' + a.y + ' ปี</b>'; })() + '</dd>' +
       '<dt>ละหมาด 7 วัน</dt><dd>' + (pr[norm(s.studentId)] || 0) + ' / 35 เวลา</dd><dt>GPAX</dt><dd>' + gpax(s) + '</dd></dl>' +
       '<div class="k8-as-acts"><button type="button" class="k8-btn-pri" onclick="openAdminEditStudentModal(\'' + esc(id) + '\')">แก้ไขข้อมูล</button>' +
       '<button type="button" class="k8-btn-line" onclick="openStudentQuickStatusModal(\'' + esc(id) + '\')">ปรับสถานะ</button>' +
       '<button type="button" class="k8-btn-line" onclick="k8AsPrayerHistory(\'' + esc(id) + '\')">ดูประวัติละหมาด</button>' +
       '<button type="button" class="k8-btn-line is-danger" onclick="deleteStudent(\'' + esc(id) + '\')">ลบนักเรียน</button></div>' +
-      '<button type="button" class="k8-as-preview" onclick="k8PreviewStudent(\'' + esc(id) + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>ดูแอปในมุมมองของนักเรียนคนนี้</button>';
+      '<button type="button" class="k8-as-preview" hidden onclick="k8PreviewStudent(\'' + esc(id) + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>ดูแอปในมุมมองของนักเรียนคนนี้</button>';
   }
   window.k8AsSelect = function (id) { selId = id; render(lastList); };
   window.k8AsGrade = function (v) { const g = document.getElementById('filterGradeSelect'); if (g) { g.value = v; filterAdminStudents(); } };
@@ -1897,6 +1898,16 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
 })();
 
 /* ============ Round 4 · Register = canvas (native date → BE selects) ============ */
+/* อายุจากวันเกิด "DDMMYYYY" (ปี พ.ศ. หรือ ค.ศ.) → { y, m } */
+window.k8AgeOf = function (bd) {
+  const t = String(bd || '').replace(/\D/g, ''); let d, mo, y;
+  if (t.length === 8 && +t.slice(0, 4) > 1800) { y = +t.slice(0, 4); mo = +t.slice(4, 6); d = +t.slice(6, 8); } else if (t.length === 8 || t.length === 7) { const p = t.padStart(8, '0'); d = +p.slice(0, 2); mo = +p.slice(2, 4); y = +p.slice(4, 8); } else return null;
+  if (y > 2400) y -= 543;
+  if (!d || !mo || mo > 12 || d > 31 || y < 1900) return null;
+  const now = new Date(); let yy = now.getFullYear() - y, mm = now.getMonth() + 1 - mo;
+  if (now.getDate() < d) mm--; if (mm < 0) { yy--; mm += 12; }
+  return yy < 0 || yy > 120 ? null : { y: yy, m: mm, d, mo, be: y + 543 };
+};
 window.k8RegBirthChange = function (v) {
   const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) { const h = document.getElementById('regBirthDate'); if (h && !v) h.value = ''; return; }
@@ -1908,6 +1919,8 @@ window.k8RegBirthChange = function (v) {
   if (!Array.from(y.options).some((o) => o.value === be)) { const o = document.createElement('option'); o.value = be; o.textContent = be; y.appendChild(o); }
   d.value = m[3]; mo.value = m[2]; y.value = be;
   try { syncBirthDatePicker(); } catch (e) {}
+  const ag = document.getElementById('k8RegAge');
+  if (ag) { const a = window.k8AgeOf(m[3] + m[2] + be); ag.hidden = a == null; if (a != null) { const MN = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']; ag.innerHTML = 'เกิด ' + (+m[3]) + ' ' + MN[+m[2] - 1] + ' ' + be + ' · <b>อายุ ' + a.y + ' ปี' + (a.m ? ' ' + a.m + ' เดือน' : '') + '</b>'; } }
 };
 (function () {
   function term() {
@@ -2888,7 +2901,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '15.1';
+  const APP_VERSION = '15.2';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6284,4 +6297,39 @@ window.k8RegBirthChange = function (v) {
   if (typeof lo === 'function') window.studentLogout = function () { if (stash()) { window.k8PreviewExit(); return; } return lo.apply(this, arguments); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(banner, 0)); else setTimeout(banner, 0);
   window.addEventListener('load', () => setTimeout(banner, 300));
+})();
+
+/* ---------- สิทธิ์โหมดดูตัวอย่าง: แอดมินสูงสุด หรือแอดมินที่ได้รับสิทธิ์ ---------- */
+(function () {
+  let P = null, loading = false;
+  async function load() {
+    if (loading) return; loading = true;
+    try { const r = await gasApiCall('getPreviewAllowed', {}, 15000); if (r && r.success) P = r; } catch (e) {}
+    loading = false; paint();
+  }
+  function paint() {
+    const b = document.querySelector('#k8AsDetail .k8-as-preview'); if (!b) return;
+    b.hidden = !(P && P.canPreview);
+    let m = document.querySelector('#k8AsDetail .k8-as-pvperm');
+    if (P && P.owner && !m) { m = document.createElement('button'); m.type = 'button'; m.className = 'k8-as-pvperm'; m.textContent = 'ให้สิทธิ์แอดมินคนอื่นใช้โหมดนี้'; m.onclick = openPerm; b.after(m); }
+  }
+  async function openPerm() {
+    try { closeModal('k8AsModal'); } catch (e) {}
+    let staff = []; try { staff = (subAdmins || []).filter((t) => t && t.username && /admin|super|ผู้ช่วย|ผู้บริหาร|executive/i.test(String(t.role || ''))); } catch (e) {}
+    const on = new Set(((P && P.list) || []).map((x) => String(x).toLowerCase()));
+    const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    let ov = document.getElementById('k8PvPerm');
+    if (!ov) { ov = document.createElement('div'); ov.id = 'k8PvPerm'; ov.className = 'modal-overlay'; ov.onclick = (e) => { if (e.target === ov) closeModal('k8PvPerm'); }; document.body.appendChild(ov); }
+    ov.innerHTML = '<div class="modal-dialog k8-sheet" role="dialog" aria-label="สิทธิ์โหมดดูตัวอย่าง"><header class="k8-sheet-head"><div><h2>สิทธิ์ดูแอปในมุมมองนักเรียน</h2><span>แอดมินสูงสุดใช้ได้เสมอ · เลือกแอดมินอื่นที่ให้ใช้ได้</span></div><button type="button" class="btn-icon" onclick="closeModal(\'k8PvPerm\')" aria-label="ปิด">✕</button></header><div class="k8-sheet-body">' +
+      (staff.length ? staff.map((t) => '<label class="k8-tt-xl-chk"><input type="checkbox" value="' + esc(String(t.username).toLowerCase()) + '"' + (on.has(String(t.username).toLowerCase()) ? ' checked' : '') + '><span><b>' + esc(t.fullName || t.username) + '</b><small>' + esc(t.username) + ' · ' + esc(t.role || '') + '</small></span></label>').join('') : '<p class="k8-li-empty">ยังไม่มีบัญชีแอดมินอื่นในระบบ</p>') +
+      '<div class="k8-dr-btns"><button type="button" onclick="k8PvPermSave()">บันทึกสิทธิ์</button></div></div></div>';
+    openModal('k8PvPerm');
+  }
+  window.k8PvPermSave = async function () {
+    const list = Array.from(document.querySelectorAll('#k8PvPerm input:checked')).map((c) => c.value);
+    let r = null; try { r = await gasApiCall('savePreviewAllowed', { data: { list } }, 20000); } catch (e) {}
+    if (r && r.success) { P = Object.assign({}, P, { list: r.list }); closeModal('k8PvPerm'); try { showToast('บันทึกสิทธิ์แล้ว', 'success'); } catch (e) {} } else { try { showToast((r && r.message) || 'บันทึกไม่สำเร็จ', 'error'); } catch (e) {} }
+  };
+  const sel = window.k8AsSelect;
+  if (typeof sel === 'function') window.k8AsSelect = function () { const r = sel.apply(this, arguments); if (P) paint(); else load(); return r; };
 })();

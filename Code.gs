@@ -1181,7 +1181,7 @@ const ACTION_ACCESS = {
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
-  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin',
+  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
@@ -1567,7 +1567,18 @@ function dispatchAction_(action, req, data, session, ctx) {
       return savePrayerWindows_(data.windows);
     case 'getTimetable':
       return getTimetable_(session, isStudent, ctx.isAdmin);
+    case 'getPreviewAllowed': {
+      let l = []; try { l = JSON.parse((getSettings().data || {}).PreviewAllowedAdmins || '[]') || []; } catch (e) {}
+      return { success: true, list: l, owner: !!ctx.isOwner, canPreview: !!ctx.isOwner || l.indexOf(String(session.userId).toLowerCase()) !== -1 };
+    }
+    case 'savePreviewAllowed': {
+      const l = (Array.isArray((data || {}).list) ? data.list : []).map(function (x) { return cleanVal(x).toLowerCase(); }).filter(Boolean).slice(0, 50);
+      saveSetting({ key: 'PreviewAllowedAdmins', value: JSON.stringify(l), description: 'แอดมินที่ได้สิทธิ์ดูแอปในมุมมองนักเรียน (JSON)' });
+      return { success: true, list: l, message: 'บันทึกสิทธิ์แล้ว' };
+    }
     case 'previewAsStudent': {
+      // เฉพาะแอดมินสูงสุด หรือแอดมินที่แอดมินสูงสุดให้สิทธิ์
+      if (!ctx.isOwner) { let l = []; try { l = JSON.parse((getSettings().data || {}).PreviewAllowedAdmins || '[]') || []; } catch (e) {} if (l.indexOf(String(session.userId).toLowerCase()) === -1) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินสูงสุด หรือแอดมินที่ได้รับสิทธิ์เท่านั้น' }; }
       const sid = cleanVal((data || {}).studentId);
       const ss = getSpreadsheet(); const sh = ss.getSheetByName(SHEETS.STUDENTS);
       const rows = sh ? sh.getDataRange().getValues() : [];

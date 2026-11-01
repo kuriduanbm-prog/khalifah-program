@@ -2793,3 +2793,8 @@ html.k8-narrow .k8-ta-dpill svg { display: none; }
 #k8PvBar small { font-size: 12px; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #k8PvBar button { flex: none; min-height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: #fff; color: #4338ca; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 html.k8-preview body.portal-mode-student .main-wrapper { padding-top: calc(78px + env(safe-area-inset-top, 0px)) !important; }
+.k8-reg-age { margin: 8px 0 0; padding: 8px 12px; border-radius: 12px; background: #f0f9ff; color: #0c4a6e; font-size: 14px; }
+.k8-reg-age[hidden] { display: none; }
+.k8-reg-age b { color: #0369a1; }
+.k8-as-preview[hidden] { display: none !important; }
+.k8-as-pvperm { align-self: center; border: 0; background: none; color: #4338ca; font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 36px; }
