@@ -2764,3 +2764,7 @@ html.k8-narrow .k8-ta-dpill svg { display: none; }
 .k8-ap-sent { display: flex; gap: 8px; margin-top: 10px; background: none !important; padding: 0 !important; }
 .k8-ap-sent button { flex: 1; min-height: 44px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
 .k8-ap-sent button.is-ok { border-color: #15803d; background: #15803d; color: #fff; }
+
+/* v14.9 · ดูรูปขยาย: ใหญ่ตามขนาดจริงของรูป (ไม่เกินจอ) */
+#globalPhotoViewerModal .photo-viewer-dialog { max-width: min(96vw, 960px) !important; width: auto !important; min-width: min(92vw, 320px); }
+#globalPhotoViewerModal #globalPhotoViewerImg { max-height: 80vh !important; max-height: 80dvh !important; width: auto; height: auto; }

@@ -2874,7 +2874,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '14.8';
+  const APP_VERSION = '14.9';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4987,7 +4987,7 @@ window.k8RegBirthChange = function (v) {
         av.textContent = ''; av.classList.add('has-img'); if (/^data:image\/(png|webp|gif)|#png$/i.test(u)) av.classList.add('is-png');
         av.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")';
         av.setAttribute('role', 'button'); av.tabIndex = 0; av.title = 'แตะเพื่อดูรูปขยาย'; av.setAttribute('aria-label', 'ดูรูปโปรไฟล์ของ ' + name);
-        const open = () => { try { openPhotoViewerModal(u, name); } catch (e) {} };
+        const open = () => { try { openPhotoViewerModal(u, name); const h = document.getElementById('globalPhotoViewerTitle'); if (h) h.textContent = 'รูปโปรไฟล์'; } catch (e) {} };
         av.onclick = open; av.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); } };
       }
     }
@@ -6147,7 +6147,7 @@ window.k8RegBirthChange = function (v) {
     const u = urlOf(el); if (!u) return;
     e.preventDefault(); e.stopPropagation();
     const name = el.getAttribute('aria-label') || el.getAttribute('title') || 'รูปโปรไฟล์';
-    try { openPhotoViewerModal(u.replace(/#png$/i, ''), name); } catch (er) {}
+    try { openPhotoViewerModal(u.replace(/#png$/i, ''), name); const h = document.getElementById('globalPhotoViewerTitle'); if (h) h.textContent = 'รูปโปรไฟล์'; } catch (er) {}
   }, true);
   const css = document.createElement('style');
   css.textContent = '#hfPhoto.has-img, #k8ProfAv:has(img), #accSheetAvatar:has(img), #teacherModalAvatar:has(img) { cursor: zoom-in; }';

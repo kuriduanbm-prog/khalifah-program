@@ -207,6 +207,7 @@ function openPhotoViewerModal(imageUrl, caption = '', driveLink = null) {
     fileId: fileId
   };
 
+  { const h = document.getElementById('globalPhotoViewerTitle'); if (h) h.textContent = 'ภาพถ่ายหลักฐานในระบบ'; }
   imgEl.src = '';
   if (loaderEl) loaderEl.style.display = 'block';
 
@@ -234,14 +235,14 @@ function openPhotoViewerModal(imageUrl, caption = '', driveLink = null) {
     }
   }
 
-  modal.classList.add('active');
+  modal.classList.add('active', 'open'); // ต้องมี .open ถึงจะแสดง (สไตล์ของหน้าต่างทั้งหมดใช้ .open)
   document.body.style.overflow = 'hidden';
 }
 
 function closePhotoViewerModal() {
   const modal = document.getElementById('globalPhotoViewerModal');
   if (modal) {
-    modal.classList.remove('active');
+    modal.classList.remove('active', 'open');
   }
   document.body.style.overflow = '';
 }
