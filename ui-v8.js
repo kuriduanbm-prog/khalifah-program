@@ -2874,7 +2874,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '14.9';
+  const APP_VERSION = '15.0';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6186,4 +6186,39 @@ window.k8RegBirthChange = function (v) {
   if (typeof o === 'function') window.populateTeacherRegisterSubjectsChecklist = function () { const r = o.apply(this, arguments); setTimeout(refreshSubjects, 0); return r; };
   const t = window.toggleTeacherAuthForm;
   if (typeof t === 'function') window.toggleTeacherAuthForm = function (f) { const r = t.apply(this, arguments); if (f === 'register') refreshSubjects(); return r; };
+})();
+
+/* ---------- v15.0 · หน้านักเรียน (แอดมิน): แตะรายชื่อ → ป๊อปอัปกลางจอ · แตะคนอื่น → ปิดอันเดิม เปิดอันใหม่ ---------- */
+(function () {
+  function setup() {
+    const det = document.getElementById('k8AsDetail'); if (!det || document.getElementById('k8AsModal')) return;
+    const ov = document.createElement('div'); ov.className = 'modal-overlay k8-as-modal'; ov.id = 'k8AsModal';
+    const dlg = document.createElement('div'); dlg.className = 'modal-dialog k8-as-pop'; dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.setAttribute('aria-label', 'รายละเอียดนักเรียน');
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'k8-as-popx'; x.setAttribute('aria-label', 'ปิด'); x.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    x.onclick = () => closeModal('k8AsModal');
+    dlg.appendChild(x); dlg.appendChild(det); ov.appendChild(dlg); document.body.appendChild(ov);
+    // แตะนอกป๊อปอัป: ปิด แล้วถ้าแตะโดนรายชื่อคนอื่น เปิดของคนนั้นแทนทันที
+    ov.addEventListener('click', (e) => {
+      if (e.target !== ov) return;
+      closeModal('k8AsModal');
+      ov.style.display = 'none';
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      ov.style.display = '';
+      const row = under && under.closest && under.closest('#k8AsRows tr[onclick]');
+      if (row) setTimeout(() => row.click(), 0);
+    });
+    // ปุ่มคำสั่งในป๊อปอัป (แก้ไข/ปรับสถานะ/ประวัติ/ลบ) เปิดหน้าต่างอื่น → ปิดป๊อปอัปก่อน
+    det.addEventListener('click', (e) => { if (e.target.closest('.k8-as-acts button')) closeModal('k8AsModal'); }, true);
+  }
+  const sel = window.k8AsSelect;
+  if (typeof sel === 'function') window.k8AsSelect = function () {
+    setup();
+    const r = sel.apply(this, arguments);
+    const dlg = document.querySelector('#k8AsModal .k8-as-pop');
+    if (dlg) { dlg.classList.remove('is-in'); void dlg.offsetWidth; dlg.classList.add('is-in'); }
+    openModal('k8AsModal');
+    return r;
+  };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const m = document.getElementById('k8AsModal'); if (m && m.classList.contains('open')) closeModal('k8AsModal'); } });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup); else setup();
 })();
