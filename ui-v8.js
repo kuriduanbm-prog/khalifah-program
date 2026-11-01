@@ -2901,7 +2901,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '15.8';
+  const APP_VERSION = '15.9';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6237,15 +6237,10 @@ window.k8RegBirthChange = function (v) {
     const x = document.createElement('button'); x.type = 'button'; x.className = 'k8-as-popx'; x.setAttribute('aria-label', 'ปิด'); x.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
     x.onclick = () => closeModal('k8AsModal');
     dlg.appendChild(x); dlg.appendChild(det); ov.appendChild(dlg); document.body.appendChild(ov);
-    // แตะนอกป๊อปอัป: ปิด แล้วถ้าแตะโดนรายชื่อคนอื่น เปิดของคนนั้นแทนทันที
+    // แตะนอกป๊อปอัป: ปิดป๊อปอัป
     ov.addEventListener('click', (e) => {
       if (e.target !== ov) return;
-      closeModal('k8AsModal');
-      ov.style.display = 'none';
-      const under = document.elementFromPoint(e.clientX, e.clientY);
-      ov.style.display = '';
-      const row = under && under.closest && under.closest('#k8AsRows tr[onclick]');
-      if (row) setTimeout(() => row.click(), 0);
+      closeModal('k8AsModal'); // แตะนอกกรอบ = ปิดอย่างเดียว
     });
     // ปุ่มคำสั่งในป๊อปอัป (แก้ไข/ปรับสถานะ/ประวัติ/ลบ) เปิดหน้าต่างอื่น → ปิดป๊อปอัปก่อน
     det.addEventListener('click', (e) => { if (e.target.closest('.k8-as-acts button')) closeModal('k8AsModal'); }, true);
