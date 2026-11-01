@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.2">
-  <link rel="stylesheet" href="ui-v8.css?v=17.2">
-  <link rel="stylesheet" href="dark.css?v=17.2">
+  <link rel="stylesheet" href="style.css?v=17.3">
+  <link rel="stylesheet" href="ui-v8.css?v=17.3">
+  <link rel="stylesheet" href="dark.css?v=17.3">
 </head>
 <body class="auth-locked">
   <script>
@@ -731,7 +731,7 @@
               <h3><span>1</span>เหตุผล</h3>
               <div class="k8-pn-reasons">
                 <button type="button" class="prayer-preset-btn k8-pn-forgot" data-key="ลืมกดเช็คชื่อ" onclick="applyPrayerNotePreset('forgot')"><i aria-hidden="true">⏰</i><b>ลืมเช็คชื่อ (ละหมาดแล้ว)</b><small>ขอบันทึกย้อนหลัง</small></button>
-                <button type="button" class="prayer-preset-btn preset-menstruation" onclick="applyPrayerNotePreset('menstruation')"><i aria-hidden="true">🌸</i><b>มีประจำเดือน / อุซุร</b><small>เลือกครบ 5 เวลาให้</small></button>
+                <button type="button" class="prayer-preset-btn preset-menstruation" onclick="applyPrayerNotePreset('menstruation')"><i aria-hidden="true">🌸</i><b>มีประจำเดือน / อุซุร</b></button>
                 <button type="button" class="prayer-preset-btn" onclick="applyPrayerNotePreset('sick')"><i aria-hidden="true">🤒</i><b>ลาป่วย / มีไข้</b></button>
                 <button type="button" class="prayer-preset-btn" onclick="applyPrayerNotePreset('travel')"><i aria-hidden="true">🚗</i><b>กำลังเดินทาง</b></button>
                 <button type="button" class="prayer-preset-btn" onclick="applyPrayerNotePreset('home')"><i aria-hidden="true">🏠</i><b>ละหมาดที่บ้าน</b></button>
@@ -752,11 +752,11 @@
               <p class="k8-pn-hint">เลือกได้ทุกเวลา ไม่ล็อก · แตะเลือกได้หลายเวลา</p>
             </section>
             <section class="k8-pn-step">
-              <h3><span>3</span><em id="k8PnStep3">รายละเอียด <small>(ไม่บังคับ)</small></em></h3>
+              <h3><span>3</span><em id="k8PnStep3">รายละเอียด <small class="k8-opt">ไม่บังคับ</small></em></h3>
               <input type="text" class="form-control k8-pn-input" id="prayerNoteInput" placeholder="เช่น ไปโรงพยาบาล, กลับบ้านต่างจังหวัด" maxlength="200" oninput="typeof updatePrayerNoteChipsUI==='function'&&updatePrayerNoteChipsUI()">
             </section>
             <section class="k8-pn-step">
-              <h3><span>4</span>รูปหลักฐาน <small>(ไม่บังคับ)</small></h3>
+              <h3><span>4</span>รูปหลักฐาน <small class="k8-opt">ไม่บังคับ</small></h3>
               <div class="k8-pn-pbtns" id="k8PnPBtns">
                 <label class="k8-pn-pbtn"><input type="file" accept="image/*" capture="environment" onchange="k8PnPhoto(this,'camera')"><i aria-hidden="true">📷</i><b>ถ่ายรูป</b><small>เปิดกล้อง</small></label>
                 <label class="k8-pn-pbtn"><input type="file" accept="image/*" onchange="k8PnPhoto(this,'gallery')"><i aria-hidden="true">🖼️</i><b>แนบรูป</b><small>จากอัลบั้ม/ไฟล์</small></label>
@@ -5762,7 +5762,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.2"></script>
-  <script defer src="ui-v8.js?v=17.2"></script>
+  <script defer src="app.js?v=17.3"></script>
+  <script defer src="ui-v8.js?v=17.3"></script>
 </body>
 </html>

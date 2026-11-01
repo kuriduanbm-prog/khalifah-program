@@ -3032,3 +3032,15 @@ html.k8-narrow .k8-pn-date b { display: none; }
 .k8-ap-src { display: inline-flex; align-self: flex-start; margin-top: 2px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #f1f5f9; color: #475569; }
 .k8-ap-src.is-cam { background: #e0f2fe; color: #0369a1; }
 .k8-ap-src.is-gal { background: #fef3c7; color: #92400e; }
+/* v17.3 · ปุ่ม "ลืมเช็คชื่อ" พื้นขาวเหมือนปุ่มอื่น */
+.k8-pn-reasons .k8-pn-forgot { border-color: #e2e8f0 !important; background: #fff !important; }
+.k8-pn-reasons .k8-pn-forgot small { color: #64748b !important; }
+.k8-pn-reasons .k8-pn-forgot.is-on { border-color: #0369a1 !important; background: #e0f2fe !important; }
+.k8-pr-foot.k8-done #btnCaptureInstant { display: none !important; }
+/* v17.3 · เว้นระยะแต่ละขั้น + ป้าย "ไม่บังคับ" ชัดขึ้น */
+.k8-pn-body[style*="block"] { display: flex !important; flex-direction: column; gap: 22px; }
+.k8-pn-body .k8-pn-save { margin-top: 4px; }
+.k8-pn-step h3 { margin-bottom: 12px !important; }
+.k8-pn-step h3 small.k8-opt, .k8-pn-step h3 small.k8-req { display: inline-flex; align-items: center; margin-left: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12.5px !important; font-weight: 600 !important; line-height: 1.6; }
+.k8-pn-step h3 small.k8-opt { background: #f1f5f9; color: #475569 !important; border: 1px solid #e2e8f0; }
+.k8-pn-step h3 small.k8-req { background: #fee2e2; color: #b91c1c !important; border: 1px solid #fecaca; }

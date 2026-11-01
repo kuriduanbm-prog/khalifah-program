@@ -1185,7 +1185,10 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       let live = false; try { live = !!activeCameraStream && prayerCheckStep === 2; } catch (e) {}
       const ph = document.getElementById('k8CamPh'); if (ph) ph.hidden = live;
     } catch (e) {}
-    if (btn) btn.classList.toggle('k8-hide', done && step === 3 && (function () { try { return prayerCheckStep !== 2; } catch (e) { return true; } })());
+    // v17.3 · ซ่อนปุ่มด้วย class บน footer (โค้ดเดิมรีเซ็ต className ของปุ่มบ่อย ทำให้ปุ่มกะพริบ)
+    const hideBtn = done && step === 3 && (function () { try { return prayerCheckStep !== 2; } catch (e) { return true; } })();
+    if (foot) foot.classList.toggle('k8-done', hideBtn);
+    if (btn) btn.classList.remove('k8-hide');
     relabelBtn();
   };
   function hook(fn, after) {
@@ -2909,7 +2912,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.2';
+  const APP_VERSION = '17.3';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6600,7 +6603,7 @@ window.k8RegBirthChange = function (v) {
     let any = false;
     document.querySelectorAll('.k8-pn-reasons .prayer-preset-btn:not(.k8-pn-other)').forEach((b) => { const t = (b.querySelector('b') || {}).textContent || ''; const key = b.dataset.key || t.split('/')[0].trim().replace('กำลังเดินทาง', 'เดินทาง'); const on = !!key && v.indexOf(key) !== -1; b.classList.toggle('is-on', on); if (on) any = true; });
     const ot = document.querySelector('.k8-pn-other'); const otherOn = !any && (otherMode || !!v.trim()); if (ot) ot.classList.toggle('is-on', otherOn);
-    const s3 = document.getElementById('k8PnStep3'); if (s3) s3.innerHTML = otherOn ? 'ระบุเหตุผล <small style="color:#b91c1c">(จำเป็น)</small>' : 'รายละเอียด <small>(ไม่บังคับ)</small>';
+    const s3 = document.getElementById('k8PnStep3'); if (s3) s3.innerHTML = otherOn ? 'ระบุเหตุผล <small class="k8-req">จำเป็น</small>' : 'รายละเอียด <small class="k8-opt">ไม่บังคับ</small>';
   };
   let otherMode = false;
   window.k8PnOther = function () {
@@ -6677,7 +6680,7 @@ window.k8RegBirthChange = function (v) {
     const b = document.querySelector('.k8-pn-forgot'); if (!b) return;
     const v = (($('prayerNoteInput') || {}).value || '');
     const on = v.indexOf(b.dataset.key) !== -1; b.classList.toggle('is-on', on);
-    if (on) { const o = document.querySelector('.k8-pn-other'); if (o) o.classList.remove('is-on'); const s3 = $('k8PnStep3'); if (s3) s3.innerHTML = 'รายละเอียด <small>(ไม่บังคับ)</small>'; }
+    if (on) { const o = document.querySelector('.k8-pn-other'); if (o) o.classList.remove('is-on'); const s3 = $('k8PnStep3'); if (s3) s3.innerHTML = 'รายละเอียด <small class="k8-opt">ไม่บังคับ</small>'; }
   }
   document.addEventListener('input', (e) => { if (e.target && e.target.id === 'prayerNoteInput') setTimeout(hlForgot, 0); });
   ['updatePrayerNoteChipsUI', 'applyPrayerNotePreset', 'k8PnOther'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(hlForgot, 2); return r; }; });

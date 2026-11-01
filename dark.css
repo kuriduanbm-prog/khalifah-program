@@ -1621,6 +1621,11 @@ html[data-theme="dark"] .k8-pn-mine span { color: #f8a96d !important; }
 html[data-theme="dark"] .k8-ap-src { background-color: #1a2229 !important; color: #b6bcc3 !important; }
 html[data-theme="dark"] .k8-ap-src.is-cam { background-color: #122938 !important; color: #69c8fc !important; }
 html[data-theme="dark"] .k8-ap-src.is-gal { background-color: #433a15 !important; color: #f3a372 !important; }
+html[data-theme="dark"] .k8-pn-reasons .k8-pn-forgot { border-color: #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-pn-reasons .k8-pn-forgot small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pn-reasons .k8-pn-forgot.is-on { background-color: #122938 !important; }
+html[data-theme="dark"] .k8-pn-step h3 small.k8-opt { background-color: #1a2229 !important; color: #b6bcc3 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-pn-step h3 small.k8-req { background-color: #371212 !important; color: #ed7878 !important; border: 1px solid #522424 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

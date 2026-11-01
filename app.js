@@ -2815,9 +2815,7 @@ function autoSelectDetectedPrayerSlot(showToastMsg = false) {
 
   // ส่ง isSystemAuto = true เพื่ออนุญาตให้เลือกรอบเวลาอัตโนมัติได้
   selectPrayerTime(res.prayerName, document.getElementById(`ptime-${res.prayerName}`), true);
-  if (typeof selectPrayerNoteTime === 'function') {
-    selectPrayerNoteTime(res.prayerName);
-  }
+  // v17.3 · การ์ดคำร้องไม่เลือกเวลาให้อัตโนมัติ ให้นักเรียนเลือกเอง
 
   if (showToastMsg) {
     showToast(`ซิงค์เวลาละหมาดปัจจุบันสำเร็จ: ${res.prayerName} (เผื่อเวลา ±${res.bufferMins} นาที)`, 'info');
@@ -4908,13 +4906,9 @@ function selectPrayerNoteTime(time) {
 function applyPrayerNotePreset(reasonKey) {
   const noteInput = document.getElementById('prayerNoteInput');
   if (reasonKey === 'menstruation') {
-    selectAllPrayerNoteTimes(true);
     if (noteInput) noteInput.value = 'มีประจำเดือน / อุซุรทางศาสนา';
-    showToast('เลือกเวลาละหมาดครบ 5 เวลา และตั้งสถานะ "มีประจำเดือน / อุซุร" เรียบร้อยแล้ว สามารถกดบันทึกได้ทันที', 'info');
+    showToast('ตั้งค่าหมายเหตุ "มีประจำเดือน / อุซุร" แล้ว · เลือกเวลาละหมาดในข้อ 2', 'info');
   } else if (reasonKey === 'sick') {
-    if (selectedPrayerNoteTimeSlots.length === 0) {
-      selectAllPrayerNoteTimes(true);
-    }
     if (noteInput) noteInput.value = 'ลาป่วย / มีไข้';
     showToast('ตั้งค่าหมายเหตุ "ลาป่วย / มีไข้" เรียบร้อยแล้ว', 'info');
   } else if (reasonKey === 'travel') {
