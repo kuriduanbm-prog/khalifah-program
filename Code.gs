@@ -4455,39 +4455,30 @@ function approveRegistrationAndSendEmail(data) {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) emailError = 'อีเมลของผู้สมัครไม่ถูกต้อง (' + (email || 'ว่าง') + ')';
   else if (quotaLeft === 0) emailError = 'โควตาส่งอีเมลของวันนี้หมดแล้ว (Google จำกัดจำนวนต่อวัน) · ให้แจ้งรหัสกับผู้สมัครโดยตรง หรือส่งใหม่พรุ่งนี้';
   if (!emailError) {
-    const senderName = 'KHALIFAH PROGRAM';
-    const subject = 'แจ้งผลการอนุมัติบัญชีและรหัสยืนยันเข้าใช้งาน KHALIFAH PROGRAM (' + fullName + ')';
+    // อีเมลสั้น เรียบ เหมือนจดหมายจากคน (ลดโอกาสเข้าจดหมายขยะ): หัวเรื่องสั้น ไม่มีรูป ไม่มีปุ่ม HTML หนัก ๆ เนื้อหา text/HTML ตรงกัน
+    const senderName = 'KHALIFAH โรงเรียน';
+    const subject = 'รหัสยืนยันบัญชี KHALIFAH ของ ' + fullName;
     const plainBody =
-      'อัสสลามุอะลัยกุม คุณ ' + fullName + '\n\n' +
-      'KHALIFAH PROGRAM ได้ตรวจสอบและกดยินยอมรับรองการสมัครบัญชี ' + roleLabel + ' (รหัสประจำตัว: ' + userId + ') ของคุณเรียบร้อยแล้ว\n\n' +
-      'รหัสยืนยัน 6 หลักของคุณคือ: ' + otpCode + '\n\n' +
-      'กรุณานำรหัสยืนยัน 6 หลักนี้ไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ https://khalifah-program.vercel.app เพื่อเข้าใช้งานระบบได้ทันที\n\n' +
-      'ขอแสดงความนับถือ\n' +
-      'KHALIFAH PROGRAM';
-
+      'อัสสลามุอะลัยกุม ' + fullName + '\n\n' +
+      'บัญชี' + roleLabel + ' รหัส ' + userId + ' ได้รับการอนุมัติแล้ว\n' +
+      'รหัสยืนยันของคุณคือ ' + otpCode + '\n\n' +
+      'นำรหัสนี้ไปกรอกในแอป KHALIFAH (khalifah-program.vercel.app) ที่หน้า "มีรหัสยืนยัน 6 หลักจากอีเมลแล้ว"\n' +
+      'ถ้าไม่ได้สมัคร ไม่ต้องทำอะไร\n\n' +
+      'ฝ่ายทะเบียน KHALIFAH';
+    const h_ = function (v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
     const htmlBody =
-      '<div style="font-family: Sarabun, Tahoma, Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 28px 24px; border: 1px solid #e2e8f0; border-radius: 12px; color: #0f172a; background-color: #ffffff; line-height: 1.6;">' +
-      '<div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 14px; margin-bottom: 18px;">' +
-      '<strong style="font-size: 18px; color: #0f172a; letter-spacing: 0.3px;">KHALIFAH PROGRAM</strong>' +
-      '<div style="font-size: 12px; color: #64748b;">แจ้งผลการอนุมัติบัญชีผู้ใช้งานและรหัสยืนยันตัวตน</div>' +
-      '</div>' +
-      '<p style="font-size: 15px; color: #1e293b; margin: 0 0 12px 0;">อัสสลามุอะลัยกุม คุณ <strong>' + fullName + '</strong></p>' +
-      '<p style="font-size: 14px; color: #334155; margin: 0 0 18px 0;">ผู้ดูแลระบบได้ตรวจสอบข้อมูลและกดยินยอมรับรองการสมัครบัญชี <strong>' + roleLabel + '</strong> (รหัสประจำตัว: <strong>' + userId + '</strong>) ของท่านเรียบร้อยแล้ว</p>' +
-      '<div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; text-align: center; margin: 20px 0;">' +
-      '<div style="font-size: 13px; color: #475569; margin-bottom: 6px;">รหัสยืนยันสำหรับเข้าใช้งานระบบ (6 หลัก)</div>' +
-      '<div style="font-size: 30px; font-weight: 700; letter-spacing: 6px; color: #0f172a; font-family: Consolas, monospace;">' + otpCode + '</div>' +
-      '</div>' +
-      '<p style="font-size: 13.5px; color: #475569; margin: 0 0 18px 0;">ท่านสามารถนำรหัสยืนยัน 6 หลักด้านบนไปกรอกในหน้าต่างยืนยันรหัสบนเว็บไซต์ เพื่อเข้าใช้งานระบบได้ทันที</p>' +
-      '<div style="border-top: 1px solid #f1f5f9; padding-top: 14px; margin-top: 20px; font-size: 12px; color: #64748b;">' +
-      'ขอแสดงความนับถือ<br><strong>KHALIFAH PROGRAM</strong>' +
-      '</div>' +
-      '</div>';
+      '<div style="font-family:Tahoma,Arial,sans-serif;font-size:15px;line-height:1.7;color:#111">' +
+      '<p>อัสสลามุอะลัยกุม ' + h_(fullName) + '</p>' +
+      '<p>บัญชี' + h_(roleLabel) + ' รหัส ' + h_(userId) + ' ได้รับการอนุมัติแล้ว<br>รหัสยืนยันของคุณคือ <b style="font-size:20px;letter-spacing:2px">' + otpCode + '</b></p>' +
+      '<p>นำรหัสนี้ไปกรอกในแอป KHALIFAH (khalifah-program.vercel.app) ที่หน้า "มีรหัสยืนยัน 6 หลักจากอีเมลแล้ว"<br>ถ้าไม่ได้สมัคร ไม่ต้องทำอะไร</p>' +
+      '<p>ฝ่ายทะเบียน KHALIFAH</p></div>';
+    let replyTo = '';
+    try { replyTo = Session.getEffectiveUser().getEmail() || ''; } catch (e) {}
 
     try {
-      GmailApp.sendEmail(email, subject, plainBody, {
-        htmlBody: htmlBody,
-        name: senderName
-      });
+      const opt = { htmlBody: htmlBody, name: senderName };
+      if (replyTo) opt.replyTo = replyTo;
+      GmailApp.sendEmail(email, subject, plainBody, opt);
       emailSent = true;
     } catch (gmailErr) {
       try {
