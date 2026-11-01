@@ -1535,6 +1535,20 @@ html[data-theme="dark"] .k8-reg-age b { color: #69c8fc !important; }
 html[data-theme="dark"] .k8-pvdemo h2 { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-pvdemo p { color: #b6bcc3 !important; }
 html[data-theme="dark"] .k8-pvdemo-x { border: 1px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-geo-head p { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-geo-map { border: 1px solid #323941 !important; background-color: #1a2229 !important; }
+html[data-theme="dark"] .k8-geo-card { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-geo-name { border: 1px solid #393f46 !important; }
+html[data-theme="dark"] .k8-geo-main { color: #79eca4 !important; background-color: #153821 !important; }
+html[data-theme="dark"] .k8-geo-mk { border: 1px solid #393f46 !important; background-color: #121212 !important; color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-geo-ll label, html[data-theme="dark"] .k8-geo-r { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-geo-ll input { border: 1px solid #393f46 !important; }
+html[data-theme="dark"] .k8-geo-r > span { color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-geo-r b { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-geo-rn { border: 1px solid #393f46 !important; }
+html[data-theme="dark"] .k8-geo-acts > * { border: 1px solid #323941 !important; background-color: #181f26 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-geo-acts .is-del { color: #ed7878 !important; border-color: #522424 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-geo-add { border: 2px dashed #29425e !important; background-color: #0e2432 !important; color: #69c8fc !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

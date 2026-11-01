@@ -2902,19 +2902,20 @@ function fetchFreshPrayerLocation() {
         let matchedTarget = null;
         let minDistance = Infinity;
 
+        // เลือกจุดที่ใกล้ที่สุดในบรรดาจุดที่อยู่ในรัศมี (จุดถูกตั้งจากหน้าแอดมิน "พิกัดละหมาด")
+        let bestIn = Infinity;
         for (const target of targetEntries) {
           const dist = calculateDistanceInMeters(userLat, userLng, target.lat, target.lng);
-          if (dist <= target.radius) {
-            matchedTarget = target;
+          if (dist <= target.radius && dist < bestIn) {
+            matchedTarget = target; bestIn = dist;
             minDistance = Math.round(dist);
-            break;
           }
-          if (dist < minDistance) {
+          if (!matchedTarget && dist < minDistance) {
             minDistance = dist;
           }
         }
 
-        const mosqueTarget = GEOFENCE_TARGETS.MOSQUE;
+        const mosqueTarget = GEOFENCE_TARGETS.MOSQUE || targetEntries[0];
         const distToMosque = Math.round(calculateDistanceInMeters(userLat, userLng, mosqueTarget.lat, mosqueTarget.lng));
         const formattedMosqueDist = formatDistance(distToMosque);
 
@@ -2926,7 +2927,7 @@ function fetchFreshPrayerLocation() {
           isWithinZone = true;
         } else {
           isWithinZone = false;
-          locationName = `ห่างจากมัสยิดฮารอมัยน์ ${formattedMosqueDist}`;
+          locationName = `ห่างจาก${mosqueTarget.name || 'จุดละหมาด'} ${formattedMosqueDist}`;
         }
 
         verifiedLocation = {

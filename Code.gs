@@ -1181,7 +1181,7 @@ const ACTION_ACCESS = {
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
-  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
+  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
@@ -1567,6 +1567,22 @@ function dispatchAction_(action, req, data, session, ctx) {
       return savePrayerWindows_(data.windows);
     case 'getTimetable':
       return getTimetable_(session, isStudent, ctx.isAdmin);
+    case 'saveGeoZones': {
+      const zs = (Array.isArray((data || {}).zones) ? data.zones : []).slice(0, 20);
+      const out = [];
+      for (let i = 0; i < zs.length; i++) {
+        const z = zs[i] || {}; const lat = Number(z.lat), lng = Number(z.lng), r = Math.round(Number(z.radius));
+        const name = cleanVal(z.name).slice(0, 80);
+        if (!name) return { success: false, message: 'จุดที่ ' + (i + 1) + ': ตั้งชื่อจุดก่อน' };
+        if (!isFinite(lat) || lat < -90 || lat > 90 || !isFinite(lng) || lng < -180 || lng > 180) return { success: false, message: '"' + name + '": ละติจูด/ลองจิจูดไม่ถูกต้อง' };
+        if (!isFinite(r) || r < 5 || r > 2000) return { success: false, message: '"' + name + '": รัศมีต้องอยู่ระหว่าง 5–2000 เมตร' };
+        out.push({ name: name, lat: Math.round(lat * 1e7) / 1e7, lng: Math.round(lng * 1e7) / 1e7, radius: r, main: !!z.main });
+      }
+      if (!out.length) return { success: false, message: 'ต้องมีอย่างน้อย 1 จุด' };
+      if (!out.some(function (z) { return z.main; })) out[0].main = true;
+      saveSetting({ key: 'GeoZones', value: JSON.stringify(out), description: 'จุดพิกัดเช็คชื่อละหมาด: ชื่อ ละติจูด ลองจิจูด รัศมี (JSON)' });
+      return { success: true, zones: out, message: 'บันทึกจุดพิกัดแล้ว · นักเรียนจะใช้จุดใหม่ทันที' };
+    }
     case 'getPreviewAllowed': {
       let l = []; try { l = JSON.parse((getSettings().data || {}).PreviewAllowedAdmins || '[]') || []; } catch (e) {}
       return { success: true, list: l, owner: !!ctx.isOwner, canPreview: !!ctx.isOwner || l.indexOf(String(session.userId).toLowerCase()) !== -1 };

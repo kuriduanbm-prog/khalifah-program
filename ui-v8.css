@@ -2805,3 +2805,36 @@ html.k8-preview body.portal-mode-student .main-wrapper { padding-top: calc(78px 
 .k8-pvdemo-g button { min-height: 52px; border: 0; border-radius: 14px; background: #4338ca; color: #fff; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
 .k8-pvdemo-x { margin-top: 12px; min-height: 44px; width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #334155; font: inherit; font-size: 14px; cursor: pointer; }
 #k8PvDemo { align-items: center !important; justify-content: center !important; }
+
+/* v15.4 · พิกัดเช็คชื่อละหมาด */
+.k8-geo { display: flex; flex-direction: column; gap: 12px; padding-bottom: 110px; }
+.k8-geo-head h1 { margin: 0; font-size: 24px; font-weight: 600; }
+.k8-geo-head p { margin: 4px 0 0; font-size: 13px; color: #475569; line-height: 1.55; }
+.k8-geo-map { height: 320px; border-radius: 18px; overflow: hidden; border: 1px solid #e2e8f0; background: #f1f5f9; display: flex; align-items: center; justify-content: center; z-index: 0; }
+.k8-geo-map.leaflet-container { display: block; }
+.k8-geo-list { display: flex; flex-direction: column; gap: 10px; }
+.k8-geo-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: #fff; border: 1px solid #e2e8f0; cursor: pointer; }
+.k8-geo-card.is-sel { border-color: #0369a1; box-shadow: 0 0 0 3px #e0f2fe; }
+.k8-geo-ch { display: flex; align-items: center; gap: 8px; }
+.k8-geo-no { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #0369a1; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.k8-geo-name { flex: 1; min-width: 0; height: 44px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 15px; font-weight: 600; }
+.k8-geo-main { flex: none; font-size: 12px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 4px 10px; border-radius: 999px; }
+.k8-geo-mk { flex: none; border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; color: #334155; cursor: pointer; min-height: 32px; }
+.k8-geo-ll { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.k8-geo-ll label, .k8-geo-r { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #64748b; }
+.k8-geo-ll input { height: 44px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0 10px; font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; min-width: 0; }
+.k8-geo-r { display: grid; grid-template-columns: 1fr 88px; grid-template-areas: "t t" "s n"; align-items: center; column-gap: 10px; }
+.k8-geo-r > span { grid-area: t; font-size: 13px; color: #334155; }
+.k8-geo-r b { color: #0369a1; font-size: 15px; }
+.k8-geo-r input[type=range] { grid-area: s; accent-color: #0369a1; width: 100%; }
+.k8-geo-rn { grid-area: n; height: 40px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 8px; font: inherit; font-size: 14px; }
+.k8-geo-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.k8-geo-acts > * { min-height: 38px; padding: 0 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; color: #0369a1; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; text-decoration: none; }
+.k8-geo-acts .is-del { color: #b91c1c; border-color: #fecaca; background: #fff; }
+.k8-geo-add { min-height: 50px; border: 2px dashed #93c5fd; border-radius: 16px; background: #f0f9ff; color: #0369a1; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.k8-geo-ll { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.k8-geo-ll label { min-width: 0; }
+.k8-geo-ll input { width: 100%; box-sizing: border-box; }
+.k8-geo-r { grid-template-columns: minmax(0, 1fr) 80px; }
+.k8-geo-rn { width: 100%; box-sizing: border-box; }
+.k8-geo-card { min-width: 0; overflow: hidden; }
