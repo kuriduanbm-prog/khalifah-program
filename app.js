@@ -6690,6 +6690,9 @@ function handleStudentRegister() {
   const email = (emailInput?.value || '').trim();
   const schoolName = (schoolNameInput?.value || '').trim();
   const grade = gradeInput?.value || 'มัธยมศึกษาปีที่ 1';
+  // บางเบราว์เซอร์ (iPhone / Samsung) ไม่ส่งเหตุการณ์ change จากปฏิทินวันเกิด → อ่านค่าจากช่องวันเกิดโดยตรงอีกครั้งก่อนตรวจ
+  const nativeBirth = document.getElementById('k8RegBirth');
+  if (nativeBirth && nativeBirth.value && typeof window.k8RegBirthChange === 'function') { try { window.k8RegBirthChange(nativeBirth.value); } catch (e) {} }
   const rawBirthDate = (document.getElementById('regBirthDate')?.value || '').trim();
   const birthDate = normalizeBirthDate(rawBirthDate);
   const parentPhone = normalizePhone(parentPhoneInput?.value || '');
@@ -6726,8 +6729,8 @@ function handleStudentRegister() {
 
   const cleanBD = birthDate ? birthDate.replace(/[^0-9]/g, '') : '';
   if (!cleanBD || cleanBD.length !== 8) {
-    const targetInput = (!birthDayInput?.value) ? birthDayInput : (!birthMonthInput?.value ? birthMonthInput : birthYearInput);
-    triggerAuthError(targetInput, 'กรุณาเลือกวัน เดือน และปี พ.ศ. เกิดให้ครบถ้วน');
+    const targetInput = (nativeBirth && nativeBirth.offsetParent !== null) ? nativeBirth : ((!birthDayInput?.value) ? birthDayInput : (!birthMonthInput?.value ? birthMonthInput : birthYearInput));
+    triggerAuthError(targetInput, 'กรุณาเลือกวันเกิด (แตะช่องวันเกิดแล้วเลือกวัน เดือน ปี)');
     try { targetInput?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
     return;
   }

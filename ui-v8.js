@@ -1885,7 +1885,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
 /* ============ Round 4 · Register = canvas (native date → BE selects) ============ */
 window.k8RegBirthChange = function (v) {
   const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return;
+  if (!m) { const h = document.getElementById('regBirthDate'); if (h && !v) h.value = ''; return; }
+  if (+m[1] > 2400) m[1] = String(+m[1] - 543); // บางเครื่องตั้งปฏิทินพุทธ ส่งปี พ.ศ. มา
   try { if (typeof initBirthDatePicker === 'function') initBirthDatePicker(); } catch (e) {}
   const d = document.getElementById('regBirthDay'), mo = document.getElementById('regBirthMonth'), y = document.getElementById('regBirthYear');
   if (!d || !mo || !y) return;
@@ -2873,7 +2874,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '14.7';
+  const APP_VERSION = '14.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6151,4 +6152,38 @@ window.k8RegBirthChange = function (v) {
   const css = document.createElement('style');
   css.textContent = '#hfPhoto.has-img, #k8ProfAv:has(img), #accSheetAvatar:has(img), #teacherModalAvatar:has(img) { cursor: zoom-in; }';
   document.head.appendChild(css);
+})();
+
+/* ---- ช่องวันเกิดตอนสมัคร: ฟังทั้ง input/change/blur (iPhone, Samsung ส่งเหตุการณ์ไม่เหมือนกัน) ---- */
+(function () {
+  function bind() {
+    const el = document.getElementById('k8RegBirth'); if (!el || el.dataset.k8b) return; el.dataset.k8b = '1';
+    const t = new Date(); el.max = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); el.min = '1987-01-01';
+    ['input', 'change', 'blur'].forEach((ev) => el.addEventListener(ev, () => { try { window.k8RegBirthChange(el.value); } catch (e) {} }));
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
+})();
+
+/* ---- สมัครอาจารย์: ดึงรายวิชาจริงของโรงเรียนจากระบบ (เครื่องใหม่ยังไม่มีรายวิชาในเครื่อง จะเห็นแค่วิชาตัวอย่าง) ---- */
+(function () {
+  let fetched = false;
+  async function refreshSubjects() {
+    if (fetched) return; fetched = true;
+    try {
+      const r = await gasApiCall('getSettings', {}, 15000);
+      const raw = r && r.success && r.data && r.data.AppSubjects;
+      const list = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(list) && list.length) {
+        const checked = Array.from(document.querySelectorAll('input[name="regTeacherSubjChk"]:checked')).map((c) => c.value);
+        localStorage.setItem('khalifah_subjects', JSON.stringify(list));
+        try { appSubjects = list; } catch (e) {}
+        if (typeof populateTeacherRegisterSubjectsChecklist === 'function') populateTeacherRegisterSubjectsChecklist();
+        checked.forEach((v) => { const c = Array.from(document.querySelectorAll('input[name="regTeacherSubjChk"]')).find((x) => x.value === v); if (c) c.checked = true; });
+      }
+    } catch (e) { fetched = false; }
+  }
+  const o = window.populateTeacherRegisterSubjectsChecklist;
+  if (typeof o === 'function') window.populateTeacherRegisterSubjectsChecklist = function () { const r = o.apply(this, arguments); setTimeout(refreshSubjects, 0); return r; };
+  const t = window.toggleTeacherAuthForm;
+  if (typeof t === 'function') window.toggleTeacherAuthForm = function (f) { const r = t.apply(this, arguments); if (f === 'register') refreshSubjects(); return r; };
 })();
