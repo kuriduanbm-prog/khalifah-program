@@ -2919,3 +2919,53 @@ html body.k8-inspector .main-wrapper { padding-top: calc(28px + env(safe-area-in
 .k8-eval-closed { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; text-align: center; color: #64748b; }
 .k8-eval-closed b { font-size: 17px; color: #0f172a; }
 .k8-eval-closed span { font-size: 14px; line-height: 1.6; }
+
+/* v16.6 · ดูรูปขยาย: เหลือแค่รูป */
+#globalPhotoViewerModal.k8-pv-min { background: rgba(2,6,23,.92) !important; align-items: center !important; justify-content: center !important; padding: 12px; cursor: zoom-out; }
+#globalPhotoViewerModal.k8-pv-min .photo-viewer-dialog { background: transparent !important; border: 0 !important; box-shadow: none !important; width: auto !important; max-width: 96vw !important; min-width: 0 !important; overflow: visible !important; }
+#globalPhotoViewerModal.k8-pv-min .photo-viewer-dialog > *:not(:has(#globalPhotoViewerImg)) { display: none !important; }
+#globalPhotoViewerModal.k8-pv-min .photo-viewer-dialog > *:has(#globalPhotoViewerImg) { background: transparent !important; padding: 0 !important; border: 0 !important; min-height: 0 !important; }
+#globalPhotoViewerModal.k8-pv-min #globalPhotoViewerImg { display: block; max-width: 96vw !important; max-height: 88vh !important; max-height: 88dvh !important; border-radius: 16px !important; box-shadow: 0 20px 60px rgba(0,0,0,.6) !important; }
+
+/* v16.6 · หมายเหตุละหมาดแบบใหม่ */
+.k8-pn { border-radius: 20px !important; overflow: hidden; }
+.k8-pn-head { display: flex !important; align-items: center; gap: 12px; padding: 14px 16px !important; cursor: pointer; min-height: 64px; }
+.k8-pn-ico { flex: none; width: 44px; height: 44px; border-radius: 14px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; }
+.k8-pn-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+.k8-pn-t b { font-size: 16px; font-weight: 600; color: #0f172a; }
+.k8-pn-t small { font-size: 12.5px; color: #64748b; }
+.k8-pn-sel { flex: none; font-size: 13px; }
+.k8-pn-sel:empty { display: none; }
+.k8-pn-chev { flex: none; width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; transition: transform .2s; }
+.k8-pn.is-open .k8-pn-chev { transform: rotate(180deg); }
+.k8-pn-body { padding: 4px 16px 16px !important; display: flex; flex-direction: column; gap: 16px; }
+.k8-pn-body[style*="none"] { display: none !important; }
+.k8-pn-step h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; font-weight: 600; color: #0f172a; }
+.k8-pn-step h3 > span { width: 24px; height: 24px; border-radius: 50%; background: #0369a1; color: #fff; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.k8-pn-step h3 small { font-weight: 400; color: #64748b; font-size: 13px; }
+.k8-pn-all { margin-left: auto; min-height: 32px; padding: 0 10px; border: 1px solid #bae6fd; border-radius: 999px; background: #f0f9ff; color: #0369a1; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.k8-pn-all.is-clear { margin-left: 0; border-color: #e2e8f0; background: #fff; color: #64748b; }
+.k8-pn-reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.k8-pn-reasons .prayer-preset-btn { display: flex !important; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 64px; padding: 10px 12px !important; border: 1.5px solid #e2e8f0 !important; border-radius: 16px !important; background: #fff !important; color: #0f172a !important; text-align: left; font: inherit; cursor: pointer; box-shadow: none !important; }
+.k8-pn-reasons .prayer-preset-btn i { font-style: normal; font-size: 22px; line-height: 1; }
+.k8-pn-reasons .prayer-preset-btn b { font-size: 14px; font-weight: 600; }
+.k8-pn-reasons .prayer-preset-btn small { font-size: 11.5px; color: #64748b; }
+.k8-pn-reasons .prayer-preset-btn.is-on { border-color: #0369a1 !important; background: #e0f2fe !important; box-shadow: 0 0 0 3px #bae6fd !important; }
+.k8-pn-reasons .preset-menstruation { grid-column: 1 / -1; flex-direction: row !important; align-items: center !important; gap: 10px !important; }
+.k8-pn-reasons .preset-menstruation small { margin-left: auto; }
+.k8-pn-times { display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.k8-pn-times .prayer-note-time-chip { display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 58px; padding: 6px 2px !important; border: 1.5px solid #e2e8f0 !important; border-radius: 14px !important; background: #fff !important; color: #334155 !important; font: inherit; font-size: 13.5px !important; font-weight: 600; cursor: pointer; }
+.k8-pn-times .prayer-note-time-chip .chip-check-icon { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 10px; color: transparent; }
+.k8-pn-times .prayer-note-time-chip.active { border-color: #0369a1 !important; background: #0369a1 !important; color: #fff !important; }
+.k8-pn-times .prayer-note-time-chip.active .chip-check-icon { background: #fff; border-color: #fff; color: #0369a1; }
+.k8-pn-times .prayer-note-time-chip.slot-expired:not(.active) { opacity: .45; }
+.k8-pn-hint { margin: 8px 0 0; font-size: 12px; color: #64748b; }
+.k8-pn-input { height: 50px !important; border-radius: 14px !important; font-size: 15px !important; }
+.k8-pn-save { min-height: 54px; border: 0; border-radius: 16px; background: #0369a1; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 8px 20px rgba(3,105,161,.25); }
+.k8-pn-save.is-off { background: #cbd5e1; box-shadow: none; color: #475569; }
+html.k8-narrow .k8-pn-times { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+html.k8-narrow .k8-pn-reasons { grid-template-columns: 1fr; }
+#globalPhotoViewerModal.k8-pv-min .photo-viewer-dialog > *:has(#globalPhotoViewerImg) { max-height: none !important; }
+.k8-pn-save { width: 100% !important; display: block !important; white-space: normal; padding: 0 16px !important; }
+.k8-pn-chev svg { display: block; }
+.k8-pn-head #prayerNotesChevron { transform: none !important; }

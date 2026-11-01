@@ -2908,7 +2908,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '16.5';
+  const APP_VERSION = '16.6';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6587,4 +6587,29 @@ window.k8RegBirthChange = function (v) {
   };
   const sat = window.switchAdminTab;
   if (typeof sat === 'function') window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'eval-admin') { render(); load(); } return r; };
+})();
+
+/* ---------- v16.6 · หมายเหตุละหมาดแบบใหม่: ไฮไลต์เหตุผลที่เลือก / สรุปบนปุ่มบันทึก ---------- */
+(function () {
+  const sync = () => {
+    let n = 0; try { n = (selectedPrayerNoteTimeSlots || []).length; } catch (e) {}
+    const sel = document.getElementById('prayerNoteTimeSelectedText'); if (sel && !n) sel.innerHTML = '';
+    const sv = document.querySelector('.k8-pn-save'); if (sv) { sv.textContent = n ? 'บันทึกหมายเหตุ · ' + (n === 5 ? 'ครบ 5 เวลา' : n + ' เวลา') : 'เลือกเวลาละหมาดก่อน'; sv.classList.toggle('is-off', !n); }
+    const v = ((document.getElementById('prayerNoteInput') || {}).value || '');
+    document.querySelectorAll('.k8-pn-reasons .prayer-preset-btn').forEach((b) => { const t = (b.querySelector('b') || {}).textContent || ''; const key = t.split('/')[0].trim().replace('กำลังเดินทาง', 'เดินทาง'); b.classList.toggle('is-on', !!key && v.indexOf(key) !== -1); });
+  };
+  ['updatePrayerNoteChipsUI', 'applyPrayerNotePreset', 'togglePrayerNoteTime', 'selectAllPrayerNoteTimes', 'togglePrayerNotesCollapse'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(sync, 0); return r; }; });
+  document.addEventListener('input', (e) => { if (e.target && e.target.id === 'prayerNoteInput') sync(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sync); else sync();
+})();
+
+/* ---------- v16.6 · ดูรูปขยาย: เหลือแค่รูป (แตะที่ไหนก็ได้เพื่อปิด) ---------- */
+(function () {
+  const m = () => document.getElementById('globalPhotoViewerModal');
+  function setup() { const el = m(); if (!el || el.dataset.k8min) return; el.dataset.k8min = '1'; el.classList.add('k8-pv-min'); el.addEventListener('click', () => { if (history.state && history.state.k8pv) { history.back(); return; } try { closePhotoViewerModal(); } catch (er) {} }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup); else setup();
+  // ปุ่มย้อนกลับของมือถือปิดรูปได้
+  const o = window.openPhotoViewerModal;
+  if (typeof o === 'function') window.openPhotoViewerModal = function () { setup(); const r = o.apply(this, arguments); try { history.pushState({ k8pv: 1 }, ''); } catch (e) {} return r; };
+  window.addEventListener('popstate', () => { const el = m(); if (el && el.classList.contains('open')) { try { closePhotoViewerModal(); } catch (e) {} } });
 })();

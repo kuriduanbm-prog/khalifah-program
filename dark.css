@@ -1575,6 +1575,22 @@ html[data-theme="dark"] .k8-evad-btn.is-close { background-color: #121212 !impor
 html[data-theme="dark"] .k8-evad-sum { color: #69c8fc !important; }
 html[data-theme="dark"] .k8-eval-closed { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-eval-closed b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-pn-ico { background-color: #122938 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-pn-t b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-pn-t small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pn-chev { background-color: #1a2229 !important; color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-pn-step h3 { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-pn-step h3 small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pn-all { border: 1px solid #264555 !important; background-color: #0e2432 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-pn-all.is-clear { border-color: #323941 !important; background-color: #121212 !important; color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pn-reasons .prayer-preset-btn { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-pn-reasons .prayer-preset-btn small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pn-reasons .prayer-preset-btn.is-on { background-color: #122938 !important; }
+html[data-theme="dark"] .k8-pn-times .prayer-note-time-chip { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-pn-times .prayer-note-time-chip .chip-check-icon { border: 1.5px solid #393f46 !important; }
+html[data-theme="dark"] .k8-pn-times .prayer-note-time-chip.active .chip-check-icon { background-color: #121212 !important; border-color: #333333 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-pn-hint { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pn-save.is-off { background-color: #2b323a !important; color: #b6bcc3 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
