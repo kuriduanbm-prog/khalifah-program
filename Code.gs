@@ -3571,6 +3571,17 @@ function addSubAdmin(data) {
       break;
     }
   }
+  // เปลี่ยนตำแหน่งข้ามประเภท (อาจารย์ ↔ ผู้ตรวจการ/ผู้บริหาร/แอดมินรอง): ย้ายข้อมูลจากอีกแผ่นงาน แล้วลบแถวเดิม
+  const otherSheet = ss.getSheetByName(isTeacher ? SHEETS.ADMINS : SHEETS.TEACHERS);
+  let otherRow = -1;
+  if (otherSheet && otherSheet.getLastRow() > 1) {
+    const orows = otherSheet.getDataRange().getValues();
+    for (let i = 1; i < orows.length; i++) if (cleanVal(orows[i][1]).toLowerCase() === cleanUser.toLowerCase()) {
+      otherRow = i + 1;
+      if (!existing) { const o = orows[i]; existing = [o[0], o[1], o[2], o[3], o[4], o[5], o[6], isTeacher ? '[]' : (o[8] || ''), isTeacher ? (o[8] || '') : (o[9] || ''), isTeacher ? (o[9] || '') : '']; }
+      break;
+    }
+  }
 
   // ค่าที่ไม่ได้ส่งมา = คงค่าเดิมในชีต (ป้องกันข้อมูลหาย เช่น รหัสผ่านที่ไม่ได้ส่งกลับไปที่เบราว์เซอร์)
   const keep = function (val, idx, def) {
@@ -3632,8 +3643,10 @@ function addSubAdmin(data) {
   sheet.getRange(rowNum, 2).setNumberFormat('@').setValue(cleanUser);
   sheet.getRange(rowNum, 3).setNumberFormat('@').setValue(storedPass);
   sheet.getRange(rowNum, 6).setNumberFormat('@').setValue(phone);
+  if (otherRow > 0) { try { otherSheet.deleteRow(otherRow); } catch (e) {} }
   return {
     success: true,
+    role: roleCode,
     message: isTeacher ? 'บันทึกข้อมูลอาจารย์ผู้สอนสำเร็จ' : 'บันทึกข้อมูลแอดมินดูแลระบบสำเร็จ',
     adminId: recordId
   };

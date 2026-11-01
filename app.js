@@ -8962,7 +8962,11 @@ function openEditTeacherModal(username) {
   }
   if (document.getElementById('subEmail')) document.getElementById('subEmail').value = t.email || '';
   if (document.getElementById('subPhone')) document.getElementById('subPhone').value = normalizePhone(t.phone || '');
-  if (document.getElementById('subRole')) document.getElementById('subRole').value = t.role || 'TEACHER';
+  if (document.getElementById('subRole')) {
+    const sel = document.getElementById('subRole'); const r = String(t.role || 'TEACHER'); const l = r.toLowerCase();
+    sel.value = r;
+    if (sel.value !== r) sel.value = /inspector|ผู้ตรวจการ/.test(l) ? 'INSPECTOR' : /executive|ผู้บริหาร/.test(l) ? 'EXECUTIVE' : /teacheradmin|homeroom|ประจำชั้น/.test(l) ? 'TeacherAdmin' : /activity|กิจกรรม/.test(l) ? 'ActivityAdmin' : /subadmin|admin|ผู้ช่วย/.test(l) ? 'SubAdmin' : 'TEACHER';
+  }
 
   const assignedArr = Array.isArray(t.assignedSubjects)
     ? t.assignedSubjects
@@ -9066,22 +9070,32 @@ function renderSubAdminsTable() {
     EXECUTIVE: { label: 'ผู้บริหารสถานศึกษา', bg: '#f0fdf4', color: '#047857', border: '#a7f3d0' },
     HOMEROOM: { label: 'อาจารย์ประจำชั้น', bg: '#fefce8', color: '#a16207', border: '#fde047' },
     ACTIVITY: { label: 'ฝ่ายกิจกรรม', bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
-    SubAdmin: { label: 'ผู้ช่วยแอดมิน', bg: '#f1f5f9', color: '#334155', border: '#cbd5e1' }
+    SubAdmin: { label: 'ผู้ช่วยแอดมิน', bg: '#f1f5f9', color: '#334155', border: '#cbd5e1' },
+    TeacherAdmin: { label: 'อาจารย์ประจำชั้น', bg: '#fefce8', color: '#a16207', border: '#fde047' },
+    ActivityAdmin: { label: 'ฝ่ายกิจกรรม', bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
+    INSPECTOR: { label: 'ผู้ตรวจการ', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+    SuperAdmin: { label: 'แอดมินสูงสุด', bg: '#0f172a', color: '#ffffff', border: '#0f172a' }
   };
+  // ตำแหน่งที่เขียนต่างกัน (ตัวพิมพ์เล็ก/ไทย) ให้ตรงกับป้ายที่ถูกต้อง
+  const roleKey = (r) => { const v = String(r || '').trim(); if (roleMap[v]) return v; const l = v.toLowerCase();
+    if (/inspector|ผู้ตรวจการ/.test(l)) return 'INSPECTOR'; if (/executive|ผู้บริหาร/.test(l)) return 'EXECUTIVE'; if (/teacheradmin|homeroom|ประจำชั้น/.test(l)) return 'TeacherAdmin';
+    if (/activity|กิจกรรม/.test(l)) return 'ActivityAdmin'; if (/super/.test(l)) return 'SuperAdmin'; if (/subadmin|admin|แอดมิน|ผู้ช่วย/.test(l)) return 'SubAdmin'; return 'TEACHER'; };
 
   tbody.innerHTML = subAdmins.map(a => {
     const assignedIds = Array.isArray(a.assignedSubjects)
       ? a.assignedSubjects
       : (a.assignedSubject ? [a.assignedSubject] : []);
 
-    const subjNames = (a.role === 'EXECUTIVE' || assignedIds.length === 0 || assignedIds.length >= appSubjects.length)
+    const rk = roleKey(a.role);
+    const noSubj = ['EXECUTIVE', 'INSPECTOR', 'SubAdmin', 'ActivityAdmin', 'SuperAdmin'].indexOf(rk) !== -1;
+    const subjNames = noSubj ? ({ EXECUTIVE: 'ทั้งโรงเรียน', INSPECTOR: 'คะแนนพฤติกรรม', SubAdmin: 'ระบบแอดมิน', ActivityAdmin: 'กิจกรรม', SuperAdmin: 'ทั้งระบบ' }[rk]) : (assignedIds.length === 0 || assignedIds.length >= appSubjects.length)
       ? 'ทุกวิชา / ทั้งโรงเรียน'
       : assignedIds.map(id => {
           const s = appSubjects.find(x => x.id === id);
           return s ? s.name : id;
         }).filter(Boolean).join(', ');
 
-    const rInfo = roleMap[a.role] || roleMap.TEACHER;
+    const rInfo = roleMap[rk] || roleMap.TEACHER;
     const rolePill = `<span class="activity-badge" style="background:${rInfo.bg}; color:${rInfo.color}; border:1px solid ${rInfo.border}; margin-right:0.3rem;">${rInfo.label}</span>`;
     const subjBadge = `<span class="activity-badge badge-upcoming">${escapeHtml(subjNames)}</span>`;
 
