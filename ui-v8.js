@@ -2850,7 +2850,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '14.3';
+  const APP_VERSION = '14.4';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5136,6 +5136,242 @@ window.k8RegBirthChange = function (v) {
     body.innerHTML = h;
   }
   window.k8TtWho = function (w) { if (w === 'mine') T.who = 'mine'; else { T.who = 'grade'; T.grade = w; } renderView(); };
+  // ---------- เทมเพลต Excel: ดาวน์โหลด → กรอก → นำเข้า (ม.1–ม.6) ----------
+  // เขียน/อ่านไฟล์ .xlsx เอง เพื่อใส่ดรอปดาวน์ (Data Validation) รายชื่อวิชาและอาจารย์จากระบบ
+  const DSHORT = { 'จ': 1, 'อ': 2, 'พ': 3, 'พฤ': 4, 'ศ': 5, 'ส': 6, 'อา': 0 };
+  function dayOf(v) {
+    const s = String(v || '').replace(/^วัน/, '').replace(/[.\s]/g, '').trim(); if (!s) return -1;
+    for (let d = 0; d < 7; d++) { const n = DAYN[d].replace('บดี', ''); if (s.indexOf(n) === 0) return d; }
+    return DSHORT[s] !== undefined ? DSHORT[s] : -1;
+  }
+  const XE = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+  const colName = (i) => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return (b) => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = t[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }; })();
+  function zipStore(files) { // files: [[name, string]] → Blob (ไม่บีบอัด)
+    const enc = new TextEncoder(); const parts = []; const cen = []; let off = 0;
+    files.forEach(([name, str]) => {
+      const nb = enc.encode(name), data = enc.encode(str), crc = CRC(data);
+      const h = new DataView(new ArrayBuffer(30)); h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nb.length, true);
+      parts.push(h.buffer, nb, data);
+      const c = new DataView(new ArrayBuffer(46)); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nb.length, true); c.setUint32(42, off, true);
+      cen.push(c.buffer, nb); off += 30 + nb.length + data.length;
+    });
+    const csize = cen.reduce((a, b) => a + (b.byteLength || b.length), 0);
+    const e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(cen, [e.buffer]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  // สไตล์: 0 ปกติ · 1 หัวเรื่อง · 2 หัวตาราง · 3 ช่องวัน · 4 ช่องคาบ/เวลา · 5 ช่องกรอก · 6 หมายเหตุ · 7 ช่องวัน (แถบสลับ) · 8 ช่องคาบ (แถบสลับ) · 9 ช่องกรอก (แถบสลับ)
+  const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="5"><font><sz val="12"/><name val="Tahoma"/></font><font><b/><sz val="16"/><color rgb="FF0C4A6E"/><name val="Tahoma"/></font><font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Tahoma"/></font><font><b/><sz val="12"/><color rgb="FF0F172A"/><name val="Tahoma"/></font><font><i/><sz val="11"/><color rgb="FF64748B"/><name val="Tahoma"/></font></fonts>' +
+    '<fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0369A1"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE0F2FE"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFBEB"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/></patternFill></fill></fills>' +
+    '<borders count="2"><border/><border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom></border></borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="10">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+    '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+    '<xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+    '<xf numFmtId="0" fontId="3" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+    '<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1" applyProtection="1"><alignment vertical="center" wrapText="1"/><protection locked="0"/></xf>' +
+    '<xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>' +
+    '<xf numFmtId="0" fontId="3" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+    '<xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+    '<xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1" applyProtection="1"><alignment vertical="center" wrapText="1"/><protection locked="0"/></xf>' +
+    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  function sheetXml(sh) {
+    const rows = sh.rows.map((r, ri) => '<row r="' + (ri + 1) + '"' + (sh.heights && sh.heights[ri] ? ' ht="' + sh.heights[ri] + '" customHeight="1"' : '') + '>' + r.map((c, ci) => { if (c == null) return ''; const o = typeof c === 'object' ? c : { v: c }; const ref = colName(ci) + (ri + 1); return (o.v === '' || o.v == null) ? '<c r="' + ref + '"' + (o.s ? ' s="' + o.s + '"' : '') + '/>' : (typeof o.v === 'number' ? '<c r="' + ref + '"' + (o.s ? ' s="' + o.s + '"' : '') + '><v>' + o.v + '</v></c>' : '<c r="' + ref + '" t="inlineStr"' + (o.s ? ' s="' + o.s + '"' : '') + '><is><t xml:space="preserve">' + XE(o.v) + '</t></is></c>'); }).join('') + '</row>').join('');
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView workbookViewId="0"' + (sh.tab ? ' tabSelected="1"' : '') + '>' + (sh.freeze ? '<pane ySplit="' + sh.freeze + '" topLeftCell="A' + (sh.freeze + 1) + '" activePane="bottomLeft" state="frozen"/>' : '') + '</sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/>' +
+      (sh.cols ? '<cols>' + sh.cols.map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>').join('') + '</cols>' : '') +
+      '<sheetData>' + rows + '</sheetData>' +
+      (sh.merges && sh.merges.length ? '<mergeCells count="' + sh.merges.length + '">' + sh.merges.map((m) => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>' : '') +
+      (sh.dv && sh.dv.length ? '<dataValidations count="' + sh.dv.length + '">' + sh.dv.map((d) => '<dataValidation type="list" errorStyle="' + (d.strict ? 'stop' : 'warning') + '" allowBlank="1" showInputMessage="1" showErrorMessage="1" errorTitle="' + XE(d.errT) + '" error="' + XE(d.err) + '" promptTitle="' + XE(d.pT) + '" prompt="' + XE(d.p) + '" sqref="' + d.ref + '"><formula1>' + XE(d.f) + '</formula1></dataValidation>').join('') + '</dataValidations>' : '') +
+      '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';
+  }
+  function buildXlsx(sheets) {
+    const files = [];
+    files.push(['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + sheets.map((s, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>']);
+    files.push(['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>']);
+    files.push(['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="' + Math.max(0, sheets.findIndex((s) => s.tab)) + '"/></bookViews><sheets>' + sheets.map((s, i) => '<sheet name="' + XE(s.name) + '" sheetId="' + (i + 1) + '"' + (s.hidden ? ' state="hidden"' : '') + ' r:id="rId' + (i + 1) + '"/>').join('') + '</sheets></workbook>']);
+    files.push(['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + sheets.map((s, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>']);
+    files.push(['xl/styles.xml', STYLES]);
+    sheets.forEach((s, i) => files.push(['xl/worksheets/sheet' + (i + 1) + '.xml', sheetXml(s)]));
+    return zipStore(files);
+  }
+  // อ่าน .xlsx: แตก zip (DecompressionStream) แล้วอ่าน XML · ถ้าเบราว์เซอร์เก่าใช้ SheetJS แทน
+  async function unzip(buf) {
+    const dv = new DataView(buf); let e = buf.byteLength - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+    if (e < 0) throw new Error('not zip');
+    const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true); const out = {}; const dec = new TextDecoder();
+    for (let i = 0; i < n; i++) {
+      const m = dv.getUint16(p + 10, true), cs = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+      const name = dec.decode(new Uint8Array(buf, p + 46, nl)); p += 46 + nl + xl + cl;
+      const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true); const raw = new Uint8Array(buf, ds, cs);
+      out[name] = { m, raw };
+    }
+    return async (name) => { const f = out[name]; if (!f) return null; if (f.m === 0) return dec.decode(f.raw); const s = new Blob([f.raw]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return await new Response(s).text(); };
+  }
+  async function readXlsx(buf) {
+    if (typeof DecompressionStream === 'undefined') { const X = await xlsxLib(); const wb = X.read(buf, { type: 'array' }); const o = {}; wb.SheetNames.forEach((nm) => { o[nm] = X.utils.sheet_to_json(wb.Sheets[nm], { header: 1, defval: '', raw: false }); }); return o; }
+    const get = await unzip(buf); const P = new DOMParser(); const X = (s) => P.parseFromString(s || '<x/>', 'application/xml');
+    const tag = (el, t) => Array.from(el.getElementsByTagNameNS('*', t));
+    const sst = tag(X(await get('xl/sharedStrings.xml')), 'si').map((si) => tag(si, 't').map((t) => t.textContent).join(''));
+    const rels = {}; tag(X(await get('xl/_rels/workbook.xml.rels')), 'Relationship').forEach((r) => { rels[r.getAttribute('Id')] = r.getAttribute('Target'); });
+    const o = {};
+    for (const s of tag(X(await get('xl/workbook.xml')), 'sheet')) {
+      const rid = s.getAttribute('r:id') || s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+      let tgt = rels[rid] || ''; tgt = tgt.replace(/^\/?xl\//, '').replace(/^\//, '');
+      const doc = X(await get('xl/' + tgt)); const grid = [];
+      tag(doc, 'c').forEach((c) => {
+        const ref = c.getAttribute('r') || ''; const mm = ref.match(/^([A-Z]+)(\d+)$/); if (!mm) return;
+        let ci = 0; for (const ch of mm[1]) ci = ci * 26 + ch.charCodeAt(0) - 64; ci--; const ri = +mm[2] - 1;
+        const t = c.getAttribute('t'); const v = tag(c, 'v')[0]; let val = '';
+        if (t === 's') val = sst[+(v ? v.textContent : 0)] || ''; else if (t === 'inlineStr') val = tag(c, 't').map((x) => x.textContent).join(''); else val = v ? v.textContent : '';
+        (grid[ri] = grid[ri] || [])[ci] = val;
+      });
+      for (let i = 0; i < grid.length; i++) { grid[i] = grid[i] || []; for (let j = 0; j < grid[i].length; j++) if (grid[i][j] == null) grid[i][j] = ''; }
+      o[s.getAttribute('name')] = grid;
+    }
+    return o;
+  }
+  async function xlsxLib() {
+    if (window.XLSX && window.XLSX.read) return window.XLSX;
+    await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+    return window.XLSX;
+  }
+  // รายชื่ออาจารย์ในดรอปดาวน์: ชื่อจากระบบ (ชื่อซ้ำจะต่อท้ายด้วยชื่อผู้ใช้)
+  function teacherOptions() {
+    const tch = (T.teachers || []).filter((t) => t && t.u);
+    const cnt = {}; tch.forEach((t) => { cnt[t.n] = (cnt[t.n] || 0) + 1; });
+    return tch.map((t) => ({ u: t.u, n: t.n, label: cnt[t.n] > 1 ? t.n + ' (' + t.u + ')' : t.n })).sort((a, b) => a.label.localeCompare(b.label, 'th'));
+  }
+  window.k8TtXlTemplate = async function () {
+    await loadTeachers();
+    const c = cfg(); const subs = subjects().filter((s) => s && s.name); const tops = teacherOptions();
+    if (!tops.length) toast('ยังไม่มีรายชื่ออาจารย์ในระบบ · ดรอปดาวน์อาจารย์จะว่าง', 'warning');
+    const nS = Math.max(1, subs.length), nT = Math.max(1, tops.length);
+    const sheets = [];
+    const how = [[{ v: 'วิธีกรอกตารางเรียน KHALIFAH', s: 1 }], [''],
+      [{ v: '1) แผ่นงาน ม.1 – ม.6 คือตารางของแต่ละชั้น · ห้ามเปลี่ยนชื่อแผ่นงาน', s: 0 }],
+      [{ v: '2) แต่ละแถวคือ 1 คาบ · กรอกเฉพาะช่องสีเหลือง: วิชา · อาจารย์ผู้สอน · ห้อง', s: 0 }],
+      [{ v: '3) ช่อง "วิชา" และ "อาจารย์ผู้สอน" เป็นดรอปดาวน์ คลิกที่ช่องแล้วกดลูกศร ▾ เพื่อเลือก (รายชื่อตามในระบบ)', s: 0 }],
+      [{ v: '4) วิชาใหม่ที่ยังไม่มีในรายการ: พิมพ์ชื่อลงช่องได้เลย → ตอนนำเข้า ระบบจะถามว่าจะเพิ่มเป็นวิชาใหม่ในระบบ หรือใช้เป็นชื่อในตารางอย่างเดียว (เช่น โฮมรูม กิจกรรม)', s: 0 }],
+      [{ v: '5) อาจารย์พิเศษ / อาจารย์ใหม่ที่ยังไม่มีบัญชี: พิมพ์ชื่อลงช่องได้ (เช่น อ.สมชาย วิทยากรภายนอก) → ชื่อจะแสดงในตารางของนักเรียน', s: 0 }],
+      [{ v: '    ถ้าเป็นอาจารย์ประจำ ควรเพิ่มบัญชีในเมนู "บุคลากร" ก่อน แล้วดาวน์โหลดเทมเพลตใหม่ เพื่อให้คาบนี้ขึ้นในตารางสอนของอาจารย์', s: 6 }],
+      [{ v: '6) คาบที่ไม่มีเรียน ปล่อยว่างไว้ · ห้องไม่บังคับ', s: 0 }],
+      [{ v: '7) แผ่นงานของชั้นที่ไม่ต้องการแก้ ลบทิ้งได้ ระบบจะไม่แตะตารางของชั้นนั้น', s: 0 }],
+      [{ v: '8) บันทึกเป็น .xlsx แล้วกด "นำเข้าไฟล์ Excel" ในหน้าตารางเรียนของแอดมิน', s: 0 }],
+      [''], [{ v: 'เวลาคาบ (เหมือนกันทุกชั้น)', s: 3 }]].concat(c.periods.map((p, i) => [{ v: 'คาบ ' + (i + 1) + '   ' + p.start + ' – ' + p.end, s: 4 }]));
+    sheets.push({ name: 'วิธีกรอก', rows: how, cols: [96], tab: true });
+    ['1', '2', '3', '4', '5', '6'].forEach((g) => {
+      const cells = (T.grade === g && T.draft) ? T.draft : (gradeOf(g).cells || {});
+      const rows = [[{ v: 'ตารางเรียน ชั้น ม.' + g, s: 1 }, '', '', '', '', ''], [{ v: 'กรอกช่องสีเหลือง · วิชาและอาจารย์เลือกจากดรอปดาวน์ ▾', s: 6 }, '', '', '', '', ''],
+        [{ v: 'วัน', s: 2 }, { v: 'คาบ', s: 2 }, { v: 'เวลา', s: 2 }, { v: 'วิชา', s: 2 }, { v: 'อาจารย์ผู้สอน', s: 2 }, { v: 'ห้อง', s: 2 }]];
+      const merges = ['A1:F1', 'A2:F2']; const heights = [28, 20, 26];
+      c.days.forEach((d, di) => {
+        const alt = di % 2 === 1;
+        c.periods.forEach((p, i) => {
+          const x = arr(cells[d + '-' + (i + 1)])[0];
+          const to = x && x.t ? tops.find((t) => t.u === x.t) : null;
+          rows.push([{ v: DAYN[d], s: alt ? 7 : 3 }, { v: i + 1, s: alt ? 8 : 4 }, { v: p.start + '–' + p.end, s: alt ? 8 : 4 }, { v: x ? x.sn : '', s: alt ? 9 : 5 }, { v: to ? to.label : (x && x.tn ? x.tn : ''), s: alt ? 9 : 5 }, { v: x && x.r ? x.r : '', s: alt ? 9 : 5 }]);
+          heights.push(24);
+        });
+      });
+      const last = rows.length;
+      sheets.push({ name: 'ม.' + g, rows, cols: [14, 7, 14, 34, 30, 14], freeze: 3, merges, heights, dv: [
+        { ref: 'D4:D' + last, f: "'รายชื่อ'!$A$2:$A$" + (nS + 1), strict: false, pT: 'วิชา', p: 'เลือกจากรายการ ▾', errT: 'ไม่มีวิชานี้ในระบบ', err: 'ถ้าเป็นวิชาใหม่หรือกิจกรรม (เช่น โฮมรูม) กด ใช่ เพื่อใช้ชื่อนี้ · ตอนนำเข้าระบบจะถามว่าจะเพิ่มเป็นวิชาใหม่หรือไม่' },
+        { ref: 'E4:E' + last, f: "'รายชื่อ'!$B$2:$B$" + (nT + 1), strict: false, pT: 'อาจารย์ผู้สอน', p: 'เลือกจากรายชื่อในระบบ ▾ · อาจารย์พิเศษ/อาจารย์ใหม่ พิมพ์ชื่อเองได้', errT: 'ไม่มีชื่อนี้ในระบบ', err: 'ถ้าเป็นอาจารย์พิเศษหรืออาจารย์ใหม่ที่ยังไม่มีบัญชี กด ใช่ เพื่อใช้ชื่อนี้ · ถ้าพิมพ์ผิด กด ไม่ใช่ แล้วเลือกจากดรอปดาวน์' }] });
+    });
+    const ref = [[{ v: 'วิชา', s: 2 }, { v: 'อาจารย์ผู้สอน', s: 2 }]];
+    for (let i = 0; i < Math.max(nS, nT); i++) ref.push([subs[i] ? subs[i].name : '', tops[i] ? tops[i].label : '']);
+    sheets.push({ name: 'รายชื่อ', rows: ref, cols: [36, 34], hidden: true });
+    const blob = buildXlsx(sheets);
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'เทมเพลตตารางเรียน_ม1-ม6.xlsx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+    toast('ดาวน์โหลดเทมเพลตแล้ว · มีตารางเดิมใส่ไว้ให้แก้ต่อได้', 'success');
+  };
+  let XL = null;
+  window.k8TtXlImport = async function (input) {
+    const file = input.files && input.files[0]; input.value = ''; if (!file) return;
+    await loadTeachers();
+    let book; try { book = await readXlsx(await file.arrayBuffer()); } catch (e) { toast('อ่านไฟล์ไม่ได้ · ใช้ไฟล์ .xlsx จากปุ่ม "ดาวน์โหลดเทมเพลต"', 'error'); return; }
+    const c = cfg(); const subs = subjects().filter((s) => s && s.name); const tops = teacherOptions();
+    const norm = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const findSub = (n) => subs.find((s) => norm(s.name) === norm(n)) || subs.find((s) => s.id && norm(s.id) === norm(n));
+    const strip = (v) => norm(v).replace(/^(อ\.|อาจารย์|ครู)\s*/, '');
+    const findT = (n) => tops.find((t) => norm(t.label) === norm(n)) || tops.find((t) => norm(t.n) === norm(n) || norm(t.u) === norm(n)) || tops.find((t) => strip(t.n) === strip(n));
+    const res = {}; const warn = []; const newS = {}; const newT = {}; const skipped = [];
+    Object.keys(book).forEach((name) => {
+      const m = String(name).match(/^\s*(?:ม\.?|มัธยม(?:ศึกษาปีที่)?|M)\s*([1-6])\s*$/i); if (!m) return;
+      const g = m[1]; const rows = book[name];
+      let hr = -1, col = {};
+      for (let r = 0; r < Math.min(rows.length, 12) && hr === -1; r++) {
+        const h = (rows[r] || []).map((v) => String(v).trim());
+        if (h.some((v) => /^วัน$/.test(v)) && h.some((v) => /^วิชา/.test(v))) { hr = r; h.forEach((v, i) => { if (/^วัน$/.test(v)) col.d = i; else if (/^คาบ/.test(v)) col.p = i; else if (/^วิชา/.test(v)) col.s = i; else if (/อาจารย์|ครู|ผู้สอน/.test(v)) col.t = i; else if (/^ห้อง/.test(v)) col.r = i; }); }
+      }
+      if (hr === -1 || col.p === undefined) { warn.push('ม.' + g + ': ไม่พบหัวตาราง (วัน · คาบ · วิชา · อาจารย์ผู้สอน · ห้อง) · ข้ามแผ่นนี้'); return; }
+      const old = gradeOf(g).cells || {}; const cells = {}; let n = 0;
+      for (let r = hr + 1; r < rows.length; r++) {
+        const row = rows[r] || []; const sn0 = String(row[col.s] || '').trim(); if (!sn0) continue;
+        const d = dayOf(row[col.d]); const p = parseInt(String(row[col.p] || '').replace(/\D/g, ''), 10);
+        const at = 'ม.' + g + (d >= 0 ? ' วัน' + DAYN[d] : '') + (p ? ' คาบ ' + p : '');
+        if (d === -1 || !p) { warn.push(at + ': อ่านวันหรือคาบไม่ได้ · ข้ามแถว ' + (r + 1)); continue; }
+        if (c.days.indexOf(d) === -1) { warn.push(at + ': วันนี้ไม่ได้เปิดเป็นวันเรียน · ข้าม'); continue; }
+        if (p > c.periods.length) { warn.push(at + ': เกินจำนวนคาบที่ตั้งไว้ (' + c.periods.length + ' คาบ) · ข้าม'); continue; }
+        const so = findSub(sn0); const sn = so ? so.name : sn0;
+        const tName = col.t !== undefined ? String(row[col.t] || '').trim() : ''; const to = tName ? findT(tName) : null;
+        if (!so) (newS[sn] = newS[sn] || []).push(at);
+        if (tName && !to) (newT[tName] = newT[tName] || []).push(at);
+        const e = { s: so ? so.id : '', sn, t: to ? to.u : '', tn: to ? to.n : tName, r: col.r !== undefined ? String(row[col.r] || '').trim() : '' };
+        const prev = arr(old[d + '-' + p])[0]; // เก็บกลุ่ม/ละเว้นเดิมไว้ ถ้าเป็นวิชาเดิม
+        if (prev && prev.sn === e.sn) { if (prev.o && prev.o.length) e.o = prev.o; if (prev.x && prev.x.length) e.x = prev.x; }
+        if (cells[d + '-' + p]) warn.push(at + ': มีซ้ำในไฟล์ · ใช้แถวล่าสุด');
+        cells[d + '-' + p] = e.o ? [e] : e; n++;
+      }
+      if (n) res[g] = { cells, n }; else skipped.push('ม.' + g);
+    });
+    const gs = Object.keys(res).sort();
+    if (!gs.length && skipped.length) { toast('ไฟล์ยังไม่ได้กรอกวิชาเลย · กรอกช่องสีเหลืองแล้วนำเข้าอีกครั้ง', 'warning'); return; }
+    if (!gs.length) { toast('ไม่พบแผ่นงาน ม.1–ม.6 ในไฟล์ · ใช้ไฟล์จากปุ่ม "ดาวน์โหลดเทมเพลต"', 'error'); return; }
+    XL = res; XLNEW = Object.keys(newS);
+    const loc = (L) => esc(L.slice(0, 3).join(' · ') + (L.length > 3 ? ' และอีก ' + (L.length - 3) + ' คาบ' : ''));
+    const newHtml = (XLNEW.length ? '<section class="k8-tt-xl-new"><h3>วิชาใหม่ที่ยังไม่มีในระบบ (' + XLNEW.length + ')</h3><p>ติ๊ก = เพิ่มเป็นวิชาใหม่ในระบบ (ใช้กรอกเกรด/เช็คชื่อได้) · ไม่ติ๊ก = ใช้เป็นชื่อในตารางอย่างเดียว เช่น โฮมรูม กิจกรรม</p>' +
+      XLNEW.map((n, i) => '<label class="k8-tt-xl-chk"><input type="checkbox" data-i="' + i + '"' + (/โฮมรูม|กิจกรรม|พัก|ประชุม|ชุมนุม|แนะแนว|homeroom/i.test(n) ? '' : ' checked') + '><span><b>' + esc(n) + '</b><small>' + loc(newS[n]) + '</small></span></label>').join('') + '</section>' : '') +
+      (Object.keys(newT).length ? '<section class="k8-tt-xl-new is-t"><h3>อาจารย์ที่ยังไม่มีในระบบ (' + Object.keys(newT).length + ')</h3><p>จะบันทึกเป็น <b>อาจารย์พิเศษ</b> · นักเรียนเห็นชื่อในตาราง แต่ไม่ขึ้นในตารางสอนของใคร · ถ้าเป็นอาจารย์ประจำ ให้เพิ่มบัญชีในเมนู "บุคลากร" ก่อน แล้วนำเข้าอีกครั้ง</p><ul>' +
+      Object.keys(newT).map((n) => '<li><b>' + esc(n) + '</b><small>' + loc(newT[n]) + '</small></li>').join('') + '</ul></section>' : '');
+    document.getElementById('k8TtCellTitle').textContent = 'ตรวจก่อนนำเข้า';
+    document.getElementById('k8TtCellSub').textContent = file.name;
+    document.getElementById('k8TtCellBody').innerHTML =
+      '<ul class="k8-tt-xl-sum">' + gs.map((g) => '<li><b>ม.' + g + '</b><span>' + (res[g].n + ' คาบ') + '</span><small>เดิม ' + Object.keys(gradeOf(g).cells || {}).length + ' คาบ</small></li>').join('') + '</ul>' +
+      (warn.length ? '<details class="k8-tt-xl-warn"' + (warn.length <= 6 ? ' open' : '') + '><summary>ข้อควรตรวจ ' + warn.length + ' รายการ</summary><ul>' + warn.slice(0, 80).map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul></details>' : (newHtml ? '' : '<p class="k8-tt-xl-ok">✓ จับคู่วิชาและอาจารย์กับในระบบได้ครบทุกช่อง</p>')) + newHtml +
+      '<p class="k8-pw-hint">กดบันทึกแล้ว ตารางของชั้นข้างบนจะถูกแทนที่ด้วยข้อมูลจากไฟล์' + (skipped.length ? ' · ' + skipped.join(' ') + ' ว่างในไฟล์ จะไม่แตะตารางเดิม' : '') + '</p>' +
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ยกเลิก</button><button type="button" id="k8TtXlGo" onclick="k8TtXlSave()">บันทึก ' + gs.length + ' ชั้น</button></div>';
+    openModal('k8TtCellModal');
+  };
+  let XLNEW = [];
+  window.k8TtXlSave = async function () {
+    if (!XL) return; const b = document.getElementById('k8TtXlGo');
+    // วิชาใหม่ที่ติ๊กไว้ → เพิ่มเข้ารายวิชาของระบบ แล้วผูกรหัสวิชาให้คาบนั้น
+    const add = Array.from(document.querySelectorAll('.k8-tt-xl-chk input:checked')).map((c) => XLNEW[+c.dataset.i]).filter(Boolean);
+    if (add.length) {
+      try {
+        loadAppSubjects(); const map = {};
+        add.forEach((n, i) => { const ex = appSubjects.find((x) => String(x.name).trim() === n); if (ex) { map[n] = ex.id; return; } const id = 'subj_' + Date.now() + '_' + i; appSubjects.push({ id, code: '', name: n }); map[n] = id; });
+        localStorage.setItem('khalifah_subjects', JSON.stringify(appSubjects));
+        const r = await gasApiCall('saveSubjects', { data: { subjects: appSubjects } }, 25000);
+        if (!r || !r.success) throw new Error((r && r.message) || '');
+        Object.keys(XL).forEach((g) => Object.keys(XL[g].cells).forEach((k) => { arr(XL[g].cells[k]).forEach((e) => { if (!e.s && map[e.sn]) e.s = map[e.sn]; }); }));
+        try { renderAdminSubjectsTable(); populateGradingSubjectSelect(); } catch (e) {}
+      } catch (e) { toast('เพิ่มวิชาใหม่ไม่สำเร็จ · ตารางจะใช้ชื่อวิชาที่พิมพ์ไว้', 'warning'); }
+    }
+    const gs = Object.keys(XL).sort(); const fail = [];
+    for (let i = 0; i < gs.length; i++) {
+      const g = gs[i]; if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก ม.' + g + ' (' + (i + 1) + '/' + gs.length + ')…'; }
+      let r = null; try { r = await gasApiCall('saveTimetable', { data: { grade: g, cells: XL[g].cells } }, 30000); } catch (e) { r = null; }
+      if (r && r.success) { T.data.grades = T.data.grades || {}; T.data.grades[g] = r.timetable; } else fail.push('ม.' + g + ((r && r.message) ? ' (' + r.message + ')' : ''));
+    }
+    try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
+    XL = null; closeModal('k8TtCellModal'); T.dirty = false; startDraft(String(T.grade).indexOf('x:') === 0 ? '1' : (T.grade || '1')); renderAdmin();
+    if (fail.length) toast('บันทึกไม่สำเร็จ: ' + fail.join(', '), 'error'); else toast('นำเข้าตารางเรียนเรียบร้อย ' + gs.length + ' ชั้น' + (add.length ? ' · เพิ่มวิชาใหม่ ' + add.length + ' วิชา' : ''), 'success');
+  };
   // ---------- บันทึกตารางเป็นรูปภาพ A4 แนวนอน ----------
   const IMG_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>';
   function wrapLines(ctx, text, maxW, maxLines) {
@@ -5245,6 +5481,7 @@ window.k8RegBirthChange = function (v) {
       '<label class="k8-tt-sw"><input type="checkbox" ' + (c.showTeachers ? 'checked' : '') + ' onchange="k8TtVis(\'showTeachers\',this.checked)"><span><b>อาจารย์เห็นตารางสอน</b><small>อาจารย์เห็นคาบที่ตัวเองสอน และตารางทุกชั้น</small></span></label>' +
       '<div class="k8-tt-cfgrow"><span>วันเรียน</span><div class="k8-tt-seg">' + [1, 2, 3, 4, 5, 6, 0].map((d) => '<button type="button" aria-pressed="' + (c.days.indexOf(d) !== -1) + '" onclick="k8TtToggleDay(' + d + ')">' + DAYS[d] + '</button>').join('') + '</div></div>' +
       '<button type="button" class="k8-bh-link" onclick="k8TtPeriods()">ตั้งเวลาคาบเรียน (' + c.periods.length + ' คาบ · ' + esc(c.periods[0] ? c.periods[0].start : '') + '–' + esc(c.periods.length ? c.periods[c.periods.length - 1].end : '') + ')</button></section>' +
+      '<section class="k8-bh-card k8-tt-xl"><h2 class="k8-bh-h">นำเข้าตารางจากไฟล์ Excel</h2><ol class="k8-tt-xl-steps"><li>ดาวน์โหลดเทมเพลต (มีครบ ม.1–ม.6 แยกแผ่นละชั้น)</li><li>กรอกในช่อง: <b>ชื่อวิชา / อาจารย์ / ห้อง</b></li><li>นำเข้าไฟล์ ตรวจดู แล้วกดบันทึก ระบบจะลงตารางให้ทุกชั้น</li></ol><div class="k8-tt-xl-btns"><button type="button" class="k8-tt-xl-dl" onclick="k8TtXlTemplate()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>ดาวน์โหลดเทมเพลต</button><label class="k8-tt-xl-up"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>นำเข้าไฟล์ Excel<input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onchange="k8TtXlImport(this)"></label></div></section>' +
       '<section class="k8-bh-card"><div class="k8-tt-seg k8-tt-grades" role="tablist">' + allKeys().concat(T.newX ? [T.newX.key] : []).map((g) => '<button type="button" role="tab" aria-selected="' + (T.grade === g) + '" onclick="k8TtGrade(\'' + g + '\')"' + (String(g).indexOf('x:') === 0 ? ' class="is-x"' : '') + '>' + esc(lbl(g)) + ' <small>' + cnt(g) + '</small></button>').join('') + '<button type="button" class="k8-tt-xadd" onclick="k8TtXNew()">+ ตารางพิเศษ</button></div>' +
       (isX ? '<div class="k8-tt-xinfo"><span><b>' + esc(xm.name || 'ตารางพิเศษ') + '</b><small>ตารางแยกสำหรับนักเรียนที่เลือก ' + (xm.students || []).length + ' คน · นักเรียนจะเห็นเป็นแท็บแยกจากตารางชั้น</small></span><button type="button" class="k8-bh-link" onclick="k8TtXEdit()">ชื่อ & รายชื่อ</button><button type="button" class="k8-bh-link k8-pe-del" onclick="k8TtXDel()">ลบตาราง</button></div>' : '') +
       '<p class="k8-pw-hint">แตะช่องเพื่อเลือกวิชา อาจารย์ และห้อง · ลงแล้ว ' + filled + ' คาบ' + (gradeOf(T.grade).updatedAt ? ' · บันทึกล่าสุด ' + esc(gradeOf(T.grade).updatedAt) : '') + '</p>' +
@@ -5321,7 +5558,8 @@ window.k8RegBirthChange = function (v) {
       const sv = box.querySelector('.k8TtSubj').value; const subs = subjects(); const so = subs.find((x) => x.id === sv);
       e.s = so ? so.id : ''; e.sn = so ? so.name : (sv === '__custom' ? box.querySelector('.k8TtCustom').value.trim() : (sv ? e.sn : ''));
       if (sv === '__custom') e.custom = true; else delete e.custom;
-      const tu = box.querySelector('.k8TtTeacher').value; const t = (T.teachers || []).find((x) => x.u === tu); e.t = tu; e.tn = t ? t.n : '';
+      const tu = box.querySelector('.k8TtTeacher').value; const t = (T.teachers || []).find((x) => x.u === tu);
+      if (tu === '__guest') { e.guest = true; e.t = ''; const gi = box.querySelector('.k8TtGuest'); e.tn = gi ? gi.value.trim() : (e.tn || ''); } else { delete e.guest; e.t = tu; e.tn = t ? t.n : ''; }
       e.r = box.querySelector('.k8TtRoom').value.trim();
       const who = box.querySelector('input[name="k8TtWho' + i + '"]:checked'); e.pick = !!(who && who.value === 'some');
       e.o = e.pick ? Array.from(box.querySelectorAll('.k8-tt-stu:not(.k8-tt-xlist) input:checked')).map((c) => c.value) : [];
@@ -5345,7 +5583,8 @@ window.k8RegBirthChange = function (v) {
       return '<section class="k8-tt-grp">' + (G.length > 1 ? '<div class="k8-tt-grp-h"><b>กลุ่มที่ ' + (i + 1) + '</b><button type="button" class="k8-bh-link" onclick="k8TtGrpDel(' + i + ')">ลบกลุ่มนี้</button></div>' : '') +
         '<label class="k8-nf-f"><span>วิชา</span><select class="k8TtSubj k8-pe-sel" onchange="k8TtGrpRe()"><option value="">— เลือกวิชา —</option>' + subs.map((s) => '<option value="' + esc(s.id) + '"' + (s.id === e.s ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') + '<option value="__custom"' + (custom ? ' selected' : '') + '>อื่นๆ (พิมพ์เอง เช่น โฮมรูม กิจกรรม)</option></select></label>' +
         '<label class="k8-nf-f"' + (custom ? '' : ' hidden') + '><span>ชื่อวิชา/กิจกรรม</span><input type="text" class="k8TtCustom" maxlength="80" value="' + esc(known ? '' : (e.sn || '')) + '"></label>' +
-        '<label class="k8-nf-f"><span>อาจารย์ผู้สอน</span><select class="k8TtTeacher k8-pe-sel"><option value="">— ไม่ระบุ —</option>' + (T.teachers || []).map((t) => '<option value="' + esc(t.u) + '"' + (t.u === e.t ? ' selected' : '') + '>' + esc(t.n) + '</option>').join('') + '</select></label>' +
+        '<label class="k8-nf-f"><span>อาจารย์ผู้สอน</span><select class="k8TtTeacher k8-pe-sel" onchange="k8TtGrpRe()"><option value="">— ไม่ระบุ —</option>' + (T.teachers || []).map((t) => '<option value="' + esc(t.u) + '"' + (t.u === e.t ? ' selected' : '') + '>' + esc(t.n) + '</option>').join('') + '<option value="__guest"' + ((e.guest || (!e.t && e.tn)) ? ' selected' : '') + '>อาจารย์พิเศษ / ภายนอก (พิมพ์ชื่อ)</option></select></label>' +
+        '<label class="k8-nf-f"' + ((e.guest || (!e.t && e.tn)) ? '' : ' hidden') + '><span>ชื่ออาจารย์พิเศษ</span><input type="text" class="k8TtGuest" maxlength="80" placeholder="เช่น อ.สมชาย (วิทยากรภายนอก)" value="' + esc(!e.t ? (e.tn || '') : '') + '"></label>' +
         '<label class="k8-nf-f"><span>ห้องเรียน (ไม่บังคับ)</span><input type="text" class="k8TtRoom" maxlength="40" placeholder="เช่น 501 ห้องแล็บ มัสยิด" value="' + esc(e.r || '') + '"></label>' + exBlock(e, i) +
         (!e.pick && G.length === 1 ? '' : '<fieldset class="k8-tt-who"><legend>ผู้เรียนในคาบนี้</legend>' +
         '<label><input type="radio" name="k8TtWho' + i + '" value="all"' + (e.pick ? '' : ' checked') + ' onchange="k8TtGrpRe()"> ทั้งชั้น ม.' + esc(T.grade) + '</label>' +
@@ -5380,6 +5619,7 @@ window.k8RegBirthChange = function (v) {
       const e = G[i];
       if (!e.sn) { toast((G.length > 1 ? 'กลุ่มที่ ' + (i + 1) + ': ' : '') + 'เลือกวิชาก่อน', 'warning'); return; }
       if (e.pick && !e.o.length) { toast((G.length > 1 ? 'กลุ่มที่ ' + (i + 1) + ': ' : '') + 'เลือกนักเรียนอย่างน้อย 1 คน หรือเลือก "ทั้งชั้น"', 'warning'); return; }
+      if (e.guest && !e.tn) { toast((G.length > 1 ? 'กลุ่มที่ ' + (i + 1) + ': ' : '') + 'พิมพ์ชื่ออาจารย์พิเศษ หรือเลือก "ไม่ระบุ"', 'warning'); return; }
       const out = { s: e.s, sn: e.sn, t: e.t, tn: e.tn, r: e.r }; if (e.pick) out.o = e.o; if (e.x && e.x.length) out.x = e.x; list.push(out);
     }
     T.draft[T.cell] = list.length === 1 && !list[0].o ? list[0] : list;
