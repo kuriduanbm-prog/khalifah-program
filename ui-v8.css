@@ -2900,3 +2900,22 @@ html body.k8-inspector .main-wrapper { padding-top: calc(28px + env(safe-area-in
 #otpVerifyUserSummary > div:first-child > span:first-child { font-size: 15px; }
 .k8-rk-row.is-new { opacity: .85; }
 .k8-rk-newtxt { font-size: 13px; color: #64748b; }
+
+/* v16.5 · เปิด/ปิดการประเมินอาจารย์ */
+.k8-evad { display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
+.k8-evad-card { display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 20px; background: #fff; border: 1px solid #e2e8f0; }
+.k8-evad-card.is-on { border-color: #86efac; background: #f0fdf4; }
+.k8-evad-st { display: flex; align-items: center; gap: 12px; }
+.k8-evad-st > span:last-child { display: flex; flex-direction: column; line-height: 1.4; }
+.k8-evad-st b { font-size: 17px; font-weight: 600; color: #0f172a; }
+.k8-evad-st small { font-size: 13px; color: #475569; }
+.k8-evad-dot { flex: none; width: 14px; height: 14px; border-radius: 50%; background: #94a3b8; box-shadow: 0 0 0 5px #f1f5f9; }
+.k8-evad-card.is-on .k8-evad-dot { background: #16a34a; box-shadow: 0 0 0 5px #dcfce7; animation: k8EvPulse 1.6s ease-in-out infinite; }
+@keyframes k8EvPulse { 50% { box-shadow: 0 0 0 9px rgba(22,163,74,.15); } }
+.k8-evad-btn { min-height: 52px; border: 0; border-radius: 14px; background: #15803d; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.k8-evad-btn.is-close { background: #fff; color: #b91c1c; border: 1px solid #fecaca; }
+.k8-evad-btn:disabled { opacity: .6; }
+.k8-evad-sum { align-self: flex-start; border: 0; background: none; color: #0369a1; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 40px; }
+.k8-eval-closed { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; text-align: center; color: #64748b; }
+.k8-eval-closed b { font-size: 17px; color: #0f172a; }
+.k8-eval-closed span { font-size: 14px; line-height: 1.6; }

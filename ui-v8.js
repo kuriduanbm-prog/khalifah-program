@@ -2517,14 +2517,15 @@ window.k8RegBirthChange = function (v) {
   const LABELS = ['ควรปรับปรุง', 'พอใช้', 'ปานกลาง', 'ดี', 'ดีมาก'];
   async function load() {
     const [t, d] = await Promise.all([gasApiCall('getEvaluationTargets', {}), gasApiCall('getMyEvaluationStatus', {})]);
-    if (t && t.success) { E.targets = t.data || []; E.items = t.items || []; E.term = t.term; }
+    if (t && t.success) { E.targets = t.data || []; E.items = t.items || []; E.term = t.term; E.open = t.open === undefined ? true : !!t.open; }
     if (d && d.success) E.done = d.done || [];
     badge();
   }
-  function badge() { const b = document.getElementById('k8EvalBadge'); if (!b) return; const left = E.targets.filter((x) => E.done.indexOf(x.subjectCode + '|' + x.teacher) === -1).length; b.textContent = E.targets.length ? (left ? 'ค้าง ' + left + ' วิชา' : 'ครบแล้ว ✓') : ''; b.className = 'k8-pl-badge' + (left ? ' is-todo' : ''); }
+  function badge() { const b = document.getElementById('k8EvalBadge'); if (!b) return; if (E.open === false) { b.textContent = 'ยังไม่เปิด'; return; } const left = E.targets.filter((x) => E.done.indexOf(x.subjectCode + '|' + x.teacher) === -1).length; b.textContent = E.targets.length ? (left ? 'ค้าง ' + left + ' วิชา' : 'ครบแล้ว ✓') : ''; b.className = 'k8-pl-badge' + (left ? ' is-todo' : ''); }
   function list() {
     const body = document.getElementById('k8EvalBody');
     document.getElementById('k8EvalSub').textContent = 'ภาคเรียนที่ ' + (E.term || '-') + ' · ไม่ระบุชื่อผู้ประเมิน';
+    if (E.open === false) { body.innerHTML = '<div class="k8-eval-closed"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><b>ยังไม่เปิดให้ประเมินอาจารย์</b><span>แอดมินจะเปิดระบบเมื่อถึงช่วงประเมิน แล้วกลับมาที่นี่อีกครั้ง</span></div>'; return; }
     if (!E.targets.length) { body.innerHTML = '<p class="k8-li-empty">ยังไม่มีรายวิชาที่มีอาจารย์ผู้สอน</p>'; return; }
     body.innerHTML = '<p class="k8-eval-note">คำตอบของคุณจะไม่ถูกเชื่อมกับชื่อหรือรหัสนักเรียน อาจารย์จะเห็นเฉพาะค่าเฉลี่ยและความคิดเห็นรวม</p>' + E.targets.map((x) => {
       const done = E.done.indexOf(x.subjectCode + '|' + x.teacher) !== -1;
@@ -2907,7 +2908,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '16.4';
+  const APP_VERSION = '16.5';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6558,4 +6559,32 @@ window.k8RegBirthChange = function (v) {
     }
     return r;
   };
+})();
+
+/* ---------- v16.5 · แอดมินเปิด/ปิดการประเมินอาจารย์ ---------- */
+(function () {
+  const V = { open: null, busy: false };
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  function render() {
+    const el = document.getElementById('k8EvalAdmin'); if (!el) return;
+    const on = V.open === true;
+    el.innerHTML = '<header class="k8-geo-head"><h1>ประเมินอาจารย์ผู้สอน</h1><p>นักเรียนประเมินอาจารย์ได้เฉพาะตอนที่แอดมินเปิดระบบ · คำตอบไม่ระบุชื่อผู้ประเมิน</p></header>' +
+      '<section class="k8-evad-card' + (on ? ' is-on' : '') + '"><div class="k8-evad-st"><span class="k8-evad-dot"></span><span><b>' + (V.open === null ? 'กำลังโหลดสถานะ…' : on ? 'เปิดให้ประเมินอยู่' : 'ปิดอยู่ · นักเรียนยังประเมินไม่ได้') + '</b><small>' + (on ? 'นักเรียนเห็นปุ่มประเมินและส่งคำตอบได้' : 'นักเรียนจะเห็นข้อความ "ยังไม่เปิดให้ประเมิน"') + '</small></span></div>' +
+      '<button type="button" class="k8-evad-btn' + (on ? ' is-close' : '') + '" onclick="k8EvalAdminSet(' + (on ? 'false' : 'true') + ')"' + (V.busy || V.open === null ? ' disabled' : '') + '>' + (V.busy ? 'กำลังบันทึก…' : on ? 'ปิดการประเมิน' : 'เปิดให้นักเรียนประเมิน') + '</button></section>' +
+      '<button type="button" class="k8-evad-sum" onclick="typeof k8EvalSummary===\'function\'&&k8EvalSummary()">ดูผลประเมินจากนักเรียน ›</button>';
+  }
+  async function load() {
+    try { const r = await gasApiCall('getSettings', {}, 15000); if (r && r.success) V.open = String((r.data || {}).EvalOpen || '') === '1'; } catch (e) {}
+    if (V.open === null) V.open = false; render();
+  }
+  window.k8EvalAdminSet = async function (on) {
+    if (on === false && !confirm('ปิดการประเมินอาจารย์ใช่ไหม? นักเรียนจะส่งแบบประเมินไม่ได้จนกว่าจะเปิดอีกครั้ง')) return;
+    V.busy = true; render();
+    let r = null; try { r = await gasApiCall('setEvalOpen', { data: { open: !!on } }, 20000); } catch (e) {}
+    V.busy = false;
+    if (r && r.success) { V.open = r.open; toast(r.message, 'success'); } else toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ · Deploy Code.gs ตัวล่าสุดก่อน', 'error');
+    render();
+  };
+  const sat = window.switchAdminTab;
+  if (typeof sat === 'function') window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'eval-admin') { render(); load(); } return r; };
 })();

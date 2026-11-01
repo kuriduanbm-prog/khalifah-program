@@ -1181,7 +1181,7 @@ const ACTION_ACCESS = {
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
-  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
+  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
@@ -1492,6 +1492,11 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'resetMyHasanat':
       if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
       return resetMyHasanat_(session.userId);
+    case 'setEvalOpen': {
+      const on = !!(data && (data.open === true || data.open === '1' || data.open === 1));
+      saveSetting({ key: 'EvalOpen', value: on ? '1' : '0', description: 'เปิดให้นักเรียนประเมินอาจารย์ (1=เปิด 0=ปิด)' });
+      return { success: true, open: on, message: on ? 'เปิดให้นักเรียนประเมินอาจารย์แล้ว' : 'ปิดการประเมินอาจารย์แล้ว' };
+    }
     case 'getEvaluationTargets':
       return getEvaluationTargets_();
     case 'getMyEvaluationStatus':
@@ -5583,8 +5588,10 @@ function getEvaluationTargets_() {
       out.push({ subjectCode: code, subjectName: nameOf[code] || code, teacher: cleanVal(rows[i][1]), teacherName: cleanVal(rows[i][3]) });
     });
   }
-  return { success: true, term: currentTerm_(), items: EVAL_ITEMS, data: out };
+  return { success: true, term: currentTerm_(), items: EVAL_ITEMS, data: out, open: evalOpen_() };
 }
+/** แอดมินเปิด/ปิดการประเมินอาจารย์ (ค่าเริ่มต้น: ปิด) */
+function evalOpen_() { try { return String((getSettings().data || {}).EvalOpen || '') === '1'; } catch (e) { return false; } }
 function getMyEvaluationStatus_(sid, term) {
   ensureSchema();
   term = cleanVal(term) || currentTerm_();
@@ -5600,6 +5607,7 @@ function getMyEvaluationStatus_(sid, term) {
 function submitTeacherEvaluation_(sid, data) {
   ensureSchema();
   const term = currentTerm_();
+  if (!evalOpen_()) return { success: false, closed: true, message: 'ยังไม่เปิดให้ประเมินอาจารย์ · รอแอดมินเปิดระบบ' };
   const subj = cleanVal(data.subjectCode), teacher = cleanVal(data.teacher);
   const target = getEvaluationTargets_().data.filter(function (x) { return x.subjectCode === subj && x.teacher === teacher; })[0];
   if (!target) return { success: false, message: 'ไม่พบวิชาหรืออาจารย์ที่เลือก' };
