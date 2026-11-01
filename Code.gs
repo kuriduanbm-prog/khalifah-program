@@ -1580,6 +1580,11 @@ function dispatchAction_(action, req, data, session, ctx) {
       // เฉพาะแอดมินสูงสุด หรือแอดมินที่แอดมินสูงสุดให้สิทธิ์
       if (!ctx.isOwner) { let l = []; try { l = JSON.parse((getSettings().data || {}).PreviewAllowedAdmins || '[]') || []; } catch (e) {} if (l.indexOf(String(session.userId).toLowerCase()) === -1) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินสูงสุด หรือแอดมินที่ได้รับสิทธิ์เท่านั้น' }; }
       const sid = cleanVal((data || {}).studentId);
+      if (!sid || sid === 'DEMO') { // นักเรียนตัวอย่าง (ไม่ต้องเลือกนักเรียนจริง)
+        const g = String(cleanVal((data || {}).grade) || '1').replace(/\D/g, '') || '1';
+        const demo = { studentId: 'DEMO', fullName: 'นักเรียนตัวอย่าง', grade: 'มัธยมศึกษาปีที่ ' + g, schoolName: 'โหมดดูตัวอย่าง', status: 'ปกติ (กำลังศึกษา)', approvalStatus: 'Verified', parentPhone: '', birthDate: '', avatarUrl: '', email: '', gpax: 0 };
+        return { success: true, token: issueToken_('student', 'DEMO', demo.fullName, false, true), student: demo, preview: true };
+      }
       const ss = getSpreadsheet(); const sh = ss.getSheetByName(SHEETS.STUDENTS);
       const rows = sh ? sh.getDataRange().getValues() : [];
       for (let i = 1; i < rows.length; i++) {

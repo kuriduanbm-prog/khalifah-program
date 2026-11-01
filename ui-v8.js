@@ -2901,7 +2901,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '15.2';
+  const APP_VERSION = '15.3';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6256,17 +6256,28 @@ window.k8RegBirthChange = function (v) {
   const stash = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } };
   const isPreview = () => { let s = null; try { s = currentStudent; } catch (e) {} return !!(stash() && s); };
   window.k8IsPreview = isPreview;
-  window.k8PreviewStudent = async function (id) {
-    let r = null; try { r = await gasApiCall('previewAsStudent', { data: { studentId: id } }, 25000); } catch (e) { r = null; }
+  window.k8PreviewStudent = async function (id, grade) {
+    let r = null; try { r = await gasApiCall('previewAsStudent', { data: { studentId: id || 'DEMO', grade: grade || '1' } }, 25000); } catch (e) { r = null; }
     if (!r || !r.success || !r.token) { try { showToast((r && (r.message || r.error)) || 'เปิดโหมดดูตัวอย่างไม่ได้ · Deploy Code.gs ตัวล่าสุดก่อน', 'error'); } catch (e) {} return; }
     try {
-      localStorage.setItem(KEY, JSON.stringify({ admin: localStorage.getItem('khalifah_current_admin'), token: localStorage.getItem('khalifah_session_token'), role: localStorage.getItem('khalifah_auth_role'), name: r.student.fullName || id, at: Date.now() }));
+      localStorage.setItem(KEY, JSON.stringify({ admin: localStorage.getItem('khalifah_current_admin'), token: localStorage.getItem('khalifah_session_token'), role: localStorage.getItem('khalifah_auth_role'), view: (document.querySelector('.view-section.active') || {}).id === 'view-teacher' ? 'teacher' : 'admin', name: (r.student.fullName || id) + (r.student.studentId === 'DEMO' ? ' (' + String(r.student.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.') + ')' : ''), at: Date.now() }));
       localStorage.removeItem('khalifah_current_admin');
       localStorage.setItem('khalifah_current_student', JSON.stringify(r.student));
       localStorage.setItem('khalifah_session_token', r.token);
       localStorage.setItem('khalifah_auth_role', 'student');
     } catch (e) {}
     location.reload();
+  };
+  // เปิดโหมดดูตัวอย่างทันที ไม่ต้องเลือกนักเรียน (เลือกชั้นได้)
+  window.k8PreviewDemo = function () {
+    let ov = document.getElementById('k8PvDemo');
+    if (!ov) {
+      ov = document.createElement('div'); ov.id = 'k8PvDemo'; ov.className = 'modal-overlay'; ov.onclick = (e) => { if (e.target === ov) closeModal('k8PvDemo'); };
+      ov.innerHTML = '<div class="modal-dialog k8-pvdemo" role="dialog" aria-label="ดูแอปแบบนักเรียน"><h2>ดูแอปแบบนักเรียน</h2><p>เปิดเป็นนักเรียนตัวอย่าง · กดอะไรก็ไม่บันทึกจริง<br>อยากดูของนักเรียนคนใด ให้เปิดจากหน้า "นักเรียน" แล้วแตะชื่อ</p><div class="k8-pvdemo-g">' +
+        [1, 2, 3, 4, 5, 6].map((g) => '<button type="button" onclick="closeModal(\'k8PvDemo\');k8PreviewStudent(\'DEMO\',\'' + g + '\')">ม.' + g + '</button>').join('') + '</div><button type="button" class="k8-pvdemo-x" onclick="closeModal(\'k8PvDemo\')">ยกเลิก</button></div>';
+      document.body.appendChild(ov);
+    }
+    openModal('k8PvDemo');
   };
   window.k8PreviewExit = function () {
     const st = stash(); if (!st) return;
@@ -6276,6 +6287,7 @@ window.k8RegBirthChange = function (v) {
       if (st.token) localStorage.setItem('khalifah_session_token', st.token);
       localStorage.setItem('khalifah_auth_role', st.role || 'admin');
       localStorage.removeItem(KEY);
+      sessionStorage.setItem('k8_after_preview', st.view || 'admin');
     } catch (e) {}
     location.reload();
   };
@@ -6332,4 +6344,19 @@ window.k8RegBirthChange = function (v) {
   };
   const sel = window.k8AsSelect;
   if (typeof sel === 'function') window.k8AsSelect = function () { const r = sel.apply(this, arguments); if (P) paint(); else load(); return r; };
+  // ปุ่ม "นักเรียน" ที่แถบล่าง + เมนูแอดมิน: แสดงเฉพาะแอดมินที่มีสิทธิ์
+  function navBtn() {
+    let a = null; try { a = currentAdmin; } catch (e) {}
+    const ok = !!(a && P && P.canPreview);
+    const m = document.getElementById('m-nav-preview'); if (m) m.style.display = ok ? 'flex' : 'none';
+    let d = document.getElementById('btnAdminTabPreview');
+    if (!d) { const grp = document.querySelector('.k8-nav-group[data-g="main"] .k8-nav-items'); if (grp) { d = document.createElement('button'); d.className = 'admin-tab-btn'; d.id = 'btnAdminTabPreview'; d.type = 'button'; d.onclick = () => window.k8PreviewDemo(); d.innerHTML = '<svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg> ดูแอปแบบนักเรียน'; grp.appendChild(d); } }
+    if (d) d.style.display = ok ? '' : 'none';
+  }
+  const op = paint; paint = function () { op(); navBtn(); };
+  function boot() { let a = null; try { a = currentAdmin; } catch (e) {} if (a) load(); else navBtn(); }
+  const uav = window.updateAdminUIVisibility;
+  if (typeof uav === 'function') window.updateAdminUIVisibility = function () { const r = uav.apply(this, arguments); setTimeout(boot, 0); return r; };
+  if (document.readyState === 'complete') setTimeout(boot, 500); else window.addEventListener('load', () => setTimeout(boot, 500));
 })();
+(function () { let v = null; try { v = sessionStorage.getItem('k8_after_preview'); sessionStorage.removeItem('k8_after_preview'); } catch (e) {} if (v === 'teacher') window.addEventListener('load', () => setTimeout(() => { try { switchView('teacher'); } catch (e) {} }, 300)); })();

@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=15.2">
-  <link rel="stylesheet" href="ui-v8.css?v=15.2">
-  <link rel="stylesheet" href="dark.css?v=15.2">
+  <link rel="stylesheet" href="style.css?v=15.3">
+  <link rel="stylesheet" href="ui-v8.css?v=15.3">
+  <link rel="stylesheet" href="dark.css?v=15.3">
 </head>
 <body class="auth-locked">
   <script>
@@ -163,6 +163,11 @@
     <button class="mobile-nav-item" onclick="switchView('admin')" id="m-nav-admin" style="display: none;">
       <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>
       <span>แอดมิน</span>
+    </button>
+    <!-- แอดมินที่มีสิทธิ์: ดูแอปแบบนักเรียน (โหมดดูตัวอย่าง) -->
+    <button class="mobile-nav-item" onclick="k8PreviewDemo()" id="m-nav-preview" style="display: none;">
+      <svg class="k8-nav-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span>นักเรียน</span>
     </button>
   </nav>
 
@@ -5799,7 +5804,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=15.2"></script>
-  <script defer src="ui-v8.js?v=15.2"></script>
+  <script defer src="app.js?v=15.3"></script>
+  <script defer src="ui-v8.js?v=15.3"></script>
 </body>
 </html>
