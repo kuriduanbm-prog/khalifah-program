@@ -2913,7 +2913,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.9';
+  const APP_VERSION = '17.10';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7182,4 +7182,45 @@ window.k8RegBirthChange = function (v) {
     if (!V.blob) return;
     try { await navigator.share({ files: [new File([V.blob], V.name, { type: 'image/png' })], title: 'สรุปการละหมาด' }); } catch (e) { if (!e || e.name !== 'AbortError') window.k8PsSave(); }
   };
+})();
+
+/* ---------- v17.10 · ตรวจรายการเก่าซ้ำตามเกณฑ์มาสาย (เช็คหลังเวลาสาย = มาสาย) ---------- */
+(function () {
+  const FROM = '2026-11-01'; // วันที่เริ่มใช้เกณฑ์มาสาย
+  const norm = (k) => { try { return normalizePrayerSlotKey(k); } catch (e) { return k; } };
+  const hm = (t) => { const m = String(t || '').match(/(\d{1,2})[:.](\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  // รายการนี้ควรเป็น "มาสาย" ไหม (ใช้เวลาที่เช็คชื่อจริงของรายการ)
+  function shouldBeLate(p) {
+    if (!p || typeof window.k8LateCutoffs !== 'function') return false;
+    const st = String(p.status || ''); if (!/^ตรงเวลา/.test(st)) return false;
+    const date = String(p.date || ''); if (!date || date < FROM) return false;
+    const id = String(p.logId || p.id || '');
+    if (/^PRY-(ROLL|ADM|APPR)/.test(id) || /แก้ไขโดย|อนุมัติ/.test(String(p.note || '') + String(p.time || ''))) return false;
+    const slot = norm(p.prayerName || p.prayerTime || ''); if (!slot || slot === 'ซุบฮิ') return false;
+    const t = hm(p.time); if (isNaN(t)) return false;
+    const c = window.k8LateCutoffs(new Date(date + 'T12:00:00'))[slot]; if (c == null) return false;
+    if (slot === 'อีชาอ์' && t < 12 * 60) return true;
+    return t > c;
+  }
+  window.k8ShouldBeLate = shouldBeLate;
+  const o = window.getAllCombinedPrayerHistory;
+  if (typeof o === 'function') window.getAllCombinedPrayerHistory = function () {
+    const list = o.apply(this, arguments) || [];
+    return list.map((p) => shouldBeLate(p) ? Object.assign({}, p, { status: 'มาสาย', _k8late: 1 }) : p);
+  };
+  // บันทึกถาวรลงชีต + เครื่องนี้ (แอดมิน/อาจารย์เท่านั้น)
+  let busy = false;
+  async function persist() {
+    if (busy) return; let staff = false; try { staff = !!currentAdmin; } catch (e) {} if (!staff) return;
+    const fix = (key) => { let arr = []; try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } const ids = []; arr.forEach((p) => { if (shouldBeLate(p)) { p.status = 'มาสาย'; ids.push(String(p.logId || p.id || '')); } }); if (ids.length) { try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {} } return ids; };
+    const ids = Array.from(new Set(fix('khalifah_prayer_history').concat(fix('khalifah_today_prayers')))).filter(Boolean);
+    try { (typeof todayPrayers !== 'undefined' ? todayPrayers : []).forEach((p) => { if (shouldBeLate(p)) p.status = 'มาสาย'; }); } catch (e) {}
+    if (!ids.length) return;
+    busy = true;
+    try { await gasApiCall('markPrayersLate', { data: { ids: ids } }, 30000); } catch (e) {}
+    busy = false;
+  }
+  window.k8PersistLate = persist;
+  const r = window.renderAdminPrayerDailyDashboard;
+  if (typeof r === 'function') window.renderAdminPrayerDailyDashboard = function () { const x = r.apply(this, arguments); setTimeout(persist, 500); return x; };
 })();

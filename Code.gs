@@ -1179,7 +1179,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1567,6 +1567,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return deletePrayerRecord(data);
     case 'updatePrayerRecord':
       return updatePrayerRecord_(data, session);
+    case 'markPrayersLate':
+      return markPrayersLate_(data);
     case 'addPrayerForStudent':
       return addPrayerForStudent_(data, session);
     case 'savePrayerWindows':
@@ -2786,6 +2788,29 @@ function updatePrayerRecord_(data, session) {
     sheet.getRange(row, 7, 1, 2).setNumberFormat('@').setValues([[date, time]]);
     sheet.getRange(row, 15, 1, 2).setValues([[status, note]]);
     return { success: true, message: 'แก้ไขบันทึกละหมาดแล้ว', record: { logId: logId, studentId: cleanVal(cur[1]), prayerTime: pt, date: date, time: time, status: status, note: note } };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/** v17.10 · ปรับรายการที่เช็คชื่อหลังเวลาสาย (บันทึกเป็น "ตรงเวลา" ก่อนมีเกณฑ์) ให้เป็น "มาสาย" · ไม่แตะรายการที่แอดมินแก้เอง */
+function markPrayersLate_(data) {
+  const ids = (Array.isArray((data || {}).ids) ? data.ids : []).map(function (x) { return cleanVal(x); }).filter(Boolean).slice(0, 500);
+  if (!ids.length) return { success: true, updated: 0 };
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานบันทึกเวลาละหมาด' };
+  const want = {}; ids.forEach(function (i) { want[i] = true; });
+  const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) {}
+  try {
+    const n = sheet.getLastRow(); if (n < 2) return { success: true, updated: 0 };
+    const rows = sheet.getRange(2, 1, n - 1, 16).getValues();
+    let updated = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const id = cleanVal(rows[i][0]); if (!want[id]) continue;
+      const st = String(rows[i][14] || ''), note = String(rows[i][15] || '');
+      if (!/^ตรงเวลา/.test(st) || /แก้ไขโดย/.test(note)) continue;
+      sheet.getRange(i + 2, 15, 1, 2).setValues([['มาสาย', (note ? note + ' ' : '') + '(ปรับเป็นมาสายตามเกณฑ์เวลา)']]);
+      updated++;
+    }
+    return { success: true, updated: updated };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
