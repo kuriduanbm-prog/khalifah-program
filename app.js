@@ -12059,7 +12059,7 @@ async function syncAllDataFromCloud(showToastMsg = false) {
       try {
         allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
       } catch (e) { allHasanat = {}; }
-      db.hasanat.forEach(item => {
+      db.hasanat.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))).forEach(item => {
         const sid = cleanIdString(item.studentId);
         if (!sid) return;
         allHasanat[sid] = allHasanat[sid] || {};
