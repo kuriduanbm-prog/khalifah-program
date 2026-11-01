@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.10">
-  <link rel="stylesheet" href="ui-v8.css?v=17.10">
-  <link rel="stylesheet" href="dark.css?v=17.10">
+  <link rel="stylesheet" href="style.css?v=17.11">
+  <link rel="stylesheet" href="ui-v8.css?v=17.11">
+  <link rel="stylesheet" href="dark.css?v=17.11">
 </head>
 <body class="auth-locked">
   <script>
@@ -199,6 +199,7 @@
       </div>
       <!-- ===== หน้าแรกแบบ F (v8) ===== -->
       <div id="homeF" class="hf">
+        <button type="button" class="k8-pw-alert" id="k8PwAlertHome" hidden onclick="switchView('prayer')"></button>
         <section class="hf-card hf-idcard" aria-label="บัตรนักเรียน">
           <div class="hf-idcard-band">
             <span class="hf-idcard-brand">KHALIFAH · บัตรนักเรียน</span>
@@ -524,6 +525,7 @@
 
     <!-- ==================== VIEW 2: PRAYER CHECK-IN ==================== -->
     <section id="view-prayer" class="view-section">
+      <button type="button" class="k8-pw-alert" id="k8PwAlertPr" hidden onclick="var b=document.getElementById('btnCaptureInstant');if(b)b.scrollIntoView({behavior:'smooth',block:'center'})"></button>
       <div class="card k8-pr-wrap" style="max-width: 760px; margin: 0 auto 1.5rem auto; padding: 1.25rem 1.15rem;">
         <header class="k8-pg-head">
           <button type="button" class="k8-pg-back" aria-label="กลับหน้าแรก" onclick="switchView('dashboard')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -1660,6 +1662,10 @@
             <span class="k8-th-kpi-v"><b id="k8ThAttN">0</b><small id="k8ThAttT"> / 0</small></span>
             <span class="k8-th-bar"><span id="k8ThAttBar" style="width:0%"></span></span>
           </button>
+        </section>
+        <section class="k8-lv" id="k8LvCard" aria-label="ลาสอน">
+          <div class="k8-lv-head"><h2>ลาสอน</h2><button type="button" class="k8-lv-add" onclick="k8LvNew()">+ แจ้งลาสอน</button></div>
+          <div id="k8LvList"><div class="k8-li-empty">กำลังโหลด…</div></div>
         </section>
         <!-- Teacher & Executive Bento Header -->
         <div class="teacher-hero-card" style="margin-bottom: 1.25rem;">
@@ -5686,6 +5692,12 @@
       <div class="k8-sheet-body" id="k8PeBody"></div>
     </div>
   </div>
+  <div class="modal-overlay" id="k8LvModal" onclick="if(event.target===this)closeModal('k8LvModal')">
+    <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8LvTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8LvTitle">แจ้งลาสอน</h2><span>อาจารย์ท่านอื่นจะเห็นทันที และกดรับสอนแทนได้</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8LvModal')">✕</button></header>
+      <div class="k8-sheet-body k8-lv-form" id="k8LvForm"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="k8PsModal" onclick="if(event.target===this)closeModal('k8PsModal')">
     <div class="modal-dialog k8-sheet k8-ps-sheet" role="dialog" aria-labelledby="k8PsTitle">
       <header class="k8-sheet-head"><div><h2 id="k8PsTitle">รูปสรุปการละหมาด</h2><span id="k8PsSub">เลือกเวลาละหมาด แล้วบันทึกหรือแชร์รูป</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8PsModal')">✕</button></header>
@@ -5760,7 +5772,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.10"></script>
-  <script defer src="ui-v8.js?v=17.10"></script>
+  <script defer src="app.js?v=17.11"></script>
+  <script defer src="ui-v8.js?v=17.11"></script>
 </body>
 </html>

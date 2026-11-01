@@ -1131,6 +1131,7 @@ function publicSettings_(settings) {
   const o = {};
   Object.keys(settings || {}).forEach(function (k) {
     if (/master|password|secret|token|otp/i.test(k)) return;
+    if (/^TeacherLeaves$/.test(k)) return; // ลาสอน: เฉพาะบุคลากร
     if (/^Timetable/.test(k)) return; // ตารางสอน: อ่านผ่าน getTimetable (มีสิทธิ์และการเปิด/ปิดการมองเห็น)
     o[k] = settings[k];
   });
@@ -1179,7 +1180,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1210,7 +1211,7 @@ const ACTION_ACCESS = {
 // คำสั่งที่เขียนข้อมูล (ล้างแคชเมื่อสำเร็จ)
 const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'getStudent', 'getActivities',
   'getCalendarEvents', 'getCalendar', 'getSettings', 'whoami', 'getFullDatabase', 'getPrayers', 'getAttendance',
-  'getHasanat', 'getSubjectGrades', 'getMyEvaluationStatus', 'getEvaluationTargets', 'getTeacherEvaluationSummary', 'getAssignmentScores', 'getStatusLogs', 'getActivityLogs', 'getPrayerApprovals', 'getAllStudents',
+  'getHasanat', 'getTeacherLeaves', 'getSubjectGrades', 'getMyEvaluationStatus', 'getEvaluationTargets', 'getTeacherEvaluationSummary', 'getAssignmentScores', 'getStatusLogs', 'getActivityLogs', 'getPrayerApprovals', 'getAllStudents',
   'getSubAdmins', 'getTeachers', 'getPendingRegistrations', 'getAdmins', 'checkRegistrationStatus',
   'loginStudent', 'adminLogin', 'staffLogin'];
 
@@ -1569,6 +1570,14 @@ function dispatchAction_(action, req, data, session, ctx) {
       return updatePrayerRecord_(data, session);
     case 'markPrayersLate':
       return markPrayersLate_(data);
+    case 'getTeacherLeaves':
+      return { success: true, data: readLeaves_() };
+    case 'saveTeacherLeave':
+      return saveTeacherLeave_(data, session, !!session && session.role === 'admin');
+    case 'takeTeacherLeave':
+      return takeTeacherLeave_(data, session);
+    case 'deleteTeacherLeave':
+      return deleteTeacherLeave_(data, session, !!session && session.role === 'admin');
     case 'addPrayerForStudent':
       return addPrayerForStudent_(data, session);
     case 'savePrayerWindows':
@@ -2789,6 +2798,68 @@ function updatePrayerRecord_(data, session) {
     sheet.getRange(row, 15, 1, 2).setValues([[status, note]]);
     return { success: true, message: 'แก้ไขบันทึกละหมาดแล้ว', record: { logId: logId, studentId: cleanVal(cur[1]), prayerTime: pt, date: date, time: time, status: status, note: note } };
   } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/* ===================== v17.11 · ลาสอน (อาจารย์แจ้งลา · ท่านอื่นรับสอนแทน) =====================
+   เก็บใน Settings คีย์ TeacherLeaves (JSON) · ลบรายการที่เก่ากว่า 60 วันอัตโนมัติ */
+function readLeaves_() {
+  let v = []; try { v = JSON.parse((getSettings().data || {}).TeacherLeaves || '[]'); } catch (e) { v = []; }
+  return Array.isArray(v) ? v : [];
+}
+function writeLeaves_(list) {
+  const cut = Utilities.formatDate(new Date(Date.now() - 60 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  list = list.filter(function (x) { return x && String(x.date) >= cut; }).slice(-400);
+  saveSetting({ key: 'TeacherLeaves', value: JSON.stringify(list), description: 'ลาสอนของอาจารย์ (JSON)' });
+  return list;
+}
+function leaveLock_(fn) { const l = LockService.getScriptLock(); try { l.waitLock(10000); } catch (e) { return { success: false, message: 'ระบบกำลังบันทึก ลองใหม่อีกครั้ง' }; } try { return fn(); } finally { try { l.releaseLock(); } catch (e) {} } }
+function saveTeacherLeave_(d, session, isAdmin) {
+  d = d || {};
+  const date = String(d.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { success: false, message: 'เลือกวันที่ลา' };
+  const periods = (Array.isArray(d.periods) ? d.periods : []).map(Number).filter(function (n) { return n >= 1 && n <= 10; });
+  const allDay = !!d.allDay;
+  if (!allDay && !periods.length) return { success: false, message: 'เลือกคาบที่ลาอย่างน้อย 1 คาบ หรือเลือกทั้งวัน' };
+  const subject = cleanVal(d.subject || '').substring(0, 80);
+  if (!subject) return { success: false, message: 'ระบุวิชา' };
+  return leaveLock_(function () {
+    const list = readLeaves_();
+    const id = cleanVal(d.id || '');
+    const old = id ? list.find(function (x) { return x.id === id; }) : null;
+    if (old && old.teacherId !== session.userId && !isAdmin) return { success: false, code: 'FORBIDDEN', message: 'แก้ไขได้เฉพาะรายการของตัวเอง' };
+    const item = {
+      id: old ? old.id : 'LV' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      teacherId: old ? old.teacherId : session.userId, teacherName: old ? old.teacherName : (cleanVal(session.name || session.userId)),
+      date: date, allDay: allDay, periods: allDay ? [] : periods.sort(function (a, b) { return a - b; }),
+      timeText: cleanVal(d.timeText || '').substring(0, 60), subject: subject, grade: cleanVal(d.grade || '').substring(0, 60),
+      reason: cleanVal(d.reason || '').substring(0, 120),
+      subName: cleanVal(d.subName || '').substring(0, 80), subId: cleanVal(d.subId || '').substring(0, 60),
+      createdAt: old ? old.createdAt : new Date().toISOString(), updatedAt: new Date().toISOString()
+    };
+    const out = old ? list.map(function (x) { return x.id === item.id ? item : x; }) : list.concat([item]);
+    return { success: true, message: old ? 'แก้ไขการลาแล้ว' : 'แจ้งลาสอนแล้ว · อาจารย์ท่านอื่นจะเห็นทันที', item: item, data: writeLeaves_(out) };
+  });
+}
+function takeTeacherLeave_(d, session) {
+  const id = cleanVal((d || {}).id || ''); const undo = !!(d || {}).undo;
+  return leaveLock_(function () {
+    const list = readLeaves_(); const it = list.find(function (x) { return x.id === id; });
+    if (!it) return { success: false, message: 'ไม่พบรายการลานี้ (อาจถูกลบแล้ว)' };
+    if (it.teacherId === session.userId) return { success: false, message: 'รับสอนแทนตัวเองไม่ได้' };
+    if (undo) { if (it.subId !== session.userId) return { success: false, message: 'ยกเลิกได้เฉพาะคนที่รับสอนแทน' }; it.subId = ''; it.subName = ''; }
+    else { if (it.subName && it.subId !== session.userId) return { success: false, message: 'มีอาจารย์รับสอนแทนแล้ว: ' + it.subName }; it.subId = session.userId; it.subName = cleanVal(session.name || session.userId); }
+    it.updatedAt = new Date().toISOString();
+    return { success: true, message: undo ? 'ยกเลิกการรับสอนแทนแล้ว' : 'รับสอนแทนแล้ว ขอบคุณครับ', item: it, data: writeLeaves_(list) };
+  });
+}
+function deleteTeacherLeave_(d, session, isAdmin) {
+  const id = cleanVal((d || {}).id || '');
+  return leaveLock_(function () {
+    const list = readLeaves_(); const it = list.find(function (x) { return x.id === id; });
+    if (!it) return { success: true, data: list };
+    if (it.teacherId !== session.userId && !isAdmin) return { success: false, code: 'FORBIDDEN', message: 'ลบได้เฉพาะรายการของตัวเอง' };
+    return { success: true, message: 'ยกเลิกการลาแล้ว', data: writeLeaves_(list.filter(function (x) { return x.id !== id; })) };
+  });
 }
 
 /** v17.10 · ปรับรายการที่เช็คชื่อหลังเวลาสาย (บันทึกเป็น "ตรงเวลา" ก่อนมีเกณฑ์) ให้เป็น "มาสาย" · ไม่แตะรายการที่แอดมินแก้เอง */

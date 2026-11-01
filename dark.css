@@ -1675,6 +1675,25 @@ html[data-theme="dark"] .k8-pt-xls:hover { background-color: #153821 !important;
 html[data-theme="dark"] .k8-ps-chips button { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
 html[data-theme="dark"] .k8-ps-prev { border: 1px solid #323941 !important; background-color: #181f26 !important; }
 html[data-theme="dark"] .k8-ps-btns button.is-alt { background-color: #1a2229 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-pw-alert-ico { background-color: #121212 !important; }
+html[data-theme="dark"] .k8-lv { border: 1px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-lv-head h2 { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-lv-need { background-color: #371212 !important; color: #ed7878 !important; }
+html[data-theme="dark"] .k8-lv-item { border: 1px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-lv-top b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-lv-top span { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-lv-subj { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-lv-who { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-lv-sub { border-top: 1px dashed #323941 !important; }
+html[data-theme="dark"] .k8-lv-ok { color: #79eca4 !important; }
+html[data-theme="dark"] .k8-lv-no { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-lv-acts button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-lv-acts .is-del { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-lv-f { color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-lv-f small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-lv-f input, html[data-theme="dark"] .k8-lv-f select { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-lv-f input:focus, html[data-theme="dark"] .k8-lv-f select:focus { outline: 3px solid #233c4d !important; }
+html[data-theme="dark"] .k8-lv-pchips button { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

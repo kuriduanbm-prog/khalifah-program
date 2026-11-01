@@ -2913,7 +2913,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.10';
+  const APP_VERSION = '17.11';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7223,4 +7223,164 @@ window.k8RegBirthChange = function (v) {
   window.k8PersistLate = persist;
   const r = window.renderAdminPrayerDailyDashboard;
   if (typeof r === 'function') window.renderAdminPrayerDailyDashboard = function () { const x = r.apply(this, arguments); setTimeout(persist, 500); return x; };
+})();
+
+/* ---------- v17.11 · เตือนนักเรียน (สีแดง) เมื่อใกล้หมดเวลาละหมาดแต่ยังไม่เช็คชื่อ ---------- */
+(function () {
+  const WARN = 15; // นาทีสุดท้ายก่อนหมดเวลา (เช่น ซุฮริ: 15 นาทีก่อนเข้าอัศรฺ)
+  const NEXT = { 'ซุฮริ': 'อัศรฺ', 'อัศรฺ': 'มัฆริบ', 'มัฆริบ': 'อีชาอ์', 'อีชาอ์': 'เที่ยงคืน' };
+  const norm = (k) => { try { return normalizePrayerSlotKey(k); } catch (e) { return k; } };
+  const hhmm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  function done(slot) {
+    try { if ((getStudentTodayPrayersList() || []).some((p) => norm(p.prayerName || p.prayerTime || p.timeSlot || '') === slot)) return true; } catch (e) {}
+    try { const d = new Date().toLocaleDateString('sv-SE'); const sid = currentStudent.studentId; if ((getPrayerApprovalsList() || []).some((r) => r.studentId === sid && r.prayerSlot === slot && r.date === d && !/reject/i.test(String(r.status)))) return true; } catch (e) {}
+    return false;
+  }
+  function check() {
+    let st = null; try { st = currentStudent; } catch (e) {}
+    let adm = null; try { adm = currentAdmin; } catch (e) {}
+    const els = [document.getElementById('k8PwAlertHome'), document.getElementById('k8PwAlertPr')];
+    let hit = null;
+    if (st && !adm) {
+      const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
+      try {
+        PRAYER_TIME_WINDOWS.forEach((w) => {
+          const k = norm(w.key || w.name); if (k === 'ซุบฮิ' || hit) return;
+          const left = w.endMin - cur;
+          if (cur >= w.startMin && left >= 0 && left <= WARN && !done(k)) hit = { k: k, left: left, end: w.endMin };
+        });
+      } catch (e) {}
+    }
+    const nav = [document.getElementById('m-nav-prayer'), document.getElementById('nav-prayer')];
+    nav.forEach((n) => { if (n) n.classList.toggle('k8-nav-alert', !!hit); });
+    els.forEach((el) => {
+      if (!el) return;
+      el.hidden = !hit;
+      if (hit) el.innerHTML = '<span class="k8-pw-alert-ico" aria-hidden="true">!</span><span class="k8-pw-alert-t"><b>ยังไม่ได้เช็คชื่อละหมาด' + hit.k + '</b><small>เหลืออีก ' + (hit.left || '< 1') + ' นาที (หมดเวลา ' + hhmm(hit.end) + ' น. · ก่อนเข้า' + (NEXT[hit.k] || 'เวลาถัดไป') + ')</small></span><span class="k8-pw-alert-go" aria-hidden="true">›</span>';
+    });
+    if (hit) {
+      const key = 'k8pwwarn_' + new Date().toLocaleDateString('sv-SE') + '_' + hit.k;
+      let shown = false; try { shown = !!sessionStorage.getItem(key); } catch (e) {}
+      if (!shown) {
+        try { sessionStorage.setItem(key, '1'); } catch (e) {}
+        try { showToast('⚠️ ยังไม่ได้เช็คชื่อละหมาด' + hit.k + ' · เหลืออีก ' + hit.left + ' นาที', 'error'); } catch (e) {}
+        try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) {}
+        try {
+          if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker) navigator.serviceWorker.ready.then((r) => r.showNotification('ยังไม่ได้เช็คชื่อละหมาด' + hit.k, { body: 'เหลืออีก ' + hit.left + ' นาที ก่อนหมดเวลา', icon: 'assets/icon-192.png', tag: key }));
+        } catch (e) {}
+      }
+    }
+  }
+  window.k8PrayerWarnCheck = check;
+  ['switchView', 'refreshPrayerChipsStatus'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(check, 50); return r; }; });
+  setInterval(check, 30000);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(check, 1500)); else setTimeout(check, 1500);
+})();
+
+/* ---------- v17.11 · ลาสอน (อาจารย์) ---------- */
+(function () {
+  const V = { list: null, teachers: null, edit: null, busy: false };
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const DN = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'], M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const me = () => { try { return currentAdmin || {}; } catch (e) { return {}; } };
+  const myIds = () => { const a = me(); return [a.username, a.userId, a.id, a.teacherId].filter(Boolean).map(String); };
+  const isMine = (x) => myIds().indexOf(String(x.teacherId)) !== -1 || (!!me().fullName && x.teacherName === me().fullName);
+  const isAdm = () => { const a = me(); return /ADMIN|SUPER|EXEC/i.test(String(a.role || '')) || a.isOwner || a.isSubAdmin; };
+  function dLabel(s) {
+    const d = new Date(s + 'T00:00:00'); if (isNaN(d)) return s;
+    const t = ymd(new Date()), tm = ymd(new Date(Date.now() + 864e5));
+    return (s === t ? 'วันนี้ · ' : s === tm ? 'พรุ่งนี้ · ' : '') + 'วัน' + DN[d.getDay()] + ' ' + d.getDate() + ' ' + M[d.getMonth()];
+  }
+  const when = (x) => x.allDay ? 'ทั้งวัน' : 'คาบ ' + (x.periods || []).join(', ') + (x.timeText ? ' (' + x.timeText + ')' : '');
+  async function load() {
+    let r = null; try { r = await gasApiCall('getTeacherLeaves', {}, 20000); } catch (e) {}
+    if (r && r.success) V.list = r.data || []; else if (!V.list) V.list = [];
+    render();
+  }
+  function place() { const card = document.getElementById('k8LvCard'), tl = document.getElementById('k8ThTl'); if (card && tl && tl.parentElement && card.previousElementSibling !== tl) tl.after(card); }
+  function render() {
+    place();
+    const el = document.getElementById('k8LvList'); if (!el) return;
+    if (V.list === null) { el.innerHTML = '<div class="k8-li-empty">กำลังโหลด…</div>'; return; }
+    const today = ymd(new Date());
+    const up = V.list.filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date) || ((a.periods || [0])[0] - (b.periods || [0])[0]));
+    const need = up.filter((x) => !x.subName).length;
+    const head = document.querySelector('#k8LvCard .k8-lv-head h2'); if (head) head.innerHTML = 'ลาสอน' + (need ? ' <span class="k8-lv-need">ยังไม่มีคนสอนแทน ' + need + '</span>' : '');
+    el.innerHTML = up.length ? up.map((x) => {
+      const mine = isMine(x), canEdit = mine || isAdm(), iSub = myIds().indexOf(String(x.subId)) !== -1;
+      return '<article class="k8-lv-item' + (x.subName ? ' is-ok' : ' is-need') + '">' +
+        '<div class="k8-lv-top"><b>' + esc(dLabel(x.date)) + '</b><span>' + esc(when(x)) + '</span></div>' +
+        '<div class="k8-lv-main"><span class="k8-lv-subj">' + esc(x.subject) + (x.grade ? ' · ' + esc(x.grade) : '') + '</span><span class="k8-lv-who">ลาโดย ' + esc(x.teacherName || '-') + (mine ? ' (ฉัน)' : '') + (x.reason ? ' · ' + esc(x.reason) : '') + '</span></div>' +
+        '<div class="k8-lv-sub">' + (x.subName ? '<span class="k8-lv-ok">✓ สอนแทนโดย ' + esc(x.subName) + '</span>' : '<span class="k8-lv-no">ยังไม่มีคนสอนแทน</span>') +
+        '<span class="k8-lv-acts">' +
+          (!mine && !x.subName ? '<button type="button" class="is-take" onclick="k8LvTake(\'' + x.id + '\')">ฉันสอนแทนได้</button>' : '') +
+          (iSub ? '<button type="button" onclick="k8LvTake(\'' + x.id + '\',1)">ยกเลิกรับสอน</button>' : '') +
+          (canEdit ? '<button type="button" onclick="k8LvEdit(\'' + x.id + '\')">แก้ไข</button><button type="button" class="is-del" onclick="k8LvDel(\'' + x.id + '\')">ยกเลิกลา</button>' : '') +
+        '</span></div></article>';
+    }).join('') : '<div class="k8-li-empty">ยังไม่มีอาจารย์แจ้งลาสอน</div>';
+  }
+  async function teachers() {
+    if (V.teachers) return V.teachers;
+    let r = null; try { r = await gasApiCall('getTeachers', {}, 20000); } catch (e) {}
+    V.teachers = r && r.success ? (r.data || []).map((t) => ({ id: String(t.username || t.id || ''), name: t.fullName || t.name || t.username })).filter((t) => t.name) : [];
+    return V.teachers;
+  }
+  function subjects() { let a = []; try { a = (appSubjects || []).map((s) => s.name || s); } catch (e) {} return Array.from(new Set(a.filter(Boolean))); }
+  async function form(x) {
+    V.edit = x || null; x = x || {};
+    const el = document.getElementById('k8LvForm'); if (!el) return;
+    const tt = document.getElementById('k8LvTitle'); if (tt) tt.textContent = V.edit ? 'แก้ไขการลาสอน' : 'แจ้งลาสอน';
+    const subs = subjects(); const T = await teachers(); const myName = me().fullName || '';
+    const P = x.periods || [];
+    el.innerHTML =
+      '<label class="k8-lv-f"><span>วันที่ลา</span><input type="date" id="k8LvDate" value="' + esc(x.date || ymd(new Date())) + '" min="' + ymd(new Date(Date.now() - 7 * 864e5)) + '"></label>' +
+      '<div class="k8-lv-f"><span>คาบ / เวลา</span><div class="k8-lv-pchips"><button type="button" data-p="all" class="' + (x.allDay ? 'on' : '') + '" onclick="k8LvP(this)">ทั้งวัน</button>' + [1, 2, 3, 4, 5].map((n) => '<button type="button" data-p="' + n + '" class="' + (P.indexOf(n) !== -1 ? 'on' : '') + '" onclick="k8LvP(this)">คาบ ' + n + '</button>').join('') + '</div>' +
+      '<input type="text" id="k8LvTime" placeholder="ช่วงเวลา (ไม่บังคับ) เช่น 09:00–10:00" maxlength="60" value="' + esc(x.timeText || '') + '"></div>' +
+      '<label class="k8-lv-f"><span>วิชา</span><input type="text" id="k8LvSubj" list="k8LvSubjList" placeholder="เลือกหรือพิมพ์ชื่อวิชา" maxlength="80" value="' + esc(x.subject || '') + '"><datalist id="k8LvSubjList">' + subs.map((n) => '<option value="' + esc(n) + '">').join('') + '</datalist></label>' +
+      '<label class="k8-lv-f"><span>ชั้น / ห้อง</span><select id="k8LvGrade"><option value="">— ไม่ระบุ —</option>' + ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'].map((g) => '<option' + (x.grade === g ? ' selected' : '') + '>' + g + '</option>').join('') + '</select></label>' +
+      '<label class="k8-lv-f"><span>เหตุผล <small>ไม่บังคับ</small></span><input type="text" id="k8LvReason" placeholder="เช่น ไปราชการ, ลาป่วย" maxlength="120" value="' + esc(x.reason || '') + '"></label>' +
+      '<label class="k8-lv-f"><span>มีคนสอนแทนแล้วหรือยัง</span><select id="k8LvSub"><option value="">ยังไม่มี · ให้อาจารย์ท่านอื่นกดรับ</option>' + T.filter((t) => t.name !== myName).map((t) => '<option value="' + esc(t.id) + '|' + esc(t.name) + '"' + (x.subName === t.name ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('') + '</select></label>' +
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8LvModal\')">ยกเลิก</button><button type="button" id="k8LvSave" onclick="k8LvSave()">' + (V.edit ? 'บันทึกการแก้ไข' : 'แจ้งลาสอน') + '</button></div>';
+  }
+  window.k8LvP = function (b) {
+    const box = b.parentElement;
+    if (b.dataset.p === 'all') { const on = !b.classList.contains('on'); box.querySelectorAll('button').forEach((x) => x.classList.remove('on')); if (on) b.classList.add('on'); }
+    else { box.querySelector('[data-p="all"]').classList.remove('on'); b.classList.toggle('on'); }
+  };
+  window.k8LvNew = function () { form(null); try { openModal('k8LvModal'); } catch (e) {} };
+  window.k8LvEdit = function (id) { const x = (V.list || []).find((y) => y.id === id); form(x); try { openModal('k8LvModal'); } catch (e) {} };
+  window.k8LvSave = async function () {
+    if (V.busy) return;
+    const g = (id) => (document.getElementById(id) || {}).value || '';
+    const chips = Array.from(document.querySelectorAll('.k8-lv-pchips button.on'));
+    const allDay = chips.some((c) => c.dataset.p === 'all');
+    const periods = chips.filter((c) => c.dataset.p !== 'all').map((c) => +c.dataset.p);
+    if (!g('k8LvDate')) return toast('เลือกวันที่ลา', 'warning');
+    if (!allDay && !periods.length) return toast('เลือกคาบที่ลา หรือ "ทั้งวัน"', 'warning');
+    if (!g('k8LvSubj').trim()) return toast('ระบุวิชา', 'warning');
+    const sub = g('k8LvSub').split('|');
+    const data = { id: V.edit ? V.edit.id : '', date: g('k8LvDate'), allDay: allDay, periods: periods, timeText: g('k8LvTime').trim(), subject: g('k8LvSubj').trim(), grade: g('k8LvGrade'), reason: g('k8LvReason').trim(), subId: sub[0] || '', subName: sub[1] || '' };
+    const b = document.getElementById('k8LvSave'); V.busy = true; if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก…'; }
+    let r = null; try { r = await gasApiCall('saveTeacherLeave', { data: data }, 25000); } catch (e) {}
+    V.busy = false; if (b) { b.disabled = false; b.textContent = 'แจ้งลาสอน'; }
+    if (r && r.success) { V.list = r.data || V.list; render(); try { closeModal('k8LvModal'); } catch (e) {} toast(r.message, 'success'); }
+    else toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ · Deploy Code.gs ตัวล่าสุดก่อน', 'error');
+  };
+  window.k8LvTake = async function (id, undo) {
+    if (undo && !confirm('ยกเลิกการรับสอนแทนใช่ไหม?')) return;
+    let r = null; try { r = await gasApiCall('takeTeacherLeave', { data: { id: id, undo: !!undo } }, 20000); } catch (e) {}
+    if (r && r.success) { V.list = r.data || V.list; render(); toast(r.message, 'success'); } else toast((r && (r.message || r.error)) || 'ไม่สำเร็จ', 'error');
+  };
+  window.k8LvDel = async function (id) {
+    if (!confirm('ยกเลิกการลาสอนรายการนี้ใช่ไหม?')) return;
+    let r = null; try { r = await gasApiCall('deleteTeacherLeave', { data: { id: id } }, 20000); } catch (e) {}
+    if (r && r.success) { V.list = r.data || []; render(); toast(r.message || 'ยกเลิกแล้ว', 'success'); } else toast((r && (r.message || r.error)) || 'ไม่สำเร็จ', 'error');
+  };
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'teacher') load(); return r; };
+  const st = window.switchTeacherTab;
+  if (typeof st === 'function') window.switchTeacherTab = function (t) { const r = st.apply(this, arguments); if (t === 'overview') load(); return r; };
+  setInterval(() => { const v = document.getElementById('view-teacher'); if (v && v.classList.contains('active') && document.visibilityState === 'visible') load(); }, 60000);
 })();

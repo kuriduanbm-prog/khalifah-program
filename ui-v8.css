@@ -3176,3 +3176,48 @@ html.k8-narrow .k8-pt-img span { display: none; }
 .k8-ps-btns [hidden] { display: none !important; }
 .k8-ps-btns button:not(.is-alt) { background: #0369a1 !important; color: #fff !important; }
 .k8-ps-btns button.is-alt { background: #f1f5f9 !important; color: #0f172a !important; }
+/* v17.11 · เตือนใกล้หมดเวลาละหมาด (สีแดง) */
+.k8-pw-alert { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 12px; padding: 12px 14px; border: 0; border-radius: 16px; background: #dc2626; color: #fff; font: inherit; text-align: left; cursor: pointer; box-shadow: 0 8px 20px rgba(220,38,38,.3); animation: k8PwPulse 1.6s ease-in-out infinite; }
+.k8-pw-alert[hidden] { display: none !important; }
+.k8-pw-alert-ico { flex: none; width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #dc2626; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.k8-pw-alert-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+.k8-pw-alert-t b { font-size: 16px; font-weight: 700; }
+.k8-pw-alert-t small { font-size: 13px; opacity: .95; }
+.k8-pw-alert-go { flex: none; font-size: 26px; }
+@keyframes k8PwPulse { 0%, 100% { box-shadow: 0 8px 20px rgba(220,38,38,.3); } 50% { box-shadow: 0 8px 28px rgba(220,38,38,.6); } }
+@media (prefers-reduced-motion: reduce) { .k8-pw-alert { animation: none; } }
+#view-prayer > .k8-pw-alert { margin-top: 8px; }
+.k8-nav-alert { position: relative; }
+.k8-nav-alert::after { content: ''; position: absolute; top: 6px; right: calc(50% - 18px); width: 10px; height: 10px; border-radius: 50%; background: #dc2626; box-shadow: 0 0 0 2px #fff; }
+/* v17.11 · ลาสอน */
+.k8-lv { margin: 0 0 16px; padding: 14px; border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; }
+.k8-lv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.k8-lv-head h2 { margin: 0; font-size: 17px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.k8-lv-need { padding: 2px 10px; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 12.5px; font-weight: 600; }
+.k8-lv-add { flex: none; min-height: 40px; padding: 0 14px; border: 0; border-radius: 12px; background: #0369a1; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+#k8LvList { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 10px; }
+.k8-lv-item { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #ef4444; border-radius: 14px; background: #fff; min-width: 0; }
+.k8-lv-item.is-ok { border-left-color: #16a34a; }
+.k8-lv-top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.k8-lv-top b { font-weight: 600; color: #0f172a; }
+.k8-lv-top span { color: #0369a1; font-weight: 600; }
+.k8-lv-main { display: flex; flex-direction: column; line-height: 1.4; }
+.k8-lv-subj { font-size: 15.5px; font-weight: 600; color: #0f172a; }
+.k8-lv-who { font-size: 13px; color: #64748b; }
+.k8-lv-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
+.k8-lv-ok { color: #15803d; font-size: 13.5px; font-weight: 600; }
+.k8-lv-no { color: #b91c1c; font-size: 13.5px; font-weight: 600; }
+.k8-lv-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.k8-lv-acts button { min-height: 36px; padding: 0 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; color: #334155; font: inherit; font-size: 13px; cursor: pointer; }
+.k8-lv-acts .is-take { background: #0369a1; border-color: #0369a1; color: #fff; font-weight: 600; }
+.k8-lv-acts .is-del { color: #b91c1c; }
+.k8-lv-form { display: flex; flex-direction: column; gap: 14px; }
+.k8-lv-f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #334155; font-weight: 600; }
+.k8-lv-f small { font-weight: 400; color: #64748b; }
+.k8-lv-f input, .k8-lv-f select { height: 46px; padding: 0 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fff; font: inherit; font-size: 15px; font-weight: 400; color: #0f172a; }
+.k8-lv-f input:focus, .k8-lv-f select:focus { border-color: #0369a1; outline: 3px solid #e0f2fe; }
+.k8-lv-pchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.k8-lv-pchips button { min-height: 40px; padding: 0 14px; border: 1.5px solid #e2e8f0; border-radius: 999px; background: #fff; color: #334155; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-lv-pchips button.on { background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-lv-form .k8-dr-btns button:not(.is-alt) { background: #0369a1 !important; color: #fff !important; }
+#view-teacher #teacher-tab-overview > .k8-lv { display: block !important; }
