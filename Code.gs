@@ -1180,7 +1180,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1216,7 +1216,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1491,6 +1491,7 @@ function dispatchAction_(action, req, data, session, ctx) {
       if (!ctx.isAdmin && !(session && session.role === 'inspector')) return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'แก้ไขหัวข้อได้เฉพาะแอดมินและผู้ตรวจการ' };
       return saveBehaviorRules_(data.rules);
     case 'resetMyHasanat':
+      if (isStudent) return { success: false, forbidden: true, code: 'ADMIN_ONLY', message: 'ข้อมูลผลบุญบันทึกโดยแอดมินเท่านั้น' };
       if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
       return resetMyHasanat_(session.userId);
     case 'setEvalOpen': {
@@ -1533,7 +1534,8 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'saveSurahMemorizationLog':
     case 'saveSurahLog':
     case 'saveHasanatLog':
-      if (isStudent) data.studentId = session.userId;
+      // v17.17 · อ่านอัลกุรอาน/ท่องจำ/สุนัต: แอดมินเป็นผู้บันทึก นักเรียนดูได้อย่างเดียว
+      if (isStudent) return { success: false, forbidden: true, code: 'ADMIN_ONLY', message: 'ข้อมูลผลบุญบันทึกโดยแอดมินเท่านั้น' };
       return recordHasanat(data);
     case 'checkInActivity':
     case 'activityCheckIn':
@@ -1576,6 +1578,10 @@ function dispatchAction_(action, req, data, session, ctx) {
       return saveTeacherLeave_(data, session, !!session && session.role === 'admin');
     case 'takeTeacherLeave':
       return takeTeacherLeave_(data, session);
+    case 'getHasanatDay':
+      return getHasanatDay_(pick('date') || data.date);
+    case 'saveHasanatBatch':
+      return saveHasanatBatch_(data);
     case 'getMyTeaching':
       return getMyTeaching_(session);
     case 'approveTeacherLeave':
@@ -4318,6 +4324,74 @@ function updateStudentProfilePhoto(studentId, avatarUrl) {
 /**
  * บันทึกข้อมูลผลบุญและศาสนกิจ (อัลกุรอาน, ท่องจำซูเราะห์, ละหมาดสุนัต) ลง Google Sheet แบบผสานข้อมูลทั้ง 3 ด้านไม่ให้ทับกันเป็น 0
  */
+/* ===================== v17.17 · ผลบุญ (แอดมินบันทึกรายวัน) =====================
+   ค่าต่อวัน: อ่าน (หน้า) · ท่องจำใหม่ (ซูเราะห์) · สุนัต (ร็อกอะฮ์)
+   ในชีต: คอลัมน์ "จำนวนซูเราะห์" เป็นยอดสะสม จึงคำนวณ ท่องจำใหม่ = สะสมวันนั้น − สะสมก่อนหน้า */
+const HAS_NORM_ = function (v) { return String(cleanVal(v)).replace(/\D/g, '').replace(/^0+/, ''); };
+function hasanatIndex_(rows) {
+  const by = {};
+  for (let i = 1; i < rows.length; i++) {
+    const sid = HAS_NORM_(rows[i][1]); if (!sid) continue;
+    (by[sid] = by[sid] || []).push({ i: i, date: formatSheetDate(rows[i][4]) || cleanVal(rows[i][4]), pages: Number(rows[i][5]) || 0, cur: Number(rows[i][6]) || 0, khatam: Number(rows[i][9]) || 0, mem: Number(rows[i][10]) || 0, rak: Number(rows[i][12]) || 0 });
+  }
+  Object.keys(by).forEach(function (k) { by[k].sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); }); });
+  return by;
+}
+function getHasanatDay_(date) {
+  date = String(date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { success: false, message: 'วันที่ไม่ถูกต้อง' };
+  ensureSchema();
+  const sh = getSpreadsheet().getSheetByName(SHEETS.HASANAT);
+  const rows = sh && sh.getLastRow() > 1 ? sh.getDataRange().getValues() : [[]];
+  const by = hasanatIndex_(rows), out = {};
+  Object.keys(by).forEach(function (sid) {
+    const list = by[sid]; let before = null, at = null;
+    list.forEach(function (r) { if (r.date < date) before = r; else if (r.date === date) at = r; });
+    if (at) out[sid] = { pages: at.pages, mem: Math.max(0, at.mem - (before ? before.mem : 0)), rakaat: at.rak };
+    out[sid] = Object.assign(out[sid] || { pages: 0, mem: 0, rakaat: 0 }, { totalMem: (at || before || { mem: 0 }).mem, page: (at || before || { cur: 0 }).cur, has: !!at });
+  });
+  return { success: true, date: date, data: out };
+}
+function saveHasanatBatch_(data) {
+  data = data || {};
+  const date = String(data.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { success: false, message: 'วันที่ไม่ถูกต้อง' };
+  const entries = (Array.isArray(data.entries) ? data.entries : []).slice(0, 400);
+  if (!entries.length) return { success: true, saved: 0 };
+  ensureSchema();
+  const ss = getSpreadsheet(); const sh = ss.getSheetByName(SHEETS.HASANAT);
+  const stuRows = sheetRows_(SHEETS.STUDENTS, 4); const info = {};
+  stuRows.forEach(function (r) { const k = HAS_NORM_(r[0]); if (k) info[k] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]) }; });
+  const lock = LockService.getScriptLock(); try { lock.waitLock(20000); } catch (e) { return { success: false, message: 'ระบบกำลังบันทึก ลองใหม่อีกครั้ง' }; }
+  try {
+    const rows = sh.getLastRow() > 1 ? sh.getDataRange().getValues() : [[]];
+    const by = hasanatIndex_(rows);
+    const now = new Date().toISOString();
+    const updates = [], appends = []; let saved = 0;
+    entries.forEach(function (e) {
+      const sid = HAS_NORM_(e.studentId); if (!sid || !info[sid]) return;
+      const pages = Math.max(0, Math.min(604, Math.round(Number(e.pages) || 0)));
+      const mem = Math.max(0, Math.min(114, Math.round(Number(e.mem) || 0)));
+      const rak = Math.max(0, Math.min(200, Math.round(Number(e.rakaat) || 0)));
+      const list = by[sid] || []; let before = null, at = null; const after = [];
+      list.forEach(function (r) { if (r.date < date) before = r; else if (r.date === date) at = r; else after.push(r); });
+      if (!at && !pages && !mem && !rak) return;
+      const prevMem = before ? before.mem : 0, prevPage = before ? before.cur : 0, prevKh = before ? before.khatam : 0;
+      let cur = prevPage + pages, kh = prevKh; while (cur > 604) { cur -= 604; kh++; }
+      const newMem = Math.min(114, prevMem + mem);
+      const oldMem = at ? at.mem : prevMem, oldCur = at ? at.cur : prevPage;
+      const dMem = newMem - oldMem, dCur = cur - oldCur;
+      if (at) updates.push({ i: at.i, vals: { 5: pages, 6: cur || 1, 7: Math.floor(cur / 20.13), 9: kh, 10: newMem, 12: rak, 14: now } });
+      else appends.push(['HAS-' + Date.now() + '-' + sid, formatAsText(info[sid].id), info[sid].name, info[sid].grade, date, pages, cur || 1, Math.floor(cur / 20.13), 0, kh, newMem, '', rak, '{}', now]);
+      after.forEach(function (r) { if (dMem || dCur) updates.push({ i: r.i, vals: { 10: Math.max(0, Math.min(114, r.mem + dMem)), 6: Math.max(1, Math.min(604, r.cur + dCur)) } }); });
+      saved++;
+    });
+    updates.forEach(function (u) { Object.keys(u.vals).forEach(function (c) { sh.getRange(u.i + 1, Number(c) + 1).setValue(u.vals[c]); }); });
+    if (appends.length) { const start = sh.getLastRow() + 1; sh.getRange(start, 1, appends.length, 15).setValues(appends); sh.getRange(start, 2, appends.length, 1).setNumberFormat('@'); }
+    return { success: true, saved: saved, message: 'บันทึกผลบุญ ' + saved + ' คนแล้ว' };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
 function recordHasanat(data) {
   if (!data) return { success: false, message: 'ไม่มีข้อมูลผลบุญ' };
   ensureSchema();

@@ -1719,6 +1719,22 @@ html[data-theme="dark"] .k8-nt-push small { color: #b6bcc3 !important; }
 html[data-theme="dark"] .k8-bh-stick { background-color: #121212 !important; }
 html[data-theme="dark"] .k8-pr-girls { border: 1px solid #323941 !important; background-color: #2d1321 !important; color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-pr-girls small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-hro-head h1 { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-hro-head p { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-hro-seg { background-color: #21272f !important; }
+html[data-theme="dark"] .k8-hro-seg button { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-hro-seg button[aria-selected="true"] { background-color: #121212 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-hro-cards > div { border: 1px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-hro-cards span { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-hro-tot { background-color: #0e2432 !important; color: #6dc7f8 !important; }
+html[data-theme="dark"] .k8-hro-list { border: 1px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-hro-list li { border-top: 1px solid #2d363f !important; }
+html[data-theme="dark"] .k8-hro-list li span:last-child { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-ha-legend { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-ha-list li { border: 1px solid #323941 !important; border-left: 4px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-ha-list li.is-changed { background-color: #342d0f !important; }
+html[data-theme="dark"] .k8-ha-ins input { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-ha-ins input:focus { outline: 3px solid #233c4d !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

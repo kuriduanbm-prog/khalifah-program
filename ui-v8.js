@@ -2917,7 +2917,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.16';
+  const APP_VERSION = '17.17';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7576,3 +7576,129 @@ window.k8RegBirthChange = function (v) {
   };
 })();
 try { navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.type === 'k8-open-notif' && typeof window.k8NotifOpen === 'function') window.k8NotifOpen(); }); } catch (e) {}
+
+/* ---------- v17.17 · ผลบุญ: แอดมินเป็นผู้บันทึก · นักเรียนดูได้อย่างเดียว ---------- */
+(function () {
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const norm = (v) => String(v == null ? '' : v).replace(/\D/g, '').replace(/^0+/, '');
+  const DN = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'], M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const stu = () => { try { return currentStudent || null; } catch (e) { return null; } };
+  const adm = () => { try { return currentAdmin || null; } catch (e) { return null; } };
+  const readJ = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (e) { return d; } };
+
+  // ===== ฝั่งนักเรียน: อ่านจากข้อมูลที่แอดมินบันทึก (ชีต) เท่านั้น =====
+  function myRows() {
+    const s = stu(); if (!s) return [];
+    const id = norm(s.studentId);
+    return readJ('khalifah_hasanat_rows', []).filter((r) => r && norm(r.studentId) === id && r.date).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  }
+  function stats(from, to) {
+    const rs = myRows(); let pages = 0, rakaat = 0;
+    rs.forEach((r) => { if (r.date >= from && r.date <= to) { pages += Number(r.quran && r.quran.pagesToday) || 0; rakaat += Number(r.sunnah && r.sunnah.totalRakaat) || 0; } });
+    const memAt = (d) => { let v = 0; rs.forEach((r) => { if (r.date <= d) v = Number(r.memorization && r.memorization.count) || v; }); return v; };
+    const dayBefore = (d) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() - 1); return ymd(x); };
+    const mem = Math.max(0, memAt(to) - memAt(dayBefore(from)));
+    return { pages: pages, mem: mem, rakaat: rakaat };
+  }
+  window.k8HasanatStats = function (from, to) { return stats(from, to); };
+  const RO = { period: 'week' };
+  function range(p) {
+    const t = new Date(); const d0 = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    if (p === 'day') return [ymd(d0), ymd(d0), 'วันนี้'];
+    if (p === 'month') return [ymd(new Date(d0.getFullYear(), d0.getMonth(), 1)), ymd(new Date(d0.getFullYear(), d0.getMonth() + 1, 0)), 'เดือนนี้'];
+    if (p === 'all') return ['0000-01-01', '9999-12-31', 'ทั้งหมด'];
+    const s = new Date(d0); s.setDate(d0.getDate() - (d0.getDay() + 6) % 7); const e = new Date(s); e.setDate(s.getDate() + 6);
+    return [ymd(s), ymd(e), 'สัปดาห์นี้'];
+  }
+  function renderRO() {
+    const el = document.getElementById('k8HasRO'); if (!el) return;
+    const on = !!stu() && !adm();
+    document.documentElement.classList.toggle('k8-has-ro', on);
+    el.hidden = !on; if (!on) return;
+    const [f, t, lbl] = range(RO.period); const st = stats(f, t);
+    const rs = myRows(); const last = rs[rs.length - 1];
+    const totalMem = last ? Number(last.memorization && last.memorization.count) || 0 : 0;
+    const page = last ? Number(last.quran && last.quran.currentPage) || 0 : 0;
+    const recent = rs.slice(-10).reverse();
+    el.innerHTML = '<header class="k8-hro-head"><h1>ผลบุญของฉัน</h1><p>บันทึกโดยแอดมิน · นักเรียนดูได้อย่างเดียว</p></header>' +
+      '<div class="k8-hro-seg" role="tablist">' + [['day', 'วันนี้'], ['week', 'สัปดาห์นี้'], ['month', 'เดือนนี้'], ['all', 'ทั้งหมด']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (RO.period === k) + '" onclick="k8HroP(\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
+      '<div class="k8-hro-cards"><div><span>อ่านอัลกุรอาน</span><b style="color:#b45309">' + st.pages + ' หน้า</b></div><div><span>ท่องจำใหม่</span><b style="color:#15803d">' + st.mem + ' ซูเราะห์</b></div><div><span>สุนัต</span><b style="color:#6d28d9">' + st.rakaat + ' ร็อกอะฮ์</b></div></div>' +
+      '<p class="k8-hro-tot">สะสม: อ่านถึงหน้า <b>' + (page || '–') + '</b> · ท่องจำแล้วทั้งหมด <b>' + totalMem + '</b> ซูเราะห์</p>' +
+      '<section class="k8-hro-list"><h2>บันทึกล่าสุด</h2>' + (recent.length ? '<ul>' + recent.map((r) => { const d = new Date(r.date + 'T00:00:00'); return '<li><span>' + DN[d.getDay()] + ' ' + d.getDate() + ' ' + M[d.getMonth()] + '</span><span>อ่าน ' + (Number(r.quran && r.quran.pagesToday) || 0) + ' หน้า · สุนัต ' + (Number(r.sunnah && r.sunnah.totalRakaat) || 0) + '</span></li>'; }).join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่มีบันทึก · แอดมินจะเป็นผู้บันทึกให้</p>') + '</section>';
+  }
+  window.k8HroP = function (p) { RO.period = p; renderRO(); };
+  window.k8HasanatRORender = renderRO;
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'hasanat') setTimeout(renderRO, 0); return r; };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(renderRO, 800)); else setTimeout(renderRO, 800);
+
+  // ===== ฝั่งแอดมิน: บันทึกผลบุญรายวัน =====
+  const A = { date: ymd(new Date()), grade: 'ALL', q: '', saved: {}, edits: {}, loading: false, saving: false, err: '' };
+  const gnum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
+  function students() { let all = []; try { all = allStudents || []; } catch (e) {} return all.filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))).sort((a, b) => (gnum(a.grade) + String(a.fullName || '')).localeCompare(gnum(b.grade) + String(b.fullName || ''), 'th')); }
+  const val = (k, f) => { const e = A.edits[k]; if (e && e[f] !== undefined) return e[f]; const s = A.saved[k]; return s ? (s[f] || 0) : 0; };
+  const dirty = () => Object.keys(A.edits).filter((k) => ['pages', 'mem', 'rakaat'].some((f) => A.edits[k][f] !== undefined && Number(A.edits[k][f]) !== Number((A.saved[k] || {})[f] || 0)));
+  async function load() {
+    A.loading = true; A.err = ''; render();
+    let r = null; try { r = await gasApiCall('getHasanatDay', { date: A.date }, 25000); } catch (e) {}
+    A.loading = false;
+    if (r && r.success) A.saved = r.data || {}; else A.err = (r && /Unknown|ไม่รู้จัก/i.test(String(r.error || r.message))) ? 'old' : 'net';
+    render();
+  }
+  function render() {
+    const el = document.getElementById('k8HaAdmin'); if (!el) return;
+    const d = new Date(A.date + 'T00:00:00'); const today = A.date === ymd(new Date());
+    const list = students().filter((s) => (A.grade === 'ALL' || gnum(s.grade) === A.grade) && (!A.q || (String(s.fullName || '') + ' ' + s.studentId).toLowerCase().indexOf(A.q.toLowerCase()) !== -1));
+    const n = dirty().length;
+    let h = '<header class="k8-pr-head"><div><h1>บันทึกผลบุญ</h1><p>อ่านอัลกุรอาน · ท่องจำ · ละหมาดสุนัต รายวัน · นักเรียนดูได้อย่างเดียว</p></div></header>' +
+      '<section class="k8-pr-bar"><div class="k8-pr-date"><button type="button" aria-label="วันก่อนหน้า" onclick="k8HaShift(-1)">‹</button><label><span>' + DN[d.getDay()] + ' ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543) + (today ? ' · วันนี้' : '') + '</span><input type="date" value="' + A.date + '" max="' + ymd(new Date()) + '" onchange="k8HaDate(this.value)" aria-label="เลือกวันที่"></label><button type="button" aria-label="วันถัดไป" onclick="k8HaShift(1)"' + (today ? ' disabled' : '') + '>›</button></div>' +
+      '<div class="k8-pr-grades" role="tablist">' + ['ALL', '1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" role="tab" aria-selected="' + (A.grade === g) + '" onclick="k8HaGrade(\'' + g + '\')">' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + g) + '</button>').join('') + '</div>' +
+      '<input type="search" class="k8-pr-q" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(A.q) + '" oninput="k8HaQ(this.value)"></section>';
+    if (A.err === 'old') h += '<div class="k8-tt-warn" role="alert"><b>ระบบหลังบ้านยังไม่รองรับ</b><span>กรุณา Deploy ไฟล์ Code.gs ตัวล่าสุด (Manage deployments → New version)</span></div>';
+    else if (A.err === 'net') h += '<div class="k8-tt-warn" role="alert"><b>โหลดข้อมูลไม่ได้</b><span><button type="button" class="k8-bh-link" onclick="k8HaReload()">โหลดใหม่</button></span></div>';
+    h += '<div class="k8-ha-legend"><span>อ่าน <small>(หน้า)</small></span><span>ท่องจำใหม่ <small>(ซูเราะห์)</small></span><span>สุนัต <small>(ร็อกอะฮ์)</small></span></div>';
+    h += A.loading ? '<p class="k8-li-empty">กำลังโหลด…</p>' : (list.length ? '<ul class="k8-ha-list">' + list.map((s) => {
+      const k = norm(s.studentId); const sv0 = A.saved[k] || {};
+      const ch = A.edits[k] && ['pages', 'mem', 'rakaat'].some((f) => A.edits[k][f] !== undefined && Number(A.edits[k][f]) !== Number(sv0[f] || 0));
+      const inp = (f, max) => '<input type="number" inputmode="numeric" min="0" max="' + max + '" value="' + (val(k, f) || '') + '" placeholder="0" oninput="k8HaSet(\'' + k + '\',\'' + f + '\',this.value)" aria-label="' + f + '">';
+      return '<li class="' + (ch ? 'is-changed' : '') + (sv0.has ? ' is-has' : '') + '"><span class="k8-pr-who"><b>' + esc(s.fullName || k) + '</b><small>ม.' + esc(gnum(s.grade) || '-') + ' · ' + esc(s.studentId) + (sv0.totalMem ? ' · ท่องจำสะสม ' + sv0.totalMem : '') + '</small></span><span class="k8-ha-ins">' + inp('pages', 604) + inp('mem', 114) + inp('rakaat', 200) + '</span></li>';
+    }).join('') + '</ul>' : '<p class="k8-li-empty">ไม่พบนักเรียน</p>');
+    h += '<div class="k8-bh-rsave k8-pr-save"' + (n ? '' : ' hidden') + ' role="status"><span><b>ยังไม่บันทึก ' + n + ' คน</b><small>กดบันทึกเพื่อส่งเข้าระบบ · นักเรียนจะเห็นทันที</small></span><button type="button" onclick="k8HaSave()"' + (A.saving ? ' disabled' : '') + '>' + (A.saving ? 'กำลังบันทึก…' : 'บันทึก') + '</button></div>';
+    const y = window.scrollY; const act = document.activeElement; const actKey = act && act.getAttribute && act.getAttribute('oninput');
+    el.innerHTML = h; if (Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y);
+    if (actKey) { const again = el.querySelector('[oninput="' + actKey.replace(/"/g, '\\"') + '"]'); if (again) { again.focus(); try { const L = String(again.value).length; again.setSelectionRange && again.type !== 'number' && again.setSelectionRange(L, L); } catch (e) {} } }
+  }
+  const leaveOk = () => !dirty().length || confirm('ยังมีข้อมูลที่ไม่ได้บันทึก ' + dirty().length + ' คน · ออกโดยไม่บันทึกใช่ไหม?');
+  window.k8HaSet = function (k, f, v) {
+    A.edits[k] = A.edits[k] || {}; A.edits[k][f] = Math.max(0, parseInt(v, 10) || 0);
+    const n = dirty().length; const bar = document.querySelector('#k8HaAdmin .k8-pr-save');
+    if (bar) { bar.hidden = !n; const b = bar.querySelector('b'); if (b) b.textContent = 'ยังไม่บันทึก ' + n + ' คน'; }
+    const li = document.activeElement && document.activeElement.closest && document.activeElement.closest('li'); if (li) li.classList.add('is-changed');
+  };
+  window.k8HaGrade = function (g) { A.grade = g; render(); };
+  window.k8HaQ = function (v) { A.q = v; render(); const q = document.querySelector('#k8HaAdmin .k8-pr-q'); if (q) { q.focus(); q.setSelectionRange(v.length, v.length); } };
+  window.k8HaDate = function (v) { if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || !leaveOk()) { render(); return; } A.date = v; A.edits = {}; load(); };
+  window.k8HaShift = function (n) { const d = new Date(A.date + 'T00:00:00'); d.setDate(d.getDate() + n); if (ymd(d) > ymd(new Date())) return; window.k8HaDate(ymd(d)); };
+  window.k8HaReload = load;
+  window.k8HaSave = async function () {
+    const ks = dirty(); if (!ks.length || A.saving) return;
+    const entries = ks.map((k) => ({ studentId: k, pages: val(k, 'pages'), mem: val(k, 'mem'), rakaat: val(k, 'rakaat') }));
+    A.saving = true; render();
+    let r = null; try { r = await gasApiCall('saveHasanatBatch', { data: { date: A.date, entries: entries } }, 60000); } catch (e) {}
+    A.saving = false;
+    if (r && r.success) { A.edits = {}; toast(r.message || 'บันทึกแล้ว', 'success'); load(); }
+    else { toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ · Deploy Code.gs ตัวล่าสุดก่อน', 'error'); render(); }
+  };
+  const sat = window.switchAdminTab;
+  if (typeof sat === 'function') window.switchAdminTab = function (tab) {
+    const el = document.getElementById('admin-tab-hasanat-admin');
+    if (tab !== 'hasanat-admin' && el && el.style.display === 'block' && !leaveOk()) return;
+    if (tab !== 'hasanat-admin') A.edits = {};
+    const r = sat.apply(this, arguments);
+    if (tab === 'hasanat-admin') { render(); load(); }
+    return r;
+  };
+})();
