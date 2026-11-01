@@ -1591,6 +1591,14 @@ html[data-theme="dark"] .k8-pn-times .prayer-note-time-chip .chip-check-icon { b
 html[data-theme="dark"] .k8-pn-times .prayer-note-time-chip.active .chip-check-icon { background-color: #121212 !important; border-color: #333333 !important; color: #69c8fc !important; }
 html[data-theme="dark"] .k8-pn-hint { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-pn-save.is-off { background-color: #2b323a !important; color: #b6bcc3 !important; }
+html[data-theme="dark"] #view-prayer .k8-pr-latebtn { border: 1px solid #5f552a !important; background-color: #342d0f !important; color: #f0a275 !important; }
+html[data-theme="dark"] .k8-plb-t b { color: #f0a275 !important; }
+html[data-theme="dark"] .k8-plb-t small { color: #f3a372 !important; }
+html[data-theme="dark"] .k8-plb-go { color: #f8a96d !important; }
+html[data-theme="dark"] .k8-pn-late { border: 1.5px solid #5f552a !important; background-color: #342d0f !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-pn-late b { color: #f3a372 !important; }
+html[data-theme="dark"] .k8-pn-late small { color: #f9bf6c !important; }
+html[data-theme="dark"] .k8-pn-late em { color: #f8a96d !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

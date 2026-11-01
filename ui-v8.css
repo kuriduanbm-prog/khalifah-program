@@ -2979,3 +2979,19 @@ html.k8-narrow .k8-pn-reasons { grid-template-columns: 1fr; }
 /* v16.9 · การ์ดหมายเหตุละหมาดและประวัติแสดงตลอด · เอาลิงก์ "บันทึกหมายเหตุ · ประวัติ" ออก */
 #view-prayer #prayerNotesCard, #view-prayer #prayerHistoryBottomSection { display: block !important; }
 #view-prayer #k8PrMoreBtn { display: none !important; }
+/* v17.0 · ปุ่มขอบันทึกละหมาดย้อนหลัง */
+#view-prayer .k8-pr-latebtn { display: flex !important; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 14px; border: 1px solid #fde68a; border-radius: 18px; background: #fffbeb; color: #78350f; font: inherit; text-align: left; text-decoration: none !important; cursor: pointer; box-shadow: 0 2px 8px rgba(180,83,9,.08); }
+#view-prayer .k8-pr-latebtn:active { transform: scale(.99); }
+.k8-plb-ico { flex: none; width: 42px; height: 42px; border-radius: 12px; background: #f59e0b; color: #fff; display: flex; align-items: center; justify-content: center; }
+.k8-plb-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+.k8-plb-t b { font-size: 15px; font-weight: 600; color: #78350f; }
+.k8-plb-t small { font-size: 13px; color: #92400e; }
+.k8-plb-go { flex: none; font-size: 26px; color: #b45309; line-height: 1; }
+/* v17.0 · รวม "ลืมเช็คชื่อ · ขอย้อนหลัง" ไว้ในการ์ดหมายเหตุ */
+#view-prayer .k8-pr-foot .k8-pr-late { display: none !important; }
+.k8-pn-late { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px; padding: 10px 14px; border: 1.5px solid #fde68a; border-radius: 16px; background: #fffbeb; color: #0f172a; font: inherit; text-align: left; cursor: pointer; }
+.k8-pn-late i { font-style: normal; font-size: 24px; flex: none; }
+.k8-pn-late span { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+.k8-pn-late b { font-size: 15px; font-weight: 600; color: #92400e; }
+.k8-pn-late small { font-size: 12.5px; color: #a16207; }
+.k8-pn-late em { font-style: normal; font-size: 24px; color: #b45309; flex: none; }
