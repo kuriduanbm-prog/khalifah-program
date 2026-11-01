@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=15.6">
-  <link rel="stylesheet" href="ui-v8.css?v=15.6">
-  <link rel="stylesheet" href="dark.css?v=15.6">
+  <link rel="stylesheet" href="style.css?v=15.8">
+  <link rel="stylesheet" href="ui-v8.css?v=15.8">
+  <link rel="stylesheet" href="dark.css?v=15.8">
 </head>
 <body class="auth-locked">
   <script>
@@ -1657,6 +1657,7 @@
         <details class="k8-acct">
           <summary aria-label="บัญชีของฉัน" id="k8InspAvatar">ต</summary>
           <div class="k8-acct-menu">
+            <button type="button" class="k8-acct-photo" onclick="this.closest('details').open=false; k8ThPickPhoto()"><span class="k8-acct-pic" id="k8InspMenuPic" aria-hidden="true">ต</span><span><b>เปลี่ยนรูปโปรไฟล์</b><small>แตะเพื่อเลือกรูปหรือถ่ายรูป</small></span></button>
             <button type="button" class="is-danger" onclick="adminLogout()">ออกจากระบบ</button>
           </div>
         </details>
@@ -2388,6 +2389,7 @@
         </button>
         <span class="k8-adm-bar-t" id="k8AdmBarTitle">ภาพรวม</span>
         <span class="k8-adm-bar-badge" id="k8AdmBarBadge" hidden></span>
+        <button type="button" class="k8-adm-me" id="k8AdmAvatar" onclick="k8ThPickPhoto()" aria-label="เปลี่ยนรูปโปรไฟล์ของฉัน" title="เปลี่ยนรูปโปรไฟล์">อ</button>
       </div>
       <div class="k8-adm-backdrop" id="k8AdmBackdrop" onclick="k8AdmNav(false)" hidden></div>
       <nav class="admin-tabs k8-admin-nav" id="k8AdminNav" aria-label="เมนูแอดมิน">
@@ -5812,7 +5814,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=15.6"></script>
-  <script defer src="ui-v8.js?v=15.6"></script>
+  <script defer src="app.js?v=15.8"></script>
+  <script defer src="ui-v8.js?v=15.8"></script>
 </body>
 </html>

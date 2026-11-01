@@ -2901,7 +2901,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '15.6';
+  const APP_VERSION = '15.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3183,7 +3183,15 @@ window.k8RegBirthChange = function (v) {
     const selN = B.sel.size;
     let h = '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">1</span>เลือกหมวดที่ตรวจ</h2><div class="k8-bh-cats">' +
       CATS.map(([k, l, ink, bg]) => '<button type="button" aria-pressed="' + (B.cat === k) + '" style="--ink:' + ink + ';--bg:' + bg + '" onclick="k8BhSet(\'cat\',\'' + k + '\')">' + svg(k, 22) + '<span>' + l + '</span></button>').join('') + '</div></section>';
-    h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>เลือกหัวข้อ</h2><div class="k8-bh-rules">' +
+    const canEdit = (() => { const a = me(); return !!a && (isInspector() || /SUPER|^admin$|SubAdmin/i.test(String(a.role || ''))); })();
+    if (B.editCat && B.editRules) {
+      const cat = CATS.find((c) => c[0] === B.cat) || CATS[0]; const rows = B.editRules.map((r, i) => [r, i]).filter(([r]) => r.cat === B.cat);
+      h += '<section class="k8-bh-card k8-bh-editcat"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>แก้ไขหัวข้อ · ' + cat[1] + '</h2><p class="k8-bh-intro">' + (B.cat === 'good' ? 'แต่ละข้อเพิ่มคะแนน' : 'แต่ละข้อหักคะแนน') + ' 1–50 · บันทึกแล้วใช้ได้ทันทีทั้งผู้ตรวจการและแอดมิน</p>' +
+        rows.map(([r, i]) => '<div class="k8-bh-rrow"><input type="text" maxlength="120" value="' + esc(r.title) + '" oninput="k8BhRule(' + i + ',\'title\',this.value)" aria-label="หัวข้อ" placeholder="ชื่อหัวข้อ"><span class="k8-bh-rpts ' + (B.cat === 'good' ? 'is-plus' : 'is-minus') + '">' + (B.cat === 'good' ? '+' : '−') + '<input type="number" min="1" max="50" inputmode="numeric" value="' + Math.abs(Number(r.points) || 0) + '" oninput="k8BhRule(' + i + ',\'points\',this.value)" aria-label="คะแนน"></span><button type="button" class="k8-bh-rdel" onclick="k8BhRuleDel(' + i + ')" aria-label="ลบหัวข้อ">✕</button></div>').join('') +
+        '<button type="button" class="k8-bh-link" onclick="k8BhRuleAdd(\'' + B.cat + '\')">+ เพิ่มหัวข้อ</button>' +
+        '<div class="k8-bh-editbtns"><button type="button" class="is-alt" onclick="k8BhEditCat(false)">ยกเลิก</button><button type="button" onclick="k8BhRulesSave()">บันทึกหัวข้อ</button></div></section>';
+    } else
+    h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>เลือกหัวข้อ' + (canEdit ? '<button type="button" class="k8-bh-editlink" onclick="k8BhEditCat(true)">✎ แก้ไขหัวข้อ</button>' : '') + '</h2><div class="k8-bh-rules">' +
       rules.map((r) => '<button type="button" aria-pressed="' + (B.ruleId === r.id) + '" onclick="k8BhSet(\'ruleId\',\'' + js(r.id) + '\')"><span>' + esc(r.title) + '</span><b class="' + (r.points > 0 ? 'is-plus' : 'is-minus') + '">' + (r.points > 0 ? '+' : '') + r.points + '</b></button>').join('') +
       '<button type="button" class="k8-bh-other" aria-pressed="' + custom + '" onclick="k8BhSet(\'ruleId\',\'__custom\')"><span>อื่น ๆ (ระบุเอง)</span><b>✎</b></button></div>' +
       (custom ? '<div class="k8-bh-custom"><input type="text" maxlength="120" placeholder="ระบุสิ่งที่ตรวจพบ" value="' + esc(B.custom.title) + '" oninput="k8BhCustom(\'title\', this.value)"><label>คะแนน<input type="number" inputmode="numeric" min="-20" max="20" value="' + esc(B.custom.points) + '" oninput="k8BhCustom(\'points\', this.value)"></label><small>ติดลบ = หักคะแนน · บวก = เพิ่มคะแนน (ครั้งละไม่เกิน 20)</small></div>' : '') + '</section>';
@@ -3310,14 +3318,18 @@ window.k8RegBirthChange = function (v) {
   const rulesDirty = () => { B.rulesDirty = true; const bar = document.getElementById('k8BhRSave'); if (bar) bar.hidden = false; };
   window.k8BhRule = function (i, k, v) { const r = B.editRules[i]; if (!r) return; rulesDirty(); if (k === 'points') { const n = Math.max(1, Math.min(50, Math.abs(parseInt(v, 10) || 0))); r.points = r.cat === 'good' ? n : -n; } else r.title = v; };
   window.k8BhRuleAdd = function (cat) { B.rulesDirty = true; B.editRules.push({ id: '', cat, title: '', points: cat === 'good' ? 3 : -5 }); render(); const ins = document.querySelectorAll('.k8-bh-rrow input[type=text]'); const last = Array.from(ins).filter((x) => !x.value).pop(); if (last) last.focus(); };
+  window.k8BhEditCat = function (on) {
+    if (!on && B.rulesDirty && !confirm('ยังไม่ได้บันทึกหัวข้อที่แก้ ยกเลิกใช่ไหม?')) return;
+    B.editCat = !!on; B.editRules = on ? B.rules.map((r) => Object.assign({}, r)) : null; B.rulesDirty = false; render();
+  };
   window.k8BhRuleDel = function (i) { B.rulesDirty = true; B.editRules.splice(i, 1); render(); };
   window.k8BhRulesSave = async function () {
     const rules = B.editRules.filter((r) => String(r.title || '').trim());
-    const btns = document.querySelectorAll('#k8BhRSave button'); btns.forEach((b) => { b.disabled = true; b.dataset.t = b.textContent; b.textContent = 'กำลังบันทึก…'; });
+    const btns = document.querySelectorAll('#k8BhRSave button, .k8-bh-editbtns button:not(.is-alt)'); btns.forEach((b) => { b.disabled = true; b.dataset.t = b.textContent; b.textContent = 'กำลังบันทึก…'; });
     try {
       const r = await api('saveBehaviorRules', { data: { rules } });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
-      B.rules = r.rules; B.editRules = null; B.rulesDirty = false; toast(r.message, 'success'); render();
+      B.rules = r.rules; B.editRules = null; B.rulesDirty = false; B.editCat = false; if (B.ruleId && B.ruleId !== '__custom' && !B.rules.some((x) => x.id === B.ruleId)) B.ruleId = ''; toast(r.message, 'success'); render();
     } catch (e) { toast(e.message, 'error'); btns.forEach((b) => { b.disabled = false; b.textContent = b.dataset.t || 'บันทึก'; }); }
   };
 
@@ -3365,6 +3377,7 @@ window.k8RegBirthChange = function (v) {
     const a = me(); if (!a) return;
     const n = document.getElementById('k8InspName'); if (n) n.textContent = a.fullName || a.username || 'ผู้ตรวจการ';
     const av = document.getElementById('k8InspAvatar'); if (av) av.textContent = String(a.fullName || a.username || 'ต').trim().charAt(0);
+    try { window.k8ThAvatarPaint && window.k8ThAvatarPaint(); } catch (e) {}
     const d = new Date(); const dt = document.getElementById('k8InspDate'); if (dt) dt.textContent = 'ผู้ตรวจการ · ' + DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()];
   }
   function markRole() { document.body.classList.toggle('k8-inspector', isInspector()); if (isInspector()) document.body.classList.remove('portal-mode-teacher', 'teacher-portal-active'); }
@@ -6021,7 +6034,7 @@ window.k8RegBirthChange = function (v) {
     const nm = a ? (a.fullName || a.username || 'อาจารย์') : 'อาจารย์';
     const ini = (String(nm).replace(/^(อ\.|อาจารย์|ครู|นาย|นางสาว|นาง)\s*/, '').trim().charAt(0)) || 'อ';
     const u = photoOf(a);
-    ['k8ThAvatar', 'k8ThMenuPic'].forEach((id) => {
+    ['k8ThAvatar', 'k8ThMenuPic', 'k8InspAvatar', 'k8InspMenuPic', 'k8AdmAvatar', 'k8NavMeAv'].forEach((id) => {
       const el = document.getElementById(id); if (!el) return;
       el.classList.toggle('has-photo', !!u);
       el.innerHTML = u ? '<img src="' + esc(u) + '" alt="" onerror="this.remove()">' : esc(ini);
@@ -6488,4 +6501,11 @@ window.k8RegBirthChange = function (v) {
     if (tab === 'geo-zones') { G.zones = current(); G.dirty = false; G.sel = 0; G.map = null; render(); refresh().then((z) => { if (z && !G.dirty) { G.zones = z.map((x) => Object.assign({}, x)); G.map = null; render(); } }); }
     return r;
   };
+})();
+
+/* ---- รูปโปรไฟล์ทุกบทบาทบุคลากร (ผู้ตรวจการ ผู้บริหาร แอดมิน): ทาสีใหม่เมื่อเปลี่ยนหน้า/ล็อกอิน ---- */
+(function () {
+  const paint = () => { try { window.k8ThAvatarPaint && window.k8ThAvatarPaint(); } catch (e) {} };
+  ['switchView', 'updateAdminUIVisibility'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(paint, 0); return r; }; });
+  window.addEventListener('load', () => setTimeout(paint, 400));
 })();

@@ -1552,6 +1552,11 @@ html[data-theme="dark"] .k8-geo-add { border: 2px dashed #29425e !important; bac
 html[data-theme="dark"] .k8-geo-mapwrap { background-color: #1b2026 !important; }
 html[data-theme="dark"] .k8-geo-hint { color: #c1c7cf !important; }
 html[data-theme="dark"] .k8-geo-hint b { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-bh-editlink { border: 1px solid #252e53 !important; background-color: #0f1733 !important; }
+html[data-theme="dark"] .k8-bh-editcat { border-color: #252e53 !important; }
+html[data-theme="dark"] .k8-bh-editcat .k8-bh-rrow input[type=text] { border: 1px solid #393f46 !important; }
+html[data-theme="dark"] .k8-bh-editbtns button.is-alt { background-color: #121212 !important; color: #c1c7cf !important; border: 1px solid #393f46 !important; }
+html[data-theme="dark"] .k8-adm-me { border: 2px solid rgba(51,51,51,0.35) !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

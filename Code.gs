@@ -1177,7 +1177,7 @@ const ACTION_ACCESS = {
   getTeacherEvaluationSummary: 'staff',
   // คะแนนพฤติกรรม: ผู้ตรวจการ อาจารย์ และแอดมิน บันทึก/ยกเลิก (ยกเลิกได้เฉพาะรายการของตนเอง ยกเว้นแอดมิน) · แอดมินตั้งค่าหัวข้อ
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
-  saveBehaviorRules: 'admin',
+  saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
@@ -1214,7 +1214,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'getSubAdmins', 'getTeachers', 'getPendingRegistrations', 'getAdmins', 'checkRegistrationStatus',
   'loginStudent', 'adminLogin', 'staffLogin'];
 
-const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead'];
+const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
 READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
@@ -1269,7 +1269,7 @@ function routeRequest_(action, req, method) {
       if (isInspector && access !== 'inspector' && INSPECTOR_EXTRA_ACTIONS.indexOf(action) === -1) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีผู้ตรวจการไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
-      if ((access === 'staff' && !isStaff) || (access === 'admin' && !isAdmin) || (access === 'owner' && !isOwner) || (access === 'inspector' && !isInspector && !isStaff)) {
+      if ((access === 'staff' && !isStaff && !(isInspector && INSPECTOR_EXTRA_ACTIONS.indexOf(action) !== -1)) || (access === 'admin' && !isAdmin) || (access === 'owner' && !isOwner) || (access === 'inspector' && !isInspector && !isStaff)) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
     }
@@ -1487,6 +1487,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'saveCurrentTerm':
       return saveCurrentTerm_(data);
     case 'saveBehaviorRules':
+      if (!ctx.isAdmin && !(session && session.role === 'inspector')) return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'แก้ไขหัวข้อได้เฉพาะแอดมินและผู้ตรวจการ' };
       return saveBehaviorRules_(data.rules);
     case 'resetMyHasanat':
       if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
@@ -1858,13 +1859,17 @@ function updateSubAdminPhoto(username, photo) {
   const url = saveStudentPhotoToDrive('staff_' + target.replace(/[^a-z0-9_-]/g, ''), photo);
   if (!url) return { success: false, message: 'บันทึกรูปลง Google Drive ไม่สำเร็จ' };
   const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.TEACHERS);
-  if (sheet && sheet.getLastRow() > 1) {
+  // อาจารย์อยู่ในแผ่นงานอาจารย์ · ผู้ตรวจการ/ผู้บริหาร/แอดมินรองอยู่ในแผ่นงานแอดมิน (คอลัมน์ที่ 11 = รูปโปรไฟล์)
+  const sheetsToCheck = [SHEETS.TEACHERS, SHEETS.ADMINS];
+  for (let si = 0; si < sheetsToCheck.length; si++) {
+    const sheet = ss.getSheetByName(sheetsToCheck[si]);
+    if (!sheet || sheet.getLastRow() <= 1) continue;
     const rows = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getValues();
     for (let i = 0; i < rows.length; i++) {
       if (cleanVal(rows[i][0]).toLowerCase() === target) {
+        if (si === 1 && sheet.getRange(1, 11).getValue() === '') sheet.getRange(1, 11).setValue('รูปโปรไฟล์');
         sheet.getRange(i + 2, 11).setValue(url);
-        return { success: true, photoUrl: url, message: 'บันทึกรูปโปรไฟล์อาจารย์สำเร็จ' };
+        return { success: true, photoUrl: url, message: 'บันทึกรูปโปรไฟล์สำเร็จ' };
       }
     }
   }
@@ -3538,7 +3543,7 @@ function verifyAdminLogin(password, username) {
         phone: normalizePhone(rows[i][kind === 'legacy' ? 7 : 5] || ''),
         email: cleanVal(rows[i][6] || ''),
         assignedSubjects: Array.isArray(assignedSubjects) ? assignedSubjects : [],
-        avatarUrl: kind === 'teacher' ? cleanVal(rows[i][10] || '') : '',
+        avatarUrl: (kind === 'teacher' || kind === 'admin') ? cleanVal(rows[i][10] || '') : '',
         status: status || 'Active',
         approvalStatus: 'Verified'
       };
@@ -3743,7 +3748,9 @@ function getAdmins() {
       email: cleanVal(rows[i][6] || ''),
       status: cleanVal(rows[i][7]) || 'ใช้งานปกติ',
       createdAt: formatSheetDate(rows[i][8]) || cleanVal(rows[i][8]),
-      note: cleanVal(rows[i][9] || '')
+      note: cleanVal(rows[i][9] || ''),
+      avatarUrl: cleanVal(rows[i][10] || ''),
+      photo: cleanVal(rows[i][10] || '')
     };
     if (order.indexOf(key) === -1) order.push(key);
   }

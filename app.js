@@ -6014,7 +6014,7 @@ function handleTeacherProfileUpload(event) {
       }
 
       if (typeof playSuccessSound === 'function') playSuccessSound();
-      showToast('✓ อัปโหลดและบันทึกรูปโปรไฟล์อาจารย์เรียบร้อยแล้ว!', 'success');
+      showToast('✓ บันทึกรูปโปรไฟล์เรียบร้อยแล้ว', 'success');
 
       // Sync to cloud
       syncRecordToGoogleSheet('updateSubAdminPhoto', {
