@@ -995,7 +995,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       });
       totalDone += done;
       const possible = list.length * passed;
-      return { label: g.replace('มัธยมศึกษาปีที่ ', 'ม.'), n: list.length, pct: possible ? Math.round(done / possible * 100) : 0 };
+      return { label: g.replace('มัธยมศึกษาปีที่ ', 'ม.'), n: list.length, done: done, possible: possible, pct: possible ? Math.round(done / possible * 100) : 0 };
     });
     const prayPossible = students.length * passed;
     const prayPct = prayPossible ? Math.round(totalDone / prayPossible * 100) : 0;
@@ -1030,8 +1030,9 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       '<button type="button" class="k8-todo-row" onclick="' + t.go + '"><span class="k8-todo-badge" style="background:' + t.bg + ';color:' + t.ink + '">' + t.n + '</span><span class="k8-todo-text"><b>' + esc(t.label) + '</b></span><span class="k8-todo-cta">' + t.cta + '</span></button>'
     ).join('');
 
-    document.getElementById('k8OvPray').innerHTML = byGrade.map((g) =>
-      '<div class="k8-gbar"><span class="k8-gbar-l">' + g.label + '</span><span class="k8-gbar-track" role="img" aria-label="' + g.label + ' ' + g.pct + ' เปอร์เซ็นต์"><span style="width:' + g.pct + '%;background:' + (g.pct < 70 ? '#f59e0b' : '#0369a1') + '"></span></span><span class="k8-gbar-v">' + (g.n ? g.pct + '%' : '–') + '</span></div>'
+    const slotNames = wins.slice(0, passed).map((w) => w.name).join(', ');
+    document.getElementById('k8OvPray').innerHTML = '<p class="k8-gbar-hint">เช็คชื่อแล้วกี่ครั้ง จากที่ควรมี (นักเรียนในชั้น × เวลาที่ผ่านมาแล้ว: ' + esc(slotNames) + ')</p>' + byGrade.map((g) =>
+      '<div class="k8-gbar"><span class="k8-gbar-l">' + g.label + '</span><span class="k8-gbar-track" role="img" aria-label="' + g.label + ' เช็คแล้ว ' + g.done + ' จาก ' + g.possible + ' ครั้ง"><span style="width:' + g.pct + '%;background:' + (g.pct < 70 ? '#f59e0b' : '#0369a1') + '"></span></span><span class="k8-gbar-v">' + (g.n ? '<b>' + g.done + '/' + g.possible + '</b><small>' + g.pct + '%</small>' : '<small>ไม่มีนักเรียน</small>') + '</span></div>'
     ).join('');
   }
 
@@ -2912,7 +2913,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.5';
+  const APP_VERSION = '17.6';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
