@@ -2912,7 +2912,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.3';
+  const APP_VERSION = '17.4';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6793,4 +6793,65 @@ window.k8RegBirthChange = function (v) {
 
   const go = () => { initDate(); syncSave(); mine(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
+
+/* ---------- v17.4 · ตรวจการละหมาด 5 เวลา: การ์ดรายคน ดูง่ายทั้งคอมและมือถือ ---------- */
+(function () {
+  const V = { f: 'all', sort: 'low' };
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const jsq = (t) => String(t == null ? '' : t).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const SHORT = { 'ซุบฮิ': 'ซุบฮิ', 'ซุฮริ': 'ซุฮริ', 'อัศรฺ': 'อัศรฺ', 'มัฆริบ': 'มัฆริบ', 'อีชาอ์': 'อีชาอ์' };
+  function kind(st) { st = String(st || ''); if (/อุซุร|ป่วย|ลา/.test(st)) return 'ex'; if (/สาย|ช้า/.test(st)) return 'late'; if (/ไม่มา|ขาด/.test(st)) return 'abs'; return 'ok'; }
+  function host() {
+    let el = document.getElementById('k8PdWrap');
+    if (el) return el;
+    const tbl = document.getElementById('adminDailyPrayerMatrixTable'); if (!tbl) return null;
+    const resp = tbl.closest('.table-responsive') || tbl.parentElement;
+    el = document.createElement('div'); el.id = 'k8PdWrap'; el.className = 'k8-pd';
+    resp.parentElement.insertBefore(el, resp);
+    resp.classList.add('k8-pd-oldtbl');
+    return el;
+  }
+  function render() {
+    const el = host(); if (!el) return;
+    let all = []; let map = {}; let slots = [];
+    try { all = cachedDailyFilteredStudents || []; map = cachedDailyStudentPrayerMap || {}; slots = CANONICAL_PRAYERS || []; } catch (e) { return; }
+    const q = ((document.getElementById('adminPrayerSearchInput') || {}).value || '').toLowerCase().trim();
+    const cid = (v) => { try { return cleanIdString(v); } catch (e) { return String(v || '').trim(); } };
+    const rows = all.map((s) => { const sid = cid(s.studentId); const p = map[sid] || {}; return { s: s, sid: sid, p: p, n: slots.filter((x) => p[x.key]).length }; });
+    const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length };
+    let list = rows.filter((r) => V.f === 'all' || (V.f === 'full' ? r.n === 5 : V.f === 'part' ? r.n > 0 && r.n < 5 : r.n === 0));
+    if (q) list = list.filter((r) => String(r.s.fullName || '').toLowerCase().includes(q) || r.sid.toLowerCase().includes(q) || String(r.s.grade || '').toLowerCase().includes(q));
+    if (V.sort === 'low') list.sort((a, b) => a.n - b.n || String(a.s.fullName || '').localeCompare(String(b.s.fullName || ''), 'th'));
+    else if (V.sort === 'high') list.sort((a, b) => b.n - a.n || String(a.s.fullName || '').localeCompare(String(b.s.fullName || ''), 'th'));
+    else list.sort((a, b) => a.sid.localeCompare(b.sid, 'th', { numeric: true }));
+    // จำนวนต่อเวลา
+    const per = slots.map((x) => rows.filter((r) => r.p[x.key]).length);
+    const chip = (k, l, n) => '<button type="button" class="k8-pd-chip' + (V.f === k ? ' on' : '') + ' is-' + k + '" onclick="k8PdF(\'' + k + '\')">' + l + ' <b>' + n + '</b></button>';
+    const card = (r) => {
+      const s = r.s; const g = String(s.grade || '').match(/(\d)/);
+      const av = s.avatarUrl ? (function () { try { return getDirectImageUrl(s.avatarUrl) || s.avatarUrl; } catch (e) { return s.avatarUrl; } })() : '';
+      const boxes = slots.map((x) => {
+        const rec = r.p[x.key];
+        if (!rec) return '<button type="button" class="k8-pd-b is-none" onclick="k8PeAdd(\'' + jsq(r.sid) + '\',\'' + jsq(x.key) + '\')" title="' + esc(x.label) + ' · ยังไม่เช็คชื่อ · แตะเพื่อบันทึกแทน"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>–</i></button>';
+        const k = kind(rec.status); const t = rec.time ? String(rec.time).slice(0, 5) : '✓';
+        return '<button type="button" class="k8-pd-b is-' + k + '" onclick="openPrayerHistoryDetailModal(\'' + jsq(rec.id || rec.logId || '') + '\')" title="' + esc(x.label + ' · ' + (rec.status || '') + ' · ' + (rec.time || '')) + '"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>' + (k === 'ex' ? 'ลา' : k === 'late' ? t : k === 'abs' ? '✕' : t) + '</i></button>';
+      }).join('');
+      return '<article class="k8-pd-card n' + r.n + '"><button type="button" class="k8-pd-who" onclick="adminSelectStudentForPrayerHistory(\'' + jsq(r.sid) + '\')" title="ดูประวัติรายคน">' +
+        '<span class="k8-pd-av">' + (av ? '<img src="' + esc(av) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '<em>' + esc(String(s.fullName || '?').replace(/^(นางสาว|นาย|เด็กหญิง|เด็กชาย|ด\.ญ\.|ด\.ช\.)\s*/, '').charAt(0)) + '</em></span>' +
+        '<span class="k8-pd-nm"><b>' + esc(s.fullName || r.sid) + '</b><small>' + esc(r.sid) + (g ? ' · ม.' + g[1] : '') + '</small></span>' +
+        '<span class="k8-pd-n">' + r.n + '<small>/5</small></span></button><div class="k8-pd-row">' + boxes + '</div></article>';
+    };
+    el.innerHTML = '<div class="k8-pd-top"><div class="k8-pd-chips">' + chip('all', 'ทั้งหมด', cnt.all) + chip('zero', 'ยังไม่เช็คเลย', cnt.zero) + chip('part', 'ยังไม่ครบ', cnt.part) + chip('full', 'ครบ 5', cnt.full) + '</div>' +
+      '<label class="k8-pd-sort"><span>เรียง</span><select onchange="k8PdS(this.value)"><option value="low"' + (V.sort === 'low' ? ' selected' : '') + '>เช็คน้อยก่อน</option><option value="high"' + (V.sort === 'high' ? ' selected' : '') + '>เช็คมากก่อน</option><option value="id"' + (V.sort === 'id' ? ' selected' : '') + '>รหัสนักเรียน</option></select></label></div>' +
+      '<div class="k8-pd-per">' + slots.map((x, i) => '<span><small>' + esc(x.label) + '</small><b>' + per[i] + '</b><em>/' + rows.length + '</em></span>').join('') + '</div>' +
+      '<div class="k8-pd-legend"><span class="is-ok">ตรงเวลา</span><span class="is-late">มาช้า</span><span class="is-ex">ลา/อุซุร</span><span class="is-none">ยังไม่เช็ค · แตะเพื่อบันทึกแทน</span></div>' +
+      (list.length ? '<div class="k8-pd-grid">' + list.map(card).join('') + '</div>' : '<div class="k8-li-empty">ไม่มีนักเรียนในกลุ่มนี้</div>');
+    const badge = document.getElementById('dailyTableTotalBadge'); if (badge) badge.textContent = 'แสดง ' + list.length + ' จาก ' + rows.length + ' คน';
+  }
+  window.k8PdF = function (f) { V.f = f; render(); };
+  window.k8PdS = function (s) { V.sort = s; render(); };
+  window.k8PdRender = render;
+  const o = window.renderAdminPrayerDailyTable;
+  if (typeof o === 'function') window.renderAdminPrayerDailyTable = function () { const r = o.apply(this, arguments); try { render(); } catch (e) { console.warn('k8pd', e); } return r; };
 })();
