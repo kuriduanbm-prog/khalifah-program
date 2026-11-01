@@ -4804,18 +4804,26 @@ function saveSetting(data) {
   const val = (typeof data.value === 'object') ? JSON.stringify(data.value) : String(data.value !== undefined ? data.value : '');
   const desc = cleanVal(data.description || 'การตั้งค่าระบบ');
 
-  const rows = sheet.getDataRange().getValues();
-  for (let i = 1; i < rows.length; i++) {
-    if (cleanVal(rows[i][0]) === key) {
-      sheet.getRange(i + 1, 2).setNumberFormat('@').setValue(val);
-      if (data.description) sheet.getRange(i + 1, 3).setValue(desc);
+  const lock = LockService.getScriptLock();
+  let locked = false; try { locked = lock.tryLock(10000); } catch (e) {}
+  try {
+    const rows = sheet.getDataRange().getValues();
+    // คีย์ซ้ำหลายแถว (เกิดจากบันทึกพร้อมกัน) ทำให้อ่านได้ค่าเก่า เช่น ลบตารางพิเศษแล้วกลับมา → เก็บแถวแรก ลบแถวซ้ำ
+    const hit = [];
+    for (let i = 1; i < rows.length; i++) if (cleanVal(rows[i][0]) === key) hit.push(i + 1);
+    if (hit.length) {
+      sheet.getRange(hit[0], 2).setNumberFormat('@').setValue(val);
+      if (data.description) sheet.getRange(hit[0], 3).setValue(desc);
+      for (let j = hit.length - 1; j >= 1; j--) sheet.deleteRow(hit[j]);
+      if (typeof __ROWS_MEMO !== 'undefined' && __ROWS_MEMO) delete __ROWS_MEMO[sheet.getName()];
       return { success: true, message: 'อัปเดตการตั้งค่า ' + key + ' สำเร็จ' };
     }
-  }
-  sheet.appendRow([key, val, desc]);
-  const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(val);
-  return { success: true, message: 'บันทึกการตั้งค่า ' + key + ' สำเร็จ' };
+    sheet.appendRow([key, val, desc]);
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(val);
+    if (typeof __ROWS_MEMO !== 'undefined' && __ROWS_MEMO) delete __ROWS_MEMO[sheet.getName()];
+    return { success: true, message: 'บันทึกการตั้งค่า ' + key + ' สำเร็จ' };
+  } finally { if (locked) { try { lock.releaseLock(); } catch (e) {} } }
 }
 
 function getSettings() {
