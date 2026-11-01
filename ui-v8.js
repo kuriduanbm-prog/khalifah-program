@@ -2916,7 +2916,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.12';
+  const APP_VERSION = '17.13';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7302,7 +7302,20 @@ window.k8RegBirthChange = function (v) {
     if (r && r.success) V.list = r.data || []; else if (!V.list) V.list = [];
     render();
   }
-  function place() { const card = document.getElementById('k8LvCard'), tl = document.getElementById('k8ThTl'); if (card && tl && tl.parentElement && card.previousElementSibling !== tl) tl.after(card); }
+  // ปุ่ม "ลาสอน" ในแถวทางลัดของอาจารย์ (มีป้ายจำนวนที่ยังไม่มีคนสอนแทน)
+  function place() {
+    const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return;
+    let b = q.querySelector('.k8-lv-qbtn');
+    if (!b) {
+      q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-lv-qbtn" onclick="k8LvOpen()"><span style="background:#fee2e2;color:#b91c1c"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9.5 14.5l5 5M14.5 14.5l-5 5"/></svg><em class="k8-lv-qn" hidden></em></span>ลาสอน</button>');
+      b = q.querySelector('.k8-lv-qbtn');
+    }
+    const today = ymd(new Date());
+    const need = (V.list || []).filter((x) => x.date >= today && !x.subName).length;
+    const n = b.querySelector('.k8-lv-qn'); if (n) { n.hidden = !need; n.textContent = need; }
+    b.setAttribute('aria-label', 'ลาสอน' + (need ? ' · ยังไม่มีคนสอนแทน ' + need + ' รายการ' : ''));
+  }
+  window.k8LvOpen = function () { render(); try { openModal('k8LvListModal'); } catch (e) {} load(); };
   function render() {
     place();
     const el = document.getElementById('k8LvList'); if (!el) return;
@@ -7310,7 +7323,7 @@ window.k8RegBirthChange = function (v) {
     const today = ymd(new Date());
     const up = V.list.filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date) || ((a.periods || [0])[0] - (b.periods || [0])[0]));
     const need = up.filter((x) => !x.subName).length;
-    const head = document.querySelector('#k8LvCard .k8-lv-head h2'); if (head) head.innerHTML = 'ลาสอน' + (need ? ' <span class="k8-lv-need">ยังไม่มีคนสอนแทน ' + need + '</span>' : '');
+    const head = document.querySelector('#k8LvCard .k8-lv-head h2'); if (head) head.innerHTML = 'ลาสอนที่จะถึง' + (need ? ' <span class="k8-lv-need">ยังไม่มีคนสอนแทน ' + need + '</span>' : '');
     el.innerHTML = up.length ? up.map((x) => {
       const mine = isMine(x), canEdit = mine || isAdm(), iSub = myIds().indexOf(String(x.subId)) !== -1;
       return '<article class="k8-lv-item' + (x.subName ? ' is-ok' : ' is-need') + '">' +

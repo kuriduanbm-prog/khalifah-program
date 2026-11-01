@@ -3222,3 +3222,12 @@ html.k8-narrow .k8-pt-img span { display: none; }
 .k8-lv-form .k8-dr-btns button:not(.is-alt) { background: #0369a1 !important; color: #fff !important; }
 #view-teacher #teacher-tab-overview > .k8-lv { display: block !important; }
 .hf-subj-note { margin: 4px 0 8px; font-size: 12.5px; color: #64748b; }
+/* v17.13 · ปุ่มลาสอนในแถวทางลัด */
+.k8-th-quick { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+html.k8-narrow .k8-th-quick { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+.k8-th-quick button > span { position: relative; }
+.k8-lv-qn { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #dc2626; color: #fff; font-style: normal; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #fff; }
+.k8-lv-qn[hidden] { display: none; }
+@media (max-width: 400px) { .k8-th-quick button > span { width: 44px !important; height: 44px !important; } .k8-th-quick button { font-size: 11px !important; } }
+.k8-lv-sheet { max-width: 760px !important; }
+.k8-lv-sheet .k8-lv { margin: 0; padding: 0; border: 0; }

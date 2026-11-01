@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.12">
-  <link rel="stylesheet" href="ui-v8.css?v=17.12">
-  <link rel="stylesheet" href="dark.css?v=17.12">
+  <link rel="stylesheet" href="style.css?v=17.13">
+  <link rel="stylesheet" href="ui-v8.css?v=17.13">
+  <link rel="stylesheet" href="dark.css?v=17.13">
 </head>
 <body class="auth-locked">
   <script>
@@ -1662,10 +1662,6 @@
             <span class="k8-th-kpi-v"><b id="k8ThAttN">0</b><small id="k8ThAttT"> / 0</small></span>
             <span class="k8-th-bar"><span id="k8ThAttBar" style="width:0%"></span></span>
           </button>
-        </section>
-        <section class="k8-lv" id="k8LvCard" aria-label="ลาสอน">
-          <div class="k8-lv-head"><h2>ลาสอน</h2><button type="button" class="k8-lv-add" onclick="k8LvNew()">+ แจ้งลาสอน</button></div>
-          <div id="k8LvList"><div class="k8-li-empty">กำลังโหลด…</div></div>
         </section>
         <!-- Teacher & Executive Bento Header -->
         <div class="teacher-hero-card" style="margin-bottom: 1.25rem;">
@@ -5692,6 +5688,17 @@
       <div class="k8-sheet-body" id="k8PeBody"></div>
     </div>
   </div>
+  <div class="modal-overlay" id="k8LvListModal" onclick="if(event.target===this)closeModal('k8LvListModal')">
+    <div class="modal-dialog k8-sheet k8-lv-sheet" role="dialog" aria-labelledby="k8LvListTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8LvListTitle">ลาสอน</h2><span>อาจารย์ที่ลา · ใครสอนแทน · กดรับสอนแทนได้</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8LvListModal')">✕</button></header>
+      <div class="k8-sheet-body">
+        <section class="k8-lv" id="k8LvCard" aria-label="รายการลาสอน">
+          <div class="k8-lv-head"><h2>ลาสอนที่จะถึง</h2><button type="button" class="k8-lv-add" onclick="k8LvNew()">+ แจ้งลาสอน</button></div>
+          <div id="k8LvList"><div class="k8-li-empty">กำลังโหลด…</div></div>
+        </section>
+      </div>
+    </div>
+  </div>
   <div class="modal-overlay" id="k8LvModal" onclick="if(event.target===this)closeModal('k8LvModal')">
     <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8LvTitle">
       <header class="k8-sheet-head"><div><h2 id="k8LvTitle">แจ้งลาสอน</h2><span>อาจารย์ท่านอื่นจะเห็นทันที และกดรับสอนแทนได้</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8LvModal')">✕</button></header>
@@ -5772,7 +5779,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.12"></script>
-  <script defer src="ui-v8.js?v=17.12"></script>
+  <script defer src="app.js?v=17.13"></script>
+  <script defer src="ui-v8.js?v=17.13"></script>
 </body>
 </html>
