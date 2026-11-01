@@ -2873,7 +2873,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '14.6';
+  const APP_VERSION = '14.7';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -2992,7 +2992,15 @@ window.k8RegBirthChange = function (v) {
         ? '<li>แตะเมนู ⋯ แล้วเลือก “เปิดในเบราว์เซอร์” (Safari / Chrome)</li><li>ทำตามขั้นตอนติดตั้งในเบราว์เซอร์</li>'
         : isIOS
           ? '<li>เปิดใน <b>Safari</b> แล้วแตะปุ่มแชร์ <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></li><li>เลือก <b>“เพิ่มไปยังหน้าจอโฮม”</b></li><li>แตะ <b>“เพิ่ม”</b> แล้วเปิดแอปจากไอคอน KHALIFAH</li>'
-          : '<li>แตะเมนู ⋮ ของ Chrome</li><li>เลือก <b>“ติดตั้งแอป”</b> หรือ “เพิ่มไปยังหน้าจอหลัก”</li><li>เปิดแอปจากไอคอน KHALIFAH</li>';
+          : /SamsungBrowser/i.test(ua)
+            ? '<li>แตะไอคอน <b>ติดตั้ง ⤓</b> ที่แถบที่อยู่ด้านบน (ถ้ามี) หรือแตะเมนู <b>≡</b> ขวาล่าง → <b>“เพิ่มหน้าไปที่”</b> → <b>“หน้าจอหลัก”</b> แล้วกด <b>ติดตั้ง</b></li><li>ถ้าเคยเพิ่มไว้แล้วแต่เปิดแล้วยังเห็นลิงก์ด้านบน ให้ลบไอคอนเดิมออกก่อน แล้วติดตั้งใหม่</li><li>เปิดแอปจากไอคอน KHALIFAH (จะเต็มจอ ไม่มีแถบลิงก์)</li>'
+            : /Firefox|FxiOS/i.test(ua)
+              ? '<li>แตะเมนู <b>⋮</b> → <b>“ติดตั้ง”</b> หรือ “เพิ่มไปยังหน้าจอหลัก”</li><li>เปิดแอปจากไอคอน KHALIFAH</li>'
+              : /EdgA|Edg\//i.test(ua)
+                ? '<li>แตะเมนู <b>⋯</b> ด้านล่าง → <b>“เพิ่มลงในโทรศัพท์”</b> / “ติดตั้งแอป”</li><li>เปิดแอปจากไอคอน KHALIFAH</li>'
+                : /MiuiBrowser|HuaweiBrowser|HeyTapBrowser|VivoBrowser|OPR\//i.test(ua)
+                  ? '<li>เบราว์เซอร์นี้ติดตั้งแอปแบบเต็มจอไม่ได้ทุกรุ่น · แนะนำเปิดลิงก์นี้ใน <b>Chrome</b></li><li>ใน Chrome แตะเมนู ⋮ → <b>“ติดตั้งแอป”</b></li>'
+                  : '<li>แตะเมนู ⋮ ของ Chrome</li><li>เลือก <b>“ติดตั้งแอป”</b> หรือ “เพิ่มไปยังหน้าจอหลัก”</li><li>เปิดแอปจากไอคอน KHALIFAH</li>';
     }
     c.hidden = false;
   }
