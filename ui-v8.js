@@ -1608,7 +1608,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       '<div class="k8-as-acts"><button type="button" class="k8-btn-pri" onclick="openAdminEditStudentModal(\'' + esc(id) + '\')">แก้ไขข้อมูล</button>' +
       '<button type="button" class="k8-btn-line" onclick="openStudentQuickStatusModal(\'' + esc(id) + '\')">ปรับสถานะ</button>' +
       '<button type="button" class="k8-btn-line" onclick="k8AsPrayerHistory(\'' + esc(id) + '\')">ดูประวัติละหมาด</button>' +
-      '<button type="button" class="k8-btn-line is-danger" onclick="deleteStudent(\'' + esc(id) + '\')">ลบนักเรียน</button></div>';
+      '<button type="button" class="k8-btn-line is-danger" onclick="deleteStudent(\'' + esc(id) + '\')">ลบนักเรียน</button></div>' +
+      '<button type="button" class="k8-as-preview" onclick="k8PreviewStudent(\'' + esc(id) + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>ดูแอปในมุมมองของนักเรียนคนนี้</button>';
   }
   window.k8AsSelect = function (id) { selId = id; render(lastList); };
   window.k8AsGrade = function (v) { const g = document.getElementById('filterGradeSelect'); if (g) { g.value = v; filterAdminStudents(); } };
@@ -1625,6 +1626,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
 
 /* ============ Round 3 · Admin approvals (canvas AdminApprovals) ============ */
 (function () {
+  const TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const js = (v) => esc(String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
   let tab = 'accounts';
@@ -1659,7 +1661,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
           (sent
             ? '<div class="k8-ap-otp"><span class="k8-ap-otp-l">รหัสยืนยัน</span><b class="k8-ap-otp-v">' + esc(/^\d{6}$/.test(String(a.otpCode || '')) ? a.otpCode : '------') + '</b><button type="button" onclick="k8ApCopy(\'' + js(a.otpCode || '') + '\')">คัดลอก</button></div>' +
               (a.emailError ? '<p class="k8-ap-mail is-bad">ส่งอีเมลไม่สำเร็จ: ' + esc(a.emailError) + '</p>' : a.emailSent ? '<p class="k8-ap-mail">ส่งอีเมลแล้ว · ถ้าผู้สมัครยังไม่ได้รับ ให้ดูในจดหมายขยะ (Spam) หรือแจ้งรหัสนี้ให้โดยตรง</p>' : '<p class="k8-ap-mail">ถ้าอีเมลไม่เข้า แจ้งรหัสนี้ให้ผู้สมัครกรอกเอง หรือกด "ยืนยันบัญชีแทน"</p>') +
-              '<div class="k8-ap-sent"><button type="button" class="is-ok" onclick="k8ApVerify(\'' + js(key) + '\')">ยืนยันบัญชีแทน</button><button type="button" onclick="adminApproveRegistration(\'' + js(key) + '\')">ส่งอีเมลอีกครั้ง</button></div>'
+              '<div class="k8-ap-sent"><button type="button" class="is-ok" onclick="k8ApVerify(\'' + js(key) + '\')">ยืนยันบัญชีแทน</button><button type="button" onclick="adminApproveRegistration(\'' + js(key) + '\')">ส่งอีเมลอีกครั้ง</button></div>' +
+              '<button type="button" class="k8-ap-del" onclick="adminRejectRegistration(\'' + js(key) + '\')">' + TRASH + 'ลบคำขอนี้</button>'
             : '<div class="k8-ap-acts"><button type="button" class="is-ok" onclick="adminApproveRegistration(\'' + js(key) + '\')">อนุมัติ &amp; ส่งรหัสทางอีเมล</button><button type="button" class="is-no" onclick="adminRejectRegistration(\'' + js(key) + '\')">ปฏิเสธ</button></div>') +
           '</article>';
       }).join('') : '<div class="k8-li-empty">ไม่มีบัญชีใหม่ที่รออนุมัติ</div>';
@@ -1673,10 +1676,21 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
           (s === 'pending'
             ? '<div class="k8-ap-acts2"><button type="button" class="is-ok" onclick="adminApprovePrayerRequest(\'' + js(l.id) + '\')">อนุมัติ</button><button type="button" class="is-no" onclick="adminRejectPrayerRequest(\'' + js(l.id) + '\')">ไม่อนุมัติ</button></div>'
             : '<span class="k8-ap-done" style="color:' + (s === 'approved' ? '#15803d' : '#b91c1c') + '">' + (s === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ') + (l.approvedBy || l.rejectedBy ? ' โดย ' + esc(l.approvedBy || l.rejectedBy) : '') + '</span>') +
+          '<button type="button" class="k8-ap-del" onclick="k8ApDelLate(\'' + js(l.id) + '\')">' + TRASH + 'ลบ</button>' +
           '</div></article>';
       }).join('') : '<div class="k8-li-empty">ไม่มีคำขอละหมาดย้อนหลัง</div>';
     }
   }
+  window.k8ApDelLate = async function (id) {
+    let list = []; try { list = getPrayerApprovalsList(); } catch (e) {}
+    const l = list.find((x) => x.id === id);
+    if (!confirm('ลบคำขอละหมาดย้อนหลังของ ' + ((l && (l.studentName || l.studentId)) || '') + ' ใช่ไหม?\nลบแล้วกู้คืนไม่ได้ (บันทึกละหมาดที่อนุมัติไปแล้วจะยังอยู่)')) return;
+    try { savePrayerApprovalsList(list.filter((x) => x.id !== id)); } catch (e) {}
+    window.renderApprovalsV8();
+    let r = null; try { r = await gasApiCall('deletePrayerLateRequest', { data: { reqId: id } }, 20000); } catch (e) { r = null; }
+    try { showToast(r && r.success ? 'ลบคำขอแล้ว' : 'ลบในเครื่องแล้ว · ระบบหลังบ้านยังไม่ได้อัปเดต (Deploy Code.gs ตัวล่าสุด)', r && r.success ? 'success' : 'warning'); } catch (e) {}
+    try { if (typeof renderSuperAdminOverviewKpis === 'function') renderSuperAdminOverviewKpis(); } catch (e) {}
+  };
   window.renderApprovalsV8 = function () { try { render(); } catch (e) { console.warn('k8 approvals', e); } };
   window.k8ApTab = function (t) { tab = t; if (t === 'prayers' && typeof fetchPrayerApprovalsFromCloud === 'function') { try { fetchPrayerApprovalsFromCloud(true); } catch (e) {} } window.renderApprovalsV8(); };
   function wrap(fn) {
@@ -2874,7 +2888,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '15.0';
+  const APP_VERSION = '15.1';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6221,4 +6235,53 @@ window.k8RegBirthChange = function (v) {
   };
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const m = document.getElementById('k8AsModal'); if (m && m.classList.contains('open')) closeModal('k8AsModal'); } });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup); else setup();
+})();
+
+/* ---------- v15.1 · แอดมินดูแอปในมุมมองนักเรียน (โหมดดูตัวอย่าง อ่านอย่างเดียว) ---------- */
+(function () {
+  const KEY = 'k8_preview_stash';
+  const stash = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } };
+  const isPreview = () => { let s = null; try { s = currentStudent; } catch (e) {} return !!(stash() && s); };
+  window.k8IsPreview = isPreview;
+  window.k8PreviewStudent = async function (id) {
+    let r = null; try { r = await gasApiCall('previewAsStudent', { data: { studentId: id } }, 25000); } catch (e) { r = null; }
+    if (!r || !r.success || !r.token) { try { showToast((r && (r.message || r.error)) || 'เปิดโหมดดูตัวอย่างไม่ได้ · Deploy Code.gs ตัวล่าสุดก่อน', 'error'); } catch (e) {} return; }
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ admin: localStorage.getItem('khalifah_current_admin'), token: localStorage.getItem('khalifah_session_token'), role: localStorage.getItem('khalifah_auth_role'), name: r.student.fullName || id, at: Date.now() }));
+      localStorage.removeItem('khalifah_current_admin');
+      localStorage.setItem('khalifah_current_student', JSON.stringify(r.student));
+      localStorage.setItem('khalifah_session_token', r.token);
+      localStorage.setItem('khalifah_auth_role', 'student');
+    } catch (e) {}
+    location.reload();
+  };
+  window.k8PreviewExit = function () {
+    const st = stash(); if (!st) return;
+    try {
+      localStorage.removeItem('khalifah_current_student');
+      if (st.admin) localStorage.setItem('khalifah_current_admin', st.admin);
+      if (st.token) localStorage.setItem('khalifah_session_token', st.token);
+      localStorage.setItem('khalifah_auth_role', st.role || 'admin');
+      localStorage.removeItem(KEY);
+    } catch (e) {}
+    location.reload();
+  };
+  function banner() {
+    if (!isPreview()) { const b = document.getElementById('k8PvBar'); if (b) b.remove(); document.documentElement.classList.remove('k8-preview'); return; }
+    document.documentElement.classList.add('k8-preview');
+    if (document.getElementById('k8PvBar')) return;
+    const b = document.createElement('div'); b.id = 'k8PvBar'; b.setAttribute('role', 'status');
+    b.innerHTML = '<span><b>โหมดดูตัวอย่าง</b><small>เห็นแบบ ' + String(stash().name || 'นักเรียน').replace(/[<>&"]/g, '') + ' · กดอะไรก็ไม่บันทึกจริง</small></span><button type="button" onclick="k8PreviewExit()">กลับหน้าแอดมิน</button>';
+    document.body.appendChild(b);
+  }
+  const block = (what) => { try { showToast('โหมดดูตัวอย่าง · ' + (what || 'ไม่ได้บันทึกจริง'), 'info'); } catch (e) {} };
+  // กันการบันทึกในเครื่องของแอดมิน (ระบบหลังบ้านก็ปฏิเสธการเขียนจากโหมดนี้อยู่แล้ว)
+  ['handlePrayerMainButtonClick', 'submitPrayerLateApprovalRequest', 'syncRecordToGoogleSheet', 'k8OutboxSend'].forEach((fn) => {
+    const o = window[fn]; if (typeof o !== 'function') return;
+    window[fn] = function () { if (isPreview()) { block(fn === 'handlePrayerMainButtonClick' ? 'ไม่ได้บันทึกละหมาดจริง' : ''); return Promise.resolve({ success: false, preview: true }); } return o.apply(this, arguments); };
+  });
+  const lo = window.studentLogout;
+  if (typeof lo === 'function') window.studentLogout = function () { if (stash()) { window.k8PreviewExit(); return; } return lo.apply(this, arguments); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(banner, 0)); else setTimeout(banner, 0);
+  window.addEventListener('load', () => setTimeout(banner, 300));
 })();

@@ -7592,6 +7592,11 @@ async function fetchPendingApprovalsFromCloud() {
           localList.unshift(merged);
         }
       });
+      // รายการที่ถูกลบในระบบแล้ว ให้หายจากเครื่องด้วย (เก็บไว้เฉพาะคำขอที่เพิ่งส่งไม่เกิน 10 นาทีซึ่งอาจยังไม่ถึงระบบ)
+      const onServer = new Set(json.data.map(r => String(r.reqId || r.id || '')));
+      const fresh = (p) => { const t = Date.parse(p.createdAt || p.requestedAt || ''); return !isNaN(t) && Date.now() - t < 10 * 60000; };
+      const kept = localList.filter(p => onServer.has(String(p.reqId || p.id || '')) || fresh(p) || json.data.some(r => isIdMatch(r.userId, p.userId) && r.role === p.role));
+      localList.length = 0; kept.forEach(p => localList.push(p));
       savePendingRegistrations(localList);
       renderPendingApprovalsTable(true);
     }
@@ -7815,10 +7820,10 @@ function adminRejectRegistration(reqId) {
   renderSuperAdminOverviewKpis();
   showToast('ลบคำขอสมัครเรียบร้อยแล้ว', 'info');
 
-  syncRecordToGoogleSheet('deletePendingRegistration', {
-    reqId: reqId,
-    userId: target ? target.userId : ''
-  });
+  // ลบในระบบแบบรอผล (กันรายการเด้งกลับมาตอนดึงข้อมูลรอบถัดไป)
+  gasApiCall('deletePendingRegistration', { data: { reqId: reqId, userId: target ? target.userId : '' } }, 20000)
+    .then((r) => { if (!r || r.success === false) showToast('ลบในเครื่องแล้ว แต่ลบในระบบไม่สำเร็จ ลองใหม่อีกครั้ง', 'warning'); })
+    .catch(() => showToast('ลบในเครื่องแล้ว · จะลบในระบบเมื่อเชื่อมต่ออินเทอร์เน็ต', 'warning'));
 }
 
 function formatThaiDateShort(dateStr) {

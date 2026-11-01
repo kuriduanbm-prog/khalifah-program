@@ -932,15 +932,16 @@ function signToken_(body) {
 }
 
 /** role: 'student' | 'teacher' | 'admin' */
-function issueToken_(role, userId, name, owner) {
+function issueToken_(role, userId, name, owner, preview) {
   const payload = {
     r: role,
     o: owner ? 1 : 0,
     u: cleanVal(userId),
     n: cleanVal(name || ''),
-    exp: Date.now() + SESSION_TTL_MS,
+    exp: Date.now() + (preview ? 3 * 3600 * 1000 : SESSION_TTL_MS),
     ep: getProp_('SESSION_EPOCH') || '0'
   };
+  if (preview) payload.pv = 1; // โหมดดูตัวอย่างของแอดมิน: อ่านได้อย่างเดียว
   const body = b64urlEncode_(JSON.stringify(payload));
   return 'v1.' + body + '.' + signToken_(body);
 }
@@ -955,7 +956,7 @@ function verifyToken_(token) {
     if (!p || !p.r || !p.u) return null;
     if (Date.now() > Number(p.exp || 0)) return null;
     if ((p.ep || '0') !== (getProp_('SESSION_EPOCH') || '0')) return null;
-    return { role: p.r, userId: p.u, name: p.n || '', owner: p.r === 'admin' && (!!p.o || p.u === 'MasterAdmin') };
+    return { role: p.r, userId: p.u, name: p.n || '', owner: p.r === 'admin' && (!!p.o || p.u === 'MasterAdmin'), preview: !!p.pv };
   } catch (e) {
     return null;
   }
@@ -1180,7 +1181,7 @@ const ACTION_ACCESS = {
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
-  getPrayerRoll: 'staff', savePrayerRoll: 'staff',
+  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
@@ -1189,7 +1190,7 @@ const ACTION_ACCESS = {
   deletePrayerRecord: 'staff', recordAttendance: 'staff', saveDailyAttendance: 'staff',
   saveSubjectGrades: 'staff', updateSubjectScores: 'staff',
   createActivity: 'staff', deleteActivity: 'staff', deleteActivityAttendee: 'staff',
-  saveCalendarEvent: 'staff', deleteCalendarEvent: 'staff', updatePrayerLateRequestStatus: 'staff',
+  saveCalendarEvent: 'staff', deleteCalendarEvent: 'staff', updatePrayerLateRequestStatus: 'staff', deletePrayerLateRequest: 'staff',
   approveRegistrationAndSendEmail: 'staff', saveSubjectAssignments: 'staff', saveAssignmentScores: 'staff', deletePendingRegistration: 'staff', updateSubAdminPhoto: 'staff',
   // แอดมิน (หลัก + รอง)
   getAdmins: 'admin', addSubAdmin: 'admin', deleteSubAdmin: 'admin', deleteStudent: 'admin',
@@ -1273,6 +1274,10 @@ function routeRequest_(action, req, method) {
       }
     }
 
+    // โหมดดูตัวอย่าง (แอดมินดูแอปแบบนักเรียน): ห้ามเขียนข้อมูลใด ๆ
+    if (session && session.preview && READ_ONLY_ACTIONS.indexOf(action) === -1 && ['whoami', 'refreshToken'].indexOf(action) === -1) {
+      return { success: false, preview: true, code: 'PREVIEW', message: 'โหมดดูตัวอย่าง · ไม่ได้บันทึกจริง' };
+    }
     stripMarkup_(req, 0);
     const data = (req.data && typeof req.data === 'object') ? req.data : req;
     if (data && data.token) delete data.token;
@@ -1323,7 +1328,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'whoami':
       // ต่ออายุโทเค็นทุกครั้งที่แอปเปิด เพื่อให้อยู่ในระบบได้ต่อเนื่องจนกว่าจะออกจากระบบเอง
-      return session ? { success: true, session: { role: session.role, userId: session.userId, name: session.name, owner: !!session.owner }, token: issueToken_(session.role, session.userId, session.name, !!session.owner) } : { success: false, authRequired: true, code: 'AUTH_REQUIRED' };
+      return session ? { success: true, session: { role: session.role, userId: session.userId, name: session.name, owner: !!session.owner }, token: issueToken_(session.role, session.userId, session.name, !!session.owner, !!session.preview), preview: !!session.preview } : { success: false, authRequired: true, code: 'AUTH_REQUIRED' };
 
     // ---------- เข้าสู่ระบบ ----------
     case 'loginStudent':
@@ -1562,6 +1567,17 @@ function dispatchAction_(action, req, data, session, ctx) {
       return savePrayerWindows_(data.windows);
     case 'getTimetable':
       return getTimetable_(session, isStudent, ctx.isAdmin);
+    case 'previewAsStudent': {
+      const sid = cleanVal((data || {}).studentId);
+      const ss = getSpreadsheet(); const sh = ss.getSheetByName(SHEETS.STUDENTS);
+      const rows = sh ? sh.getDataRange().getValues() : [];
+      for (let i = 1; i < rows.length; i++) {
+        if (!isCodeMatch(rows[i][0], sid)) continue;
+        const st = buildStudentObjectFromRow(rows[i], getLatestHasanatMapByStudent(ss), getLatestGradesMapByStudent(ss));
+        return { success: true, token: issueToken_('student', st.studentId, st.fullName, false, true), student: st, preview: true };
+      }
+      return { success: false, message: 'ไม่พบนักเรียนรหัสนี้' };
+    }
     case 'getPrayerRoll':
       return getPrayerRoll_(data || req);
     case 'savePrayerRoll':
@@ -1592,6 +1608,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return saveCalendarEvent(data);
     case 'deleteCalendarEvent':
       return deleteCalendarEvent(data);
+    case 'deletePrayerLateRequest':
+      return deletePrayerLateRequest_(data);
     case 'updatePrayerLateRequestStatus':
       return updatePrayerLateRequestStatus(data);
     case 'updateSubAdminPhoto': {
@@ -5204,6 +5222,20 @@ function savePrayerLateRequest(data) {
 /**
  * อัปเดตสถานะคำขออนุมัติละหมาดใน Google Sheets
  */
+/** แอดมิน/อาจารย์ลบคำขอบันทึกละหมาดย้อนหลัง (ลบทิ้งทั้งแถว) */
+function deletePrayerLateRequest_(data) {
+  const reqId = cleanVal((data || {}).reqId || (data || {}).id);
+  if (!reqId) return { success: false, message: 'ไม่พบรหัสคำขอ' };
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYER_APPROVALS);
+  if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานคำขออนุมัติละหมาด' };
+  const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) {}
+  try {
+    const rows = sheet.getDataRange().getValues();
+    for (let i = rows.length - 1; i >= 1; i--) if (cleanVal(rows[i][0]) === reqId) { sheet.deleteRow(i + 1); return { success: true, message: 'ลบคำขอแล้ว' }; }
+    return { success: true, message: 'ไม่มีคำขอนี้ในระบบแล้ว' };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
 function updatePrayerLateRequestStatus(data) {
   ensureSchema();
   const ss = getSpreadsheet();
