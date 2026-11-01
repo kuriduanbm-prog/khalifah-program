@@ -3120,3 +3120,13 @@ html.k8-narrow .k8-pd-per { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 #k8OvPray .k8-gbar-v { display: flex; flex-direction: column; align-items: flex-end; min-width: 64px; line-height: 1.2; }
 #k8OvPray .k8-gbar-v b { font-size: 13.5px; font-weight: 600; color: #0f172a; }
 #k8OvPray .k8-gbar-v small { font-size: 11.5px; color: #64748b; }
+/* v17.7 · KPI ละหมาดรายวัน: แถวละ 2 ช่องบนมือถือ (คอม 4 ช่อง) */
+.prayer-kpi-grid { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+@media (min-width: 993px) { .prayer-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; } }
+.prayer-kpi-grid .prayer-kpi-card { min-width: 0; padding: 10px 12px !important; }
+.prayer-kpi-grid .prayer-kpi-top { gap: 6px; align-items: flex-start; }
+.prayer-kpi-grid .prayer-kpi-title { font-size: 12.5px !important; line-height: 1.35; min-width: 0; }
+.prayer-kpi-grid .prayer-kpi-badge { flex: none; font-size: 11.5px !important; padding: 2px 7px !important; }
+.prayer-kpi-grid .prayer-kpi-number { font-size: 22px !important; margin: 4px 0 2px !important; }
+.prayer-kpi-grid .prayer-kpi-sub { font-size: 11.5px !important; line-height: 1.35; }
+html.k8-narrow .prayer-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
