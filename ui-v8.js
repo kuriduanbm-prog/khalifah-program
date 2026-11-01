@@ -2913,7 +2913,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.7';
+  const APP_VERSION = '17.8';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6991,4 +6991,24 @@ window.k8RegBirthChange = function (v) {
     saveRule({ zuhr: z, asr: a, offset: o });
   };
   window.k8PtReset = function () { saveRule(Object.assign({}, DEF_RULE)); };
+})();
+
+/* ---------- v17.8 · แถบเลือกวัน/ชั้น/ค้นหา หน้าละหมาด (แอดมิน) ---------- */
+(function () {
+  const D = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  function lbl() {
+    const inp = document.getElementById('adminPrayerDateSelect'), l = document.getElementById('k8PtDayLbl'), sub = document.getElementById('k8PtDaySub'), tb = document.getElementById('k8PtTodayBtn');
+    if (!inp || !l) return;
+    const v = inp.value || ymd(new Date()); const d = new Date(v + 'T00:00:00'); if (isNaN(d)) return;
+    const t = ymd(new Date()), y = ymd(new Date(Date.now() - 864e5));
+    const full = 'วัน' + D[d.getDay()] + ' ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+    l.textContent = v === t ? 'วันนี้' : v === y ? 'เมื่อวาน' : full;
+    if (sub) sub.textContent = (v === t || v === y) ? full : '';
+    if (tb) tb.hidden = v === t;
+  }
+  ['renderAdminPrayerDailyDashboard', 'adminPrayerChangeDate', 'adminPrayerSetToday'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(lbl, 0); return r; }; });
+  document.addEventListener('change', (e) => { if (e.target && e.target.id === 'adminPrayerDateSelect') lbl(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lbl); else lbl();
 })();

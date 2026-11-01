@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.7">
-  <link rel="stylesheet" href="ui-v8.css?v=17.7">
-  <link rel="stylesheet" href="dark.css?v=17.7">
+  <link rel="stylesheet" href="style.css?v=17.8">
+  <link rel="stylesheet" href="ui-v8.css?v=17.8">
+  <link rel="stylesheet" href="dark.css?v=17.8">
 </head>
 <body class="auth-locked">
   <script>
@@ -3236,40 +3236,27 @@
 
           <!-- ================= MODE 1: DAILY PRAYER OVERVIEW DASHBOARD ================= -->
           <div id="adminPrayerDailySection" style="display: block;">
-            <!-- Daily Controls Toolbar -->
-            <div style="background: #f8fafc; border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.15rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 0.3rem;">
-                  <i class="fa-regular fa-calendar" style="color: #0284c7;"></i> เลือกวันที่:
-                </span>
-                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="adminPrayerChangeDate(-1)" title="วันก่อนหน้า" style="height: 36px; padding: 0 0.65rem;">
-                    <i class="fa-solid fa-chevron-left"></i>
-                  </button>
-                  <input type="date" id="adminPrayerDateSelect" class="form-control" style="width: auto; height: 36px; font-size: 0.85rem; font-weight: 600;" onchange="renderAdminPrayerDailyDashboard()">
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="adminPrayerChangeDate(1)" title="วันถัดไป" style="height: 36px; padding: 0 0.65rem;">
-                    <i class="fa-solid fa-chevron-right"></i>
-                  </button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="adminPrayerSetToday()" title="กลับมาดูวันนี้" style="height: 36px; font-size: 0.8rem; font-weight: 600;">
-                    วันนี้
-                  </button>
-                </div>
+            <!-- Daily Controls Toolbar · v17.8 -->
+            <div class="k8-pt-bar">
+              <div class="k8-pt-date" role="group" aria-label="เลือกวันที่">
+                <button type="button" class="k8-pt-step" onclick="adminPrayerChangeDate(-1)" aria-label="วันก่อนหน้า"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                <label class="k8-pt-day">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  <span class="k8-pt-day-t"><b id="k8PtDayLbl">วันนี้</b><small id="k8PtDaySub"></small></span>
+                  <input type="date" id="adminPrayerDateSelect" aria-label="วันที่" onchange="renderAdminPrayerDailyDashboard()">
+                </label>
+                <button type="button" class="k8-pt-step" onclick="adminPrayerChangeDate(1)" aria-label="วันถัดไป"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+                <button type="button" class="k8-pt-today" id="k8PtTodayBtn" onclick="adminPrayerSetToday()">วันนี้</button>
               </div>
-
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 0.35rem;">
-                  <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-dark);">ชั้นปี:</span>
-                  <select id="adminPrayerGradeFilter" class="form-control" style="min-width: 140px; height: 36px; font-size: 0.82rem;" onchange="renderAdminPrayerDailyDashboard()">
-                    <option value="ALL">ทุกระดับชั้นปี</option>
-                  </select>
-                </div>
-                <div style="position: relative; min-width: 180px;">
-                  <input type="text" id="adminPrayerSearchInput" class="form-control" placeholder="ค้นหาชื่อ / รหัสนร..." style="padding-left: 2rem; height: 36px; font-size: 0.82rem;" oninput="renderAdminPrayerDailyTable()">
-                  <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.78rem;"></i>
-                </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="exportAdminDailyPrayerToExcel()" style="height: 36px; font-size: 0.82rem; font-weight: 600; white-space: nowrap;">
-                  <i class="fa-solid fa-file-excel" style="color: #10b981;"></i> ส่งออก Excel
-                </button>
+              <div class="k8-pt-filters">
+                <select id="adminPrayerGradeFilter" class="k8-pt-sel" aria-label="ชั้นปี" onchange="renderAdminPrayerDailyDashboard()">
+                  <option value="ALL">ทุกระดับชั้นปี</option>
+                </select>
+                <label class="k8-pt-search">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  <input type="search" id="adminPrayerSearchInput" placeholder="ค้นหาชื่อ / รหัส" aria-label="ค้นหานักเรียน" oninput="renderAdminPrayerDailyTable()">
+                </label>
+                <button type="button" class="k8-pt-xls" onclick="exportAdminDailyPrayerToExcel()" title="ส่งออก Excel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 13l4 5M13 13l-4 5"/></svg><span>Excel</span></button>
               </div>
             </div>
 
@@ -5762,7 +5749,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.7"></script>
-  <script defer src="ui-v8.js?v=17.7"></script>
+  <script defer src="app.js?v=17.8"></script>
+  <script defer src="ui-v8.js?v=17.8"></script>
 </body>
 </html>
