@@ -1518,6 +1518,12 @@ html[data-theme="dark"] .k8-tt-xl-new small { color: #a6b0bf !important; }
 @supports (padding-top: env(safe-area-inset-top)) {
 html[data-theme="dark"] body.portal-mode-student::before, html[data-theme="dark"] body.teacher-portal-active::before, html[data-theme="dark"] body.k8-inspector::before { background-color: #1c222a !important; }
 }
+html[data-theme="dark"] .k8-ap-otp { background-color: #0e2432 !important; }
+html[data-theme="dark"] .k8-ap-otp-l { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-ap-otp-v { color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-ap-mail { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-ap-mail.is-bad { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-ap-sent button { border: 1px solid #393f46 !important; background-color: #121212 !important; color: #c1c7cf !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

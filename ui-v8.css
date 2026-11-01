@@ -2753,3 +2753,14 @@ html.k8-narrow .k8-ta-dpill svg { display: none; }
   /* แถบทึบใต้แถบสถานะ: เลื่อนหน้าแล้วเนื้อหาไม่ไปซ้อนกับนาฬิกา/แบตเตอรี่ */
   body.portal-mode-student::before, body.teacher-portal-active::before, body.k8-inspector::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--k8-bg, #eef2f7); z-index: 900; pointer-events: none; }
 }
+
+/* v14.6 · การ์ดอนุมัติ: แสดงรหัสยืนยันให้แอดมิน */
+.k8-ap-otp { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: #f0f9ff; border: 1px dashed #7dd3fc; }
+.k8-ap-otp-l { font-size: 13px; color: #0369a1; font-weight: 500; }
+.k8-ap-otp-v { flex: 1; font-size: 24px; font-weight: 700; letter-spacing: 4px; color: #0c4a6e; font-family: Consolas, 'IBM Plex Sans Thai', monospace; }
+.k8-ap-otp button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: #0369a1; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-ap-mail { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: #475569; }
+.k8-ap-mail.is-bad { color: #b91c1c; font-weight: 500; }
+.k8-ap-sent { display: flex; gap: 8px; margin-top: 10px; background: none !important; padding: 0 !important; }
+.k8-ap-sent button { flex: 1; min-height: 44px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+.k8-ap-sent button.is-ok { border-color: #15803d; background: #15803d; color: #fff; }

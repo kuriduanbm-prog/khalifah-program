@@ -1657,7 +1657,9 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
           '<span class="k8-pill" style="background:' + st[1] + ';color:' + st[2] + '">' + st[0] + '</span></div>' +
           '<dl class="k8-ap-dl"><dt>อีเมล</dt><dd>' + esc(a.email || '-') + '</dd><dt>รายละเอียด</dt><dd>' + esc(a.gradeOrSubj || a.detail || '-') + '</dd><dt>สมัครเมื่อ</dt><dd>' + esc(fmtWhen(a.createdAt || a.timestamp || a.submittedAt || a.requestedAt)) + '</dd></dl>' +
           (sent
-            ? '<div class="k8-ap-sent"><span>รอผู้สมัครกรอกรหัสยืนยัน</span><button type="button" onclick="adminApproveRegistration(\'' + js(key) + '\')">ส่งรหัสอีกครั้ง</button></div>'
+            ? '<div class="k8-ap-otp"><span class="k8-ap-otp-l">รหัสยืนยัน</span><b class="k8-ap-otp-v">' + esc(/^\d{6}$/.test(String(a.otpCode || '')) ? a.otpCode : '------') + '</b><button type="button" onclick="k8ApCopy(\'' + js(a.otpCode || '') + '\')">คัดลอก</button></div>' +
+              (a.emailError ? '<p class="k8-ap-mail is-bad">ส่งอีเมลไม่สำเร็จ: ' + esc(a.emailError) + '</p>' : a.emailSent ? '<p class="k8-ap-mail">ส่งอีเมลแล้ว · ถ้าผู้สมัครยังไม่ได้รับ ให้ดูในจดหมายขยะ (Spam) หรือแจ้งรหัสนี้ให้โดยตรง</p>' : '<p class="k8-ap-mail">ถ้าอีเมลไม่เข้า แจ้งรหัสนี้ให้ผู้สมัครกรอกเอง หรือกด "ยืนยันบัญชีแทน"</p>') +
+              '<div class="k8-ap-sent"><button type="button" class="is-ok" onclick="k8ApVerify(\'' + js(key) + '\')">ยืนยันบัญชีแทน</button><button type="button" onclick="adminApproveRegistration(\'' + js(key) + '\')">ส่งอีเมลอีกครั้ง</button></div>'
             : '<div class="k8-ap-acts"><button type="button" class="is-ok" onclick="adminApproveRegistration(\'' + js(key) + '\')">อนุมัติ &amp; ส่งรหัสทางอีเมล</button><button type="button" class="is-no" onclick="adminRejectRegistration(\'' + js(key) + '\')">ปฏิเสธ</button></div>') +
           '</article>';
       }).join('') : '<div class="k8-li-empty">ไม่มีบัญชีใหม่ที่รออนุมัติ</div>';
@@ -1686,6 +1688,27 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       return r;
     };
   }
+  window.k8ApCopy = function (code) {
+    if (!/^\d{6}$/.test(String(code))) { try { showToast('ยังไม่มีรหัส · กด "ส่งอีเมลอีกครั้ง" เพื่อสร้างรหัส', 'warning'); } catch (e) {} return; }
+    const done = () => { try { showToast('คัดลอกรหัส ' + code + ' แล้ว', 'success'); } catch (e) {} };
+    try { navigator.clipboard.writeText(String(code)).then(done, () => prompt('คัดลอกรหัสยืนยัน', code)); } catch (e) { prompt('คัดลอกรหัสยืนยัน', code); }
+  };
+  // แอดมินยืนยันบัญชีแทนผู้สมัคร (ใช้รหัสยืนยันที่ระบบสร้าง) · ไม่ต้องรออีเมล
+  window.k8ApVerify = async function (key) {
+    let L = []; try { L = getPendingRegistrations(); } catch (e) {}
+    const a = L.find((p) => (p.reqId || p.id || p.userId) === key); if (!a) return;
+    if (!/^\d{6}$/.test(String(a.otpCode || ''))) { try { showToast('ยังไม่มีรหัสยืนยัน · กด "ส่งอีเมลอีกครั้ง" ก่อน', 'warning'); } catch (e) {} return; }
+    if (!confirm('ยืนยันบัญชีของ ' + (a.fullName || a.userId) + ' แทนผู้สมัครเลยใช่ไหม?\nหลังจากนี้ผู้สมัครเข้าสู่ระบบได้ทันทีโดยไม่ต้องกรอกรหัส')) return;
+    let r = null; try { r = await gasApiCall('verifyUserOtp', { data: { reqId: a.reqId || a.id, userId: a.userId, role: a.role, otpCode: String(a.otpCode) } }, 25000); } catch (e) { r = null; }
+    if (r && (r.success || r.alreadyVerified)) {
+      try { const L2 = getPendingRegistrations().filter((p) => (p.reqId || p.id || p.userId) !== key); savePendingRegistrations(L2); } catch (e) {}
+      try { if (typeof fetchPendingApprovalsFromCloud === 'function') fetchPendingApprovalsFromCloud(); if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(); } catch (e) {}
+      try { renderPendingApprovalsTable(true); } catch (e) {}
+      try { showToast('ยืนยันบัญชีของ ' + (a.fullName || a.userId) + ' แล้ว · เข้าสู่ระบบได้ทันที', 'success'); } catch (e) {}
+    } else {
+      try { showToast((r && r.message) || 'ยืนยันไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); } catch (e) {}
+    }
+  };
   ['renderPendingApprovalsTable', 'renderAdminPrayerApprovals', 'fetchPrayerApprovalsFromCloud', 'fetchPendingApprovalsFromCloud', 'adminApproveRegistration', 'adminRejectRegistration', 'adminApprovePrayerRequest', 'adminRejectPrayerRequest'].forEach(wrap);
   const sat = window.switchAdminTab;
   if (typeof sat === 'function') window.switchAdminTab = function (t) { const r = sat.apply(this, arguments); if (t === 'approvals') { try { fetchPrayerApprovalsFromCloud(false); } catch (e) {} window.renderApprovalsV8(); } return r; };
@@ -1708,7 +1731,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     inp.value = v; sync();
     if (v.length === 6 && typeof verifyRegistrationOtpCode === 'function') { const id = document.getElementById('otpLookupIdInput'); const g = document.getElementById('otpLookupIdGroup'); if (!g || g.style.display === 'none' || (id && id.value.trim())) verifyRegistrationOtpCode(); }
   };
-  window.k8OtpNoEmail = function () { if (typeof showToast === 'function') showToast('ตรวจสอบโฟลเดอร์จดหมายขยะ (Spam) หากยังไม่ได้รับ ติดต่อแอดมินให้กด "ส่งรหัสอีกครั้ง"', 'info'); };
+  window.k8OtpNoEmail = function () { if (typeof showToast === 'function') showToast('ยังไม่ได้รับอีเมล? ดูในโฟลเดอร์จดหมายขยะ (Spam) หรือ "โปรโมชัน" ก่อน · ถ้ายังไม่มี ขอรหัส 6 หลักจากแอดมินได้เลย แอดมินดูรหัสได้ในหน้าอนุมัติบัญชี', 'info'); };
   function boot() {
     const inp = document.getElementById('otpVerifyCodeInput');
     if (!inp) return;
@@ -2850,7 +2873,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '14.5';
+  const APP_VERSION = '14.6';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

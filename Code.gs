@@ -4450,7 +4450,11 @@ function approveRegistrationAndSendEmail(data) {
   // ส่งอีเมลอัตโนมัติผ่าน GmailApp / MailApp พร้อมโครงสร้าง Multipart (Plain Text + HTML) และชื่อผู้ส่ง KHALIFAH PROGRAM เพื่อป้องกันการเข้าจดหมายขยะ (Spam)
   let emailSent = false;
   let emailError = '';
-  if (email && email.indexOf('@') !== -1) {
+  let quotaLeft = -1;
+  try { quotaLeft = MailApp.getRemainingDailyQuota(); } catch (e) {}
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) emailError = 'อีเมลของผู้สมัครไม่ถูกต้อง (' + (email || 'ว่าง') + ')';
+  else if (quotaLeft === 0) emailError = 'โควตาส่งอีเมลของวันนี้หมดแล้ว (Google จำกัดจำนวนต่อวัน) · ให้แจ้งรหัสกับผู้สมัครโดยตรง หรือส่งใหม่พรุ่งนี้';
+  if (!emailError) {
     const senderName = 'KHALIFAH PROGRAM';
     const subject = 'แจ้งผลการอนุมัติบัญชีและรหัสยืนยันเข้าใช้งาน KHALIFAH PROGRAM (' + fullName + ')';
     const plainBody =
@@ -4496,20 +4500,34 @@ function approveRegistrationAndSendEmail(data) {
         });
         emailSent = true;
       } catch (mailErr) {
-        emailError = mailErr.toString();
+        emailError = /authoriz|permission|สิทธิ์/i.test(String(mailErr)) ? 'Apps Script ยังไม่ได้รับสิทธิ์ส่งอีเมล · เปิด Apps Script แล้วกด Run ฟังก์ชัน authorizeEmailPermission หนึ่งครั้ง' : String(mailErr && mailErr.message || mailErr);
       }
     }
   }
+  logEmail_(email, 'OTP ' + roleLabel + ' ' + userId, emailSent, emailError, quotaLeft);
 
   return {
     success: true,
     emailSent: emailSent,
     emailError: emailError,
+    email: email,
+    quotaLeft: quotaLeft,
     otpCode: otpCode,
     message: emailSent
       ? 'อนุมัติและส่งรหัสยืนยัน (' + otpCode + ') ไปยังอีเมล ' + email + ' เรียบร้อยแล้ว'
       : 'อนุมัติเรียบร้อยแล้ว แต่ส่งอีเมลไม่สำเร็จ: ' + emailError
   };
+}
+
+/** บันทึกประวัติการส่งอีเมลลงแผ่นงาน "EmailLog" ไว้ตรวจย้อนหลังว่าส่งออกจริงหรือไม่ */
+function logEmail_(to, what, ok, err, quota) {
+  try {
+    const ss = getSpreadsheet();
+    let sh = ss.getSheetByName('EmailLog');
+    if (!sh) { sh = ss.insertSheet('EmailLog'); sh.appendRow(['เวลา', 'ถึง', 'เรื่อง', 'สถานะ', 'ข้อผิดพลาด', 'โควตาคงเหลือ']); sh.setFrozenRows(1); }
+    sh.appendRow([Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), to || '', what || '', ok ? 'ส่งแล้ว' : 'ไม่สำเร็จ', err || '', quota]);
+    if (sh.getLastRow() > 1000) sh.deleteRows(2, sh.getLastRow() - 1000);
+  } catch (e) {}
 }
 
 /**

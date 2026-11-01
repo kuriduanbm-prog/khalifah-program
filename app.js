@@ -7767,11 +7767,22 @@ async function adminApproveRegistration(reqId) {
     });
     const resJson = await resp.json();
     playSuccessSound();
+    // เก็บผลการส่งอีเมลจริงไว้ที่รายการ เพื่อให้การ์ดอนุมัติแสดงรหัสและสถานะอีเมล
+    try {
+      const L2 = getPendingRegistrations(); const j = L2.findIndex(p => (p.reqId || p.id) === (item.reqId || item.id) || isIdMatch(p.userId, item.userId));
+      if (j !== -1) {
+        if (resJson && /^\d{6}$/.test(String(resJson.otpCode || ''))) L2[j].otpCode = String(resJson.otpCode);
+        L2[j].emailSent = !!(resJson && resJson.emailSent); L2[j].emailError = (resJson && (resJson.emailError || (resJson.success === false ? (resJson.message || 'ส่งไม่สำเร็จ') : ''))) || '';
+        L2[j].emailAt = new Date().toISOString();
+        savePendingRegistrations(L2); renderPendingApprovalsTable(true);
+      }
+    } catch (e) {}
+    const code = (resJson && resJson.otpCode) || item.otpCode;
     if (resJson && resJson.emailSent) {
-      showToast(`ส่งอีเมลสำเร็จ! รหัสยืนยัน [${item.otpCode}] ถูกส่งไปที่ ${item.email} เรียบร้อยแล้ว (ผู้สมัครต้องนำรหัสนี้มากรอกจึงจะเข้าระบบได้)`, 'success');
+      showToast(`ส่งอีเมลแล้ว · รหัสยืนยัน ${code} ไปที่ ${item.email} (ถ้ายังไม่ได้รับ ให้ดูในจดหมายขยะ หรือแจ้งรหัสนี้กับผู้สมัครโดยตรง)`, 'success');
     } else {
       console.warn('Email dispatch warning:', resJson);
-      showToast(`อนุมัติแล้ว (รหัส: ${item.otpCode}) กรุณาตรวจสอบสิทธิ์ส่งอีเมลใน Apps Script`, 'warning');
+      showToast(`อนุมัติแล้ว แต่ส่งอีเมลไม่สำเร็จ: ${(resJson && (resJson.emailError || resJson.message)) || 'ไม่ทราบสาเหตุ'} · รหัสยืนยันคือ ${code}`, 'warning');
     }
   } catch (err) {
     playSuccessSound();
