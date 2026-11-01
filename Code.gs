@@ -202,7 +202,7 @@ const HEADERS = {
   PRAYER_APPROVALS: [
     'รหัสคำขอ', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'เบอร์ผู้ปกครอง',
     'เวลาละหมาด', 'วันที่ละหมาด', 'เหตุผลหลัก', 'รายละเอียดเหตุผล', 'ลิงก์รูปถ่ายพยาน',
-    'สถานะคำขอ', 'เวลาที่ส่งคำขอ', 'ผู้อนุมัติ', 'เวลาที่อนุมัติ', 'หมายเหตุอาจารย์'
+    'สถานะคำขอ', 'เวลาที่ส่งคำขอ', 'ผู้อนุมัติ', 'เวลาที่อนุมัติ', 'หมายเหตุอาจารย์', 'ที่มาของรูป'
   ],
   CALENDAR: [
     'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'วันที่เริ่มต้น', 'วันที่สิ้นสุด', 'เวลาเริ่มต้น', 'เวลาสิ้นสุด',
@@ -5204,10 +5204,31 @@ function getPrayerApprovals() {
       submittedAtFormatted: cleanVal(row[11]),
       approvedBy: cleanVal(row[12]) || null,
       approvedAt: cleanVal(row[13]) || null,
-      adminNote: cleanVal(row[14]) || ''
+      adminNote: cleanVal(row[14]) || '',
+      photoSource: cleanVal(row[15]) || ''
     });
   }
   return { success: true, status: 'success', data: list };
+}
+
+/** v17.2 · รูปหลักฐานคำร้องละหมาด: เก็บลง Google Drive (ไม่ยัดรูปใหญ่ลงเซลล์) */
+function savePrayerRequestPhoto_(raw, studentId, reqId) {
+  const v = String(raw || '').trim();
+  if (!v) return '';
+  if (/^https?:\/\//.test(v)) return v.substring(0, 500);
+  if (!/^data:image\//.test(v)) return '';
+  try {
+    const it = DriveApp.getFoldersByName('Khalifah_Prayer_Request_Photos');
+    const folder = it.hasNext() ? it.next() : DriveApp.createFolder('Khalifah_Prayer_Request_Photos');
+    const bytes = Utilities.base64Decode(v.split(',')[1] || '');
+    const name = String(studentId || 'std').replace(/[^a-zA-Z0-9_-]/g, '') + '_' + String(reqId || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '') + '.jpg';
+    const file = folder.createFile(Utilities.newBlob(bytes, 'image/jpeg', name));
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return 'https://lh3.googleusercontent.com/d/' + file.getId();
+  } catch (e) {
+    Logger.log('prayer request photo: ' + e.message);
+    return v.length < 49000 ? v : '';
+  }
 }
 
 /**
@@ -5236,7 +5257,9 @@ function savePrayerLateRequest(data) {
     const date = formatSheetDate(data.date) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
     const reasonPreset = cleanVal(data.reasonPreset || 'ละหมาดแล้วแต่ลืมกดเช็คชื่อ');
     const reasonDetail = cleanVal(data.reasonDetail || '');
-    const photoUrl = cleanVal(data.photoUrl || '');
+    const photoUrl = savePrayerRequestPhoto_(data.photoUrl || '', studentId, id);
+    const photoSource = /^(camera|gallery)$/.test(String(data.photoSource || '')) ? (data.photoSource === 'camera' ? 'ถ่ายจากกล้อง' : 'แนบจากเครื่อง') : (photoUrl ? cleanVal(data.photoSource || '') : '');
+    if (prayerSlot.length > 20) return { success: false, message: 'เวลาละหมาดไม่ถูกต้อง' };
     const status = cleanVal(data.status || 'pending');
     const submittedAt = data.submittedAtFormatted || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
     const approvedBy = cleanVal(data.approvedBy || '');
@@ -5247,9 +5270,9 @@ function savePrayerLateRequest(data) {
     let updated = false;
     for (let i = 1; i < rows.length; i++) {
       if (cleanVal(rows[i][0]) === id) {
-        sheet.getRange(i + 1, 2, 1, 14).setValues([[
+        sheet.getRange(i + 1, 2, 1, 15).setValues([[
           studentId, studentName, grade, parentPhone, prayerSlot, date,
-          reasonPreset, reasonDetail, photoUrl, status, submittedAt, approvedBy, approvedAt, adminNote
+          reasonPreset, reasonDetail, photoUrl, status, submittedAt, approvedBy, approvedAt, adminNote, photoSource
         ]]);
         updated = true;
         break;
@@ -5259,7 +5282,7 @@ function savePrayerLateRequest(data) {
     if (!updated) {
       sheet.appendRow([
         id, studentId, studentName, grade, parentPhone, prayerSlot, date,
-        reasonPreset, reasonDetail, photoUrl, status, submittedAt, approvedBy, approvedAt, adminNote
+        reasonPreset, reasonDetail, photoUrl, status, submittedAt, approvedBy, approvedAt, adminNote, photoSource
       ]);
       const lastRow = sheet.getLastRow();
       sheet.getRange(lastRow, 1).setNumberFormat('@');
@@ -5268,7 +5291,7 @@ function savePrayerLateRequest(data) {
       sheet.getRange(lastRow, 7).setNumberFormat('@');
     }
 
-    return { success: true, message: 'บันทึกคำขออนุมัติเรียบร้อย', id: id };
+    return { success: true, message: 'บันทึกคำขออนุมัติเรียบร้อย', id: id, photoUrl: /^https?:/.test(photoUrl) ? photoUrl : '', photoSource: photoSource };
   } catch (err) {
     return { success: false, message: 'เกิดข้อผิดพลาด: ' + err.message };
   } finally {

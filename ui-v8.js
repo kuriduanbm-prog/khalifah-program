@@ -1673,7 +1673,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         const s = ns(l.status);
         const photo = l.photoUrl ? '<button type="button" class="k8-ap-photo" onclick="viewPhotoInNewTab(\'' + js(l.photoUrl) + '\')" aria-label="ดูภาพหลักฐาน"><img src="' + esc(l.photoUrl) + '" alt="ภาพหลักฐาน" loading="lazy"></button>' : '<div class="k8-ap-photo is-empty">ไม่มีภาพ</div>';
         return '<article class="k8-ap-card k8-ap-late">' + photo + '<div class="k8-ap-lb"><b>' + esc(l.studentName || l.studentId) + (l.grade ? ' · ' + esc(String(l.grade).replace('มัธยมศึกษาปีที่ ', 'ม.')) : '') + '</b>' +
-          '<span class="k8-ap-meta">' + esc(l.prayerSlot || '-') + ' · ' + esc(l.date || '-') + '</span><span class="k8-ap-why">เหตุผล: ' + esc([l.reasonPreset, l.reasonDetail].filter(Boolean).join(' · ') || '-') + '</span>' +
+          '<span class="k8-ap-meta">' + esc(l.prayerSlot || '-') + ' · ' + esc(l.date || '-') + '</span>' + (l.photoUrl ? (function () { const ps = String(l.photoSource || ''); const cam = /camera|กล้อง/.test(ps); const gal = /gallery|แนบ/.test(ps); return '<span class="k8-ap-src ' + (cam ? 'is-cam' : gal ? 'is-gal' : '') + '">' + (cam ? '📷 ถ่ายจากกล้อง' : gal ? '🖼️ แนบจากเครื่อง' : 'รูปแนบ (ไม่ทราบที่มา)') + '</span>'; })() : '') + '<span class="k8-ap-why">เหตุผล: ' + esc([l.reasonPreset, l.reasonDetail].filter(Boolean).join(' · ') || '-') + '</span>' +
           (s === 'pending'
             ? '<div class="k8-ap-acts2"><button type="button" class="is-ok" onclick="adminApprovePrayerRequest(\'' + js(l.id) + '\')">อนุมัติ</button><button type="button" class="is-no" onclick="adminRejectPrayerRequest(\'' + js(l.id) + '\')">ไม่อนุมัติ</button></div>'
             : '<span class="k8-ap-done" style="color:' + (s === 'approved' ? '#15803d' : '#b91c1c') + '">' + (s === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ') + (l.approvedBy || l.rejectedBy ? ' โดย ' + esc(l.approvedBy || l.rejectedBy) : '') + '</span>') +
@@ -2909,7 +2909,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.1';
+  const APP_VERSION = '17.2';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6595,10 +6595,10 @@ window.k8RegBirthChange = function (v) {
   const sync = () => {
     let n = 0; try { n = (selectedPrayerNoteTimeSlots || []).length; } catch (e) {}
     const sel = document.getElementById('prayerNoteTimeSelectedText'); if (sel && !n) sel.innerHTML = '';
-    const sv = document.querySelector('.k8-pn-save'); if (sv) { sv.textContent = n ? 'บันทึกหมายเหตุ · ' + (n === 5 ? 'ครบ 5 เวลา' : n + ' เวลา') : 'เลือกเวลาละหมาดก่อน'; sv.classList.toggle('is-off', !n); }
+    const sv = document.querySelector('.k8-pn-save'); if (sv) { if (sv.disabled) return; sv.textContent = n ? 'ส่งคำร้องให้แอดมิน · ' + (n === 5 ? 'ครบ 5 เวลา' : n + ' เวลา') : 'เลือกเวลาละหมาดก่อน'; sv.classList.toggle('is-off', !n); }
     const v = ((document.getElementById('prayerNoteInput') || {}).value || '');
     let any = false;
-    document.querySelectorAll('.k8-pn-reasons .prayer-preset-btn:not(.k8-pn-other)').forEach((b) => { const t = (b.querySelector('b') || {}).textContent || ''; const key = t.split('/')[0].trim().replace('กำลังเดินทาง', 'เดินทาง'); const on = !!key && v.indexOf(key) !== -1; b.classList.toggle('is-on', on); if (on) any = true; });
+    document.querySelectorAll('.k8-pn-reasons .prayer-preset-btn:not(.k8-pn-other)').forEach((b) => { const t = (b.querySelector('b') || {}).textContent || ''; const key = b.dataset.key || t.split('/')[0].trim().replace('กำลังเดินทาง', 'เดินทาง'); const on = !!key && v.indexOf(key) !== -1; b.classList.toggle('is-on', on); if (on) any = true; });
     const ot = document.querySelector('.k8-pn-other'); const otherOn = !any && (otherMode || !!v.trim()); if (ot) ot.classList.toggle('is-on', otherOn);
     const s3 = document.getElementById('k8PnStep3'); if (s3) s3.innerHTML = otherOn ? 'ระบุเหตุผล <small style="color:#b91c1c">(จำเป็น)</small>' : 'รายละเอียด <small>(ไม่บังคับ)</small>';
   };
@@ -6624,4 +6624,170 @@ window.k8RegBirthChange = function (v) {
   const o = window.openPhotoViewerModal;
   if (typeof o === 'function') window.openPhotoViewerModal = function () { setup(); const r = o.apply(this, arguments); try { history.pushState({ k8pv: 1 }, ''); } catch (e) {} return r; };
   window.addEventListener('popstate', () => { const el = m(); if (el && el.classList.contains('open')) { try { closePhotoViewerModal(); } catch (e) {} } });
+})();
+
+/* ---------- v17.2 · หมายเหตุละหมาด = คำร้องถึงแอดมิน (รวม "ลืมเช็คชื่อ") · แนบ/ถ่ายรูป · เลือกได้ทุกเวลา ---------- */
+(function () {
+  const P = { photo: '', src: '' };
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const $ = (id) => document.getElementById(id);
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const thDate = (s) => { const d = new Date(s + 'T00:00:00'); if (isNaN(d)) return s; return d.getDate() + ' ' + TH_M[d.getMonth()] + ' ' + (d.getFullYear() + 543); };
+  function dateLbl() {
+    const inp = $('k8PnDate'), l = $('k8PnDateLbl'); if (!inp || !l) return;
+    const t = ymd(new Date()), y = ymd(new Date(Date.now() - 864e5));
+    l.textContent = inp.value === t ? 'วันนี้' : inp.value === y ? 'เมื่อวาน' : thDate(inp.value);
+  }
+  function initDate() {
+    const inp = $('k8PnDate'); if (!inp) return;
+    const now = new Date();
+    inp.max = ymd(new Date(now.getTime() + 7 * 864e5));
+    inp.min = ymd(new Date(now.getTime() - 30 * 864e5));
+    if (!inp.value) inp.value = ymd(now);
+    if (!inp.dataset.k8) { inp.dataset.k8 = '1'; inp.addEventListener('change', dateLbl); }
+    dateLbl();
+  }
+  function mine() {
+    const el = $('k8PnMineN'); if (!el) return;
+    let n = 0; try { const sid = currentStudent && currentStudent.studentId; n = (getPrayerApprovalsList() || []).filter((r) => r.studentId === sid && String(r.status || 'pending').toLowerCase() === 'pending').length; } catch (e) {}
+    el.textContent = n ? '· รออนุมัติ ' + n : '';
+  }
+  // ปุ่มบันทึก: บอกจำนวนเวลา
+  function syncSave() {
+    let n = 0; try { n = (selectedPrayerNoteTimeSlots || []).length; } catch (e) {}
+    const sv = document.querySelector('.k8-pn-save');
+    if (sv && !sv.disabled) { sv.textContent = n ? 'ส่งคำร้องให้แอดมิน · ' + (n === 5 ? 'ครบ 5 เวลา' : n + ' เวลา') : 'เลือกเวลาละหมาดก่อน'; sv.classList.toggle('is-off', !n); }
+  }
+  ['updatePrayerNoteChipsUI', 'togglePrayerNoteTime', 'selectAllPrayerNoteTimes', 'applyPrayerNotePreset', 'togglePrayerNotesCollapse'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(() => { syncSave(); initDate(); mine(); }, 1); return r; }; });
+
+  // เหตุผล "ลืมเช็คชื่อ"
+  const ap = window.applyPrayerNotePreset;
+  window.applyPrayerNotePreset = function (k) {
+    if (k === 'forgot') {
+      const inp = $('prayerNoteInput'); if (inp) inp.value = 'ละหมาดแล้วแต่ลืมกดเช็คชื่อ';
+      const r = ap ? ap.call(this, '__none__') : null; // ให้ wrapper อื่นรีเซ็ตโหมด "อื่น ๆ"
+      try { updatePrayerNoteChipsUI(); } catch (e) {}
+      return r;
+    }
+    return ap ? ap.apply(this, arguments) : null;
+  };
+  // ไฮไลต์ปุ่มที่มี data-key
+  function hlForgot() {
+    const b = document.querySelector('.k8-pn-forgot'); if (!b) return;
+    const v = (($('prayerNoteInput') || {}).value || '');
+    const on = v.indexOf(b.dataset.key) !== -1; b.classList.toggle('is-on', on);
+    if (on) { const o = document.querySelector('.k8-pn-other'); if (o) o.classList.remove('is-on'); const s3 = $('k8PnStep3'); if (s3) s3.innerHTML = 'รายละเอียด <small>(ไม่บังคับ)</small>'; }
+  }
+  document.addEventListener('input', (e) => { if (e.target && e.target.id === 'prayerNoteInput') setTimeout(hlForgot, 0); });
+  ['updatePrayerNoteChipsUI', 'applyPrayerNotePreset', 'k8PnOther'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(hlForgot, 2); return r; }; });
+
+  // ---- รูปหลักฐาน: ถ่ายรูป / แนบรูป ----
+  window.k8PnPhoto = function (input, mode) {
+    const f = input && input.files && input.files[0]; if (!f) return;
+    if (!/^image\//.test(f.type || 'image/')) { toast('เลือกได้เฉพาะไฟล์รูปภาพ', 'warning'); input.value = ''; return; }
+    // ถ่ายจากกล้องจริง = เปิดผ่านปุ่มถ่ายรูป และไฟล์เพิ่งถูกสร้าง (ภายใน 3 นาที)
+    const fresh = f.lastModified && Math.abs(Date.now() - f.lastModified) < 3 * 60 * 1000;
+    const src = mode === 'camera' && fresh ? 'camera' : 'gallery';
+    const note = mode === 'camera' && !fresh ? 'รูปนี้ไม่ได้ถ่ายตอนนี้ ระบบจึงระบุว่าเป็นรูปแนบ' : '';
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1000; let w = img.width, h = img.height;
+        if (w > h && w > max) { h = Math.round(h * max / w); w = max; } else if (h > max) { w = Math.round(w * max / h); h = max; }
+        const bar = Math.max(30, Math.round(w * 0.06));
+        const c = document.createElement('canvas'); c.width = w; c.height = h + bar;
+        const x = c.getContext('2d');
+        x.drawImage(img, 0, 0, w, h);
+        const d = new Date();
+        x.fillStyle = src === 'camera' ? '#0369a1' : '#b45309'; x.fillRect(0, h, w, bar);
+        x.fillStyle = '#fff'; x.font = '600 ' + Math.round(bar * 0.5) + 'px "IBM Plex Sans Thai", sans-serif'; x.textBaseline = 'middle';
+        x.fillText((src === 'camera' ? 'ถ่ายจากกล้อง' : 'แนบจากเครื่อง') + ' · ' + d.getDate() + ' ' + TH_M[d.getMonth()] + ' ' + (d.getFullYear() + 543) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' น.', Math.round(bar * 0.4), h + bar / 2);
+        P.photo = c.toDataURL('image/jpeg', 0.72); P.src = src;
+        const pv = $('k8PnPrev'), im = $('k8PnPrevImg'), s = $('k8PnSrc'), sn = $('k8PnSrcNote'), bt = $('k8PnPBtns');
+        if (im) im.src = P.photo;
+        if (s) { s.textContent = src === 'camera' ? '📷 ถ่ายจากกล้อง' : '🖼️ แนบจากเครื่อง'; s.className = 'k8-pn-src is-' + src; }
+        if (sn) sn.textContent = note;
+        if (pv) pv.hidden = false; if (bt) bt.hidden = true;
+      };
+      img.onerror = () => toast('เปิดรูปนี้ไม่ได้ ลองรูปอื่น', 'error');
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+    input.value = '';
+  };
+  window.k8PnPhotoClear = function () {
+    P.photo = ''; P.src = '';
+    const pv = $('k8PnPrev'), bt = $('k8PnPBtns'), im = $('k8PnPrevImg');
+    if (pv) pv.hidden = true; if (bt) bt.hidden = false; if (im) im.removeAttribute('src');
+  };
+
+  // ---- ส่งคำร้อง (แทนการบันทึกตรง) ----
+  let busy = false;
+  window.savePrayerNoteOnly = async function () {
+    if (busy) return;
+    if (typeof currentStudent === 'undefined' || !currentStudent) { toast('กรุณาเข้าสู่ระบบนักเรียนก่อน', 'warning'); return; }
+    if (typeof window.k8IsPreview === 'function' && window.k8IsPreview()) { toast('โหมดดูตัวอย่าง · ส่งคำร้องไม่ได้', 'info'); return; }
+    let slots = []; try { slots = (selectedPrayerNoteTimeSlots || []).slice(); } catch (e) {}
+    if (!slots.length) { toast('เลือกเวลาละหมาดอย่างน้อย 1 เวลา', 'warning'); const g = document.querySelector('.k8-pn-times'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    const inp = $('prayerNoteInput'); const reason = inp ? inp.value.trim() : '';
+    if (!reason) { toast('เลือกเหตุผลในข้อ 1 หรือพิมพ์เหตุผลในข้อ 3', 'warning'); if (inp) inp.focus(); return; }
+    initDate();
+    const date = ($('k8PnDate') || {}).value || ymd(new Date());
+    const KNOWN = ['ละหมาดแล้วแต่ลืมกดเช็คชื่อ', 'มีประจำเดือน / อุซุรทางศาสนา', 'ลาป่วย / มีไข้', 'กำลังเดินทาง (มุซาฟิร)', 'ละหมาดที่บ้าน', 'ญะมาอะฮ์แถวแรก'];
+    const isKnown = KNOWN.indexOf(reason) !== -1;
+    const preset = isKnown ? reason : 'อื่น ๆ';
+    let list = []; try { list = getPrayerApprovalsList() || []; } catch (e) {}
+    const sid = currentStudent.studentId;
+    const dup = slots.filter((sl) => list.some((r) => r.studentId === sid && r.prayerSlot === sl && r.date === date && String(r.status || 'pending').toLowerCase() === 'pending'));
+    const todo = slots.filter((sl) => dup.indexOf(sl) === -1);
+    if (!todo.length) { toast('ส่งคำร้อง ' + dup.join(', ') + ' ของวันนี้ไปแล้ว · รอแอดมินตรวจสอบ', 'warning'); return; }
+    const sv = document.querySelector('.k8-pn-save');
+    busy = true; if (sv) { sv.disabled = true; sv.textContent = 'กำลังส่งคำร้อง…'; }
+    let photo = P.photo, ok = 0, fail = 0; const src = P.photo ? P.src : '';
+    const sub = new Date().toLocaleString('th-TH');
+    for (let i = 0; i < todo.length; i++) {
+      const item = {
+        id: 'PREQ-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        studentId: sid, studentName: currentStudent.fullName || currentStudent.name || '-', grade: currentStudent.grade || '-',
+        parentPhone: currentStudent.parentPhone || currentStudent.phone || '',
+        prayerSlot: todo[i], date: date, reasonPreset: preset, reasonDetail: isKnown ? '' : reason,
+        photoUrl: photo || '', photoSource: src, status: 'pending', createdAt: new Date().toISOString(), submittedAtFormatted: sub,
+        approvedBy: null, approvedAt: null, rejectedBy: null, rejectedAt: null, adminNote: ''
+      };
+      let r = null; try { r = await gasApiCall('prayerLateRequest', { data: item }, 45000); } catch (e) { r = null; }
+      if (r && r.success) { ok++; if (r.photoUrl) { photo = r.photoUrl; item.photoUrl = r.photoUrl; } if (r.photoSource) item.photoSourceLabel = r.photoSource; }
+      else { fail++; try { syncRecordToGoogleSheet('prayerLateRequest', item); } catch (e) {} }
+      // เก็บในเครื่อง (ไม่เก็บรูป base64 ขนาดใหญ่ซ้ำทุกเวลา)
+      const local = Object.assign({}, item); if (/^data:/.test(local.photoUrl) && i > 0) local.photoUrl = '';
+      list.unshift(local);
+    }
+    try { savePrayerApprovalsList(list); } catch (e) {}
+    busy = false; if (sv) sv.disabled = false;
+    try { selectAllPrayerNoteTimes(false); } catch (e) {}
+    if (inp) inp.value = '';
+    window.k8PnPhotoClear();
+    try { updatePrayerNoteChipsUI(); } catch (e) {}
+    syncSave(); mine();
+    try { updateStudentPendingReqBadge(); } catch (e) {}
+    try { refreshPrayerChipsStatus(); } catch (e) {}
+    const msg = 'ส่งคำร้อง ' + todo.join(', ') + ' (' + thDate(date) + ') แล้ว · รอแอดมินอนุมัติ' + (dup.length ? ' · ข้าม ' + dup.join(', ') + ' (ส่งไปแล้ว)' : '');
+    toast(fail && !ok ? 'ส่งไม่สำเร็จ ระบบจะลองส่งใหม่อัตโนมัติ' : msg, fail && !ok ? 'warning' : 'success');
+  };
+
+  // ปุ่ม/ลิงก์ "ลืมเช็คชื่อ" เดิม → เปิดการ์ดนี้แทนหน้าต่างแยก
+  const olm = window.openPrayerLateApprovalModal;
+  window.openPrayerLateApprovalModal = function (slot) {
+    const card = $('prayerNotesCard');
+    if (!card) return olm ? olm.apply(this, arguments) : null;
+    try { if (typeof switchView === 'function' && !document.querySelector('#view-prayer.active, #view-prayer[style*="block"]')) switchView('prayer'); } catch (e) {}
+    try { togglePrayerNotesCollapse(true); } catch (e) {}
+    window.applyPrayerNotePreset('forgot');
+    if (slot) { try { selectAllPrayerNoteTimes(false); togglePrayerNoteTime(slot); } catch (e) {} }
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  };
+
+  const go = () => { initDate(); syncSave(); mine(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
 })();

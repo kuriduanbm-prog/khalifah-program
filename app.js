@@ -3999,6 +3999,14 @@ function renderAdminPrayerApprovals() {
 /**
  * แอดมิน/อาจารย์กดอนุมัติคำขอละหมาด
  */
+/** v17.2 · สถานะที่บันทึกเมื่ออนุมัติ ตามเหตุผลของคำร้อง */
+function prayerApprovedStatus_(req) {
+  const t = String((req && req.reasonPreset) || '') + ' ' + String((req && req.reasonDetail) || '');
+  if (/ประจำเดือน|อุซุร/.test(t)) return 'อุซุร (มีประจำเดือน)';
+  if (/ป่วย/.test(t)) return 'ลาป่วย';
+  return 'อนุมัติย้อนหลังโดยอาจารย์/แอดมิน';
+}
+
 function adminApprovePrayerRequest(reqId) {
   const list = getPrayerApprovalsList();
   const req = list.find(r => r.id === reqId);
@@ -4026,7 +4034,7 @@ function adminApprovePrayerRequest(reqId) {
     timeSlot: req.prayerSlot,
     date: req.date,
     time: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น. (อนุมัติย้อนหลัง)',
-    status: 'อนุมัติย้อนหลังโดยอาจารย์/แอดมิน',
+    status: prayerApprovedStatus_(req),
     note: `อนุมัติกรณีพิเศษ (เหตุผล: ${req.reasonPreset || req.reasonDetail || 'ลืมเช็คชื่อ'})`,
     location: 'อนุมัติผ่านระบบ (คำขอย้อนหลัง)',
     photoUrl: req.photoUrl || '',
@@ -4816,9 +4824,7 @@ function updatePrayerNoteChipsUI() {
       chip.classList.remove('active');
     }
 
-    if (slotStatus.isPast && !isExcused) {
-      chip.classList.add('slot-expired');
-      chip.title = `หมดเวลาละหมาด ${t} แล้ว (ไม่อนุญาตให้บันทึกย้อนหลัง)`;
+    if (false) {
     } else {
       chip.classList.remove('slot-expired');
       chip.title = `เวลา ${t}`;
@@ -4858,18 +4864,7 @@ function togglePrayerNoteTime(time) {
   const slotStatus = getPrayerSlotTimeStatus(time);
   const idx = selectedPrayerNoteTimeSlots.indexOf(time);
 
-  // ป้องกันการเลือกบันทึกช่วงเวลาย้อนหลัง (ยกเว้นกรณีมีประจำเดือน/ลาป่วย)
-  if (idx === -1 && slotStatus.isPast && !isExcused) {
-    showToast(`⚠️ ไม่สามารถเลือกบันทึกเวลา ${time} ย้อนหลังได้ เนื่องจากหมดเวลาแล้ว (อนุญาตเฉพาะกรณีมีประจำเดือน/ลาป่วย)`, 'warning');
-    return;
-  }
-
-  // ป้องกันการเลือกบันทึกเวลาล่วงหน้า
-  if (idx === -1 && slotStatus.isFuture && !isExcused) {
-    showToast(`⚠️ ยังไม่ถึงช่วงเวลาละหมาด ${time} (${slotStatus.rangeLabel})`, 'warning');
-    return;
-  }
-
+  // v17.2 · เลือกได้ทุกเวลา ไม่ล็อก (ทุกรายการเป็นคำร้องให้แอดมินอนุมัติ)
   if (idx > -1) {
     selectedPrayerNoteTimeSlots.splice(idx, 1);
   } else {
@@ -4890,22 +4885,7 @@ function selectAllPrayerNoteTimes(selectAll = true) {
     const noteText = noteInput ? noteInput.value.trim() : '';
     const isExcused = noteText.includes('ประจำเดือน') || noteText.includes('อุซุร') || noteText.includes('ป่วย');
 
-    if (isExcused) {
-      selectedPrayerNoteTimeSlots = [...ALL_PRAYERS];
-    } else {
-      // กรณีทั่วไป: เลือกเฉพาะช่วงเวลาละหมาดที่อยู่ในเวลาปัจจุบันเท่านั้น (ไม่รวมเวลาย้อนหลัง)
-      const activeSlots = ALL_PRAYERS.filter(p => {
-        const st = getPrayerSlotTimeStatus(p);
-        return st.isActive;
-      });
-      if (activeSlots.length > 0) {
-        selectedPrayerNoteTimeSlots = activeSlots;
-        showToast('เลือกเฉพาะช่วงเวลาละหมาดที่อยู่ในเวลา (ไม่รวมเวลาย้อนหลัง)', 'info');
-      } else {
-        selectedPrayerNoteTimeSlots = [];
-        showToast('⚠️ ไม่สามารถเลือกครบ 5 เวลาได้เนื่องจากมีเวลาที่หมดไปแล้ว (การเลือกครบ 5 เวลาอนุญาตเฉพาะกรณีมีประจำเดือน/ลาป่วยเท่านั้น)', 'warning');
-      }
-    }
+    selectedPrayerNoteTimeSlots = [...ALL_PRAYERS];
   } else {
     selectedPrayerNoteTimeSlots = [];
   }
