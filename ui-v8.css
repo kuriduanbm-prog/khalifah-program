@@ -3161,3 +3161,18 @@ html.k8-narrow .prayer-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr
   .k8-pt-search { order: 3; flex: 1 1 100%; }
 }
 html.k8-narrow .k8-pt-xls span { display: none; }
+/* v17.9 · รูปสรุปการละหมาด */
+.k8-pt-img { flex: none; height: 46px; display: flex; align-items: center; gap: 6px; padding: 0 14px; border: 0; border-radius: 12px; background: #0369a1; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-pt-img:hover { background: #075985; }
+@media (max-width: 640px) { .k8-pt-img { order: 2; } .k8-pt-sel { flex: 1 1 100% !important; order: 1; } .k8-pt-img, .k8-pt-xls { flex: 1 1 0; justify-content: center; } }
+html.k8-narrow .k8-pt-img span { display: none; }
+.k8-ps-sheet { max-width: 760px !important; }
+.k8-ps-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.k8-ps-chips button { min-height: 40px; padding: 0 14px; border: 1.5px solid #e2e8f0; border-radius: 999px; background: #fff; color: #334155; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-ps-chips button.on { background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-ps-prev { max-height: 56vh; overflow: auto; border: 1px solid #e2e8f0; border-radius: 14px; background: #f8fafc; padding: 8px; }
+.k8-ps-prev img { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 10px rgba(15,23,42,.08); }
+.k8-ps-btns { margin-top: 12px; }
+.k8-ps-btns [hidden] { display: none !important; }
+.k8-ps-btns button:not(.is-alt) { background: #0369a1 !important; color: #fff !important; }
+.k8-ps-btns button.is-alt { background: #f1f5f9 !important; color: #0f172a !important; }

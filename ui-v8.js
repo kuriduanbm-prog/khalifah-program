@@ -2913,7 +2913,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.8';
+  const APP_VERSION = '17.9';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7011,4 +7011,175 @@ window.k8RegBirthChange = function (v) {
   ['renderAdminPrayerDailyDashboard', 'adminPrayerChangeDate', 'adminPrayerSetToday'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(lbl, 0); return r; }; });
   document.addEventListener('change', (e) => { if (e.target && e.target.id === 'adminPrayerDateSelect') lbl(); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lbl); else lbl();
+})();
+
+/* ---------- v17.9 · รูปสรุปการละหมาด (เลือกเวลาเดียว/ทุกเวลา) ---------- */
+(function () {
+  const V = { slot: 'ALL', blob: null, url: '', name: '' };
+  const FONT = '"IBM Plex Sans Thai", sans-serif';
+  const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const DN = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const CAT = { ok: ['ตรงเวลา', '#16a34a', '#dcfce7', '#166534'], late: ['มาสาย', '#f59e0b', '#fef3c7', '#92400e'], ex: ['ลา / อุซุร', '#8b5cf6', '#ede9fe', '#5b21b6'], abs: ['ขาด', '#ef4444', '#fee2e2', '#991b1b'], none: ['ยังไม่เช็คชื่อ', '#94a3b8', '#f1f5f9', '#334155'] };
+  const ORDER = ['ok', 'late', 'ex', 'abs', 'none'];
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function kind(st) { st = String(st || ''); if (/อุซุร|ประจำเดือน|ป่วย|^ลา|ลากิจ|ลาหยุด/.test(st)) return 'ex'; if (/สาย|ช้า/.test(st)) return 'late'; if (/ไม่มา|ขาด/.test(st)) return 'abs'; return 'ok'; }
+  const gShort = (g) => { const m = String(g || '').match(/(\d)/); return m ? 'ม.' + m[1] : String(g || '-'); };
+  const tShort = (t) => { const m = String(t || '').match(/(\d{1,2})[:.](\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : ''; };
+  function data() {
+    let all = [], map = {}, slots = [];
+    try { all = cachedDailyFilteredStudents || []; map = cachedDailyStudentPrayerMap || {}; slots = CANONICAL_PRAYERS || []; } catch (e) {}
+    const cid = (v) => { try { return cleanIdString(v); } catch (e) { return String(v || '').trim(); } };
+    const rows = all.map((s) => { const sid = cid(s.studentId); const p = map[sid] || {}; const c = {}; slots.forEach((x) => { const r = p[x.key]; c[x.key] = r ? { k: kind(r.status), t: tShort(r.time) } : { k: 'none', t: '' }; }); return { sid: sid, name: s.fullName || sid, grade: gShort(s.grade), c: c }; });
+    rows.sort((a, b) => a.grade.localeCompare(b.grade, 'th', { numeric: true }) || String(a.name).localeCompare(String(b.name), 'th'));
+    const dv = ((document.getElementById('adminPrayerDateSelect') || {}).value) || new Date().toISOString().slice(0, 10);
+    const d = new Date(dv + 'T00:00:00');
+    const gsel = document.getElementById('adminPrayerGradeFilter');
+    const gl = gsel && gsel.value !== 'ALL' ? String(gsel.options[gsel.selectedIndex].text).replace(/\s*\(.*\)\s*$/, '') : 'ทุกระดับชั้น';
+    return { rows: rows, slots: slots, dateTxt: 'วัน' + DN[d.getDay()] + ' ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543), dateKey: dv, grade: gl };
+  }
+  const fit = (ctx, t, w) => { t = String(t); if (ctx.measureText(t).width <= w) return t; while (t.length > 1 && ctx.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
+  function rr(ctx, x, y, w, h, r, fill, stroke, lw) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 2; ctx.stroke(); } }
+  function header(ctx, W, title, sub, D) {
+    ctx.fillStyle = '#0369a1'; ctx.fillRect(0, 0, W, 220);
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = '600 30px ' + FONT; ctx.textAlign = 'left'; ctx.fillText('KHALIFAH · สรุปการละหมาด', 60, 70);
+    ctx.fillStyle = '#fff'; ctx.font = '700 64px ' + FONT; ctx.fillText(title, 60, 150);
+    ctx.font = '400 32px ' + FONT; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillText(D.dateTxt + ' · ' + D.grade + (sub ? ' · ' + sub : ''), 60, 198);
+  }
+  function stats(ctx, x, y, W, counts, total) {
+    const gap = 16, n = ORDER.length, bw = (W - gap * (n - 1)) / n, bh = 130;
+    ORDER.forEach((k, i) => {
+      const bx = x + i * (bw + gap); rr(ctx, bx, y, bw, bh, 20, CAT[k][2]);
+      ctx.textAlign = 'center'; ctx.fillStyle = CAT[k][3]; ctx.font = '700 56px ' + FONT; ctx.fillText(String(counts[k] || 0), bx + bw / 2, y + 66);
+      ctx.font = '600 26px ' + FONT; ctx.fillText(CAT[k][0], bx + bw / 2, y + 108);
+    });
+    ctx.textAlign = 'left';
+    return bh;
+  }
+  function drawSingle(D, slot) {
+    const W = 1240, P = 60, IW = W - P * 2;
+    const groups = {}; ORDER.forEach((k) => { groups[k] = []; });
+    D.rows.forEach((r) => groups[r.c[slot.key].k].push(r));
+    const COLS = 1, LH = 50, colW = IW / COLS;
+    let H = 220 + 40 + 130 + 40;
+    ORDER.forEach((k) => { if (groups[k].length) H += 76 + Math.ceil(groups[k].length / COLS) * LH + 30; });
+    H += 90; if (!D.rows.length) H += 80;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    header(ctx, W, 'ละหมาด' + slot.label, slot.range ? String(slot.range).replace(' น.', '') + ' น.' : '', D);
+    let y = 260;
+    const counts = {}; ORDER.forEach((k) => { counts[k] = groups[k].length; });
+    y += stats(ctx, P, y, IW, counts, D.rows.length) + 40;
+    ORDER.forEach((k) => {
+      const list = groups[k]; if (!list.length) return;
+      rr(ctx, P, y, IW, 60, 14, CAT[k][2]);
+      ctx.fillStyle = CAT[k][1]; ctx.beginPath(); ctx.arc(P + 32, y + 30, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = CAT[k][3]; ctx.font = '700 32px ' + FONT; ctx.fillText(CAT[k][0] + '  ' + list.length + ' คน', P + 56, y + 41);
+      y += 76;
+      list.forEach((r, i) => {
+        const col = i % COLS, row = Math.floor(i / COLS); const x = P + col * colW, yy = y + row * LH + 36;
+        ctx.fillStyle = '#94a3b8'; ctx.font = '400 26px ' + FONT; ctx.fillText((i + 1) + '.', x + 6, yy);
+        const tail = r.grade + ((k === 'ok' || k === 'late') && r.c[slot.key].t ? ' · ' + r.c[slot.key].t : '');
+        ctx.font = '400 26px ' + FONT; const tw = ctx.measureText(tail).width;
+        ctx.fillStyle = '#0f172a'; ctx.font = '600 28px ' + FONT; ctx.fillText(fit(ctx, r.name, colW - tw - 90), x + 52, yy);
+        ctx.fillStyle = '#64748b'; ctx.font = '400 26px ' + FONT; ctx.textAlign = 'right'; ctx.fillText(tail, x + colW - 20, yy); ctx.textAlign = 'left';
+      });
+      y += Math.ceil(list.length / COLS) * LH + 30;
+    });
+    if (!D.rows.length) { ctx.fillStyle = '#64748b'; ctx.font = '400 30px ' + FONT; ctx.fillText('ไม่มีนักเรียนในกลุ่มนี้', P, y + 40); }
+    foot(ctx, W, H, D.rows.length);
+    return cv;
+  }
+  function drawAll(D) {
+    const W = 1600, P = 50, IW = W - P * 2, RH = 54, HH = 64;
+    const slots = D.slots;
+    const H = 220 + 30 + 210 + 30 + HH + Math.max(1, D.rows.length) * RH + 40 + 60 + 90;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    header(ctx, W, 'สรุปการละหมาด 5 เวลา', '', D);
+    let y = 250;
+    // สรุปต่อเวลา
+    const bw = (IW - 16 * 4) / 5;
+    slots.forEach((s, i) => {
+      const x = P + i * (bw + 16); rr(ctx, x, y, bw, 210, 18, '#f8fafc', '#e2e8f0');
+      ctx.fillStyle = '#0369a1'; ctx.font = '700 34px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(s.label, x + bw / 2, y + 46); ctx.textAlign = 'left';
+      ORDER.forEach((k, j) => {
+        const n = D.rows.filter((r) => r.c[s.key].k === k).length; const ly = y + 84 + j * 26;
+        ctx.fillStyle = CAT[k][1]; ctx.fillRect(x + 20, ly - 15, 14, 14);
+        ctx.fillStyle = '#334155'; ctx.font = '400 22px ' + FONT; ctx.fillText(CAT[k][0], x + 44, ly);
+        ctx.font = '700 22px ' + FONT; ctx.textAlign = 'right'; ctx.fillText(String(n), x + bw - 20, ly); ctx.textAlign = 'left';
+      });
+    });
+    y += 240;
+    // ตาราง
+    const cNo = 70, cGr = 100, cSum = 110, cSlot = 150; const cName = IW - cNo - cGr - cSum - cSlot * 5;
+    rr(ctx, P, y, IW, HH, 14, '#0369a1');
+    ctx.fillStyle = '#fff'; ctx.font = '600 26px ' + FONT;
+    let x = P; ctx.textAlign = 'center'; ctx.fillText('#', x + cNo / 2, y + 42); x += cNo; ctx.textAlign = 'left'; ctx.fillText('ชื่อ - นามสกุล', x + 12, y + 42); x += cName; ctx.textAlign = 'center'; ctx.fillText('ชั้น', x + cGr / 2, y + 42); x += cGr;
+    slots.forEach((s) => { ctx.fillText(s.label, x + cSlot / 2, y + 42); x += cSlot; }); ctx.fillText('รวม', x + cSum / 2, y + 42);
+    y += HH;
+    D.rows.forEach((r, i) => {
+      if (i % 2) { ctx.fillStyle = '#f8fafc'; ctx.fillRect(P, y, IW, RH); }
+      let x2 = P; ctx.textAlign = 'center'; ctx.fillStyle = '#94a3b8'; ctx.font = '400 24px ' + FONT; ctx.fillText(String(i + 1), x2 + cNo / 2, y + 36); x2 += cNo;
+      ctx.textAlign = 'left'; ctx.fillStyle = '#0f172a'; ctx.font = '600 26px ' + FONT; ctx.fillText(fit(ctx, r.name, cName - 24), x2 + 12, y + 36); x2 += cName;
+      ctx.textAlign = 'center'; ctx.fillStyle = '#475569'; ctx.font = '400 24px ' + FONT; ctx.fillText(r.grade, x2 + cGr / 2, y + 36); x2 += cGr;
+      let n = 0;
+      slots.forEach((s) => {
+        const c = r.c[s.key]; if (c.k === 'ok' || c.k === 'late') n++;
+        const t = c.k === 'ok' ? (c.t || '✓') : c.k === 'late' ? 'สาย' + (c.t ? ' ' + c.t : '') : c.k === 'ex' ? 'ลา' : c.k === 'abs' ? 'ขาด' : '–';
+        if (c.k !== 'none') rr(ctx, x2 + 10, y + 8, cSlot - 20, RH - 16, 10, CAT[c.k][1]); else rr(ctx, x2 + 10, y + 8, cSlot - 20, RH - 16, 10, null, '#cbd5e1', 2);
+        ctx.fillStyle = c.k === 'none' ? '#94a3b8' : '#fff'; ctx.font = '600 22px ' + FONT; ctx.fillText(fit(ctx, t, cSlot - 28), x2 + cSlot / 2, y + 35); x2 += cSlot;
+      });
+      ctx.fillStyle = n === 5 ? '#15803d' : n === 0 ? '#b91c1c' : '#0f172a'; ctx.font = '700 26px ' + FONT; ctx.fillText(n + '/5', x2 + cSum / 2, y + 36);
+      ctx.textAlign = 'left'; y += RH;
+    });
+    if (!D.rows.length) { ctx.fillStyle = '#64748b'; ctx.font = '400 28px ' + FONT; ctx.fillText('ไม่มีนักเรียนในกลุ่มนี้', P + 20, y + 36); y += RH; }
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 2; ctx.strokeRect(P, 250 + 240, IW, y - (250 + 240));
+    // คำอธิบาย
+    y += 40; let lx = P;
+    ORDER.forEach((k) => { ctx.fillStyle = CAT[k][1]; rr(ctx, lx, y - 20, 22, 22, 6, k === 'none' ? null : CAT[k][1], k === 'none' ? '#cbd5e1' : null); ctx.fillStyle = '#475569'; ctx.font = '400 24px ' + FONT; ctx.fillText(CAT[k][0], lx + 32, y); lx += ctx.measureText(CAT[k][0]).width + 80; });
+    ctx.fillText('· รวม = ตรงเวลา + สาย', lx, y);
+    foot(ctx, W, H, D.rows.length);
+    return cv;
+  }
+  function foot(ctx, W, H, n) {
+    const d = new Date();
+    ctx.fillStyle = '#94a3b8'; ctx.font = '400 22px ' + FONT; ctx.textAlign = 'left';
+    ctx.fillText('นักเรียน ' + n + ' คน · สร้างเมื่อ ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' น.', 50, H - 36);
+    ctx.textAlign = 'right'; ctx.fillText('khalifah-program.vercel.app', W - 50, H - 36); ctx.textAlign = 'left';
+  }
+  async function build() {
+    const prev = document.getElementById('k8PsPrev'); if (prev) prev.innerHTML = '<div class="k8-li-empty">กำลังสร้างรูป…</div>';
+    try { await Promise.all(['400', '600', '700'].map((w) => document.fonts.load(w + ' 30px "IBM Plex Sans Thai"', 'กขค'))); } catch (e) {}
+    const D = data();
+    const slot = D.slots.find((s) => s.key === V.slot);
+    const cv = slot ? drawSingle(D, slot) : drawAll(D);
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+    if (V.url) URL.revokeObjectURL(V.url);
+    V.blob = blob; V.url = blob ? URL.createObjectURL(blob) : '';
+    V.name = 'สรุปละหมาด_' + (slot ? slot.label : '5เวลา') + '_' + D.dateKey + (D.grade !== 'ทุกระดับชั้น' ? '_' + D.grade.replace(/\s+/g, '') : '') + '.png';
+    if (prev) prev.innerHTML = V.url ? '<img src="' + V.url + '" alt="รูปสรุปการละหมาด">' : '<div class="k8-li-empty">สร้างรูปไม่สำเร็จ</div>';
+    const sub = document.getElementById('k8PsSub'); if (sub) sub.textContent = D.dateTxt + ' · ' + D.grade + ' · ' + D.rows.length + ' คน';
+    const sh = document.getElementById('k8PsShare');
+    if (sh) { let ok = false; try { ok = !!(blob && navigator.canShare && navigator.canShare({ files: [new File([blob], V.name, { type: 'image/png' })] })); } catch (e) {} sh.hidden = !ok; }
+  }
+  function chips() {
+    const el = document.getElementById('k8PsChips'); if (!el) return;
+    let slots = []; try { slots = CANONICAL_PRAYERS || []; } catch (e) {}
+    el.innerHTML = [{ key: 'ALL', label: 'ทุกเวลา (5 เวลา)' }].concat(slots).map((s) => '<button type="button" role="tab" aria-selected="' + (V.slot === s.key) + '" class="' + (V.slot === s.key ? 'on' : '') + '" onclick="k8PsSlot(\'' + s.key + '\')">' + esc(s.label) + '</button>').join('');
+  }
+  window.k8PsOpen = function () {
+    try { if (!(cachedDailyFilteredStudents || []).length && typeof renderAdminPrayerDailyDashboard === 'function') renderAdminPrayerDailyDashboard(); } catch (e) {}
+    chips(); try { openModal('k8PsModal'); } catch (e) {} build();
+  };
+  window.k8PsSlot = function (k) { V.slot = k; chips(); build(); };
+  window.k8PsSave = function () {
+    if (!V.blob) return;
+    const a = document.createElement('a'); a.href = V.url; a.download = V.name; document.body.appendChild(a); a.click(); a.remove();
+    toast('บันทึกรูปแล้ว', 'success');
+  };
+  window.k8PsShare = async function () {
+    if (!V.blob) return;
+    try { await navigator.share({ files: [new File([V.blob], V.name, { type: 'image/png' })], title: 'สรุปการละหมาด' }); } catch (e) { if (!e || e.name !== 'AbortError') window.k8PsSave(); }
+  };
 })();
