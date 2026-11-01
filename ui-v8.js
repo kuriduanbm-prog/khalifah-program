@@ -2917,7 +2917,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.14';
+  const APP_VERSION = '17.15';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3202,12 +3202,11 @@ window.k8RegBirthChange = function (v) {
     const canEdit = (() => { const a = me(); return !!a && (isInspector() || /SUPER|^admin$|SubAdmin/i.test(String(a.role || ''))); })();
     if (B.editCat && B.editRules) {
       const cat = CATS.find((c) => c[0] === B.cat) || CATS[0]; const rows = B.editRules.map((r, i) => [r, i]).filter(([r]) => r.cat === B.cat);
-      h += '<section class="k8-bh-card k8-bh-editcat"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>แก้ไขหัวข้อ · ' + cat[1] + '</h2><p class="k8-bh-intro">' + (B.cat === 'good' ? 'แต่ละข้อเพิ่มคะแนน' : 'แต่ละข้อหักคะแนน') + ' 1–50 · บันทึกแล้วใช้ได้ทันทีทั้งผู้ตรวจการและแอดมิน</p>' +
+      h += '<section class="k8-bh-card k8-bh-editcat"><div class="k8-bh-stick"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>แก้ไขหัวข้อ · ' + cat[1] + '</h2><div class="k8-bh-editbtns"><button type="button" class="is-alt" onclick="k8BhEditCat(false)">ยกเลิก</button><button type="button" onclick="k8BhRulesSave()">บันทึก</button></div></div><p class="k8-bh-intro">' + (B.cat === 'good' ? 'แต่ละข้อเพิ่มคะแนน' : 'แต่ละข้อหักคะแนน') + ' 1–50 · บันทึกแล้วใช้ได้ทันทีทั้งผู้ตรวจการและแอดมิน</p>' +
         rows.map(([r, i]) => '<div class="k8-bh-rrow"><input type="text" maxlength="120" value="' + esc(r.title) + '" oninput="k8BhRule(' + i + ',\'title\',this.value)" aria-label="หัวข้อ" placeholder="ชื่อหัวข้อ"><span class="k8-bh-rpts ' + (B.cat === 'good' ? 'is-plus' : 'is-minus') + '">' + (B.cat === 'good' ? '+' : '−') + '<input type="number" min="1" max="50" inputmode="numeric" value="' + Math.abs(Number(r.points) || 0) + '" oninput="k8BhRule(' + i + ',\'points\',this.value)" aria-label="คะแนน"></span><button type="button" class="k8-bh-rdel" onclick="k8BhRuleDel(' + i + ')" aria-label="ลบหัวข้อ">✕</button></div>').join('') +
-        '<button type="button" class="k8-bh-link" onclick="k8BhRuleAdd(\'' + B.cat + '\')">+ เพิ่มหัวข้อ</button>' +
-        '<div class="k8-bh-editbtns"><button type="button" class="is-alt" onclick="k8BhEditCat(false)">ยกเลิก</button><button type="button" onclick="k8BhRulesSave()">บันทึกหัวข้อ</button></div></section>';
+        '<button type="button" class="k8-bh-link" onclick="k8BhRuleAdd(\'' + B.cat + '\')">+ เพิ่มหัวข้อ</button></section>';
     } else
-    h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>เลือกหัวข้อ' + (canEdit ? '<button type="button" class="k8-bh-editlink" onclick="k8BhEditCat(true)">✎ แก้ไขหัวข้อ</button>' : '') + '</h2><div class="k8-bh-rules">' +
+    h += '<section class="k8-bh-card"><div class="k8-bh-stick' + (canEdit ? '' : ' is-plain') + '"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>เลือกหัวข้อ' + (canEdit ? '<button type="button" class="k8-bh-editlink" onclick="k8BhEditCat(true)">✎ แก้ไขหัวข้อ</button>' : '') + '</h2></div><div class="k8-bh-rules">' +
       rules.map((r) => '<button type="button" aria-pressed="' + (B.ruleId === r.id) + '" onclick="k8BhSet(\'ruleId\',\'' + js(r.id) + '\')"><span>' + esc(r.title) + '</span><b class="' + (r.points > 0 ? 'is-plus' : 'is-minus') + '">' + (r.points > 0 ? '+' : '') + r.points + '</b></button>').join('') +
       '<button type="button" class="k8-bh-other" aria-pressed="' + custom + '" onclick="k8BhSet(\'ruleId\',\'__custom\')"><span>อื่น ๆ (ระบุเอง)</span><b>✎</b></button></div>' +
       (custom ? '<div class="k8-bh-custom"><input type="text" maxlength="120" placeholder="ระบุสิ่งที่ตรวจพบ" value="' + esc(B.custom.title) + '" oninput="k8BhCustom(\'title\', this.value)"><label>คะแนน<input type="number" inputmode="numeric" min="-20" max="20" value="' + esc(B.custom.points) + '" oninput="k8BhCustom(\'points\', this.value)"></label><small>ติดลบ = หักคะแนน · บวก = เพิ่มคะแนน (ครั้งละไม่เกิน 20)</small></div>' : '') + '</section>';

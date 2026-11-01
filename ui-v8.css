@@ -3278,3 +3278,15 @@ html.k8-narrow .k8-th-quick { grid-template-columns: repeat(3, minmax(0, 1fr)) !
 #k8ApTabs::-webkit-scrollbar { display: none; }
 #k8ApTabs button { white-space: nowrap; flex: 0 0 auto; }
 @media (max-width: 480px) { #k8ApTabs button { padding-left: 10px !important; padding-right: 10px !important; font-size: 14px !important; } }
+/* v17.15 · ผู้ตรวจการ: ปุ่มแก้ไข/บันทึกติดด้านบนเสมอ */
+.k8-bh-stick { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 6px); z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: -6px -6px 10px; padding: 8px 6px; border-radius: 14px; background: var(--k8-card, #fff); box-shadow: 0 6px 14px -10px rgba(15,23,42,.35); }
+.k8-bh-stick.is-plain { position: static; box-shadow: none; }
+.k8-bh-stick .k8-bh-h { margin: 0 !important; flex: 1 1 auto; min-width: 0; }
+.k8-bh-stick .k8-bh-editbtns { display: flex; gap: 6px; margin: 0; flex: none; }
+.k8-bh-stick .k8-bh-editbtns button { min-height: 42px; padding: 0 16px; font-size: 15px; border-radius: 12px; }
+.k8-bh-stick .k8-bh-editlink { min-height: 40px; }
+.k8-bh-card:has(.k8-bh-stick) { overflow: visible !important; }
+html[data-theme="dark"] .k8-bh-stick { background: #1e1e1e; }
+.k8-bh-stick .k8-bh-editbtns { margin-left: auto; }
+.k8-inspector { overflow-x: clip !important; overflow-y: visible !important; }
+.k8-bh-stick { top: 0; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); border-radius: 0 0 14px 14px; }
