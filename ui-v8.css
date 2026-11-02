@@ -4026,3 +4026,10 @@ html.k8-tp .k8-th-hero .k8-th-kpi.is-hl { flex-direction: column; justify-conten
 .k8-subj-warn[hidden] { display: none; }
 .k8-subj-warn b { font-size: 14.5px; }
 .k8-subj-nt { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 11.5px; font-weight: 700; vertical-align: middle; }
+/* v17.61 · เรียนซ้ำชั้น / แก้เกรด */
+.k8-en-rt-q { margin-top: 6px; font-weight: 600; }
+.k8-en-rt { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.k8-en-rt button { flex: 1; min-width: 140px; min-height: 44px; border-radius: 12px; border: 1px solid #f59e0b; background: #fff; color: #92400e; font: 600 14px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+.k8-en-rt button:hover { background: #fef3c7; }
+.k8-en-rt button[disabled] { opacity: .6; cursor: wait; }
+.k8-en-why { display: inline-block; align-self: flex-start; margin-top: 2px; padding: 1px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 11.5px; font-weight: 700; font-style: normal; }

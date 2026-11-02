@@ -3215,7 +3215,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.60';
+  const APP_VERSION = '17.61';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8180,7 +8180,7 @@ window.k8HfBarOpen = function (id, date) {
         '<div class="k8-en-link"><input type="text" readonly value="' + esc(link) + '" onclick="this.select()" aria-label="ลิงก์ลงทะเบียน"><button type="button" onclick="k8EnCopy()">คัดลอก</button>' + (navigator.share ? '<button type="button" onclick="k8EnShare()">แชร์</button>' : '') + '</div>' +
         '<button type="button" class="k8-en-toggle' + (R.open ? '' : ' is-open') + '" onclick="k8EnToggle(' + (R.open ? 'false' : 'true') + ')">' + (R.open ? 'ปิดรับลงทะเบียน' : 'เปิดรับลงทะเบียนอีกครั้ง') + '</button></div></section>' +
         '<section class="k8-en-list"><div class="k8-en-lh"><b>ลงทะเบียนแล้ว ' + R.students.length + ' คน</b><button type="button" onclick="k8EnPick(\'' + esc(T.subj.id) + '\')">↻ รีเฟรช</button></div>' +
-        (R.students.length ? '<ul>' + R.students.map((x) => '<li><span><b>' + esc(x.fullName) + '</b><small>' + esc(shortG(x.grade)) + ' · ' + esc(x.studentId) + ' · ' + (x.via === 'qr' ? 'สแกน/ลิงก์' : 'ดึงจากระบบ') + '</small></span><button type="button" onclick="k8EnRemove(\'' + esc(x.studentId) + '\')" aria-label="นำออก">นำออก</button></li>').join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่มีนักเรียนลงทะเบียน · ให้นักเรียนสแกน QR หรือเปิดลิงก์</p>') + '</section>';
+        (R.students.length ? '<ul>' + R.students.map((x) => '<li><span><b>' + esc(x.fullName) + '</b><small>' + esc(shortG(x.grade)) + ' · ' + esc(x.studentId) + ' · ' + (x.via === 'qr' ? 'สแกน/ลิงก์' : 'ดึงจากระบบ') + '</small>' + (x.reason ? '<em class="k8-en-why">' + (x.reason === 'repeat' ? 'เรียนซ้ำชั้น' : 'แก้เกรด') + '</em>' : '') + '</span><button type="button" onclick="k8EnRemove(\'' + esc(x.studentId) + '\')" aria-label="นำออก">นำออก</button></li>').join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่มีนักเรียนลงทะเบียน · ให้นักเรียนสแกน QR หรือเปิดลิงก์</p>') + '</section>';
     }
     el.innerHTML = h;
     if (T.room) {
@@ -8247,9 +8247,10 @@ window.k8HfBarOpen = function (id, date) {
     } else {
       h += '<div class="k8-en-ways"><button type="button" onclick="k8EnMode(\'system\')"><span>📚</span><b>ดึงจากระบบ</b><small>วิชาของชั้นคุณตามตารางเรียน</small></button><button type="button" onclick="k8EnMode(\'scan\')"><span>📷</span><b>สแกนเพื่อลงทะเบียน</b><small>สแกน QR Code ของอาจารย์</small></button></div>' +
         '<div class="k8-en-row k8-en-codein"><input type="text" id="k8EnCodeIn" maxlength="6" placeholder="หรือกรอกรหัส 6 ตัว" autocomplete="off" autocapitalize="characters" value="' + esc(N.pending || '') + '"><button type="button" class="k8-en-pri" onclick="k8EnCode()"' + (N.busy ? ' disabled' : '') + '>ลงทะเบียน</button></div>' +
-        '<section class="k8-en-list"><div class="k8-en-lh"><b>วิชาที่ลงทะเบียนแล้ว ' + (N.my.enrolled || []).length + ' วิชา</b></div>' + ((N.my.enrolled || []).length ? '<ul>' + N.my.enrolled.map((x) => '<li><span><b>' + esc(x.name) + '</b><small>' + (x.teacher ? esc(x.teacher) + ' · ' : '') + (x.via === 'qr' ? 'สแกน/ลิงก์' : 'ดึงจากระบบ') + ' · ' + esc(String(x.at || '').slice(0, 10)) + '</small></span><span class="k8-en-ok">✓</span></li>').join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่ได้ลงทะเบียนวิชาใด</p>') + '</section>';
+        '<section class="k8-en-list"><div class="k8-en-lh"><b>วิชาที่ลงทะเบียนแล้ว ' + (N.my.enrolled || []).length + ' วิชา</b></div>' + ((N.my.enrolled || []).length ? '<ul>' + N.my.enrolled.map((x) => '<li><span><b>' + esc(x.name) + '</b><small>' + (x.teacher ? esc(x.teacher) + ' · ' : '') + (x.via === 'qr' ? 'สแกน/ลิงก์' : 'ดึงจากระบบ') + ' · ' + esc(String(x.at || '').slice(0, 10)) + '</small>' + (x.reason ? '<em class="k8-en-why">' + (x.reason === 'repeat' ? 'เรียนซ้ำชั้น' : 'แก้เกรด') + '</em>' : '') + '</span><span class="k8-en-ok">✓</span></li>').join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่ได้ลงทะเบียนวิชาใด</p>') + '</section>';
     }
-    if (N.warn && N.mode === 'home') h = '<div class="k8-en-warn" role="alert"><b>⚠ วิชานี้มีอยู่แล้ว</b><span>' + esc(N.warn) + '</span></div>' + h; // v17.60
+    if (N.warn && N.mode === 'home') h = '<div class="k8-en-warn" role="alert"><b>⚠ วิชานี้มีอยู่แล้ว</b><span>' + esc(N.warn) + '</span>' +
+      (N.retake ? '<span class="k8-en-rt-q">ถ้าต้องการเรียนวิชานี้อีกครั้ง เลือกเหตุผล:</span><div class="k8-en-rt"><button type="button" onclick="k8EnRetake(\'repeat\')"' + (N.busy ? ' disabled' : '') + '>เรียนซ้ำชั้น</button><button type="button" onclick="k8EnRetake(\'regrade\')"' + (N.busy ? ' disabled' : '') + '>เรียนเพื่อแก้เกรด</button></div>' : '') + '</div>' + h; // v17.60–61
     el.innerHTML = h;
     if (N.mode === 'scan') startScan();
   }
@@ -8270,12 +8271,12 @@ window.k8HfBarOpen = function (id, date) {
     };
     N.raf = requestAnimationFrame(tick);
   }
-  async function enrollCode(code) {
-    N.busy = true; N.mode = 'home'; N.pending = code; renderS();
-    let r = null; try { r = await gasApiCall('enrollSubject', { data: { code: code } }, 25000); } catch (e) {}
+  async function enrollCode(code, retake) {
+    N.busy = true; N.mode = 'home'; N.pending = retake ? '' : code; renderS();
+    let r = null; try { r = await gasApiCall('enrollSubject', { data: retake ? { code: code, retake: retake } : { code: code } }, 25000); } catch (e) {}
     N.busy = false;
-    N.warn = '';
-    if (r && r.success) { N.my = r; N.pending = ''; if (r.warn) { N.warn = r.message; toast(r.message, 'warning'); } else toast(r.message, 'success'); } else toast((r && (r.message || r.error)) || 'ลงทะเบียนไม่สำเร็จ', 'error');
+    N.warn = ''; N.retake = null;
+    if (r && r.success) { N.my = r; N.pending = ''; if (r.warn) { N.warn = r.message; N.retake = r.canRetake ? { code: r.code, name: r.subjectName } : null; toast(r.message, 'warning'); } else toast(r.message, 'success'); } else toast((r && (r.message || r.error)) || 'ลงทะเบียนไม่สำเร็จ', 'error');
     paintCard(); renderS();
   }
   window.k8EnStuOpen = function (code) { if (!stu()) { toast('กรุณาเข้าสู่ระบบนักเรียนก่อน', 'warning'); return; } N.mode = 'home'; N.warn = ''; if (code) N.pending = code; renderS(); try { openModal('k8EnStuModal'); } catch (e) {} loadMine().then(() => { if (code) enrollCode(code); }); };
@@ -8289,6 +8290,7 @@ window.k8HfBarOpen = function (id, date) {
     if (r && r.success) { N.my = r; N.mode = 'home'; toast(r.message, 'success'); } else toast((r && (r.message || r.error)) || 'ลงทะเบียนไม่สำเร็จ · Deploy Code.gs ตัวล่าสุดก่อน', 'error');
     paintCard(); renderS();
   };
+  window.k8EnRetake = function (why) { if (!N.retake || N.busy) return; enrollCode(N.retake.code, why); };
   window.k8EnCode = function () { const c = parseCode((document.getElementById('k8EnCodeIn') || {}).value || ''); if (!c) { toast('รหัสลงทะเบียนมี 6 ตัวอักษร', 'warning'); return; } enrollCode(c); };
   window.k8EnScanFile = function (input) {
     const f = input.files && input.files[0]; if (!f) return;

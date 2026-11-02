@@ -2960,7 +2960,7 @@ function enrollIdsBySubject_() { const e = enrollRead_('Enrollments'); const out
 function enrollStudents_(subjectId) {
   const e = enrollRead_('Enrollments')[subjectId] || {};
   const info = {}; sheetRows_(SHEETS.STUDENTS, 4).forEach(function (r) { const k = ENROLL_NORM_(r[0]); if (k) info[k] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]) }; });
-  return Object.keys(e).map(function (sid) { const i = info[sid] || { id: sid, name: sid, grade: '' }; return { studentId: i.id, fullName: i.name, grade: i.grade, at: (e[sid] || [])[0] || '', via: (e[sid] || [])[1] || '' }; })
+  return Object.keys(e).map(function (sid) { const i = info[sid] || { id: sid, name: sid, grade: '' }; return { studentId: i.id, fullName: i.name, grade: i.grade, at: (e[sid] || [])[0] || '', via: (e[sid] || [])[1] || '', reason: (e[sid] || [])[2] || '' }; })
     .sort(function (a, b) { return String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName)); });
 }
 function getEnrollRoom_(d, session) {
@@ -2997,7 +2997,7 @@ function enrollSubjectsAll_() {
 function getMyEnrollments_(studentId) {
   const me = ENROLL_NORM_(studentId); const e = enrollRead_('Enrollments'); const codes = enrollRead_('EnrollCodes');
   const all = enrollSubjectsAll_(); const nameOf = {}; all.forEach(function (x) { nameOf[x.id] = x.name; });
-  const enrolled = Object.keys(e).filter(function (k) { return e[k] && e[k][me]; }).map(function (k) { return { subjectId: k, name: (codes[k] && codes[k].name) || nameOf[k] || k, teacher: (codes[k] && codes[k].byName) || '', at: e[k][me][0], via: e[k][me][1] }; });
+  const enrolled = Object.keys(e).filter(function (k) { return e[k] && e[k][me]; }).map(function (k) { return { subjectId: k, name: (codes[k] && codes[k].name) || nameOf[k] || k, teacher: (codes[k] && codes[k].byName) || '', at: e[k][me][0], via: e[k][me][1], reason: e[k][me][2] || '' }; });
   const mine = getMySubjects_(studentId).subjects;
   const sys = (mine || []).map(function (t) { const m = all.find(function (x) { return (t.id && x.id === t.id) || x.name === t.name; }); return { id: m ? m.id : (t.id || t.name), name: t.name }; });
   return { success: true, enrolled: enrolled, available: mine ? sys : [], fromTimetable: !!mine };
@@ -3015,10 +3015,19 @@ function enrollSubject_(d, studentId) {
     // v17.60 · สแกนวิชาที่มีอยู่แล้ว → แจ้งเตือนนักเรียน (ไม่ลงซ้ำ)
     const eNow = enrollRead_('Enrollments');
     const nmQ = codes[subj].name || subj;
-    if (eNow[subj] && eNow[subj][me]) { const o = getMyEnrollments_(studentId); o.warn = true; o.message = 'คุณลงทะเบียนวิชา ' + nmQ + ' ไว้แล้ว'; return o; }
+    // v17.61 · เรียนซ้ำชั้น / แก้เกรด: ลงทะเบียนวิชาเดิมได้ โดยบันทึกเหตุผลไว้ให้อาจารย์เห็น
+    const why = ({ repeat: 'repeat', regrade: 'regrade' })[cleanVal(d.retake || '')] || '';
+    if (why) {
+      const now2 = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+      const rr = enrollLock_(function () { const e2 = enrollRead_('Enrollments'); e2[subj] = e2[subj] || {}; e2[subj][me] = [now2, 'qr', why]; enrollWrite_('Enrollments', e2); return { success: true }; });
+      if (!rr.success) return rr;
+      const o2 = getMyEnrollments_(studentId); o2.message = 'ลงทะเบียนวิชา ' + nmQ + ' เพื่อ' + (why === 'repeat' ? 'เรียนซ้ำชั้น' : 'แก้เกรด') + 'แล้ว'; return o2;
+    }
+    const dupWarn = function (msg) { const o = getMyEnrollments_(studentId); o.warn = true; o.canRetake = true; o.code = codes[subj].code; o.subjectName = nmQ; o.message = msg; return o; };
+    if (eNow[subj] && eNow[subj][me]) return dupWarn('คุณลงทะเบียนวิชา ' + nmQ + ' ไว้แล้ว');
     const mineQ = getMySubjects_(studentId).subjects || [];
     const inTt = mineQ.some(function (t) { return (t.id && t.id === subj) || cleanVal(t.name) === cleanVal(nmQ); });
-    if (inTt) d.__warnTt = 'วิชา ' + nmQ + ' มีอยู่ในตารางเรียนของคุณแล้ว · บันทึกการลงทะเบียนให้อาจารย์แล้ว';
+    if (inTt) { d.__warnTt = 'วิชา ' + nmQ + ' มีอยู่ในตารางเรียนของคุณแล้ว · บันทึกการลงทะเบียนให้อาจารย์แล้ว'; d.__code = codes[subj].code; d.__nm = nmQ; }
   } else {
     const want = (Array.isArray(d.subjectIds) ? d.subjectIds : [d.subjectId]).map(function (x) { return cleanVal(x); }).filter(Boolean);
     const mine = getMySubjects_(studentId).subjects;
@@ -3037,7 +3046,7 @@ function enrollSubject_(d, studentId) {
   const out = getMyEnrollments_(studentId);
   const nm = list.map(function (k) { return (codes[k] && codes[k].name) || (out.enrolled.find(function (x) { return x.subjectId === k; }) || {}).name || k; });
   out.message = r.added ? 'ลงทะเบียนแล้ว: ' + nm.join(', ') : 'ลงทะเบียนวิชานี้ไว้แล้ว';
-  if (d.__warnTt) { out.warn = true; out.message = d.__warnTt; }
+  if (d.__warnTt) { out.warn = true; out.canRetake = true; out.code = d.__code; out.subjectName = d.__nm; out.message = d.__warnTt; }
   else if (!r.added) out.warn = true;
   return out;
 }
