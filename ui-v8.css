@@ -3618,3 +3618,30 @@ html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
 /* v17.38 · ตัวเลขคำขอที่เมนูอนุมัติ */
 .k8-admin-nav .admin-pending-pill { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #dc2626 !important; color: #fff !important; }
 .k8-admin-nav .admin-pending-pill.is-zero { background: #334155 !important; color: #cbd5e1 !important; }
+/* v17.39 · ประจำเดือน */
+.k8-pn-reasons .prayer-preset-btn[hidden] { display: none !important; }
+.k8-pn-reasons .preset-menstruation.is-on { border-color: #db2777 !important; background: #fdf2f8 !important; }
+#prayerNotesCard.is-per-mode .k8-pn-all, #prayerNotesCard.is-per-mode .k8-pn-times { pointer-events: none; opacity: .75; }
+.k8-per { margin: 0 0 14px; padding: 16px; border-radius: 18px; background: #fdf2f8; border: 1.5px solid #fbcfe8; display: flex; flex-direction: column; gap: 10px; }
+.k8-per[hidden] { display: none !important; }
+.k8-per-top { display: flex; align-items: center; gap: 12px; }
+.k8-per-ico { width: 44px; height: 44px; border-radius: 14px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; flex: none; }
+.k8-per-top b { display: block; font-size: 16px; font-weight: 600; color: #831843; }
+.k8-per-top small { font-size: 13px; color: #9d174d; }
+.k8-per-txt { margin: 0; font-size: 13.5px; line-height: 1.55; color: #500724; }
+.k8-per-end { min-height: 50px; border: 0; border-radius: 14px; background: #db2777; color: #fff; font: inherit; font-size: 15.5px; font-weight: 600; cursor: pointer; padding: 0 16px; }
+.k8-per-end:disabled { opacity: .6; cursor: default; }
+.k8-per-note { font-size: 12.5px; color: #9d174d; text-align: center; }
+.k8-per-links { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.k8-per-links button { min-height: 40px; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #be185d; cursor: pointer; padding: 0 4px; text-decoration: underline; text-underline-offset: 3px; }
+.k8-per-links .is-mute { color: #64748b; font-weight: 500; }
+.k8-per-pick { display: flex; flex-direction: column; gap: 10px; }
+.k8-per-pick label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: #831843; }
+.k8-per-pick input, .k8-per-pick select { min-height: 46px; border: 1px solid #f9a8d4; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 15px; background: #fff; color: #0f172a; }
+.k8-per-sum { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fff; font-size: 13px; color: #500724; line-height: 1.5; }
+.k8-per-btns { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.k8-per-btns .is-alt { min-height: 50px; border: 1px solid #f9a8d4; border-radius: 14px; background: #fff; color: #be185d; font: inherit; font-weight: 600; cursor: pointer; }
+.k8-nt-pin.is-per { border-color: #f9a8d4; background: #fdf2f8; }
+.k8-nt-pin.is-per .k8-nt-pin-tag { background: #db2777; color: #fff; }
+.hf-pt-n.is-ex .hf-pt-dot { font-size: 17px; }
+.hf-pt-cta.is-per { background: #db2777; }

@@ -207,10 +207,13 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (nx) mins = nx.start - cur; else { nx = day[0]; mins = 1440 - cur + nx.start; }
       lab = (open ? open.key + ' ✓ · ถัดไป ' : 'ถัดไป · ') + nx.key; big = fmt(nx.adhan); sub = 'อีก ' + dur(mins);
     }
+    const perOn = !!(window.k8PeriodActive && window.k8PeriodActive());
+    if (perOn) { cta = null; lab = '🌸 กำลังมีประจำเดือน'; big = ''; sub = 'ไม่ต้องเช็คชื่อ · กดสิ้นสุดเมื่อหมด'; subCls = ''; }
     const node = (w) => {
       const r = rec(w.key), k = w.key, ac = (fn) => ' onclick="' + fn + '"';
       let cls = 'is-wait', ic = '–', act = '';
       if (r) { cls = 'is-' + r.kind; ic = r.kind === 'late' ? 'สาย' : r.kind === 'appr' ? 'ย้อนหลัง' : r.kind === 'ex' ? 'ลา' : '✓'; act = ac("k8HfBarOpen('" + esc(r.id) + "','" + esc(todayStr) + "')"); }
+      else if (perOn) { cls = 'is-ex'; ic = '🌸'; act = ac("k8PerGo()"); }
       else if (open && open.key === k) { cls = 'is-now'; ic = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'; act = roll(k) ? '' : ac("switchView('prayer')"); }
       else if (k !== 'อีชาอ์' && cur > w.end && !roll(k)) { cls = 'is-miss'; ic = '✕'; act = ac("k8HfMiss('" + esc(k) + "')"); }
       return '<button type="button" class="hf-pt-n ' + cls + '"' + act + (act ? '' : ' disabled') + '><span class="hf-pt-dot">' + ic + '</span><b>' + esc(k) + '</b><span class="hf-pt-a">' + fmt(w.adhan) + '</span><small>อิกอมะฮ์<br>' + fmt(w.iqamah) + '</small></button>';
@@ -222,7 +225,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     box.innerHTML = '<div class="hf-pt-top"><div class="hf-pt-sky" aria-hidden="true">' + (SKY[sky] || '') + '</div><div class="hf-pt-row"><div class="hf-pt-ttl"><h2>ละหมาดวันนี้</h2><span>' + DN[now.getDay()] + ' ' + now.getDate() + ' ' + MN[now.getMonth()] + ' ' + (now.getFullYear() + 543) + ' · ' + esc(window.k8PrayerPlace ? window.k8PrayerPlace() : 'ต.เขาตูม อ.ยะรัง จ.ปัตตานี') + (far ? ' <i>(ตามพิกัดล่าสุด)</i>' : '') + '</span></div><span class="hf-pt-cnt">' + done + ' / 5</span></div>' +
       '<div class="hf-pt-hero"><span class="hf-pt-lab">' + esc(lab) + '</span><b>' + big + '</b><span class="hf-pt-sub' + subCls + '">' + esc(sub) + '</span></div></div>' +
       '<div class="hf-pt-line"><div class="hf-pt-track" aria-hidden="true"></div><div class="hf-pt-nodes">' + day.map(node).join('') + '</div></div>' +
-      '<div class="hf-pt-foot">' + (cta ? '<button type="button" class="hf-pt-cta" onclick="switchView(\'prayer\')">เช็คชื่อ' + esc(cta.key) + '</button>' : '<button type="button" class="hf-pt-cta is-alt" onclick="switchView(\'prayer\')">ไปหน้าละหมาด</button>') +
+      '<div class="hf-pt-foot">' + (perOn ? '<button type="button" class="hf-pt-cta is-per" onclick="k8PerGo()">🌸 สิ้นสุดประจำเดือน</button>' : cta ? '<button type="button" class="hf-pt-cta" onclick="switchView(\'prayer\')">เช็คชื่อ' + esc(cta.key) + '</button>' : '<button type="button" class="hf-pt-cta is-alt" onclick="switchView(\'prayer\')">ไปหน้าละหมาด</button>') +
       '<span>' + (cta ? 'ตรงเวลาถึง ' + fmt(cta.cutoff) + ' น. · ' : '') + 'แตะวงกลมเพื่อดูประวัติ</span></div>';
   }
 
@@ -2999,7 +3002,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.38';
+  const APP_VERSION = '17.39';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3824,7 +3827,8 @@ window.k8RegBirthChange = function (v) {
   function paintBadge() {
     const rc = reqCounts();
     const other = rc ? N.list.filter((x) => !x.read && !/คำขอลาสอน|คำขอละหมาด|บัญชีใหม่/.test(x.title || '')).length : 0;
-    const n = rc ? rc.total + other : N.unread, el = document.getElementById('k8BellN');
+    const perN = !rc && stu() && window.k8PeriodActive && window.k8PeriodActive() ? 1 : 0;
+    const n = rc ? rc.total + other : N.unread + perN, el = document.getElementById('k8BellN');
     // v17.38 · ตัวเลขคำขอรออนุมัติที่เมนู "อนุมัติบัญชี & คำขอ"
     if (rc) { const pill = document.getElementById('adminTabPendingBadge'); if (pill) { pill.textContent = rc.total > 99 ? '99+' : String(rc.total); pill.style.display = 'inline-flex'; pill.classList.toggle('is-zero', !rc.total); pill.title = 'บัญชีใหม่ ' + rc.accounts + ' · ละหมาดย้อนหลัง ' + rc.prayers + ' · ลาสอน ' + rc.leaves; } }
     const bl = document.getElementById('k8Bell'); if (bl) { bl.classList.toggle('is-staff', !!rc); bl.title = rc ? (rc.total ? 'คำขอรออนุมัติ ' + rc.total + ' รายการ' : 'การแจ้งเตือน') : ''; }
@@ -3918,6 +3922,7 @@ window.k8RegBirthChange = function (v) {
       h += '<div class="k8-nt-reqs"><div class="k8-nt-reqh">คำขอรออนุมัติ <b>' + rc.total + '</b></div>' + row('accounts', 'บัญชีใหม่', rc.accounts) + row('prayers', 'ละหมาดย้อนหลัง', rc.prayers) + row('leaves', 'ลาสอน', rc.leaves) + '</div>';
     }
     if ('Notification' in window && Notification.permission !== 'granted') h += '<button type="button" class="k8-nt-push" onclick="k8EnablePush()"><span aria-hidden="true">🔔</span><span><b>เปิดแจ้งเตือนเข้ามือถือ</b><small>' + (Notification.permission === 'denied' ? 'ถูกปิดไว้ · เปิดได้ที่การตั้งค่าเบราว์เซอร์ > การแจ้งเตือน' : 'ให้แจ้งเตือนเด้งขึ้นที่มือถือเมื่อมีเรื่องใหม่') + '</small></span></button>';
+    try { const pe = window.k8PeriodActive && window.k8PeriodActive(); if (pe && stu()) h += '<button type="button" class="k8-nt-pin is-per" onclick="k8PerGo()"><span class="k8-nt-pin-tag">กำลังรอ · กดเมื่อประจำเดือนหมด</span><b>🌸 รอกด "สิ้นสุดประจำเดือน"</b><small>เริ่ม ' + esc(window.k8PerThDate(pe.start)) + ' · ระบบจะบันทึกอุซุรทุกเวลาให้อัตโนมัติเมื่อกดสิ้นสุด · แตะเพื่อไปกด</small></button>'; } catch (e) {}
     N.pending.forEach((p) => { h += '<button type="button" class="k8-nt-pin" onclick="k8PolicyOpen(\'' + js(p.id) + '\')"><span class="k8-nt-pin-tag">ต้องอ่านและกดยินยอม · ลบไม่ได้จนกว่าจะยินยอม</span><b>' + esc(p.title) + '</b><small>' + esc(p.subtitle || '') + ' · แตะเพื่ออ่าน</small></button>'; });
     if (!N.list.length && !N.pending.length) h += '<div class="k8-docs-empty"><b>ยังไม่มีการแจ้งเตือน</b><span>เมื่อโรงเรียนประกาศข่าวสาร จะแสดงที่นี่</span></div>';
     h += '<ul class="k8-nt-list">' + N.list.map((n) => '<li class="' + (n.read ? '' : 'is-new') + (n.priority === 'urgent' ? ' is-urgent' : '') + (focusId === n.id ? ' is-focus' : '') + '" id="k8nt-' + esc(n.id) + '"><div class="k8-nt-top">' + (n.priority === 'urgent' ? '<span class="k8-nt-tag">สำคัญ</span>' : '') + '<b>' + esc(n.title) + '</b></div>' + (n.body ? '<p>' + esc(n.body).replace(/\n/g, '<br>') + '</p>' : '') + '<div class="k8-nt-meta"><span>' + esc(ago(n.createdAt)) + (n.byName ? ' · ' + esc(n.byName) : '') + '</span><button type="button" onclick="k8NotifHide(\'' + js(n.id) + '\')">ลบ</button></div></li>').join('') + '</ul>';
@@ -7463,7 +7468,7 @@ window.k8RegBirthChange = function (v) {
     let adm = null; try { adm = currentAdmin; } catch (e) {}
     const els = [document.getElementById('k8PwAlertHome'), document.getElementById('k8PwAlertPr')];
     let hit = null;
-    if (st && !adm) {
+    if (st && !adm && !(window.k8PeriodActive && window.k8PeriodActive())) {
       const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
       try {
         PRAYER_TIME_WINDOWS.forEach((w) => {
@@ -8154,4 +8159,162 @@ window.k8HfMiss = function (slot) {
     const o = window[fn]; if (typeof o !== 'function') return;
     window[fn] = function () { const r = o.apply(this, arguments); setTimeout(() => { try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {} }, 0); if (r && typeof r.then === 'function') r.then(() => { try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {} }).catch(() => {}); return r; };
   });
+})();
+
+/* ---------- v17.39 · ประจำเดือน: แจ้งวันเริ่ม → รอกดสิ้นสุด → บันทึกอุซุรย้อนหลังอัตโนมัติ ---------- */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const SLOTS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+  const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const thDate = (s) => { const d = new Date(s + 'T00:00:00'); if (isNaN(d)) return s || ''; const t = ymd(new Date()), y = ymd(new Date(Date.now() - 864e5)); return (s === t ? 'วันนี้ · ' : s === y ? 'เมื่อวาน · ' : '') + d.getDate() + ' ' + TH_M[d.getMonth()] + ' ' + (d.getFullYear() + 543); };
+  window.k8PerThDate = thDate;
+  const stu = () => { try { return currentStudent || null; } catch (e) { return null; } };
+  const adm = () => { try { return currentAdmin || null; } catch (e) { return null; } };
+  const girl = () => { const s = stu(); return !!s && !!(window.k8IsGirl && window.k8IsGirl(s)); };
+  const key = () => { const s = stu(); return s ? 'k8_period_' + String(s.studentId).replace(/^0+/, '') : ''; };
+  const S = { active: null, mode: false, endOpen: false, busy: false };
+  try { const v = JSON.parse(localStorage.getItem(key()) || 'null'); if (v) S.active = v; } catch (e) {}
+  const preview = () => !!(window.k8IsPreview && window.k8IsPreview());
+  window.k8PeriodActive = function () { return stu() && !adm() && girl() ? S.active : null; };
+  function store() { try { if (S.active) localStorage.setItem(key(), JSON.stringify(S.active)); else localStorage.removeItem(key()); } catch (e) {} }
+  function repaint() { render(); try { window.renderHomeF && window.renderHomeF(); } catch (e) {} try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {} try { window.k8PrayerWarnCheck && window.k8PrayerWarnCheck(); } catch (e) {} }
+  async function load() {
+    if (!stu() || adm() || !girl() || preview()) { render(); return; }
+    let r = null; try { r = await gasApiCall('getMyPeriod', {}, 20000); } catch (e) {}
+    if (r && r.success) { S.active = r.active || null; store(); }
+    repaint();
+  }
+  // เวลาแรกที่กลับมาละหมาดได้ ถ้ากดสิ้นสุด "ตอนนี้" = เวลาที่ยังเปิดอยู่หรือเวลาถัดไป
+  function resumeNow() {
+    const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
+    let day = []; try { day = window.k8PrayerDay(now); } catch (e) {}
+    if (!day.length) return 0;
+    if (cur < day[0].start) return 0;
+    for (let i = 0; i < day.length; i++) if (cur <= day[i].end) return i;
+    return 5;
+  }
+  function countRecs(start, end, resume) {
+    const a = new Date(start + 'T00:00:00'), b = new Date(end + 'T00:00:00'); const days = Math.round((b - a) / 864e5);
+    return Math.max(0, days) * 5 + resume;
+  }
+  function render() {
+    const box = $('k8PerCard'); if (!box) return;
+    const a = window.k8PeriodActive();
+    box.hidden = !a;
+    if (!a) { box.innerHTML = ''; return; }
+    const days = Math.round((new Date(ymd(new Date()) + 'T00:00:00') - new Date(a.start + 'T00:00:00')) / 864e5) + 1;
+    const t = ymd(new Date()), rn = resumeNow();
+    let h = '<div class="k8-per-top"><span class="k8-per-ico" aria-hidden="true">🌸</span><div><b>กำลังมีประจำเดือน · วันที่ ' + days + '</b><small>เริ่ม ' + thDate(a.start) + ' · รอกดสิ้นสุด</small></div></div>' +
+      '<p class="k8-per-txt">ระหว่างนี้ไม่ต้องเช็คชื่อละหมาด เมื่อประจำเดือนหมด กด <b>สิ้นสุดประจำเดือน</b> แล้วระบบจะบันทึก "อุซุร" ให้ครบทุกเวลาย้อนหลังอัตโนมัติ</p>';
+    if (!S.endOpen) {
+      h += '<button type="button" class="k8-per-end" onclick="k8PerEndNow()"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'กำลังบันทึก…' : 'สิ้นสุดประจำเดือน (ตอนนี้)') + '</button>' +
+        '<small class="k8-per-note">' + (rn < 5 ? 'เริ่มละหมาดตามปกติตั้งแต่' + SLOTS[rn] + 'วันนี้' : 'วันนี้บันทึกอุซุรครบทั้ง 5 เวลา · เริ่มละหมาดพรุ่งนี้') + '</small>' +
+        '<div class="k8-per-links"><button type="button" onclick="k8PerEndPick(true)">ลืมกด? เลือกวันที่สิ้นสุดเอง</button><button type="button" class="is-mute" onclick="k8PerCancel()">ยกเลิกการแจ้ง</button></div>';
+    } else {
+      h += '<div class="k8-per-pick"><label><span>ประจำเดือนหมดวันที่</span><input type="date" id="k8PerEndD" min="' + a.start + '" max="' + t + '" value="' + t + '" onchange="k8PerSum()"></label>' +
+        '<label><span>เริ่มละหมาดได้ตั้งแต่เวลา</span><select id="k8PerRes" onchange="k8PerSum()">' + SLOTS.map((x, i) => '<option value="' + i + '"' + (i === 0 ? ' selected' : '') + '>' + x + '</option>').join('') + '<option value="5">ยังไม่ได้ละหมาดทั้งวันนั้น (เริ่มวันถัดไป)</option></select></label>' +
+        '<p class="k8-per-sum" id="k8PerSum"></p>' +
+        '<div class="k8-per-btns"><button type="button" class="is-alt" onclick="k8PerEndPick(false)">ย้อนกลับ</button><button type="button" class="k8-per-end" onclick="k8PerEndPicked()"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'กำลังบันทึก…' : 'บันทึกวันที่สิ้นสุด') + '</button></div></div>';
+    }
+    box.innerHTML = h;
+    if (S.endOpen) window.k8PerSum();
+  }
+  window.k8PerSum = function () {
+    const a = S.active, d = ($('k8PerEndD') || {}).value, r = parseInt(($('k8PerRes') || {}).value, 10), el = $('k8PerSum'); if (!a || !d || !el) return;
+    const n = countRecs(a.start, d, isNaN(r) ? 0 : r);
+    el.textContent = 'ระบบจะบันทึกอุซุร ' + n + ' เวลา (' + thDate(a.start) + ' ถึง ' + (r >= 5 ? 'ครบวัน ' + thDate(d) : 'ก่อน' + SLOTS[r] + ' ' + thDate(d)) + ') · ตั้งแต่เวลาที่เลือกเป็นต้นไปนับตามจริง';
+  };
+  window.k8PerGo = function () {
+    try { closeModal('k8NotifModal'); } catch (e) {}
+    try { switchView('prayer'); } catch (e) {}
+    setTimeout(() => { render(); const b = $('k8PerCard'); if (b && !b.hidden) b.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
+  };
+  window.k8PerEndPick = function (v) { S.endOpen = !!v; render(); };
+  async function end(endDate, resume) {
+    if (S.busy || !S.active) return;
+    if (preview()) { toast('โหมดดูตัวอย่าง · บันทึกไม่ได้', 'info'); return; }
+    const n = countRecs(S.active.start, endDate, resume);
+    if (!confirm('สิ้นสุดประจำเดือน ' + thDate(endDate) + '\nระบบจะบันทึกอุซุรย้อนหลัง ' + n + ' เวลา (ข้ามเวลาที่บันทึกไว้แล้ว)\nยืนยันไหม?')) return;
+    S.busy = true; render();
+    let r = null; try { r = await gasApiCall('periodEnd', { data: { endDate: endDate, resumeSlot: resume } }, 45000); } catch (e) {}
+    S.busy = false;
+    if (r && r.success) {
+      S.active = null; S.endOpen = false; store();
+      toast(r.message || 'บันทึกแล้ว', 'success');
+      try { if (typeof fetchStudentPrayersFromCloud === 'function') fetchStudentPrayersFromCloud(true); } catch (e) {}
+      try { if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(); } catch (e) {}
+    } else toast((r && r.message) || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error');
+    repaint();
+  }
+  window.k8PerEndNow = function () { end(ymd(new Date()), resumeNow()); };
+  window.k8PerEndPicked = function () { const d = ($('k8PerEndD') || {}).value, r = parseInt(($('k8PerRes') || {}).value, 10); if (!d) { toast('เลือกวันที่สิ้นสุด', 'warning'); return; } end(d, isNaN(r) ? 0 : r); };
+  window.k8PerCancel = async function () {
+    if (!S.active || !confirm('ยกเลิกการแจ้งมีประจำเดือน (เริ่ม ' + thDate(S.active.start) + ')?\nจะไม่มีการบันทึกอุซุรใด ๆ')) return;
+    let r = null; try { r = await gasApiCall('periodCancel', {}, 20000); } catch (e) {}
+    if (r && r.success) { S.active = null; store(); toast('ยกเลิกแล้ว', 'success'); repaint(); } else toast((r && r.message) || 'ยกเลิกไม่สำเร็จ', 'error');
+  };
+
+  // ---- การ์ดหมายเหตุ: ปุ่ม "มีประจำเดือน" (เฉพาะนักเรียนหญิง) → โหมดแจ้งวันเริ่ม ----
+  function formMode(on) {
+    S.mode = !!on;
+    const card = $('prayerNotesCard'); if (card) card.classList.toggle('is-per-mode', S.mode);
+    const di = $('k8PnDate');
+    if (di) {
+      const t = ymd(new Date());
+      if (S.mode) { di.dataset.k8max = di.max; di.dataset.k8min = di.min; di.max = t; di.min = ymd(new Date(Date.now() - 15 * 864e5)); if (di.value > t) di.value = t; }
+      else if (di.dataset.k8max) { di.max = di.dataset.k8max; di.min = di.dataset.k8min; }
+      const lab = di.parentElement && di.parentElement.querySelector('span'); if (lab) lab.textContent = S.mode ? 'เริ่มมีประจำเดือนวันที่' : 'วันที่';
+    }
+    const intro = document.querySelector('#prayerNotesCard .k8-pn-intro span');
+    if (intro) { if (!intro.dataset.k8o) intro.dataset.k8o = intro.innerHTML; intro.innerHTML = S.mode ? 'แจ้ง<b>วันเริ่ม</b>ครั้งเดียว · เมื่อหมดให้กด <b>สิ้นสุดประจำเดือน</b> ระบบจะบันทึกอุซุรย้อนหลังให้อัตโนมัติ' : intro.dataset.k8o; }
+    const hint = document.querySelector('.k8-pn-step .k8-pn-hint'); if (hint) hint.textContent = S.mode ? 'เลือกครบ 5 เวลาให้อัตโนมัติ · ระบบจะบันทึกอุซุรทุกเวลาจนกว่าจะกด "สิ้นสุดประจำเดือน"' : 'เลือกได้ทุกเวลา ไม่ล็อก · แตะเลือกได้หลายเวลา';
+    if (S.mode) { try { selectAllPrayerNoteTimes(true); } catch (e) {} }
+    sync();
+  }
+  function sync() {
+    const b = document.querySelector('.preset-menstruation'); if (b) { b.hidden = !girl(); b.classList.toggle('is-on', S.mode); }
+    if (S.mode) { const sv = document.querySelector('.k8-pn-save'); if (sv && !S.busy) { sv.textContent = S.active ? 'มีช่วงประจำเดือนที่รอกดสิ้นสุดอยู่แล้ว' : 'แจ้งเริ่มมีประจำเดือน · ครบ 5 เวลา'; sv.classList.toggle('is-off', !!S.active); } }
+  }
+  const ap = window.applyPrayerNotePreset;
+  window.applyPrayerNotePreset = function (k) {
+    if (k === 'menstruation') {
+      if (!girl()) { toast('เมนูนี้สำหรับนักเรียนหญิงเท่านั้น', 'warning'); return; }
+      const r = ap ? ap.call(this, '__none__') : null;
+      const inp = $('prayerNoteInput'); if (inp) inp.value = 'มีประจำเดือน / อุซุรทางศาสนา';
+      formMode(true);
+      if (S.active) toast('มีช่วงประจำเดือนที่รอกดสิ้นสุดอยู่แล้ว (เริ่ม ' + thDate(S.active.start) + ')', 'info');
+      else { toast('เลือกวันที่เริ่มมีประจำเดือนในข้อ 2 แล้วกดแจ้ง', 'info'); setTimeout(() => { const d = $('k8PnDate'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150); }
+      return r;
+    }
+    if (S.mode) formMode(false);
+    return ap ? ap.apply(this, arguments) : null;
+  };
+  ['togglePrayerNoteTime', 'selectAllPrayerNoteTimes', 'updatePrayerNoteChipsUI', 'k8PnOther'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); if (S.mode && fn === 'k8PnOther') formMode(false); setTimeout(sync, 5); return r; }; });
+  document.addEventListener('input', (e) => { if (S.mode && e.target && e.target.id === 'prayerNoteInput' && !/ประจำเดือน/.test(e.target.value)) formMode(false); });
+  const sv = window.savePrayerNoteOnly;
+  window.savePrayerNoteOnly = async function () {
+    if (!S.mode) return sv.apply(this, arguments);
+    if (S.busy) return;
+    if (S.active) { window.k8PerGo(); return; }
+    if (preview()) { toast('โหมดดูตัวอย่าง · ส่งไม่ได้', 'info'); return; }
+    const start = ($('k8PnDate') || {}).value || ymd(new Date());
+    S.busy = true; const b = document.querySelector('.k8-pn-save'); if (b) { b.disabled = true; b.textContent = 'กำลังส่ง…'; }
+    let r = null; try { r = await gasApiCall('periodStart', { data: { startDate: start, note: (($('prayerNoteInput') || {}).value || '') } }, 30000); } catch (e) {}
+    S.busy = false; if (b) b.disabled = false;
+    if (r && r.success) {
+      S.active = r.active; store();
+      const inp = $('prayerNoteInput'); if (inp) inp.value = '';
+      try { selectAllPrayerNoteTimes(false); } catch (e) {}
+      formMode(false);
+      try { togglePrayerNotesCollapse(false); } catch (e) {}
+      toast('บันทึกวันเริ่มแล้ว · เมื่อหมดให้กด "สิ้นสุดประจำเดือน"', 'success');
+      repaint(); window.k8PerGo();
+    } else { if (r && r.code === 'ALREADY_ACTIVE' && r.active) { S.active = r.active; store(); repaint(); } toast((r && r.message) || 'ส่งไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); sync(); }
+  };
+
+  ['switchView', 'renderCurrentStudentProfile'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(() => { sync(); render(); if (fn === 'renderCurrentStudentProfile' || arguments[0] === 'prayer') { if (!S.loadedAt || Date.now() - S.loadedAt > 30000) { S.loadedAt = Date.now(); load(); } } }, 30); return r; }; });
+  const go = () => { sync(); render(); setTimeout(() => { S.loadedAt = Date.now(); load(); }, 2500); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
 })();

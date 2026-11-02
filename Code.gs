@@ -1131,7 +1131,7 @@ function publicSettings_(settings) {
   const o = {};
   Object.keys(settings || {}).forEach(function (k) {
     if (/master|password|secret|token|otp/i.test(k)) return;
-    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
+    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$|^PeriodEpisodes$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
     if (/^Timetable/.test(k)) return; // ตารางสอน: อ่านผ่าน getTimetable (มีสิทธิ์และการเปิด/ปิดการมองเห็น)
     o[k] = settings[k];
   });
@@ -1180,7 +1180,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1591,6 +1591,15 @@ function dispatchAction_(action, req, data, session, ctx) {
       return removeEnrollment_(data);
     case 'getEnrollments':
       return { success: true, data: enrollIdsBySubject_() };
+    // v17.39 · ประจำเดือน: นักเรียนหญิงแจ้งวันเริ่ม → กดสิ้นสุด → ระบบบันทึกอุซุรย้อนหลังครบทุกเวลา
+    case 'periodStart':
+    case 'periodEnd':
+    case 'periodCancel':
+    case 'getMyPeriod':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return periodAction_(action, data || {}, session);
+    case 'getPeriodEpisodes':
+      return { success: true, data: periodList_().slice(-200).reverse() };
     case 'getMyEnrollments':
       if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
       return getMyEnrollments_(session.userId);
@@ -6775,5 +6784,82 @@ function markHalaqah_(d, session) {
     });
     if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, add[0].length).setValues(add);
     return { success: true, saved: n, message: 'บันทึกการเข้าหะละเกาะฮฺ ' + n + ' คนแล้ว' };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/* ---------- v17.39 · ช่วงมีประจำเดือน (นักเรียนหญิง) ----------
+   เก็บใน Settings คีย์ PeriodEpisodes (JSON) · ตอนกดสิ้นสุด ระบบเพิ่มบันทึก "อุซุร (มีประจำเดือน)"
+   ให้ทุกเวลาละหมาดตั้งแต่วันเริ่มจนถึงก่อนเวลาที่กลับมาละหมาดได้ (ข้ามเวลาที่มีบันทึกอยู่แล้ว) */
+const PERIOD_SLOTS_ = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+const PERIOD_STATUS_ = 'อุซุร (มีประจำเดือน)';
+function periodList_() { let v = []; try { v = JSON.parse((getSettings().data || {}).PeriodEpisodes || '[]'); } catch (e) { v = []; } return Array.isArray(v) ? v : []; }
+function periodSave_(list) {
+  const cut = Utilities.formatDate(new Date(Date.now() - 400 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  list = list.filter(function (x) { return x.status === 'active' || String(x.end || x.start) >= cut; });
+  saveSetting({ key: 'PeriodEpisodes', value: JSON.stringify(list), description: 'ช่วงมีประจำเดือนของนักเรียนหญิง (JSON)' });
+}
+function periodYmd_(d) { return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd'); }
+function periodAddDays_(ymd, n) { const d = new Date(ymd + 'T12:00:00+07:00'); d.setDate(d.getDate() + n); return periodYmd_(d); }
+function periodIsGirl_(st) {
+  if (!st) return false;
+  const g = String(st.gender || st.sex || '').trim();
+  if (/หญิง|female|^f$/i.test(g)) return true;
+  if (/ชาย|male|^m$/i.test(g)) return false;
+  return /^(นางสาว|นาง|เด็กหญิง|ด\.ญ\.|น\.ส\.)/.test(String(st.fullName || st.name || '').trim());
+}
+function periodAction_(action, data, session) {
+  const sid = cleanVal(session.userId);
+  const today = periodYmd_(new Date());
+  const lock = LockService.getScriptLock(); try { lock.waitLock(15000); } catch (e) {}
+  try {
+    const list = periodList_();
+    const mine = list.filter(function (x) { return isCodeMatch(x.studentId, sid); });
+    const active = mine.filter(function (x) { return x.status === 'active'; })[0] || null;
+    if (action === 'getMyPeriod') return { success: true, active: active, history: mine.filter(function (x) { return x.status !== 'active'; }).slice(-5).reverse() };
+    if (action === 'periodStart') {
+      if (active) return { success: false, code: 'ALREADY_ACTIVE', message: 'มีช่วงประจำเดือนที่ยังไม่สิ้นสุดอยู่แล้ว (เริ่ม ' + active.start + ')', active: active };
+      const st = getStudentForStaff_(sid); const stu = st && st.student;
+      if (!periodIsGirl_(stu)) return { success: false, code: 'GIRLS_ONLY', message: 'เมนูนี้สำหรับนักเรียนหญิงเท่านั้น' };
+      const start = formatSheetDate(data.startDate) || today;
+      if (start > today) return { success: false, message: 'วันที่เริ่มต้องไม่เกินวันนี้' };
+      if (start < periodAddDays_(today, -15)) return { success: false, message: 'เลือกวันเริ่มย้อนหลังได้ไม่เกิน 15 วัน' };
+      const ep = { id: 'PER-' + Date.now(), studentId: sid, name: cleanVal(stu.fullName || ''), grade: cleanVal(stu.grade || ''), start: start, status: 'active', note: cleanVal(data.note || '').slice(0, 200), createdAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss') };
+      list.push(ep); periodSave_(list);
+      try { sendNotification_({ title: 'แจ้งมีประจำเดือน: ' + ep.name, body: 'เริ่ม ' + start + ' · ระบบจะบันทึกอุซุรให้อัตโนมัติเมื่อนักเรียนกดสิ้นสุด', audience: 'admins' }, { userId: sid, name: ep.name }); } catch (e) {}
+      return { success: true, active: ep, message: 'บันทึกวันเริ่มแล้ว · เมื่อประจำเดือนหมด ให้กด "สิ้นสุดประจำเดือน"' };
+    }
+    if (!active) return { success: false, code: 'NO_ACTIVE', message: 'ไม่มีช่วงประจำเดือนที่กำลังรออยู่' };
+    if (action === 'periodCancel') {
+      const ix = list.indexOf(active); list.splice(ix, 1); periodSave_(list);
+      return { success: true, message: 'ยกเลิกการแจ้งแล้ว' };
+    }
+    // periodEnd: endDate = วันที่ประจำเดือนหมด · resume = เวลาแรกที่กลับมาละหมาดได้ของวันนั้น (0–4, 5 = ทั้งวันยังมี)
+    const end = formatSheetDate(data.endDate) || today;
+    if (end < active.start) return { success: false, message: 'วันที่สิ้นสุดต้องไม่ก่อนวันเริ่ม (' + active.start + ')' };
+    if (end > today) return { success: false, message: 'วันที่สิ้นสุดต้องไม่เกินวันนี้' };
+    let resume = parseInt(data.resumeSlot, 10); if (!(resume >= 0 && resume <= 5)) resume = 0;
+    const ss = getSpreadsheet(); const sheet = ss.getSheetByName(SHEETS.PRAYERS);
+    const rows = sheet.getDataRange().getValues(); const have = {};
+    for (let i = 1; i < rows.length; i++) {
+      if (!isCodeMatch(rows[i][1], sid)) continue;
+      const st = String(rows[i][14] || ''); if (/ขาด/.test(st)) continue;
+      have[formatSheetDate(rows[i][6]) + '|' + formatPrayerTimeThai(rows[i][4])] = 1;
+    }
+    const out = []; let d = active.start, guard = 0; const stamp = new Date().toISOString();
+    const note = 'บันทึกอัตโนมัติ: ช่วงมีประจำเดือน ' + active.start + ' ถึง ' + end;
+    while (d <= end && guard++ < 40) {
+      const n = d < end ? 5 : resume;
+      for (let k = 0; k < n; k++) {
+        const slot = formatPrayerTimeThai(PERIOD_SLOTS_[k]);
+        if (have[d + '|' + slot]) continue;
+        out.push(['PRY-PER-' + Date.now() + '-' + out.length, formatAsText(sid), active.name, active.grade, slot, stamp, d, '-', '', '', 'อุซุร · บันทึกอัตโนมัติ', 0, 'ไม่ใช่', '', PERIOD_STATUS_, note]);
+      }
+      d = periodAddDays_(d, 1);
+    }
+    if (out.length) sheet.getRange(sheet.getLastRow() + 1, 1, out.length, out[0].length).setValues(out);
+    active.status = 'ended'; active.end = end; active.resumeSlot = resume; active.records = out.length; active.endedAt = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    periodSave_(list);
+    try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
+    return { success: true, ended: active, added: out.length, message: 'บันทึกอุซุรย้อนหลังให้แล้ว ' + out.length + ' เวลา' };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
