@@ -3965,3 +3965,7 @@ html.k8-tpd #view-teacher { padding-top: 88px !important; }
 
 /* v17.55 · การ์ดผลประเมินเดิมซ่อน (ใช้ปุ่มทางลัดแทน) */
 html #view-teacher #teacher-tab-overview .k8-eval-card.k8-eval-card { display: none !important; }
+/* v17.55 · ปุ่มทางลัดบนคอม/แท็บเล็ต: 4 ปุ่มต่อแถว ลำดับเดียวกับมือถือ */
+html.k8-tp #view-teacher .k8-tp-c > .k8-th-quick { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+/* v17.56 · ปุ่มทางลัดแถวละ 4 เท่ามือถือ ทุกจอ */
+html.k8-tp .k8-tp-c > .k8-th-quick { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
