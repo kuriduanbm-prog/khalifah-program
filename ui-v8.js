@@ -1127,19 +1127,25 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const now = new Date(); const in7 = new Date(now.getTime() + 7 * 864e5);
     const soon = acts.filter((a) => { const d = new Date(a.startDate || a.date); return !isNaN(d) && d >= new Date(ymd(now)) && d <= in7; }).length;
 
+    // v17.62 · ต้องทำ: เฉพาะงานจริงของวันนี้ (คาบที่สอนวันนี้ · คะแนนที่ยังขาด · กิจกรรมใกล้ถึง) · ซ่อนรายการที่เป็น 0
+    const gOf = {}; students.forEach((s) => { const m = String(s.grade || '').match(/([1-6])/); gOf[String(s.studentId).replace(/^0+/, '')] = m ? m[1] : ''; });
+    const per = (window.k8TtMineToday && window.k8TtMineToday()) || [];
+    const lblG = (g) => (String(g).indexOf('x:') === 0 ? 'กลุ่มพิเศษ' : 'ม.' + g);
+    const perDone = (x) => cloudAtt.some((r) => r && r.date === today && String(r.subjectCode || '') === String(x.c.s || '') && (String(x.g).indexOf('x:') === 0 || gOf[String(r.studentId).replace(/^0+/, '')] === String(x.g)));
+    const perLeft = per.filter((x) => !perDone(x));
+    let gm = []; try { gm = window.k8GsModel ? window.k8GsModel() : []; } catch (e) { gm = []; }
+    const gLeft = [];
+    gm.forEach((c) => c.rows.forEach((r) => { const miss = r.studs.length - r.done; if (r.studs.length && miss > 0 && c.g !== '?') gLeft.push({ name: r.subj.name, g: c.g, miss }); }));
+    gLeft.sort((x, y) => y.miss - x.miss);
+    const gMiss = gLeft.reduce((t, x) => t + x.miss, 0);
+    const more = (n) => (n > 0 ? ' และอีก ' + n : '');
     const rows = [
-      (function () {
-        let a = null; try { a = currentAdmin; } catch (e) {}
-        let subs = []; try { subs = appSubjects || []; } catch (e) {}
-        const my = window.k8TeacherSubjects ? window.k8TeacherSubjects(a) : subs; // v17.60
-        if (!my.length) return { n: notChecked, title: 'เช็คชื่อมาเรียนวันนี้', sub: notChecked ? 'ยังไม่เช็ค ' + notChecked + ' คน' : 'เช็คครบทุกคนแล้ว', bg: notChecked ? '#fffbeb' : '#f0fdf4', ink: notChecked ? '#b45309' : '#15803d', go: "switchTeacherTab('attendance')" };
-        const done = new Set(cloudAtt.filter((r) => r && r.date === today && r.subjectCode).map((r) => String(r.subjectCode)));
-        const left = my.filter((x) => !done.has(String(x.id)));
-        return { n: left.length, title: 'เช็คชื่อรายวิชาวันนี้', sub: left.length ? 'ยังไม่เช็ค: ' + left.map((x) => x.name).join(', ') : 'เช็คครบทุกวิชาแล้ว', bg: left.length ? '#fffbeb' : '#f0fdf4', ink: left.length ? '#b45309' : '#15803d', go: "switchTeacherTab('attendance')" };
-      })(),
-      { n: subjId ? students.length - graded : 0, title: 'เกรด' + (subjName ? ' ' + subjName.replace(/^[A-Z0-9]+ - /, '') : ''), sub: subjId ? 'ให้เกรดแล้ว ' + graded + ' จาก ' + students.length + ' คน' : 'ยังไม่มีวิชาที่รับผิดชอบ', bg: '#e0f2fe', ink: '#0369a1', go: "switchTeacherTab('grades')" },
-      { n: soon, title: 'กิจกรรมใกล้ถึง', sub: soon ? soon + ' กิจกรรมภายใน 7 วัน' : 'ไม่มีกิจกรรมใน 7 วัน', bg: '#f0fdf4', ink: '#15803d', go: "switchTeacherTab('calendar')" }
+      perLeft.length ? { n: perLeft.length, title: 'เช็คชื่อคาบที่สอนวันนี้', sub: perLeft.slice(0, 2).map((x) => x.start + ' ' + x.c.sn + ' ' + lblG(x.g)).join(' · ') + more(perLeft.length - 2), bg: '#fffbeb', ink: '#b45309', go: "switchTeacherTab('attendance')" } : null,
+      gLeft.length ? { n: gMiss, title: 'คะแนนที่ยังกรอกไม่ครบ', sub: gLeft.slice(0, 2).map((x) => x.name + ' ม.' + x.g + ' ขาด ' + x.miss + ' คน').join(' · ') + more(gLeft.length - 2 > 0 ? gLeft.length - 2 : 0) + (gLeft.length > 2 ? ' วิชา' : ''), bg: '#e0f2fe', ink: '#0369a1', go: "switchTeacherTab('grades')" } : null,
+      soon ? { n: soon, title: 'กิจกรรมใกล้ถึง', sub: soon + ' กิจกรรมภายใน 7 วัน', bg: '#f0fdf4', ink: '#15803d', go: "switchTeacherTab('calendar')" } : null
     ];
+    if (!rows.some(Boolean)) { list.innerHTML = '<p class="k8-todo-empty">' + (per.length ? 'เช็คชื่อครบทุกคาบแล้ว · ' : '') + 'ไม่มีงานค้างวันนี้ ✓</p>'; }
+    else
     list.innerHTML = rows.filter(Boolean).map((r) =>
       '<button type="button" class="k8-todo-row" onclick="' + r.go + '"><span class="k8-todo-badge" style="background:' + r.bg + ';color:' + r.ink + '">' + r.n + '</span>' +
       '<span class="k8-todo-text"><b>' + esc(r.title) + '</b><span>' + esc(r.sub) + '</span></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>'
@@ -3215,7 +3221,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.61';
+  const APP_VERSION = '17.62';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6261,7 +6267,8 @@ window.k8RegBirthChange = function (v) {
       const sel = document.getElementById('teacherPortalSubjectSelect'); const sid = sel && sel.value;
       const st = (typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents.filter((s) => !/ลาออก|สำเร็จ/.test(String(s.status || ''))) : [];
       let left = 0; if (sid) st.forEach((s) => { const g = s.subjectGrades && s.subjectGrades[sid]; if (!(g !== undefined && g !== null && g !== '' && Number(g) > 0)) left++; });
-      document.getElementById('k8ThGradeN').textContent = sid ? left : '0';
+      let miss = 0; try { (window.k8GsModel ? window.k8GsModel() : []).forEach((c) => { if (c.g !== '?') c.rows.forEach((r) => { miss += Math.max(0, r.studs.length - r.done); }); }); } catch (e) { miss = sid ? left : 0; }
+      document.getElementById('k8ThGradeN').textContent = miss; // v17.62 · นับเฉพาะนักเรียนในชั้นที่สอนจริงตามตารางสอน
     } catch (e) {}
     const list = window.k8TtMineToday ? window.k8TtMineToday() : null;
     const perN = document.getElementById('k8ThPerN'); if (perN) perN.textContent = list ? list.length : '-';
