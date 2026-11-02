@@ -4098,3 +4098,62 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-saved { grid-column: 1 / -1; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-datenav { display: flex; gap: 6px; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-dpill { flex: 1; min-width: 0; white-space: nowrap; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-row2 select { width: 100%; }
+
+/* v17.64 · เช็คชื่อบนมือถือ (PM7): แถบคาบด้านบน · ชื่อ 2 บรรทัด · ปุ่มคำเต็มบรรทัดเดียว (สูง ≥ 44px)
+   จอแคบกว่า 360px หรือโหมดตัวอักษรใหญ่: ปุ่มย้ายไปใต้ชื่อ */
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-per { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x proximity; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-per::-webkit-scrollbar { display: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-per-h { display: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-per-empty { flex: 1; padding: 10px 12px; font-size: 12.5px; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-pc { flex: none; width: 132px; padding: 9px 11px; scroll-snap-align: start; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-pc b { font-size: 13.5px; line-height: 1.35; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-pc small { font-size: 11px; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-pc-t span:last-child { display: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-pc.is-home { margin: 0; justify-content: center; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-card { flex-direction: row !important; align-items: center; gap: 8px; padding: 8px 10px !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-top { flex: 1; min-width: 0; flex-direction: column; align-items: flex-start !important; gap: 1px !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-av { display: none !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-name { width: 100%; font-size: 14px !important; line-height: 1.35; white-space: normal !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: clip !important; overflow-wrap: anywhere; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-id { font-size: 11.5px !important; margin: 0 !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-opts { flex: none; display: grid !important; grid-template-columns: repeat(4, 44px) !important; gap: 4px !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-opts button { min-height: 44px !important; padding: 0 !important; font-size: 13px !important; border-radius: 10px !important; }
+@media (max-width: 359px) {
+  html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-card { flex-direction: column !important; align-items: stretch; }
+  html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-name { -webkit-line-clamp: unset; display: block; }
+  html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-opts { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+html.k8-narrow:not(.k8-tpd) #teacher-tab-attendance .k8-ta-card { flex-direction: column !important; align-items: stretch; }
+html.k8-narrow:not(.k8-tpd) #teacher-tab-attendance .k8-ta-name { -webkit-line-clamp: unset; display: block; }
+html.k8-narrow:not(.k8-tpd) #teacher-tab-attendance .k8-ta-opts { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+/* v17.64 · ชื่อแสดงเต็มเสมอ (ไม่ตัด) · การ์ดคาบกว้างขึ้นเล็กน้อย */
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-name { display: block !important; -webkit-line-clamp: unset !important; overflow: visible !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-pc { width: 150px; }
+/* v17.64 · แถวที่ชื่อยาวเกิน 2 บรรทัด: ย่อปุ่มเป็น ม ส ล ข */
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-card.is-short .k8-ta-opts { grid-template-columns: repeat(4, 36px) !important; gap: 3px !important; }
+#teacher-tab-attendance .k8-ta-ls { display: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-card.is-short .k8-ta-lf { display: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-card.is-short .k8-ta-ls { display: inline; font-size: 14px; }
+
+/* v17.64 · เช็คชื่อบนมือถือ = PM7 ทั้งหน้า */
+.k8-ta-msub, .k8-ta-msum { display: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-head { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 0 4px !important; margin: 0 !important; border-radius: 0 !important; gap: 12px !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-mt { display: flex; flex-direction: column; min-width: 0; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-head h1 { font-size: 22px !important; margin: 0 !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-head h1 { font-size: 0 !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-head h1::before { content: 'เช็คชื่อ'; font-size: 22px; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-msub { display: block; font-size: 13px; color: #64748b; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-hist-btn svg { display: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-msum { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+.k8-ta-msum-c { flex: 1; display: flex; gap: 12px; font-size: 13px; color: #475569; white-space: nowrap; }
+.k8-ta-mall { min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: #dcfce7; color: #15803d; font: 700 13.5px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+.k8-ta-mmore { flex-basis: 100%; text-align: left; border: 0; background: none; padding: 2px 0; color: #0369a1; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta:not(.show-f) .k8-ta-grid2, html:not(.k8-tpd) #teacher-tab-attendance .k8-ta:not(.show-f) .k8-ta-row2 { display: none !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-sum, html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-row2 .k8-ta-all { display: none !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta.show-f .k8-ta-grid2, html:not(.k8-tpd) #teacher-tab-attendance .k8-ta.show-f .k8-ta-row2 { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; }
+/* รายชื่อรวมในการ์ดเดียว */
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-list { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; gap: 0 !important; padding: 0 !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-card { border: 0 !important; border-top: 1px solid #f1f5f9 !important; border-radius: 0 !important; box-shadow: none !important; margin: 0 !important; padding: 10px 12px !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-card:first-child { border-top: 0 !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-opts button[aria-checked="false"] { background: #f1f5f9 !important; color: #64748b !important; border-color: #f1f5f9 !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-opts button { font-weight: 700 !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-per { margin: 0 !important; padding: 2px 0 4px !important; }
