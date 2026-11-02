@@ -3692,14 +3692,9 @@ function deleteActivity(activityId) {
   const sheet = ss.getSheetByName(SHEETS.ACTIVITIES);
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานกิจกรรม' };
   const targetId = cleanVal(activityId);
-  const rows = sheet.getDataRange().getValues();
-  for (let i = rows.length - 1; i >= 1; i--) {
-    if (cleanVal(rows[i][0]) === targetId) {
-      sheet.deleteRow(i + 1);
-      return { success: true, message: 'ลบกิจกรรมเรียบร้อยแล้ว' };
-    }
-  }
-  return { success: false, message: 'ไม่พบรหัสกิจกรรม' };
+  if (!targetId) return { success: false, message: 'ไม่พบรหัสกิจกรรม' };
+  const n = deleteRowsWhere_(sheet, function (r) { return cleanVal(r[0]) === targetId; });
+  return { success: true, deleted: n, message: n ? 'ลบกิจกรรมเรียบร้อยแล้ว' : 'ไม่มีกิจกรรมนี้ในระบบแล้ว' };
 }
 
 function getActivities() {
@@ -3930,20 +3925,11 @@ function deleteActivityAttendee(data) {
   const targetLogId = cleanVal(data.logId || data.id || '');
   const targetActId = cleanVal(data.activityId || '');
   const targetSid = cleanVal(data.studentId || '');
-  const rows = sheetLogs.getDataRange().getValues();
-
-  for (let i = rows.length - 1; i >= 1; i--) {
-    const rLogId = cleanVal(rows[i][0]);
-    const rParsed = stripKhalifahQrPrefix(rows[i][2], rows[i][1]);
-    const rSid = cleanVal(rows[i][3]);
-
-    if ((targetLogId && rLogId === targetLogId) ||
-        (targetActId && targetSid && rParsed.activityId === targetActId && isCodeMatch(rSid, targetSid))) {
-      sheetLogs.deleteRow(i + 1);
-      return { success: true, message: 'ลบรายชื่อผู้เข้าร่วมกิจกรรมเรียบร้อยแล้ว' };
-    }
-  }
-  return { success: false, message: 'ไม่พบรายชื่อผู้เข้าร่วมที่ต้องการลบ' };
+  const n = deleteRowsWhere_(sheetLogs, function (r) {
+    const rParsed = stripKhalifahQrPrefix(r[2], r[1]);
+    return (targetLogId && cleanVal(r[0]) === targetLogId) || (targetActId && targetSid && rParsed.activityId === targetActId && isCodeMatch(cleanVal(r[3]), targetSid));
+  });
+  return { success: true, deleted: n, message: n ? 'ลบรายชื่อผู้เข้าร่วมกิจกรรมเรียบร้อยแล้ว' : 'ไม่มีรายชื่อนี้แล้ว' };
 }
 
 /**
@@ -4184,7 +4170,7 @@ function deleteSubAdmin(username) {
   });
 
   if (deleted) return { success: true, message: 'ลบบัญชีบุคลากรเรียบร้อยแล้ว' };
-  return { success: false, message: 'ไม่พบบัญชีที่ต้องการลบ' };
+  return { success: true, deleted: 0, message: 'ไม่มีบัญชีนี้ในระบบแล้ว' };
 }
 
 function getTeachers() {
@@ -4420,18 +4406,22 @@ function getAllStudents() {
   return { success: true, data: results };
 }
 
-function deleteStudent(studentId) {
-  const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName(SHEETS.STUDENTS);
-  const rows = sheet.getDataRange().getValues();
 
-  for (let i = rows.length - 1; i >= 1; i--) {
-    if (isCodeMatch(rows[i][0], studentId)) {
-      sheet.deleteRow(i + 1);
-      return { success: true, message: 'ลบข้อมูลนักเรียนรหัส ' + cleanVal(studentId) + ' เรียบร้อยแล้ว' };
-    }
-  }
-  return { success: false, message: 'ไม่พบรหัสนักเรียน' };
+// v17.46 · ลบทุกแถวที่ตรงเงื่อนไข (กันแถวซ้ำที่ทำให้ "ลบแล้วกลับมา" ต้องกดลบหลายครั้ง) · ล็อกกันลบพร้อมกัน
+function deleteRowsWhere_(sheet, match) {
+  const lock = LockService.getScriptLock(); try { lock.waitLock(15000); } catch (e) {}
+  try {
+    const rows = sheet.getDataRange().getValues(); let n = 0;
+    for (let i = rows.length - 1; i >= 1; i--) if (match(rows[i])) { sheet.deleteRow(i + 1); n++; }
+    if (n) { try { SpreadsheetApp.flush(); } catch (e) {} if (typeof __ROWS_MEMO !== 'undefined' && __ROWS_MEMO) delete __ROWS_MEMO[sheet.getName()]; }
+    return n;
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+function deleteStudent(studentId) {
+  if (!cleanVal(studentId)) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.STUDENTS);
+  const n = deleteRowsWhere_(sheet, function (r) { return isCodeMatch(r[0], studentId); });
+  return { success: true, deleted: n, message: n ? 'ลบข้อมูลนักเรียนรหัส ' + cleanVal(studentId) + ' เรียบร้อยแล้ว' : 'ไม่มีนักเรียนรหัสนี้ในระบบแล้ว' };
 }
 
 function batchPromoteStudents(fromGrade, toGrade) {
@@ -5037,17 +5027,9 @@ function deletePendingRegistration(data) {
   const sheet = ensureApprovalsSheet();
   const targetReqId = cleanVal(data.reqId || data.id || '');
   const targetUserId = cleanVal(data.userId || '');
-  const rows = sheet.getDataRange().getValues();
-
-  for (let i = rows.length - 1; i >= 1; i--) {
-    const rReqId = cleanVal(rows[i][0]);
-    const rUserId = cleanVal(rows[i][2]);
-    if ((targetReqId && rReqId === targetReqId) || (targetUserId && isCodeMatch(rUserId, targetUserId))) {
-      sheet.deleteRow(i + 1);
-      return { success: true, message: 'ลบคำขอสมัครออกจากฐานข้อมูลเรียบร้อยแล้ว' };
-    }
-  }
-  return { success: false, message: 'ไม่พบคำขอสมัครที่ต้องการลบ' };
+  if (!targetReqId && !targetUserId) return { success: false, message: 'ไม่พบคำขอสมัครที่ต้องการลบ' };
+  const n = deleteRowsWhere_(sheet, function (r) { return (targetReqId && cleanVal(r[0]) === targetReqId) || (targetUserId && isCodeMatch(cleanVal(r[2]), targetUserId)); });
+  return { success: true, deleted: n, message: n ? 'ลบคำขอสมัครออกจากฐานข้อมูลเรียบร้อยแล้ว' : 'ไม่มีคำขอสมัครนี้แล้ว' };
 }
 
 /**
@@ -5690,27 +5672,11 @@ function deleteCalendarEvent(data) {
   const eventId = cleanVal(typeof data === 'string' ? data : (data.id || data.eventId));
   if (!eventId) return { success: false, message: 'ไม่พบรหัสกิจกรรมที่ต้องการลบ' };
 
-  const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(10000);
-  } catch (e) {
-    return { success: false, message: 'ระบบกำลังมีผู้ใช้งานพร้อมกันจำนวนมาก' };
-  }
-
-  try {
-    const rows = sheet.getDataRange().getValues();
-    for (let i = rows.length - 1; i >= 1; i--) {
-      if (cleanVal(rows[i][0]) === eventId) {
-        sheet.deleteRow(i + 1);
-        SpreadsheetApp.flush();
-        return { success: true, message: 'ลบกิจกรรมออกจากปฏิทินเรียบร้อยแล้ว', id: eventId };
-      }
-    }
-    return { success: false, message: 'ไม่พบกิจกรรมรหัส ' + eventId + ' ในฐานข้อมูล' };
+    const n = deleteRowsWhere_(sheet, function (r) { return cleanVal(r[0]) === eventId; });
+    return { success: true, deleted: n, id: eventId, message: n ? 'ลบกิจกรรมออกจากปฏิทินเรียบร้อยแล้ว' : 'ไม่มีกิจกรรมนี้ในปฏิทินแล้ว' };
   } catch (err) {
     return { success: false, message: 'เกิดข้อผิดพลาดในการลบกิจกรรม: ' + err.message };
-  } finally {
-    try { lock.releaseLock(); } catch (e) {}
   }
 }
 
@@ -5890,12 +5856,8 @@ function deletePrayerLateRequest_(data) {
   if (!reqId) return { success: false, message: 'ไม่พบรหัสคำขอ' };
   const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYER_APPROVALS);
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานคำขออนุมัติละหมาด' };
-  const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) {}
-  try {
-    const rows = sheet.getDataRange().getValues();
-    for (let i = rows.length - 1; i >= 1; i--) if (cleanVal(rows[i][0]) === reqId) { sheet.deleteRow(i + 1); return { success: true, message: 'ลบคำขอแล้ว' }; }
-    return { success: true, message: 'ไม่มีคำขอนี้ในระบบแล้ว' };
-  } finally { try { lock.releaseLock(); } catch (e) {} }
+  const n = deleteRowsWhere_(sheet, function (r) { return cleanVal(r[0]) === reqId; });
+  return { success: true, deleted: n, message: n ? 'ลบคำขอแล้ว' : 'ไม่มีคำขอนี้ในระบบแล้ว' };
 }
 
 function updatePrayerLateRequestStatus(data) {

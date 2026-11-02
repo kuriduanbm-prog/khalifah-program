@@ -3026,7 +3026,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.45';
+  const APP_VERSION = '17.46';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5319,8 +5319,9 @@ window.k8RegBirthChange = function (v) {
   async function load(force) {
     if (T.loading) return; if (!force && T.data && Date.now() - (T.at || 0) < 60000) return;
     T.loading = true;
-    let r = null;
+    let r = null; const w0 = T.w || 0;
     try { r = await gasApiCall('getTimetable', {}, 20000); } catch (e) { r = null; }
+    if (r && r.success && (T.w || 0) !== w0) { T.loading = false; T.at = 0; return load(true); } // v17.46 · มีการบันทึก/ลบระหว่างโหลด → ข้อมูลที่ได้เก่าแล้ว โหลดใหม่
     if (r && r.success) { T.data = r; T.at = Date.now(); T.err = ''; try { localStorage.setItem(CACHE, JSON.stringify(r)); } catch (e) {} }
     else {
       // โหลดไม่ได้ (ระบบหลังบ้านยังไม่อัปเดต / เน็ตหลุด): ใช้ค่าเริ่มต้นให้ทำงานต่อได้ ไม่ค้างที่ "กำลังโหลด"
@@ -5638,6 +5639,7 @@ window.k8RegBirthChange = function (v) {
         try { renderAdminSubjectsTable(); populateGradingSubjectSelect(); } catch (e) {}
       } catch (e) { toast('เพิ่มวิชาใหม่ไม่สำเร็จ · ตารางจะใช้ชื่อวิชาที่พิมพ์ไว้', 'warning'); }
     }
+    T.w = (T.w || 0) + 1;
     const gs = Object.keys(XL).sort(); const fail = [];
     for (let i = 0; i < gs.length; i++) {
       const g = gs[i]; if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก ม.' + g + ' (' + (i + 1) + '/' + gs.length + ')…'; }
@@ -5807,6 +5809,7 @@ window.k8RegBirthChange = function (v) {
     if (!T.xmeta) return;
     if (!T.xmeta.id) { T.newX = null; T.dirty = false; startDraft('1'); renderAdmin(); return; }
     if (!confirm('ลบตาราง "' + T.xmeta.name + '" ใช่ไหม? นักเรียนในตารางนี้จะไม่เห็นตารางนี้อีก')) return;
+    T.w = (T.w || 0) + 1;
     let r = null; try { r = await gasApiCall('deleteTimetableExtra', { data: { id: T.xmeta.id } }, 20000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้' }; }
     if (!r || !r.success) { toast((r && (r.message || r.error)) || 'ลบไม่สำเร็จ', 'error'); return; }
     T.data.extras = extrasOf().filter((x) => x.id !== T.xmeta.id); try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
@@ -5908,6 +5911,7 @@ window.k8RegBirthChange = function (v) {
     T.draft = JSON.parse(JSON.stringify(gradeOf(g.trim()).cells || {})); T.dirty = true; renderAdmin(); toast('คัดลอกจาก ม.' + g.trim() + ' แล้ว · ตรวจแก้แล้วกดบันทึก', 'info');
   };
   window.k8TtSave = async function () {
+    T.w = (T.w || 0) + 1;
     const b = document.getElementById('k8TtSaveBtn'); if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก…'; }
     const isX = String(T.grade).indexOf('x:') === 0;
     let r = null; try { r = isX ? await gasApiCall('saveTimetableExtra', { data: { id: T.xmeta.id, name: T.xmeta.name, students: T.xmeta.students, cells: T.draft } }, 25000) : await gasApiCall('saveTimetable', { data: { grade: T.grade, cells: T.draft } }, 25000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง' }; }
@@ -5922,6 +5926,7 @@ window.k8RegBirthChange = function (v) {
     toast(r.message, 'success'); renderAdmin();
   };
   async function saveCfg(patch, okMsg) {
+    T.w = (T.w || 0) + 1;
     let r = null; try { r = await gasApiCall('saveTimetableConfig', { data: patch }, 20000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้' }; }
     if (!r || !r.success) { toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); renderAdmin(); return false; }
     T.data.config = r.config; try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
@@ -8486,4 +8491,97 @@ window.k8HfMiss = function (slot) {
   setTimeout(badge, 3000);
   setTimeout(autoNormalize, 6000);
   const osw = window.switchAdminTab; if (typeof osw === 'function') window.switchAdminTab = function (t) { const r = osw.apply(this, arguments); if (t === 'students') setTimeout(autoNormalize, 500); return r; };
+})();
+
+/* ---------- v17.46 · ลบแล้วต้องหายจริง: รอผลจากเซิร์ฟเวอร์ + ลองใหม่อัตโนมัติ + กันข้อมูลเก่าจากการซิงค์ดึงกลับมา ---------- */
+(function () {
+  const KEY = 'k8_tombs';
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const cid = (v) => String(v == null ? '' : v).trim().toLowerCase().replace(/^0+(?=\d)/, '');
+  const KIND = {
+    deleteStudent: { k: 'stu', id: (d) => d.studentId, label: 'นักเรียน' },
+    deleteSubAdmin: { k: 'adm', id: (d) => d.username, label: 'บัญชีบุคลากร' },
+    deleteActivity: { k: 'act', id: (d) => d.activityId || d.id, label: 'กิจกรรม' },
+    deleteCalendarEvent: { k: 'cal', id: (d) => d.id || d.eventId, label: 'กิจกรรมในปฏิทิน' },
+    deleteActivityAttendee: { k: 'log', id: (d) => d.logId || d.id, label: 'รายชื่อผู้เข้าร่วม' },
+    deletePrayerRecord: { k: 'pry', id: (d) => d.logId || d.id, label: 'บันทึกละหมาด' },
+    deletePendingRegistration: { k: 'reg', id: (d) => d.reqId || d.id, label: 'คำขอสมัคร' }
+  };
+  let T = {}; try { T = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { T = {}; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(T)); } catch (e) {} };
+  function prune() {
+    const now = Date.now(); let ch = false;
+    Object.keys(T).forEach((k) => Object.keys(T[k] || {}).forEach((id) => { const t = T[k][id]; if ((t.ok && now - t.ok > 180000) || now - t.at > 15 * 60000) { delete T[k][id]; ch = true; } }));
+    if (ch) save();
+  }
+  const has = (k, id) => !!(T[k] && id != null && T[k][cid(id)]);
+  function add(k, id) { if (id == null || id === '') return; T[k] = T[k] || {}; T[k][cid(id)] = { at: Date.now(), ok: 0 }; save(); }
+  function ok(k, id) { const t = T[k] && T[k][cid(id)]; if (t) { t.ok = Date.now(); save(); } }
+  function drop(k, id) { if (T[k]) { delete T[k][cid(id)]; save(); } }
+  let pending = 0;
+
+  // ซ่อนรายการที่เพิ่งลบ แม้ข้อมูลจากการซิงค์ (ที่ดึงก่อนลบเสร็จ) จะยังมีอยู่
+  function apply() {
+    prune();
+    let ch = {};
+    const filt = (arr, k, idf) => { if (!Array.isArray(arr) || !T[k] || !Object.keys(T[k]).length) return arr; const out = arr.filter((x) => !(x && idf(x).some((v) => has(k, v)))); if (out.length !== arr.length) ch[k] = 1; return out; };
+    try { allStudents = filt(allStudents, 'stu', (s) => [s.studentId]); if (ch.stu) localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents)); } catch (e) {}
+    try { subAdmins = filt(subAdmins, 'adm', (s) => [s.username]); if (ch.adm) localStorage.setItem('khalifah_sub_admins', JSON.stringify(subAdmins)); } catch (e) {}
+    try { activities = filt(activities, 'act', (a) => [a.id, a.activityId]); if (ch.act) localStorage.setItem('khalifah_activities', JSON.stringify(activities)); } catch (e) {}
+    try { calendarEvents = filt(calendarEvents, 'cal', (e) => [e.id]); if (ch.cal) localStorage.setItem('khalifah_calendar_events', JSON.stringify(calendarEvents)); } catch (e) {}
+    try { const l = JSON.parse(localStorage.getItem('khalifah_student_act_logs') || '[]'); const o = filt(l, 'log', (x) => [x.id, x.logId]); if (ch.log) localStorage.setItem('khalifah_student_act_logs', JSON.stringify(o)); } catch (e) {}
+    try {
+      const h = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]'); const o = filt(h, 'pry', (x) => [x.id, x.logId]); if (ch.pry) localStorage.setItem('khalifah_prayer_history', JSON.stringify(o));
+      const before = ch.pry; ch.pry = 0; todayPrayers = filt(todayPrayers, 'pry', (x) => [x.id, x.logId]); if (ch.pry) localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers)); ch.pry = ch.pry || before;
+    } catch (e) {}
+    try { if (typeof getPendingRegistrations === 'function') { const l = getPendingRegistrations(); const o = filt(l, 'reg', (x) => [x.reqId, x.id]); if (ch.reg) savePendingRegistrations(o); } } catch (e) {}
+    const run = (f) => { try { if (typeof window[f] === 'function') window[f](); } catch (e) {} };
+    if (ch.stu) { run('filterAdminStudents'); run('renderSuperAdminOverviewKpis'); }
+    if (ch.adm) run('renderSubAdminsTable');
+    if (ch.act || ch.log) { run('renderAdminActivitiesTable'); run('renderActivitiesList'); run('renderAdminLiveActivityFeed'); run('renderActivitiesV8'); }
+    if (ch.cal) { try { renderCalendar('all'); } catch (e) {} }
+    if (ch.reg) { run('renderPendingApprovalsTable'); run('renderApprovalsV8'); }
+    if (ch.pry) { run('renderAdminStudentsTable'); }
+  }
+  window.k8TombApply = apply;
+
+  // ลบผ่าน API ที่รอผลจริง (แทนการส่งแบบไม่รู้ผล) · ลองใหม่ 3 ครั้ง · ไม่สำเร็จ = แจ้งและดึงข้อมูลจริงกลับมา
+  async function reliable(action, data) {
+    const K = KIND[action]; const id = K.id(data || {});
+    add(K.k, id); pending++;
+    let r = null;
+    for (let i = 0; i < 3; i++) {
+      try { r = await window.gasApiCall(action, { data: data }, 30000); } catch (e) { r = null; }
+      if (r && r.success !== false) break;
+      if (r && (r.forbidden || r.authRequired || r.code === 'FORBIDDEN')) break;
+      await new Promise((res) => setTimeout(res, 1500 * (i + 1)));
+    }
+    pending--;
+    if (r && r.success !== false) { ok(K.k, id); }
+    else {
+      drop(K.k, id);
+      toast('ลบ' + K.label + 'ไม่สำเร็จ' + (r && r.message ? ': ' + r.message : ' (เชื่อมต่อระบบไม่ได้)') + ' · ข้อมูลยังอยู่ในระบบ ลองใหม่อีกครั้ง', 'error');
+      try { if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(false); } catch (e) {}
+    }
+    return r;
+  }
+  const osr = window.syncRecordToGoogleSheet;
+  if (typeof osr === 'function') window.syncRecordToGoogleSheet = function (action, data) {
+    if (KIND[action]) return reliable(action, data);
+    return osr.apply(this, arguments);
+  };
+  const oga = window.gasApiCall;
+  if (typeof oga === 'function') window.gasApiCall = async function (action, payload) {
+    const K = KIND[action]; const d = (payload && payload.data) || payload || {};
+    if (K) add(K.k, K.id(d));
+    const r = await oga.apply(this, arguments);
+    if (K) { if (r && r.success !== false) ok(K.k, K.id(d)); else if (!pending) drop(K.k, K.id(d)); }
+    return r;
+  };
+  // หลังดึงข้อมูลจากเซิร์ฟเวอร์ทุกครั้ง: ซ่อนรายการที่เพิ่งลบ
+  ['syncAllDataFromCloud', 'fetchActivitiesAndLogsFromCloud', 'fetchPendingApprovalsFromCloud', 'fetchPrayerApprovalsFromCloud'].forEach((fn) => {
+    const o = window[fn]; if (typeof o !== 'function') return;
+    window[fn] = function () { const r = o.apply(this, arguments); Promise.resolve(r).then(apply, apply); return r; };
+  });
+  setTimeout(apply, 1500);
 })();
