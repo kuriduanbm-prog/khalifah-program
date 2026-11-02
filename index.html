@@ -60,9 +60,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.41">
-  <link rel="stylesheet" href="ui-v8.css?v=17.41">
-  <link rel="stylesheet" href="dark.css?v=17.41">
+  <link rel="stylesheet" href="style.css?v=17.42">
+  <link rel="stylesheet" href="ui-v8.css?v=17.42">
+  <link rel="stylesheet" href="dark.css?v=17.42">
 </head>
 <body class="auth-locked">
   <script>
@@ -2564,6 +2564,7 @@
               <div class="k8-as-sub" id="k8AsSub">แสดง 0 คน · กดแถวเพื่อดูรายละเอียด</div>
             </div>
             <button type="button" class="k8-btn-line" onclick="exportToExcel()">ส่งออก Excel</button>
+            <button type="button" class="k8-btn-line k8-gx-btn" onclick="k8GxOpen()">ระบุเพศนักเรียน<span class="k8-gx-n" id="k8GxBtnN" hidden></span></button>
             <button type="button" class="k8-btn-pri" onclick="openAdminEditStudentModal(null)">+ เพิ่มนักเรียน</button>
           </div>
           <div class="k8-as-filters">
@@ -4415,8 +4416,26 @@
               <span class="k8-help">ใช้เป็นรหัสผ่านตอนเข้าสู่ระบบ</span>
             </div>
             <div class="form-group">
+              <span class="form-label" id="k8RegSexLbl">เพศ</span>
+              <div class="k8-reg-sex" id="k8RegSex" role="radiogroup" aria-labelledby="k8RegSexLbl">
+                <button type="button" role="radio" aria-checked="false" data-v="ชาย" onclick="k8RegSex('ชาย')">ชาย</button>
+                <button type="button" role="radio" aria-checked="false" data-v="หญิง" onclick="k8RegSex('หญิง')">หญิง</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="k8RegPrefix">คำนำหน้า</label>
+              <select class="form-control" id="k8RegPrefix" onchange="k8RegPrefix(this.value)">
+                <option value="">เลือกคำนำหน้า</option>
+                <option value="เด็กชาย" data-sex="ชาย">เด็กชาย</option>
+                <option value="นาย" data-sex="ชาย">นาย</option>
+                <option value="เด็กหญิง" data-sex="หญิง">เด็กหญิง</option>
+                <option value="นางสาว" data-sex="หญิง">นางสาว</option>
+                <option value="นาง" data-sex="หญิง">นาง</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label" for="regFullName">ชื่อ-นามสกุล</label>
-              <input type="text" class="form-control" id="regFullName" placeholder="ชื่อจริง นามสกุล">
+              <input type="text" class="form-control" id="regFullName" placeholder="ชื่อจริง นามสกุล (ไม่ต้องพิมพ์คำนำหน้า)">
               <span class="k8-help">ชื่อยาวได้ ระบบจะตัดบรรทัดให้อัตโนมัติ</span>
             </div>
             <div class="form-group">
@@ -5709,6 +5728,12 @@
       <div class="k8-sheet-body" id="k8TtCellBody"></div>
     </div>
   </div>
+  <div class="modal-overlay" id="k8GxModal" onclick="if(event.target===this)closeModal('k8GxModal')">
+    <div class="modal-dialog k8-sheet k8-gx-sheet" role="dialog" aria-labelledby="k8GxTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8GxTitle">ระบุเพศนักเรียน</h2><span id="k8GxSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8GxModal')">✕</button></header>
+      <div class="k8-sheet-body" id="k8GxBody"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="k8PeModal" onclick="if(event.target===this)closeModal('k8PeModal')">
     <div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8PeTitle">
       <header class="k8-sheet-head"><div><h2 id="k8PeTitle">แก้ไขบันทึกละหมาด</h2><span id="k8PeSub">-</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8PeModal')">✕</button></header>
@@ -5818,7 +5843,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.41"></script>
-  <script defer src="ui-v8.js?v=17.41"></script>
+  <script defer src="app.js?v=17.42"></script>
+  <script defer src="ui-v8.js?v=17.42"></script>
 </body>
 </html>

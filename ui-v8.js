@@ -3002,7 +3002,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.41';
+  const APP_VERSION = '17.42';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8342,4 +8342,102 @@ window.k8HfMiss = function (slot) {
     }
     return r;
   };
+})();
+
+/* ---------- v17.42 · เพศนักเรียน: สมัครต้องเลือกเพศ+คำนำหน้า · แอดมินระบุเพศนักเรียนเดิมแบบรวดเร็ว ---------- */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const PRE = /^\s*(เด็กชาย|เด็กหญิง|นางสาว|นาย|นาง|ด\.ช\.|ด\.ญ\.|น\.ส\.)\s*/;
+  const gnum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
+  const cid = (v) => String(v == null ? '' : v).trim().replace(/^0+/, '');
+  const guess = (s) => { const n = String((s && (s.fullName || s.name)) || ''); if (/^\s*(นางสาว|น\.ส\.|นาง|เด็กหญิง|ด\.ญ\.)/.test(n)) return 'หญิง'; if (/^\s*(นาย|เด็กชาย|ด\.ช\.)/.test(n)) return 'ชาย'; return ''; };
+  const saved = (s) => { const g = String((s && s.gender) || ''); return g === 'หญิง' || g === 'ชาย' ? g : ''; };
+
+  // ---- ฟอร์มสมัคร ----
+  let SEX = '';
+  window.k8RegSex = function (v) {
+    SEX = v;
+    document.querySelectorAll('#k8RegSex button').forEach((b) => { const on = b.dataset.v === v; b.setAttribute('aria-checked', on); b.classList.toggle('on', on); });
+    const sel = $('k8RegPrefix'); if (!sel) return;
+    Array.from(sel.options).forEach((o) => { if (o.dataset.sex) o.hidden = o.disabled = !!v && o.dataset.sex !== v; });
+    const cur = sel.selectedOptions[0]; if (cur && cur.dataset.sex && cur.dataset.sex !== v) sel.value = '';
+    const w = document.querySelector('#k8RegSex'); if (w) { w.classList.remove('is-invalid'); const g = w.closest('.form-group'); if (g) g.querySelectorAll('.auth-field-error-msg').forEach((e) => e.remove()); }
+  };
+  window.k8RegPrefix = function (v) { const pe = $('k8RegPrefix'); if (pe) { pe.classList.remove('is-invalid'); const g = pe.closest('.form-group'); if (g) g.querySelectorAll('.auth-field-error-msg').forEach((e) => e.remove()); } const o = $('k8RegPrefix') && $('k8RegPrefix').selectedOptions[0]; if (o && o.dataset.sex && o.dataset.sex !== SEX) window.k8RegSex(o.dataset.sex); };
+  const hr = window.handleStudentRegister;
+  if (typeof hr === 'function') window.handleStudentRegister = function () {
+    document.querySelectorAll('#registerFormSection .auth-field-error-msg').forEach((el) => el.remove());
+    const sexBox = $('k8RegSex'), pre = $('k8RegPrefix'), nm = $('regFullName');
+    const err = (el, m) => { try { triggerAuthError(el, m); } catch (e) { toast(m, 'warning'); } try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} };
+    if (!SEX) { err(sexBox, 'กรุณาเลือกเพศ'); return; }
+    if (!pre || !pre.value) { err(pre, 'กรุณาเลือกคำนำหน้า'); return; }
+    if (nm) { const bare = nm.value.replace(PRE, '').trim(); if (bare) nm.value = pre.value + bare; }
+    window.__k8RegGender = SEX;
+    const r = hr.apply(this, arguments);
+    try { const id = cid(($('regStudentId') || {}).value); const s = (allStudents || []).find((x) => cid(x.studentId) === id); if (s) s.gender = SEX; } catch (e) {}
+    return r;
+  };
+  const sr = window.submitRegistrationToServer;
+  if (typeof sr === 'function') window.submitRegistrationToServer = function (item) {
+    if (item && item.role === 'student' && window.__k8RegGender) { item.gender = window.__k8RegGender; if (item.payload) item.payload.gender = window.__k8RegGender; }
+    return sr.apply(this, arguments);
+  };
+
+  // ---- แอดมิน: ระบุเพศนักเรียน ----
+  const G = { edits: {}, f: 'todo', grade: '', q: '', busy: false };
+  function pool() { let l = []; try { l = allStudents || []; } catch (e) {} return l.filter((s) => s && s.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || '')) && s.approvalStatus !== 'PendingAdmin' && s.approvalStatus !== 'AwaitingOtp'); }
+  const chosen = (s) => G.edits[cid(s.studentId)] || saved(s) || guess(s);
+  const dirty = () => pool().filter((s) => chosen(s) && chosen(s) !== saved(s));
+  function badge() {
+    const n = pool().filter((s) => !saved(s) && !guess(s)).length, el = $('k8GxBtnN');
+    if (el) { el.hidden = !n; el.textContent = n; }
+  }
+  function render() {
+    const body = $('k8GxBody'); if (!body) return;
+    const all = pool();
+    const nSaved = all.filter((s) => saved(s)).length, nNone = all.filter((s) => !chosen(s)).length;
+    $('k8GxSub').textContent = 'ระบุแล้ว ' + nSaved + ' จาก ' + all.length + ' คน' + (nNone ? ' · ยังไม่รู้เพศ ' + nNone + ' คน' : '');
+    const q = G.q.trim().toLowerCase();
+    const list = all.filter((s) => {
+      const c = chosen(s);
+      if (G.f === 'todo' && saved(s) && !G.edits[cid(s.studentId)]) return false;
+      if (G.f === 'm' && c !== 'ชาย') return false; if (G.f === 'f' && c !== 'หญิง') return false;
+      if (G.grade && gnum(s.grade) !== G.grade) return false;
+      return !q || String(s.fullName || '').toLowerCase().indexOf(q) !== -1 || String(s.studentId).indexOf(q) !== -1;
+    }).sort((a, b) => (gnum(a.grade) - gnum(b.grade)) || String(a.fullName || '').localeCompare(String(b.fullName || ''), 'th'));
+    const chip = (k, l) => '<button type="button" class="' + (G.f === k ? 'on' : '') + '" onclick="k8GxSet(\'f\',\'' + k + '\')">' + l + '</button>';
+    let h = '<div class="k8-gx-bar"><div class="k8-gx-chips">' + chip('todo', 'ยังไม่บันทึก') + chip('all', 'ทั้งหมด') + chip('m', 'ชาย') + chip('f', 'หญิง') + '</div>' +
+      '<div class="k8-gx-row2"><select aria-label="ชั้น" onchange="k8GxSet(\'grade\',this.value)"><option value="">ทุกชั้น</option>' + [1, 2, 3, 4, 5, 6].map((g) => '<option value="' + g + '"' + (G.grade === String(g) ? ' selected' : '') + '>ม.' + g + '</option>').join('') + '</select>' +
+      '<input type="search" id="k8GxQ" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(G.q) + '" oninput="k8GxSet(\'q\',this.value)"></div></div>';
+    h += '<p class="k8-gx-hint">ระบบเลือกให้ก่อนจากคำนำหน้าชื่อ (ป้าย "เดาจากคำนำหน้า") · ตรวจแล้วกดบันทึก · คนที่ไม่มีคำนำหน้าแตะเลือกเอง</p>';
+    h += '<ul class="k8-gx-list">' + (list.length ? list.map((s) => {
+      const id = cid(s.studentId), c = chosen(s), sv = saved(s), gs = !sv && !G.edits[id] && guess(s);
+      const tag = !c ? '<span class="k8-gx-tag is-none">ยังไม่ระบุ</span>' : gs ? '<span class="k8-gx-tag is-guess">เดาจากคำนำหน้า</span>' : (c !== sv ? '<span class="k8-gx-tag is-new">ยังไม่บันทึก</span>' : '');
+      const seg = ['ชาย', 'หญิง'].map((v) => '<button type="button" aria-pressed="' + (c === v) + '" class="' + (c === v ? 'on is-' + (v === 'ชาย' ? 'm' : 'f') : '') + '" onclick="k8GxPick(\'' + esc(id) + '\',\'' + v + '\')">' + v + '</button>').join('');
+      return '<li class="' + (!c ? 'is-none' : '') + '"><span class="k8-gx-who"><b>' + esc(s.fullName || s.studentId) + '</b><small>ม.' + (gnum(s.grade) || '-') + ' · ' + esc(s.studentId) + ' ' + tag + '</small></span><span class="k8-gx-seg" role="group" aria-label="เพศของ ' + esc(s.fullName || '') + '">' + seg + '</span></li>';
+    }).join('') : '<li class="k8-gx-empty">' + (G.f === 'todo' ? 'บันทึกเพศครบทุกคนแล้ว 🎉' : 'ไม่พบนักเรียน') + '</li>') + '</ul>';
+    const n = dirty().length;
+    h += '<div class="k8-gx-foot"><button type="button" class="k8-gx-save" onclick="k8GxSave()"' + (!n || G.busy ? ' disabled' : '') + '>' + (G.busy ? 'กำลังบันทึก…' : n ? 'บันทึก ' + n + ' คน' : 'ไม่มีรายการต้องบันทึก') + '</button></div>';
+    body.innerHTML = h;
+  }
+  window.k8GxOpen = function () { G.edits = {}; G.f = pool().some((s) => !saved(s)) ? 'todo' : 'all'; render(); try { openModal('k8GxModal'); } catch (e) {} };
+  window.k8GxSet = function (k, v) { G[k] = v; render(); if (k === 'q') { const q = $('k8GxQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } } };
+  window.k8GxPick = function (id, v) { G.edits[id] = v; render(); };
+  window.k8GxSave = async function () {
+    const items = dirty().map((s) => ({ studentId: String(s.studentId), gender: chosen(s) })); if (!items.length || G.busy) return;
+    G.busy = true; render();
+    let r = null; try { r = await gasApiCall('setStudentGenders', { data: { items: items } }, 45000); } catch (e) {}
+    G.busy = false;
+    if (r && r.success) {
+      const map = {}; items.forEach((x) => { map[cid(x.studentId)] = x.gender; });
+      try { (allStudents || []).forEach((s) => { const g = map[cid(s.studentId)]; if (g) s.gender = g; }); localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents)); } catch (e) {}
+      G.edits = {}; toast('บันทึกเพศนักเรียนแล้ว ' + items.length + ' คน', 'success');
+      try { filterAdminStudents(); } catch (e) {}
+    } else toast((r && r.message) || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error');
+    render(); badge();
+  };
+  ['switchAdminTab', 'renderSuperAdminOverviewKpis'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(badge, 30); return r; }; });
+  setTimeout(badge, 3000);
 })();

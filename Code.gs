@@ -128,7 +128,7 @@ const HEADERS = {
     'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'โรงเรียน/สังกัด', 'ระดับชั้น', 
     'วันเดือนปีเกิด', 'เบอร์โทรผู้ปกครอง', 'วันที่ลงทะเบียน', 'สถานะนักเรียน', 'รูปโปรไฟล์',
     'อีเมล', 'GPAX', 'สถิติมาเรียน JSON', 'เกรดรายวิชา JSON', 'สถานะยืนยันตัวตน',
-    'มีผล ณ วันที่', 'หมายเหตุสถานะ'
+    'มีผล ณ วันที่', 'หมายเหตุสถานะ', 'เพศ'
   ],
   TEACHERS: [
     'รหัสอาจารย์', 'ชื่อผู้ใช้ (Username)', 'รหัสผ่าน (Password)', 'ชื่อ-นามสกุล', 'ตำแหน่ง / สิทธิ์',
@@ -1187,7 +1187,7 @@ const ACTION_ACCESS = {
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
-  registerStudent: 'staff', updateStudentFull: 'staff', updateStudentStatus: 'staff',
+  registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', updateStudentStatus: 'staff',
   deletePrayerRecord: 'staff', recordAttendance: 'staff', saveDailyAttendance: 'staff',
   saveSubjectGrades: 'staff', updateSubjectScores: 'staff',
   createActivity: 'staff', deleteActivity: 'staff', deleteActivityAttendee: 'staff',
@@ -1568,6 +1568,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return registerStudent(data);
     case 'updateStudentFull':
       return updateStudentFull(data);
+    case 'setStudentGenders':
+      return setStudentGenders_(data.items || []);
     case 'updateStudentStatus':
       if (!data.adminUser) data.adminUser = session.name || session.userId;
       return updateStudentStatus(data);
@@ -2048,7 +2050,27 @@ function formatSheetTime(val) {
   return s;
 }
 
+// v17.42 · เพศนักเรียน (คอลัมน์ Q) · 'ชาย' / 'หญิง' / '' (ยังไม่ระบุ)
+function normGender_(v) { const g = cleanVal(v); if (/^(หญิง|female|f|ญ)$/i.test(g)) return 'หญิง'; if (/^(ชาย|male|m|ช)$/i.test(g)) return 'ชาย'; return ''; }
+function setStudentGenders_(items) {
+  ensureSchema();
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.STUDENTS); if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
+  try { if (cleanVal(sheet.getRange(1, 17).getValue()) !== 'เพศ') sheet.getRange(1, 17).setValue('เพศ'); } catch (e) {}
+  const want = {}; (items || []).forEach(function (x) { const id = cleanVal(x && x.studentId); if (id) want[id.replace(/^0+/, '')] = normGender_(x.gender); });
+  const last = sheet.getLastRow(); if (last < 2) return { success: true, updated: 0 };
+  const ids = sheet.getRange(2, 1, last - 1, 1).getValues();
+  const cur = sheet.getRange(2, 17, last - 1, 1).getValues();
+  let n = 0;
+  for (let i = 0; i < ids.length; i++) { const k = cleanVal(ids[i][0]).replace(/^0+/, ''); if (k && Object.prototype.hasOwnProperty.call(want, k) && cleanVal(cur[i][0]) !== want[k]) { cur[i][0] = want[k]; n++; } }
+  if (n) sheet.getRange(2, 17, last - 1, 1).setValues(cur);
+  return { success: true, updated: n, message: 'บันทึกเพศนักเรียนแล้ว ' + n + ' คน' };
+}
 function registerStudent(data) {
+  const r = registerStudentCore_(data);
+  try { if (r && r.success !== false && data && normGender_(data.gender)) setStudentGenders_([{ studentId: data.studentId, gender: data.gender }]); } catch (e) {}
+  return r;
+}
+function registerStudentCore_(data) {
   if (!data) return { success: false, message: 'ไม่มีข้อมูลนักเรียน' };
   ensureSchema();
   const ss = getSpreadsheet();
@@ -2298,6 +2320,7 @@ function buildStudentObjectFromRow(row, hasanatMap, gradesMap) {
     attendance: attendance,
     grades: Array.isArray(grades) ? grades : [],
     approvalStatus: cleanVal(row[13] || (statusVal === 'รอผู้สมัครกรอกรหัส OTP' ? 'AwaitingOtp' : 'Verified')),
+    gender: normGender_(row[16]),
     hasanat: (hasanatMap && hasanatMap[sid]) ? hasanatMap[sid] : defaultHasanat
   };
 }
@@ -4844,6 +4867,7 @@ function sanitizeRegistrationPayload_(role, payload, fallback) {
     birthDate: normalizeBirthDate(p.birthDate || ''),
     parentPhone: normalizePhone(p.parentPhone || p.phone || f.phone || ''),
     email: cleanVal(p.email || f.email || ''),
+    gender: normGender_(p.gender),
     avatarUrl: (typeof p.avatarUrl === 'string' && p.avatarUrl.length < 300000) ? p.avatarUrl : ''
   };
 }

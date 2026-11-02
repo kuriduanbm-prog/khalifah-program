@@ -1839,6 +1839,22 @@ html[data-theme="dark"] .k8-per-btns .is-alt { border: 1px solid #582a43 !import
 html[data-theme="dark"] .k8-nt-pin.is-per { border-color: #582a43 !important; background-color: #2d1321 !important; }
 html[data-theme="dark"] .k8-pr-back { color: #69c8fc !important; }
 html[data-theme="dark"] .k8-pr-back:hover { background-color: #122938 !important; }
+html[data-theme="dark"] .k8-reg-sex button { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-reg-sex button.on { background-color: #122938 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-gx-chips button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-gx-row2 select, html[data-theme="dark"] .k8-gx-row2 input { border: 1px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-gx-hint { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-gx-list li { border-bottom: 1px solid #2d363f !important; }
+html[data-theme="dark"] .k8-gx-list li.is-none { background-color: #33230f !important; }
+html[data-theme="dark"] .k8-gx-who small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-gx-tag.is-guess { background-color: #122938 !important; color: #6dc7f8 !important; }
+html[data-theme="dark"] .k8-gx-tag.is-none { background-color: #371212 !important; color: #ed7878 !important; }
+html[data-theme="dark"] .k8-gx-tag.is-new { background-color: #433a15 !important; color: #f3a372 !important; }
+html[data-theme="dark"] .k8-gx-seg { background-color: #1a2229 !important; }
+html[data-theme="dark"] .k8-gx-seg button { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-gx-empty { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-gx-foot { background: linear-gradient(rgba(31,31,31,0.05), #121212 30%) !important; }
+html[data-theme="dark"] .k8-gx-save:disabled { background-color: #2b323a !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

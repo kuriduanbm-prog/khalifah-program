@@ -3656,3 +3656,38 @@ html.k8-xnarrow .k8-pr-tools { grid-template-columns: 1fr; }
 html.k8-xnarrow .k8-pr-tools .hf-cal-btn { flex-direction: row; align-items: center; }
 .k8-pr-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: 0 0 10px -6px; padding: 0 12px 0 6px; border: 0; border-radius: 12px; background: transparent; color: #0369a1; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
 .k8-pr-back:hover { background: #e0f2fe; }
+/* v17.42 · เพศนักเรียน */
+.k8-reg-sex { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.k8-reg-sex button { min-height: 48px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fff; font: inherit; font-size: 15px; font-weight: 600; color: #334155; cursor: pointer; }
+.k8-reg-sex button.on { border-color: #0369a1; background: #e0f2fe; color: #0369a1; }
+.k8-reg-sex.is-invalid { outline: 2px solid #ef4444; outline-offset: 2px; border-radius: 12px; }
+.k8-gx-btn { position: relative; }
+.k8-gx-n { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 11.5px; font-weight: 700; }
+.k8-gx-n[hidden] { display: none; }
+.k8-gx-sheet .k8-sheet-body { display: flex; flex-direction: column; gap: 10px; padding-bottom: 0; }
+.k8-gx-bar { display: flex; flex-direction: column; gap: 8px; }
+.k8-gx-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.k8-gx-chips button { min-height: 38px; padding: 0 14px; border: 1px solid #e2e8f0; border-radius: 999px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: #475569; cursor: pointer; }
+.k8-gx-chips button.on { background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-gx-row2 { display: grid; grid-template-columns: 110px 1fr; gap: 8px; }
+.k8-gx-row2 select, .k8-gx-row2 input { min-height: 44px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 14.5px; background: #fff; min-width: 0; }
+.k8-gx-hint { margin: 0; font-size: 12.5px; color: #64748b; }
+.k8-gx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.k8-gx-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 2px; border-bottom: 1px solid #f1f5f9; }
+.k8-gx-list li.is-none { background: #fff7ed; margin: 0 -8px; padding: 10px; border-radius: 12px; }
+.k8-gx-who { display: flex; flex-direction: column; min-width: 0; }
+.k8-gx-who b { font-size: 14.5px; font-weight: 600; overflow-wrap: anywhere; }
+.k8-gx-who small { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.k8-gx-tag { padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.k8-gx-tag.is-guess { background: #e0f2fe; color: #075985; }
+.k8-gx-tag.is-none { background: #fee2e2; color: #b91c1c; }
+.k8-gx-tag.is-new { background: #fef3c7; color: #92400e; }
+.k8-gx-seg { display: inline-flex; flex: none; background: #f1f5f9; border-radius: 12px; padding: 3px; gap: 2px; }
+.k8-gx-seg button { min-width: 56px; min-height: 40px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; }
+.k8-gx-seg button.on.is-m { background: #0369a1; color: #fff; }
+.k8-gx-seg button.on.is-f { background: #db2777; color: #fff; }
+.k8-gx-empty { justify-content: center !important; color: #64748b; padding: 24px !important; }
+.k8-gx-foot { position: sticky; bottom: 0; padding: 10px 0 14px; background: linear-gradient(rgba(255,255,255,0), #fff 30%); }
+.k8-gx-save { width: 100%; min-height: 50px; border: 0; border-radius: 14px; background: #0369a1; color: #fff; font: inherit; font-size: 15.5px; font-weight: 600; cursor: pointer; }
+.k8-gx-save:disabled { background: #cbd5e1; cursor: default; }
+#authModal #registerFormSection .form-group:has(#k8RegSex), #authModal #registerFormSection .form-group:has(#k8RegPrefix) { order: 2; }
