@@ -155,7 +155,7 @@ const HEADERS = {
   ],
   ACTIVITIES: [
     'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'รายละเอียด', 'วันเริ่มต้น', 'วันสิ้นสุด', 
-    'สถานที่จัดกิจกรรม', 'ผู้สร้างกิจกรรม', 'วันที่สร้าง', 'จำนวนผู้เข้าร่วม'
+    'สถานที่จัดกิจกรรม', 'ผู้สร้างกิจกรรม', 'วันที่สร้าง', 'จำนวนผู้เข้าร่วม', 'กลุ่มเป้าหมาย'
   ],
   ACTIVITY_LOGS: [
     'รหัสบันทึก', 'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'รหัสนักเรียน', 'ชื่อ-นามสกุล', 
@@ -1539,7 +1539,12 @@ function dispatchAction_(action, req, data, session, ctx) {
       return recordHasanat(data);
     case 'checkInActivity':
     case 'activityCheckIn':
-      if (isStudent) data.studentId = session.userId;
+      if (isStudent) {
+        data.studentId = session.userId;
+        // v17.36 · กิจกรรมเฉพาะชั้นปี/รายบุคคล: นักเรียนนอกกลุ่มเช็คชื่อไม่ได้
+        const gate = activityAudienceAllows_(data.activityId || '', data.activityTitle || data.title || '', session.userId);
+        if (!gate.ok) return { success: false, code: 'NOT_IN_AUDIENCE', message: gate.message };
+      }
       return checkInActivity(data);
     case 'updateProfilePhoto':
       return updateStudentProfilePhoto(ownStudentId_(session, ctx, pick('studentId')), pick('avatarUrl') || pick('profilePhoto') || pick('photo'));
@@ -1674,7 +1679,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'updateSubjectScores':
       return updateSubjectScores(data);
     case 'createActivity':
-      return createActivity(data);
+      return createActivity(data, session);
     case 'deleteActivity':
       return deleteActivity(pick('activityId') || pick('id'));
     case 'deleteActivityAttendee':
@@ -3497,7 +3502,37 @@ function getAttendance(studentId, grade) {
   return { success: true, data: results };
 }
 
-function createActivity(data) {
+// v17.36 · กลุ่มเป้าหมายของกิจกรรม: ทุกคน / เฉพาะชั้นปี / รายบุคคล (เก็บเป็น JSON ในคอลัมน์ J)
+function normActivityAudience_(a) {
+  if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } }
+  a = a || {};
+  const type = ['grades', 'students'].indexOf(cleanVal(a.type)) !== -1 ? cleanVal(a.type) : 'all';
+  if (type === 'grades') {
+    const g = (Array.isArray(a.grades) ? a.grades : []).map(function (v) { return String(v).replace(/\D/g, ''); }).filter(function (v, i, arr) { return /^[1-6]$/.test(v) && arr.indexOf(v) === i; }).sort();
+    return g.length ? { type: 'grades', grades: g } : { type: 'all' };
+  }
+  if (type === 'students') {
+    const seen = {};
+    const st = (Array.isArray(a.students) ? a.students : []).map(function (x) { return { id: cleanVal(x && (x.id || x.studentId) || x), name: cleanVal(x && (x.name || x.fullName) || '') }; }).filter(function (x) { if (!x.id || seen[x.id]) return false; seen[x.id] = 1; return true; }).slice(0, 500);
+    return st.length ? { type: 'students', students: st } : { type: 'all' };
+  }
+  return { type: 'all' };
+}
+function activityAudienceAllows_(activityId, title, studentId) {
+  try {
+    const parsed = stripKhalifahQrPrefix(title || '', activityId || '');
+    const id = cleanVal(parsed.activityId || activityId), t = cleanVal(parsed.title || title);
+    const sheet = getSpreadsheet().getSheetByName(SHEETS.ACTIVITIES); if (!sheet) return { ok: true };
+    const rows = sheet.getDataRange().getValues(); let aud = null;
+    for (let i = 1; i < rows.length; i++) { if ((id && cleanVal(rows[i][0]) === id) || (!id && t && cleanVal(rows[i][1]) === t)) { aud = normActivityAudience_(rows[i][9]); break; } }
+    if (!aud || aud.type === 'all') return { ok: true };
+    if (aud.type === 'students') return aud.students.some(function (x) { return isCodeMatch(x.id, studentId); }) ? { ok: true } : { ok: false, message: 'กิจกรรมนี้สำหรับนักเรียนที่ถูกเลือกเท่านั้น' };
+    const st = getStudentForStaff_(studentId); const g = st && st.student ? String(st.student.grade || '').match(/([1-6])/) : null;
+    return g && aud.grades.indexOf(g[1]) !== -1 ? { ok: true } : { ok: false, message: 'กิจกรรมนี้สำหรับนักเรียนชั้น ม.' + aud.grades.join(', ม.') + ' เท่านั้น' };
+  } catch (e) { return { ok: true }; }
+}
+
+function createActivity(data, session) {
   ensureSchema();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ACTIVITIES);
@@ -3510,11 +3545,16 @@ function createActivity(data) {
   const createdBy = cleanVal(data.createdBy || 'Admin');
   const createdAt = cleanVal(data.createdAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
 
+  const aud = normActivityAudience_(data.audience);
+  const audStr = aud.type === 'all' ? '' : JSON.stringify(aud);
+  try { if (!cleanVal(sheet.getRange(1, 10).getValue())) sheet.getRange(1, 10).setValue('กลุ่มเป้าหมาย'); } catch (e) {}
+
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (cleanVal(rows[i][0]) === actId) {
       sheet.getRange(i + 1, 2, 1, 6).setValues([[title, desc, startDate, endDate, location, createdBy]]);
-      return { success: true, message: 'อัปเดตกิจกรรมเรียบร้อยแล้ว', activityId: actId, id: actId };
+      if (data.audience !== undefined) sheet.getRange(i + 1, 10).setValue(audStr);
+      return { success: true, message: 'อัปเดตกิจกรรมเรียบร้อยแล้ว', activityId: actId, id: actId, audience: aud };
     }
   }
 
@@ -3527,10 +3567,23 @@ function createActivity(data) {
     location,
     createdBy,
     createdAt,
-    0
+    0,
+    audStr
   ]);
 
-  return { success: true, message: 'ประกาศกิจกรรมใหม่เรียบร้อยแล้ว', activityId: actId, id: actId };
+  // แจ้งเตือนเฉพาะกลุ่มเป้าหมาย (กระดิ่งในแอปนักเรียน)
+  if (session && aud.type !== 'all') {
+    try {
+      sendNotification_({
+        title: 'กิจกรรมใหม่: ' + title,
+        body: (startDate ? 'วันที่ ' + startDate : '') + (location ? ' · ' + location : ''),
+        audience: aud.type === 'grades' ? 'grade' : 'students',
+        values: aud.type === 'grades' ? aud.grades : aud.students.map(function (x) { return x.id; })
+      }, session);
+    } catch (e) {}
+  }
+
+  return { success: true, message: 'ประกาศกิจกรรมใหม่เรียบร้อยแล้ว', activityId: actId, id: actId, audience: aud };
 }
 
 function deleteActivity(activityId) {
@@ -3572,7 +3625,8 @@ function getActivities() {
       location: cleanVal(rows[i][5]) || 'ลานกิจกรรมหลัก',
       createdBy: cleanVal(rows[i][6]) || 'Admin',
       createdAt: cleanVal(rows[i][7]),
-      attendeesCount: Number(rows[i][8]) || 0
+      attendeesCount: Number(rows[i][8]) || 0,
+      audience: normActivityAudience_(rows[i][9])
     });
   }
   return { success: true, data: results.reverse() };

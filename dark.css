@@ -1795,6 +1795,24 @@ html[data-theme="dark"] .hf-qk .hf-qk-btn.is-on { background-color: #0e2432 !imp
 html[data-theme="dark"] #homeF .hf-idcard .hf-photo { border: 3px solid #333333 !important; background-color: #122938 !important; color: #b7d1e0 !important; }
 html[data-theme="dark"] #homeF .hf-idcard .hf-photo.has-img { background-color: #122938 !important; }
 html[data-theme="dark"] .hf-pt[class*="is-sky-"] .hf-pt-cnt { background-color: rgba(31,31,31,0.21) !important; }
+html[data-theme="dark"] .k8-aud { border: 1px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-aud-seg { background-color: #1a2229 !important; }
+html[data-theme="dark"] .k8-aud-seg button { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-aud-grades button { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-aud-grades button small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-aud-grades button.on { background-color: #122938 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-aud-grades button.on small { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-aud-sum { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-aud-chips span { background-color: #122938 !important; color: #6dc7f8 !important; }
+html[data-theme="dark"] .k8-aud-chips button { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-aud-chips button:hover { background-color: #173748 !important; }
+html[data-theme="dark"] .k8-aud-list { border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-aud-list label { border-bottom: 1px solid #2d363f !important; }
+html[data-theme="dark"] .k8-aud-list label.on { background-color: #0e2432 !important; }
+html[data-theme="dark"] .k8-aud-list small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-aud-empty { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-aud-tag { background-color: #1a2229 !important; color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-aud-tag.is-limited { background-color: #433a15 !important; color: #f3a372 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

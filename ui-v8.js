@@ -928,7 +928,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     }
 
     // 4) กิจกรรมใน 7 วัน
-    const acts = (typeof activities !== 'undefined' && Array.isArray(activities)) ? activities : [];
+    const acts = (typeof activities !== 'undefined' && Array.isArray(activities)) ? activities.filter((a) => !window.k8ActForMe || window.k8ActForMe(a)) : [];
     const now = new Date(); const in7 = new Date(now.getTime() + 7 * 864e5);
     const soon = acts.filter((a) => { const d = new Date(a.startDate || a.date); return !isNaN(d) && d >= new Date(ymd(now)) && d <= in7; }).length;
 
@@ -1353,7 +1353,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     document.querySelectorAll('#k8ActTabs button').forEach((b) => { const on = b.dataset.tab === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     let rows = [];
     if (tab === 'upcoming') {
-      const acts = (typeof activities !== 'undefined' && Array.isArray(activities)) ? activities : [];
+      const acts = (typeof activities !== 'undefined' && Array.isArray(activities)) ? activities.filter((a) => !window.k8ActForMe || window.k8ActForMe(a)) : [];
       const t = new Date(); const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
       rows = acts.map((a) => ({ a, d: ymd(a.startDate || a.date) })).filter((x) => x.d && x.d >= today).sort((x, y) => x.d - y.d)
         .map((x) => ({ d: x.d, title: x.a.title || x.a.activityTitle || '-', meta: [hhmm(x.a.startTime || x.a.time || x.a.startDate), x.a.location].filter(Boolean).join(' · ') || (x.a.type || 'กิจกรรม'),
@@ -2998,7 +2998,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.35';
+  const APP_VERSION = '17.36';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8017,3 +8017,104 @@ window.k8HfMiss = function (slot) {
   try { showToast('หมดเวลาละหมาด' + slot + (end ? 'แล้ว (หมดเวลา ' + end + ' น.)' : 'แล้ว') + ' · เช็คชื่อย้อนหลังไม่ได้', 'warning'); } catch (e) {}
   try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
 };
+
+/* ---------- v17.36 · สร้างกิจกรรม: เลือกกลุ่มเป้าหมาย ทุกคน / เฉพาะชั้นปี / รายบุคคล ---------- */
+(function () {
+  const A = { type: 'all', grades: [], students: [], q: '' };
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const gNum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
+  const cid = (v) => String(v == null ? '' : v).trim().replace(/^0+/, '');
+  function parseAud(a) { if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } } return a && (a.type === 'grades' || a.type === 'students') ? a : null; }
+  // กิจกรรมนี้สำหรับนักเรียนที่ล็อกอินอยู่ไหม (แอดมิน/อาจารย์เห็นทุกกิจกรรม)
+  window.k8ActForMe = function (act, stu) {
+    const a = parseAud(act && act.audience); if (!a) return true;
+    let st = stu; if (!st) { try { st = currentStudent; } catch (e) {} } if (!st) return true;
+    let adm = null; try { adm = currentAdmin; } catch (e) {} if (adm && !stu) return true;
+    if (a.type === 'grades') return (a.grades || []).map(String).indexOf(gNum(st.grade)) !== -1;
+    return (a.students || []).some((x) => cid(x.id || x) === cid(st.studentId));
+  };
+  window.k8ActAudLabel = function (act) {
+    const a = parseAud(act && act.audience); if (!a) return 'ทุกคน';
+    if (a.type === 'grades') return 'ม.' + (a.grades || []).join(', ม.');
+    return 'รายบุคคล ' + (a.students || []).length + ' คน';
+  };
+  function pool() { let l = []; try { l = allStudents; } catch (e) {} if (!Array.isArray(l) || !l.length) { try { l = JSON.parse(localStorage.getItem('khalifah_students') || '[]'); } catch (e) { l = []; } } return (l || []).filter((s) => s && s.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))); }
+  function render() {
+    const box = document.getElementById('k8ActAud'); if (!box) return;
+    const seg = [['all', 'ทุกคน'], ['grades', 'เฉพาะชั้นปี'], ['students', 'รายบุคคล']].map(([k, l]) => '<button type="button" role="radio" aria-checked="' + (A.type === k) + '" class="' + (A.type === k ? 'on' : '') + '" onclick="k8AudType(\'' + k + '\')">' + l + '</button>').join('');
+    let h = '<div class="k8-aud-h"><span class="form-label">กลุ่มเป้าหมาย</span><div class="k8-aud-seg" role="radiogroup" aria-label="กลุ่มเป้าหมาย">' + seg + '</div></div>';
+    if (A.type === 'grades') {
+      h += '<div class="k8-aud-grades">' + [1, 2, 3, 4, 5, 6].map((g) => { const on = A.grades.indexOf(String(g)) !== -1; const n = pool().filter((s) => gNum(s.grade) === String(g)).length; return '<button type="button" aria-pressed="' + on + '" class="' + (on ? 'on' : '') + '" onclick="k8AudGrade(' + g + ')">ม.' + g + '<small>' + n + ' คน</small></button>'; }).join('') + '</div>';
+      h += '<p class="k8-aud-sum">' + (A.grades.length ? 'นักเรียนชั้น ม.' + A.grades.join(', ม.') + ' เห็นและเช็คชื่อกิจกรรมนี้ได้ (รวม ' + pool().filter((s) => A.grades.indexOf(gNum(s.grade)) !== -1).length + ' คน)' : 'แตะเลือกชั้นปีได้มากกว่า 1 ชั้น') + '</p>';
+    } else if (A.type === 'students') {
+      const q = A.q.trim().toLowerCase(), sel = {}; A.students.forEach((x) => { sel[cid(x.id)] = 1; });
+      const list = pool().filter((s) => !q || String(s.fullName || '').toLowerCase().indexOf(q) !== -1 || String(s.studentId).indexOf(q) !== -1).sort((a, b) => (gNum(a.grade) - gNum(b.grade)) || String(a.fullName).localeCompare(String(b.fullName), 'th')).slice(0, 60);
+      h += (A.students.length ? '<div class="k8-aud-chips">' + A.students.map((x) => '<span>' + esc(x.name || x.id) + '<button type="button" aria-label="เอาออก" onclick="k8AudStu(\'' + esc(x.id) + '\')">×</button></span>').join('') + '</div>' : '');
+      h += '<input type="search" class="form-control k8-aud-q" id="k8AudQ" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(A.q) + '" oninput="k8AudSearch(this.value)">';
+      h += '<div class="k8-aud-list">' + (list.length ? list.map((s) => { const on = !!sel[cid(s.studentId)]; return '<label class="' + (on ? 'on' : '') + '"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="k8AudStu(\'' + esc(s.studentId) + '\')"><span><b>' + esc(s.fullName || s.studentId) + '</b><small>' + esc(s.studentId) + ' · ม.' + (gNum(s.grade) || '-') + '</small></span></label>'; }).join('') : '<p class="k8-aud-empty">ไม่พบนักเรียน</p>') + '</div>';
+      h += '<p class="k8-aud-sum">' + (A.students.length ? 'เลือกแล้ว ' + A.students.length + ' คน · เฉพาะคนที่เลือกเห็นและเช็คชื่อได้' : 'ติ๊กเลือกนักเรียนที่ต้องเข้าร่วม') + '</p>';
+    } else h += '<p class="k8-aud-sum">นักเรียนทุกคนเห็นและเช็คชื่อกิจกรรมนี้ได้</p>';
+    box.innerHTML = h;
+    const btn = document.getElementById('btnAdminCreateAct');
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-qrcode"></i> บันทึกกิจกรรม' + (A.type === 'all' ? '' : ' (' + (A.type === 'grades' ? (A.grades.length ? 'ม.' + A.grades.join(', ม.') : 'ยังไม่เลือกชั้น') : A.students.length + ' คน') + ')') + ' และเปิด QR Code ทันที';
+  }
+  window.k8AudType = function (t) { A.type = t; render(); };
+  window.k8AudGrade = function (g) { g = String(g); const i = A.grades.indexOf(g); if (i === -1) A.grades.push(g); else A.grades.splice(i, 1); A.grades.sort(); render(); };
+  window.k8AudStu = function (id) {
+    const i = A.students.findIndex((x) => cid(x.id) === cid(id));
+    if (i !== -1) A.students.splice(i, 1);
+    else { const s = pool().find((x) => cid(x.studentId) === cid(id)); if (s) A.students.push({ id: String(s.studentId), name: s.fullName || '' }); }
+    render(); const q = document.getElementById('k8AudQ'); if (q && A.q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  };
+  window.k8AudSearch = function (v) { A.q = v || ''; render(); const q = document.getElementById('k8AudQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } };
+  function current() { return A.type === 'grades' ? { type: 'grades', grades: A.grades.slice() } : A.type === 'students' ? { type: 'students', students: A.students.slice() } : { type: 'all' }; }
+  // ส่งกลุ่มเป้าหมายไปพร้อมกิจกรรม
+  const oc = window.adminCreateNewActivity;
+  if (typeof oc === 'function') window.adminCreateNewActivity = function () {
+    if (A.type === 'grades' && !A.grades.length) { toast('เลือกชั้นปีอย่างน้อย 1 ชั้น', 'warning'); return; }
+    if (A.type === 'students' && !A.students.length) { toast('เลือกนักเรียนอย่างน้อย 1 คน', 'warning'); return; }
+    const aud = current(), os = window.syncRecordToGoogleSheet;
+    window.syncRecordToGoogleSheet = function (action, d) { if (action === 'createActivity' && d) d.audience = aud; return os.apply(this, arguments); };
+    let r; try { r = oc.apply(this, arguments); } finally { window.syncRecordToGoogleSheet = os; }
+    try { if (activities[0] && !activities[0].audience) { activities[0].audience = aud; localStorage.setItem('khalifah_activities', JSON.stringify(activities)); } } catch (e) {}
+    A.type = 'all'; A.grades = []; A.students = []; A.q = ''; render();
+    try { renderAdminActivitiesTable(); } catch (e) {}
+    return r;
+  };
+  // ตารางกิจกรรม (แอดมิน): ป้ายกลุ่มเป้าหมายใต้ชื่อ
+  const ot = window.renderAdminActivitiesTable;
+  if (typeof ot === 'function') window.renderAdminActivitiesTable = function () {
+    const r = ot.apply(this, arguments);
+    try {
+      const rows = document.querySelectorAll('#adminActivitiesTableBody tr');
+      rows.forEach((tr, i) => { const a = activities[i]; const td = tr.children[1]; if (!a || !td || td.querySelector('.k8-aud-tag')) return; const all = !parseAud(a.audience); td.insertAdjacentHTML('beforeend', '<span class="k8-aud-tag' + (all ? '' : ' is-limited') + '">' + esc(window.k8ActAudLabel(a)) + '</span>'); });
+    } catch (e) {}
+    return r;
+  };
+  // นักเรียน: เห็นเฉพาะกิจกรรมของตัวเอง + กันเช็คชื่อกิจกรรมที่ไม่ใช่ของตัวเอง
+  const ol = window.renderActivitiesList;
+  if (typeof ol === 'function') window.renderActivitiesList = function () {
+    let st = null, adm = null; try { st = currentStudent; } catch (e) {} try { adm = currentAdmin; } catch (e) {}
+    if (!st || adm) return ol.apply(this, arguments);
+    const all = activities; activities = all.filter((a) => window.k8ActForMe(a));
+    try { return ol.apply(this, arguments); } finally { activities = all; }
+  };
+  const deny = (act) => { toast('กิจกรรมนี้สำหรับ ' + window.k8ActAudLabel(act) + ' เท่านั้น', 'warning'); };
+  const oci = window.checkInActivity;
+  if (typeof oci === 'function') window.checkInActivity = function (actId) {
+    const act = (activities || []).find((a) => a.id === actId || a.activityId === actId);
+    if (act && !window.k8ActForMe(act)) { deny(act); return; }
+    return oci.apply(this, arguments);
+  };
+  const oq = window.handleQrCodeDetected;
+  if (typeof oq === 'function') window.handleQrCodeDetected = function (qr) {
+    try {
+      const m = String(qr || '').match(/^KHALIFAH_ACT:([^:]*):?(.*)$/i);
+      if (m) { const act = (activities || []).find((a) => a.id === m[1] || a.activityId === m[1]); if (act && !window.k8ActForMe(act)) { deny(act); return; } }
+    } catch (e) {}
+    return oq.apply(this, arguments);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
+  ['switchView', 'switchAdminTab'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(() => { const b = document.getElementById('k8ActAud'); if (b && !b.innerHTML) render(); }, 0); return r; }; });
+})();

@@ -3565,3 +3565,32 @@ html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
 .hf-pt-ar { position: absolute; right: 18px; top: 46px; font-family: 'Amiri', 'Noto Naskh Arabic', 'Geeza Pro', serif; font-weight: 700; font-size: 50px; line-height: 1.2; color: #fff; opacity: .1; white-space: nowrap; }
 .hf-pt-top > .hf-pt-row .hf-pt-ttl, .hf-pt-top > .hf-pt-hero { padding-right: 0; }
 @media (max-width: 360px) { .hf-pt-ar { font-size: 40px; right: 12px; top: 50px; } }
+/* v17.36 · กลุ่มเป้าหมายกิจกรรม */
+.k8-aud { display: flex; flex-direction: column; gap: 10px; margin-bottom: .9rem; padding: 12px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
+.k8-aud-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.k8-aud-h .form-label { margin: 0; }
+.k8-aud-seg { display: inline-flex; background: #f1f5f9; border-radius: 12px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.k8-aud-seg button { min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: #475569; cursor: pointer; }
+.k8-aud-seg button.on { background: #0369a1; color: #fff; }
+.k8-aud-grades { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.k8-aud-grades button { min-height: 52px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fff; font: inherit; font-size: 15px; font-weight: 700; color: #0f172a; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.k8-aud-grades button small { font-size: 11.5px; font-weight: 500; color: #64748b; }
+.k8-aud-grades button.on { border-color: #0369a1; background: #e0f2fe; color: #0369a1; }
+.k8-aud-grades button.on small { color: #0369a1; }
+.k8-aud-sum { margin: 0; font-size: 13px; color: #475569; }
+.k8-aud-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.k8-aud-chips span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 999px; background: #e0f2fe; color: #075985; font-size: 13px; font-weight: 600; }
+.k8-aud-chips button { width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: #0369a1; font-size: 16px; line-height: 1; cursor: pointer; }
+.k8-aud-chips button:hover { background: #bae6fd; }
+.k8-aud-list { max-height: 260px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 12px; }
+.k8-aud-list label { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; margin: 0; }
+.k8-aud-list label:last-child { border-bottom: 0; }
+.k8-aud-list label.on { background: #f0f9ff; }
+.k8-aud-list input { width: 20px; height: 20px; accent-color: #0369a1; flex: none; }
+.k8-aud-list span { display: flex; flex-direction: column; min-width: 0; }
+.k8-aud-list b { font-size: 14px; font-weight: 600; }
+.k8-aud-list small { font-size: 12px; color: #64748b; }
+.k8-aud-empty { margin: 0; padding: 14px; text-align: center; color: #64748b; font-size: 13px; }
+.k8-aud-tag { display: block; width: fit-content; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 11.5px; font-weight: 600; }
+.k8-aud-tag.is-limited { background: #fef3c7; color: #92400e; }
+@media (max-width: 520px) { .k8-aud-grades { grid-template-columns: repeat(3, minmax(0, 1fr)); } .k8-aud-seg { width: 100%; } .k8-aud-seg button { flex: 1; padding: 0 8px; } }
