@@ -2820,7 +2820,7 @@ window.k8RegBirthChange = function (v) {
     const a = me();
     document.body.classList.toggle('k8-subadmin', !!(a && a.isSubAdmin));
     const sub = document.querySelector('.k8-nav-brand-sub');
-    if (sub) sub.textContent = a && a.isSubAdmin ? 'แอดมินรอง · ' + (a.fullName || a.username) : 'ศูนย์ควบคุมแอดมิน';
+    if (sub) sub.textContent = a && a.limited ? (a.limited === 'exec' ? 'ผู้บริหาร' : 'ฝ่ายกิจกรรม') + ' · ' + (a.fullName || a.username) : a && a.isSubAdmin ? 'แอดมินรอง · ' + (a.fullName || a.username) : 'ศูนย์ควบคุมแอดมิน';
   }
   const uv = window.updateAdminUIVisibility;
   if (typeof uv === 'function') window.updateAdminUIVisibility = function () { const r = uv.apply(this, arguments); try { markRole(); } catch (e) {} return r; };
@@ -2880,13 +2880,13 @@ window.k8RegBirthChange = function (v) {
   const ROLES = [
     ['TEACHER', 'อาจารย์ผู้สอน', 'เช็คชื่อ กรอกคะแนนและเกรดวิชาที่สอน', false],
     ['TeacherAdmin', 'ครูประจำชั้น', 'เหมือนอาจารย์ + ดูสถิติห้องเรียน', false],
-    ['EXECUTIVE', 'ผู้บริหาร', 'ดูสถิติภาพรวม รายงาน และผลประเมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
-    ['ActivityAdmin', 'ฝ่ายกิจกรรม', 'สร้างกิจกรรมและเปิดสแกน QR', false],
+    ['EXECUTIVE', 'ผู้บริหาร', 'ดูนักเรียน อาจารย์ ละหมาด อันดับ พฤติกรรม รายวิชา เกรด หะละเกาะฮฺ · แก้ตารางสอนและอนุมัติลาสอนได้ (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
+    ['ActivityAdmin', 'ฝ่ายกิจกรรม', 'ดูกิจกรรมและสแกน/เช็คชื่อเข้ากิจกรรม · เพิ่มหรือลบกิจกรรมไม่ได้ (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['INSPECTOR', 'ผู้ตรวจการ', 'ตรวจเครื่องแต่งกาย หอพัก ห้องน้ำ ความประพฤติ · หัก/เพิ่มคะแนนพฤติกรรม (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ ยกเว้นตั้งค่าระบบและจัดการแอดมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', true],
     ['SuperAdmin', 'แอดมิน (สิทธิ์เท่าแอดมินหลัก)', 'ทำได้ทุกอย่างเหมือนแอดมินหลัก รวมถึงตั้งค่าระบบ จัดการแอดมิน และให้สิทธิ์ผู้อื่น (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว) · เฉพาะแอดมินหลักเลือกได้', true]
   ];
-  const PW_ONLY = ['EXECUTIVE', 'INSPECTOR', 'SubAdmin', 'SuperAdmin'];
+  const PW_ONLY = ['EXECUTIVE', 'ActivityAdmin', 'INSPECTOR', 'SubAdmin', 'SuperAdmin'];
   const pwOnly = () => PW_ONLY.indexOf(nfRole) !== -1;
   let nfRole = 'TEACHER'; const nfSubj = new Set();
   function drawRoles() {
@@ -2949,7 +2949,7 @@ window.k8RegBirthChange = function (v) {
       return;
     }
     closeModal('k8NewStaffModal');
-    if (typeof showToast === 'function') showToast('สร้างบัญชี' + roleName + ' "' + name + '" แล้ว · ชื่อผู้ใช้ ' + user + (nfRole === 'SubAdmin' || nfRole === 'INSPECTOR' ? ' (เข้าทางแท็บแอดมิน)' : ' (เข้าทางแท็บอาจารย์)'), 'success');
+    if (typeof showToast === 'function') showToast('สร้างบัญชี' + roleName + ' "' + name + '" แล้ว · ชื่อผู้ใช้ ' + user + (pwOnly() ? ' (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)' : ' (เข้าทางแท็บอาจารย์)'), 'success');
     try { if (typeof fetchSubAdminsFromCloud === 'function') fetchSubAdminsFromCloud(true); } catch (e) {}
   };
   // ปุ่มในหน้า "อาจารย์ & ผู้บริหาร"
@@ -3026,7 +3026,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.47';
+  const APP_VERSION = '17.48';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3842,11 +3842,11 @@ window.k8RegBirthChange = function (v) {
   }
   // v17.37 · แอดมิน: กระดิ่งนับคำขอที่รออนุมัติ (บัญชีใหม่ + ละหมาดย้อนหลัง + ลาสอน) + แจ้งเตือนอื่นที่ยังไม่อ่าน
   function reqCounts() {
-    const a = adm(); if (!a || stu()) return null;
+    const a = adm(); if (!a || stu() || a.limited === 'act') return null;
     let c = { accounts: 0, prayers: 0 }; try { if (window.k8ApCounts) c = window.k8ApCounts(); } catch (e) {}
     let lv = null; try { lv = window.k8LvPendingN ? window.k8LvPendingN() : null; } catch (e) {}
     if (lv === null && window.k8LvLoad && !N.lvAsked) { N.lvAsked = true; try { window.k8LvLoad(); } catch (e) {} }
-    c.leaves = lv || 0; c.total = c.accounts + c.prayers + c.leaves; return c;
+    c.leaves = lv || 0; if (a.limited === 'exec') { c.accounts = 0; c.prayers = 0; } c.total = c.accounts + c.prayers + c.leaves; return c;
   }
   function paintBadge() {
     const rc = reqCounts();
@@ -6606,11 +6606,11 @@ window.k8RegBirthChange = function (v) {
   // ปุ่ม "นักเรียน" ที่แถบล่าง + เมนูแอดมิน: แสดงเฉพาะแอดมินที่มีสิทธิ์
   function navBtn() {
     let a = null; try { a = currentAdmin; } catch (e) {}
-    const ok = !!(a && P && P.canPreview);
+    const ok = !!(a && P && P.canPreview && !a.limited);
     const m = document.getElementById('m-nav-preview'); if (m) m.style.display = ok ? 'flex' : 'none';
     let d = document.getElementById('btnAdminTabPreview');
     if (!d) { const grp = document.querySelector('.k8-nav-group[data-g="main"] .k8-nav-items'); if (grp) { d = document.createElement('button'); d.className = 'admin-tab-btn'; d.id = 'btnAdminTabPreview'; d.type = 'button'; d.onclick = () => window.k8PreviewDemo(); d.innerHTML = '<svg class="k8-nav-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg> ดูแอปแบบนักเรียน'; grp.appendChild(d); } }
-    if (d) d.style.display = ok ? '' : 'none';
+    if (d) { if (ok) d.style.removeProperty('display'); else d.style.setProperty('display', 'none', 'important'); }
   }
   const op = paint; paint = function () { op(); navBtn(); };
   function boot() { let a = null; try { a = currentAdmin; } catch (e) {} if (a) load(); else navBtn(); }
@@ -8618,4 +8618,74 @@ window.k8HfMiss = function (slot) {
     window[fn] = function () { const r = o.apply(this, arguments); Promise.resolve(r).then(apply, apply); return r; };
   });
   setTimeout(apply, 1500);
+})();
+
+/* ---------- v17.48 · บัญชีสิทธิ์จำกัดในหน้าแอดมิน: ผู้บริหาร (ดูเป็นหลัก) · ฝ่ายกิจกรรม (กิจกรรม & สแกน) ---------- */
+(function () {
+  const lim = () => { try { return (currentAdmin && currentAdmin.limited) || ''; } catch (e) { return ''; } };
+  const ALLOW = {
+    exec: ['overview', 'approvals', 'students', 'subadmins', 'timetable', 'subjects', 'grading', 'prayers-monitor', 'prayer-rank', 'behavior', 'halaqah'],
+    act: ['activities-admin']
+  };
+  const HOME = { exec: 'overview', act: 'activities-admin' };
+  const tabOf = (btn) => { const oc = String(btn.getAttribute('onclick') || ''); if (/k8HqOpen/.test(oc)) return 'halaqah'; const m = oc.match(/switchAdminTab\('([^']+)'/); return m ? m[1] : ''; };
+  const allowed = (t) => { const l = lim(); return !l || (ALLOW[l] || []).indexOf(t) !== -1; };
+  window.k8LimitAllows = allowed;
+  function nav() {
+    const l = lim();
+    document.body.classList.toggle('k8-lim', !!l); document.body.classList.toggle('k8-lim-exec', l === 'exec'); document.body.classList.toggle('k8-lim-act', l === 'act');
+    document.querySelectorAll('#k8AdminNav .admin-tab-btn').forEach((b) => {
+      if (b.classList.contains('k8-nav-sub')) return;
+      const t = tabOf(b); if (!t) return;
+      const hide = !!l && !allowed(t);
+      if (hide) { b.dataset.k8lim = '1'; b.style.setProperty('display', 'none', 'important'); }
+      else if (b.dataset.k8lim) { delete b.dataset.k8lim; b.style.removeProperty('display'); }
+    });
+    document.querySelectorAll('#k8AdminNav .k8-nav-group').forEach((g) => {
+      const vis = Array.from(g.querySelectorAll('.admin-tab-btn')).filter((b) => !b.dataset.k8lim && !b.classList.contains('k8-nav-sub') && !b.hidden && b.style.getPropertyValue('display') !== 'none').length;
+      g.hidden = !!l && !vis;
+      const c = g.querySelector('.k8-nav-gc'); if (c) { if (!c.dataset.k8o) c.dataset.k8o = c.textContent; c.textContent = l ? vis : c.dataset.k8o; }
+    });
+    ['m-nav-teacher', 'nav-teacher', 'm-nav-preview'].forEach((id) => { const e = document.getElementById(id); if (e && l) e.style.display = 'none'; });
+    if (l) document.querySelectorAll('#k8AdminNav button, #k8AdminNav a').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (/k8Preview|switchView\('teacher'\)|switchView\("teacher"\)/.test(oc)) b.style.setProperty('display', 'none', 'important'); });
+  }
+  // ซ่อนปุ่มเพิ่ม/แก้ไข/ลบในหน้าที่ผู้บริหารดูได้อย่างเดียว · ฝ่ายกิจกรรม: ซ่อนสร้าง/ลบกิจกรรม
+  const RO_EXEC = /delete|Delete|remove|Remove|openAdminEdit|openAddSubAdmin|k8NfOpen|resetPass|ResetPass|toggleSub|Status|k8GxOpen|exportTo|k8AsPromote|k8BhSubmit|k8BhCancel|saveSubject|addSubject|k8SjAdd|k8SjDel|k8SjSave|saveGrade|k8GrSave|importExcel|k8Pw|PrayerRoll|k8Hq(New|Edit|Del|Save)|k8PeAdd|k8PeEdit/;
+  function readOnly() {
+    const l = lim(); if (!l) return;
+    const view = document.getElementById('view-admin'); if (!view) return;
+    if (l === 'exec') {
+      view.querySelectorAll('.admin-content-tab:not(#admin-tab-timetable) button, .admin-content-tab:not(#admin-tab-timetable) [onclick]').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (RO_EXEC.test(oc) && !b.dataset.k8ro) { b.dataset.k8ro = '1'; b.style.setProperty('display', 'none', 'important'); } });
+      document.querySelectorAll('#k8ApTabs [data-tab]').forEach((b) => { if (b.dataset.tab !== 'leaves') b.style.setProperty('display', 'none', 'important'); });
+      document.querySelectorAll('.k8-pr-tools button').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (!/prayer-rank/.test(oc)) b.style.setProperty('display', 'none', 'important'); });
+    }
+    if (l === 'act') {
+      const f = document.getElementById('newActTitle'); const box = f && f.closest('div[style*="border"]'); if (box) box.style.setProperty('display', 'none', 'important');
+      view.querySelectorAll('[onclick*="adminDeleteActivity"], [onclick*="deleteActivityAttendee"], [onclick*="openCreateActivity"], #k8ActAud').forEach((b) => b.style.setProperty('display', 'none', 'important'));
+    }
+  }
+  const o = window.switchAdminTab;
+  if (typeof o === 'function') window.switchAdminTab = function (t, btn) {
+    const l = lim();
+    if (l && !allowed(t)) { try { showToast('บัญชีนี้ไม่มีสิทธิ์ใช้เมนูนี้', 'warning'); } catch (e) {} t = HOME[l]; btn = Array.from(document.querySelectorAll('#k8AdminNav .admin-tab-btn')).find((b) => tabOf(b) === t) || btn; }
+    const r = o.call(this, t, btn);
+    if (l === 'exec' && t === 'approvals') setTimeout(() => { try { window.k8ApTab && window.k8ApTab('leaves'); } catch (e) {} }, 30);
+    setTimeout(() => { nav(); readOnly(); }, 40);
+    return r;
+  };
+  const hq = window.k8HqOpen; if (typeof hq === 'function') window.k8HqOpen = function () { const r = hq.apply(this, arguments); setTimeout(readOnly, 300); return r; };
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) {
+    const l = lim();
+    if (l && (v === 'teacher')) v = 'admin';
+    const r = sv.call(this, v);
+    if (l && v === 'admin') setTimeout(() => { nav(); const cur = document.querySelector('#view-admin .admin-content-tab[style*="block"], #view-admin .admin-content-tab.active'); const id = cur ? cur.id.replace('admin-tab-', '') : ''; if (!allowed(id)) window.switchAdminTab(HOME[l]); else readOnly(); }, 60);
+    return r;
+  };
+  // หน้าเนื้อหาวาดใหม่บ่อย → ซ่อนปุ่มซ้ำเมื่อมีการเปลี่ยนแปลง
+  let mo = null, tick = 0;
+  function watch() { const v = document.getElementById('view-admin'); if (!v || mo) return; mo = new MutationObserver(() => { if (!lim() || tick) return; tick = setTimeout(() => { tick = 0; readOnly(); }, 120); }); mo.observe(v, { childList: true, subtree: true }); }
+  const boot = () => { if (lim()) { nav(); watch(); readOnly(); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 500)); else setTimeout(boot, 500);
+  ['updateAdminUIVisibility'].forEach((fn) => { const f = window[fn]; if (typeof f === 'function') window[fn] = function () { const r = f.apply(this, arguments); setTimeout(boot, 50); return r; }; });
 })();

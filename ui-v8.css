@@ -3753,3 +3753,4 @@ html.k8-xnarrow .k8-ss-cols { grid-template-columns: 1fr; }
 @keyframes k8ttspin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .k8-tt-spin { animation: none; } }
 .k8-tt-save .k8-tt-autosave { grid-column: 1 / -1; flex: 1 1 100%; order: -1; justify-content: center; white-space: nowrap; }
+#k8AdminNav .k8-nav-group[hidden] { display: none !important; }

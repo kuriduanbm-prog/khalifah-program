@@ -6892,6 +6892,13 @@ async function performStaffLogin({ username, password, btn, userEl, passEl, moda
     profile.role = 'SuperAdmin';
     profile.isSubAdmin = true;
   }
+  if (res.limited) {
+    // v17.48 · ผู้บริหาร / ฝ่ายกิจกรรม: เข้าหน้าแอดมิน แต่เห็นเฉพาะเมนูของตน (เซิร์ฟเวอร์ตรวจสิทธิ์ทุกคำสั่ง)
+    profile.realRole = profile.role;
+    profile.role = 'SuperAdmin';
+    profile.isSubAdmin = true;
+    profile.limited = res.limited;
+  }
   const isSuper = profile.role === 'SuperAdmin';
 
   setButtonLoading(btn, false, null, 'เข้าสู่ระบบสำเร็จ!');
@@ -6908,7 +6915,7 @@ async function performStaffLogin({ username, password, btn, userEl, passEl, moda
     updateAdminUIVisibility(true);
     (modalsToClose || ['authModal']).forEach(id => closeModal(id));
     switchView(isSuper ? 'admin' : 'teacher');
-    const roleWelcome = isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : (/INSPECTOR|ผู้ตรวจการ/i.test(String(profile.role)) ? 'ผู้ตรวจการ' : 'อาจารย์'));
+    const roleWelcome = profile.limited === 'exec' ? 'ผู้บริหาร' : profile.limited === 'act' ? 'ฝ่ายกิจกรรม' : isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : (/INSPECTOR|ผู้ตรวจการ/i.test(String(profile.role)) ? 'ผู้ตรวจการ' : 'อาจารย์'));
     showToast(`ยินดีต้อนรับ${roleWelcome} ${profile.fullName || profile.username}`, 'success');
     if (res.securityWarning) {
       setTimeout(() => showToast('⚠️ ' + res.securityWarning, 'warning'), 1500);

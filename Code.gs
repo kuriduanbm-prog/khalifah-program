@@ -932,7 +932,7 @@ function signToken_(body) {
 }
 
 /** role: 'student' | 'teacher' | 'admin' */
-function issueToken_(role, userId, name, owner, preview) {
+function issueToken_(role, userId, name, owner, preview, limit) {
   const payload = {
     r: role,
     o: owner ? 1 : 0,
@@ -941,6 +941,7 @@ function issueToken_(role, userId, name, owner, preview) {
     exp: Date.now() + (preview ? 3 * 3600 * 1000 : SESSION_TTL_MS),
     ep: getProp_('SESSION_EPOCH') || '0'
   };
+  if (limit) payload.x = limit; // v17.48 · บัญชีสิทธิ์จำกัดที่เข้าทางแท็บแอดมิน: 'exec' ผู้บริหาร · 'act' ฝ่ายกิจกรรม
   if (preview) payload.pv = 1; // โหมดดูตัวอย่างของแอดมิน: อ่านได้อย่างเดียว
   const body = b64urlEncode_(JSON.stringify(payload));
   return 'v1.' + body + '.' + signToken_(body);
@@ -956,7 +957,7 @@ function verifyToken_(token) {
     if (!p || !p.r || !p.u) return null;
     if (Date.now() > Number(p.exp || 0)) return null;
     if ((p.ep || '0') !== (getProp_('SESSION_EPOCH') || '0')) return null;
-    return { role: p.r, userId: p.u, name: p.n || '', owner: p.r === 'admin' && (!!p.o || p.u === 'MasterAdmin'), preview: !!p.pv };
+    return { role: p.r, userId: p.u, name: p.n || '', owner: !p.x && p.r === 'admin' && (!!p.o || p.u === 'MasterAdmin'), preview: !!p.pv, limit: p.x || '' };
   } catch (e) {
     return null;
   }
@@ -965,7 +966,20 @@ function verifyToken_(token) {
 const INSPECTOR_ROLE_VALUES = ['inspector', 'ผู้ตรวจการ'];
 function isInspectorRole_(v) { return INSPECTOR_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
 // บทบาทที่เข้าระบบทางแท็บแอดมินด้วยรหัสผ่านอย่างเดียว
-const PASSWORD_ONLY_ROLE_VALUES = ['superadmin', 'subadmin', 'admin', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง', 'executive', 'ผู้บริหาร', 'inspector', 'ผู้ตรวจการ'];
+const PASSWORD_ONLY_ROLE_VALUES = ['superadmin', 'subadmin', 'admin', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง', 'executive', 'ผู้บริหาร', 'inspector', 'ผู้ตรวจการ', 'activityadmin', 'activity', 'ฝ่ายกิจกรรม'];
+// v17.48 · บัญชีสิทธิ์จำกัด (เข้าทางแท็บแอดมิน เห็นเฉพาะเมนูของตน · เซิร์ฟเวอร์ตรวจทุกคำสั่ง)
+function limitOfRole_(v) { const r = cleanVal(v).toLowerCase(); if (r === 'executive' || r === 'ผู้บริหาร') return 'exec'; if (r === 'activityadmin' || r === 'activity' || r === 'ฝ่ายกิจกรรม') return 'act'; return ''; }
+const LIMIT_COMMON_ACTIONS_ = ['whoami', 'getMyNotifications', 'markNotificationRead', 'hideNotification', 'updateSubAdminPhoto', 'getFullDatabase', 'getSettings', 'getCalendarEvents', 'getPolicy'];
+// ผู้บริหาร: ดูได้ทุกอย่าง (อ่านอย่างเดียว) · แก้ได้เฉพาะตารางสอน และอนุมัติลาสอน
+const LIMIT_EXEC_WRITES_ = ['saveTimetable', 'saveTimetableExtra', 'deleteTimetableExtra', 'saveTimetableConfig', 'approveTeacherLeave'];
+// ฝ่ายกิจกรรม: ดูกิจกรรม + สแกน/เช็คชื่อเข้ากิจกรรม (เพิ่ม/ลบกิจกรรมไม่ได้)
+const LIMIT_ACT_ACTIONS_ = ['getActivities', 'getActivityLogs', 'activityCheckIn', 'checkInActivity', 'getAllStudents'];
+function limitAllows_(limit, action) {
+  if (LIMIT_COMMON_ACTIONS_.indexOf(action) !== -1) return true;
+  if (limit === 'exec') return READ_ONLY_ACTIONS.indexOf(action) !== -1 || LIMIT_EXEC_WRITES_.indexOf(action) !== -1;
+  if (limit === 'act') return LIMIT_ACT_ACTIONS_.indexOf(action) !== -1;
+  return true;
+}
 function isPasswordOnlyRole_(v) { return PASSWORD_ONLY_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
 function passwordOnlyRows_() {
   const ss = getSpreadsheet(); const out = [];
@@ -1273,6 +1287,9 @@ function routeRequest_(action, req, method) {
       if ((access === 'staff' && !isStaff && !(isInspector && INSPECTOR_EXTRA_ACTIONS.indexOf(action) !== -1)) || (access === 'admin' && !isAdmin) || (access === 'owner' && !isOwner) || (access === 'inspector' && !isInspector && !isStaff)) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
+      if (session.limit && !limitAllows_(session.limit, action)) {
+        return { success: false, forbidden: true, code: 'FORBIDDEN', message: session.limit === 'act' ? 'บัญชีฝ่ายกิจกรรมใช้ได้เฉพาะดูกิจกรรมและสแกนเช็คชื่อ' : 'บัญชีผู้บริหารดูข้อมูลได้ · แก้ไขได้เฉพาะตารางสอนและอนุมัติลาสอน' };
+      }
     }
 
     // โหมดดูตัวอย่าง (แอดมินดูแอปแบบนักเรียน): ห้ามเขียนข้อมูลใด ๆ
@@ -1283,7 +1300,7 @@ function routeRequest_(action, req, method) {
     const data = (req.data && typeof req.data === 'object') ? req.data : req;
     if (data && data.token) delete data.token;
 
-    const result = dispatchAction_(action, req, data, session, { isStaff: isStaff, isAdmin: isAdmin, isOwner: isOwner, method: method });
+    const result = dispatchAction_(action, req, data, session, { isStaff: isStaff, isAdmin: isAdmin && !(session && session.limit), isOwner: isOwner, method: method });
     if (result && result.success !== false && READ_ONLY_ACTIONS.indexOf(action) === -1) {
       bumpDataVersion_();
     }
@@ -1329,7 +1346,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'whoami':
       // ต่ออายุโทเค็นทุกครั้งที่แอปเปิด เพื่อให้อยู่ในระบบได้ต่อเนื่องจนกว่าจะออกจากระบบเอง
-      return session ? { success: true, session: { role: session.role, userId: session.userId, name: session.name, owner: !!session.owner }, token: issueToken_(session.role, session.userId, session.name, !!session.owner, !!session.preview), preview: !!session.preview } : { success: false, authRequired: true, code: 'AUTH_REQUIRED' };
+      return session ? { success: true, session: { role: session.role, userId: session.userId, name: session.name, owner: !!session.owner }, token: issueToken_(session.role, session.userId, session.name, !!session.owner, !!session.preview, session.limit || ''), preview: !!session.preview, limit: session.limit || '' } : { success: false, authRequired: true, code: 'AUTH_REQUIRED' };
 
     // ---------- เข้าสู่ระบบ ----------
     case 'loginStudent':
@@ -1629,7 +1646,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'savePrayerWindows':
       return savePrayerWindows_(data.windows);
     case 'getTimetable':
-      return getTimetable_(session, isStudent, ctx.isAdmin);
+      return getTimetable_(session, isStudent, ctx.isAdmin || (session && session.limit === 'exec'));
     case 'getMySubjects':
       return getMySubjects_(isStudent ? session.userId : (data.studentId || ''));
     case 'saveGeoZones': {
@@ -1802,7 +1819,7 @@ function buildFullDatabaseRaw_() {
 }
 
 function scopeDatabase_(db, session) {
-  const role = session.role;
+  const role = session.limit ? 'teacher' : session.role; // บัญชีสิทธิ์จำกัด: ไม่เห็นรหัส OTP/ข้อมูลลับของแอดมิน
   if (role === 'admin') return db;
   if (role === 'inspector') {
     return {
@@ -4019,12 +4036,14 @@ function verifyAdminLogin(password, username) {
         try { assignedSubjects = rows[i][subjCol] ? JSON.parse(rows[i][subjCol]) : []; } catch (e) {}
       }
       const roleVal = cleanVal(rows[i][4]) || (kind === 'admin' ? 'Admin' : 'TEACHER');
-      const tokenRole = staffTokenRole_(roleVal);
+      const lim = limitOfRole_(roleVal);
+      const tokenRole = lim === 'exec' ? 'admin' : lim === 'act' ? 'teacher' : staffTokenRole_(roleVal);
       loginSucceeded_(rlKey);
       return {
         success: true,
-        token: issueToken_(tokenRole, cleanVal(rows[i][1]), cleanVal(rows[i][3]), tokenRole === 'admin' && isOwnerRole_(roleVal)),
-        isSubAdmin: tokenRole === 'admin' && !isOwnerRole_(roleVal),
+        token: issueToken_(tokenRole, cleanVal(rows[i][1]), cleanVal(rows[i][3]), !lim && tokenRole === 'admin' && isOwnerRole_(roleVal), false, lim),
+        limited: lim,
+        isSubAdmin: !lim && tokenRole === 'admin' && !isOwnerRole_(roleVal),
         isOwner: tokenRole === 'admin' && isOwnerRole_(roleVal),
         role: roleVal,
         id: cleanVal(rows[i][0]),
