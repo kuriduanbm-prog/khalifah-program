@@ -3691,3 +3691,12 @@ html.k8-xnarrow .k8-pr-tools .hf-cal-btn { flex-direction: row; align-items: cen
 .k8-gx-save { width: 100%; min-height: 50px; border: 0; border-radius: 14px; background: #0369a1; color: #fff; font: inherit; font-size: 15.5px; font-weight: 600; cursor: pointer; }
 .k8-gx-save:disabled { background: #cbd5e1; cursor: default; }
 #authModal #registerFormSection .form-group:has(#k8RegSex), #authModal #registerFormSection .form-group:has(#k8RegPrefix) { order: 2; }
+/* v17.43 · รายชื่อนักเรียนแบ่งตามเพศ */
+#k8AsRows tr.k8-as-grp td { padding: 14px 12px 6px !important; background: transparent !important; border: 0 !important; cursor: default; }
+#k8AsRows tr.k8-as-grp td { display: table-cell; }
+#k8AsRows tr.k8-as-grp span { font-size: 14px; font-weight: 700; color: #0f172a; }
+#k8AsRows tr.k8-as-grp b { margin-left: 8px; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #e0f2fe; color: #075985; }
+#k8AsRows tr.k8-as-grp.is-f b { background: #fce7f3; color: #9d174d; }
+#k8AsRows tr.k8-as-grp.is-u b { background: #fee2e2; color: #b91c1c; }
+#k8AsRows tr.k8-as-grp button { margin-left: 10px; min-height: 32px; padding: 0 12px; border: 1px solid #fecaca; border-radius: 999px; background: #fff; color: #b91c1c; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+#k8AsRows tr.k8-as-grp:hover td { background: transparent !important; }

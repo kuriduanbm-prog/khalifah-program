@@ -1636,8 +1636,11 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (!body) return;
     const all = (typeof allStudents !== 'undefined' ? allStudents : []);
     list = Array.isArray(list) ? list : all;
-    // v17.21 · นักเรียนชายขึ้นก่อน (คงลำดับเดิมภายในกลุ่ม)
-    if (typeof window.k8IsGirl === 'function') list = list.map((x, i) => [x, i]).sort((a, b) => (window.k8IsGirl(a[0]) - window.k8IsGirl(b[0])) || (a[1] - b[1])).map((p) => p[0]);
+    // v17.43 · แบ่งกลุ่ม ชาย / หญิง / ยังไม่ระบุ · เรียง ก–ฮ โดยไม่นับคำนำหน้า
+    const SEXK = { 'ชาย': 0, 'หญิง': 1, '': 2 };
+    const sexOf = (s) => window.k8SexOf ? window.k8SexOf(s) : '';
+    const bare = (s) => (window.k8BareName ? window.k8BareName(s) : String(s.fullName || ''));
+    list = list.slice().sort((a, b) => (SEXK[sexOf(a)] - SEXK[sexOf(b)]) || bare(a).localeCompare(bare(b), 'th'));
     lastList = list;
     document.getElementById('k8AsSub').textContent = 'แสดง ' + list.length + ' คน · กดแถวเพื่อดูรายละเอียด';
     const gSel = document.getElementById('filterGradeSelect');
@@ -1646,10 +1649,14 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       '<button type="button" aria-pressed="' + (v === g) + '" onclick="k8AsGrade(\'' + v + '\')">' + l + '</button>').join('');
     const pr = prayer7();
     if (!selId || !list.some((s) => cid(s.studentId) === selId)) selId = list[0] ? cid(list[0].studentId) : null;
+    const cnt = { 'ชาย': 0, 'หญิง': 0, '': 0 }; list.forEach((s) => { cnt[sexOf(s)]++; });
+    let lastSex = null;
     body.innerHTML = list.length ? list.map((s) => {
+      const sx = sexOf(s); let grp = '';
+      if (sx !== lastSex) { lastSex = sx; grp = '<tr class="k8-as-grp is-' + (sx === 'ชาย' ? 'm' : sx === 'หญิง' ? 'f' : 'u') + '"><td colspan="6"><span>' + (sx ? 'นักเรียน' + sx : 'ยังไม่ระบุเพศ') + '</span><b>' + cnt[sx] + ' คน</b>' + (sx ? '' : '<button type="button" onclick="event.stopPropagation();k8GxOpen()">ระบุเพศ ›</button>') + '</td></tr>'; }
       const id = cid(s.studentId); const [stL, stBg, stInk] = statusPill(s.status);
       const ap = attPct(s); const pn = pr[norm(s.studentId)] || 0; const pp = Math.min(100, Math.round(pn / 35 * 100));
-      return '<tr class="' + (id === selId ? 'is-sel' : '') + '" onclick="k8AsSelect(\'' + esc(id) + '\')">' +
+      return grp + '<tr class="' + (id === selId ? 'is-sel' : '') + '" onclick="k8AsSelect(\'' + esc(id) + '\')">' +
         '<td><button type="button" class="k8-as-name" onclick="event.stopPropagation();k8AsSelect(\'' + esc(id) + '\')"><b title="' + esc(s.fullName) + '">' + esc(s.fullName) + '</b><span>' + esc(id) + '</span></button></td>' +
         '<td>' + esc(shortG(s.grade)) + '</td>' +
         '<td><span class="k8-pill" style="background:' + stBg + ';color:' + stInk + '">' + esc(stL) + '</span></td>' +
@@ -3002,7 +3009,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.42';
+  const APP_VERSION = '17.43';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8354,6 +8361,16 @@ window.k8HfMiss = function (slot) {
   const cid = (v) => String(v == null ? '' : v).trim().replace(/^0+/, '');
   const guess = (s) => { const n = String((s && (s.fullName || s.name)) || ''); if (/^\s*(นางสาว|น\.ส\.|นาง|เด็กหญิง|ด\.ญ\.)/.test(n)) return 'หญิง'; if (/^\s*(นาย|เด็กชาย|ด\.ช\.)/.test(n)) return 'ชาย'; return ''; };
   const saved = (s) => { const g = String((s && s.gender) || ''); return g === 'หญิง' || g === 'ชาย' ? g : ''; };
+  // v17.43 · เพศสำหรับแบ่งกลุ่ม (ที่บันทึก > คำนำหน้า) · ชื่อไม่รวมคำนำหน้าสำหรับเรียง ก–ฮ
+  window.k8SexOf = (s) => saved(s) || guess(s) || (/^(นาย|เด็กชาย)$/.test(String((s && s.prefix) || '')) ? 'ชาย' : /^(นางสาว|นาง|เด็กหญิง)$/.test(String((s && s.prefix) || '')) ? 'หญิง' : '');
+  window.k8BareName = (s) => String((s && (s.nameOnly || s.fullName)) || '').replace(PRE, '').replace(/\s*(นางสาว|เด็กหญิง|เด็กชาย)$/, '').trim();
+  async function autoNormalize() {
+    let a = null; try { a = currentAdmin; } catch (e) {} if (!a || a.role !== 'SuperAdmin' && !/admin/i.test(String(a.role || ''))) return;
+    let l = []; try { l = allStudents || []; } catch (e) {} if (!l.length || !l.some((s) => 'prefix' in s)) return; // เซิร์ฟเวอร์ยังเป็นเวอร์ชันเก่า
+    try { if (sessionStorage.getItem('k8_name_norm')) return; sessionStorage.setItem('k8_name_norm', '1'); } catch (e) {}
+    let r = null; try { r = await gasApiCall('normalizeStudentNames', {}, 45000); } catch (e) {}
+    if (r && r.success && (r.moved || r.gendered)) { toast('จัดข้อมูลนักเรียนแล้ว: ' + r.message, 'success'); try { if (typeof syncAllDataFromCloud === 'function') await syncAllDataFromCloud(false); } catch (e) {} try { filterAdminStudents(); } catch (e) {} badge(); }
+  }
 
   // ---- ฟอร์มสมัคร ----
   let SEX = '';
@@ -8406,7 +8423,7 @@ window.k8HfMiss = function (slot) {
       if (G.f === 'm' && c !== 'ชาย') return false; if (G.f === 'f' && c !== 'หญิง') return false;
       if (G.grade && gnum(s.grade) !== G.grade) return false;
       return !q || String(s.fullName || '').toLowerCase().indexOf(q) !== -1 || String(s.studentId).indexOf(q) !== -1;
-    }).sort((a, b) => (gnum(a.grade) - gnum(b.grade)) || String(a.fullName || '').localeCompare(String(b.fullName || ''), 'th'));
+    }).sort((a, b) => (gnum(a.grade) - gnum(b.grade)) || window.k8BareName(a).localeCompare(window.k8BareName(b), 'th'));
     const chip = (k, l) => '<button type="button" class="' + (G.f === k ? 'on' : '') + '" onclick="k8GxSet(\'f\',\'' + k + '\')">' + l + '</button>';
     let h = '<div class="k8-gx-bar"><div class="k8-gx-chips">' + chip('todo', 'ยังไม่บันทึก') + chip('all', 'ทั้งหมด') + chip('m', 'ชาย') + chip('f', 'หญิง') + '</div>' +
       '<div class="k8-gx-row2"><select aria-label="ชั้น" onchange="k8GxSet(\'grade\',this.value)"><option value="">ทุกชั้น</option>' + [1, 2, 3, 4, 5, 6].map((g) => '<option value="' + g + '"' + (G.grade === String(g) ? ' selected' : '') + '>ม.' + g + '</option>').join('') + '</select>' +
@@ -8440,4 +8457,6 @@ window.k8HfMiss = function (slot) {
   };
   ['switchAdminTab', 'renderSuperAdminOverviewKpis'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(badge, 30); return r; }; });
   setTimeout(badge, 3000);
+  setTimeout(autoNormalize, 6000);
+  const osw = window.switchAdminTab; if (typeof osw === 'function') window.switchAdminTab = function (t) { const r = osw.apply(this, arguments); if (t === 'students') setTimeout(autoNormalize, 500); return r; };
 })();

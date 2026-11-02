@@ -128,7 +128,7 @@ const HEADERS = {
     'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'โรงเรียน/สังกัด', 'ระดับชั้น', 
     'วันเดือนปีเกิด', 'เบอร์โทรผู้ปกครอง', 'วันที่ลงทะเบียน', 'สถานะนักเรียน', 'รูปโปรไฟล์',
     'อีเมล', 'GPAX', 'สถิติมาเรียน JSON', 'เกรดรายวิชา JSON', 'สถานะยืนยันตัวตน',
-    'มีผล ณ วันที่', 'หมายเหตุสถานะ', 'เพศ'
+    'มีผล ณ วันที่', 'หมายเหตุสถานะ', 'เพศ', 'คำนำหน้า'
   ],
   TEACHERS: [
     'รหัสอาจารย์', 'ชื่อผู้ใช้ (Username)', 'รหัสผ่าน (Password)', 'ชื่อ-นามสกุล', 'ตำแหน่ง / สิทธิ์',
@@ -1187,7 +1187,7 @@ const ACTION_ACCESS = {
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
-  registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', updateStudentStatus: 'staff',
+  registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
   deletePrayerRecord: 'staff', recordAttendance: 'staff', saveDailyAttendance: 'staff',
   saveSubjectGrades: 'staff', updateSubjectScores: 'staff',
   createActivity: 'staff', deleteActivity: 'staff', deleteActivityAttendee: 'staff',
@@ -1570,6 +1570,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return updateStudentFull(data);
     case 'setStudentGenders':
       return setStudentGenders_(data.items || []);
+    case 'normalizeStudentNames':
+      return normalizeStudentNames_();
     case 'updateStudentStatus':
       if (!data.adminUser) data.adminUser = session.name || session.userId;
       return updateStudentStatus(data);
@@ -2065,10 +2067,66 @@ function setStudentGenders_(items) {
   if (n) sheet.getRange(2, 17, last - 1, 1).setValues(cur);
   return { success: true, updated: n, message: 'บันทึกเพศนักเรียนแล้ว ' + n + ' คน' };
 }
+// แยกคำนำหน้าออกจากชื่อ (ทั้งที่อยู่หน้าชื่อ และกรณีพิมพ์ต่อท้าย เช่น "ซุลฟา บนีอาดัมนางสาว")
+const NAME_PREFIX_MAP_ = { 'ด.ช.': 'เด็กชาย', 'ด.ญ.': 'เด็กหญิง', 'น.ส.': 'นางสาว' };
+function splitNamePrefix_(name) {
+  let n = cleanVal(name).replace(/\s+/g, ' '), p = '';
+  let m = n.match(/^(เด็กชาย|เด็กหญิง|นางสาว|นาย|นาง|ด\.ช\.|ด\.ญ\.|น\.ส\.)\s*/);
+  if (m) { p = m[1]; n = n.slice(m[0].length).trim(); }
+  else {
+    m = n.match(/\s*(นางสาว|เด็กหญิง|เด็กชาย)$/) || n.match(/\s+(นาย|นาง)$/);
+    if (m && n.length - m[0].length >= 2) { p = m[1]; n = n.slice(0, n.length - m[0].length).trim(); }
+  }
+  return { prefix: NAME_PREFIX_MAP_[p] || p, name: n };
+}
+function genderFromPrefix_(p) { if (/^(นาย|เด็กชาย)$/.test(p)) return 'ชาย'; if (/^(นางสาว|นาง|เด็กหญิง)$/.test(p)) return 'หญิง'; return ''; }
+function setStudentPrefix_(studentId, prefix) {
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.STUDENTS); if (!sheet) return;
+  try { if (cleanVal(sheet.getRange(1, 18).getValue()) !== 'คำนำหน้า') sheet.getRange(1, 18).setValue('คำนำหน้า'); } catch (e) {}
+  const last = sheet.getLastRow(); if (last < 2) return;
+  const ids = sheet.getRange(2, 1, last - 1, 1).getValues();
+  for (let i = 0; i < ids.length; i++) if (isCodeMatch(ids[i][0], studentId)) { sheet.getRange(i + 2, 18).setValue(prefix); return; }
+}
 function registerStudent(data) {
+  let prefix = '';
+  if (data && (data.fullName || data.prefix)) {
+    const sp = splitNamePrefix_(data.fullName || '');
+    prefix = NAME_PREFIX_MAP_[cleanVal(data.prefix)] || cleanVal(data.prefix) || sp.prefix;
+    if (prefix && data.fullName) data = Object.assign({}, data, { fullName: sp.name });
+  }
   const r = registerStudentCore_(data);
-  try { if (r && r.success !== false && data && normGender_(data.gender)) setStudentGenders_([{ studentId: data.studentId, gender: data.gender }]); } catch (e) {}
+  try {
+    if (r && r.success !== false && data) {
+      if (prefix) setStudentPrefix_(data.studentId, prefix);
+      const g = normGender_(data.gender) || '';
+      if (g) setStudentGenders_([{ studentId: data.studentId, gender: g }]);
+    }
+  } catch (e) {}
   return r;
+}
+/** v17.43 · ย้ายคำนำหน้าที่พิมพ์ปนในชื่อไปไว้คอลัมน์คำนำหน้า + เติมเพศจากคำนำหน้า (เรียกซ้ำได้ ไม่เสียหาย) */
+function normalizeStudentNames_() {
+  ensureSchema();
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.STUDENTS); if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานนักเรียน' };
+  try { if (cleanVal(sheet.getRange(1, 17).getValue()) !== 'เพศ') sheet.getRange(1, 17).setValue('เพศ'); if (cleanVal(sheet.getRange(1, 18).getValue()) !== 'คำนำหน้า') sheet.getRange(1, 18).setValue('คำนำหน้า'); } catch (e) {}
+  const last = sheet.getLastRow(); if (last < 2) return { success: true, moved: 0, gendered: 0 };
+  const names = sheet.getRange(2, 2, last - 1, 1).getValues();
+  const ids = sheet.getRange(2, 1, last - 1, 1).getValues();
+  const qr = sheet.getRange(2, 17, last - 1, 2).getValues();
+  let moved = 0, gendered = 0;
+  const FORCE_MALE = ['มูฮำหมัดมับรูรหลังปูเต๊ะ']; // แอดมินแจ้ง 2 พ.ย. 2569
+  for (let i = 0; i < names.length; i++) {
+    if (!cleanVal(ids[i][0])) continue;
+    const sp = splitNamePrefix_(names[i][0]);
+    if (sp.prefix) { names[i][0] = sp.name; if (!cleanVal(qr[i][1])) qr[i][1] = sp.prefix; moved++; }
+    else if (cleanVal(qr[i][1]) && NAME_PREFIX_MAP_[cleanVal(qr[i][1])]) qr[i][1] = NAME_PREFIX_MAP_[cleanVal(qr[i][1])];
+    const key = String(sp.name).replace(/\s+/g, '');
+    if (FORCE_MALE.indexOf(key) !== -1 && normGender_(qr[i][0]) !== 'ชาย') { qr[i][0] = 'ชาย'; gendered++; }
+    else if (!normGender_(qr[i][0])) { const g = genderFromPrefix_(cleanVal(qr[i][1])); if (g) { qr[i][0] = g; gendered++; } }
+  }
+  if (moved) sheet.getRange(2, 2, last - 1, 1).setValues(names);
+  if (moved || gendered) sheet.getRange(2, 17, last - 1, 2).setValues(qr);
+  return { success: true, moved: moved, gendered: gendered, message: 'ย้ายคำนำหน้า ' + moved + ' คน · เติมเพศ ' + gendered + ' คน' };
 }
 function registerStudentCore_(data) {
   if (!data) return { success: false, message: 'ไม่มีข้อมูลนักเรียน' };
@@ -2301,9 +2359,15 @@ function buildStudentObjectFromRow(row, hasanatMap, gradesMap) {
   const statusEffectiveDate = formatSheetDate(row[14]) || cleanVal(row[14] || '');
   const statusNote = cleanVal(row[15] || '');
 
+  // v17.43 · คำนำหน้าแยกคอลัมน์ R · ชื่อในคอลัมน์ B ไม่มีคำนำหน้า · fullName = คำนำหน้า + ชื่อ (ใช้แสดงผลเหมือนเดิม)
+  const pfx = cleanVal(row[17] || '');
+  const sp0 = splitNamePrefix_(cleanVal(row[1]));
+  const bareName = pfx ? sp0.name : cleanVal(row[1]);
   return {
     studentId: sid,
-    fullName: cleanVal(row[1]),
+    fullName: pfx ? pfx + bareName : cleanVal(row[1]),
+    prefix: pfx || sp0.prefix,
+    nameOnly: sp0.name,
     schoolName: cleanVal(row[2]),
     grade: cleanVal(row[3]),
     birthDate: normalizeBirthDate(row[4]),
