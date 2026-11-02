@@ -3353,3 +3353,21 @@ html.k8-has-readonly #k8Has input[onchange^="k8HasSun"] { opacity: 1; }
 .k8-hp-t b { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .k8-hp-t small { font-size: 12.5px; color: #64748b; }
 .k8-hp-go { font-size: 24px; color: #94a3b8; }
+/* v17.20 · กราฟละหมาด: ตรงเวลา=เขียว · สาย=แดง · อนุมัติย้อนหลัง=ม่วง · ลา=ฟ้า · หมดเวลาไม่เช็ค=กากบาทเคลื่อนไหว */
+.hf-bar.is-late .hf-bar-v { color: #dc2626; font-weight: 700; }
+.hf-bar.is-appr .hf-bar-v { color: #7c3aed; font-weight: 700; }
+.hf-bar.is-ok .hf-bar-v { color: #16a34a; font-weight: 700; }
+.hf-bar.is-ex .hf-bar-v { color: #2563eb; font-weight: 700; }
+.hf-bar-col.is-stack { display: flex; flex-direction: column-reverse; overflow: hidden; background: transparent !important; }
+.hf-bar-col.is-stack i { display: block; width: 100%; min-height: 3px; }
+.hf-bar-x { width: 44px; height: 44px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; line-height: 1; animation: k8MissX 1.6s ease-in-out infinite; }
+@keyframes k8MissX { 0%, 100% { transform: scale(1) rotate(0deg); box-shadow: 0 0 0 0 rgba(220,38,38,.35); } 25% { transform: scale(1.08) rotate(-8deg); } 50% { transform: scale(1) rotate(0deg); box-shadow: 0 0 0 8px rgba(220,38,38,0); } 75% { transform: scale(1.08) rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) { .hf-bar-x { animation: none; } }
+.hf-bars-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: 12px; color: #64748b; }
+.hf-bars-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.hf-bars-legend span::before { content: ''; width: 10px; height: 10px; border-radius: 3px; }
+.hf-bars-legend .is-ok::before { background: #16a34a; } .hf-bars-legend .is-late::before { background: #dc2626; }
+.hf-bars-legend .is-appr::before { background: #7c3aed; } .hf-bars-legend .is-ex::before { background: #2563eb; }
+.hf-bars-legend .is-miss::before { content: '✕'; width: auto; height: auto; color: #dc2626; font-weight: 800; background: none; }
+html.k8-has-readonly #k8Has input[type="checkbox"]:disabled { opacity: 1; cursor: default; }
+html.k8-has-readonly #k8Has label:has(input:disabled) { cursor: default; }

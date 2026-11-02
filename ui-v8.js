@@ -100,7 +100,13 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const k = date + '|' + slot;
       if (seen[k]) return;
       seen[k] = true;
-      out.push({ date, d: parseYMD(date), slot });
+      // v17.20 · ประเภทเพื่อลงสีกราฟ: ตรงเวลา / สาย / อนุมัติย้อนหลัง / ลา
+      const id = String(p.logId || p.id || '');
+      let kind = 'ok';
+      if (/อนุมัติ/.test(st) || /^PRY-APPR/.test(id)) kind = 'appr';
+      else if (/อุซุร|ประจำเดือน|ป่วย|^ลา/.test(st)) kind = 'ex';
+      else if (/สาย|ช้า/.test(st) || (typeof window.k8ShouldBeLate === 'function' && window.k8ShouldBeLate(Object.assign({}, p, { date: date })))) kind = 'late';
+      out.push({ date, d: parseYMD(date), slot, kind });
     });
     return out;
   }
@@ -259,17 +265,23 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     let got = 0, possible = 0;
     if (hfState.period === 'day') {
       max = 1;
+      const curMin = now.getHours() * 60 + now.getMinutes();
+      const wins = (typeof PRAYER_TIME_WINDOWS !== 'undefined') ? PRAYER_TIME_WINDOWS : [];
       bars = SLOT_ORDER.map((slot) => {
-        const v = doneToday.indexOf(slot) !== -1 ? 1 : 0;
-        return { label: slot, v, text: v ? '✓' : '–' };
+        const rec = prayers.find((p) => p.date === todayStr && p.slot === slot);
+        if (rec) return { label: slot, v: 1, kind: rec.kind, text: rec.kind === 'late' ? 'สาย' : rec.kind === 'appr' ? 'ย้อนหลัง' : rec.kind === 'ex' ? 'ลา' : '✓' };
+        const w = wins.find((x) => slotKey(x.key || x.name) === slot);
+        const over = w && slot !== 'อีชาอ์' && curMin > w.endMin;
+        return { label: slot, v: 0, miss: !!over, text: over ? '' : '–' };
       });
       got = doneToday.length; possible = 5;
     } else if (hfState.period === 'week') {
       for (let i = 0; i < 7; i++) {
         const d = new Date(range.start); d.setDate(range.start.getDate() + i);
         const key = ymd(d);
-        const v = prayers.filter((p) => p.date === key).length;
-        bars.push({ label: TH_DOW[d.getDay()], v, text: d > now ? '' : String(v), future: d > now });
+        const dayRecs = prayers.filter((p) => p.date === key); const v = dayRecs.length;
+        const segs = {}; dayRecs.forEach((p) => { segs[p.kind] = (segs[p.kind] || 0) + 1; });
+        bars.push({ label: TH_DOW[d.getDay()], v, segs, text: d > now ? '' : String(v), future: d > now });
         if (d <= now) { got += v; possible += 5; }
       }
     } else {
@@ -277,21 +289,29 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       for (let d = new Date(range.start); d <= range.end; d.setDate(d.getDate() + 1)) {
         const w = Math.floor((d.getDate() - 1) / 7);
         weeks[w] = weeks[w] || { v: 0, days: 0 };
-        if (d <= now) { weeks[w].days++; weeks[w].v += prayers.filter((p) => p.date === ymd(d)).length; }
+        if (d <= now) { weeks[w].days++; const recs = prayers.filter((p) => p.date === ymd(d)); weeks[w].v += recs.length; weeks[w].segs = weeks[w].segs || {}; recs.forEach((p) => { weeks[w].segs[p.kind] = (weeks[w].segs[p.kind] || 0) + 1; }); }
       }
       max = 35;
-      bars = weeks.map((w, i) => ({ label: 'สัปดาห์ ' + (i + 1), v: w.v, text: w.days ? String(w.v) : '', future: !w.days }));
+      bars = weeks.map((w, i) => ({ label: 'สัปดาห์ ' + (i + 1), v: w.v, segs: w.segs || {}, text: w.days ? String(w.v) : '', future: !w.days }));
       weeks.forEach((w) => { got += w.v; possible += w.days * 5; });
     }
     document.getElementById('hfPrayerTotal').textContent = got + ' / ' + possible + ' เวลา';
     const barsEl = document.getElementById('hfBars');
     barsEl.setAttribute('aria-label', 'ละหมาด ' + got + ' จาก ' + possible + ' เวลา');
+    const KC = { ok: '#16a34a', late: '#dc2626', appr: '#7c3aed', ex: '#2563eb' };
     barsEl.innerHTML = bars.map((b) => {
-      const ratio = max ? b.v / max : 0;
-      const color = b.future ? '#e2e8f0' : (ratio >= 0.9 ? '#0369a1' : (ratio >= 0.6 ? '#7dd3fc' : '#fcd34d'));
+      const ratio = max ? Math.min(1, b.v / max) : 0;
       const h = Math.max(4, Math.round(ratio * 110));
-      return '<div class="hf-bar"><span class="hf-bar-v">' + esc(b.text) + '</span><span class="hf-bar-col" style="height:' + h + 'px;background:' + color + '"></span><span class="hf-bar-l">' + esc(b.label) + '</span></div>';
+      if (b.miss) return '<div class="hf-bar is-miss"><span class="hf-bar-v"></span><span class="hf-bar-x" aria-label="ไม่ได้เช็คชื่อ หมดเวลาแล้ว">✕</span><span class="hf-bar-l">' + esc(b.label) + '</span></div>';
+      let col;
+      if (b.kind) col = '<span class="hf-bar-col" style="height:' + h + 'px;background:' + KC[b.kind] + '"></span>';
+      else if (b.segs && b.v) col = '<span class="hf-bar-col is-stack" style="height:' + h + 'px">' + ['ok', 'late', 'appr', 'ex'].filter((k) => b.segs[k]).map((k) => '<i style="flex:' + b.segs[k] + ';background:' + KC[k] + '"></i>').join('') + '</span>';
+      else col = '<span class="hf-bar-col" style="height:' + h + 'px;background:' + (b.future ? '#e2e8f0' : '#cbd5e1') + '"></span>';
+      return '<div class="hf-bar' + (b.kind ? ' is-' + b.kind : '') + '"><span class="hf-bar-v">' + esc(b.text) + '</span>' + col + '<span class="hf-bar-l">' + esc(b.label) + '</span></div>';
     }).join('');
+    let lg = document.getElementById('hfBarsLegend');
+    if (!lg) { lg = document.createElement('div'); lg.id = 'hfBarsLegend'; lg.className = 'hf-bars-legend'; barsEl.after(lg); }
+    lg.innerHTML = '<span class="is-ok">ตรงเวลา</span><span class="is-late">สาย</span><span class="is-appr">อนุมัติย้อนหลัง</span><span class="is-ex">ลา</span><span class="is-miss">ไม่ได้เช็ค</span>';
 
     // --- เกรด (หุบไว้) ---
     renderGradesBlock(s, sid);
@@ -2442,7 +2462,7 @@ window.k8RegBirthChange = function (v) {
     if (!S.sun || S.sunDate !== S.date) { const d = daySunnah(S.date); S.sun = d ? JSON.parse(JSON.stringify({ rawatib: d.rawatib || {}, duhaRakaat: d.duhaRakaat || 0, witrRakaat: d.witrRakaat || 0, tahajjudRakaat: d.tahajjudRakaat || 0 })) : { rawatib: {}, duhaRakaat: 0, witrRakaat: 0, tahajjudRakaat: 0 }; S.sunDate = S.date; }
     const x = S.sun; const total = sunTotal(x); const saved = daySunnah(S.date); const dirty = !saved || sunTotal(saved) !== total || JSON.stringify(saved.rawatib || {}) !== JSON.stringify(x.rawatib);
     return '<section class="k8h-card"><div class="k8h-row-b"><h2>' + (S.date === today() ? 'ละหมาดสุนัตวันนี้' : 'ละหมาดสุนัตวันที่เลือก') + '</h2><span class="k8h-sun-total">' + total + ' ร็อกอะฮ์</span></div><div class="k8h-bar is-purple"><span style="width:' + Math.min(100, total / 12 * 100) + '%"></span></div><p class="k8h-hint">เป้าหมายรอติบมุอักกัด 12 ร็อกอะฮ์ต่อวัน</p>' +
-      '<h3 class="k8h-sub">รอติบ (ก่อน-หลังฟัรฎู)</h3><ul class="k8h-checks">' + RAWATIB.map(([k, l, n, mu]) => '<li><label><input type="checkbox"' + (x.rawatib[k] ? ' checked' : '') + ' onchange="k8HasSun(\'' + k + '\', this.checked)"><span><b>' + l + '</b><small>' + n + ' ร็อกอะฮ์' + (mu ? ' · มุอักกัด' : '') + '</small></span></label></li>').join('') + '</ul>' +
+      '<h3 class="k8h-sub">รอติบ (ก่อน-หลังฟัรฎู)</h3><ul class="k8h-checks">' + RAWATIB.map(([k, l, n, mu]) => '<li><label><input type="checkbox"' + (x.rawatib[k] ? ' checked' : '') + (RO() ? ' disabled' : '') + ' onchange="k8HasSun(\'' + k + '\', this.checked)"><span><b>' + l + '</b><small>' + n + ' ร็อกอะฮ์' + (mu ? ' · มุอักกัด' : '') + '</small></span></label></li>').join('') + '</ul>' +
       EXTRA.map(([k, l, opts]) => '<h3 class="k8h-sub">' + l + '</h3><div class="k8h-chips">' + opts.map((o) => '<button type="button" aria-pressed="' + ((Number(x[k + 'Rakaat']) || 0) === o) + '" onclick="k8HasSunN(\'' + k + '\',' + o + ')">' + (o ? o + ' ร็อกอะฮ์' : 'ไม่ได้ทำ') + '</button>').join('') + '</div>').join('') +
       '<button type="button" class="k8h-save is-purple" onclick="k8HasSaveSun()"' + (dirty ? '' : ' disabled') + '>' + (dirty ? 'บันทึกละหมาดสุนัต (' + total + ' ร็อกอะฮ์)' : '✓ บันทึกแล้ว') + '</button></section>';
   }
@@ -2497,7 +2517,7 @@ window.k8RegBirthChange = function (v) {
     const btn = ul2 && ul2.querySelector('button[onclick="k8HasToggleSurah(' + num + ')"]'); if (btn) try { btn.focus({ preventScroll: true }); } catch (e) {}
     clearTimeout(memTimer); memTimer = setTimeout(() => push(S.date, 'บันทึกการท่องจำแล้ว · รวม ' + arr.length + ' ซูเราะห์'), 900);
   };
-  window.k8HasSun = function (k, v) { if (RO()) { roMsg(); return; } S.sun.rawatib[k] = !!v; render(); };
+  window.k8HasSun = function (k, v) { if (RO()) { roMsg(); render(); return; } S.sun.rawatib[k] = !!v; render(); };
   window.k8HasSunN = function (k, n) { if (RO()) { roMsg(); return; } S.sun[k + 'Rakaat'] = n; render(); };
   window.k8HasSaveSun = function () { if (RO()) { roMsg(); return; }
     const h = H(); if (!h || !S.sun || future()) return;
@@ -2925,7 +2945,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.19';
+  const APP_VERSION = '17.20';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
