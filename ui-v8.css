@@ -3949,3 +3949,16 @@ html.k8-tpd #k8TpBar .k8-tp-acts { align-self: center; }
 .k8-tp-res[hidden] { display: none !important; }
 html.k8-tpd #k8TpBar { position: fixed; top: 0; left: 0; right: 0; width: auto; margin: 0; }
 html.k8-tpd #view-teacher { padding-top: 88px !important; }
+
+/* v17.54 · ปุ่มสลับโหมดบนแถบบนของแอดมิน (เอาออกจากเมนูซ้าย) */
+#btnAdminTabPreview, #view-admin .admin-tab-btn[onclick="switchView('teacher')"] { display: none !important; }
+.k8-adm-modes { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.k8-adm-modes + #k8Bell, .k8-adm-bar .k8-adm-modes ~ #k8Bell { margin-left: 0 !important; }
+.k8-adm-mode { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; color: #0c4a6e; font: 600 14px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; white-space: nowrap; }
+.k8-adm-mode:hover { border-color: #7dd3fc; background: #f0f9ff; }
+.k8-adm-mode:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+@media (max-width: 992px) {
+  .k8-adm-mode { min-height: 40px; width: 40px; padding: 0; justify-content: center; background: rgba(255,255,255,.12); border-color: transparent; color: #fff; }
+  .k8-adm-mode span { display: none; }
+  .k8-adm-modes { gap: 6px; }
+}

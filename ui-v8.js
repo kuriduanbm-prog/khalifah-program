@@ -3218,7 +3218,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.53';
+  const APP_VERSION = '17.54';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9041,5 +9041,21 @@ window.k8HfMiss = function (slot) {
     later(); setTimeout(later, 1500);
   }
   window.k8TpSync = sync;
+  if (document.readyState === 'complete') arm(); else window.addEventListener('load', arm);
+})();
+
+/* ---------- v17.54 · แอดมิน: ปุ่มเข้า "โหมดอาจารย์" และ "ดูแบบนักเรียน" ย้ายมาอยู่แถบบนขวา ---------- */
+(function () {
+  const ICO_T = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v11H3zM8 21h8M12 16v5"/></svg>';
+  const ICO_S = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  function place() {
+    const bar = document.querySelector('#view-admin .k8-adm-bar'); if (!bar || bar.querySelector('.k8-adm-modes')) return;
+    const box = document.createElement('div'); box.className = 'k8-adm-modes'; box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'สลับโหมด');
+    box.innerHTML = '<button type="button" class="k8-adm-mode" onclick="switchView(\'teacher\')" aria-label="เข้าโหมดอาจารย์" title="เข้าโหมดอาจารย์">' + ICO_T + '<span>โหมดอาจารย์</span></button>' +
+      '<button type="button" class="k8-adm-mode" onclick="k8PreviewDemo()" aria-label="ดูแอปแบบนักเรียน" title="ดูแอปแบบนักเรียน">' + ICO_S + '<span>ดูแบบนักเรียน</span></button>';
+    const bell = bar.querySelector('#k8Bell, .k8-adm-me');
+    if (bell) bar.insertBefore(box, bell); else bar.appendChild(box);
+  }
+  function arm() { place(); const v = document.getElementById('view-admin'); if (v) new MutationObserver(place).observe(v, { childList: true, subtree: true }); }
   if (document.readyState === 'complete') arm(); else window.addEventListener('load', arm);
 })();
