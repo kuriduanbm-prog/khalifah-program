@@ -687,6 +687,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   window.k8GsModel = gsModel;
 
   function renderTeacherGradesV8() {
+    tgState.tab = 'scores'; tgState.entry = false; // v17.51 · ไม่มีแท็บสรุปเกรดแล้ว
     const body = document.getElementById('tgBody');
     if (!body) return;
     const subj = tgSubject();
@@ -722,7 +723,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
               '<td class="tg-grid-sum" data-gridsum-for="' + esc(sid) + '">' + fmtNum(t.got) + '</td></tr>'; }).join('') + '</tbody></table></div>';
         if (!students.length) html += '<div class="tg-empty">ไม่พบนักเรียนในระดับชั้นที่เลือก</div>';
       } else if (!defs.length) {
-        html += '<div class="tg-empty">ยังไม่มีชิ้นงาน กด "+ เพิ่มชิ้นงาน" เพื่อสร้างช่องคะแนน เช่น การบ้าน รายงาน หรือสอบ<br>หรือไปที่แท็บ "สรุปเกรด" เพื่อให้เกรดโดยตรง</div>';
+        html += '<div class="tg-empty">ยังไม่มีชิ้นงาน กด "+ เพิ่มชิ้นงาน" เพื่อสร้างช่องคะแนน เช่น การบ้าน รายงาน หรือสอบ</div>';
       } else {
         const a = defs.find((x) => x.id === active);
         html += '<div class="tg-asg-bar"><span>กำลังกรอก: <b>' + esc(a.title) + '</b> (เต็ม ' + fmtNum(a.maxScore) + ') · กด Enter เพื่อไปคนถัดไป</span><button type="button" class="tg-link-danger" data-act="remove-asg">ลบชิ้นงานนี้</button></div>';
@@ -3148,7 +3149,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.50';
+  const APP_VERSION = '17.51';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3959,7 +3960,7 @@ window.k8RegBirthChange = function (v) {
       const nm = document.getElementById('k8HomeName'); if (nm) nm.textContent = String(s.fullName || '').replace(/^(นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.|เด็กชาย|เด็กหญิง)\s*/, '').split(/\s+/)[0] || '';
       host = row;
     } else {
-      const ins = document.querySelector('#view-inspector.active .k8-insp-head') || document.querySelector('#view-admin.active .k8-adm-bar') || document.querySelector('#view-teacher .k8-th-head');
+      const ins = document.querySelector('#view-inspector.active .k8-insp-head') || document.querySelector('#view-admin.active .k8-adm-bar') || document.querySelector('html.k8-tpd #k8TpActs') || document.querySelector('#view-teacher .k8-th-head');
       host = ins;
     }
     if (host && bell.parentElement !== host) { const acct = host.querySelector('.k8-acct, .k8-adm-me'); if (acct) host.insertBefore(bell, acct); else host.appendChild(bell); }
@@ -4051,6 +4052,7 @@ window.k8RegBirthChange = function (v) {
     try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
   }
   window.k8BellPaint = function () { try { paintBadge(); } catch (e) {} };
+  window.k8BellPlace = function () { try { placeBell(); } catch (e) {} };
   window.k8BellGo = function (tab) {
     try { closeModal('k8NotifModal'); } catch (e) {}
     try { switchAdminTab('approvals', document.getElementById('btnAdminTabApprovals')); } catch (e) {}
@@ -8860,4 +8862,77 @@ window.k8HfMiss = function (slot) {
   if (typeof os === 'function') window.syncBirthDatePicker = function () { fixDays(); const r = os.apply(this, arguments); setTimeout(age, 0); return r; };
   ['handleAuthModeSegmentChange', 'toggleAuthForm', 'openModal'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(prep, 30); return r; }; });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', prep); else prep();
+})();
+
+
+/* ---------- v17.51 · ฝั่งอาจารย์บนแท็บเล็ต/คอมพิวเตอร์ (TP2): แถบบนขีดเส้นใต้ + 3 คอลัมน์ ---------- */
+(function () {
+  const TAB = 768, DESK = 993;
+  const ov = () => document.getElementById('teacher-tab-overview');
+  const vt = () => document.getElementById('view-teacher');
+  let mode = '';
+  function cols(o) {
+    let l = o.querySelector(':scope > .k8-tp-l');
+    if (!l) {
+      l = document.createElement('div'); l.className = 'k8-tp-l';
+      const c = document.createElement('div'); c.className = 'k8-tp-c';
+      const r = document.createElement('div'); r.className = 'k8-tp-r';
+      o.insertBefore(r, o.firstChild); o.insertBefore(l, r); o.insertBefore(c, r);
+    }
+    return [l, o.querySelector(':scope > .k8-tp-c'), o.querySelector(':scope > .k8-tp-r')];
+  }
+  const pick = (o, sel) => o.querySelector(sel);
+  function enter(o) {
+    const hero = pick(o, '#k8ThHero'); if (!hero) return false;
+    const [l, c, r] = cols(o);
+    [['#k8ThTl', l], ['#k8ThHero', c], ['.k8-th-quick', c], ['.k8-todo', r], ['.k8-th-week', r], ['.k8-follow', r], ['.k8-eval-card', r]].forEach(([sel, host]) => { const el = pick(o, sel); if (el && el.parentElement !== host) host.appendChild(el); });
+    return true;
+  }
+  function leave(o) {
+    const l = o.querySelector(':scope > .k8-tp-l'); if (!l) return;
+    const anchor = l;
+    ['#k8ThHero', '.k8-th-quick', '#k8ThTl', '.k8-th-week', '.k8-todo', '.k8-follow', '.k8-eval-card'].forEach((sel) => { const el = pick(o, sel); if (el) o.insertBefore(el, anchor); });
+    o.querySelectorAll(':scope > .k8-tp-l, :scope > .k8-tp-c, :scope > .k8-tp-r').forEach((x) => x.remove());
+  }
+  // แถบบนของคอมพิวเตอร์: แท็บอาจารย์ + กระดิ่ง + บัญชี อยู่บนหัวเว็บ
+  function hdrIn() {
+    const hc = document.querySelector('.app-header .header-container'); const nav = document.querySelector('#view-teacher .teacher-segmented-nav, .app-header .teacher-segmented-nav');
+    if (!hc || !nav) return;
+    if (nav.parentElement !== hc) { const brand = hc.querySelector('.brand-wrapper'); brand.after(nav); }
+    let acts = document.getElementById('k8TpActs');
+    if (!acts) { acts = document.createElement('div'); acts.id = 'k8TpActs'; acts.className = 'k8-tp-acts'; const ha = hc.querySelector('.header-actions'); (ha || hc).appendChild(acts); }
+    const acct = document.querySelector('#k8ThHero .k8-acct'); if (acct && acct.parentElement !== acts) acts.appendChild(acct);
+    const dn = hc.querySelector('.desktop-nav'); if (dn) { const vis = Array.from(dn.querySelectorAll('.nav-link')).filter((b) => b.style.display !== 'none' && getComputedStyle(b).display !== 'none'); dn.classList.toggle('k8-tp-hide', vis.length <= 1); }
+  }
+  function hdrOut() {
+    const nav = document.querySelector('.app-header .teacher-segmented-nav'); const v = vt();
+    if (nav && v) v.insertBefore(nav, v.firstChild);
+    const acts = document.getElementById('k8TpActs'); const head = document.querySelector('#k8ThHero .k8-th-head');
+    if (acts && head) { const acct = acts.querySelector('.k8-acct'); if (acct) head.appendChild(acct); const bell = acts.querySelector('#k8Bell'); if (bell) head.insertBefore(bell, head.querySelector('.k8-acct')); }
+    const dn = document.querySelector('.app-header .desktop-nav'); if (dn) dn.classList.remove('k8-tp-hide');
+  }
+  function sync() {
+    const v = vt(), o = ov(); if (!v || !o) return;
+    let staff = null; try { staff = currentAdmin; } catch (e) {}
+    const on = !!staff && v.classList.contains('active') && innerWidth >= TAB;
+    const desk = on && innerWidth >= DESK;
+    const m = on ? (desk ? 'd' : 't') : '';
+    const root = document.documentElement;
+    root.classList.toggle('k8-tp', on); root.classList.toggle('k8-tpd', desk);
+    if (on) { if (!enter(o)) return; } else if (mode) leave(o);
+    if (desk) hdrIn(); else if (mode === 'd' || document.querySelector('.app-header .teacher-segmented-nav')) hdrOut();
+    if (m !== mode || desk) { mode = m; try { window.k8BellPlace && window.k8BellPlace(); } catch (e) {} }
+    const nm = document.getElementById('k8ThName'); if (nm) nm.dataset.hi = on ? 'สวัสดี ' : '';
+  }
+  let tmr = 0; const later = () => { clearTimeout(tmr); tmr = setTimeout(sync, 60); };
+  window.addEventListener('resize', later);
+  const wrap = (n) => { const f = window[n]; if (typeof f === 'function' && !f.__k8tp) { const g = function () { const r = f.apply(this, arguments); later(); return r; }; g.__k8tp = 1; window[n] = g; } };
+  function arm() {
+    ['switchView', 'switchTeacherTab', 'performStaffLogin', 'logout', 'handleLogout'].forEach(wrap);
+    const v = vt(); if (v) new MutationObserver(later).observe(v, { attributes: true, attributeFilter: ['class'] });
+    const o = ov(); if (o) new MutationObserver(() => { if (mode && o.querySelector(':scope > #k8ThHero, :scope > .k8-todo, :scope > .k8-follow, :scope > .k8-eval-card')) later(); }).observe(o, { childList: true });
+    later(); setTimeout(later, 1500);
+  }
+  window.k8TpSync = sync;
+  if (document.readyState === 'complete') arm(); else window.addEventListener('load', arm);
 })();

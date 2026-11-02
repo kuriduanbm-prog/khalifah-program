@@ -1912,6 +1912,23 @@ html[data-theme="dark"] .gs-back button { color: #69c8fc !important; background-
 html[data-theme="dark"] .gs-back > div span { color: #a6b0bf !important; }
 html[data-theme="dark"] .gs-stu li { background-color: #121212 !important; border: 1px solid #323941 !important; }
 html[data-theme="dark"] .gs-g.is-miss { background: repeating-linear-gradient(45deg, #2f1111, #2f1111 4px, #121212 4px, #121212 8px) !important; color: #ed7878 !important; border: 1px dashed #592929 !important; }
+html[data-theme="dark"].k8-tp .k8-tp-c > .k8-th-hero { color: #d6dae5 !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-date { color: #a6b0bf !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-head h1 { color: #d6dae5 !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-bell { background-color: #121212 !important; border: 1px solid #323941 !important; color: #d6dae5 !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-kpi, html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-kpi.is-hl { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-kpi .k8-th-kpi-l, html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-l { color: #a6b0bf !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-kpi .k8-th-kpi-v b { color: #79eca4 !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-v b { color: #f8a96d !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-kpi .k8-th-kpi-v small { color: #a6b0bf !important; }
+html[data-theme="dark"].k8-tp .k8-th-hero .k8-th-kpi:hover { border-color: #264555 !important; }
+html[data-theme="dark"].k8-tp .k8-th-quick button { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"].k8-tp .k8-th-quick button:hover { border-color: #264555 !important; }
+html[data-theme="dark"].k8-tpd .app-header .teacher-nav-tab { color: #b6bcc3 !important; }
+html[data-theme="dark"].k8-tpd .app-header .teacher-nav-tab:hover { color: #d6dae5 !important; }
+html[data-theme="dark"].k8-tpd .app-header .teacher-nav-tab.active { color: #b7d1e0 !important; }
+html[data-theme="dark"].k8-tpd .k8-tp-acts .k8-bell { color: #d6dae5 !important; }
+html[data-theme="dark"].k8-tpd .k8-tp-acts .k8-bell:hover { background-color: #1a2229 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

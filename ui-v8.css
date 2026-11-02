@@ -3826,3 +3826,56 @@ div.gs-head { cursor: default; }
   #tgRoot.gs-ov #tgBody .gs-lead { grid-column: 1 / -1; }
   .gs-stu { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 }
+
+/* v17.51 · อาจารย์บนแท็บเล็ต/คอมพิวเตอร์ (TP2) */
+html.k8-tp #view-teacher { max-width: 1280px; padding-left: 24px; padding-right: 24px; box-sizing: border-box; }
+html.k8-tp #view-teacher > .teacher-subcontent:not(#teacher-tab-overview) { max-width: 980px; margin-left: auto; margin-right: auto; }
+html.k8-tp #view-teacher #teacher-tab-overview:not([style*="none"]) { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "c c" "l r"; gap: 20px; align-items: start; }
+html.k8-tp #view-teacher #teacher-tab-overview > .k8-tp-l, html.k8-tp #view-teacher #teacher-tab-overview > .k8-tp-c, html.k8-tp #view-teacher #teacher-tab-overview > .k8-tp-r { display: flex !important; flex-direction: column; gap: 16px; min-width: 0; }
+html.k8-tp #view-teacher #teacher-tab-overview > .k8-tp-l { grid-area: l; } html.k8-tp #view-teacher #teacher-tab-overview > .k8-tp-c { grid-area: c; } html.k8-tp #view-teacher #teacher-tab-overview > .k8-tp-r { grid-area: r; }
+html.k8-tp #teacher-tab-overview > :not(.k8-tp-l):not(.k8-tp-c):not(.k8-tp-r) { grid-column: 1 / -1; }
+@media (min-width: 1100px) {
+  html.k8-tpd #view-teacher #teacher-tab-overview:not([style*="none"]) { grid-template-columns: 290px minmax(0, 1fr) 320px; grid-template-areas: "l c r"; }
+}
+html.k8-tp .k8-tp-l > .k8-th-tl, html.k8-tp .k8-tp-r > .k8-th-week, html.k8-tp .k8-tp-r > .k8-eval-card { display: flex !important; }
+html.k8-tp .k8-tp-c > .k8-th-hero { display: flex !important; margin: 0; padding: 0; background: transparent; color: #0f172a; border-radius: 0; gap: 14px; }
+html.k8-tp .k8-th-hero .k8-th-date { color: #64748b; font-size: 13px; }
+html.k8-tp .k8-th-hero .k8-th-head h1 { color: #0f172a; font-size: 24px; }
+html.k8-tp #k8ThName::before { content: attr(data-hi); }
+html.k8-tp .k8-th-hero .k8-bell { background: #fff; border: 1px solid #e2e8f0; color: #0f172a; }
+html.k8-tp .k8-acct summary { background: #0f172a; color: #fff; }
+html.k8-tp .k8-th-hero .k8-th-kpis { gap: 12px; }
+html.k8-tp .k8-th-hero .k8-th-kpi, html.k8-tp .k8-th-hero .k8-th-kpi.is-hl { background: #fff; border: 1px solid #e2e8f0; padding: 14px 16px; flex-direction: column-reverse; justify-content: flex-end; gap: 4px; }
+html.k8-tp .k8-th-hero .k8-th-kpi .k8-th-kpi-l, html.k8-tp .k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-l { color: #64748b; font-size: 12.5px; }
+html.k8-tp .k8-th-hero .k8-th-kpi .k8-th-kpi-v b { font-size: 30px; font-weight: 700; color: #15803d; }
+html.k8-tp .k8-th-hero .k8-th-kpi:nth-child(2) .k8-th-kpi-v b { color: #4338ca; }
+html.k8-tp .k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-v b { color: #b45309; }
+html.k8-tp .k8-th-hero .k8-th-kpi .k8-th-kpi-v small { color: #64748b; }
+html.k8-tp .k8-th-hero .k8-th-kpi:hover { border-color: #bae6fd; }
+html.k8-tp .k8-tp-c > .k8-th-quick { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)) !important; gap: 12px; }
+html.k8-tp .k8-th-quick button { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px 8px 14px; gap: 10px; font-size: 13.5px; font-weight: 600; min-height: 112px; justify-content: center; transition: border-color .15s, box-shadow .15s; }
+html.k8-tp .k8-th-quick button:hover { border-color: #bae6fd; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); }
+html.k8-tp .k8-th-quick button > span { width: 46px; height: 46px; border-radius: 14px; }
+html.k8-tp .k8-tp-r .hf-week-days { gap: 4px; }
+html.k8-tp .k8-tp-l > .k8-th-tl, html.k8-tp .k8-tp-r > section, html.k8-tp .k8-tp-r > .k8-eval-card { margin: 0 !important; }
+/* แถบบนของคอมพิวเตอร์ */
+html.k8-tpd .app-header .header-container { gap: 24px; }
+html.k8-tpd .app-header .header-actions { margin-left: auto; }
+html.k8-tpd .app-header .desktop-nav.k8-tp-hide, html.k8-tpd .app-header #userBadge { display: none !important; }
+html.k8-tpd .app-header .teacher-segmented-nav { display: flex !important; align-self: stretch; align-items: stretch; gap: 6px; background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; width: auto; position: static; }
+html.k8-tpd .app-header .teacher-nav-tab { display: inline-flex !important; align-items: center; gap: 8px; min-height: 0 !important; height: auto; padding: 0 12px !important; border: 0 !important; border-bottom: 2px solid transparent !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; color: #475569 !important; font: 600 14.5px 'IBM Plex Sans Thai', sans-serif !important; cursor: pointer; transform: none !important; }
+html.k8-tpd .app-header .teacher-nav-tab:hover { color: #0f172a !important; }
+html.k8-tpd .app-header .teacher-nav-tab.active { color: #0c4a6e !important; border-bottom-color: #0c4a6e !important; }
+html.k8-tpd .app-header .teacher-nav-tab i { display: inline-block !important; font-size: 15px; color: inherit !important; }
+html.k8-tpd .app-header .teacher-tab-badge { display: none !important; }
+html.k8-tpd .app-header .teacher-nav-tab .tab-label { display: inline !important; color: inherit !important; }
+.k8-tp-acts { display: none; }
+html.k8-tpd .k8-tp-acts { display: flex; align-items: center; gap: 10px; }
+html.k8-tpd .k8-tp-acts .k8-bell { margin: 0; border: 0; background: transparent; color: #0f172a; }
+html.k8-tpd .k8-tp-acts .k8-bell:hover { background: #f1f5f9; }
+html.k8-tpd .k8-tp-acts .k8-acct summary { width: 40px; height: 40px; }
+html.k8-tpd .k8-tp-acts .k8-acct-menu { right: 0; left: auto; }
+html.k8-tpd #view-teacher > .teacher-segmented-nav { display: none !important; }
+
+/* v17.51 · เอาสรุปเกรดออกจากฝั่งอาจารย์ (เหลือกรอกคะแนนชิ้นงานอย่างเดียว) */
+#tgTabs { display: none !important; }

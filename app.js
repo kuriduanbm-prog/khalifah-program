@@ -9408,7 +9408,7 @@ function initTeacherPortalView() {
 
 function switchTeacherPortalTab(tabName, btnEl) {
   // Sync top segmented tabs
-  document.querySelectorAll('#view-teacher .admin-tab-btn, #view-teacher .hasanat-subnav-btn, #view-teacher .teacher-nav-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#view-teacher .admin-tab-btn, #view-teacher .hasanat-subnav-btn, #view-teacher .teacher-nav-tab, .teacher-segmented-nav .teacher-nav-tab').forEach(b => b.classList.remove('active'));
   if (btnEl) {
     btnEl.classList.add('active');
   } else {
