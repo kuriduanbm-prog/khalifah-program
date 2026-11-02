@@ -4072,7 +4072,7 @@ html.k8-tpd .k8-ta-dh { display: flex; align-items: center; gap: 10px; flex-wrap
 .k8-ta-dh-b:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
 /* ตัวกรองเดิมเหลือแถวเดียวแบบเล็ก · ซ่อนหัวข้อ/สรุป/ส่วนท้ายที่ซ้ำกับหัวใหม่ */
 html.k8-tpd #teacher-tab-attendance .k8-ta-head { display: flex !important; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 12px 14px !important; margin: 0 !important; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: none !important; }
-html.k8-tpd #teacher-tab-attendance .k8-ta-head > .k8-ta-row, html.k8-tpd #teacher-tab-attendance .k8-ta-sum, html.k8-tpd #teacher-tab-attendance .k8-ta-foot, html.k8-tpd #teacher-tab-attendance .k8-ta-all { display: none !important; }
+html.k8-tpd #teacher-tab-attendance .k8-ta-head > .k8-ta-row, html.k8-tpd #teacher-tab-attendance .k8-ta-sum, html.k8-tpd #teacher-tab-attendance .k8-ta-all { display: none !important; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-grid2 { display: flex !important; gap: 10px; flex: 2; margin: 0 !important; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-grid2 > * { flex: 1; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-row2 { flex: 1; margin: 0 !important; }
@@ -4164,7 +4164,13 @@ html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-mmore { flex-basis: auto; flex:
 html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-mmore { flex: 1 1 auto; }
 
 /* v17.66 · มือถือ: แถบบันทึกการเช็คชื่อติดด้านบนจอเสมอ */
-html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-foot { position: sticky !important; top: calc(8px + env(safe-area-inset-top, 0px)) !important; bottom: auto !important; z-index: 30; margin: 0 0 4px !important; padding: 10px 12px 10px 16px !important; box-shadow: 0 8px 22px rgba(15, 23, 42, .12) !important; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-foot { position: sticky !important; top: auto !important; bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; z-index: 30; margin: 4px 0 0 !important; padding: 10px 12px 10px 16px !important; box-shadow: 0 8px 22px rgba(15, 23, 42, .12) !important; }
 html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-foot button { height: 46px; }
 /* v17.66 · overflow-x: hidden ที่ html/body ทำให้ position: sticky ไม่ทำงาน · ใช้ clip แทน (ยังกันเลื่อนด้านข้างเหมือนเดิม) */
 @supports (overflow: clip) { html, body { overflow-x: clip !important; } }
+
+/* v17.67 · คอม: แถบบันทึกติดด้านล่างจอใต้ตารางรายชื่อ (แบบเดียวกับมือถือ) */
+html.k8-tpd #teacher-tab-attendance .k8-ta-foot { display: flex !important; position: sticky !important; bottom: 16px !important; top: auto !important; z-index: 20; margin: 0 !important; padding: 12px 14px 12px 20px !important; border-radius: 16px !important; border: 1px solid #e2e8f0 !important; background: rgba(255,255,255,.96) !important; backdrop-filter: blur(8px); box-shadow: 0 10px 28px rgba(15, 23, 42, .12) !important; }
+html.k8-tpd #teacher-tab-attendance .k8-ta-foot-t b { font-size: 14.5px; }
+html.k8-tpd #teacher-tab-attendance .k8-ta-foot button { height: 46px; min-width: 160px; }
+html.k8-tpd #teacher-tab-attendance .k8-ta-dh-b.is-save { display: none; }

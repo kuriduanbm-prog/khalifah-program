@@ -2525,9 +2525,9 @@ window.k8RegBirthChange = function (v) {
     const headRow = root.querySelector('.k8-ta-head > .k8-ta-row');
     if (desk) { if (aside.parentElement !== root || root.firstChild !== aside) root.insertBefore(aside, root.firstChild); }
     else if (headRow && aside.previousElementSibling !== headRow) headRow.after(aside);
-    // v17.66 · มือถือ: แถบบันทึกอยู่เหนือรายชื่อ และติดด้านบนจอเสมอ
+    // v17.67 · มือถือ: แถบบันทึกอยู่ท้ายรายชื่อ และติดด้านล่างจอ (เหนือแถบเมนู) เสมอ
     const foot = root.querySelector('.k8-ta-foot'), lst = root.querySelector('#k8TaList');
-    if (!desk && foot && lst && foot.nextElementSibling !== lst) lst.before(foot);
+    if (foot && lst && lst.nextElementSibling !== foot) lst.after(foot);
 
     const P = periods(); autoPick(P);
     const isToday = S.date === ymd(new Date()); const onDay = true;
@@ -3306,7 +3306,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.66';
+  const APP_VERSION = '17.67';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
