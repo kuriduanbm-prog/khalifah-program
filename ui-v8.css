@@ -3371,3 +3371,9 @@ html.k8-has-readonly #k8Has input[onchange^="k8HasSun"] { opacity: 1; }
 .hf-bars-legend .is-miss::before { content: '✕'; width: auto; height: auto; color: #dc2626; font-weight: 800; background: none; }
 html.k8-has-readonly #k8Has input[type="checkbox"]:disabled { opacity: 1; cursor: default; }
 html.k8-has-readonly #k8Has label:has(input:disabled) { cursor: default; }
+/* v17.21 · หลักฐานรูป (คะแนนพฤติกรรม) */
+.k8-bh-photo { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1.5px dashed #c4b5fd; border-radius: 14px; background: #faf5ff; }
+.k8-bh-photo > b { font-size: 14px; font-weight: 600; color: #0f172a; }
+.k8-bh-photo > b small { font-weight: 400; color: #64748b; margin-left: 4px; }
+.k8-bh-hph { flex: none; width: 44px; height: 44px; padding: 0; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #f1f5f9; cursor: pointer; }
+.k8-bh-hph img { width: 100%; height: 100%; object-fit: cover; display: block; }

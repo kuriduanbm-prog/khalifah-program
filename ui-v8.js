@@ -1601,6 +1601,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (!body) return;
     const all = (typeof allStudents !== 'undefined' ? allStudents : []);
     list = Array.isArray(list) ? list : all;
+    // v17.21 · นักเรียนชายขึ้นก่อน (คงลำดับเดิมภายในกลุ่ม)
+    if (typeof window.k8IsGirl === 'function') list = list.map((x, i) => [x, i]).sort((a, b) => (window.k8IsGirl(a[0]) - window.k8IsGirl(b[0])) || (a[1] - b[1])).map((p) => p[0]);
     lastList = list;
     document.getElementById('k8AsSub').textContent = 'แสดง ' + list.length + ' คน · กดแถวเพื่อดูรายละเอียด';
     const gSel = document.getElementById('filterGradeSelect');
@@ -2945,7 +2947,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.20';
+  const APP_VERSION = '17.21';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3244,7 +3246,11 @@ window.k8RegBirthChange = function (v) {
       '<ul class="k8-bh-stu">' + (list.length ? list.slice(0, 200).map((s) => { const k = norm(s.studentId); const sc = clamp(100 + (sm[k] || 0)); const on = B.sel.has(k); const lv = level(sc);
         return '<li><button type="button" role="checkbox" aria-checked="' + on + '" onclick="k8BhToggle(\'' + js(k) + '\')"><span class="k8-bh-chk">' + (on ? '✓' : '') + '</span><span class="k8-bh-who"><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(s.studentId) + '</small></span><span class="k8-bh-sc" style="color:' + lv[1] + ';background:' + lv[2] + '">' + sc + '</span></button></li>'; }).join('') : '<li class="k8-bh-empty">ไม่พบนักเรียน</li>') + '</ul></section>';
     const ready = rule && rule.title && rule.points && selN;
-    h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">4</span>ยืนยันการบันทึก</h2>' +
+    const needPhoto = (B.cat === 'dorm' || B.cat === 'toilet') && rule && Number(rule.points) < 0;
+    const photoBlock = needPhoto ? '<div class="k8-bh-photo"><b>รูปหลักฐาน <small>ไม่บังคับ · แนะนำให้ถ่ายรูปห้องที่ตรวจ</small></b>' +
+      (B.photo ? '<div class="k8-pn-prev"><img src="' + B.photo + '" alt="รูปหลักฐาน"><div class="k8-pn-prev-b"><span class="k8-pn-src is-' + B.photoSrc + '">' + (B.photoSrc === 'camera' ? '📷 ถ่ายจากกล้อง' : '🖼️ แนบจากเครื่อง') + '</span><button type="button" onclick="k8BhPhotoClear()">ลบรูป / เลือกใหม่</button></div></div>'
+        : '<div class="k8-pn-pbtns"><label class="k8-pn-pbtn"><input type="file" accept="image/*" capture="environment" onchange="k8BhPhoto(this,\'camera\')"><i aria-hidden="true">📷</i><b>ถ่ายรูป</b><small>เปิดกล้อง</small></label><label class="k8-pn-pbtn"><input type="file" accept="image/*" onchange="k8BhPhoto(this,\'gallery\')"><i aria-hidden="true">🖼️</i><b>แนบรูป</b><small>จากอัลบั้ม/ไฟล์</small></label></div>') + '</div>' : '';
+    h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">4</span>ยืนยันการบันทึก</h2>' + photoBlock +
       '<div class="k8-bh-confirm"><label>วันที่<input type="date" value="' + B.date + '" max="' + ymd(new Date()) + '" onchange="k8BhSet(\'date\', this.value)"></label><label>หมายเหตุ (ถ้ามี)<input type="text" maxlength="300" placeholder="เช่น ห้อง 204 ตรวจรอบเช้า" value="' + esc(B.note) + '" oninput="k8BhNote(this.value)"></label></div>' +
       '<p class="k8-bh-summary">' + (ready ? '<b class="' + (rule.points > 0 ? 'is-plus' : 'is-minus') + '">' + (rule.points > 0 ? 'เพิ่ม ' + rule.points : 'หัก ' + Math.abs(rule.points)) + ' คะแนน</b> · ' + esc(rule.title) + ' · นักเรียน ' + selN + ' คน' : 'เลือกหัวข้อและนักเรียนให้ครบก่อน') + '</p>' +
       '<button type="button" class="k8-bh-go ' + (rule && rule.points > 0 ? 'is-plus' : '') + '" ' + (ready && !B.saving ? '' : 'disabled') + ' onclick="k8BhSubmit()">' + (B.saving ? 'กำลังบันทึก…' : ready ? (rule.points > 0 ? 'เพิ่มคะแนน' : 'หักคะแนน') + ' ' + selN + ' คน' : 'บันทึก') + '</button></section>';
@@ -3281,7 +3287,7 @@ window.k8RegBirthChange = function (v) {
       '<input type="search" placeholder="ค้นหาชื่อนักเรียนหรือหัวข้อ" value="' + esc(B.hq) + '" oninput="k8BhHQ(this)" id="k8BhHQ" autocomplete="off"></div>' +
       '<p class="k8-bh-intro">' + list.length + ' รายการ · หักคะแนน ' + minus + ' · เพิ่มคะแนน ' + plus + (admin ? '' : ' · ยกเลิกรายการที่บันทึกผิดได้') + '</p>' +
       '<ul class="k8-bh-hist">' + (list.length ? list.slice(0, 300).map((l) => { const c = catOf(l.cat); const own = String(l.by || '').toLowerCase() === uid; const can = l.status !== 'cancelled' && (own || isAdmin());
-        return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span><span class="k8-bh-who"><b>' + esc(l.studentName || l.studentId) + ' <small>' + esc(shortG(l.grade)) + '</small></b><small>' + esc(l.title) + (l.note ? ' · ' + esc(l.note) : '') + '</small><small class="k8-bh-meta">' + fmtD(l.date) + ' ' + esc(String(l.time || '').slice(11, 16)) + ' · ' + esc(l.byName || l.by) + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span>' + (can ? '<button type="button" class="k8-bh-undo" onclick="k8BhCancel(\'' + js(l.id) + '\')" aria-label="ยกเลิกรายการนี้">ยกเลิก</button>' : '') + '</li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีรายการในช่วงนี้</li>') + '</ul></section>';
+        return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span>' + (l.photoUrl ? '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(l.photoUrl) + '\',\'รูปหลักฐาน\')" title="' + esc(l.photoSource || 'รูปหลักฐาน') + '"><img src="' + esc(l.photoUrl) + '" alt="รูปหลักฐาน" loading="lazy"></button>' : '') + '<span class="k8-bh-who"><b>' + esc(l.studentName || l.studentId) + ' <small>' + esc(shortG(l.grade)) + '</small></b><small>' + esc(l.title) + (l.note ? ' · ' + esc(l.note) : '') + '</small><small class="k8-bh-meta">' + fmtD(l.date) + ' ' + esc(String(l.time || '').slice(11, 16)) + ' · ' + esc(l.byName || l.by) + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span>' + (can ? '<button type="button" class="k8-bh-undo" onclick="k8BhCancel(\'' + js(l.id) + '\')" aria-label="ยกเลิกรายการนี้">ยกเลิก</button>' : '') + '</li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีรายการในช่วงนี้</li>') + '</ul></section>';
   }
 
   function rulesHtml() {
@@ -3313,7 +3319,13 @@ window.k8RegBirthChange = function (v) {
 
   // ---------- actions ----------
   window.k8BhTab = function (t) { if (B.tab === 'rules' && t !== 'rules' && B.rulesDirty && !confirm('หัวข้อที่แก้ไว้ยังไม่ได้บันทึก ออกโดยไม่บันทึกใช่ไหม?')) return; B.tab = t; if (t !== 'rules') { B.editRules = null; B.rulesDirty = false; } render(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (e) {} };
-  window.k8BhSet = function (k, v) { B[k] = v; if (k === 'cat') B.ruleId = ''; render(); };
+  window.k8BhSet = function (k, v) { B[k] = v; if (k === 'cat') { B.ruleId = ''; B.photo = ''; B.photoSrc = ''; } render(); };
+  window.k8BhPhoto = async function (input, mode) {
+    const f = input && input.files && input.files[0]; if (!f) return;
+    try { const r = await window.k8EvidencePhoto(f, mode); B.photo = r.data; B.photoSrc = r.src; } catch (e) { toast('เปิดรูปนี้ไม่ได้ ลองรูปอื่น', 'error'); }
+    input.value = ''; render();
+  };
+  window.k8BhPhotoClear = function () { B.photo = ''; B.photoSrc = ''; render(); };
   window.k8BhCustom = function (k, v) { B.custom[k] = v; const sum = document.querySelector('.k8-bh-summary'); if (sum) { render(); const el = document.querySelector('.k8-bh-custom ' + (k === 'title' ? 'input[type=text]' : 'input[type=number]')); if (el) { el.focus(); try { const n = el.value.length; el.setSelectionRange && el.type === 'text' && el.setSelectionRange(n, n); } catch (e) {} } } };
   window.k8BhNote = function (v) { B.note = v; };
   function refocus(id, el) { const pos = el.selectionStart; render(); const n = document.getElementById(id); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }
@@ -3338,11 +3350,12 @@ window.k8RegBirthChange = function (v) {
     B.saving = true; render();
     try {
       const payload = { studentIds: ids, note: B.note, date: B.date };
+      if (B.photo && (B.cat === 'dorm' || B.cat === 'toilet')) { payload.photo = B.photo; payload.photoSource = B.photoSrc; }
       if (custom) { payload.title = B.custom.title; payload.points = Number(B.custom.points); } else payload.ruleId = rule.id;
       const r = await api('addBehaviorLogs', { data: payload });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
       B.logs = B.logs.concat(r.logs || []);
-      B.sel.clear(); B.note = '';
+      B.sel.clear(); B.note = ''; B.photo = ''; B.photoSrc = '';
       toast('บันทึกแล้ว · ' + r.message, 'success');
     } catch (e) { toast(e.message || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
     B.saving = false; render();
@@ -7672,3 +7685,32 @@ try { navigator.serviceWorker && navigator.serviceWorker.addEventListener('messa
   const sv = window.switchView;
   if (typeof sv === 'function') window.switchView = function (v) { if (window.k8HasTarget) { homeBack(); window.k8HasTarget = null; } return sv.apply(this, arguments); };
 })();
+
+/* ---------- v17.21 · รูปหลักฐาน: ย่อขนาด + แถบบอกที่มา (ถ่ายจากกล้อง/แนบจากเครื่อง) ---------- */
+window.k8EvidencePhoto = function (file, mode) {
+  return new Promise((resolve, reject) => {
+    const fresh = file.lastModified && Math.abs(Date.now() - file.lastModified) < 3 * 60 * 1000;
+    const src = mode === 'camera' && fresh ? 'camera' : 'gallery';
+    const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const rd = new FileReader();
+    rd.onerror = reject;
+    rd.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const max = 1000; let w = img.width, h = img.height;
+        if (w > h && w > max) { h = Math.round(h * max / w); w = max; } else if (h > max) { w = Math.round(w * max / h); h = max; }
+        const bar = Math.max(30, Math.round(w * 0.06));
+        const c = document.createElement('canvas'); c.width = w; c.height = h + bar; const x = c.getContext('2d');
+        x.drawImage(img, 0, 0, w, h);
+        const d = new Date();
+        x.fillStyle = src === 'camera' ? '#0369a1' : '#b45309'; x.fillRect(0, h, w, bar);
+        x.fillStyle = '#fff'; x.font = '600 ' + Math.round(bar * 0.5) + 'px "IBM Plex Sans Thai", sans-serif'; x.textBaseline = 'middle';
+        x.fillText((src === 'camera' ? 'ถ่ายจากกล้อง' : 'แนบจากเครื่อง') + ' · ' + d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' น.', Math.round(bar * 0.4), h + bar / 2);
+        resolve({ data: c.toDataURL('image/jpeg', 0.72), src: src });
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+};

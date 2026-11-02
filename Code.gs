@@ -189,7 +189,7 @@ const HEADERS = {
   POLICY_ACKS: ['รหัสยินยอม', 'รหัสข้อตกลง', 'ฉบับ', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ยินยอมเมื่อ'],
   BEHAVIOR: [
     'รหัสบันทึก', 'วันที่', 'เวลาบันทึก', 'ภาคเรียน', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น',
-    'หมวด', 'รหัสหัวข้อ', 'หัวข้อ', 'คะแนน (+/-)', 'หมายเหตุ', 'ผู้บันทึก (username)', 'ชื่อผู้บันทึก', 'สถานะ', 'ผู้ยกเลิก'
+    'หมวด', 'รหัสหัวข้อ', 'หัวข้อ', 'คะแนน (+/-)', 'หมายเหตุ', 'ผู้บันทึก (username)', 'ชื่อผู้บันทึก', 'สถานะ', 'ผู้ยกเลิก', 'รูปหลักฐาน', 'ที่มาของรูป'
   ],
   TEACHER_EVALS: [
     'รหัสประเมิน', 'ภาคเรียน', 'รหัสวิชา', 'ชื่อวิชา', 'อาจารย์ (username)', 'ชื่ออาจารย์',
@@ -5521,6 +5521,20 @@ function getPrayerApprovals() {
 }
 
 /** v17.2 · รูปหลักฐานคำร้องละหมาด: เก็บลง Google Drive (ไม่ยัดรูปใหญ่ลงเซลล์) */
+/** v17.21 · บันทึกรูป base64 ลงโฟลเดอร์ Google Drive แล้วคืนลิงก์รูป (ถ้า Drive ใช้ไม่ได้และรูปเล็ก ให้เก็บ base64) */
+function savePhotoToDrive_(raw, folderName, baseName) {
+  const v = String(raw || '').trim();
+  if (!v) return '';
+  if (/^https?:\/\//.test(v)) return v.substring(0, 500);
+  if (!/^data:image\//.test(v)) return '';
+  try {
+    const it = DriveApp.getFoldersByName(folderName);
+    const folder = it.hasNext() ? it.next() : DriveApp.createFolder(folderName);
+    const file = folder.createFile(Utilities.newBlob(Utilities.base64Decode(v.split(',')[1] || ''), 'image/jpeg', String(baseName || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '') + '.jpg'));
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return 'https://lh3.googleusercontent.com/d/' + file.getId();
+  } catch (e) { Logger.log('photo: ' + e.message); return v.length < 49000 ? v : ''; }
+}
 function savePrayerRequestPhoto_(raw, studentId, reqId) {
   const v = String(raw || '').trim();
   if (!v) return '';
@@ -6079,7 +6093,8 @@ function getBehaviorLogs_() {
     return {
       id: cleanVal(r[0]), date: normalizeDateStr_(r[1]), time: cleanVal(r[2]), term: cleanVal(r[3]), studentId: cleanVal(r[4]), studentName: cleanVal(r[5]),
       grade: cleanVal(r[6]), cat: cleanVal(r[7]), ruleId: cleanVal(r[8]), title: cleanVal(r[9]), points: Number(r[10]) || 0, note: cleanVal(r[11]),
-      by: cleanVal(r[12]), byName: cleanVal(r[13]), status: cleanVal(r[14]) || 'active', cancelledBy: cleanVal(r[15])
+      by: cleanVal(r[12]), byName: cleanVal(r[13]), status: cleanVal(r[14]) || 'active', cancelledBy: cleanVal(r[15]),
+      photoUrl: cleanVal(r[16] || ''), photoSource: cleanVal(r[17] || '')
     };
   });
 }
@@ -6106,6 +6121,9 @@ function addBehaviorLogs_(data, session) {
   if (date > today) return { success: false, message: 'บันทึกล่วงหน้าไม่ได้' };
   const note = cleanVal(data.note).substring(0, 300);
   ensureSchema();
+  // v17.21 · รูปหลักฐาน (ห้องน้ำ/ความสะอาดหอพัก) เก็บใน Google Drive ครั้งเดียว ใช้ร่วมกันทุกคนที่เลือก
+  const photoUrl = data.photo ? savePhotoToDrive_(data.photo, 'Khalifah_Behavior_Photos', 'bhv_' + Date.now()) : '';
+  const photoSource = photoUrl ? (data.photoSource === 'camera' ? 'ถ่ายจากกล้อง' : data.photoSource === 'gallery' ? 'แนบจากเครื่อง' : '') : '';
   const ss = getSpreadsheet();
   const sh = ss.getSheetByName(SHEETS.BEHAVIOR);
   const stuSheet = ss.getSheetByName(SHEETS.STUDENTS);
@@ -6117,13 +6135,13 @@ function addBehaviorLogs_(data, session) {
   ids.forEach(function (sid, i) {
     const st = info[sid.replace(/^0+/, '')];
     if (!st) { missing.push(sid); return; }
-    rows.push(['BHV-' + Date.now() + '-' + i, date, now, term, st.id, st.name, st.grade, rule.cat, rule.id, rule.title, rule.points, note, session.userId, session.name || session.userId, 'active', '']);
+    rows.push(['BHV-' + Date.now() + '-' + i, date, now, term, st.id, st.name, st.grade, rule.cat, rule.id, rule.title, rule.points, note, session.userId, session.name || session.userId, 'active', '', photoUrl, photoSource]);
   });
   if (!rows.length) return { success: false, message: 'ไม่พบรหัสนักเรียนที่เลือก' };
   const lock = LockService.getScriptLock();
   try { lock.waitLock(15000); } catch (e) {}
   try { sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows); } finally { try { lock.releaseLock(); } catch (e) {} }
-  return { success: true, added: rows.length, missing: missing, points: rule.points, logs: rows.map(function (r) { return { id: r[0], date: r[1], time: r[2], term: r[3], studentId: r[4], studentName: r[5], grade: r[6], cat: r[7], ruleId: r[8], title: r[9], points: r[10], note: r[11], by: r[12], byName: r[13], status: 'active' }; }),
+  return { success: true, added: rows.length, missing: missing, points: rule.points, logs: rows.map(function (r) { return { id: r[0], date: r[1], time: r[2], term: r[3], studentId: r[4], studentName: r[5], grade: r[6], cat: r[7], ruleId: r[8], title: r[9], points: r[10], note: r[11], by: r[12], byName: r[13], status: 'active', photoUrl: r[16], photoSource: r[17] }; }),
     message: (rule.points < 0 ? 'หัก ' + Math.abs(rule.points) : 'เพิ่ม ' + rule.points) + ' คะแนน · ' + rows.length + ' คน' };
 }
 function cancelBehaviorLog_(logId, session, isAdmin) {
