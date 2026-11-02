@@ -634,6 +634,15 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         if (!students.length) html += '<div class="tg-empty">ไม่พบนักเรียนในระดับชั้นที่เลือก</div>';
       }
     } else {
+      // v17.49 · ดูเกรดรายชั้นหรือรายบุคคลได้ทันที
+      const gsel = document.getElementById('teacherPortalGradeSelect'); const gv = gsel ? (gsel.value || 'ALL') : 'ALL';
+      const pool = ((typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents : []).filter((x) => x && x.studentId && !/ลาออก|สำเร็จ/.test(String(x.status || '')));
+      const gn = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
+      const cnt = (g) => pool.filter((x) => g === 'ALL' || x.grade === g).length;
+      html += '<div class="tg-quick"><div class="tg-quick-g" role="tablist" aria-label="เลือกชั้น">' + ['ALL', 'มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3', 'มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'].map((g) => { const n = cnt(g); return '<button type="button" role="tab" data-qg="' + esc(g) + '" aria-selected="' + (gv === g) + '"' + (n || g === 'ALL' ? '' : ' disabled') + '>' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + gn(g)) + '<small>' + n + '</small></button>'; }).join('') + '</div>' +
+        '<label class="tg-quick-one"><span>ดูรายบุคคล</span><select data-qone="1"><option value="">ทุกคนในชั้นที่เลือก</option>' + tgStudents().map((x) => '<option value="' + esc(cleanId(x.studentId)) + '"' + (tgState.one === cleanId(x.studentId) ? ' selected' : '') + '>' + esc((x.fullName || x.studentId) + ' · ' + (x.grade ? 'ม.' + gn(x.grade) : '')) + '</option>').join('') + '</select></label></div>';
+      if (tgState.one && !students.some((x) => cleanId(x.studentId) === tgState.one)) tgState.one = '';
+      if (tgState.one) students.splice(0, students.length, ...students.filter((x) => cleanId(x.studentId) === tgState.one));
       html += '<div class="tg-sum-tools"><button type="button" class="tg-btn is-primary" data-act="apply-suggest"' + (defs.length ? '' : ' disabled') + '>ใช้เกรดแนะนำทั้งหมด</button><button type="button" class="tg-btn" data-act="toggle-rule" aria-expanded="' + !!tgState.showRule + '">เกณฑ์เกรด</button></div>';
       if (tgState.showRule) html += '<p class="tg-note">เกรดแนะนำ (จุดสีม่วง) คิดจากคะแนนชิ้นงานรวม: 80%+ = 4 · 75% = 3.5 · 70% = 3 · 65% = 2.5 · 60% = 2 · 55% = 1.5 · 50% = 1 · ต่ำกว่า = 0 แตะตัวเลขเพื่อเลือกเกรดเองได้</p>';
       html += '<ul class="tg-list">' + students.map((s) => {
@@ -691,6 +700,11 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       renderTeacherGradesV8();
     });
     const body = document.getElementById('tgBody');
+    body.addEventListener('click', (e) => {
+      const qg = e.target.closest('button[data-qg]');
+      if (qg) { const gs = document.getElementById('teacherPortalGradeSelect'); if (gs) gs.value = qg.dataset.qg; tgState.one = ''; renderTeacherGradesV8(); return; }
+    });
+    body.addEventListener('change', (e) => { if (e.target && e.target.dataset && e.target.dataset.qone) { tgState.one = e.target.value; renderTeacherGradesV8(); } });
     body.addEventListener('click', (e) => {
       const subj = tgSubject();
       const chip = e.target.closest('.tg-chip[data-asg]');
@@ -3026,7 +3040,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.48';
+  const APP_VERSION = '17.49';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3332,7 +3346,10 @@ window.k8RegBirthChange = function (v) {
     h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">4</span>ยืนยันการบันทึก</h2>' + photoBlock +
       '<div class="k8-bh-confirm"><label>วันที่<input type="date" value="' + B.date + '" max="' + ymd(new Date()) + '" onchange="k8BhSet(\'date\', this.value)"></label><label>หมายเหตุ (ถ้ามี)<input type="text" maxlength="300" placeholder="เช่น ห้อง 204 ตรวจรอบเช้า" value="' + esc(B.note) + '" oninput="k8BhNote(this.value)"></label></div>' +
       '<p class="k8-bh-summary">' + (ready ? '<b class="' + (rule.points > 0 ? 'is-plus' : 'is-minus') + '">' + (rule.points > 0 ? 'เพิ่ม ' + rule.points : 'หัก ' + Math.abs(rule.points)) + ' คะแนน</b> · ' + esc(rule.title) + ' · นักเรียน ' + selN + ' คน' : 'เลือกหัวข้อและนักเรียนให้ครบก่อน') + '</p>' +
-      '<button type="button" class="k8-bh-go ' + (rule && rule.points > 0 ? 'is-plus' : '') + '" ' + (ready && !B.saving ? '' : 'disabled') + ' onclick="k8BhSubmit()">' + (B.saving ? 'กำลังบันทึก…' : ready ? (rule.points > 0 ? 'เพิ่มคะแนน' : 'หักคะแนน') + ' ' + selN + ' คน' : 'บันทึก') + '</button></section>';
+      '</section>';
+    // v17.49 · ปุ่มบันทึกติดด้านล่างจอเสมอ (กดได้ทันทีโดยไม่ต้องเลื่อนลงไปข้อ 4)
+    h += '<div class="k8-bh-savebar"><span class="k8-bh-savebar-t">' + (ready ? '<b class="' + (rule.points > 0 ? 'is-plus' : 'is-minus') + '">' + (rule.points > 0 ? '+' + rule.points : rule.points) + ' คะแนน</b> · ' + selN + ' คน' : (!rule || !rule.title ? 'ยังไม่ได้เลือกหัวข้อ' : 'ยังไม่ได้เลือกนักเรียน')) + '</span>' +
+      '<button type="button" class="k8-bh-go ' + (rule && rule.points > 0 ? 'is-plus' : '') + '" ' + (ready && !B.saving ? '' : 'disabled') + ' onclick="k8BhSubmit()">' + (B.saving ? 'กำลังบันทึก…' : ready ? (rule.points > 0 ? 'เพิ่มคะแนน' : 'หักคะแนน') + ' ' + selN + ' คน' : 'บันทึก') + '</button></div>';
     return h;
   }
 
@@ -6043,6 +6060,7 @@ window.k8RegBirthChange = function (v) {
     quick.innerHTML = [['check', 'เช็คชื่อ', "switchTeacherTab('attendance')", '#fffbeb', '#b45309'], ['tt', 'ตารางสอน', 'k8TtOpen()', '#eef2ff', '#4338ca'], ['doc', 'เอกสาร', 'k8DocsOpen()', '#ecfeff', '#0e7490'], ['hq', 'หะละเกาะฮฺ', 'k8HqOpen()', '#d1fae5', '#047857'], ['bh', 'พฤติกรรม', 'k8BhTeachOpen()', '#f3e8ff', '#6d28d9']]
       .map(([k, l, go, bg, ink]) => '<button type="button" onclick="' + go + '"><span style="background:' + bg + ';color:' + ink + '">' + svg(k) + '</span>' + l + '</button>').join('');
     hero.after(quick);
+    setTimeout(() => { try { window.k8LvPlace && window.k8LvPlace(); } catch (e) {} }, 0);
     const tl = document.createElement('section'); tl.className = 'hf-card k8-th-tl'; tl.id = 'k8ThTl'; tl.setAttribute('aria-labelledby', 'k8ThTlTitle');
     quick.after(tl);
     // ปฏิทินโรงเรียนสัปดาห์นี้ (แบบเดียวกับหน้าแรกนักเรียน)
@@ -7652,7 +7670,7 @@ window.k8RegBirthChange = function (v) {
     if (tb) { const n = (V.list || []).filter((x) => (x.status || 'pending') === 'pending' && x.date >= ymd(new Date())).length; tb.textContent = 'ลาสอน (' + n + ')'; }
     try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {}
   }
-  window.k8LvRender = render; window.k8LvLoad = load;
+  window.k8LvRender = render; window.k8LvLoad = load; window.k8LvPlace = function () { try { place(); } catch (e) {} };
   window.k8LvPendingN = function () { if (V.list === null) return null; const t = ymd(new Date()); return (V.list || []).filter((x) => (x.status || 'pending') === 'pending' && x.date >= t).length; };
   async function teachers() {
     if (V.teachers) return V.teachers;
@@ -7737,7 +7755,18 @@ window.k8RegBirthChange = function (v) {
     if (b.dataset.p === 'all') { const on = !b.classList.contains('on'); box.querySelectorAll('button').forEach((x) => x.classList.remove('on')); if (on) b.classList.add('on'); }
     else { box.querySelector('[data-p="all"]').classList.remove('on'); b.classList.toggle('on'); }
   };
-  window.k8LvOpen = function () { render(); try { openModal('k8LvListModal'); } catch (e) {} load(); };
+  // v17.49 · ลาสอน: เปิดเป็นหน้าเต็ม (ไม่ใช่ป๊อปอัป) · ปุ่มย้อนกลับ/ปัดกลับของมือถือปิดหน้าได้
+  let lvOpen = false;
+  window.k8LvOpen = function () {
+    const el = document.getElementById('k8LvPage'); if (!el) return;
+    el.hidden = false; lvOpen = true; document.documentElement.classList.add('k8-docs-open');
+    try { history.pushState({ k8lv: 1 }, ''); } catch (e) {}
+    const b = el.querySelector('.k8-docs-body'); if (b) b.scrollTop = 0;
+    render(); load();
+  };
+  function lvClose() { const el = document.getElementById('k8LvPage'); if (el) el.hidden = true; lvOpen = false; if (!document.querySelector('.k8-docs:not([hidden])')) document.documentElement.classList.remove('k8-docs-open'); }
+  window.k8LvBack = function () { if (history.state && history.state.k8lv) history.back(); else lvClose(); };
+  window.addEventListener('popstate', (e) => { if (lvOpen && !(e.state && e.state.k8lv)) lvClose(); });
   window.k8LvNew = function () { form(null); try { openModal('k8LvModal'); } catch (e) {} };
   window.k8LvEdit = function (id) { const x = (V.list || []).find((y) => y.id === id); form(x); try { openModal('k8LvModal'); } catch (e) {} };
   window.k8LvSave = async function () {
@@ -7781,9 +7810,9 @@ window.k8RegBirthChange = function (v) {
     if (r && r.success) { V.list = r.data || []; render(); toast(r.message || 'ยกเลิกแล้ว', 'success'); } else toast((r && (r.message || r.error)) || 'ไม่สำเร็จ', 'error');
   };
   const sv = window.switchView;
-  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'teacher') load(); return r; };
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'teacher') { place(); setTimeout(place, 0); setTimeout(place, 300); load(); } return r; };
   const st = window.switchTeacherTab;
-  if (typeof st === 'function') window.switchTeacherTab = function (t) { const r = st.apply(this, arguments); if (t === 'overview') load(); return r; };
+  if (typeof st === 'function') window.switchTeacherTab = function (t) { const r = st.apply(this, arguments); if (t === 'overview') { place(); setTimeout(place, 0); load(); } return r; };
   // หน้า "อนุมัติบัญชี & คำขอ" ของแอดมิน: แท็บลาสอน
   const sat = window.switchAdminTab;
   if (typeof sat === 'function') window.switchAdminTab = function (t) { const r = sat.apply(this, arguments); if (t === 'approvals' || t === 'dashboard' || t === 'overview') load(); return r; };
@@ -8688,4 +8717,39 @@ window.k8HfMiss = function (slot) {
   const boot = () => { if (lim()) { nav(); watch(); readOnly(); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 500)); else setTimeout(boot, 500);
   ['updateAdminUIVisibility'].forEach((fn) => { const f = window[fn]; if (typeof f === 'function') window[fn] = function () { const r = f.apply(this, arguments); setTimeout(boot, 50); return r; }; });
+})();
+
+/* ---------- v17.49 · หน้าสมัคร: เลือกวันเกิดด้วย 3 ช่องใหญ่ (วัน · เดือน · ปี พ.ศ.) แทนปฏิทินที่ต้องเลื่อนย้อนหลายปี ---------- */
+(function () {
+  const MN = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  function prep() {
+    try { if (typeof initBirthDatePicker === 'function') initBirthDatePicker(); } catch (e) {}
+    const y = document.getElementById('regBirthYear'), m = document.getElementById('regBirthMonth'), d = document.getElementById('regBirthDay');
+    if (!y || !m || !d || y.dataset.k8) return; y.dataset.k8 = '1';
+    // ปี พ.ศ.: เฉพาะช่วงอายุนักเรียน (6–30 ปี) เรียงจากปีที่น่าจะเป็นที่สุด
+    const be = new Date().getFullYear() + 543, keep = y.value;
+    Array.from(y.options).forEach((o) => { if (o.value) o.remove(); });
+    for (let v = be - 6; v >= be - 30; v--) { const o = document.createElement('option'); o.value = String(v); o.textContent = String(v); y.appendChild(o); }
+    if (keep) y.value = keep;
+    Array.from(m.options).forEach((o) => { if (o.value) o.textContent = MN[+o.value - 1]; });
+    const ph = { regBirthDay: 'วัน', regBirthMonth: 'เดือน', regBirthYear: 'ปี พ.ศ.' };
+    [d, m, y].forEach((s) => { s.setAttribute('aria-label', ph[s.id]); const lab = document.createElement('span'); lab.className = 'k8-bd-lab'; lab.textContent = ph[s.id]; if (!s.parentElement.querySelector('.k8-bd-lab')) s.parentElement.insertBefore(lab, s); });
+  }
+  // วันในเดือน: ตัดวันที่ไม่มีจริง (เช่น 31 ก.พ.)
+  function fixDays() {
+    const y = document.getElementById('regBirthYear'), m = document.getElementById('regBirthMonth'), d = document.getElementById('regBirthDay'); if (!y || !m || !d) return;
+    const yy = (+y.value || 2560) - 543, mm = +m.value || 1, max = new Date(yy, mm, 0).getDate();
+    Array.from(d.options).forEach((o) => { if (o.value) o.disabled = o.hidden = +o.value > max; });
+    if (+d.value > max) d.value = '';
+  }
+  function age() {
+    const h = document.getElementById('regBirthDate'), ag = document.getElementById('k8RegAge'); if (!ag) return;
+    const v = String((h && h.value) || '').replace(/\D/g, '');
+    const a = v.length === 8 && window.k8AgeOf ? window.k8AgeOf(v) : null;
+    ag.hidden = !a; if (a) ag.innerHTML = 'เกิด ' + (+v.slice(0, 2)) + ' ' + MN[+v.slice(2, 4) - 1] + ' ' + v.slice(4) + ' · <b>อายุ ' + a.y + ' ปี' + (a.m ? ' ' + a.m + ' เดือน' : '') + '</b>';
+  }
+  const os = window.syncBirthDatePicker;
+  if (typeof os === 'function') window.syncBirthDatePicker = function () { fixDays(); const r = os.apply(this, arguments); setTimeout(age, 0); return r; };
+  ['handleAuthModeSegmentChange', 'toggleAuthForm', 'openModal'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(prep, 30); return r; }; });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', prep); else prep();
 })();
