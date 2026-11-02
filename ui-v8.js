@@ -3218,7 +3218,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.52';
+  const APP_VERSION = '17.53';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8963,22 +8963,60 @@ window.k8HfMiss = function (slot) {
     ['#k8ThHero', '.k8-th-quick', '#k8ThTl', '.k8-th-week', '.k8-todo', '.k8-follow', '.k8-eval-card'].forEach((sel) => { const el = pick(o, sel); if (el) o.insertBefore(el, anchor); });
     o.querySelectorAll(':scope > .k8-tp-l, :scope > .k8-tp-c, :scope > .k8-tp-r').forEach((x) => x.remove());
   }
-  // แถบบนของคอมพิวเตอร์: แท็บอาจารย์ + กระดิ่ง + บัญชี อยู่บนหัวเว็บ
+  // แถบบนของคอมพิวเตอร์ (TP2): โลโก้ · แท็บขีดเส้นใต้ · ค้นหานักเรียน · กระดิ่ง · บัญชี
+  // v17.53 · เป็นแถบของหน้าอาจารย์เอง (หัวเว็บถูกซ่อนเมื่อเข้าด้วยบัญชีแอดมิน)
+  const escH = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function bar() {
+    let b = document.getElementById('k8TpBar'); const v = vt(); if (!v) return null;
+    if (!b) {
+      b = document.createElement('div'); b.id = 'k8TpBar'; b.className = 'k8-tp-bar';
+      const img = document.querySelector('.app-header .brand-wrapper img');
+      b.innerHTML = '<div class="k8-tp-in"><button type="button" class="k8-tp-brand" onclick="switchTeacherTab(\'overview\')" aria-label="หน้าภาพรวม">' + (img ? '<img src="' + img.getAttribute('src') + '" alt="">' : '') + '<b>KHALIFAH</b></button>' +
+        '<span class="k8-tp-navslot"></span>' +
+        '<div class="k8-tp-search" role="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="k8TpQ" placeholder="ค้นหานักเรียน" autocomplete="off" aria-label="ค้นหานักเรียน" aria-controls="k8TpRes"><div class="k8-tp-res" id="k8TpRes" role="listbox" hidden></div></div>' +
+        '<button type="button" class="k8-tp-admin" id="k8TpAdmin" onclick="switchView(\'admin\')" hidden>ระบบแอดมิน</button>' +
+        '<div class="k8-tp-acts" id="k8TpActs"></div></div>';
+      v.insertBefore(b, v.firstChild);
+      const q = b.querySelector('#k8TpQ'), res = b.querySelector('#k8TpRes');
+      const paint = () => {
+        const t = q.value.trim().toLowerCase(); if (!t) { res.hidden = true; res.innerHTML = ''; return; }
+        const list = ((typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents : []).filter((x) => x && x.studentId && (String(x.fullName || '').toLowerCase().indexOf(t) !== -1 || String(x.studentId).indexOf(t) !== -1)).slice(0, 8);
+        res.innerHTML = list.length ? list.map((x) => '<button type="button" role="option" data-sid="' + escH(x.studentId) + '"><b>' + escH(x.fullName || x.studentId) + '</b><small>' + escH([String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.'), x.studentId].filter(Boolean).join(' · ')) + '</small></button>').join('') : '<p>ไม่พบนักเรียน</p>';
+        res.hidden = false;
+      };
+      q.addEventListener('input', paint); q.addEventListener('focus', paint);
+      q.addEventListener('keydown', (e) => { if (e.key === 'Escape') { q.value = ''; paint(); } if (e.key === 'Enter') { const f = res.querySelector('button[data-sid]'); if (f) f.click(); } });
+      res.addEventListener('click', (e) => {
+        if (e.target.closest('[data-tp-back]')) { paint(); q.focus(); return; }
+        const o = e.target.closest('button[data-sid]'); if (!o) return;
+        const na = document.getElementById('nav-admin'); let me = null; try { me = currentAdmin; } catch (er) {}
+        if (na && na.style.display !== 'none' && me && !me.limited) { res.hidden = true; q.value = ''; try { viewStudentDetails(o.dataset.sid); } catch (er) {} return; }
+        // อาจารย์: การ์ดข้อมูลแบบอ่านอย่างเดียว (ชั้น · รหัส · สถานะ · เกรดวิชาที่ฉันสอน)
+        const st = (allStudents || []).find((x) => String(x.studentId) === o.dataset.sid); if (!st) return;
+        const sel = document.getElementById('teacherPortalSubjectSelect'); const subs = (typeof appSubjects !== 'undefined' && Array.isArray(appSubjects)) ? appSubjects : [];
+        const mine = sel ? Array.from(sel.options).map((op) => subs.find((x) => String(x.id) === op.value) || { id: op.value, name: op.textContent }) : [];
+        const gr = mine.map((sj) => { const g = st.subjectGrades ? st.subjectGrades[sj.id] : undefined; const has = g !== undefined && g !== null && g !== ''; return '<span class="k8-tp-sg' + (has ? '' : ' is-miss') + '">' + escH(sj.name) + ' <b>' + (has ? escH(g) : '–') + '</b></span>'; }).join('');
+        res.innerHTML = '<div class="k8-tp-card"><button type="button" class="k8-tp-back" data-tp-back>‹ ผลการค้นหา</button><b class="k8-tp-cn">' + escH(st.fullName || st.studentId) + '</b><small>' + escH([String(st.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.'), 'รหัส ' + st.studentId, st.status || ''].filter(Boolean).join(' · ')) + '</small>' + (gr ? '<div class="k8-tp-sgs">' + gr + '</div>' : '') + '</div>';
+      });
+      document.addEventListener('click', (e) => { if (!e.target.closest('.k8-tp-search')) res.hidden = true; });
+    }
+    return b;
+  }
   function hdrIn() {
-    const hc = document.querySelector('.app-header .header-container'); const nav = document.querySelector('#view-teacher .teacher-segmented-nav, .app-header .teacher-segmented-nav');
-    if (!hc || !nav) return;
-    if (nav.parentElement !== hc) { const brand = hc.querySelector('.brand-wrapper'); brand.after(nav); }
-    let acts = document.getElementById('k8TpActs');
-    if (!acts) { acts = document.createElement('div'); acts.id = 'k8TpActs'; acts.className = 'k8-tp-acts'; const ha = hc.querySelector('.header-actions'); (ha || hc).appendChild(acts); }
+    const b = bar(); if (!b) return;
+    const nav = document.querySelector('.teacher-segmented-nav'); const slot = b.querySelector('.k8-tp-navslot');
+    if (nav && nav.parentElement !== slot) slot.appendChild(nav);
+    const acts = b.querySelector('#k8TpActs');
     const acct = document.querySelector('#k8ThHero .k8-acct'); if (acct && acct.parentElement !== acts) acts.appendChild(acct);
-    const dn = hc.querySelector('.desktop-nav'); if (dn) { const vis = Array.from(dn.querySelectorAll('.nav-link')).filter((b) => b.style.display !== 'none' && getComputedStyle(b).display !== 'none'); dn.classList.toggle('k8-tp-hide', vis.length <= 1); }
+    const na = document.getElementById('nav-admin'); const ab = b.querySelector('#k8TpAdmin');
+    if (ab) ab.hidden = !(na && na.style.display !== 'none');
   }
   function hdrOut() {
-    const nav = document.querySelector('.app-header .teacher-segmented-nav'); const v = vt();
-    if (nav && v) v.insertBefore(nav, v.firstChild);
+    const b = document.getElementById('k8TpBar'); const v = vt();
+    const nav = b && b.querySelector('.teacher-segmented-nav');
+    if (nav && v) v.insertBefore(nav, b.nextSibling);
     const acts = document.getElementById('k8TpActs'); const head = document.querySelector('#k8ThHero .k8-th-head');
     if (acts && head) { const acct = acts.querySelector('.k8-acct'); if (acct) head.appendChild(acct); const bell = acts.querySelector('#k8Bell'); if (bell) head.insertBefore(bell, head.querySelector('.k8-acct')); }
-    const dn = document.querySelector('.app-header .desktop-nav'); if (dn) dn.classList.remove('k8-tp-hide');
   }
   function sync() {
     const v = vt(), o = ov(); if (!v || !o) return;
@@ -8989,7 +9027,7 @@ window.k8HfMiss = function (slot) {
     const root = document.documentElement;
     root.classList.toggle('k8-tp', on); root.classList.toggle('k8-tpd', desk);
     if (on) { if (!enter(o)) return; } else if (mode) leave(o);
-    if (desk) hdrIn(); else if (mode === 'd' || document.querySelector('.app-header .teacher-segmented-nav')) hdrOut();
+    if (desk) hdrIn(); else if (mode === 'd' || document.querySelector('#k8TpBar .teacher-segmented-nav')) hdrOut();
     if (m !== mode || desk) { mode = m; try { window.k8BellPlace && window.k8BellPlace(); } catch (e) {} }
     const nm = document.getElementById('k8ThName'); if (nm) nm.dataset.hi = on ? 'สวัสดี ' : '';
   }

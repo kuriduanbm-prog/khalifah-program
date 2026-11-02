@@ -3862,20 +3862,20 @@ html.k8-tp .k8-tp-l > .k8-th-tl, html.k8-tp .k8-tp-r > section, html.k8-tp .k8-t
 html.k8-tpd .app-header .header-container { gap: 24px; }
 html.k8-tpd .app-header .header-actions { margin-left: auto; }
 html.k8-tpd .app-header .desktop-nav.k8-tp-hide, html.k8-tpd .app-header #userBadge { display: none !important; }
-html.k8-tpd .app-header .teacher-segmented-nav { display: flex !important; align-self: stretch; align-items: stretch; gap: 6px; background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; width: auto; position: static; }
-html.k8-tpd .app-header .teacher-nav-tab { display: inline-flex !important; align-items: center; gap: 8px; min-height: 0 !important; height: auto; padding: 0 12px !important; border: 0 !important; border-bottom: 2px solid transparent !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; color: #475569 !important; font: 600 14.5px 'IBM Plex Sans Thai', sans-serif !important; cursor: pointer; transform: none !important; }
-html.k8-tpd .app-header .teacher-nav-tab:hover { color: #0f172a !important; }
-html.k8-tpd .app-header .teacher-nav-tab.active { color: #0c4a6e !important; border-bottom-color: #0c4a6e !important; }
-html.k8-tpd .app-header .teacher-nav-tab i { display: inline-block !important; font-size: 15px; color: inherit !important; }
-html.k8-tpd .app-header .teacher-tab-badge { display: none !important; }
-html.k8-tpd .app-header .teacher-nav-tab .tab-label { display: inline !important; color: inherit !important; }
+html.k8-tpd #k8TpBar .teacher-segmented-nav { display: flex !important; align-self: stretch; align-items: stretch; gap: 6px; background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; border-radius: 0 !important; width: auto; position: static; }
+html.k8-tpd #k8TpBar .teacher-nav-tab { display: inline-flex !important; align-items: center; gap: 8px; min-height: 0 !important; height: auto; padding: 0 12px !important; border: 0 !important; border-bottom: 2px solid transparent !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; color: #475569 !important; font: 600 14.5px 'IBM Plex Sans Thai', sans-serif !important; cursor: pointer; transform: none !important; }
+html.k8-tpd #k8TpBar .teacher-nav-tab:hover { color: #0f172a !important; }
+html.k8-tpd #k8TpBar .teacher-nav-tab.active { color: #0c4a6e !important; border-bottom-color: #0c4a6e !important; }
+html.k8-tpd #k8TpBar .teacher-nav-tab i { display: inline-block !important; font-size: 15px; color: inherit !important; }
+html.k8-tpd #k8TpBar .teacher-tab-badge { display: none !important; }
+html.k8-tpd #k8TpBar .teacher-nav-tab .tab-label { display: inline !important; color: inherit !important; }
 .k8-tp-acts { display: none; }
 html.k8-tpd .k8-tp-acts { display: flex; align-items: center; gap: 10px; }
 html.k8-tpd .k8-tp-acts .k8-bell { margin: 0; border: 0; background: transparent; color: #0f172a; }
 html.k8-tpd .k8-tp-acts .k8-bell:hover { background: #f1f5f9; }
 html.k8-tpd .k8-tp-acts .k8-acct summary { width: 40px; height: 40px; }
 html.k8-tpd .k8-tp-acts .k8-acct-menu { right: 0; left: auto; }
-html.k8-tpd #view-teacher > .teacher-segmented-nav { display: none !important; }
+
 
 /* v17.51 · เอาสรุปเกรดออกจากฝั่งอาจารย์ (เหลือกรอกคะแนนชิ้นงานอย่างเดียว) */
 #tgTabs { display: none !important; }
@@ -3916,3 +3916,36 @@ html.k8-tp #teacher-tab-overview { gap: 24px !important; }
 .gc-grid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
 .gc-grid label > span:first-child { white-space: nowrap; }
 .gc-edit .tg-btns { justify-content: flex-end; }
+
+/* v17.53 · แถบบนของหน้าอาจารย์บนคอมพิวเตอร์ (แทนหัวเว็บ ใช้ได้ทั้งบัญชีอาจารย์และแอดมิน) */
+.k8-tp-bar { display: none; }
+html.k8-tpd .app-header { display: none !important; }
+html.k8-tpd #k8TpBar { display: block; position: sticky; top: 0; z-index: 60; width: 100vw; margin: -16px 0 24px calc(50% - 50vw); background: rgba(255,255,255,.94); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid #e2e8f0; }
+.k8-tp-in { max-width: 1280px; margin: 0 auto; padding: 0 40px; height: 64px; display: flex; align-items: stretch; gap: 20px; box-sizing: border-box; }
+.k8-tp-brand { all: unset; display: flex; align-items: center; gap: 10px; cursor: pointer; font: 700 17px 'IBM Plex Sans Thai', sans-serif; color: #0f172a; letter-spacing: .02em; }
+.k8-tp-brand img { width: 36px; height: 36px; object-fit: contain; border-radius: 8px; }
+.k8-tp-navslot { display: flex; align-items: stretch; }
+html.k8-tpd #k8TpBar .teacher-segmented-nav { height: 100%; }
+.k8-tp-search { position: relative; margin-left: auto; align-self: center; display: flex; align-items: center; gap: 8px; width: min(280px, 26vw); height: 40px; padding: 0 12px; border-radius: 12px; background: #f1f5f9; color: #64748b; }
+.k8-tp-search:focus-within { background: #fff; box-shadow: 0 0 0 2px #7dd3fc; }
+.k8-tp-search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font: 14px 'IBM Plex Sans Thai', sans-serif; color: #0f172a; }
+.k8-tp-res { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 12px 32px rgba(15,23,42,.12); padding: 6px; display: flex; flex-direction: column; max-height: 360px; overflow: auto; }
+.k8-tp-res button { all: unset; display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; cursor: pointer; font-family: 'IBM Plex Sans Thai', sans-serif; }
+.k8-tp-res button:hover, .k8-tp-res button:focus-visible { background: #f0f9ff; }
+.k8-tp-res b { font-size: 14px; color: #0f172a; font-weight: 600; }
+.k8-tp-res small { font-size: 12px; color: #64748b; }
+.k8-tp-res p { margin: 0; padding: 10px; font-size: 13px; color: #64748b; }
+.k8-tp-admin { align-self: center; border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; min-height: 38px; padding: 0 12px; font: 600 13px 'IBM Plex Sans Thai', sans-serif; color: #0369a1; cursor: pointer; }
+.k8-tp-admin[hidden] { display: none; }
+html.k8-tpd #k8TpBar .k8-tp-acts { align-self: center; }
+@media (min-width: 1400px) { .k8-tp-in { padding: 0 48px; } }
+
+.k8-tp-card { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 8px; }
+.k8-tp-back { all: unset; cursor: pointer; font: 600 12.5px 'IBM Plex Sans Thai', sans-serif; color: #0369a1; margin-bottom: 4px; }
+.k8-tp-cn { font-size: 15px !important; }
+.k8-tp-sgs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.k8-tp-sg { font-size: 12.5px; padding: 3px 9px; border-radius: 8px; background: #f0fdf4; color: #15803d; }
+.k8-tp-sg.is-miss { background: #fef2f2; color: #b91c1c; }
+.k8-tp-res[hidden] { display: none !important; }
+html.k8-tpd #k8TpBar { position: fixed; top: 0; left: 0; right: 0; width: auto; margin: 0; }
+html.k8-tpd #view-teacher { padding-top: 88px !important; }
