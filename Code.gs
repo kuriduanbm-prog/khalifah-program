@@ -1131,7 +1131,7 @@ function publicSettings_(settings) {
   const o = {};
   Object.keys(settings || {}).forEach(function (k) {
     if (/master|password|secret|token|otp/i.test(k)) return;
-    if (/^TeacherLeaves$/.test(k)) return; // ลาสอน: เฉพาะบุคลากร
+    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
     if (/^Timetable/.test(k)) return; // ตารางสอน: อ่านผ่าน getTimetable (มีสิทธิ์และการเปิด/ปิดการมองเห็น)
     o[k] = settings[k];
   });
@@ -1180,7 +1180,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1216,7 +1216,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1578,6 +1578,20 @@ function dispatchAction_(action, req, data, session, ctx) {
       return saveTeacherLeave_(data, session, !!session && session.role === 'admin');
     case 'takeTeacherLeave':
       return takeTeacherLeave_(data, session);
+    case 'getEnrollRoom':
+      return getEnrollRoom_(data, session);
+    case 'setEnrollOpen':
+      return setEnrollOpen_(data);
+    case 'removeEnrollment':
+      return removeEnrollment_(data);
+    case 'getEnrollments':
+      return { success: true, data: enrollIdsBySubject_() };
+    case 'getMyEnrollments':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return getMyEnrollments_(session.userId);
+    case 'enrollSubject':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return enrollSubject_(data, session.userId);
     case 'getHasanatDay':
       return getHasanatDay_(pick('date') || data.date);
     case 'saveHasanatBatch':
@@ -2810,6 +2824,89 @@ function updatePrayerRecord_(data, session) {
     sheet.getRange(row, 15, 1, 2).setValues([[status, note]]);
     return { success: true, message: 'แก้ไขบันทึกละหมาดแล้ว', record: { logId: logId, studentId: cleanVal(cur[1]), prayerTime: pt, date: date, time: time, status: status, note: note } };
   } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/* ===================== v17.26 · ลงทะเบียนรายวิชา (อาจารย์เปิด QR/ลิงก์ · นักเรียนสแกนหรือดึงจากระบบ) =====================
+   Settings: EnrollCodes = { subjectId: { code, open, name, by, byName } } · Enrollments = { subjectId: { sid: [at, via] } } */
+function enrollRead_(key) { let v = {}; try { v = JSON.parse((getSettings().data || {})[key] || '{}') || {}; } catch (e) { v = {}; } return (v && typeof v === 'object') ? v : {}; }
+function enrollWrite_(key, v) { saveSetting({ key: key, value: JSON.stringify(v), description: key === 'EnrollCodes' ? 'รหัสลงทะเบียนรายวิชา (JSON)' : 'นักเรียนที่ลงทะเบียนรายวิชา (JSON)' }); }
+const ENROLL_NORM_ = function (v) { return String(cleanVal(v)).replace(/\D/g, '').replace(/^0+/, ''); };
+function enrollLock_(fn) { const l = LockService.getScriptLock(); try { l.waitLock(10000); } catch (e) { return { success: false, message: 'ระบบกำลังบันทึก ลองใหม่อีกครั้ง' }; } try { return fn(); } finally { try { l.releaseLock(); } catch (e) {} } }
+function enrollIdsBySubject_() { const e = enrollRead_('Enrollments'); const out = {}; Object.keys(e).forEach(function (k) { out[k] = Object.keys(e[k] || {}); }); return out; }
+function enrollStudents_(subjectId) {
+  const e = enrollRead_('Enrollments')[subjectId] || {};
+  const info = {}; sheetRows_(SHEETS.STUDENTS, 4).forEach(function (r) { const k = ENROLL_NORM_(r[0]); if (k) info[k] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]) }; });
+  return Object.keys(e).map(function (sid) { const i = info[sid] || { id: sid, name: sid, grade: '' }; return { studentId: i.id, fullName: i.name, grade: i.grade, at: (e[sid] || [])[0] || '', via: (e[sid] || [])[1] || '' }; })
+    .sort(function (a, b) { return String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName)); });
+}
+function getEnrollRoom_(d, session) {
+  d = d || {}; const sid = cleanVal(d.subjectId || '').substring(0, 60); if (!sid) return { success: false, message: 'เลือกวิชาก่อน' };
+  const res = enrollLock_(function () {
+    const codes = enrollRead_('EnrollCodes');
+    let c = codes[sid];
+    if (!c || !c.code) {
+      const used = {}; Object.keys(codes).forEach(function (k) { if (codes[k] && codes[k].code) used[codes[k].code] = 1; });
+      const AL = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let code = '';
+      do { code = ''; for (let i = 0; i < 6; i++) code += AL.charAt(Math.floor(Math.random() * AL.length)); } while (used[code]);
+      c = codes[sid] = { code: code, open: true, name: cleanVal(d.subjectName || sid).substring(0, 80), by: session.userId, byName: cleanVal(session.name || session.userId) };
+      enrollWrite_('EnrollCodes', codes);
+    } else if (d.subjectName && c.name !== d.subjectName) { c.name = cleanVal(d.subjectName).substring(0, 80); enrollWrite_('EnrollCodes', codes); }
+    return { success: true, code: c.code, open: c.open !== false, name: c.name };
+  });
+  if (res.success) res.students = enrollStudents_(sid);
+  return res;
+}
+function setEnrollOpen_(d) {
+  const sid = cleanVal((d || {}).subjectId || '');
+  return enrollLock_(function () { const codes = enrollRead_('EnrollCodes'); if (!codes[sid]) return { success: false, message: 'ยังไม่ได้เปิดลงทะเบียนวิชานี้' }; codes[sid].open = !!d.open; enrollWrite_('EnrollCodes', codes); return { success: true, open: codes[sid].open, message: codes[sid].open ? 'เปิดรับลงทะเบียนแล้ว' : 'ปิดรับลงทะเบียนแล้ว' }; });
+}
+function removeEnrollment_(d) {
+  const sid = cleanVal((d || {}).subjectId || ''), st = ENROLL_NORM_((d || {}).studentId);
+  const r = enrollLock_(function () { const e = enrollRead_('Enrollments'); if (e[sid] && e[sid][st]) { delete e[sid][st]; enrollWrite_('Enrollments', e); } return { success: true, message: 'นำออกจากรายวิชาแล้ว' }; });
+  if (r.success) r.students = enrollStudents_(sid);
+  return r;
+}
+function enrollSubjectsAll_() {
+  let subjects = []; try { subjects = JSON.parse((getSettings().data || {}).AppSubjects || '[]') || []; } catch (e) {}
+  return subjects.map(function (x) { return { id: cleanVal(x.id || x.code || x.name), name: cleanVal(x.name || x.id) }; }).filter(function (x) { return x.id; });
+}
+function getMyEnrollments_(studentId) {
+  const me = ENROLL_NORM_(studentId); const e = enrollRead_('Enrollments'); const codes = enrollRead_('EnrollCodes');
+  const all = enrollSubjectsAll_(); const nameOf = {}; all.forEach(function (x) { nameOf[x.id] = x.name; });
+  const enrolled = Object.keys(e).filter(function (k) { return e[k] && e[k][me]; }).map(function (k) { return { subjectId: k, name: (codes[k] && codes[k].name) || nameOf[k] || k, teacher: (codes[k] && codes[k].byName) || '', at: e[k][me][0], via: e[k][me][1] }; });
+  const mine = getMySubjects_(studentId).subjects;
+  const sys = (mine || []).map(function (t) { const m = all.find(function (x) { return (t.id && x.id === t.id) || x.name === t.name; }); return { id: m ? m.id : (t.id || t.name), name: t.name }; });
+  return { success: true, enrolled: enrolled, available: sys, fromTimetable: !!mine };
+}
+function enrollSubject_(d, studentId) {
+  d = d || {}; const me = ENROLL_NORM_(studentId);
+  const codes = enrollRead_('EnrollCodes');
+  let list = [], via = 'system';
+  if (d.code) {
+    const code = String(d.code).toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 12);
+    const subj = Object.keys(codes).find(function (k) { return codes[k] && codes[k].code === code; });
+    if (!subj) return { success: false, message: 'ไม่พบรหัสลงทะเบียนนี้ · ตรวจสอบกับอาจารย์อีกครั้ง' };
+    if (codes[subj].open === false) return { success: false, message: 'อาจารย์ปิดรับลงทะเบียนวิชานี้แล้ว' };
+    list = [subj]; via = 'qr';
+  } else {
+    const want = (Array.isArray(d.subjectIds) ? d.subjectIds : [d.subjectId]).map(function (x) { return cleanVal(x); }).filter(Boolean);
+    const mine = getMySubjects_(studentId).subjects;
+    const okIds = {}; (mine ? getMyEnrollments_(studentId).available : enrollSubjectsAll_()).forEach(function (x) { okIds[x.id] = 1; });
+    list = want.filter(function (x) { return okIds[x]; });
+    if (!list.length) return { success: false, message: 'ไม่พบวิชาที่ลงทะเบียนได้จากระบบ' };
+  }
+  const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+  const r = enrollLock_(function () {
+    const e = enrollRead_('Enrollments'); let added = 0;
+    list.forEach(function (sj) { e[sj] = e[sj] || {}; if (!e[sj][me]) { e[sj][me] = [now, via]; added++; } });
+    if (added) enrollWrite_('Enrollments', e);
+    return { success: true, added: added };
+  });
+  if (!r.success) return r;
+  const out = getMyEnrollments_(studentId);
+  const nm = list.map(function (k) { return (codes[k] && codes[k].name) || (out.enrolled.find(function (x) { return x.subjectId === k; }) || {}).name || k; });
+  out.message = r.added ? 'ลงทะเบียนแล้ว: ' + nm.join(', ') : 'ลงทะเบียนวิชานี้ไว้แล้ว';
+  return out;
 }
 
 /* ===================== v17.11 · ลาสอน (อาจารย์แจ้งลา · ท่านอื่นรับสอนแทน) =====================

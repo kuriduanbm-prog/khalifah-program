@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.25">
-  <link rel="stylesheet" href="ui-v8.css?v=17.25">
-  <link rel="stylesheet" href="dark.css?v=17.25">
+  <link rel="stylesheet" href="style.css?v=17.26">
+  <link rel="stylesheet" href="ui-v8.css?v=17.26">
+  <link rel="stylesheet" href="dark.css?v=17.26">
 </head>
 <body class="auth-locked">
   <script>
@@ -1450,6 +1450,11 @@
         <button type="button" class="k8-policy-card" id="k8PolicyCard" onclick="k8PolicyOpen()">
           <span class="k8-policy-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"/></svg></span>
           <span class="k8-policy-txt"><b>กฎระเบียบหอพักนักเรียนและแนวทางส่งเสริมพฤติกรรม</b><span id="k8PolicyStatus">อ่านและกดยินยอมข้อตกลง</span></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <button type="button" class="k8-policy-card k8-en-card" id="k8EnCard" onclick="k8EnStuOpen()">
+          <span class="k8-policy-ico" style="background:#e0f2fe;color:#0369a1"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg></span>
+          <span class="k8-policy-txt"><b>ลงทะเบียนรายวิชา</b><span id="k8EnCardSub">ดึงวิชาจากระบบ หรือสแกน QR ของอาจารย์</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <button type="button" class="k8-dream-card" id="k8DreamCard" onclick="k8DreamEdit()">
@@ -5712,6 +5717,18 @@
       <div class="k8-sheet-body k8-lv-form" id="k8LvForm"></div>
     </div>
   </div>
+  <div class="modal-overlay" id="k8EnModal" onclick="if(event.target===this)closeModal('k8EnModal')">
+    <div class="modal-dialog k8-sheet k8-en-sheet" role="dialog" aria-labelledby="k8EnTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8EnTitle">ลงทะเบียนรายวิชา</h2><span id="k8EnSub">เปิด QR / ลิงก์ ให้นักเรียนลงทะเบียน</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8EnModal')">✕</button></header>
+      <div class="k8-sheet-body" id="k8EnBody"></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="k8EnStuModal" onclick="if(event.target===this)k8EnStuClose()">
+    <div class="modal-dialog k8-sheet k8-en-sheet" role="dialog" aria-labelledby="k8EnStuTitle">
+      <header class="k8-sheet-head"><div><h2 id="k8EnStuTitle">ลงทะเบียนรายวิชา</h2><span>ดึงวิชาจากระบบ หรือสแกน QR Code ของอาจารย์</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8EnStuClose()">✕</button></header>
+      <div class="k8-sheet-body" id="k8EnStuBody"></div>
+    </div>
+  </div>
   <div class="modal-overlay" id="k8PsModal" onclick="if(event.target===this)closeModal('k8PsModal')">
     <div class="modal-dialog k8-sheet k8-ps-sheet" role="dialog" aria-labelledby="k8PsTitle">
       <header class="k8-sheet-head"><div><h2 id="k8PsTitle">รูปสรุปการละหมาด</h2><span id="k8PsSub">เลือกเวลาละหมาด แล้วบันทึกหรือแชร์รูป</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8PsModal')">✕</button></header>
@@ -5786,7 +5803,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.25"></script>
-  <script defer src="ui-v8.js?v=17.25"></script>
+  <script defer src="app.js?v=17.26"></script>
+  <script defer src="ui-v8.js?v=17.26"></script>
 </body>
 </html>
