@@ -1664,7 +1664,24 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         '<td><span class="k8-as-pr"><span class="k8-as-prbar"><span style="width:' + pp + '%"></span></span><span>' + pn + '/35</span></span></td>' +
         '<td class="r b">' + gpax(s) + '</td></tr>';
     }).join('') : '<tr><td colspan="6" class="k8-li-empty">ไม่พบนักเรียนตามเงื่อนไข</td></tr>';
+    renderSplit(list, pr, cnt, sexOf);
     renderDetail(pr);
+  }
+  // v17.44 · แบ่งฝั่ง: ชายซ้าย หญิงขวา (ยังไม่ระบุเพศอยู่ด้านล่าง)
+  function renderSplit(list, pr, cnt, sexOf) {
+    const box = document.getElementById('k8AsSplit'); if (!box) return;
+    const pic = (s) => { let u = ''; try { u = getDirectImageUrl((s.avatarUrl || s.profilePhoto) || ''); } catch (e) {} const ini = String(window.k8BareName ? window.k8BareName(s) : s.fullName || '?').charAt(0) || '?'; return u ? '<span class="k8-ss-pic has-img" style="background-image:url(&quot;' + esc(u) + '&quot;)" aria-hidden="true"></span>' : '<span class="k8-ss-pic" aria-hidden="true">' + esc(ini) + '</span>'; };
+    const card = (s) => {
+      const id = cid(s.studentId); const [stL, stBg, stInk] = statusPill(s.status); const pn = pr[norm(s.studentId)] || 0;
+      const odd = !/ปกติ|กำลังศึกษา/.test(stL);
+      return '<button type="button" class="k8-ss-row" onclick="k8AsSelect(\'' + esc(id) + '\')">' + pic(s) +
+        '<span class="k8-ss-t"><b>' + esc(s.fullName || id) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(id) + (odd ? ' · <i style="color:' + stInk + '">' + esc(stL) + '</i>' : '') + '</small></span>' +
+        '<span class="k8-ss-pr" title="ละหมาด 7 วัน"><b>' + pn + '</b>/35</span></button>';
+    };
+    const col = (sx, cls, title) => { const l = list.filter((s) => sexOf(s) === sx); return '<section class="k8-ss-col ' + cls + '" aria-label="' + title + '"><header><span class="k8-ss-dot" aria-hidden="true"></span><b>' + title + '</b><em>' + l.length + ' คน</em></header>' + (l.length ? '<div class="k8-ss-list">' + l.map(card).join('') + '</div>' : '<p class="k8-ss-empty">ไม่มีนักเรียนตามเงื่อนไข</p>') + '</section>'; };
+    const un = list.filter((s) => !sexOf(s));
+    box.innerHTML = '<div class="k8-ss-cols">' + col('ชาย', 'is-m', 'นักเรียนชาย') + col('หญิง', 'is-f', 'นักเรียนหญิง') + '</div>' +
+      (un.length ? '<section class="k8-ss-col is-u"><header><span class="k8-ss-dot" aria-hidden="true"></span><b>ยังไม่ระบุเพศ</b><em>' + un.length + ' คน</em><button type="button" onclick="k8GxOpen()">ระบุเพศ ›</button></header><div class="k8-ss-list is-grid">' + un.map(card).join('') + '</div></section>' : '');
   }
   function renderDetail(pr) {
     const box = document.getElementById('k8AsDetail');
@@ -3009,7 +3026,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.43';
+  const APP_VERSION = '17.44';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
