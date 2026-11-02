@@ -3384,3 +3384,29 @@ html.k8-has-readonly #k8Has label:has(input:disabled) { cursor: default; }
 .hf-bar.is-tap:focus-visible { outline: 3px solid #bae6fd; }
 #hfBars + .hf-bars-legend::after { content: 'แตะแท่งกราฟเพื่อดูประวัติ'; margin-left: auto; color: #0369a1; }
 #k8PeDetailEdit[hidden] { display: none !important; }
+/* v17.24 · รายชื่อนักเรียนรายวิชา (อาจารย์) */
+.k8-ta-picking .k8-ta-foot, .k8-ta-picking #k8TaSum, .k8-ta-picking #k8TaSavedNote, .k8-ta-picking [onclick^="k8TaAll"], .k8-ta-picking #k8TaGrade { display: none !important; }
+.k8-ro-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 14px; background: #f0f9ff; border: 1px solid #bae6fd; color: #075985; font-size: 14px; list-style: none; }
+.k8-ro-bar button { min-height: 38px; padding: 0 12px; border: 1px solid #bae6fd; border-radius: 10px; background: #fff; color: #0369a1; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.k8-ro-box { list-style: none; display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1.5px solid #bae6fd; border-radius: 18px; background: #fff; }
+.k8-ro-head b { display: block; font-size: 16px; font-weight: 600; color: #0f172a; }
+.k8-ro-head span { font-size: 13px; color: #64748b; }
+.k8-ro-grades { display: flex; flex-wrap: wrap; gap: 6px; }
+.k8-ro-grades button { min-height: 36px; padding: 0 12px; border: 1.5px solid #e2e8f0; border-radius: 999px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: #334155; cursor: pointer; }
+.k8-ro-grades button[aria-pressed="true"] { background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-ro-q { height: 44px; padding: 0 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font: inherit; font-size: 15px; }
+.k8-ro-all { align-self: flex-start; min-height: 34px; padding: 0; border: 0; background: none; color: #0369a1; font: inherit; font-size: 14px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.k8-ro-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 6px; max-height: 55vh; overflow: auto; }
+.k8-ro-list button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #fff; font: inherit; text-align: left; cursor: pointer; color: #0f172a; }
+.k8-ro-list button[aria-checked="true"] { border-color: #0369a1; background: #e0f2fe; }
+.k8-ro-chk { width: 24px; height: 24px; flex: none; border-radius: 7px; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
+.k8-ro-list button[aria-checked="true"] .k8-ro-chk { background: #0369a1; border-color: #0369a1; }
+.k8-ro-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.k8-ro-who b { font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-ro-who small { font-size: 12px; color: #64748b; }
+.k8-ro-foot { position: sticky; bottom: 0; display: flex; align-items: center; gap: 8px; padding-top: 8px; background: #fff; }
+.k8-ro-foot span { flex: 1; font-size: 14px; color: #334155; }
+.k8-ro-foot button { min-height: 46px; padding: 0 16px; border: 0; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.k8-ro-foot .is-pri { background: #0369a1; color: #fff; }
+.k8-ro-foot .is-pri:disabled { background: #cbd5e1; color: #475569; }
+.k8-ro-foot .is-alt { background: #f1f5f9; color: #334155; }
