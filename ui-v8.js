@@ -2999,7 +2999,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.37';
+  const APP_VERSION = '17.38';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3825,6 +3825,8 @@ window.k8RegBirthChange = function (v) {
     const rc = reqCounts();
     const other = rc ? N.list.filter((x) => !x.read && !/คำขอลาสอน|คำขอละหมาด|บัญชีใหม่/.test(x.title || '')).length : 0;
     const n = rc ? rc.total + other : N.unread, el = document.getElementById('k8BellN');
+    // v17.38 · ตัวเลขคำขอรออนุมัติที่เมนู "อนุมัติบัญชี & คำขอ"
+    if (rc) { const pill = document.getElementById('adminTabPendingBadge'); if (pill) { pill.textContent = rc.total > 99 ? '99+' : String(rc.total); pill.style.display = 'inline-flex'; pill.classList.toggle('is-zero', !rc.total); pill.title = 'บัญชีใหม่ ' + rc.accounts + ' · ละหมาดย้อนหลัง ' + rc.prayers + ' · ลาสอน ' + rc.leaves; } }
     const bl = document.getElementById('k8Bell'); if (bl) { bl.classList.toggle('is-staff', !!rc); bl.title = rc ? (rc.total ? 'คำขอรออนุมัติ ' + rc.total + ' รายการ' : 'การแจ้งเตือน') : ''; }
     if (el) { el.hidden = !n; el.textContent = n > 99 ? '99+' : String(n); }
     const b = document.getElementById('k8Bell'); if (b) { b.setAttribute('aria-label', 'การแจ้งเตือน' + (n ? ' ยังไม่อ่าน ' + n + ' รายการ' : '')); b.classList.toggle('has-new', !!n); }
@@ -8144,4 +8146,12 @@ window.k8HfMiss = function (slot) {
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render); else render();
   ['switchView', 'switchAdminTab'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(() => { const b = document.getElementById('k8ActAud'); if (b && !b.innerHTML) render(); }, 0); return r; }; });
+})();
+
+/* v17.38 · ตัวเลขคำขอที่เมนูอนุมัติ: วาดใหม่หลังส่วนเดิมอัปเดต */
+(function () {
+  ['renderSuperAdminOverviewKpis', 'renderApprovalsV8', 'switchAdminTab', 'fetchPrayerApprovalsFromCloud'].forEach((fn) => {
+    const o = window[fn]; if (typeof o !== 'function') return;
+    window[fn] = function () { const r = o.apply(this, arguments); setTimeout(() => { try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {} }, 0); if (r && typeof r.then === 'function') r.then(() => { try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {} }).catch(() => {}); return r; };
+  });
 })();

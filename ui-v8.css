@@ -3615,3 +3615,6 @@ html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
 .k8-nt-req.is-on b { background: #dc2626; color: #fff; }
 .k8-nt-req:hover { border-color: #7dd3fc; }
 @media (min-width: 993px) { #view-admin.active .k8-adm-bar .k8-adm-me { margin-left: 0; } }
+/* v17.38 · ตัวเลขคำขอที่เมนูอนุมัติ */
+.k8-admin-nav .admin-pending-pill { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #dc2626 !important; color: #fff !important; }
+.k8-admin-nav .admin-pending-pill.is-zero { background: #334155 !important; color: #cbd5e1 !important; }
