@@ -4174,3 +4174,25 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-foot { display: flex !important; posi
 html.k8-tpd #teacher-tab-attendance .k8-ta-foot-t b { font-size: 14.5px; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-foot button { height: 46px; min-width: 160px; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-dh-b.is-save { display: none; }
+
+/* v17.68 · ไม่มีคาบสอน = ไม่แสดงรายชื่อ · ฝากสอน */
+.k8-ta-none { display: flex; flex-direction: column; gap: 4px; padding: 22px 16px !important; text-align: center; color: #475569; font-size: 14px; }
+.k8-ta-none b { font-size: 15px; color: #0f172a; }
+.k8-ta-none span { font-size: 13px; color: #64748b; }
+.k8-ta-per-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.k8-ta-subbtn { min-height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid #fcd34d; background: #fffbeb; color: #92400e; font: 700 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; white-space: nowrap; }
+.k8-ta-subbtn.is-on { border-color: #bae6fd; background: #f0f9ff; color: #0369a1; }
+.k8-ta-pc.is-sub:not(.is-on) { border-color: #fde68a; }
+.k8-ta-pc-tn { color: #92400e !important; font-weight: 600; }
+.k8-ta-pc.is-on .k8-ta-pc-tn { color: #fde68a !important; }
+.k8-ta-subnote { flex-basis: 100%; padding: 8px 12px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 13px; }
+.k8-hist-sub { color: #92400e !important; font-weight: 600; }
+/* มือถือ: แถบคาบมีหัวข้อ + ปุ่มฝากสอนอยู่บรรทัดเดียวกับการ์ดคาบ */
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-per-hd { flex: none; flex-direction: column; justify-content: center; width: 96px; padding: 6px; border-radius: 14px; background: #fff; border: 1px dashed #fcd34d; scroll-snap-align: start; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-per-hd .k8-ta-per-h { display: none; }
+html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-subbtn { width: 100%; min-height: 64px; white-space: normal; }
+/* เลือกได้เฉพาะวันที่ (วิชา/ชั้นมาจากคาบที่เลือก) */
+#teacher-tab-attendance .k8-ta-grid2 > label.k8-field, #teacher-tab-attendance .k8-ta-row2 { display: none !important; }
+html.k8-tpd #teacher-tab-attendance .k8-ta-head { grid-template-columns: minmax(0, 420px) !important; }
+.k8-ta-subtag { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 10px; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 13px; font-weight: 700; font-style: normal; }
+#teacher-tab-attendance .k8-ta.no-roster .k8-ta-foot, #teacher-tab-attendance .k8-ta.no-roster .k8-ta-msum-c, #teacher-tab-attendance .k8-ta.no-roster .k8-ta-mall, #teacher-tab-attendance .k8-ta.no-roster .k8-ta-dh-c, #teacher-tab-attendance .k8-ta.no-roster .k8-ta-dh-b.is-all { display: none !important; }
