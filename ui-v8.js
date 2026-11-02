@@ -1701,6 +1701,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   const ns = (st) => { try { return normalizeApprovalStatus(st); } catch (e) { return String(st || 'pending').toLowerCase(); } };
   function regs() { try { return (getPendingRegistrations() || []).filter((x) => x && x.status !== 'Verified'); } catch (e) { return []; } }
   function lates() { try { return getPrayerApprovalsList() || []; } catch (e) { return []; } }
+  window.k8ApCounts = function () { const R = regs(), L = lates(); return { accounts: R.filter((x) => !/approved/i.test(x.status)).length, prayers: L.filter((x) => ns(x.status) === 'pending').length }; };
   function render() {
     const grid = document.getElementById('k8ApGrid');
     if (!grid) return;
@@ -2998,7 +2999,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.36';
+  const APP_VERSION = '17.37';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3812,8 +3813,19 @@ window.k8RegBirthChange = function (v) {
     if (host && bell.parentElement !== host) { const acct = host.querySelector('.k8-acct, .k8-adm-me'); if (acct) host.insertBefore(bell, acct); else host.appendChild(bell); }
     bell.hidden = !host;
   }
+  // v17.37 · แอดมิน: กระดิ่งนับคำขอที่รออนุมัติ (บัญชีใหม่ + ละหมาดย้อนหลัง + ลาสอน) + แจ้งเตือนอื่นที่ยังไม่อ่าน
+  function reqCounts() {
+    const a = adm(); if (!a || stu()) return null;
+    let c = { accounts: 0, prayers: 0 }; try { if (window.k8ApCounts) c = window.k8ApCounts(); } catch (e) {}
+    let lv = null; try { lv = window.k8LvPendingN ? window.k8LvPendingN() : null; } catch (e) {}
+    if (lv === null && window.k8LvLoad && !N.lvAsked) { N.lvAsked = true; try { window.k8LvLoad(); } catch (e) {} }
+    c.leaves = lv || 0; c.total = c.accounts + c.prayers + c.leaves; return c;
+  }
   function paintBadge() {
-    const n = N.unread, el = document.getElementById('k8BellN');
+    const rc = reqCounts();
+    const other = rc ? N.list.filter((x) => !x.read && !/คำขอลาสอน|คำขอละหมาด|บัญชีใหม่/.test(x.title || '')).length : 0;
+    const n = rc ? rc.total + other : N.unread, el = document.getElementById('k8BellN');
+    const bl = document.getElementById('k8Bell'); if (bl) { bl.classList.toggle('is-staff', !!rc); bl.title = rc ? (rc.total ? 'คำขอรออนุมัติ ' + rc.total + ' รายการ' : 'การแจ้งเตือน') : ''; }
     if (el) { el.hidden = !n; el.textContent = n > 99 ? '99+' : String(n); }
     const b = document.getElementById('k8Bell'); if (b) { b.setAttribute('aria-label', 'การแจ้งเตือน' + (n ? ' ยังไม่อ่าน ' + n + ' รายการ' : '')); b.classList.toggle('has-new', !!n); }
     try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (e) {}
@@ -3867,7 +3879,8 @@ window.k8RegBirthChange = function (v) {
 
   // ---------- ป๊อปอัปเด้งเมื่อมีแจ้งเตือนใหม่ ----------
   function maybePop() {
-    if (window.k8IsPreview && window.k8IsPreview()) return; // โหมดดูตัวอย่างของแอดมิน: ไม่บังคับอ่าน/ยอมรับข้อตกลง
+    if (window.k8IsPreview && window.k8IsPreview()) return;
+    if (adm() && !stu()) return; // v17.37 · ฝั่งแอดมิน/บุคลากร: ไม่เด้งป๊อปอัปกลางจอ ใช้กระดิ่งมุมขวาบนแทน // โหมดดูตัวอย่างของแอดมิน: ไม่บังคับอ่าน/ยอมรับข้อตกลง
     if (!document.getElementById('k8Pop').hidden || document.querySelector('.modal-overlay.open') || !document.getElementById('k8Policy').hidden) return;
     const done = popped();
     let item = null;
@@ -3882,6 +3895,13 @@ window.k8RegBirthChange = function (v) {
     const pop = document.getElementById('k8Pop'); pop.classList.toggle('is-urgent', !!item.urgent || item.kind === 'policy'); pop.hidden = false;
     try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
   }
+  window.k8BellPaint = function () { try { paintBadge(); } catch (e) {} };
+  window.k8BellGo = function (tab) {
+    try { closeModal('k8NotifModal'); } catch (e) {}
+    try { switchAdminTab('approvals', document.getElementById('btnAdminTabApprovals')); } catch (e) {}
+    setTimeout(() => { try { window.k8ApTab && window.k8ApTab(tab); } catch (e) {} }, 60);
+  };
+  setInterval(() => { if (adm() && !stu()) paintBadge(); }, 20000);
   window.k8PopClose = function () { document.getElementById('k8Pop').hidden = true; };
   window.k8PopGo = function () { const it = N.pop; window.k8PopClose(); if (!it) return; if (it.kind === 'policy') window.k8PolicyOpen(); else window.k8NotifOpen(it.nid); };
 
@@ -3890,6 +3910,11 @@ window.k8RegBirthChange = function (v) {
     const body = document.getElementById('k8NotifBody'); if (!body) return;
     document.getElementById('k8NotifSub').textContent = N.unread ? 'ยังไม่อ่าน ' + N.unread + ' รายการ' : 'อ่านครบแล้ว';
     let h = '';
+    const rc = reqCounts();
+    if (rc) {
+      const row = (tab, label, n) => '<button type="button" class="k8-nt-req' + (n ? ' is-on' : '') + '" onclick="k8BellGo(\'' + tab + '\')"><span>' + label + '</span><b>' + n + '</b></button>';
+      h += '<div class="k8-nt-reqs"><div class="k8-nt-reqh">คำขอรออนุมัติ <b>' + rc.total + '</b></div>' + row('accounts', 'บัญชีใหม่', rc.accounts) + row('prayers', 'ละหมาดย้อนหลัง', rc.prayers) + row('leaves', 'ลาสอน', rc.leaves) + '</div>';
+    }
     if ('Notification' in window && Notification.permission !== 'granted') h += '<button type="button" class="k8-nt-push" onclick="k8EnablePush()"><span aria-hidden="true">🔔</span><span><b>เปิดแจ้งเตือนเข้ามือถือ</b><small>' + (Notification.permission === 'denied' ? 'ถูกปิดไว้ · เปิดได้ที่การตั้งค่าเบราว์เซอร์ > การแจ้งเตือน' : 'ให้แจ้งเตือนเด้งขึ้นที่มือถือเมื่อมีเรื่องใหม่') + '</small></span></button>';
     N.pending.forEach((p) => { h += '<button type="button" class="k8-nt-pin" onclick="k8PolicyOpen(\'' + js(p.id) + '\')"><span class="k8-nt-pin-tag">ต้องอ่านและกดยินยอม · ลบไม่ได้จนกว่าจะยินยอม</span><b>' + esc(p.title) + '</b><small>' + esc(p.subtitle || '') + ' · แตะเพื่ออ่าน</small></button>'; });
     if (!N.list.length && !N.pending.length) h += '<div class="k8-docs-empty"><b>ยังไม่มีการแจ้งเตือน</b><span>เมื่อโรงเรียนประกาศข่าวสาร จะแสดงที่นี่</span></div>';
@@ -7552,8 +7577,10 @@ window.k8RegBirthChange = function (v) {
     }
     const tb = document.querySelector('#k8ApTabs [data-tab="leaves"]');
     if (tb) { const n = (V.list || []).filter((x) => (x.status || 'pending') === 'pending' && x.date >= ymd(new Date())).length; tb.textContent = 'ลาสอน (' + n + ')'; }
+    try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {}
   }
   window.k8LvRender = render; window.k8LvLoad = load;
+  window.k8LvPendingN = function () { if (V.list === null) return null; const t = ymd(new Date()); return (V.list || []).filter((x) => (x.status || 'pending') === 'pending' && x.date >= t).length; };
   async function teachers() {
     if (V.teachers) return V.teachers;
     let r = null; try { r = await gasApiCall('getTeachers', {}, 20000); } catch (e) {}

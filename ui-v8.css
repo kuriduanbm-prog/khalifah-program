@@ -3594,3 +3594,24 @@ html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
 .k8-aud-tag { display: block; width: fit-content; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 11.5px; font-weight: 600; }
 .k8-aud-tag.is-limited { background: #fef3c7; color: #92400e; }
 @media (max-width: 520px) { .k8-aud-grades { grid-template-columns: repeat(3, minmax(0, 1fr)); } .k8-aud-seg { width: 100%; } .k8-aud-seg button { flex: 1; padding: 0 8px; } }
+/* v17.37 · กระดิ่งแอดมินมุมขวาบน (คอม: แถบบางด้านบนในพื้นที่เนื้อหา ไม่ทับปุ่มใด ๆ) */
+@media (min-width: 993px) {
+  #view-admin.active .k8-adm-bar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; position: sticky; top: 0; z-index: 30; margin: 0; padding: 12px 0 8px; background: var(--k8-bg, #eef2f7); color: #0f172a; }
+  #view-admin.active .k8-adm-bar .k8-adm-burger, #view-admin.active .k8-adm-bar .k8-adm-bar-t, #view-admin.active .k8-adm-bar .k8-adm-bar-badge { display: none !important; }
+  #view-admin > .admin-content-tab { padding-top: 4px !important; }
+  #view-admin.active .k8-adm-bar .k8-adm-me { background: #0f172a; color: #fff; }
+}
+.k8-bell.is-staff.has-new { background: #fef2f2; border-color: #fca5a5; color: #dc2626; box-shadow: 0 0 0 0 rgba(220,38,38,.45); animation: k8bellpulse 2.4s ease-out infinite; }
+.k8-adm-bar .k8-bell.is-staff.has-new { background: #fee2e2; }
+.k8-bell.is-staff .k8-bell-n { min-width: 22px; height: 22px; font-size: 12px; top: -7px; right: -7px; }
+@keyframes k8bellpulse { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,.45); } 70% { box-shadow: 0 0 0 10px rgba(220,38,38,0); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } }
+@media (prefers-reduced-motion: reduce) { .k8-bell.is-staff.has-new { animation: none; } }
+.k8-nt-reqs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; padding: 12px; border-radius: 16px; background: #f8fafc; border: 1px solid #e2e8f0; }
+.k8-nt-reqh { font-size: 14px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+.k8-nt-reqh b { min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 12.5px; display: inline-flex; align-items: center; justify-content: center; }
+.k8-nt-req { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 14px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; font: inherit; font-size: 14.5px; color: #334155; cursor: pointer; text-align: left; }
+.k8-nt-req b { min-width: 28px; height: 26px; padding: 0 8px; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; }
+.k8-nt-req.is-on { border-color: #fecaca; color: #0f172a; font-weight: 600; }
+.k8-nt-req.is-on b { background: #dc2626; color: #fff; }
+.k8-nt-req:hover { border-color: #7dd3fc; }
+@media (min-width: 993px) { #view-admin.active .k8-adm-bar .k8-adm-me { margin-left: 0; } }
