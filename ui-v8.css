@@ -3489,3 +3489,25 @@ html.k8-xnarrow .hf-pt-track { top: 31px; }
 html.k8-xnarrow .hf-pt-n small { font-size: 10px; }
 html.k8-xnarrow .hf-pt-n small, html.k8-large .hf-pt-n small { word-break: keep-all; }
 #hfPrayerCard[hidden] { display: none !important; }
+/* v17.31 · ปุ่มลัด 3 ปุ่มใต้บัตรนักเรียน: ตารางเรียน · เอกสาร · ผลการเรียน */
+.hf-qk { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.hf-qk .hf-qk-btn { min-width: 0; height: 100%; padding: 12px 14px; }
+.hf-qk .hf-cal-txt > span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; }
+.hf-qk .hf-qk-btn.is-on { border-color: #7dd3fc; background: #f0f9ff; }
+#hfGrades[hidden] { display: none !important; }
+@media (max-width: 640px) {
+  .hf-qk { gap: 8px; }
+  .hf-qk .hf-qk-btn { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 16px; }
+  .hf-qk .hf-cal-txt b { font-size: 14px; line-height: 1.35; }
+  .hf-qk .hf-cal-txt span { font-size: 12px; }
+}
+html.k8-xnarrow .hf-qk { grid-template-columns: 1fr; }
+html.k8-xnarrow .hf-qk .hf-qk-btn { flex-direction: row; align-items: center; }
+.hf-qk .hf-cal-txt b > span { font: inherit; color: inherit; white-space: normal; -webkit-line-clamp: unset; }
+.hf-qk .hf-qk-sh { display: none !important; }
+@media (max-width: 640px) {
+  .hf-qk .hf-qk-l { display: none !important; }
+  .hf-qk .hf-qk-sh { display: inline !important; }
+}
+html.k8-xnarrow .hf-qk .hf-qk-l { display: inline !important; }
+html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }

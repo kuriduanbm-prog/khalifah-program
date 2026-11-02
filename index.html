@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.30">
-  <link rel="stylesheet" href="ui-v8.css?v=17.30">
-  <link rel="stylesheet" href="dark.css?v=17.30">
+  <link rel="stylesheet" href="style.css?v=17.31">
+  <link rel="stylesheet" href="ui-v8.css?v=17.31">
+  <link rel="stylesheet" href="dark.css?v=17.31">
 </head>
 <body class="auth-locked">
   <script>
@@ -220,6 +220,35 @@
           </div>
         </section>
 
+        <div class="hf-qk" aria-label="เมนูลัด">
+        <button type="button" class="hf-cal-btn hf-qk-btn k8-tt-btn" onclick="k8TtOpen()">
+          <span class="hf-cal-ico" style="background:#eef2ff;color:#4338ca"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 4v17M3 14h18"/></svg></span>
+          <span class="hf-cal-txt"><b><span class="hf-qk-l">ตารางเรียน</span><span class="hf-qk-sh">ตารางเรียน</span></b><span class="k8-tt-next">ดูตารางเรียนรายวันและทั้งสัปดาห์</span></span>
+          
+        </button>
+        <button type="button" class="hf-cal-btn hf-qk-btn k8-docs-btn" onclick="k8DocsOpen()">
+          <span class="hf-cal-ico" style="background:#ecfeff;color:#0e7490"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h8l6 6v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5zM14 3v6h6M8 13h8M8 17h5"/></svg></span>
+          <span class="hf-cal-txt"><b><span class="hf-qk-l">เอกสารประกอบการเรียน</span><span class="hf-qk-sh">เอกสารเรียน</span></b><span id="hfDocsSub">ชีท ใบงาน สไลด์ แยกตามชั้น ม.1–ม.6</span></span>
+          
+        </button>
+
+        <button type="button" class="hf-cal-btn hf-qk-btn" id="hfGradesQk" onclick="var g=document.getElementById('hfGradesToggle');if(g&&g.getAttribute('aria-expanded')!=='true')g.click();setTimeout(function(){var t=document.getElementById('hfGrades');if(t)t.scrollIntoView({behavior:'smooth',block:'nearest'})},120)">
+          <span class="hf-cal-ico" style="background:#e0f2fe;color:#0369a1"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+          <span class="hf-cal-txt"><b><span class="hf-qk-l">ผลการเรียนรายวิชา</span><span class="hf-qk-sh">ผลการเรียน</span></b><span>ซ่อนไว้เพื่อความเป็นส่วนตัว</span></span>
+        </button>
+        </div>
+        <section class="hf-card hf-grades" id="hfGrades" hidden>
+          <button type="button" class="hf-grades-toggle" id="hfGradesToggle" aria-expanded="false" aria-controls="hfGradesBody">
+            <span class="hf-grades-icon" id="hfGradesIcon" aria-hidden="true"></span>
+            <span class="hf-grades-label">
+              <span class="hf-grades-title">ผลการเรียนรายวิชา</span>
+              <span class="hf-grades-hint" id="hfGradesHint">ซ่อนไว้เพื่อความเป็นส่วนตัว</span>
+            </span>
+            <span class="hf-grades-action" id="hfGradesAction">แตะเพื่อดู</span>
+          </button>
+          <div class="hf-grades-body" id="hfGradesBody" hidden></div>
+        </section>
+
 
         <section class="hf-card hf-week" id="hfWeek" aria-label="ปฏิทินโรงเรียน สัปดาห์นี้">
           <div class="hf-week-head">
@@ -237,17 +266,6 @@
             <span id="hfBehSub">กำลังโหลดคะแนนล่าสุด</span>
             <span class="hf-beh-term" id="hfBehTerm">ภาคเรียนนี้</span>
           </span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
-
-        <button type="button" class="hf-cal-btn k8-tt-btn" onclick="k8TtOpen()">
-          <span class="hf-cal-ico" style="background:#eef2ff;color:#4338ca"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 4v17M3 14h18"/></svg></span>
-          <span class="hf-cal-txt"><b>ตารางเรียน</b><span class="k8-tt-next">ดูตารางเรียนรายวันและทั้งสัปดาห์</span></span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
-        <button type="button" class="hf-cal-btn k8-docs-btn" onclick="k8DocsOpen()">
-          <span class="hf-cal-ico" style="background:#ecfeff;color:#0e7490"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h8l6 6v10.5a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 19.5zM14 3v6h6M8 13h8M8 17h5"/></svg></span>
-          <span class="hf-cal-txt"><b>เอกสารประกอบการเรียน</b><span id="hfDocsSub">ชีท ใบงาน สไลด์ แยกตามชั้น ม.1–ม.6</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
 
@@ -269,17 +287,6 @@
           <div class="hf-bars" id="hfBars" role="img" aria-label="กราฟการละหมาด"></div>
         </section>
 
-        <section class="hf-card hf-grades">
-          <button type="button" class="hf-grades-toggle" id="hfGradesToggle" aria-expanded="false" aria-controls="hfGradesBody">
-            <span class="hf-grades-icon" id="hfGradesIcon" aria-hidden="true"></span>
-            <span class="hf-grades-label">
-              <span class="hf-grades-title">ผลการเรียนรายวิชา</span>
-              <span class="hf-grades-hint" id="hfGradesHint">ซ่อนไว้เพื่อความเป็นส่วนตัว</span>
-            </span>
-            <span class="hf-grades-action" id="hfGradesAction">แตะเพื่อดู</span>
-          </button>
-          <div class="hf-grades-body" id="hfGradesBody" hidden></div>
-        </section>
 
         <section class="hf-card hf-list">
           <div class="hf-head"><h2>กิจกรรม</h2><button type="button" class="hf-link" onclick="switchView('activities')" id="hfActLink">ดูทั้งหมด</button></div>
@@ -5800,7 +5807,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.30"></script>
-  <script defer src="ui-v8.js?v=17.30"></script>
+  <script defer src="app.js?v=17.31"></script>
+  <script defer src="ui-v8.js?v=17.31"></script>
 </body>
 </html>
