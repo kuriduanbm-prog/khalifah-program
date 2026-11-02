@@ -3218,7 +3218,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.56';
+  const APP_VERSION = '17.57';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9029,7 +9029,7 @@ window.k8HfMiss = function (slot) {
     if (on) { if (!enter(o)) return; } else if (mode) leave(o);
     if (desk) hdrIn(); else if (mode === 'd' || document.querySelector('#k8TpBar .teacher-segmented-nav')) hdrOut();
     if (m !== mode || desk) { mode = m; try { window.k8BellPlace && window.k8BellPlace(); } catch (e) {} }
-    const nm = document.getElementById('k8ThName'); if (nm) nm.dataset.hi = on ? 'สวัสดี ' : '';
+    const nm = document.getElementById('k8ThName'); if (nm) nm.dataset.hi = '';
   }
   let tmr = 0; const later = () => { clearTimeout(tmr); tmr = setTimeout(sync, 60); };
   window.addEventListener('resize', later);
@@ -9065,6 +9065,9 @@ window.k8HfMiss = function (slot) {
   const TILE = '<button type="button" class="k8-ev-qbtn" onclick="k8EvalSummary()"><span style="background:#e0f2fe;color:#0369a1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6 .9-4.35 4.25 1 6L12 16.8 6.65 19.65l1-6L3.3 9.4l6-.9z"/></svg></span>ผลประเมิน</button>';
   function place() {
     const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return;
+    // v17.57 · คำทักทาย: السلام عليكم แล้วบรรทัดถัดไปเป็นชื่ออาจารย์
+    const nm = document.getElementById('k8ThName');
+    if (nm && !(nm.previousElementSibling && nm.previousElementSibling.classList.contains('k8-th-salam'))) nm.insertAdjacentHTML('beforebegin', '<div class="k8-th-salam" lang="ar" dir="rtl">السلام عليكم</div>');
     if (!q.querySelector('.k8-ev-qbtn')) q.insertAdjacentHTML('beforeend', TILE);
     // ลำดับเดียวกันทุกจอ: เช็คชื่อ · ตารางสอน · เอกสาร · หะละเกาะฮฺ · พฤติกรรม · ลงทะเบียนวิชา · ลาสอน · ผลประเมิน
     const ORDER = ['attendance', 'k8TtOpen', 'k8DocsOpen', 'k8HqOpen', 'k8BhTeachOpen', 'k8-en-qbtn', 'k8-lv-qbtn', 'k8-ev-qbtn'];

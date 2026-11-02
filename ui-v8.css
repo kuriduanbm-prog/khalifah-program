@@ -3969,3 +3969,9 @@ html #view-teacher #teacher-tab-overview .k8-eval-card.k8-eval-card { display: n
 html.k8-tp #view-teacher .k8-tp-c > .k8-th-quick { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
 /* v17.56 · ปุ่มทางลัดแถวละ 4 เท่ามือถือ ทุกจอ */
 html.k8-tp .k8-tp-c > .k8-th-quick { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+/* v17.57 · คำทักทายภาษาอาหรับเหนือชื่ออาจารย์ */
+.k8-th-salam { font-family: 'Amiri', 'Noto Naskh Arabic', serif; font-size: 22px; line-height: 1.5; font-weight: 700; text-align: left; color: #e0f2fe; margin: 2px 0 -2px; unicode-bidi: isolate; }
+html.k8-tp .k8-th-salam { color: #0369a1; font-size: 24px; }
+/* v17.57 · คำทักทาย السلام عليكم เหนือชื่ออาจารย์ */
+.k8-th-salam { font-family: 'Amiri', 'Noto Naskh Arabic', serif; font-size: 20px; line-height: 1.5; font-weight: 700; color: #e0f2fe; text-align: left; unicode-bidi: isolate; margin: 2px 0 -2px; }
+html.k8-tp .k8-th-salam { color: #0369a1; font-size: 22px; }
