@@ -178,6 +178,13 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     return ['#fef2f2', '#b91c1c'];
   };
 
+  const SKY = {
+    fajr: '<svg class="hf-pt-orb" viewBox="0 0 100 80" width="100" height="80"><path d="M66 19A18 18 0 1 0 66 53A14 14 0 1 1 66 19Z" fill="#fef3c7" opacity=".8"/><circle cx="20" cy="22" r="1.4" fill="#fff" opacity=".8"/><circle cx="84" cy="60" r="1.1" fill="#fff" opacity=".6"/></svg>',
+    zuhr: '<svg class="hf-pt-orb" viewBox="0 0 100 80" width="100" height="80"><g stroke="#fde68a" stroke-width="2.4" stroke-linecap="round" opacity=".75"><path d="M60 6v8M60 62v8M28 38h8M84 38h8M37 15l6 6M77 55l6 6M83 15l-6 6M43 55l-6 6"/></g><circle cx="60" cy="38" r="16" fill="#fde68a"/><path d="M8 66a9 9 0 0 1 16-6a7 7 0 0 1 12 5h-28z" fill="#fff" opacity=".55"/></svg>',
+    asr: '<svg class="hf-pt-orb" viewBox="0 0 100 80" width="100" height="80"><circle cx="58" cy="50" r="24" fill="#fcd34d" opacity=".18"/><circle cx="58" cy="50" r="15" fill="#fbbf24"/><path d="M4 30a8 8 0 0 1 14-5a6 6 0 0 1 10 4h-24z" fill="#fff" opacity=".35"/></svg>',
+    maghrib: '<svg class="hf-pt-orb" viewBox="0 0 100 80" width="100" height="80"><circle cx="56" cy="62" r="26" fill="#fdba74" opacity=".22"/><path d="M38 62a18 18 0 0 1 36 0z" fill="#fed7aa"/><path d="M22 62h68" stroke="#fed7aa" stroke-width="1.6" opacity=".7"/><path d="M14 24q4-4 8 0q4-4 8 0M34 14q3-3 6 0q3-3 6 0" fill="none" stroke="#1f2937" stroke-width="1.6" stroke-linecap="round" opacity=".55"/></svg>',
+    isha: '<svg class="hf-pt-orb" viewBox="0 0 100 80" width="100" height="80"><path d="M66 19A18 18 0 1 0 66 53A14 14 0 1 1 66 19Z" fill="#fde68a" opacity=".92"/><path d="M30 18l2 5h5l-4 3l2 5l-5-3l-5 3l2-5l-4-3h5z" fill="#fde68a" opacity=".85"/></svg>'
+  };
   // v17.29 · การ์ดละหมาดวันนี้ (ไทม์ไลน์ E): เวลาอะซาน/อิกอมะฮ์ตามพิกัด + สถานะ 5 เวลา
   function renderPtCard(prayers, todayStr, now, st) {
     const box = document.getElementById('hfPt'); if (!box || typeof window.k8PrayerDay !== 'function') return;
@@ -213,7 +220,10 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       return '<button type="button" class="hf-pt-n ' + cls + '"' + act + (act ? '' : ' disabled') + '><span class="hf-pt-dot">' + ic + '</span><b>' + esc(k) + '</b><span class="hf-pt-a">' + fmt(w.adhan) + '</span><small>อิกอมะฮ์<br>' + fmt(w.iqamah) + '</small></button>';
     };
     const far = !!(window.k8MyPrayerLoc && window.k8MyPrayerLoc());
-    box.innerHTML = '<div class="hf-pt-top"><div class="hf-pt-row"><div class="hf-pt-ttl"><h2>ละหมาดวันนี้</h2><span>' + DN[now.getDay()] + ' ' + now.getDate() + ' ' + MN[now.getMonth()] + ' ' + (now.getFullYear() + 543) + ' · ' + esc(window.k8PrayerPlace ? window.k8PrayerPlace() : 'ต.เขาตูม อ.ยะรัง จ.ปัตตานี') + (far ? ' <i>(ตามพิกัดล่าสุด)</i>' : '') + '</span></div><span class="hf-pt-cnt">' + done + ' / 5</span></div>' +
+    // v17.34 · ท้องฟ้าเปลี่ยนตามช่วงเวลา: ซุบฮิ (รุ่งอรุณ) · ซุฮริ (กลางวัน) · อัศรฺ (บ่าย) · มัฆริบ (อาทิตย์ตก) · อีชาอ์ (กลางคืน)
+    const sky = cur < day[0].start ? 'isha' : cur <= day[0].end ? 'fajr' : cur < day[2].start ? 'zuhr' : cur < day[3].start ? 'asr' : cur < day[4].start ? 'maghrib' : 'isha';
+    box.className = 'hf-card hf-pt is-sky-' + sky;
+    box.innerHTML = '<div class="hf-pt-top"><div class="hf-pt-sky" aria-hidden="true">' + (SKY[sky] || '') + '</div><div class="hf-pt-row"><div class="hf-pt-ttl"><h2>ละหมาดวันนี้</h2><span>' + DN[now.getDay()] + ' ' + now.getDate() + ' ' + MN[now.getMonth()] + ' ' + (now.getFullYear() + 543) + ' · ' + esc(window.k8PrayerPlace ? window.k8PrayerPlace() : 'ต.เขาตูม อ.ยะรัง จ.ปัตตานี') + (far ? ' <i>(ตามพิกัดล่าสุด)</i>' : '') + '</span></div><span class="hf-pt-cnt">' + done + ' / 5</span></div>' +
       '<div class="hf-pt-hero"><span class="hf-pt-lab">' + esc(lab) + '</span><b>' + big + '</b><span class="hf-pt-sub' + subCls + '">' + esc(sub) + '</span></div></div>' +
       '<div class="hf-pt-line"><div class="hf-pt-track" aria-hidden="true"></div><div class="hf-pt-nodes">' + day.map(node).join('') + '</div></div>' +
       '<div class="hf-pt-foot">' + (cta ? '<button type="button" class="hf-pt-cta" onclick="switchView(\'prayer\')">เช็คชื่อ' + esc(cta.key) + '</button>' : '<button type="button" class="hf-pt-cta is-alt" onclick="switchView(\'prayer\')">ไปหน้าละหมาด</button>') +
@@ -2992,7 +3002,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.33';
+  const APP_VERSION = '17.34';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

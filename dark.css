@@ -1794,6 +1794,7 @@ html[data-theme="dark"] .hf-pt-cta.is-alt { background-color: #0e2432 !important
 html[data-theme="dark"] .hf-qk .hf-qk-btn.is-on { background-color: #0e2432 !important; }
 html[data-theme="dark"] #homeF .hf-idcard .hf-photo { border: 3px solid #333333 !important; background-color: #122938 !important; color: #b7d1e0 !important; }
 html[data-theme="dark"] #homeF .hf-idcard .hf-photo.has-img { background-color: #122938 !important; }
+html[data-theme="dark"] .hf-pt[class*="is-sky-"] .hf-pt-cnt { background-color: rgba(31,31,31,0.21) !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

@@ -3527,3 +3527,23 @@ html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
 #homeF .hf-idcard .hf-status::before { content: '● '; }
 #homeF .hf-idcard .hf-status.is-warn { background: #f59e0b !important; color: #fff !important; }
 .hf-pt-n small { overflow-wrap: anywhere; max-width: 100%; }
+/* v17.34 · การ์ดละหมาด: ท้องฟ้าเปลี่ยนตามช่วงเวลา */
+.hf-pt-top { position: relative; overflow: hidden; }
+.hf-pt-top > .hf-pt-row, .hf-pt-top > .hf-pt-hero { position: relative; z-index: 1; }
+.hf-pt-sky { position: absolute; inset: 0; pointer-events: none; background-repeat: repeat; }
+.hf-pt-orb { position: absolute; top: 4px; right: 82px; width: 100px; height: 80px; }
+.hf-pt.is-sky-isha .hf-pt-top { background: #082f49; }
+.hf-pt.is-sky-isha .hf-pt-sky { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='90'%3E%3Cg fill='%23e0f2fe'%3E%3Ccircle cx='12' cy='14' r='1'/%3E%3Ccircle cx='58' cy='8' r='1.3' opacity='.7'/%3E%3Ccircle cx='96' cy='30' r='.9'/%3E%3Ccircle cx='130' cy='12' r='1.1' opacity='.6'/%3E%3Ccircle cx='34' cy='50' r='1.2' opacity='.5'/%3E%3Ccircle cx='76' cy='62' r='.9' opacity='.8'/%3E%3Ccircle cx='118' cy='70' r='1.3' opacity='.5'/%3E%3Ccircle cx='8' cy='80' r='.9' opacity='.6'/%3E%3C/g%3E%3C/svg%3E"); }
+.hf-pt.is-sky-fajr .hf-pt-top { background: linear-gradient(180deg, #1e1b4b 0%, #4c1d95 55%, #be185d 100%); }
+.hf-pt.is-sky-fajr .hf-pt-sky { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='90'%3E%3Cg fill='%23e0f2fe'%3E%3Ccircle cx='12' cy='14' r='1'/%3E%3Ccircle cx='58' cy='8' r='1.3' opacity='.7'/%3E%3Ccircle cx='96' cy='30' r='.9'/%3E%3Ccircle cx='130' cy='12' r='1.1' opacity='.6'/%3E%3Ccircle cx='34' cy='50' r='1.2' opacity='.5'/%3E%3Ccircle cx='76' cy='62' r='.9' opacity='.8'/%3E%3Ccircle cx='118' cy='70' r='1.3' opacity='.5'/%3E%3Ccircle cx='8' cy='80' r='.9' opacity='.6'/%3E%3C/g%3E%3C/svg%3E"); opacity: .55; }
+.hf-pt.is-sky-zuhr .hf-pt-top { background: linear-gradient(180deg, #075985 0%, #0369a1 55%, #0284c7 100%); }
+.hf-pt.is-sky-asr .hf-pt-top { background: linear-gradient(180deg, #0c4a6e 0%, #155e75 50%, #a16207 100%); }
+.hf-pt.is-sky-maghrib .hf-pt-top { background: linear-gradient(180deg, #312e81 0%, #9a3412 62%, #c2410c 100%); }
+.hf-pt[class*="is-sky-"] .hf-pt-ttl span, .hf-pt[class*="is-sky-"] .hf-pt-lab { color: rgba(255,255,255,.82); }
+.hf-pt[class*="is-sky-"] .hf-pt-sub { color: rgba(255,255,255,.92); }
+.hf-pt[class*="is-sky-"] .hf-pt-cnt { background: rgba(255,255,255,.16); }
+.hf-pt[class*="is-sky-"] .hf-pt-sub.is-late { color: #fed7aa; }
+@media (max-width: 360px) { .hf-pt-orb { right: 64px; width: 80px; height: 64px; } }
+.hf-pt-orb { top: 40px; right: 4px; width: 88px; height: 70px; }
+.hf-pt-top > .hf-pt-row .hf-pt-ttl, .hf-pt-top > .hf-pt-hero { padding-right: 78px; }
+@media (max-width: 360px) { .hf-pt-orb { top: 42px; right: 2px; width: 72px; height: 58px; } .hf-pt-top > .hf-pt-row .hf-pt-ttl, .hf-pt-top > .hf-pt-hero { padding-right: 62px; } }
