@@ -2974,6 +2974,7 @@ function markPrayersLate_(data) {
   const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานบันทึกเวลาละหมาด' };
   const want = {}; ids.forEach(function (i) { want[i] = true; });
+  const toOnTime = String((data || {}).status || '') === 'ontime';
   const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) {}
   try {
     const n = sheet.getLastRow(); if (n < 2) return { success: true, updated: 0 };
@@ -2982,8 +2983,14 @@ function markPrayersLate_(data) {
     for (let i = 0; i < rows.length; i++) {
       const id = cleanVal(rows[i][0]); if (!want[id]) continue;
       const st = String(rows[i][14] || ''), note = String(rows[i][15] || '');
-      if (!/^ตรงเวลา/.test(st) || /แก้ไขโดย/.test(note)) continue;
-      sheet.getRange(i + 2, 15, 1, 2).setValues([['มาสาย', (note ? note + ' ' : '') + '(ปรับเป็นมาสายตามเกณฑ์เวลา)']]);
+      if (/แก้ไขโดย|เช็คโดย/.test(note)) continue;
+      if (toOnTime) {
+        if (!/^(มาสาย|สาย)$/.test(st.trim())) continue;
+        sheet.getRange(i + 2, 15, 1, 2).setValues([['ตรงเวลา (ญะมาอะฮ์/มัสยิด)', note.replace(/\s*\(ปรับเป็นมาสายตามเกณฑ์เวลา\)/, '') + ' (ปรับเป็นตรงเวลาตามเกณฑ์ใหม่)']]);
+      } else {
+        if (!/^ตรงเวลา/.test(st)) continue;
+        sheet.getRange(i + 2, 15, 1, 2).setValues([['มาสาย', note.replace(/\s*\(ปรับเป็นตรงเวลาตามเกณฑ์ใหม่\)/, '') + ' (ปรับเป็นมาสายตามเกณฑ์เวลา)']]);
+      }
       updated++;
     }
     return { success: true, updated: updated };
