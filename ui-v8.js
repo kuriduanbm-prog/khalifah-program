@@ -3218,7 +3218,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.54';
+  const APP_VERSION = '17.55';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9057,5 +9057,22 @@ window.k8HfMiss = function (slot) {
     if (bell) bar.insertBefore(box, bell); else bar.appendChild(box);
   }
   function arm() { place(); const v = document.getElementById('view-admin'); if (v) new MutationObserver(place).observe(v, { childList: true, subtree: true }); }
+  if (document.readyState === 'complete') arm(); else window.addEventListener('load', arm);
+})();
+
+/* ---------- v17.55 · ผลประเมินจากนักเรียน: ย้ายเป็นปุ่มทางลัดในกลุ่มเดียวกับ เช็คชื่อ/ตารางสอน/... ---------- */
+(function () {
+  const TILE = '<button type="button" class="k8-ev-qbtn" onclick="k8EvalSummary()"><span style="background:#e0f2fe;color:#0369a1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6 .9-4.35 4.25 1 6L12 16.8 6.65 19.65l1-6L3.3 9.4l6-.9z"/></svg></span>ผลประเมิน</button>';
+  function place() {
+    const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return;
+    const ev = q.querySelector('.k8-ev-qbtn');
+    if (!ev) q.insertAdjacentHTML('beforeend', TILE);
+    else if (ev.nextElementSibling) q.appendChild(ev); // ให้อยู่ท้ายสุดเสมอ (หลังปุ่มลาสอน)
+  }
+  function arm() {
+    place();
+    const o = document.getElementById('teacher-tab-overview');
+    if (o) new MutationObserver(() => place()).observe(o, { childList: true, subtree: true });
+  }
   if (document.readyState === 'complete') arm(); else window.addEventListener('load', arm);
 })();

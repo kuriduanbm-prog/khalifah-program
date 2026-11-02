@@ -3962,3 +3962,6 @@ html.k8-tpd #view-teacher { padding-top: 88px !important; }
   .k8-adm-mode span { display: none; }
   .k8-adm-modes { gap: 6px; }
 }
+
+/* v17.55 · การ์ดผลประเมินเดิมซ่อน (ใช้ปุ่มทางลัดแทน) */
+html #view-teacher #teacher-tab-overview .k8-eval-card.k8-eval-card { display: none !important; }
