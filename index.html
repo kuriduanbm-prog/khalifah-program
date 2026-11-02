@@ -59,9 +59,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.28">
-  <link rel="stylesheet" href="ui-v8.css?v=17.28">
-  <link rel="stylesheet" href="dark.css?v=17.28">
+  <link rel="stylesheet" href="style.css?v=17.29">
+  <link rel="stylesheet" href="ui-v8.css?v=17.29">
+  <link rel="stylesheet" href="dark.css?v=17.29">
 </head>
 <body class="auth-locked">
   <script>
@@ -220,10 +220,7 @@
           </div>
         </section>
 
-        <button type="button" class="hf-next" id="hfNext" onclick="switchView('prayer')">
-          <span class="hf-next-text" id="hfNextText">-</span>
-          <span class="hf-next-cta" id="hfNextCta">เช็คชื่อละหมาด</span>
-        </button>
+        <section class="hf-card hf-pt" id="hfPt" aria-label="ละหมาดวันนี้"></section>
 
         <section class="hf-card hf-week" id="hfWeek" aria-label="ปฏิทินโรงเรียน สัปดาห์นี้">
           <div class="hf-week-head">
@@ -267,7 +264,7 @@
           <div class="hf-attbar" id="hfAttBar" aria-hidden="true"></div>
         </section>
 
-        <section class="hf-card hf-pad">
+        <section class="hf-card hf-pad" id="hfPrayerCard">
           <div class="hf-head"><h2>ละหมาด</h2><span class="hf-accent" id="hfPrayerTotal">-</span></div>
           <div class="hf-bars" id="hfBars" role="img" aria-label="กราฟการละหมาด"></div>
         </section>
@@ -5803,7 +5800,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.28"></script>
-  <script defer src="ui-v8.js?v=17.28"></script>
+  <script defer src="app.js?v=17.29"></script>
+  <script defer src="ui-v8.js?v=17.29"></script>
 </body>
 </html>

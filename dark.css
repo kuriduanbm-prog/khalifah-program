@@ -1782,6 +1782,15 @@ html[data-theme="dark"] .k8-en-frame { border: 3px solid rgba(51,51,51,0.9) !imp
 html[data-theme="dark"] .k8-en-pick button { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-en-pick button[aria-checked="true"] { background-color: #122938 !important; }
 html[data-theme="dark"] .k8-ro-chk { border: 2px solid #393f46 !important; }
+html[data-theme="dark"] .hf-pt-line { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] .hf-pt-track { background-color: #21272f !important; }
+html[data-theme="dark"] .hf-pt-n { color: #d6dae5 !important; }
+html[data-theme="dark"] .hf-pt-n small { color: #a6b0bf !important; }
+html[data-theme="dark"] .hf-pt-dot { background-color: #1a2229 !important; }
+html[data-theme="dark"] .hf-pt-n.is-miss .hf-pt-dot { background-color: #2f1111 !important; border: 2px solid #592929 !important; }
+html[data-theme="dark"] .hf-pt-n.is-now b, html[data-theme="dark"] .hf-pt-n.is-now .hf-pt-a, html[data-theme="dark"] .hf-pt-n.is-now small { color: #69c8fc !important; }
+html[data-theme="dark"] .hf-pt-foot span { color: #a6b0bf !important; }
+html[data-theme="dark"] .hf-pt-cta.is-alt { background-color: #0e2432 !important; color: #69c8fc !important; border: 1px solid #264555 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
