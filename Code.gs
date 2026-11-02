@@ -5365,9 +5365,9 @@ function saveDailyAttendance(data) {
   const records = data.records || {};
   const studentDetails = data.studentDetails || {};
   const timeStr = Utilities.formatDate(new Date(), "Asia/Bangkok", "HH:mm:ss");
-  // v17.68 · ฝากสอน: ผู้ที่รับฝากเช็คชื่อแทนอาจารย์ประจำวิชา → บันทึกว่า "ฝากเช็คชื่อ"
+  // v17.69 · สอนแทน: ผู้ที่สอนแทนอาจารย์ประจำวิชา → บันทึกว่า "เช็คชื่อแทน"
   const subFor = cleanVal(data.subFor || '').substring(0, 80);
-  const teacherNote = subFor ? 'ฝากเช็คชื่อแทน ' + subFor + ' (โดย ' + cleanVal(data.teacherName || data.teacherId || '') + ')' : 'เช็คชื่อโดยอาจารย์ (' + cleanVal(data.teacherId || 'admin') + ')';
+  const teacherNote = subFor ? 'เช็คชื่อแทน ' + subFor + ' (โดย ' + cleanVal(data.teacherName || data.teacherId || '') + ')' : 'เช็คชื่อโดยอาจารย์ (' + cleanVal(data.teacherId || 'admin') + ')';
   const subjCode = cleanVal(data.subjectCode || '');
   const subjName = cleanVal(data.subjectName || '');
   const checkedBy = cleanVal(data.teacherName || data.teacherId || '');
