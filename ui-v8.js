@@ -107,7 +107,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       else if (/อุซุร|ประจำเดือน|ป่วย|^ลา/.test(st)) kind = 'ex';
       else if (typeof window.k8ShouldBeOnTime === 'function' && window.k8ShouldBeOnTime(Object.assign({}, p, { date: date }))) kind = 'ok';
       else if (/สาย|ช้า/.test(st) || (typeof window.k8ShouldBeLate === 'function' && window.k8ShouldBeLate(Object.assign({}, p, { date: date })))) kind = 'late';
-      out.push({ date, d: parseYMD(date), slot, kind });
+      out.push({ date, d: parseYMD(date), slot, kind, id: String(p.logId || p.id || '') });
     });
     return out;
   }
@@ -270,10 +270,10 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const wins = (typeof PRAYER_TIME_WINDOWS !== 'undefined') ? PRAYER_TIME_WINDOWS : [];
       bars = SLOT_ORDER.map((slot) => {
         const rec = prayers.find((p) => p.date === todayStr && p.slot === slot);
-        if (rec) return { label: slot, v: 1, kind: rec.kind, text: rec.kind === 'late' ? 'สาย' : rec.kind === 'appr' ? 'ย้อนหลัง' : rec.kind === 'ex' ? 'ลา' : '✓' };
+        if (rec) return { label: slot, v: 1, kind: rec.kind, id: rec.id, date: todayStr, text: rec.kind === 'late' ? 'สาย' : rec.kind === 'appr' ? 'ย้อนหลัง' : rec.kind === 'ex' ? 'ลา' : '✓' };
         const w = wins.find((x) => slotKey(x.key || x.name) === slot);
         const over = w && slot !== 'อีชาอ์' && curMin > w.endMin;
-        return { label: slot, v: 0, miss: !!over, text: over ? '' : '–' };
+        return { label: slot, v: 0, miss: !!over, text: over ? '' : '–', date: todayStr };
       });
       got = doneToday.length; possible = 5;
     } else if (hfState.period === 'week') {
@@ -282,18 +282,18 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         const key = ymd(d);
         const dayRecs = prayers.filter((p) => p.date === key); const v = dayRecs.length;
         const segs = {}; dayRecs.forEach((p) => { segs[p.kind] = (segs[p.kind] || 0) + 1; });
-        bars.push({ label: TH_DOW[d.getDay()], v, segs, text: d > now ? '' : String(v), future: d > now });
+        bars.push({ label: TH_DOW[d.getDay()], v, segs, text: d > now ? '' : String(v), future: d > now, date: key });
         if (d <= now) { got += v; possible += 5; }
       }
     } else {
       const weeks = [];
       for (let d = new Date(range.start); d <= range.end; d.setDate(d.getDate() + 1)) {
         const w = Math.floor((d.getDate() - 1) / 7);
-        weeks[w] = weeks[w] || { v: 0, days: 0 };
+        weeks[w] = weeks[w] || { v: 0, days: 0, date: ymd(d) };
         if (d <= now) { weeks[w].days++; const recs = prayers.filter((p) => p.date === ymd(d)); weeks[w].v += recs.length; weeks[w].segs = weeks[w].segs || {}; recs.forEach((p) => { weeks[w].segs[p.kind] = (weeks[w].segs[p.kind] || 0) + 1; }); }
       }
       max = 35;
-      bars = weeks.map((w, i) => ({ label: 'สัปดาห์ ' + (i + 1), v: w.v, segs: w.segs || {}, text: w.days ? String(w.v) : '', future: !w.days }));
+      bars = weeks.map((w, i) => ({ label: 'สัปดาห์ ' + (i + 1), v: w.v, segs: w.segs || {}, text: w.days ? String(w.v) : '', future: !w.days, date: w.date }));
       weeks.forEach((w) => { got += w.v; possible += w.days * 5; });
     }
     document.getElementById('hfPrayerTotal').textContent = got + ' / ' + possible + ' เวลา';
@@ -303,12 +303,13 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     barsEl.innerHTML = bars.map((b) => {
       const ratio = max ? Math.min(1, b.v / max) : 0;
       const h = Math.max(4, Math.round(ratio * 110));
-      if (b.miss) return '<div class="hf-bar is-miss"><span class="hf-bar-v"></span><span class="hf-bar-x" aria-label="ไม่ได้เช็คชื่อ หมดเวลาแล้ว">✕</span><span class="hf-bar-l">' + esc(b.label) + '</span></div>';
+      const act = b.future ? '' : ' onclick="k8HfBarOpen(\'' + esc(b.id || '') + '\',\'' + esc(b.date || '') + '\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" title="แตะเพื่อดูประวัติ"';
+      if (b.miss) return '<div class="hf-bar is-miss is-tap"' + act + '><span class="hf-bar-v"></span><span class="hf-bar-x" aria-label="ไม่ได้เช็คชื่อ หมดเวลาแล้ว">✕</span><span class="hf-bar-l">' + esc(b.label) + '</span></div>';
       let col;
       if (b.kind) col = '<span class="hf-bar-col" style="height:' + h + 'px;background:' + KC[b.kind] + '"></span>';
       else if (b.segs && b.v) col = '<span class="hf-bar-col is-stack" style="height:' + h + 'px">' + ['ok', 'late', 'appr', 'ex'].filter((k) => b.segs[k]).map((k) => '<i style="flex:' + b.segs[k] + ';background:' + KC[k] + '"></i>').join('') + '</span>';
       else col = '<span class="hf-bar-col" style="height:' + h + 'px;background:' + (b.future ? '#e2e8f0' : '#cbd5e1') + '"></span>';
-      return '<div class="hf-bar' + (b.kind ? ' is-' + b.kind : '') + '"><span class="hf-bar-v">' + esc(b.text) + '</span>' + col + '<span class="hf-bar-l">' + esc(b.label) + '</span></div>';
+      return '<div class="hf-bar' + (b.kind ? ' is-' + b.kind : '') + (b.future ? '' : ' is-tap') + '"' + act + '><span class="hf-bar-v">' + esc(b.text) + '</span>' + col + '<span class="hf-bar-l">' + esc(b.label) + '</span></div>';
     }).join('');
     let lg = document.getElementById('hfBarsLegend');
     if (!lg) { lg = document.createElement('div'); lg.id = 'hfBarsLegend'; lg.className = 'hf-bars-legend'; barsEl.after(lg); }
@@ -2948,7 +2949,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.22';
+  const APP_VERSION = '17.23';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7293,6 +7294,7 @@ window.k8RegBirthChange = function (v) {
   window.k8ShouldBeLate = shouldBeLate;
   window.k8ShouldBeOnTime = shouldBeOnTime;
   const fixOne = (p) => shouldBeLate(p) ? Object.assign({}, p, { status: 'มาสาย', _k8late: 1 }) : shouldBeOnTime(p) ? Object.assign({}, p, { status: 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)', _k8ontime: 1 }) : p;
+  window.k8EffStatus = (p) => (p ? fixOne(p).status : '');
   const o = window.getAllCombinedPrayerHistory;
   if (typeof o === 'function') window.getAllCombinedPrayerHistory = function () {
     const list = o.apply(this, arguments) || [];
@@ -7721,4 +7723,17 @@ window.k8EvidencePhoto = function (file, mode) {
     };
     rd.readAsDataURL(file);
   });
+};
+
+/* ---------- v17.23 · แตะแท่งกราฟละหมาด → ประวัติการบันทึก ---------- */
+window.k8HfBarOpen = function (id, date) {
+  if (id && typeof openPrayerHistoryDetailModal === 'function') { try { openPrayerHistoryDetailModal(id); return; } catch (e) {} }
+  try { switchView('prayer'); } catch (e) {}
+  setTimeout(() => {
+    const inp = document.getElementById('filterPrayerDateBottom');
+    if (inp && date) inp.value = date;
+    try { renderPrayerHistory(date || null); } catch (e) {}
+    const sec = document.getElementById('prayerHistoryBottomSection');
+    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 120);
 };

@@ -326,7 +326,7 @@ function openPrayerHistoryDetailModal(logId) {
 
   if (pName) pName.innerText = `ละหมาด${record.prayerName || record.prayerTime || '-'}`;
   
-  const status = record.status || 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
+  const status = (typeof window.k8EffStatus === 'function' ? window.k8EffStatus(record) : record.status) || 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)';
   let statusClass = 'status-ontime';
   if (status.includes('สาย')) statusClass = 'status-late';
   if (status.includes('อุซุร') || status.includes('ประจำเดือน')) statusClass = 'status-excused';
@@ -1756,7 +1756,7 @@ function renderPrayerHistory(filterDate = null) {
     const d = new Date(p.timestamp || p.date);
     const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : (p.date || '-');
     const timeStr = !isNaN(d.getTime()) ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : (p.time || '-');
-    const status = p.status || 'ตรงเวลา';
+    const status = (typeof window.k8EffStatus === 'function' ? window.k8EffStatus(p) : p.status) || 'ตรงเวลา';
     const note = p.note ? `<div style="font-size: 0.78rem; color: #0369a1; margin-top: 0.25rem; background: #f0f9ff; padding: 0.2rem 0.5rem; border-radius: 6px; display: inline-block;"><i class="fa-solid fa-note-sticky"></i> ${p.note}</div>` : '';
 
     let statusClass = 'status-ontime';
