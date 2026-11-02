@@ -60,9 +60,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.58">
-  <link rel="stylesheet" href="ui-v8.css?v=17.58">
-  <link rel="stylesheet" href="dark.css?v=17.58">
+  <link rel="stylesheet" href="style.css?v=17.59">
+  <link rel="stylesheet" href="ui-v8.css?v=17.59">
+  <link rel="stylesheet" href="dark.css?v=17.59">
 </head>
 <body class="auth-locked">
   <script>
@@ -5759,9 +5759,9 @@
       <div class="k8-sheet-body k8-lv-form" id="k8LvForm"></div>
     </div>
   </div>
-  <div class="modal-overlay" id="k8EnModal" onclick="if(event.target===this)closeModal('k8EnModal')">
+  <div class="modal-overlay" id="k8EnModal" onclick="if(event.target===this){k8EnFull(false);closeModal('k8EnModal')}">
     <div class="modal-dialog k8-sheet k8-en-sheet" role="dialog" aria-labelledby="k8EnTitle">
-      <header class="k8-sheet-head"><div><h2 id="k8EnTitle">ลงทะเบียนรายวิชา</h2><span id="k8EnSub">เปิด QR / ลิงก์ ให้นักเรียนลงทะเบียน</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal('k8EnModal')">✕</button></header>
+      <header class="k8-sheet-head"><div><h2 id="k8EnTitle">ลงทะเบียนรายวิชา</h2><span id="k8EnSub">เปิด QR / ลิงก์ ให้นักเรียนลงทะเบียน</span></div><button type="button" class="k8-en-fullbtn" id="k8EnFullBtn" onclick="k8EnFull()" aria-pressed="false" aria-label="ขยายเต็มจอ" title="ขยายเต็มจอ"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span>ขยายเต็มจอ</span></button><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8EnFull(false);closeModal('k8EnModal')">✕</button></header>
       <div class="k8-sheet-body" id="k8EnBody"></div>
     </div>
   </div>
@@ -5845,7 +5845,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.58"></script>
-  <script defer src="ui-v8.js?v=17.58"></script>
+  <script defer src="app.js?v=17.59"></script>
+  <script defer src="ui-v8.js?v=17.59"></script>
 </body>
 </html>

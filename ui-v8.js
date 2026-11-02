@@ -3218,7 +3218,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.58';
+  const APP_VERSION = '17.59';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9082,4 +9082,27 @@ window.k8HfMiss = function (slot) {
     if (o) new MutationObserver(() => place()).observe(o, { childList: true, subtree: true });
   }
   if (document.readyState === 'complete') arm(); else window.addEventListener('load', arm);
+})();
+
+/* ---------- v17.59 · ลงทะเบียนรายวิชา (อาจารย์): ขยายเต็มจอ สำหรับฉาย QR หน้าชั้น ---------- */
+(function () {
+  const ICO_IN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+  const ICO_OUT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
+  function paint(on) {
+    const m = document.getElementById('k8EnModal'), b = document.getElementById('k8EnFullBtn'); if (!m || !b) return;
+    m.classList.toggle('k8-en-full', on);
+    b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? 'ย่อกลับ' : 'ขยายเต็มจอ'); b.title = on ? 'ย่อกลับ' : 'ขยายเต็มจอ';
+    b.innerHTML = (on ? ICO_OUT : ICO_IN) + '<span>' + (on ? 'ย่อกลับ' : 'ขยายเต็มจอ') + '</span>';
+  }
+  window.k8EnFull = function (force) {
+    const m = document.getElementById('k8EnModal'); if (!m) return;
+    const on = typeof force === 'boolean' ? force : !m.classList.contains('k8-en-full');
+    paint(on);
+    try {
+      if (on && m.requestFullscreen && !document.fullscreenElement) m.requestFullscreen().catch(() => {});
+      if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    } catch (e) {}
+  };
+  // ออกจากเต็มจอด้วยปุ่ม Esc ของเบราว์เซอร์ → ย่อการ์ดกลับด้วย
+  document.addEventListener('fullscreenchange', () => { const m = document.getElementById('k8EnModal'); if (!document.fullscreenElement && m && m.classList.contains('k8-en-full')) paint(false); });
 })();
