@@ -1206,7 +1206,7 @@ const ACTION_ACCESS = {
   saveSubjectGrades: 'staff', updateSubjectScores: 'staff',
   createActivity: 'staff', deleteActivity: 'staff', deleteActivityAttendee: 'staff',
   saveCalendarEvent: 'staff', deleteCalendarEvent: 'staff', updatePrayerLateRequestStatus: 'staff', deletePrayerLateRequest: 'staff',
-  approveRegistrationAndSendEmail: 'staff', saveSubjectAssignments: 'staff', saveAssignmentScores: 'staff', deletePendingRegistration: 'staff', updateSubAdminPhoto: 'staff',
+  approveRegistrationAndSendEmail: 'staff', saveSubjectAssignments: 'staff', saveGradeCriteria: 'staff', saveAssignmentScores: 'staff', deletePendingRegistration: 'staff', updateSubAdminPhoto: 'staff',
   // แอดมิน (หลัก + รอง)
   getAdmins: 'admin', addSubAdmin: 'admin', deleteSubAdmin: 'admin', deleteStudent: 'admin',
   batchPromote: 'admin', fullSchoolBatchPromote: 'admin',
@@ -1441,6 +1441,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return getAssignmentScores(ownStudentId_(session, ctx, pick('studentId')), pick('subjectId'));
     case 'saveSubjectAssignments':
       return saveSubjectAssignments(data);
+    case 'saveGradeCriteria':
+      return saveGradeCriteria(data);
     case 'addBehaviorLogs':
       return addBehaviorLogs_(data, session);
     case 'cancelBehaviorLog':
@@ -5946,6 +5948,35 @@ function getAssignmentDefinitionsMap_() {
     return (m && typeof m === 'object') ? m : {};
   } catch (e) {
     return {};
+  }
+}
+
+/**
+ * v17.52 · เกณฑ์ตัดเกรดรายวิชา (ไม่บังคับ) · การตั้งค่า คีย์ GradeCriteria = { รหัสวิชา: [ร้อยละขั้นต่ำของเกรด 4, 3.5, 3, 2.5, 2, 1.5, 1] }
+ * data = { subjectIds: [...], mins: [7 ตัวเลขเรียงจากมากไปน้อย] | null (= กลับไปใช้ค่าเริ่มต้น) }
+ */
+function saveGradeCriteria(data) {
+  const ids = (Array.isArray(data && data.subjectIds) ? data.subjectIds : [data && data.subjectId]).map(function (x) { return cleanVal(x || ''); }).filter(Boolean).slice(0, 60);
+  if (!ids.length) return { success: false, message: 'ไม่พบรหัสวิชา' };
+  let mins = data && data.mins;
+  if (mins !== null && mins !== undefined) {
+    if (!Array.isArray(mins) || mins.length !== 7) return { success: false, message: 'เกณฑ์ต้องมี 7 ขั้น (เกรด 4 ถึง 1)' };
+    mins = mins.map(function (v) { return Math.round(Number(v) * 100) / 100; });
+    for (let i = 0; i < 7; i++) {
+      if (!isFinite(mins[i]) || mins[i] <= 0 || mins[i] > 100) return { success: false, message: 'ร้อยละต้องอยู่ระหว่าง 1–100' };
+      if (i && mins[i] >= mins[i - 1]) return { success: false, message: 'เกณฑ์ของเกรดที่ต่ำกว่าต้องน้อยกว่าเกรดที่สูงกว่า' };
+    }
+  } else mins = null;
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) {}
+  try {
+    let map = {};
+    try { map = JSON.parse(getSettings().data.GradeCriteria || '{}') || {}; } catch (e) { map = {}; }
+    ids.forEach(function (id) { if (mins) map[id] = mins; else delete map[id]; });
+    saveSetting({ key: 'GradeCriteria', value: JSON.stringify(map), description: 'เกณฑ์ตัดเกรดรายวิชา (ร้อยละขั้นต่ำ เกรด 4 → 1)' });
+    return { success: true, criteria: map };
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
   }
 }
 

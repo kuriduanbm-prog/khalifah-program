@@ -520,6 +520,12 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   const GRADE_STEPS = [[80, 4], [75, 3.5], [70, 3], [65, 2.5], [60, 2], [55, 1.5], [50, 1], [0, 0]];
   const GRADE_VALUES = [0, 1, 1.5, 2, 2.5, 3, 3.5, 4];
   const suggestGrade = (pct) => GRADE_STEPS.find(([min]) => pct >= min)[1];
+  // v17.52 · เกรดคิดอัตโนมัติจากคะแนนชิ้นงานรวม · เกณฑ์ปรับได้รายวิชา (ค่าเริ่มต้น 80/75/70/65/60/55/50)
+  const GC_DEF = [80, 75, 70, 65, 60, 55, 50], GC_G = [4, 3.5, 3, 2.5, 2, 1.5, 1];
+  const gcMap = () => { const m = readJSON('khalifah_grade_criteria', {}); return m && typeof m === 'object' ? m : {}; };
+  const gcCustom = (subj) => { const m = gcMap()[subj]; return Array.isArray(m) && m.length === 7; };
+  const gcMins = (subj) => (gcCustom(subj) ? gcMap()[subj].map(Number) : GC_DEF.slice());
+  const gcGrade = (pct, subj) => { const mins = gcMins(subj); for (let i = 0; i < 7; i++) if (pct >= mins[i] - 1e-9) return GC_G[i]; return 0; };
 
   const tgState = {
     tab: 'scores',
@@ -579,6 +585,76 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     let n = 0;
     Object.keys(d).forEach((sid) => { n += Object.keys(d[sid]).length; });
     return n + Object.keys(tgState.gradeEdits[subj] || {}).length;
+  }
+
+  function gcCell(sid, subj, defs) { const g = gcFor(sid, subj, defs); if (g === null) return '–'; const t = gradeTone(g); return '<span class="gc-g" style="background:' + t[0] + ';color:' + t[1] + '">' + g + '</span>'; }
+  function gcTxt(sid, subj, defs) { const g = gcFor(sid, subj, defs); return g === null ? '' : ' · เกรด ' + g; }
+  function gcFor(sid, subj, defs) { const t = tgTotals(sid, subj, defs); return t.any && t.max ? gcGrade(t.got / t.max * 100, subj) : null; }
+  function tgAutoEdits(subj, defs) {
+    const out = {};
+    const pool = ((typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents : []).filter((x) => x && x.studentId && !/ลาออก|สำเร็จ/.test(String(x.status || '')));
+    pool.forEach((s) => {
+      const sid = cleanId(s.studentId); const g = gcFor(sid, subj, defs); if (g === null) return;
+      const raw = s.subjectGrades ? s.subjectGrades[subj] : undefined;
+      if (raw !== undefined && raw !== null && raw !== '' && Number(raw) === g) return;
+      if (tgSavedGrade(s, subj) === g) return;
+      out[sid] = g;
+    });
+    return out;
+  }
+  async function tgPushGrades(subj, edits, defs) {
+    const subjObj = (typeof appSubjects !== 'undefined' ? appSubjects : []).find((x) => x.id === subj) || { id: subj, name: subj };
+    const studentGrades = [];
+    Object.keys(edits).forEach((sid) => {
+      const st = allStudents.find((x) => sameId(x.studentId, sid)); if (!st) return;
+      const g = edits[sid]; const t = tgTotals(sid, subj, defs);
+      st.subjectGrades = st.subjectGrades || {}; st.skills = st.skills || {};
+      st.subjectGrades[subj] = g; st.skills[subj] = g;
+      const arr = Array.isArray(st.grades) ? st.grades.filter((x) => x && x.code !== subj) : [];
+      arr.push({ code: subj, name: subjObj.name, grade: g, score: t.any ? t.pct : Math.round(g * 25) });
+      st.grades = arr;
+      const gpax = (typeof recalculateStudentGpa === 'function') ? recalculateStudentGpa(st) : '';
+      studentGrades.push({ studentId: cleanId(st.studentId), fullName: st.fullName, grade: st.grade, gradeVal: g, score: t.any ? t.pct : Math.round(g * 25), gpax, grades: arr });
+    });
+    if (!studentGrades.length) return 0;
+    const res = await gasApiCall('saveSubjectGrades', { data: { subjectCode: subj, subjectName: subjObj.name, teacherId: currentAdmin ? currentAdmin.username : 'Teacher', studentGrades } });
+    if (!res || !res.success) throw new Error((res && (res.message || res.error)) || 'บันทึกเกรดไม่สำเร็จ');
+    localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
+    return studentGrades.length;
+  }
+  function gcBarHTML(subj) {
+    const mins = gcMins(subj), custom = gcCustom(subj);
+    let h = '<div class="gc-bar"><div class="gc-bar-t"><b>เกรดคิดให้อัตโนมัติ</b><span>จากคะแนนรวมทุกชิ้นงาน · เกณฑ์' + (custom ? 'ที่ปรับเอง' : 'มาตรฐาน') + '</span></div>' +
+      '<button type="button" class="tg-btn" data-act="gc-open" aria-expanded="' + !!tgState.gcOpen + '">' + (tgState.gcOpen ? 'ปิด' : 'ปรับเกณฑ์') + '</button></div>';
+    if (!tgState.gcOpen) {
+      h += '<div class="gc-chips" aria-label="เกณฑ์เกรดปัจจุบัน">' + GC_G.map((g, i) => '<span><b>' + g + '</b> ' + fmtNum(mins[i]) + '%+</span>').join('') + '<span><b>0</b> ต่ำกว่า ' + fmtNum(mins[6]) + '%</span></div>';
+      return h;
+    }
+    const n = gsMySubjects().length;
+    h += '<div class="gc-edit"><p class="tg-note">ใส่ร้อยละขั้นต่ำของแต่ละเกรด (คะแนนรวม ÷ คะแนนเต็มรวม) · ไม่จำเป็นต้องปรับ ถ้าใช้เกณฑ์มาตรฐานอยู่แล้ว</p><div class="gc-grid">' +
+      GC_G.map((g, i) => '<label><span>เกรด <b>' + g + '</b></span><span class="gc-in"><input type="text" inputmode="decimal" data-gc="' + i + '" value="' + fmtNum(mins[i]) + '" aria-label="ร้อยละขั้นต่ำของเกรด ' + g + '">%+</span></label>').join('') +
+      '<label class="is-zero"><span>เกรด <b>0</b></span><span class="gc-in">ต่ำกว่าเกรด 1</span></label></div>' +
+      '<fieldset class="gc-scope"><legend>ใช้กับ</legend><label><input type="radio" name="tgGcScope" value="one" checked> เฉพาะวิชานี้</label>' + (n > 1 ? '<label><input type="radio" name="tgGcScope" value="all"> ทุกวิชาที่ฉันสอน (' + n + ' วิชา)</label>' : '') + '</fieldset>' +
+      '<p class="gc-err" id="tgGcErr" role="alert" hidden></p>' +
+      '<div class="tg-btns"><button type="button" class="tg-btn" data-act="gc-reset"' + (tgState.gcBusy ? ' disabled' : '') + '>ใช้เกณฑ์มาตรฐาน</button><button type="button" class="tg-btn is-primary" data-act="gc-save"' + (tgState.gcBusy ? ' disabled' : '') + '>' + (tgState.gcBusy ? 'กำลังบันทึก...' : 'บันทึกเกณฑ์') + '</button></div></div>';
+    return h;
+  }
+  async function gcApply(mins) {
+    const subj = tgSubject(); if (!subj || tgState.gcBusy) return;
+    const scope = (document.querySelector('input[name="tgGcScope"]:checked') || {}).value || 'one';
+    const ids = scope === 'all' ? gsMySubjects().map((x) => String(x.id)) : [subj];
+    tgState.gcBusy = true; renderTeacherGradesV8();
+    try {
+      const res = await gasApiCall('saveGradeCriteria', { data: { subjectIds: ids, mins } });
+      if (!res || !res.success) throw new Error((res && (res.message || res.error)) || 'บันทึกเกณฑ์ไม่สำเร็จ');
+      try { localStorage.setItem('khalifah_grade_criteria', JSON.stringify(res.criteria || {})); } catch (e) {}
+      let n = 0;
+      for (const id of ids) { const defs = tgAssignments(id); if (defs.length) n += await tgPushGrades(id, tgAutoEdits(id, defs), defs); }
+      tgState.gcOpen = false;
+      showToast('บันทึกเกณฑ์แล้ว' + (n ? ' · คิดเกรดใหม่ ' + n + ' คน' : ''), 'success');
+    } catch (err) {
+      showToast('บันทึกเกณฑ์ไม่สำเร็จ: ' + (err && err.message ? err.message : err), 'error');
+    } finally { tgState.gcBusy = false; renderTeacherGradesV8(); }
   }
 
   // ---------- v17.50 · สรุปเกรด GS10 ----------
@@ -703,6 +779,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (tgState.tab === 'scores') {
       const left = Math.max(0, Math.round((TG_TOTAL_MAX - totalMax) * 100) / 100);
       html += '<div class="tg-head"><h3>ชิ้นงาน (' + defs.length + ')</h3><span>คะแนนเต็มรวม <b>' + fmtNum(totalMax) + '</b> / ' + TG_TOTAL_MAX + (left > 0 ? ' · เหลือ ' + fmtNum(left) : ' · ครบแล้ว') + '</span></div>';
+      html += gcBarHTML(subj);
       html += '<div class="tg-chips">' + defs.map((a) => '<button type="button" class="tg-chip" data-asg="' + esc(a.id) + '" aria-pressed="' + (a.id === active) + '">' + esc(a.title) + '<small>เต็ม ' + fmtNum(a.maxScore) + '</small></button>').join('') +
         '<button type="button" class="tg-add" data-act="open-add" aria-label="เพิ่มชิ้นงาน">+ เพิ่ม</button></div>';
       if (tgState.adding) {
@@ -716,11 +793,11 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (defs.length) html += '<div class="tg-mode tg-mode-hdr" role="tablist" aria-label="รูปแบบการกรอกคะแนน">' + [['grid', 'ตารางทุกชิ้นงาน', 'ดูตารางทุกชิ้น ›'], ['one', 'กรอกทีละชิ้นงาน', 'กรอกทีละชิ้น ›']].sort((a, b) => (b[0] === tgState.mode) - (a[0] === tgState.mode)).map(([k, l, link]) => '<button type="button" role="tab" data-mode="' + k + '" aria-selected="' + (tgState.mode === k) + '">' + (tgState.mode === k ? l : link) + '</button>').join('') + '</div>';
       if (defs.length && tgState.mode === 'grid') {
         html += '<p class="tg-note tg-note-grid">กด Enter เพื่อลงไปคนถัดไปในชิ้นงานเดียวกัน</p>';
-        html += '<div class="tg-grid-wrap"><table class="tg-grid"><thead><tr><th scope="col" class="tg-grid-name">นักเรียน</th>' + defs.map((a) => '<th scope="col"><span>' + esc(a.title) + '</span><small>เต็ม ' + fmtNum(a.maxScore) + '</small></th>').join('') + '<th scope="col" class="tg-grid-sum">รวม<small>' + fmtNum(totalMax) + '</small></th></tr></thead><tbody>' +
+        html += '<div class="tg-grid-wrap"><table class="tg-grid"><thead><tr><th scope="col" class="tg-grid-name">นักเรียน</th>' + defs.map((a) => '<th scope="col"><span>' + esc(a.title) + '</span><small>เต็ม ' + fmtNum(a.maxScore) + '</small></th>').join('') + '<th scope="col" class="tg-grid-sum">รวม<small>' + fmtNum(totalMax) + '</small></th><th scope="col" class="tg-grid-sum tg-grid-gr">เกรด</th></tr></thead><tbody>' +
           students.map((s) => { const sid = cleanId(s.studentId); const t = tgTotals(sid, subj, defs);
             return '<tr><th scope="row" class="tg-grid-name"><b>' + esc(s.fullName || sid) + '</b><small>' + esc(sid) + '</small></th>' + defs.map((a) => { const v = tgScoreOf(sid, subj, a.id); const n = Number(v); const bad = v !== '' && (isNaN(n) || n < 0 || n > Number(a.maxScore));
               return '<td><input type="text" inputmode="decimal" autocomplete="off" class="' + (bad ? 'is-bad' : '') + '" data-sid="' + esc(sid) + '" data-asg="' + esc(a.id) + '" data-max="' + esc(a.maxScore) + '" value="' + esc(v) + '" placeholder="–" aria-label="' + esc(a.title) + ' ของ ' + esc(s.fullName || sid) + ' (เต็ม ' + fmtNum(a.maxScore) + ')"></td>'; }).join('') +
-              '<td class="tg-grid-sum" data-gridsum-for="' + esc(sid) + '">' + fmtNum(t.got) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+              '<td class="tg-grid-sum" data-gridsum-for="' + esc(sid) + '">' + fmtNum(t.got) + '</td><td class="tg-grid-sum tg-grid-gr" data-gridgr-for="' + esc(sid) + '">' + gcCell(sid, subj, defs) + '</td></tr>'; }).join('') + '</tbody></table></div>';
         if (!students.length) html += '<div class="tg-empty">ไม่พบนักเรียนในระดับชั้นที่เลือก</div>';
       } else if (!defs.length) {
         html += '<div class="tg-empty">ยังไม่มีชิ้นงาน กด "+ เพิ่มชิ้นงาน" เพื่อสร้างช่องคะแนน เช่น การบ้าน รายงาน หรือสอบ</div>';
@@ -733,7 +810,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
           const n = Number(v);
           const bad = v !== '' && (isNaN(n) || n < 0 || n > Number(a.maxScore));
           const t = tgTotals(sid, subj, defs);
-          return '<li class="tg-row"><span class="tg-row-main"><span class="tg-row-name">' + esc(s.fullName || sid) + '</span><span class="tg-row-sub" data-total-for="' + esc(sid) + '">' + esc(sid) + ' · รวม ' + fmtNum(t.got) + ' / ' + fmtNum(t.max) + '</span></span>' +
+          return '<li class="tg-row"><span class="tg-row-main"><span class="tg-row-name">' + esc(s.fullName || sid) + '</span><span class="tg-row-sub" data-total-for="' + esc(sid) + '">' + esc(sid) + ' · รวม ' + fmtNum(t.got) + ' / ' + fmtNum(t.max) + gcTxt(sid, subj, defs) + '</span></span>' +
             '<label class="tg-score"><span class="sr-only-k8">คะแนน ' + esc(a.title) + ' ของ ' + esc(s.fullName || sid) + '</span>' +
             '<input type="text" inputmode="decimal" autocomplete="off" class="' + (bad ? 'is-bad' : '') + '" data-sid="' + esc(sid) + '" data-asg="' + esc(a.id) + '" data-max="' + esc(a.maxScore) + '" value="' + esc(v) + '" placeholder="–"> / ' + fmtNum(a.maxScore) + '</label></li>';
         }).join('') + '</ul>';
@@ -826,6 +903,16 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         if (kind === 'open-add') { tgState.adding = true; renderTeacherGradesV8(); const t = document.getElementById('tgNewTitle'); if (t) t.focus(); }
         if (kind === 'cancel-add') { tgState.adding = false; renderTeacherGradesV8(); }
         if (kind === 'toggle-rule') { tgState.showRule = !tgState.showRule; renderTeacherGradesV8(); }
+        if (kind === 'gc-open') { tgState.gcOpen = !tgState.gcOpen; renderTeacherGradesV8(); const f = document.querySelector('[data-gc="0"]'); if (f) f.focus(); }
+        if (kind === 'gc-reset') gcApply(null);
+        if (kind === 'gc-save') {
+          const v = Array.from(document.querySelectorAll('[data-gc]')).map((x) => Number(String(x.value).trim()));
+          let err = '';
+          if (v.length !== 7 || v.some((x) => !isFinite(x) || x <= 0 || x > 100)) err = 'กรอกร้อยละ 1–100 ให้ครบทุกเกรด';
+          else for (let i = 1; i < 7; i++) if (v[i] >= v[i - 1]) { err = 'เกณฑ์ของเกรด ' + GC_G[i] + ' ต้องน้อยกว่าเกรด ' + GC_G[i - 1]; break; }
+          const box = document.getElementById('tgGcErr'); if (box) { box.textContent = err; box.hidden = !err; }
+          if (!err) gcApply(v);
+        }
         if (kind === 'apply-suggest') {
           const defs2 = tgAssignments(subj); let n = 0;
           tgState.gradeEdits[subj] = tgState.gradeEdits[subj] || {};
@@ -913,6 +1000,9 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (sub) sub.textContent = sid + ' · รวม ' + fmtNum(t.got) + ' / ' + fmtNum(t.max);
       const gsum = body.querySelector('[data-gridsum-for="' + CSS.escape(sid) + '"]');
       if (gsum) gsum.textContent = fmtNum(t.got);
+      const gdefs = tgAssignments(subj);
+      if (sub) sub.textContent += gcTxt(sid, subj, gdefs);
+      const ggr = body.querySelector('[data-gridgr-for="' + CSS.escape(sid) + '"]'); if (ggr) ggr.innerHTML = gcCell(sid, subj, gdefs);
       tgUpdateSaveBar();
     });
   }
@@ -940,7 +1030,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     });
     if (bad) { showToast('มีคะแนน ' + bad + ' ช่องที่ไม่ถูกต้อง (เกินคะแนนเต็มหรือไม่ใช่ตัวเลข) กรุณาแก้ไขก่อน', 'error'); return; }
 
-    const gradeEdits = tgState.gradeEdits[subj] || {};
+    const gradeEdits = tgAutoEdits(subj, defs); // v17.52 · ระบบคิดเกรดให้เอง
     const gradeSids = Object.keys(gradeEdits);
     if (!Object.keys(scores).length && !gradeSids.length) { showToast('ยังไม่มีการแก้ไขที่ต้องบันทึก', 'info'); return; }
 
@@ -953,28 +1043,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         tgState.dirty[subj] = {};
         localStorage.setItem('khalifah_student_assignment_scores', JSON.stringify(m));
       }
-      if (gradeSids.length) {
-        const studentGrades = [];
-        gradeSids.forEach((sid) => {
-          const st = allStudents.find((x) => sameId(x.studentId, sid));
-          if (!st) return;
-          const g = gradeEdits[sid];
-          const t = tgTotals(sid, subj, defs);
-          st.subjectGrades = st.subjectGrades || {};
-          st.skills = st.skills || {};
-          st.subjectGrades[subj] = g;
-          st.skills[subj] = g;
-          const arr = Array.isArray(st.grades) ? st.grades.filter((x) => x && x.code !== subj) : [];
-          arr.push({ code: subj, name: subjObj.name, grade: g, score: t.any ? t.pct : Math.round(g * 25) });
-          st.grades = arr;
-          const gpax = (typeof recalculateStudentGpa === 'function') ? recalculateStudentGpa(st) : '';
-          studentGrades.push({ studentId: cleanId(st.studentId), fullName: st.fullName, grade: st.grade, gradeVal: g, score: t.any ? t.pct : Math.round(g * 25), gpax, grades: arr });
-        });
-        const res = await gasApiCall('saveSubjectGrades', { data: { subjectCode: subj, subjectName: subjObj.name, teacherId: currentAdmin ? currentAdmin.username : 'Teacher', studentGrades } });
-        if (!res || !res.success) throw new Error((res && (res.message || res.error)) || 'บันทึกเกรดไม่สำเร็จ');
-        tgState.gradeEdits[subj] = {};
-        localStorage.setItem('khalifah_all_students', JSON.stringify(allStudents));
-      }
+      if (gradeSids.length) { await tgPushGrades(subj, gradeEdits, defs); tgState.gradeEdits[subj] = {}; }
       if (typeof playSuccessSound === 'function') playSuccessSound();
       showToast('บันทึกคะแนนและเกรดวิชา ' + subjObj.name + ' ลง Google Sheets แล้ว', 'success');
     } catch (err) {
@@ -3149,7 +3218,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.51';
+  const APP_VERSION = '17.52';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

@@ -3852,7 +3852,7 @@ html.k8-tp .k8-th-hero .k8-th-kpi:nth-child(2) .k8-th-kpi-v b { color: #4338ca; 
 html.k8-tp .k8-th-hero .k8-th-kpi.is-hl .k8-th-kpi-v b { color: #b45309; }
 html.k8-tp .k8-th-hero .k8-th-kpi .k8-th-kpi-v small { color: #64748b; }
 html.k8-tp .k8-th-hero .k8-th-kpi:hover { border-color: #bae6fd; }
-html.k8-tp .k8-tp-c > .k8-th-quick { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)) !important; gap: 12px; }
+html.k8-tp .k8-tp-c > .k8-th-quick { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)) !important; gap: 12px; }
 html.k8-tp .k8-th-quick button { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px 8px 14px; gap: 10px; font-size: 13.5px; font-weight: 600; min-height: 112px; justify-content: center; transition: border-color .15s, box-shadow .15s; }
 html.k8-tp .k8-th-quick button:hover { border-color: #bae6fd; box-shadow: 0 4px 14px rgba(15, 23, 42, .06); }
 html.k8-tp .k8-th-quick button > span { width: 46px; height: 46px; border-radius: 14px; }
@@ -3879,3 +3879,40 @@ html.k8-tpd #view-teacher > .teacher-segmented-nav { display: none !important; }
 
 /* v17.51 · เอาสรุปเกรดออกจากฝั่งอาจารย์ (เหลือกรอกคะแนนชิ้นงานอย่างเดียว) */
 #tgTabs { display: none !important; }
+
+/* v17.52 · ระยะขอบฝั่งอาจารย์: คอมพิวเตอร์ / แท็บเล็ตแนวนอน / แท็บเล็ตแนวตั้ง */
+html.k8-tp #view-teacher { max-width: 1240px; padding: 28px 28px 120px !important; }
+@media (min-width: 993px) { html.k8-tpd #view-teacher { padding: 16px 40px 48px !important; } }
+@media (min-width: 1400px) { html.k8-tpd #view-teacher { max-width: 1280px; padding-left: 48px !important; padding-right: 48px !important; } }
+@media (min-width: 768px) and (max-width: 992px) and (orientation: portrait) { html.k8-tp #view-teacher { padding: 28px 32px 128px !important; } }
+@media (min-width: 768px) and (max-width: 1366px) and (orientation: landscape) and (pointer: coarse) { html.k8-tp #view-teacher { padding: 28px 36px 128px !important; } }
+html.k8-tp #teacher-tab-overview { gap: 24px !important; }
+@media (min-width: 1100px) { html.k8-tpd #view-teacher #teacher-tab-overview:not([style*="none"]) { column-gap: 28px; } }
+
+/* v17.52 · เกณฑ์เกรดอัตโนมัติ */
+.gc-bar { display: flex; align-items: center; gap: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 14px; padding: 10px 12px; }
+.gc-bar-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.gc-bar-t b { font-size: 14.5px; color: #0c4a6e; }
+.gc-bar-t span { font-size: 12.5px; color: #475569; }
+.gc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -4px; }
+.gc-chips span { font-size: 12.5px; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 999px; padding: 3px 10px; }
+.gc-chips b { color: #0f172a; }
+.gc-edit { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.gc-edit .tg-note { margin: 0; }
+.gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.gc-grid label { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 12px; background: #f8fafc; font-size: 14px; }
+.gc-grid label b { font-size: 16px; }
+.gc-in { display: inline-flex; align-items: center; gap: 4px; color: #64748b; font-size: 13px; }
+.gc-in input { width: 58px; min-height: 40px; border: 1px solid #cbd5e1; border-radius: 10px; text-align: center; font: 600 15px 'IBM Plex Sans Thai', sans-serif; color: #0f172a; background: #fff; }
+.gc-in input:focus { outline: 3px solid #7dd3fc; border-color: #0369a1; }
+.gc-scope { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 14px; }
+.gc-scope legend { font-weight: 600; margin-bottom: 6px; padding: 0; }
+.gc-scope label { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; }
+.gc-scope input { width: 18px; height: 18px; accent-color: #0369a1; }
+.gc-err { margin: 0; color: #b91c1c; font-size: 13.5px; }
+.gc-g { display: inline-flex; min-width: 34px; justify-content: center; padding: 3px 8px; border-radius: 8px; font-weight: 700; }
+.tg-grid .tg-grid-gr { text-align: center; }
+.gc-bar .tg-btn { flex: none !important; width: auto !important; padding: 0 16px; min-height: 40px; }
+.gc-grid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+.gc-grid label > span:first-child { white-space: nowrap; }
+.gc-edit .tg-btns { justify-content: flex-end; }

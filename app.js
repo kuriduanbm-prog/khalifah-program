@@ -12084,6 +12084,9 @@ async function syncAllDataFromCloud(showToastMsg = false) {
     if (Array.isArray(db.hasanat)) {
       localStorage.setItem('khalifah_hasanat_rows', JSON.stringify(db.hasanat.map(h => ({ studentId: h.studentId, date: h.date, quran: h.quran, memorization: h.memorization, sunnah: h.sunnah }))));
     }
+    if (db.settings && db.settings.GradeCriteria) {
+      try { localStorage.setItem('khalifah_grade_criteria', JSON.stringify(JSON.parse(db.settings.GradeCriteria) || {})); } catch (e) {}
+    }
     if (db.settings && db.settings.SubjectAssignments) {
       try {
         const defs = JSON.parse(db.settings.SubjectAssignments);
