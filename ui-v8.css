@@ -3744,3 +3744,12 @@ html.k8-xnarrow .k8-pr-tools .hf-cal-btn { flex-direction: row; align-items: cen
   .k8-ss-list.is-grid { grid-template-columns: 1fr; }
 }
 html.k8-xnarrow .k8-ss-cols { grid-template-columns: 1fr; }
+/* v17.47 · ตารางสอน: บันทึกอัตโนมัติ */
+.k8-tt-autosave { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 12px; font-size: 14px; font-weight: 600; background: #f0fdf4; color: #15803d; }
+.k8-tt-autosave.is-saving { background: #f0f9ff; color: #0369a1; }
+.k8-tt-autosave.is-err { background: #fef2f2; color: #b91c1c; }
+.k8-tt-autosave button { min-height: 32px; padding: 0 12px; border: 1px solid #fecaca; border-radius: 999px; background: #fff; color: #b91c1c; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.k8-tt-spin { width: 14px; height: 14px; border: 2px solid #bae6fd; border-top-color: #0369a1; border-radius: 50%; animation: k8ttspin .8s linear infinite; }
+@keyframes k8ttspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .k8-tt-spin { animation: none; } }
+.k8-tt-save .k8-tt-autosave { grid-column: 1 / -1; flex: 1 1 100%; order: -1; justify-content: center; white-space: nowrap; }
