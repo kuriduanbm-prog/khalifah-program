@@ -1549,6 +1549,9 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'updateProfilePhoto':
       return updateStudentProfilePhoto(ownStudentId_(session, ctx, pick('studentId')), pick('avatarUrl') || pick('profilePhoto') || pick('photo'));
     case 'prayerLateRequest':
+      if (isStudent && /ประจำเดือน|อุซุร/.test(cleanVal(data.reasonPreset) + ' ' + cleanVal(data.reasonDetail)) && !periodIsGirl_((getStudentForStaff_(session.userId) || {}).student)) {
+        return { success: false, code: 'GIRLS_ONLY', message: 'เหตุผล "มีประจำเดือน" ใช้ได้เฉพาะนักเรียนหญิง' };
+      }
       if (isStudent) {
         data.studentId = session.userId;
         data.status = 'pending';
@@ -1621,6 +1624,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'deleteTeacherLeave':
       return deleteTeacherLeave_(data, session, !!session && session.role === 'admin');
     case 'addPrayerForStudent':
+      if (/ประจำเดือน/.test(cleanVal(data.status)) && !periodIsGirl_((getStudentForStaff_(data.studentId) || {}).student)) return { success: false, code: 'GIRLS_ONLY', message: 'สถานะ "มีประจำเดือน" ใช้ได้เฉพาะนักเรียนหญิง' };
       return addPrayerForStudent_(data, session);
     case 'savePrayerWindows':
       return savePrayerWindows_(data.windows);

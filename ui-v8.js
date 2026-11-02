@@ -3026,7 +3026,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.44';
+  const APP_VERSION = '17.45';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5118,7 +5118,10 @@ window.k8RegBirthChange = function (v) {
   let E = null;
   function form() {
     const body = document.getElementById('k8PeBody'); if (!body) return;
-    const st = E.status || STATUSES[0]; const opts = STATUSES.indexOf(st) === -1 ? [st].concat(STATUSES) : STATUSES;
+    const st = E.status || STATUSES[0];
+    const girlRec = (() => { const s0 = studentOf(E.studentId); return !!(s0 && window.k8IsGirl && window.k8IsGirl(s0)); })();
+    const base = STATUSES.filter((o) => girlRec || !/ประจำเดือน/.test(o) || o === st); // v17.45 · มีประจำเดือน เฉพาะนักเรียนหญิง
+    const opts = base.indexOf(st) === -1 ? [st].concat(base) : base;
     const sl = slots(); const cur = E.slot;
     body.innerHTML = '<div class="k8-pe-slots" role="radiogroup" aria-label="เวลาละหมาด">' + sl.map((k) => '<button type="button" role="radio" aria-checked="' + (k === cur) + '" onclick="k8PeSlot(\'' + esc(k) + '\')">' + esc(k) + '</button>').join('') + '</div>' +
       '<div class="k8-pe-2"><label class="k8-nf-f"><span>วันที่</span><input type="date" id="k8PeDate" value="' + esc(E.date) + '"></label><label class="k8-nf-f"><span>เวลาที่บันทึก</span><input type="time" id="k8PeTime" value="' + esc(String(E.time || '').slice(0, 5)) + '"></label></div>' +
@@ -8298,13 +8301,13 @@ window.k8HfMiss = function (slot) {
     sync();
   }
   function sync() {
-    const b = document.querySelector('.preset-menstruation'); if (b) { b.hidden = !girl() && !preview(); b.classList.toggle('is-on', S.mode); }
+    const b = document.querySelector('.preset-menstruation'); labels(); if (b) { b.hidden = !girl(); b.classList.toggle('is-on', S.mode); }
     if (S.mode) { const sv = document.querySelector('.k8-pn-save'); if (sv && !S.busy) { sv.textContent = S.active ? 'มีช่วงประจำเดือนที่รอกดสิ้นสุดอยู่แล้ว' : 'แจ้งเริ่มมีประจำเดือน · ครบ 5 เวลา'; sv.classList.toggle('is-off', !!S.active); } }
   }
   const ap = window.applyPrayerNotePreset;
   window.applyPrayerNotePreset = function (k) {
     if (k === 'menstruation') {
-      if (!girl() && !preview()) { toast('เมนูนี้สำหรับนักเรียนหญิงเท่านั้น', 'warning'); return; }
+      if (!girl()) { toast('เมนูนี้สำหรับนักเรียนหญิงเท่านั้น', 'warning'); return; }
       const r = ap ? ap.call(this, '__none__') : null;
       const inp = $('prayerNoteInput'); if (inp) inp.value = 'มีประจำเดือน / อุซุรทางศาสนา';
       formMode(true);
@@ -8317,8 +8320,15 @@ window.k8HfMiss = function (slot) {
   };
   ['togglePrayerNoteTime', 'selectAllPrayerNoteTimes', 'updatePrayerNoteChipsUI', 'k8PnOther'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); if (S.mode && fn === 'k8PnOther') formMode(false); setTimeout(sync, 5); return r; }; });
   document.addEventListener('input', (e) => { if (S.mode && e.target && e.target.id === 'prayerNoteInput' && !/ประจำเดือน/.test(e.target.value)) formMode(false); });
+  // v17.45 · ข้อความบนการ์ดไม่พูดถึงอุซุรสำหรับนักเรียนชาย
+  function labels() {
+    const g = girl();
+    const sm = document.querySelector('#prayerNotesCard .k8-pn-t small'); if (sm) { if (!sm.dataset.k8o) sm.dataset.k8o = sm.textContent; sm.textContent = g ? sm.dataset.k8o : 'ลา · ป่วย · เดินทาง · ลืมเช็คชื่อ → ส่งให้แอดมินอนุมัติ'; }
+    const mb = $('k8PrMoreBtn'); if (mb) { if (!mb.dataset.k8o) mb.dataset.k8o = mb.textContent; mb.textContent = g ? mb.dataset.k8o : mb.dataset.k8o.replace(/\s*\/\s*อุซุร/, ''); }
+  }
   const sv = window.savePrayerNoteOnly;
   window.savePrayerNoteOnly = async function () {
+    if (!S.mode && !girl() && /ประจำเดือน/.test((($('prayerNoteInput') || {}).value || ''))) { toast('เหตุผล "มีประจำเดือน" ใช้ได้เฉพาะนักเรียนหญิง', 'warning'); return; }
     if (!S.mode) return sv.apply(this, arguments);
     if (S.busy) return;
     if (S.active) { window.k8PerGo(); return; }
