@@ -3526,3 +3526,4 @@ html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
 #homeF .hf-idcard .hf-status { background: #16a34a !important; color: #fff !important; border: 0 !important; padding: 3px 10px; }
 #homeF .hf-idcard .hf-status::before { content: '● '; }
 #homeF .hf-idcard .hf-status.is-warn { background: #f59e0b !important; color: #fff !important; }
+.hf-pt-n small { overflow-wrap: anywhere; max-width: 100%; }
