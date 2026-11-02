@@ -581,6 +581,111 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     return n + Object.keys(tgState.gradeEdits[subj] || {}).length;
   }
 
+  // ---------- v17.50 · สรุปเกรด GS10 ----------
+  const GS_GR = ['1', '2', '3', '4', '5', '6'];
+  const gsNum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
+  const gsBare = (s) => (window.k8BareName ? window.k8BareName(s) : String(s.fullName || ''));
+  function gsMySubjects() {
+    const sel = document.getElementById('teacherPortalSubjectSelect');
+    const subs = (typeof appSubjects !== 'undefined' && Array.isArray(appSubjects)) ? appSubjects : [];
+    return sel ? Array.from(sel.options).map((o) => subs.find((x) => String(x.id) === o.value) || { id: o.value, name: o.textContent }) : [];
+  }
+  function gsPool() {
+    return ((typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents : []).filter((x) => x && x.studentId && !/ลาออก|สำเร็จ/.test(String(x.status || '')));
+  }
+  function gsGradeOf(s, subj) {
+    const e = tgState.gradeEdits[subj.id] || {}; const sid = cleanId(s.studentId);
+    if (e[sid] !== undefined) return e[sid];
+    const g = subjectGradeFor(s, subj).grade; return g == null ? null : g;
+  }
+  // ผูกวิชากับชั้นจากตารางสอน (ช่องของฉันก่อน) · นักเรียนที่มีเกรดแล้วนับรวมด้วยเสมอ
+  function gsModel() {
+    let tt = null; try { tt = JSON.parse(localStorage.getItem('khalifah_timetable') || 'null'); } catch (e) {}
+    let me = {}; try { me = currentAdmin || {}; } catch (e) {}
+    const un = String(me.username || '').toLowerCase(), fn = String(me.fullName || me.name || '').trim();
+    const mine = (c) => (un && String(c.t || '').toLowerCase() === un) || (fn && String(c.tn || '').trim() === fn);
+    const pool = gsPool(); const subs = gsMySubjects();
+    const cells = []; // {g, c}
+    if (tt && tt.grades) GS_GR.forEach((g) => { const cs = (tt.grades[g] && tt.grades[g].cells) || {}; Object.keys(cs).forEach((k) => { (Array.isArray(cs[k]) ? cs[k] : [cs[k]]).forEach((c) => { if (c && c.s) cells.push({ g, c }); }); }); });
+    const cls = {}; GS_GR.concat(['?']).forEach((g) => { cls[g] = { g, rows: [], studs: {} }; });
+    subs.forEach((subj) => {
+      const all = cells.filter((x) => String(x.c.s) === String(subj.id));
+      const use = all.some((x) => mine(x.c)) ? all.filter((x) => mine(x.c)) : all;
+      const per = {}; // g -> Set(sid)
+      use.forEach((x) => {
+        per[x.g] = per[x.g] || {};
+        const only = Array.isArray(x.c.o) && x.c.o.length ? x.c.o.map((v) => cleanId(v)) : null;
+        pool.forEach((s) => { if (gsNum(s.grade) === x.g && (!only || only.indexOf(cleanId(s.studentId)) !== -1)) per[x.g][cleanId(s.studentId)] = s; });
+      });
+      pool.forEach((s) => { if (gsGradeOf(s, subj) != null) { const g = gsNum(s.grade) || '?'; per[g] = per[g] || {}; per[g][cleanId(s.studentId)] = s; } });
+      const gs = Object.keys(per);
+      if (!gs.length) { cls['?'].rows.push({ subj, studs: [], done: 0 }); return; }
+      gs.forEach((g) => {
+        const studs = Object.keys(per[g]).map((k) => per[g][k]);
+        const done = studs.filter((s) => gsGradeOf(s, subj) != null).length;
+        cls[g].rows.push({ subj, studs, done });
+        studs.forEach((s) => { cls[g].studs[cleanId(s.studentId)] = s; });
+      });
+    });
+    return GS_GR.concat(['?']).map((g) => cls[g]).filter((c) => c.rows.length);
+  }
+  const gsStat = (done, tot) => (tot && done >= tot ? 'done' : done ? 'part' : 'none');
+  const GS_PILL = { done: ['ครบแล้ว', 'is-done'], part: ['ยังไม่ครบ', 'is-part'], none: ['ยังไม่กรอก', 'is-none'] };
+  const gsPill = (k) => '<span class="gs-pill ' + GS_PILL[k][1] + '">' + GS_PILL[k][0] + '</span>';
+  function gsRing(pct) {
+    const col = pct >= 100 ? '#15803d' : pct > 0 ? '#f59e0b' : '#e2e8f0';
+    return '<svg class="gs-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.9" fill="none" stroke="#f1f5f9" stroke-width="4"/><circle cx="18" cy="18" r="15.9" fill="none" stroke="' + col + '" stroke-width="4" stroke-dasharray="' + pct + ' 100" stroke-linecap="' + (pct > 0 && pct < 100 ? 'round' : 'butt') + '" transform="rotate(-90 18 18)"/><text x="18" y="21" text-anchor="middle" font-size="8.5" font-weight="700" fill="currentColor">' + pct + '%</text></svg>';
+  }
+  function gsClassInfo(c) {
+    const tot = c.rows.reduce((a, r) => a + r.studs.length, 0), done = c.rows.reduce((a, r) => a + r.done, 0);
+    let sum = 0, n = 0; c.rows.forEach((r) => r.studs.forEach((s) => { const g = gsGradeOf(s, r.subj); if (g != null) { sum += Number(g); n++; } }));
+    return { tot, done, pct: tot ? Math.round(done * 100 / tot) : 0, avg: n ? (sum / n).toFixed(2) : '', n: Object.keys(c.studs).length };
+  }
+  function tgOverviewHTML() {
+    const model = gsModel();
+    if (tgState.cls) { const c = model.find((x) => x.g === tgState.cls); if (c) return gsClassHTML(c); tgState.cls = ''; }
+    if (!model.length) return '<div class="tg-empty">ยังไม่มีรายวิชาที่รับผิดชอบ</div>';
+    let all = 0, miss = 0; model.forEach((c) => c.rows.forEach((r) => { all++; if (gsStat(r.done, r.studs.length) !== 'done') miss++; }));
+    let html = '<p class="gs-lead">' + (miss ? 'ยังกรอกไม่ครบ <b>' + miss + '</b> จาก ' + all + ' รายการ' : 'กรอกเกรดครบทุกวิชาแล้ว') + ' · แตะวิชาเพื่อกรอกเกรด</p>';
+    html += model.map((c) => {
+      const i = gsClassInfo(c);
+      const name = c.g === '?' ? 'ยังไม่ระบุชั้น' : 'ม.' + c.g;
+      const head = c.g === '?' ? '<div class="gs-head"><div class="gs-hd-t"><b>' + name + '</b><span>วิชาที่ยังไม่ได้อยู่ในตารางสอน</span></div></div>'
+        : '<button type="button" class="gs-head" data-gs-cls="' + c.g + '" aria-label="ดูเกรดทุกวิชารายคน ชั้น ' + name + '">' + gsRing(i.pct) + '<div class="gs-hd-t"><b>' + name + '</b><span>' + i.n + ' คน · ' + c.rows.length + ' วิชา' + (i.avg ? ' · เฉลี่ยชั้น ' + i.avg : '') + '</span></div><span class="gs-chev" aria-hidden="true">›</span></button>';
+      return '<section class="gs-card">' + head + c.rows.map((r) => {
+        const k = gsStat(r.done, r.studs.length);
+        return '<button type="button" class="gs-row" data-gs-subj="' + esc(r.subj.id) + '" data-gs-g="' + c.g + '"><span class="gs-sn">' + esc(r.subj.name) + '</span><span class="gs-cnt">' + (c.g === '?' ? '' : r.done + '/' + r.studs.length) + '</span>' + gsPill(k) + '</button>';
+      }).join('') + '</section>';
+    }).join('');
+    return html;
+  }
+  function gsClassHTML(c) {
+    const i = gsClassInfo(c);
+    const q = (tgState.search || '').trim().toLowerCase();
+    const studs = Object.keys(c.studs).map((k) => c.studs[k])
+      .filter((s) => !q || String(s.fullName || '').toLowerCase().indexOf(q) !== -1 || String(s.studentId).indexOf(q) !== -1)
+      .sort((a, b) => gsBare(a).localeCompare(gsBare(b), 'th'));
+    let html = '<div class="gs-back"><button type="button" data-gs="back">‹ สรุปเกรด</button><div><b>ม.' + c.g + '</b><span>' + i.n + ' คน · ' + c.rows.length + ' วิชา' + (i.avg ? ' · เฉลี่ยชั้น ' + i.avg : '') + '</span></div>' + gsRing(i.pct) + '</div>';
+    html += '<label class="tg-search"><span class="sr-only-k8">ค้นหานักเรียน</span><input type="search" id="tgSearch" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(tgState.search || '') + '"></label>';
+    html += '<ul class="gs-stu">' + studs.map((s) => {
+      const sid = cleanId(s.studentId);
+      let missN = 0;
+      const chips = c.rows.filter((r) => r.studs.some((x) => cleanId(x.studentId) === sid)).map((r) => {
+        const g = gsGradeOf(s, r.subj); if (g == null) missN++;
+        const t = gradeTone(g);
+        return '<span class="gs-g' + (g == null ? ' is-miss' : '') + '" style="background:' + t[0] + ';color:' + t[1] + '"><small>' + esc(r.subj.name) + '</small><b>' + (g == null ? '–' : g) + '</b></span>';
+      }).join('');
+      return '<li><div class="gs-stu-top"><span class="gs-stu-n">' + esc(s.fullName || sid) + '</span>' + (missN ? '<span class="gs-pill is-none">ขาด ' + missN + ' วิชา</span>' : '<span class="gs-pill is-done">ครบ</span>') + '</div><div class="gs-gs">' + chips + '</div></li>';
+    }).join('') + '</ul>';
+    if (!studs.length) html += '<div class="tg-empty">ไม่พบนักเรียน</div>';
+    return html;
+  }
+  function tgMarkView() {
+    const root = document.getElementById('tgRoot'); if (!root) return;
+    root.classList.toggle('gs-ov', tgState.tab === 'summary' && !tgState.entry);
+  }
+  window.k8GsModel = gsModel;
+
   function renderTeacherGradesV8() {
     const body = document.getElementById('tgBody');
     if (!body) return;
@@ -634,15 +739,11 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         if (!students.length) html += '<div class="tg-empty">ไม่พบนักเรียนในระดับชั้นที่เลือก</div>';
       }
     } else {
-      // v17.49 · ดูเกรดรายชั้นหรือรายบุคคลได้ทันที
+      // v17.50 · สรุปเกรดแยกตามชั้นเรียน (GS10) → แตะวิชาเพื่อกรอกเกรด · แตะชั้นเพื่อดูเกรดทุกวิชารายคน
+      if (!tgState.entry) { body.innerHTML = tgOverviewHTML(); tgUpdateSaveBar(); tgMarkView(); return; }
+      const subjName = ((typeof appSubjects !== 'undefined' ? appSubjects : []).find((x) => x.id === subj) || {}).name || subj;
       const gsel = document.getElementById('teacherPortalGradeSelect'); const gv = gsel ? (gsel.value || 'ALL') : 'ALL';
-      const pool = ((typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents : []).filter((x) => x && x.studentId && !/ลาออก|สำเร็จ/.test(String(x.status || '')));
-      const gn = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
-      const cnt = (g) => pool.filter((x) => g === 'ALL' || x.grade === g).length;
-      html += '<div class="tg-quick"><div class="tg-quick-g" role="tablist" aria-label="เลือกชั้น">' + ['ALL', 'มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3', 'มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'].map((g) => { const n = cnt(g); return '<button type="button" role="tab" data-qg="' + esc(g) + '" aria-selected="' + (gv === g) + '"' + (n || g === 'ALL' ? '' : ' disabled') + '>' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + gn(g)) + '<small>' + n + '</small></button>'; }).join('') + '</div>' +
-        '<label class="tg-quick-one"><span>ดูรายบุคคล</span><select data-qone="1"><option value="">ทุกคนในชั้นที่เลือก</option>' + tgStudents().map((x) => '<option value="' + esc(cleanId(x.studentId)) + '"' + (tgState.one === cleanId(x.studentId) ? ' selected' : '') + '>' + esc((x.fullName || x.studentId) + ' · ' + (x.grade ? 'ม.' + gn(x.grade) : '')) + '</option>').join('') + '</select></label></div>';
-      if (tgState.one && !students.some((x) => cleanId(x.studentId) === tgState.one)) tgState.one = '';
-      if (tgState.one) students.splice(0, students.length, ...students.filter((x) => cleanId(x.studentId) === tgState.one));
+      html = '<div class="gs-back"><button type="button" data-gs="back">‹ สรุปเกรด</button><div><b>' + esc(subjName) + '</b><span>' + (gv === 'ALL' ? 'ทุกระดับชั้น' : 'ม.' + (String(gv).match(/[1-6]/) || [''])[0]) + ' · ' + students.length + ' คน</span></div></div>' + html;
       html += '<div class="tg-sum-tools"><button type="button" class="tg-btn is-primary" data-act="apply-suggest"' + (defs.length ? '' : ' disabled') + '>ใช้เกรดแนะนำทั้งหมด</button><button type="button" class="tg-btn" data-act="toggle-rule" aria-expanded="' + !!tgState.showRule + '">เกณฑ์เกรด</button></div>';
       if (tgState.showRule) html += '<p class="tg-note">เกรดแนะนำ (จุดสีม่วง) คิดจากคะแนนชิ้นงานรวม: 80%+ = 4 · 75% = 3.5 · 70% = 3 · 65% = 2.5 · 60% = 2 · 55% = 1.5 · 50% = 1 · ต่ำกว่า = 0 แตะตัวเลขเพื่อเลือกเกรดเองได้</p>';
       html += '<ul class="tg-list">' + students.map((s) => {
@@ -660,7 +761,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (!students.length) html += '<div class="tg-empty">ไม่พบนักเรียนในระดับชั้นที่เลือก</div>';
     }
     body.innerHTML = html;
-    tgUpdateSaveBar();
+    tgUpdateSaveBar(); tgMarkView();
   }
 
   function tgUpdateSaveBar() {
@@ -696,15 +797,22 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const b = e.target.closest('button[data-tab]');
       if (!b) return;
       tgState.tab = b.dataset.tab;
-      tgState.adding = false;
+      tgState.adding = false; tgState.entry = false; tgState.cls = '';
       renderTeacherGradesV8();
     });
     const body = document.getElementById('tgBody');
     body.addEventListener('click', (e) => {
-      const qg = e.target.closest('button[data-qg]');
-      if (qg) { const gs = document.getElementById('teacherPortalGradeSelect'); if (gs) gs.value = qg.dataset.qg; tgState.one = ''; renderTeacherGradesV8(); return; }
+      const bk = e.target.closest('[data-gs="back"]');
+      if (bk) { if (tgState.entry) { tgState.entry = false; } else tgState.cls = ''; tgState.search = ''; renderTeacherGradesV8(); window.scrollTo(0, 0); return; }
+      const cl = e.target.closest('[data-gs-cls]');
+      if (cl) { tgState.cls = cl.dataset.gsCls; tgState.search = ''; renderTeacherGradesV8(); window.scrollTo(0, 0); return; }
+      const sr = e.target.closest('[data-gs-subj]');
+      if (sr) {
+        const ss = document.getElementById('teacherPortalSubjectSelect'); if (ss) ss.value = sr.dataset.gsSubj;
+        const gs = document.getElementById('teacherPortalGradeSelect'); if (gs) gs.value = sr.dataset.gsG === '?' ? 'ALL' : 'มัธยมศึกษาปีที่ ' + sr.dataset.gsG;
+        tgState.entry = true; tgState.cls = ''; tgState.search = ''; renderTeacherGradesV8(); window.scrollTo(0, 0); return;
+      }
     });
-    body.addEventListener('change', (e) => { if (e.target && e.target.dataset && e.target.dataset.qone) { tgState.one = e.target.value; renderTeacherGradesV8(); } });
     body.addEventListener('click', (e) => {
       const subj = tgSubject();
       const chip = e.target.closest('.tg-chip[data-asg]');
@@ -3040,7 +3148,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.49';
+  const APP_VERSION = '17.50';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
