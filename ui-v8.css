@@ -3441,3 +3441,6 @@ html.k8-has-readonly #k8Has label:has(input:disabled) { cursor: default; }
 .k8-ro-chk { width: 24px; height: 24px; flex: none; border-radius: 7px; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
 .k8-en-pick button[aria-checked="true"] .k8-ro-chk { background: #0369a1; border-color: #0369a1; }
 .k8-en-codein input:placeholder-shown { letter-spacing: normal; font-size: 15px; text-transform: none; }
+/* v17.27 · มาสาย = สีส้ม */
+.hf-bar.is-late .hf-bar-v { color: #ea580c; }
+.hf-bars-legend .is-late::before { background: #f97316; }

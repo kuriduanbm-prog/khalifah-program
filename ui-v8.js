@@ -299,7 +299,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     document.getElementById('hfPrayerTotal').textContent = got + ' / ' + possible + ' เวลา';
     const barsEl = document.getElementById('hfBars');
     barsEl.setAttribute('aria-label', 'ละหมาด ' + got + ' จาก ' + possible + ' เวลา');
-    const KC = { ok: '#16a34a', late: '#dc2626', appr: '#7c3aed', ex: '#2563eb' };
+    const KC = { ok: '#16a34a', late: '#f97316', appr: '#7c3aed', ex: '#2563eb' };
     barsEl.innerHTML = bars.map((b) => {
       const ratio = max ? Math.min(1, b.v / max) : 0;
       const h = Math.max(4, Math.round(ratio * 110));
@@ -2968,7 +2968,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.26';
+  const APP_VERSION = '17.27';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
