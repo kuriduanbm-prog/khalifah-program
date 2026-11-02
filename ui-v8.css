@@ -3645,3 +3645,14 @@ html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
 .k8-nt-pin.is-per .k8-nt-pin-tag { background: #db2777; color: #fff; }
 .hf-pt-n.is-ex .hf-pt-dot { font-size: 17px; }
 .hf-pt-cta.is-per { background: #db2777; }
+/* v17.40 · เครื่องมือในหน้าละหมาด */
+.k8-nav-sub, .k8-admin-nav .admin-tab-btn.k8-nav-sub { display: none !important; }
+.k8-pr-tools { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+.k8-pr-tools .hf-cal-btn { margin: 0 !important; height: 100%; min-width: 0; padding: 12px 14px; }
+.k8-pr-tools .hf-cal-txt span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; }
+@media (max-width: 1200px) { .k8-pr-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .k8-pr-tools .hf-cal-btn { flex-direction: column; align-items: flex-start; gap: 8px; } .k8-pr-tools .hf-cal-txt b { font-size: 14px; } .k8-pr-tools .hf-cal-txt span { font-size: 12px; } }
+html.k8-xnarrow .k8-pr-tools { grid-template-columns: 1fr; }
+html.k8-xnarrow .k8-pr-tools .hf-cal-btn { flex-direction: row; align-items: center; }
+.k8-pr-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: 0 0 10px -6px; padding: 0 12px 0 6px; border: 0; border-radius: 12px; background: transparent; color: #0369a1; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.k8-pr-back:hover { background: #e0f2fe; }

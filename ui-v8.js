@@ -3002,7 +3002,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.39';
+  const APP_VERSION = '17.40';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8317,4 +8317,29 @@ window.k8HfMiss = function (slot) {
   ['switchView', 'renderCurrentStudentProfile'].forEach((fn) => { const o = window[fn]; if (typeof o === 'function') window[fn] = function () { const r = o.apply(this, arguments); setTimeout(() => { sync(); render(); if (fn === 'renderCurrentStudentProfile' || arguments[0] === 'prayer') { if (!S.loadedAt || Date.now() - S.loadedAt > 30000) { S.loadedAt = Date.now(); load(); } } }, 30); return r; }; });
   const go = () => { sync(); render(); setTimeout(() => { S.loadedAt = Date.now(); load(); }, 2500); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
+
+/* ---------- v17.40 · อันดับ/เช็คชื่อซุบฮิ/พิกัด อยู่ในหน้า "ละหมาด" (ปุ่มเข้าไปดู + ปุ่มกลับ) ---------- */
+(function () {
+  const SUB = { 'prayer-rank': 'อันดับการละหมาด', 'prayer-roll': 'เช็คชื่อซุบฮิ', 'geo-zones': 'พิกัดละหมาด' };
+  function back(tab) {
+    const box = document.getElementById('admin-tab-' + tab); if (!box || box.querySelector(':scope > .k8-pr-back')) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'k8-pr-back';
+    b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>กลับหน้าละหมาด';
+    b.onclick = () => { try { switchAdminTab('prayers-monitor', document.getElementById('btnAdminTabPrayers')); } catch (e) {} try { window.scrollTo({ top: 0 }); } catch (e) {} };
+    box.insertBefore(b, box.firstChild);
+  }
+  const o = window.switchAdminTab;
+  if (typeof o === 'function') window.switchAdminTab = function (tab) {
+    const r = o.apply(this, arguments);
+    if (SUB[tab]) {
+      back(tab);
+      setTimeout(() => {
+        document.querySelectorAll('#k8AdminNav .admin-tab-btn.active').forEach((x) => x.classList.remove('active'));
+        const p = document.getElementById('btnAdminTabPrayers'); if (p) p.classList.add('active');
+        const t = document.getElementById('k8AdmBarTitle'); if (t) t.textContent = SUB[tab];
+      }, 5);
+    }
+    return r;
+  };
 })();
