@@ -8847,7 +8847,7 @@ function submitQuickAddSubAdmin() {
   const checkedNodes = document.querySelectorAll('input[name="quickSubModalSubjChk"]:checked');
   const selectedSubjects = Array.from(checkedNodes).map(cb => cb.value);
   // If no subject checked or role is Executive/Homeroom, assign all subjects so they can access everything
-  const finalSubjects = selectedSubjects.length > 0 ? selectedSubjects : appSubjects.map(s => s.id);
+  const finalSubjects = selectedSubjects; // v17.60 · ไม่เลือก = ยังไม่กำหนดวิชา
 
   const recordData = {
     adminId: 'TCH-' + Date.now(),
@@ -9365,9 +9365,9 @@ function initTeacherPortalView() {
     const assignedIds = Array.isArray(currentAdmin.assignedSubjects)
       ? currentAdmin.assignedSubjects
       : (currentAdmin.assignedSubject ? [currentAdmin.assignedSubject] : []);
-    const assignedSubjObjs = (currentAdmin.role === 'SuperAdmin' || isExec || assignedIds.length === 0)
+    const assignedSubjObjs = (typeof window.k8TeacherSubjects === 'function') ? window.k8TeacherSubjects(currentAdmin) : ((currentAdmin.role === 'SuperAdmin' || isExec || assignedIds.length === 0)
       ? appSubjects
-      : appSubjects.filter(s => assignedIds.includes(s.id));
+      : appSubjects.filter(s => assignedIds.includes(s.id)));
 
     // Render subjects as clean chips (รูปแนบ 3: ทำให้ดูวิชาที่ได้รับการสอนได้ง่ายขึ้น)
     if (chipsContainer) {
@@ -9515,9 +9515,9 @@ function renderTeacherOverviewBento() {
     const assignedIds = Array.isArray(currentAdmin?.assignedSubjects)
       ? currentAdmin.assignedSubjects
       : (currentAdmin?.assignedSubject ? [currentAdmin.assignedSubject] : []);
-    const assignedSubjObjs = (currentAdmin?.role === 'SuperAdmin' || currentAdmin?.role === 'EXECUTIVE' || assignedIds.length === 0)
+    const assignedSubjObjs = (typeof window.k8TeacherSubjects === 'function') ? window.k8TeacherSubjects(currentAdmin) : ((currentAdmin?.role === 'SuperAdmin' || currentAdmin?.role === 'EXECUTIVE' || assignedIds.length === 0)
       ? appSubjects
-      : appSubjects.filter(s => assignedIds.includes(s.id));
+      : appSubjects.filter(s => assignedIds.includes(s.id)));
 
     if (kpiSubj) kpiSubj.innerText = `${assignedSubjObjs.length} วิชา`;
 

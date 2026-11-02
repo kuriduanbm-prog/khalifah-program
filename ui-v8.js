@@ -1131,8 +1131,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       (function () {
         let a = null; try { a = currentAdmin; } catch (e) {}
         let subs = []; try { subs = appSubjects || []; } catch (e) {}
-        const mine = a && Array.isArray(a.assignedSubjects) ? a.assignedSubjects.map(String) : [];
-        const my = subs.filter((x) => mine.indexOf(String(x.id)) !== -1 || mine.indexOf(String(x.code)) !== -1);
+        const my = window.k8TeacherSubjects ? window.k8TeacherSubjects(a) : subs; // v17.60
         if (!my.length) return { n: notChecked, title: 'เช็คชื่อมาเรียนวันนี้', sub: notChecked ? 'ยังไม่เช็ค ' + notChecked + ' คน' : 'เช็คครบทุกคนแล้ว', bg: notChecked ? '#fffbeb' : '#f0fdf4', ink: notChecked ? '#b45309' : '#15803d', go: "switchTeacherTab('attendance')" };
         const done = new Set(cloudAtt.filter((r) => r && r.date === today && r.subjectCode).map((r) => String(r.subjectCode)));
         const left = my.filter((x) => !done.has(String(x.id)));
@@ -1273,6 +1272,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       { n: lateReq.length, label: 'คำขอละหมาดย้อนหลัง', cta: 'ตรวจสอบ', bg: '#eff6ff', ink: '#1d4ed8', go: 'openPrayerApprovalsV8()' },
       { n: awaitingOtp.length, label: 'อนุมัติแล้ว รอผู้สมัครกรอกรหัส', cta: 'ดู', bg: '#e0f2fe', ink: '#0369a1', go: "switchAdminTab('approvals', document.getElementById('btnAdminTabApprovals'))" },
       { n: notCheckedClasses.length, label: notCheckedClasses.length ? 'ห้องที่ยังไม่เช็คชื่อ: ' + notCheckedClasses.map((g) => g.replace('มัธยมศึกษาปีที่ ', 'ม.')).join(', ') : 'ทุกห้องเช็คชื่อแล้ว', cta: 'เช็คชื่อ', bg: notCheckedClasses.length ? '#fef2f2' : '#f0fdf4', ink: notCheckedClasses.length ? '#b91c1c' : '#15803d', go: "switchView('teacher'); switchTeacherTab('attendance')" },
+      (function () { const L = window.k8SubjNoTeacher ? window.k8SubjNoTeacher() : []; return { n: L.length, label: 'วิชาที่ยังไม่ระบุผู้สอน: ' + L.slice(0, 4).map((x) => x.name).join(', ') + (L.length > 4 ? ' และอีก ' + (L.length - 4) + ' วิชา' : ''), cta: 'ดู', bg: '#fef2f2', ink: '#b91c1c', go: "switchAdminTab('subjects', document.getElementById('btnAdminTabSubjects'))" }; })(),
       { n: soon.length, label: 'กิจกรรมภายใน 7 วัน', cta: 'จัดการ', bg: '#f0fdf4', ink: '#15803d', go: "switchAdminTab('activities-admin', document.getElementById('btnTabActivitiesAdmin'))" }
     ];
     const todoShown = todo.filter((t) => +t.n > 0);
@@ -2399,10 +2399,7 @@ window.k8RegBirthChange = function (v) {
   function subjects() {
     let subs = []; try { subs = appSubjects || []; } catch (e) {}
     let a = null; try { a = currentAdmin; } catch (e) {}
-    const isSuper = a && /SUPER|^admin$/i.test(String(a.role || ''));
-    const mine = a && Array.isArray(a.assignedSubjects) ? a.assignedSubjects.map(String) : [];
-    let list = subs.filter((x) => isSuper || !mine.length || mine.indexOf(String(x.id)) !== -1 || mine.indexOf(String(x.code)) !== -1);
-    if (!list.length) list = subs.slice();
+    const list = window.k8TeacherSubjects ? window.k8TeacherSubjects(a) : subs; // v17.60 · เฉพาะวิชาที่อาจารย์สอน
     return [{ id: '', code: '', name: 'โฮมรูม / ทั้งวัน' }].concat(list);
   }
   function subjLabel(id) { const x = subjects().find((s) => String(s.id) === String(id)); return x ? x.name : (id || 'โฮมรูม / ทั้งวัน'); }
@@ -3122,7 +3119,7 @@ window.k8RegBirthChange = function (v) {
     if (bad.length) { bad.forEach(([id]) => document.getElementById(id).classList.add('is-bad')); showErr('k8NfErr', bad.map((b) => b[1]).join(' · ')); document.getElementById(bad[0][0]).focus(); return; }
     const subjects = (nfRole === 'TEACHER' || nfRole === 'TeacherAdmin') ? Array.from(nfSubj) : [];
     let allSubs = []; try { allSubs = nfRole === 'INSPECTOR' ? [] : (appSubjects || []).map((x) => String(x.id)); } catch (e) {}
-    const payload = { adminId: 'TCH-' + Date.now(), username: user, password: pass, fullName: name, email: email, phone: phone, role: nfRole, assignedSubjects: subjects.length ? subjects : allSubs, assignedSubject: (subjects[0] || allSubs[0] || ''), status: 'Active', approvalStatus: 'Verified', createdAt: new Date().toLocaleDateString('sv-SE') };
+    const payload = { adminId: 'TCH-' + Date.now(), username: user, password: pass, fullName: name, email: email, phone: phone, role: nfRole, assignedSubjects: subjects, /* v17.60 · ไม่เลือก = ยังไม่กำหนดวิชา (ไม่ใช่ทุกวิชา) */ assignedSubject: (subjects[0] || allSubs[0] || ''), status: 'Active', approvalStatus: 'Verified', createdAt: new Date().toLocaleDateString('sv-SE') };
     const btn = document.getElementById('k8NfSaveBtn'); btn.disabled = true; btn.textContent = 'กำลังสร้าง…';
     let r = null; try { r = await gasApiCall('addSubAdmin', payload); } catch (e) { r = { success: false, message: (typeof describeNetworkError === 'function' ? describeNetworkError(e) : 'เชื่อมต่อไม่สำเร็จ') }; }
     btn.disabled = false; btn.textContent = 'สร้างบัญชี';
@@ -3218,7 +3215,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.59';
+  const APP_VERSION = '17.60';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8027,7 +8024,7 @@ window.k8RegBirthChange = function (v) {
     let adm = null; try { adm = currentAdmin; } catch (e) {}
     const c = read(sid);
     if (!c || Date.now() - (c.at || 0) > 10 * 60 * 1000) refresh(sid);
-    if (!c || !Array.isArray(c.subjects)) return all; // ยังไม่มีตารางของชั้นนี้ → แสดงทุกวิชาเหมือนเดิม
+    if (!c || !Array.isArray(c.subjects)) return []; // v17.60 · แสดงเฉพาะวิชาที่อยู่ในตารางเรียนเท่านั้น (ยังไม่มีตาราง = ยังไม่มีวิชา)
     const out = [], used = {};
     c.subjects.forEach((t) => {
       const m = all.find((s) => (t.id && (String(s.id) === t.id || String(s.code) === t.id)) || String(s.name).trim() === String(t.name).trim());
@@ -8038,7 +8035,8 @@ window.k8RegBirthChange = function (v) {
   };
   window.k8MySubjectsInfo = function () {
     const sid = sidOf(); const c = sid ? read(sid) : null;
-    if (!c || !Array.isArray(c.subjects)) return '';
+    if (!c) return 'กำลังโหลดรายวิชาจากตารางเรียน…';
+    if (!Array.isArray(c.subjects)) return 'ยังไม่มีวิชาในตารางเรียนของคุณ · รอแอดมินจัดตารางเรียน';
     return 'วิชาของชั้น ม.' + (c.grade || '-') + ' ตามตารางเรียน · ' + c.subjects.length + ' วิชา';
   };
 })();
@@ -8161,10 +8159,7 @@ window.k8HfBarOpen = function (id, date) {
   // ===== อาจารย์ =====
   function mySubjects() {
     let subs = []; try { loadAppSubjects(); subs = appSubjects || []; } catch (e) {}
-    const a = adm() || {}; const mine = Array.isArray(a.assignedSubjects) ? a.assignedSubjects.map(String) : [];
-    const isSuper = /SUPER|^admin$/i.test(String(a.role || '')) || a.isOwner;
-    const list = subs.filter((x) => mine.indexOf(String(x.id)) !== -1 || mine.indexOf(String(x.code)) !== -1);
-    return list.length ? list : (isSuper || !mine.length ? subs.slice() : list);
+    return window.k8TeacherSubjects ? window.k8TeacherSubjects(adm()) : subs; // v17.60
   }
   function placeBtn() {
     const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q || q.querySelector('.k8-en-qbtn')) return;
@@ -8254,6 +8249,7 @@ window.k8HfBarOpen = function (id, date) {
         '<div class="k8-en-row k8-en-codein"><input type="text" id="k8EnCodeIn" maxlength="6" placeholder="หรือกรอกรหัส 6 ตัว" autocomplete="off" autocapitalize="characters" value="' + esc(N.pending || '') + '"><button type="button" class="k8-en-pri" onclick="k8EnCode()"' + (N.busy ? ' disabled' : '') + '>ลงทะเบียน</button></div>' +
         '<section class="k8-en-list"><div class="k8-en-lh"><b>วิชาที่ลงทะเบียนแล้ว ' + (N.my.enrolled || []).length + ' วิชา</b></div>' + ((N.my.enrolled || []).length ? '<ul>' + N.my.enrolled.map((x) => '<li><span><b>' + esc(x.name) + '</b><small>' + (x.teacher ? esc(x.teacher) + ' · ' : '') + (x.via === 'qr' ? 'สแกน/ลิงก์' : 'ดึงจากระบบ') + ' · ' + esc(String(x.at || '').slice(0, 10)) + '</small></span><span class="k8-en-ok">✓</span></li>').join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่ได้ลงทะเบียนวิชาใด</p>') + '</section>';
     }
+    if (N.warn && N.mode === 'home') h = '<div class="k8-en-warn" role="alert"><b>⚠ วิชานี้มีอยู่แล้ว</b><span>' + esc(N.warn) + '</span></div>' + h; // v17.60
     el.innerHTML = h;
     if (N.mode === 'scan') startScan();
   }
@@ -8278,12 +8274,13 @@ window.k8HfBarOpen = function (id, date) {
     N.busy = true; N.mode = 'home'; N.pending = code; renderS();
     let r = null; try { r = await gasApiCall('enrollSubject', { data: { code: code } }, 25000); } catch (e) {}
     N.busy = false;
-    if (r && r.success) { N.my = r; N.pending = ''; toast(r.message, 'success'); } else toast((r && (r.message || r.error)) || 'ลงทะเบียนไม่สำเร็จ', 'error');
+    N.warn = '';
+    if (r && r.success) { N.my = r; N.pending = ''; if (r.warn) { N.warn = r.message; toast(r.message, 'warning'); } else toast(r.message, 'success'); } else toast((r && (r.message || r.error)) || 'ลงทะเบียนไม่สำเร็จ', 'error');
     paintCard(); renderS();
   }
-  window.k8EnStuOpen = function (code) { if (!stu()) { toast('กรุณาเข้าสู่ระบบนักเรียนก่อน', 'warning'); return; } N.mode = 'home'; if (code) N.pending = code; renderS(); try { openModal('k8EnStuModal'); } catch (e) {} loadMine().then(() => { if (code) enrollCode(code); }); };
+  window.k8EnStuOpen = function (code) { if (!stu()) { toast('กรุณาเข้าสู่ระบบนักเรียนก่อน', 'warning'); return; } N.mode = 'home'; N.warn = ''; if (code) N.pending = code; renderS(); try { openModal('k8EnStuModal'); } catch (e) {} loadMine().then(() => { if (code) enrollCode(code); }); };
   window.k8EnStuClose = function () { stopScan(); N.mode = 'home'; try { closeModal('k8EnStuModal'); } catch (e) {} };
-  window.k8EnMode = function (m) { stopScan(); N.mode = m; if (m === 'system') { N.sel = new Set(((N.my && N.my.available) || []).filter((x) => !((N.my.enrolled || []).some((y) => String(y.subjectId) === String(x.id)))).map((x) => String(x.id))); } renderS(); };
+  window.k8EnMode = function (m) { stopScan(); N.mode = m; N.warn = ''; if (m === 'system') { N.sel = new Set(((N.my && N.my.available) || []).filter((x) => !((N.my.enrolled || []).some((y) => String(y.subjectId) === String(x.id)))).map((x) => String(x.id))); } renderS(); };
   window.k8EnSel = function (id) { if (N.sel.has(id)) N.sel.delete(id); else N.sel.add(id); renderS(); };
   window.k8EnSysSave = async function () {
     if (!N.sel.size) return; N.busy = true; renderS();
@@ -9105,4 +9102,68 @@ window.k8HfMiss = function (slot) {
   };
   // ออกจากเต็มจอด้วยปุ่ม Esc ของเบราว์เซอร์ → ย่อการ์ดกลับด้วย
   document.addEventListener('fullscreenchange', () => { const m = document.getElementById('k8EnModal'); if (!document.fullscreenElement && m && m.classList.contains('k8-en-full')) paint(false); });
+})();
+
+
+/* ---------- v17.60 · วิชาตามตารางเรียน/ตารางสอน: อาจารย์เห็นเฉพาะวิชาที่สอน · แอดมินเห็นวิชาที่ยังไม่มีผู้สอน ---------- */
+(function () {
+  const subsAll = () => { try { if (typeof loadAppSubjects === 'function') loadAppSubjects(); return Array.isArray(appSubjects) ? appSubjects : []; } catch (e) { return []; } };
+  const tt = () => { try { return JSON.parse(localStorage.getItem('khalifah_timetable') || 'null'); } catch (e) { return null; } };
+  function cells() {
+    const t = tt(); const out = []; if (!t) return out;
+    const push = (cs, where) => Object.keys(cs || {}).forEach((k) => { (Array.isArray(cs[k]) ? cs[k] : [cs[k]]).forEach((c) => { if (c && (c.s || c.sn)) out.push({ c, where }); }); });
+    Object.keys(t.grades || {}).forEach((g) => push((t.grades[g] || {}).cells, 'ม.' + g));
+    (t.extras || []).forEach((x) => push(x && x.cells, x && x.name));
+    return out;
+  }
+  const match = (sub, c) => (c.s && (String(c.s) === String(sub.id) || (sub.code && String(c.s) === String(sub.code)))) || (!c.s && String(c.sn || '').trim() === String(sub.name || '').trim());
+  // วิชาที่กำหนดให้ "ทุกวิชา" (ค่าเริ่มต้นเดิมตอนสร้างบัญชี) ถือว่ายังไม่ได้ระบุ
+  function explicitIds(a, subs) {
+    const ids = a && Array.isArray(a.assignedSubjects) ? a.assignedSubjects.map(String) : (a && a.assignedSubject ? [String(a.assignedSubject)] : []);
+    if (subs.length >= 2 && subs.every((x) => ids.indexOf(String(x.id)) !== -1)) return [];
+    return ids;
+  }
+  const adminish = (a) => !!a && (/SUPER|^admin$|EXEC/i.test(String(a.role || '')) || a.isOwner);
+  window.k8TeacherSubjects = function (a) {
+    const subs = subsAll(); if (!a) return [];
+    if (adminish(a)) return subs.slice();
+    const ids = explicitIds(a, subs);
+    const un = String(a.username || '').toLowerCase(), fn = String(a.fullName || a.name || '').trim();
+    const mineCells = cells().filter((x) => (un && String(x.c.t || '').toLowerCase() === un) || (fn && String(x.c.tn || '').trim() === fn));
+    return subs.filter((sub) => ids.indexOf(String(sub.id)) !== -1 || (sub.code && ids.indexOf(String(sub.code)) !== -1) || mineCells.some((x) => match(sub, x.c)));
+  };
+  // วิชาที่ยังไม่มีผู้สอน: ไม่มีอาจารย์ที่ถูกกำหนดวิชานี้ และในตารางสอนไม่มีช่องไหนระบุผู้สอนของวิชานี้
+  window.k8SubjNoTeacher = function () {
+    const subs = subsAll(); const all = cells();
+    let staff = []; try { staff = Array.isArray(subAdmins) ? subAdmins : []; } catch (e) {}
+    staff = staff.filter((x) => x && !/INSPECTOR|ACTIVITY/i.test(String(x.role || '')));
+    return subs.filter((sub) => {
+      if (staff.some((t) => explicitIds(t, subs).some((id) => id === String(sub.id) || (sub.code && id === String(sub.code))))) return false;
+      return !all.some((x) => match(sub, x.c) && (x.c.t || x.c.tn));
+    }).map((sub) => {
+      const where = Array.from(new Set(all.filter((x) => match(sub, x.c)).map((x) => x.where).filter(Boolean)));
+      return { id: sub.id, name: sub.name, where, inTimetable: where.length > 0 };
+    });
+  };
+  // ตารางรายวิชาของแอดมิน: ป้ายเตือนวิชาที่ยังไม่มีผู้สอน
+  function badge() {
+    const body = document.getElementById('adminSubjectsTableBody'); if (!body) return;
+    const L = window.k8SubjNoTeacher(); const box = document.getElementById('k8SubjWarn');
+    const host = body.closest('table');
+    let w = box;
+    if (!w && host) { w = document.createElement('div'); w.id = 'k8SubjWarn'; w.className = 'k8-subj-warn'; w.setAttribute('role', 'status'); host.parentElement.insertBefore(w, host); }
+    if (w) { w.hidden = !L.length; w.innerHTML = L.length ? '<b>วิชาที่ยังไม่ระบุผู้สอน ' + L.length + ' วิชา</b><span>กำหนดได้ที่ "อาจารย์ &amp; ผู้บริหาร" (เลือกวิชาที่สอน) หรือระบุผู้สอนในตารางสอน</span>' : ''; }
+    body.querySelectorAll('tr').forEach((tr) => {
+      const id = (tr.querySelector('.activity-badge') || {}).textContent; if (!id) return;
+      const hit = L.find((x) => String(x.id) === id.trim());
+      let tag = tr.querySelector('.k8-subj-nt');
+      if (hit && !tag) { const td = tr.querySelector('td'); if (td) td.insertAdjacentHTML('beforeend', ' <span class="k8-subj-nt">ยังไม่มีผู้สอน</span>'); }
+      if (!hit && tag) tag.remove();
+    });
+  }
+  const orig = window.renderAdminSubjectsTable;
+  if (typeof orig === 'function') window.renderAdminSubjectsTable = function () { const r = orig.apply(this, arguments); try { badge(); } catch (e) {} return r; };
+  document.addEventListener('k8-tt-loaded', () => { try { badge(); if (window.renderAdminOverviewV8 && document.getElementById('k8OvTodo')) window.renderAdminOverviewV8(); } catch (e) {} });
+  // อาจารย์: โหลดตารางสอนเสร็จ → อัปเดตรายวิชาในหน้าอาจารย์
+  document.addEventListener('k8-tt-loaded', () => { try { const v = document.getElementById('view-teacher'); if (v && v.classList.contains('active') && typeof initTeacherPortalView === 'function') { const ss = document.getElementById('teacherPortalSubjectSelect'); const keep = ss ? ss.value : ''; initTeacherPortalView(); if (ss && keep && Array.from(ss.options).some((o) => o.value === keep)) { ss.value = keep; if (typeof renderTeacherPortalGradesTable === 'function') renderTeacherPortalGradesTable(); } } } catch (e) {} });
 })();

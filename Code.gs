@@ -3000,7 +3000,7 @@ function getMyEnrollments_(studentId) {
   const enrolled = Object.keys(e).filter(function (k) { return e[k] && e[k][me]; }).map(function (k) { return { subjectId: k, name: (codes[k] && codes[k].name) || nameOf[k] || k, teacher: (codes[k] && codes[k].byName) || '', at: e[k][me][0], via: e[k][me][1] }; });
   const mine = getMySubjects_(studentId).subjects;
   const sys = (mine || []).map(function (t) { const m = all.find(function (x) { return (t.id && x.id === t.id) || x.name === t.name; }); return { id: m ? m.id : (t.id || t.name), name: t.name }; });
-  return { success: true, enrolled: enrolled, available: sys, fromTimetable: !!mine };
+  return { success: true, enrolled: enrolled, available: mine ? sys : [], fromTimetable: !!mine };
 }
 function enrollSubject_(d, studentId) {
   d = d || {}; const me = ENROLL_NORM_(studentId);
@@ -3012,12 +3012,19 @@ function enrollSubject_(d, studentId) {
     if (!subj) return { success: false, message: 'ไม่พบรหัสลงทะเบียนนี้ · ตรวจสอบกับอาจารย์อีกครั้ง' };
     if (codes[subj].open === false) return { success: false, message: 'อาจารย์ปิดรับลงทะเบียนวิชานี้แล้ว' };
     list = [subj]; via = 'qr';
+    // v17.60 · สแกนวิชาที่มีอยู่แล้ว → แจ้งเตือนนักเรียน (ไม่ลงซ้ำ)
+    const eNow = enrollRead_('Enrollments');
+    const nmQ = codes[subj].name || subj;
+    if (eNow[subj] && eNow[subj][me]) { const o = getMyEnrollments_(studentId); o.warn = true; o.message = 'คุณลงทะเบียนวิชา ' + nmQ + ' ไว้แล้ว'; return o; }
+    const mineQ = getMySubjects_(studentId).subjects || [];
+    const inTt = mineQ.some(function (t) { return (t.id && t.id === subj) || cleanVal(t.name) === cleanVal(nmQ); });
+    if (inTt) d.__warnTt = 'วิชา ' + nmQ + ' มีอยู่ในตารางเรียนของคุณแล้ว · บันทึกการลงทะเบียนให้อาจารย์แล้ว';
   } else {
     const want = (Array.isArray(d.subjectIds) ? d.subjectIds : [d.subjectId]).map(function (x) { return cleanVal(x); }).filter(Boolean);
     const mine = getMySubjects_(studentId).subjects;
-    const okIds = {}; (mine ? getMyEnrollments_(studentId).available : enrollSubjectsAll_()).forEach(function (x) { okIds[x.id] = 1; });
+    const okIds = {}; (mine ? getMyEnrollments_(studentId).available : []).forEach(function (x) { okIds[x.id] = 1; }); // v17.60 · ลงทะเบียนจากระบบได้เฉพาะวิชาในตารางเรียน
     list = want.filter(function (x) { return okIds[x]; });
-    if (!list.length) return { success: false, message: 'ไม่พบวิชาที่ลงทะเบียนได้จากระบบ' };
+    if (!list.length) return { success: false, message: mine ? 'ไม่พบวิชาที่ลงทะเบียนได้จากระบบ' : 'ยังไม่มีวิชาในตารางเรียนของคุณ · รอแอดมินจัดตารางเรียนก่อน' };
   }
   const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
   const r = enrollLock_(function () {
@@ -3030,6 +3037,8 @@ function enrollSubject_(d, studentId) {
   const out = getMyEnrollments_(studentId);
   const nm = list.map(function (k) { return (codes[k] && codes[k].name) || (out.enrolled.find(function (x) { return x.subjectId === k; }) || {}).name || k; });
   out.message = r.added ? 'ลงทะเบียนแล้ว: ' + nm.join(', ') : 'ลงทะเบียนวิชานี้ไว้แล้ว';
+  if (d.__warnTt) { out.warn = true; out.message = d.__warnTt; }
+  else if (!r.added) out.warn = true;
   return out;
 }
 
