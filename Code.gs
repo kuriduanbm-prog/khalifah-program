@@ -1131,7 +1131,7 @@ function publicSettings_(settings) {
   const o = {};
   Object.keys(settings || {}).forEach(function (k) {
     if (/master|password|secret|token|otp/i.test(k)) return;
-    if (/^TeacherLeaves$|^SubjectRosters$/.test(k)) return; // ลาสอน / รายชื่อนักเรียนรายวิชา: เฉพาะบุคลากร
+    if (/^TeacherLeaves$/.test(k)) return; // ลาสอน: เฉพาะบุคลากร
     if (/^Timetable/.test(k)) return; // ตารางสอน: อ่านผ่าน getTimetable (มีสิทธิ์และการเปิด/ปิดการมองเห็น)
     o[k] = settings[k];
   });
@@ -1180,7 +1180,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getMyRosters: 'staff', saveRoster: 'staff', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1216,7 +1216,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getMyRosters', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1578,10 +1578,6 @@ function dispatchAction_(action, req, data, session, ctx) {
       return saveTeacherLeave_(data, session, !!session && session.role === 'admin');
     case 'takeTeacherLeave':
       return takeTeacherLeave_(data, session);
-    case 'getMyRosters':
-      return { success: true, data: (readRosters_()[String(session.userId).toLowerCase()] || {}) };
-    case 'saveRoster':
-      return saveRoster_(data, session);
     case 'getHasanatDay':
       return getHasanatDay_(pick('date') || data.date);
     case 'saveHasanatBatch':
@@ -2813,25 +2809,6 @@ function updatePrayerRecord_(data, session) {
     sheet.getRange(row, 7, 1, 2).setNumberFormat('@').setValues([[date, time]]);
     sheet.getRange(row, 15, 1, 2).setValues([[status, note]]);
     return { success: true, message: 'แก้ไขบันทึกละหมาดแล้ว', record: { logId: logId, studentId: cleanVal(cur[1]), prayerTime: pt, date: date, time: time, status: status, note: note } };
-  } finally { try { lock.releaseLock(); } catch (e) {} }
-}
-
-/* ===================== v17.24 · รายชื่อนักเรียนรายวิชา (อาจารย์เลือกเองครั้งแรก ใช้เช็คชื่อทุกครั้ง) =====================
-   Settings: SubjectRosters = { "<username>": { "<subjectId>": ["125", ...] } } */
-function readRosters_() { let v = {}; try { v = JSON.parse((getSettings().data || {}).SubjectRosters || '{}') || {}; } catch (e) { v = {}; } return (v && typeof v === 'object') ? v : {}; }
-function saveRoster_(d, session) {
-  d = d || {};
-  const subj = cleanVal(d.subjectId || '').substring(0, 60);
-  if (!subj) return { success: false, message: 'เลือกวิชาก่อน' };
-  const ids = (Array.isArray(d.students) ? d.students : []).map(function (x) { return String(cleanVal(x)).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean);
-  const uniq = ids.filter(function (x, i) { return ids.indexOf(x) === i; }).slice(0, 400);
-  const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) { return { success: false, message: 'ระบบกำลังบันทึก ลองใหม่อีกครั้ง' }; }
-  try {
-    const all = readRosters_(); const u = String(session.userId).toLowerCase();
-    all[u] = all[u] || {};
-    if (uniq.length) all[u][subj] = uniq; else delete all[u][subj];
-    saveSetting({ key: 'SubjectRosters', value: JSON.stringify(all), description: 'รายชื่อนักเรียนแต่ละวิชาของอาจารย์ (JSON)' });
-    return { success: true, data: all[u], message: uniq.length ? 'บันทึกรายชื่อ ' + uniq.length + ' คนแล้ว' : 'ล้างรายชื่อแล้ว' };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 

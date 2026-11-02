@@ -1752,22 +1752,6 @@ html[data-theme="dark"] .k8-bh-hph { border: 1px solid #323941 !important; backg
 html[data-theme="dark"] .hf-bar.is-tap:hover { background-color: #1a2229 !important; }
 html[data-theme="dark"] .hf-bar.is-tap:focus-visible { outline: 3px solid #264555 !important; }
 html[data-theme="dark"] #hfBars + .hf-bars-legend::after { color: #69c8fc !important; }
-html[data-theme="dark"] .k8-ro-bar { background-color: #0e2432 !important; border: 1px solid #264555 !important; color: #6dc7f8 !important; }
-html[data-theme="dark"] .k8-ro-bar button { border: 1px solid #264555 !important; background-color: #121212 !important; color: #69c8fc !important; }
-html[data-theme="dark"] .k8-ro-box { border: 1.5px solid #264555 !important; background-color: #121212 !important; }
-html[data-theme="dark"] .k8-ro-head b { color: #d6dae5 !important; }
-html[data-theme="dark"] .k8-ro-head span { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-ro-grades button { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
-html[data-theme="dark"] .k8-ro-q { border: 1.5px solid #323941 !important; }
-html[data-theme="dark"] .k8-ro-all { color: #69c8fc !important; }
-html[data-theme="dark"] .k8-ro-list button { border: 1.5px solid #323941 !important; background-color: #121212 !important; color: #d6dae5 !important; }
-html[data-theme="dark"] .k8-ro-list button[aria-checked="true"] { background-color: #122938 !important; }
-html[data-theme="dark"] .k8-ro-chk { border: 2px solid #393f46 !important; }
-html[data-theme="dark"] .k8-ro-who small { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-ro-foot { background-color: #121212 !important; }
-html[data-theme="dark"] .k8-ro-foot span { color: #c1c7cf !important; }
-html[data-theme="dark"] .k8-ro-foot .is-pri:disabled { background-color: #2b323a !important; color: #b6bcc3 !important; }
-html[data-theme="dark"] .k8-ro-foot .is-alt { background-color: #1a2229 !important; color: #c1c7cf !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
