@@ -3547,3 +3547,21 @@ html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
 .hf-pt-orb { top: 40px; right: 4px; width: 88px; height: 70px; }
 .hf-pt-top > .hf-pt-row .hf-pt-ttl, .hf-pt-top > .hf-pt-hero { padding-right: 78px; }
 @media (max-width: 360px) { .hf-pt-orb { top: 42px; right: 2px; width: 72px; height: 58px; } .hf-pt-top > .hf-pt-row .hf-pt-ttl, .hf-pt-top > .hf-pt-hero { padding-right: 62px; } }
+/* v17.35 · ท้องฟ้าแบบมินิมอล: สีพื้นเดียว + ดวงอาทิตย์/จันทร์เล็ก */
+.hf-pt.is-sky-fajr .hf-pt-top { background: #3b2f7a; }
+.hf-pt.is-sky-zuhr .hf-pt-top { background: #0369a1; }
+.hf-pt.is-sky-asr .hf-pt-top { background: #0e5a73; }
+.hf-pt.is-sky-maghrib .hf-pt-top { background: #9a3f1c; }
+.hf-pt.is-sky-isha .hf-pt-top { background: #0b2f4a; }
+.hf-pt.is-sky-fajr .hf-pt-sky, .hf-pt.is-sky-isha .hf-pt-sky { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='100'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='20' cy='18' r='1' opacity='.5'/%3E%3Ccircle cx='110' cy='40' r='1' opacity='.35'/%3E%3Ccircle cx='60' cy='78' r='1' opacity='.3'/%3E%3C/g%3E%3C/svg%3E"); opacity: 1; }
+.hf-pt-orb { top: 16px; right: 64px; width: 30px; height: 30px; }
+.hf-pt-top > .hf-pt-row .hf-pt-ttl, .hf-pt-top > .hf-pt-hero { padding-right: 0; }
+.hf-pt-top > .hf-pt-row .hf-pt-ttl { padding-right: 44px; }
+@media (max-width: 360px) { .hf-pt-orb { top: 16px; right: 60px; width: 26px; height: 26px; } .hf-pt-top > .hf-pt-row .hf-pt-ttl { padding-right: 36px; } .hf-pt-top > .hf-pt-hero { padding-right: 0; } }
+.hf-pt-orb { right: 70px; }
+/* v17.35 · หัวการ์ดละหมาด: น้ำเงินเดียว + ชื่อเวลาภาษาอาหรับจาง ๆ (เห็นครบทั้งคำ) */
+.hf-pt[class*="is-sky-"] .hf-pt-top { background: #0c4a6e; }
+.hf-pt[class*="is-sky-"] .hf-pt-sky { background-image: none; opacity: 1; }
+.hf-pt-ar { position: absolute; right: 18px; top: 46px; font-family: 'Amiri', 'Noto Naskh Arabic', 'Geeza Pro', serif; font-weight: 700; font-size: 50px; line-height: 1.2; color: #fff; opacity: .1; white-space: nowrap; }
+.hf-pt-top > .hf-pt-row .hf-pt-ttl, .hf-pt-top > .hf-pt-hero { padding-right: 0; }
+@media (max-width: 360px) { .hf-pt-ar { font-size: 40px; right: 12px; top: 50px; } }
