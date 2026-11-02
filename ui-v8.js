@@ -3002,7 +3002,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.40';
+  const APP_VERSION = '17.41';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8274,13 +8274,13 @@ window.k8HfMiss = function (slot) {
     sync();
   }
   function sync() {
-    const b = document.querySelector('.preset-menstruation'); if (b) { b.hidden = !girl(); b.classList.toggle('is-on', S.mode); }
+    const b = document.querySelector('.preset-menstruation'); if (b) { b.hidden = !girl() && !preview(); b.classList.toggle('is-on', S.mode); }
     if (S.mode) { const sv = document.querySelector('.k8-pn-save'); if (sv && !S.busy) { sv.textContent = S.active ? 'มีช่วงประจำเดือนที่รอกดสิ้นสุดอยู่แล้ว' : 'แจ้งเริ่มมีประจำเดือน · ครบ 5 เวลา'; sv.classList.toggle('is-off', !!S.active); } }
   }
   const ap = window.applyPrayerNotePreset;
   window.applyPrayerNotePreset = function (k) {
     if (k === 'menstruation') {
-      if (!girl()) { toast('เมนูนี้สำหรับนักเรียนหญิงเท่านั้น', 'warning'); return; }
+      if (!girl() && !preview()) { toast('เมนูนี้สำหรับนักเรียนหญิงเท่านั้น', 'warning'); return; }
       const r = ap ? ap.call(this, '__none__') : null;
       const inp = $('prayerNoteInput'); if (inp) inp.value = 'มีประจำเดือน / อุซุรทางศาสนา';
       formMode(true);
