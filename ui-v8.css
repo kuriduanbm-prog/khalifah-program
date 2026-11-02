@@ -3511,3 +3511,18 @@ html.k8-xnarrow .hf-qk .hf-qk-btn { flex-direction: row; align-items: center; }
 }
 html.k8-xnarrow .hf-qk .hf-qk-l { display: inline !important; }
 html.k8-xnarrow .hf-qk .hf-qk-sh { display: none !important; }
+/* v17.32 · บัตรนักเรียน: น้ำเงินเข้มทั้งใบ */
+#homeF .hf-idcard { background: #0c4a6e !important; color: #fff !important; border: 0 !important; }
+#homeF .hf-idcard-band { background: transparent !important; color: #fff; padding: 12px 18px; border-bottom: 1px solid #155e75; }
+#homeF .hf-idcard-brand { color: #fff; }
+#homeF .hf-idcard #hfYear { color: #bae6fd; font-size: 12.5px; }
+#homeF .hf-idcard-body { padding: 18px; gap: 16px; }
+#homeF .hf-idcard .hf-photo { width: 88px; height: 104px; border-radius: 16px; border: 3px solid #fff; box-sizing: border-box; background-color: #e0f2fe; color: #0c4a6e; font-weight: 700; }
+#homeF .hf-idcard .hf-photo.has-img { background-color: #e0f2fe; }
+#homeF .hf-idcard .hf-name { color: #fff !important; font-weight: 700; }
+#homeF .hf-idcard .hf-dl { font-size: 13.5px; gap: 4px 12px; }
+#homeF .hf-idcard .hf-dl dt { color: #7dd3fc !important; }
+#homeF .hf-idcard .hf-dl dd { color: #fff !important; font-weight: 600; }
+#homeF .hf-idcard .hf-status { background: #16a34a !important; color: #fff !important; border: 0 !important; padding: 3px 10px; }
+#homeF .hf-idcard .hf-status::before { content: '● '; }
+#homeF .hf-idcard .hf-status.is-warn { background: #f59e0b !important; color: #fff !important; }
