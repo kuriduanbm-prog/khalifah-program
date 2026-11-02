@@ -3488,3 +3488,4 @@ html.k8-xnarrow .hf-pt-dot { width: 34px; height: 34px; }
 html.k8-xnarrow .hf-pt-track { top: 31px; }
 html.k8-xnarrow .hf-pt-n small { font-size: 10px; }
 html.k8-xnarrow .hf-pt-n small, html.k8-large .hf-pt-n small { word-break: keep-all; }
+#hfPrayerCard[hidden] { display: none !important; }
