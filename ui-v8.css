@@ -3444,3 +3444,5 @@ html.k8-has-readonly #k8Has label:has(input:disabled) { cursor: default; }
 /* v17.27 · มาสาย = สีส้ม */
 .hf-bar.is-late .hf-bar-v { color: #ea580c; }
 .hf-bars-legend .is-late::before { background: #f97316; }
+/* v17.28 · กากบาทไม่เคลื่อนไหว */
+.hf-bar-x { animation: none !important; }

@@ -304,7 +304,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const ratio = max ? Math.min(1, b.v / max) : 0;
       const h = Math.max(4, Math.round(ratio * 110));
       const act = b.future ? '' : ' onclick="k8HfBarOpen(\'' + esc(b.id || '') + '\',\'' + esc(b.date || '') + '\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" title="แตะเพื่อดูประวัติ"';
-      if (b.miss) return '<div class="hf-bar is-miss is-tap"' + act + '><span class="hf-bar-v"></span><span class="hf-bar-x" aria-label="ไม่ได้เช็คชื่อ หมดเวลาแล้ว">✕</span><span class="hf-bar-l">' + esc(b.label) + '</span></div>';
+      if (b.miss) return '<div class="hf-bar is-miss is-tap" onclick="k8HfMiss(\'' + esc(b.label) + '\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" title="หมดเวลาแล้ว · เช็คชื่อย้อนหลังไม่ได้"><span class="hf-bar-v"></span><span class="hf-bar-x" aria-label="ไม่ได้เช็คชื่อ หมดเวลาแล้ว">✕</span><span class="hf-bar-l">' + esc(b.label) + '</span></div>';
       let col;
       if (b.kind) col = '<span class="hf-bar-col" style="height:' + h + 'px;background:' + KC[b.kind] + '"></span>';
       else if (b.segs && b.v) col = '<span class="hf-bar-col is-stack" style="height:' + h + 'px">' + ['ok', 'late', 'appr', 'ex'].filter((k) => b.segs[k]).map((k) => '<i style="flex:' + b.segs[k] + ';background:' + KC[k] + '"></i>').join('') + '</span>';
@@ -2968,7 +2968,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.27';
+  const APP_VERSION = '17.28';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7928,3 +7928,11 @@ window.k8HfBarOpen = function (id, date) {
   window.k8EnLoadMine = loadMine;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(() => { if (stu()) loadMine(); }, 2500)); else setTimeout(() => { if (stu()) loadMine(); }, 2500);
 })();
+
+/* ---------- v17.28 · แตะกากบาท (หมดเวลาไม่ได้เช็ค) → แจ้งว่าเช็คชื่อย้อนหลังไม่ได้ ---------- */
+window.k8HfMiss = function (slot) {
+  let end = '';
+  try { const w = PRAYER_TIME_WINDOWS.find((x) => (x.key || x.name) === slot); if (w) end = String(Math.floor(w.endMin / 60)).padStart(2, '0') + ':' + String(w.endMin % 60).padStart(2, '0'); } catch (e) {}
+  try { showToast('หมดเวลาละหมาด' + slot + (end ? 'แล้ว (หมดเวลา ' + end + ' น.)' : 'แล้ว') + ' · เช็คชื่อย้อนหลังไม่ได้', 'warning'); } catch (e) {}
+  try { if (navigator.vibrate) navigator.vibrate(40); } catch (e) {}
+};
