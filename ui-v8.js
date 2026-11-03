@@ -3328,7 +3328,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.83';
+  const APP_VERSION = '17.84';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5675,7 +5675,14 @@ window.k8RegBirthChange = function (v) {
   const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
   // v17.78 · ตาราง TT2: จุดสีประจำวิชา (สีเดียวกันทุกหน้า) · ไฮไลต์วันนี้ + คาบที่กำลังเรียน
   const TT_PAL = ['#16a34a', '#2563eb', '#d97706', '#7c3aed', '#0d9488', '#e11d48', '#0284c7', '#c026d3', '#65a30d', '#4f46e5', '#ea580c', '#475569'];
-  const subjColor = (n) => { const k = String(n || '').trim().toLowerCase().replace(/\s+/g, ' '); let h = 2166136261; for (let j = 0; j < k.length; j++) { h ^= k.charCodeAt(j); h = Math.imul(h, 16777619) >>> 0; } return TT_PAL[h % TT_PAL.length]; };
+  // v17.84 · สีประจำวิชา: ตามลำดับรายวิชาในระบบ (ไม่ซ้ำกันใน 14 วิชาแรก) · วิชาเดียวกันสีเดียวกันทุกวัน/ทุกหน้า
+  const TT_PAL2 = ['#2563eb', '#16a34a', '#d97706', '#db2777', '#0d9488', '#dc2626', '#7c3aed', '#0891b2', '#65a30d', '#92400e', '#4338ca', '#475569', '#c026d3', '#0f766e'];
+  const subjKey = (n) => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const subjColor = (n) => { const k = subjKey(n); let list = []; try { loadAppSubjects(); list = Array.isArray(appSubjects) ? appSubjects : []; } catch (e) {} const names = list.map((x) => subjKey(x && (x.name || x.subjectName))).filter(Boolean); let i = names.indexOf(k); if (i !== -1) return TT_PAL2[i % TT_PAL2.length];
+    // วิชาที่พิมพ์เอง: ต่อท้ายตามลำดับชื่อวิชาในตาราง (เรียง ก–ฮ) เพื่อให้สีไม่ชนกัน
+    const extra = new Set(); try { const gs = (T.data && T.data.grades) || {}; Object.keys(gs).forEach((g) => { Object.values(gs[g].cells || {}).forEach((c) => (Array.isArray(c) ? c : [c]).forEach((e) => { const kk = subjKey(e && e.sn); if (kk && names.indexOf(kk) === -1) extra.add(kk); })); }); } catch (e) {}
+    i = Array.from(extra).sort((a, b) => a.localeCompare(b, 'th')).indexOf(k); if (i !== -1) return TT_PAL2[(names.length + i) % TT_PAL2.length]; return subjColorH(n); };
+  const subjColorH = (n) => { const k = String(n || '').trim().toLowerCase().replace(/\s+/g, ' '); let h = 2166136261; for (let j = 0; j < k.length; j++) { h ^= k.charCodeAt(j); h = Math.imul(h, 16777619) >>> 0; } return TT_PAL[h % TT_PAL.length]; };
   const nowIdx = (c) => { const d = new Date().getDay(); if (!c || !(c.days || []).includes(d)) return -1; const n = nowMin(); return (c.periods || []).findIndex((p) => toMin(p.start) <= n && n < toMin(p.end)); };
   window.k8SubjColor = subjColor;
   const MAXP = 5; // วันละ 5 วิชา
@@ -5688,6 +5695,19 @@ window.k8RegBirthChange = function (v) {
   const subjects = () => { try { loadAppSubjects(); return Array.isArray(appSubjects) ? appSubjects : []; } catch (e) { return []; } };
   const arr = (x) => (Array.isArray(x) ? x : (x ? [x] : []));
   const nsid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+  // v17.84 · วิชาเฉพาะเพศ (gx) + ช่วงวันที่ (from–to) · หมดช่วงแล้วไม่ลบ ประวัติเช็คชื่อยังอยู่
+  const p2 = (n) => String(n).padStart(2, '0');
+  const ymdL = (d) => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+  const todayS = () => ymdL(new Date());
+  const dateForDow = (dow) => { const t = new Date(); let diff = (dow - t.getDay() + 7) % 7; if (diff > 3) diff -= 7; t.setDate(t.getDate() + diff); return ymdL(t); };
+  const actOn = (e, ds) => !!e && (!e.from || ds >= e.from) && (!e.to || ds <= e.to);
+  const onDate = (raw, ds) => arr(raw).filter((e) => actOn(e, ds));
+  const MON_S = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const dTh = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON_S[d.getMonth()]; };
+  const rangeTxt = (e) => !e || (!e.from && !e.to) ? '' : (e.from && e.to ? dTh(e.from) + '–' + dTh(e.to) : e.from ? 'ตั้งแต่ ' + dTh(e.from) : 'ถึง ' + dTh(e.to));
+  const GXN = { m: 'ชาย', f: 'หญิง' };
+  const bandHtml = (e, ds) => { const old = e.to && e.to < (ds || todayS()); const soon = e.from && e.from > (ds || todayS()); return '<span class="k8-tt-band' + (e.gx ? ' is-' + e.gx : (rangeTxt(e) ? ' is-r' : '')) + (old ? ' is-old' : '') + (soon ? ' is-soon' : '') + '" style="--sc:' + subjColor(e.sn) + '"><b>' + esc(e.sn) + '</b>' + (e.gx ? '<i class="k8-tt-tg is-' + e.gx + '">' + GXN[e.gx] + '</i>' : '') + (e.o && e.o.length ? '<i class="k8-tt-tg">' + e.o.length + ' คน</i>' : '') + (rangeTxt(e) ? '<i class="k8-tt-tg is-r">' + (old ? 'สิ้นสุดแล้ว · ' : '') + rangeTxt(e) + '</i>' : '') + '</span>'; };
+  window.k8TtActOn = actOn;
   const isMine = (c) => { const u = me(); const un = String(u.username || '').toLowerCase(), fn = String(u.fullName || u.name || '').trim(); return !!c && ((un && String(c.t || '').toLowerCase() === un) || (fn && String(c.tn || '').trim() === fn)); };
 
   async function load(force) {
@@ -5708,11 +5728,11 @@ window.k8RegBirthChange = function (v) {
   }
 
   // ---------- ปุ่มทางเข้า: บอกคาบถัดไปของวันนี้ ----------
-  function todayList(grade, mineOnly, dow) {
-    const d = dow == null ? new Date().getDay() : dow; const c = cfg(); const out = [];
+  function todayList(grade, mineOnly, dow, ds) {
+    const d = dow == null ? new Date().getDay() : dow; const c = cfg(); const out = []; ds = ds || (dow == null ? todayS() : dateForDow(d));
     if (c.days.indexOf(d) === -1) return out;
     const gs = mineOnly ? allKeys() : [grade].concat(extrasOf().map((x) => 'x:' + x.id));
-    gs.forEach((g) => { const cells = gradeOf(g).cells || {}; c.periods.forEach((p, i) => { arr(cells[d + '-' + (i + 1)]).forEach((x) => { if (x && (!mineOnly || isMine(x))) out.push({ g, p: i + 1, start: p.start, end: p.end, c: x }); }); }); });
+    gs.forEach((g) => { const cells = gradeOf(g).cells || {}; c.periods.forEach((p, i) => { onDate(cells[d + '-' + (i + 1)], ds).forEach((x) => { if (x && (!mineOnly || isMine(x))) out.push({ g, p: i + 1, start: p.start, end: p.end, c: x }); }); }); });
     return out.sort((a, b) => toMin(a.start) - toMin(b.start));
   }
   function paintEntry() {
@@ -5750,7 +5770,7 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', (e) => { if (T.open && !(e.state && e.state.k8tt)) closePage(); });
   function cellHtml(x, showGrade, g) {
     if (!x) return '<span class="k8-tt-free">ว่าง</span>';
-    return '<b>' + esc(x.sn) + '</b><small>' + [showGrade ? lbl(g) : '', showGrade ? '' : x.tn, x.r ? 'ห้อง ' + x.r : '', x.only ? 'เฉพาะบางคน' : ''].filter(Boolean).map(esc).join(' · ') + '</small>';
+    return '<b>' + esc(x.sn) + '</b><small>' + [showGrade ? lbl(g) : '', showGrade ? '' : x.tn, x.r ? 'ห้อง ' + x.r : '', x.gx ? 'เฉพาะนักเรียน' + GXN[x.gx] : (x.only && !x.multi ? 'เฉพาะบางคน' : ''), rangeTxt(x)].filter(Boolean).map(esc).join(' · ') + '</small>';
   }
   function renderView() {
     const body = document.getElementById('k8TtBody'); if (!body) return;
@@ -5767,8 +5787,8 @@ window.k8RegBirthChange = function (v) {
     if (staff) h += '<div class="k8-tt-seg" role="tablist"><button type="button" role="tab" aria-selected="' + mine + '" onclick="k8TtWho(\'mine\')">ของฉัน</button>' + allKeys().map((g) => '<button type="button" role="tab" aria-selected="' + (!mine && T.grade === g) + '" onclick="k8TtWho(\'' + g + '\')"' + (String(g).indexOf('x:') === 0 ? ' class="is-x"' : '') + '>' + esc(lbl(g)) + '</button>').join('') + '</div>';
     else if (extrasOf().length) h += '<div class="k8-tt-seg" role="tablist" aria-label="ตารางของฉัน">' + [T.data.grade].concat(extrasOf().map((x) => 'x:' + x.id)).map((g) => '<button type="button" role="tab" aria-selected="' + (grade === g) + '" onclick="k8TtVg(\'' + g + '\')"' + (String(g).indexOf('x:') === 0 ? ' class="is-x"' : '') + '>' + esc(String(g).indexOf('x:') === 0 ? lbl(g) : 'ตารางชั้น ' + lbl(g)) + '</button>').join('') + '</div>';
     h += '<div class="k8-tt-seg k8-tt-days" role="tablist">' + c.days.map((d) => '<button type="button" role="tab" aria-selected="' + (T.view === 'day' && T.day === d) + '" onclick="k8TtDay(' + d + ')">' + DAYS[d] + (d === new Date().getDay() ? '<i aria-hidden="true"></i>' : '') + '</button>').join('') + '<button type="button" role="tab" aria-selected="' + (T.view === 'week') + '" onclick="k8TtWeek()">ทั้งสัปดาห์</button></div>';
-    const merge = (list) => { if (!list.length) return null; if (list.length === 1) return Object.assign({}, list[0], { only: list[0].only || (list[0].o && list[0].o.length) }); return { sn: list.map((e) => e.sn).join(' / '), tn: list.length + ' กลุ่ม', r: '', only: true }; };
-    const cellOf = (d, i) => { if (!mine) return { x: merge(arr((gradeOf(grade).cells || {})[d + '-' + (i + 1)])), g: grade }; for (const g of allKeys()) { const x = arr((gradeOf(g).cells || {})[d + '-' + (i + 1)]).find(isMine); if (x) return { x: Object.assign({}, x, { only: x.o && x.o.length }), g }; } return { x: null, g: '' }; };
+    const merge = (list) => { if (!list.length) return null; if (list.length === 1) return Object.assign({}, list[0], { only: list[0].only || (list[0].o && list[0].o.length) }); return { sn: list.map((e) => e.sn).join(' / '), tn: list.map((e) => (e.gx ? GXN[e.gx] + ' ' : '') + e.sn).join(' · '), r: '', only: true, multi: list }; };
+    const cellOf = (d, i) => { const ds = dateForDow(d); if (!mine) return { x: merge(onDate((gradeOf(grade).cells || {})[d + '-' + (i + 1)], ds)), g: grade, ds }; for (const g of allKeys()) { const x = onDate((gradeOf(g).cells || {})[d + '-' + (i + 1)], ds).find(isMine); if (x) return { x: Object.assign({}, x, { only: x.o && x.o.length }), g, ds }; } return { x: null, g: '', ds }; };
     let me = null; try { me = currentAdmin; } catch (e) {}
     T.exp = { title: mine ? 'ตารางสอน ' + ((me && (me.fullName || me.username)) || '') : (String(grade).indexOf('x:') === 0 ? 'ตารางเรียน ' + lbl(grade) : 'ตารางเรียน ชั้น ' + lbl(grade)), cell: (d, i) => { const o = cellOf(d, i); return o.x ? { sn: o.x.sn, sub: [mine ? lbl(o.g) : (o.x.tn || ''), o.x.r ? 'ห้อง ' + o.x.r : ''].filter(Boolean).join(' · ') } : null; } };
     if (!mine && !grade) { body.innerHTML = h + '<p class="k8-li-empty">ไม่พบชั้นเรียนของคุณ · ติดต่อแอดมิน</p>'; return; }
@@ -5782,7 +5802,7 @@ window.k8RegBirthChange = function (v) {
     } else {
       const ni = nowIdx(c), td0 = new Date().getDay();
       h += '<div class="k8-tt-gridwrap"><table class="k8-tt-grid is-tt2"><thead><tr><th scope="col">วัน</th>' + c.periods.map((p, i) => '<th scope="col"' + (i === ni ? ' class="is-now"' : '') + '>คาบ ' + (i + 1) + '<small>' + esc(p.start) + '–' + esc(p.end) + '</small>' + (i === ni ? '<em>ตอนนี้</em>' : '') + '</th>').join('') + '</tr></thead><tbody>' +
-        c.days.map((d) => '<tr' + (d === td0 ? ' class="is-today"' : '') + '><th scope="row"><button type="button" class="k8-tt-dbtn" onclick="k8TtDay(' + d + ')" aria-label="ดูวัน' + DAYN[d] + 'แบบรายคาบ">' + DAYS[d] + (d === td0 ? '<small>วันนี้</small>' : '') + '</button></th>' + c.periods.map((p, i) => { const o = cellOf(d, i); return '<td class="' + (o.x ? 'has' : 'is-free') + (i === ni ? ' is-nowcol' : '') + (i === ni && d === td0 ? ' is-live' : '') + '"' + (o.x ? ' style="--sc:' + subjColor(o.x.sn) + '"' : '') + '>' + (o.x ? '<b>' + esc(o.x.sn) + '</b><small>' + esc([mine ? lbl(o.g) : (o.x.tn || ''), o.x.r ? 'ห้อง ' + o.x.r : ''].filter(Boolean).join(' · ')) + '</small>' : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div><p class="k8-pw-hint">แตะชื่อวันเพื่อดูรายคาบของวันนั้น</p>';
+        c.days.map((d) => '<tr' + (d === td0 ? ' class="is-today"' : '') + '><th scope="row"><button type="button" class="k8-tt-dbtn" onclick="k8TtDay(' + d + ')" aria-label="ดูวัน' + DAYN[d] + 'แบบรายคาบ">' + DAYS[d] + (d === td0 ? '<small>วันนี้</small>' : '') + '</button></th>' + c.periods.map((p, i) => { const o = cellOf(d, i); return '<td class="' + (o.x ? 'has' : 'is-free') + (i === ni ? ' is-nowcol' : '') + (i === ni && d === td0 ? ' is-live' : '') + '"' + (o.x ? ' style="--sc:' + subjColor(o.x.sn) + '"' : '') + '>' + (o.x ? (o.x.multi ? '<div class="k8-tt-bands">' + o.x.multi.map((e) => bandHtml(e, o.ds)).join('') + '</div>' : '<b>' + esc(o.x.sn) + '</b><small>' + esc([mine ? lbl(o.g) : (o.x.tn || ''), o.x.r ? 'ห้อง ' + o.x.r : '', o.x.gx ? 'เฉพาะ' + GXN[o.x.gx] : '', rangeTxt(o.x)].filter(Boolean).join(' · ')) + '</small>') : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div><p class="k8-pw-hint">แตะชื่อวันเพื่อดูรายคาบของวันนั้น</p>';
     }
     if (T.view === 'week' && (mine || Object.keys(gradeOf(grade).cells || {}).length)) h += '<button type="button" class="k8-tt-img" onclick="k8TtImage(\'view\')">' + IMG_ICON + 'บันทึกเป็นรูปภาพ (A4 แนวนอน)</button>';
     body.innerHTML = h;
@@ -6143,7 +6163,7 @@ window.k8RegBirthChange = function (v) {
       (isX ? '<div class="k8-tt-xinfo"><span><b>' + esc(xm.name || 'ตารางพิเศษ') + '</b><small>ตารางแยกสำหรับนักเรียนที่เลือก ' + (xm.students || []).length + ' คน · นักเรียนจะเห็นเป็นแท็บแยกจากตารางชั้น</small></span><button type="button" class="k8-bh-link" onclick="k8TtXEdit()">ชื่อ & รายชื่อ</button><button type="button" class="k8-bh-link k8-pe-del" onclick="k8TtXDel()">ลบตาราง</button></div>' : '') +
       '<p class="k8-pw-hint">แตะช่องเพื่อเลือกวิชา อาจารย์ และห้อง · ลงแล้ว ' + filled + ' คาบ' + (gradeOf(T.grade).updatedAt ? ' · บันทึกล่าสุด ' + esc(gradeOf(T.grade).updatedAt) : '') + '</p>' +
       '<div class="k8-tt-gridwrap"><table class="k8-tt-grid is-edit is-tt2"><thead><tr><th scope="col">วัน</th>' + c.periods.map((p, i) => '<th scope="col"' + (i === nowIdx(c) ? ' class="is-now"' : '') + '>คาบ ' + (i + 1) + '<small>' + esc(p.start) + '–' + esc(p.end) + '</small>' + (i === nowIdx(c) ? '<em>ตอนนี้</em>' : '') + '</th>').join('') + '</tr></thead><tbody>' +
-      c.days.map((d) => '<tr' + (d === new Date().getDay() ? ' class="is-today"' : '') + '><th scope="row">' + DAYS[d] + (d === new Date().getDay() ? '<small>วันนี้</small>' : '') + '</th>' + c.periods.map((p, i) => { const k = d + '-' + (i + 1); const L = arr(T.draft[k]); const x = L[0]; const extra = L.length > 1 ? '+' + (L.length - 1) + ' กลุ่ม' : (x && x.o && x.o.length ? 'เฉพาะ ' + x.o.length + ' คน' : (x && x.x && x.x.length ? 'ละเว้น ' + x.x.length + ' คน' : '')); const ni = nowIdx(c); return '<td class="' + (i === ni ? 'is-nowcol' : '') + (i === ni && d === new Date().getDay() ? ' is-live' : '') + '"><button type="button"' + (x ? ' style="--sc:' + subjColor(x.sn) + '"' : '') + ' class="' + (x ? 'has' : '') + (extra ? ' is-group' : '') + '" onclick="k8TtCell(\'' + k + '\')" aria-label="วัน' + DAYN[d] + ' คาบ ' + (i + 1) + (x ? ' ' + esc(L.map((e) => e.sn).join(' และ ')) : ' ว่าง') + '">' + (x ? '<b>' + esc(x.sn) + '</b><small>' + esc(x.tn || '') + (x.r ? ' · ' + esc(x.r) : '') + '</small>' + (extra ? '<em>' + esc(extra) + '</em>' : '') : '<span aria-hidden="true">+</span>') + '</button></td>'; }).join('') + '</tr>').join('') +
+      c.days.map((d) => '<tr' + (d === new Date().getDay() ? ' class="is-today"' : '') + '><th scope="row">' + DAYS[d] + (d === new Date().getDay() ? '<small>วันนี้</small>' : '') + '</th>' + c.periods.map((p, i) => { const k = d + '-' + (i + 1); const L = arr(T.draft[k]); const x = L[0]; const extra = L.length > 1 ? '+' + (L.length - 1) + ' กลุ่ม' : (x && x.o && x.o.length ? 'เฉพาะ ' + x.o.length + ' คน' : (x && x.x && x.x.length ? 'ละเว้น ' + x.x.length + ' คน' : '')); const ni = nowIdx(c); return '<td class="' + (i === ni ? 'is-nowcol' : '') + (i === ni && d === new Date().getDay() ? ' is-live' : '') + '"><button type="button"' + (x ? ' style="--sc:' + subjColor(x.sn) + '"' : '') + ' class="' + (x ? 'has' : '') + (extra ? ' is-group' : '') + ((L.length > 1 || L.some((e) => e.gx || e.from || e.to)) ? ' is-multi' : '') + '" onclick="k8TtCell(\'' + k + '\')" aria-label="วัน' + DAYN[d] + ' คาบ ' + (i + 1) + (x ? ' ' + esc(L.map((e) => e.sn).join(' และ ')) : ' ว่าง') + '">' + (x ? ((L.length > 1 || L.some((e) => e.gx || e.from || e.to)) ? '<span class="k8-tt-bands">' + L.map((e) => bandHtml(e, dateForDow(d))).join('') + '</span>' : '<b>' + esc(x.sn) + '</b><small>' + esc(x.tn || '') + (x.r ? ' · ' + esc(x.r) : '') + '</small>' + (extra ? '<em>' + esc(extra) + '</em>' : '')) : '<span aria-hidden="true">+</span>') + '</button></td>'; }).join('') + '</tr>').join('') +
       '</tbody></table></div>' +
       '<div class="k8-dr-btns k8-tt-save"><button type="button" class="is-alt" onclick="k8TtCopyFrom()">คัดลอกจากชั้นอื่น</button><button type="button" class="is-alt k8-tt-img-a" onclick="k8TtImage(\'admin\')"' + (filled ? '' : ' disabled') + '>' + IMG_ICON + 'บันทึกเป็นรูป A4</button>' + '<span class="k8-tt-autosave is-' + (T.saveSt || 'ok') + '" id="k8TtSaveSt" role="status" aria-live="polite">' + saveStText() + '</span>' + '</div></section>';
   }
@@ -6212,14 +6232,15 @@ window.k8RegBirthChange = function (v) {
   window.k8TtExQ = function (i, v) { const box = document.querySelectorAll('#k8TtCellBody .k8-tt-grp')[i]; if (!box) return; const q = v.toLowerCase(); box.querySelectorAll('.k8-tt-xlist label').forEach((l) => { l.hidden = !!q && l.textContent.toLowerCase().indexOf(q) === -1; }); };
   function pullG() {
     document.querySelectorAll('#k8TtCellBody .k8-tt-grp').forEach((box, i) => {
-      const e = G[i]; if (!e) return;
+      const e = G[i]; if (!e || box.classList.contains('is-fold')) return;
       const sv = box.querySelector('.k8TtSubj').value; const subs = subjects(); const so = subs.find((x) => x.id === sv);
       e.s = so ? so.id : ''; e.sn = so ? so.name : (sv === '__custom' ? box.querySelector('.k8TtCustom').value.trim() : (sv ? e.sn : ''));
       if (sv === '__custom') e.custom = true; else delete e.custom;
       const tu = box.querySelector('.k8TtTeacher').value; const t = (T.teachers || []).find((x) => x.u === tu);
       if (tu === '__guest') { e.guest = true; e.t = ''; const gi = box.querySelector('.k8TtGuest'); e.tn = gi ? gi.value.trim() : (e.tn || ''); } else { delete e.guest; e.t = tu; e.tn = t ? t.n : ''; }
       e.r = box.querySelector('.k8TtRoom').value.trim();
-      const who = box.querySelector('input[name="k8TtWho' + i + '"]:checked'); e.pick = !!(who && who.value === 'some');
+      e.pick = e.aud === 'some';
+      if (e.rng) { const f = box.querySelector('.k8TtFrom'), t = box.querySelector('.k8TtTo'); e.from = f ? f.value : ''; e.to = t ? t.value : ''; } else { e.from = ''; e.to = ''; }
       e.o = e.pick ? Array.from(box.querySelectorAll('.k8-tt-stu:not(.k8-tt-xlist) input:checked')).map((c) => c.value) : [];
       if (box.querySelector('.k8-tt-xlist')) e.x = Array.from(box.querySelectorAll('.k8-tt-xlist input:checked')).map((c) => c.value);
     });
@@ -6232,43 +6253,73 @@ window.k8RegBirthChange = function (v) {
       '<div class="k8-tt-stu-tools"><input type="search" placeholder="ค้นหาชื่อหรือรหัส" oninput="k8TtExQ(' + i + ',this.value)"><b class="k8-tt-xn">' + (xs.size ? 'เลือกแล้ว ' + xs.size + ' คน' : 'ยังไม่ได้เลือก') + '</b></div>' +
       '<div class="k8-tt-stu k8-tt-xlist">' + (stu.length ? stu.map((st) => { const id = nsid(st.studentId); return '<label><input type="checkbox" value="' + esc(id) + '"' + (xs.has(id) ? ' checked' : '') + ' onchange="k8TtExCount(' + i + ')"><span>' + esc(st.fullName || id) + ' <small>' + esc(st.studentId) + '</small></span></label>'; }).join('') : '<p class="k8-pw-hint">ไม่พบรายชื่อนักเรียน · ลองซิงค์ข้อมูลนักเรียนก่อน</p>') + '</div></fieldset>';
   }
+  // v17.84 · หน้าต่างแก้ช่อง (แบบ 2): หลายวิชาในคาบเดียว · ผู้เรียน ทั้งชั้น/ชาย/หญิง/เลือกเอง · ช่วงวันที่จากปฏิทิน
+  const AUDS = [['all', 'ทั้งชั้น'], ['m', 'ชาย'], ['f', 'หญิง'], ['some', 'เลือกเอง']];
+  const audOv = (a, b) => a === 'all' || b === 'all' || a === 'some' || b === 'some' || a === b;
+  const rngOv = (a, b) => !((a.to && b.from && a.to < b.from) || (b.to && a.from && b.to < a.from));
+  function checkG() {
+    const L = G.filter((e) => e.sn); const warn = [];
+    for (let a = 0; a < L.length; a++) for (let b = a + 1; b < L.length; b++) {
+      const x = L[a], y = L[b];
+      if (x.aud === 'some' && y.aud === 'some') continue;
+      if (audOv(x.aud, y.aud) && rngOv(x, y) && !(x.aud === 'some' || y.aud === 'some')) warn.push('"' + x.sn + '" กับ "' + y.sn + '" เรียนพร้อมกัน' + (x.aud === y.aud && x.aud !== 'all' ? ' (นักเรียน' + GXN[x.aud] + ')' : '') + (x.from || x.to || y.from || y.to ? ' ในช่วงวันที่ทับกัน' : '') + ' · แยกผู้เรียนหรือช่วงวันที่');
+    }
+    const hasM = L.some((e) => e.aud === 'm'), hasF = L.some((e) => e.aud === 'f'), hasAll = L.some((e) => e.aud === 'all');
+    if (hasM && !hasF && !hasAll) warn.push('นักเรียนหญิงยังไม่มีวิชาในคาบนี้ (บันทึกได้ ถ้าตั้งใจให้ว่าง)');
+    if (hasF && !hasM && !hasAll) warn.push('นักเรียนชายยังไม่มีวิชาในคาบนี้ (บันทึกได้ ถ้าตั้งใจให้ว่าง)');
+    const ok = !warn.length && L.length ? (hasM || hasF ? 'ครบทุกคน: ' + ['m', 'f'].map((g) => GXN[g] + ' → ' + (L.filter((e) => e.aud === g || e.aud === 'all').map((e) => e.sn).join(' / ') || '-')).join(' · ') : L.length > 1 ? L.length + ' วิชาในคาบนี้ ไม่ชนกัน' : 'ทั้งชั้นเรียนวิชาเดียว') : '';
+    return { warn, ok };
+  }
   function renderG() {
     const subs = subjects(); const stu = gradeStudents();
     const q = (T.stuQ || '').toLowerCase();
+    const isX = String(T.grade).indexOf('x:') === 0;
+    const chk = checkG();
     document.getElementById('k8TtCellBody').innerHTML = G.map((e, i) => {
       const known = subs.some((s) => s.id === e.s); const custom = e.custom || (e.sn && !known);
       const chosen = new Set((e.o || []).map(nsid));
-      return '<section class="k8-tt-grp">' + (G.length > 1 ? '<div class="k8-tt-grp-h"><b>กลุ่มที่ ' + (i + 1) + '</b><button type="button" class="k8-bh-link" onclick="k8TtGrpDel(' + i + ')">ลบกลุ่มนี้</button></div>' : '') +
-        '<label class="k8-nf-f"><span>วิชา</span><select class="k8TtSubj k8-pe-sel" onchange="k8TtGrpRe()"><option value="">— เลือกวิชา —</option>' + subs.map((s) => '<option value="' + esc(s.id) + '"' + (s.id === e.s ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') + '<option value="__custom"' + (custom ? ' selected' : '') + '>อื่นๆ (พิมพ์เอง เช่น โฮมรูม กิจกรรม)</option></select></label>' +
+      const folded = G.length > 1 && i !== T.openG;
+      const tags = (e.aud === 'm' || e.aud === 'f' ? '<i class="k8-tt-tg is-' + e.aud + '">' + GXN[e.aud] + '</i>' : e.aud === 'some' ? '<i class="k8-tt-tg">' + (e.o || []).length + ' คน</i>' : '') + (rangeTxt(e) ? '<i class="k8-tt-tg is-r">' + rangeTxt(e) + '</i>' : '');
+      const head = '<div class="k8-tt-gh" onclick="k8TtOpenG(' + i + ')"><span class="k8-tt-gn" style="background:' + (e.sn ? subjColor(e.sn) : '#94a3b8') + '">' + (i + 1) + '</span><b>' + esc(e.sn || 'เลือกวิชา') + '</b>' + tags + (G.length > 1 ? '<button type="button" class="k8-tt-gdel" onclick="event.stopPropagation();k8TtGrpDel(' + i + ')">ลบ</button>' : '') + '</div>';
+      if (folded) return '<section class="k8-tt-grp is-fold">' + head + '</section>';
+      return '<section class="k8-tt-grp is-open">' + head +
+        '<div class="k8-tt-g3"><label class="k8-nf-f"><span>วิชา</span><select class="k8TtSubj k8-pe-sel" onchange="k8TtGrpRe()"><option value="">— เลือกวิชา —</option>' + subs.map((s) => '<option value="' + esc(s.id) + '"' + (s.id === e.s ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') + '<option value="__custom"' + (custom ? ' selected' : '') + '>อื่นๆ (พิมพ์เอง เช่น โฮมรูม กิจกรรม)</option></select></label>' +
+        '<label class="k8-nf-f"><span>อาจารย์</span><select class="k8TtTeacher k8-pe-sel" onchange="k8TtGrpRe()"><option value="">— ไม่ระบุ —</option>' + (T.teachers || []).map((t) => '<option value="' + esc(t.u) + '"' + (t.u === e.t ? ' selected' : '') + '>' + esc(t.n) + '</option>').join('') + '<option value="__guest"' + ((e.guest || (!e.t && e.tn)) ? ' selected' : '') + '>อาจารย์พิเศษ / ภายนอก (พิมพ์ชื่อ)</option></select></label>' +
+        '<label class="k8-nf-f k8-tt-room"><span>ห้อง</span><input type="text" class="k8TtRoom" maxlength="40" placeholder="เช่น 401" value="' + esc(e.r || '') + '"></label></div>' +
         '<label class="k8-nf-f"' + (custom ? '' : ' hidden') + '><span>ชื่อวิชา/กิจกรรม</span><input type="text" class="k8TtCustom" maxlength="80" value="' + esc(known ? '' : (e.sn || '')) + '"></label>' +
-        '<label class="k8-nf-f"><span>อาจารย์ผู้สอน</span><select class="k8TtTeacher k8-pe-sel" onchange="k8TtGrpRe()"><option value="">— ไม่ระบุ —</option>' + (T.teachers || []).map((t) => '<option value="' + esc(t.u) + '"' + (t.u === e.t ? ' selected' : '') + '>' + esc(t.n) + '</option>').join('') + '<option value="__guest"' + ((e.guest || (!e.t && e.tn)) ? ' selected' : '') + '>อาจารย์พิเศษ / ภายนอก (พิมพ์ชื่อ)</option></select></label>' +
         '<label class="k8-nf-f"' + ((e.guest || (!e.t && e.tn)) ? '' : ' hidden') + '><span>ชื่ออาจารย์พิเศษ</span><input type="text" class="k8TtGuest" maxlength="80" placeholder="เช่น อ.สมชาย (วิทยากรภายนอก)" value="' + esc(!e.t ? (e.tn || '') : '') + '"></label>' +
-        '<label class="k8-nf-f"><span>ห้องเรียน (ไม่บังคับ)</span><input type="text" class="k8TtRoom" maxlength="40" placeholder="เช่น 501 ห้องแล็บ มัสยิด" value="' + esc(e.r || '') + '"></label>' + exBlock(e, i) +
-        (!e.pick && G.length === 1 ? '' : '<fieldset class="k8-tt-who"><legend>ผู้เรียนในคาบนี้</legend>' +
-        '<label><input type="radio" name="k8TtWho' + i + '" value="all"' + (e.pick ? '' : ' checked') + ' onchange="k8TtGrpRe()"> ทั้งชั้น ม.' + esc(T.grade) + '</label>' +
-        '<label><input type="radio" name="k8TtWho' + i + '" value="some"' + (e.pick ? ' checked' : '') + ' onchange="k8TtGrpRe()"> เฉพาะนักเรียนที่เลือก' + (e.pick ? ' (' + chosen.size + ' คน)' : '') + '</label>' +
-        (e.pick ? '<div class="k8-tt-stu-tools"><input type="search" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(T.stuQ || '') + '" oninput="k8TtStuQ(this.value)"><button type="button" class="k8-bh-link" onclick="k8TtStuAll(' + i + ',1)">เลือกทั้งหมด</button><button type="button" class="k8-bh-link" onclick="k8TtStuAll(' + i + ',0)">ล้าง</button></div>' +
-          '<div class="k8-tt-stu">' + (stu.length ? stu.map((st) => { const id = nsid(st.studentId); const hide = q && (st.fullName + ' ' + st.studentId).toLowerCase().indexOf(q) === -1; return '<label' + (hide ? ' hidden' : '') + '><input type="checkbox" value="' + esc(id) + '"' + (chosen.has(id) ? ' checked' : '') + ' onchange="k8TtStuCount(' + i + ')"><span>' + esc(st.fullName || id) + ' <small>' + esc(st.studentId) + '</small></span></label>'; }).join('') : '<p class="k8-pw-hint">ไม่พบรายชื่อนักเรียน ม.' + esc(T.grade) + ' · ลองซิงค์ข้อมูลนักเรียนก่อน</p>') + '</div>' : '') +
-        '</fieldset>') + '</section>';
+        '<div class="k8-tt-g2"><div class="k8-nf-f"><span>ผู้เรียน</span><div class="k8-tt-seg2">' + AUDS.filter((a) => !isX || a[0] === 'all' || a[0] === 'm' || a[0] === 'f').map(([k, l]) => '<button type="button" class="is-' + k + '" aria-pressed="' + (e.aud === k) + '" onclick="k8TtAud(' + i + ',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>' +
+        '<div class="k8-nf-f"><span>ช่วงที่เรียน</span><div class="k8-tt-seg2"><button type="button" aria-pressed="' + !e.rng + '" onclick="k8TtRng(' + i + ',0)">ตลอดภาคเรียน</button><button type="button" aria-pressed="' + !!e.rng + '" onclick="k8TtRng(' + i + ',1)">📅 กำหนดวันที่</button></div></div></div>' +
+        (e.rng ? '<div class="k8-tt-dates"><label class="k8-nf-f"><span>ตั้งแต่วันที่</span><input type="date" class="k8TtFrom" value="' + esc(e.from || '') + '" onchange="k8TtGrpRe()"></label><span aria-hidden="true">→</span><label class="k8-nf-f"><span>ถึงวันที่</span><input type="date" class="k8TtTo" value="' + esc(e.to || '') + '" min="' + esc(e.from || '') + '" onchange="k8TtGrpRe()"></label></div><p class="k8-pw-hint">หลังวันสุดท้าย วิชานี้จะไม่ขึ้นในตารางของนักเรียนและอาจารย์ แต่ประวัติการเช็คชื่อที่บันทึกไว้ยังอยู่ครบ</p>' : '') +
+        exBlock(e, i) +
+        (e.aud === 'some' ? '<fieldset class="k8-tt-who"><legend>เลือกผู้เรียน (' + chosen.size + ' คน)</legend><div class="k8-tt-stu-tools"><input type="search" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(T.stuQ || '') + '" oninput="k8TtStuQ(this.value)"><button type="button" class="k8-bh-link" onclick="k8TtStuAll(' + i + ',1)">เลือกทั้งหมด</button><button type="button" class="k8-bh-link" onclick="k8TtStuAll(' + i + ',0)">ล้าง</button></div>' +
+          '<div class="k8-tt-stu">' + (stu.length ? stu.map((st) => { const id = nsid(st.studentId); const hide = q && (st.fullName + ' ' + st.studentId).toLowerCase().indexOf(q) === -1; return '<label' + (hide ? ' hidden' : '') + '><input type="checkbox" value="' + esc(id) + '"' + (chosen.has(id) ? ' checked' : '') + ' onchange="k8TtStuCount(' + i + ')"><span>' + esc(st.fullName || id) + ' <small>' + esc(st.studentId) + '</small></span></label>'; }).join('') : '<p class="k8-pw-hint">ไม่พบรายชื่อนักเรียน ม.' + esc(T.grade) + ' · ลองซิงค์ข้อมูลนักเรียนก่อน</p>') + '</div></fieldset>' : '') +
+        '</section>';
     }).join('') +
-      (String(T.grade).indexOf('x:') === 0 ? '' : '<p class="k8-pw-hint">วิชาที่เรียนเฉพาะบางคน (เช่น วิชาเลือก ซ่อมเสริม) ใช้ปุ่ม "+ ตารางพิเศษ" สร้างตารางแยกได้</p>') +
-      '<div class="k8-dr-btns">' + (T.draft[T.cell] ? '<button type="button" class="is-alt k8-pe-del" onclick="k8TtCellClear()">ล้างช่องนี้</button>' : '') + '<button type="button" onclick="k8TtCellOk()">ใช้ค่านี้</button></div>';
+      '<button type="button" class="k8-tt-gadd" onclick="k8TtGrpAdd()">＋ เพิ่มวิชาในคาบนี้</button>' +
+      '<div class="k8-tt-gfoot"><div class="k8-tt-gprev"><small>ตัวอย่างในตาราง</small><div class="k8-tt-bands">' + (G.filter((e) => e.sn).map((e) => bandHtml({ sn: e.sn, gx: e.aud === 'm' || e.aud === 'f' ? e.aud : '', o: e.aud === 'some' ? e.o : null, from: e.rng ? e.from : '', to: e.rng ? e.to : '' })).join('') || '<span class="k8-tt-band is-empty">+</span>') + '</div></div>' +
+      '<div class="k8-tt-gsum">' + (chk.warn.length ? chk.warn.map((w) => '<p class="is-warn">⚠ ' + esc(w) + '</p>').join('') : chk.ok ? '<p class="is-ok">✓ ' + esc(chk.ok) + '</p>' : '') +
+      '<div class="k8-dr-btns">' + (T.draft[T.cell] ? '<button type="button" class="is-alt k8-pe-del" onclick="k8TtCellClear()">ล้างช่องนี้</button>' : '') + '<button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ยกเลิก</button><button type="button" onclick="k8TtCellOk()">ใช้ค่านี้</button></div></div></div>';
   }
+  window.k8TtOpenG = function (i) { pullG(); T.openG = i; renderG(); };
+  window.k8TtAud = function (i, v) { pullG(); if (G[i]) { G[i].aud = v; if (v === 'some') G[i].pick = true; } T.openG = i; renderG(); };
+  window.k8TtRng = function (i, on) { pullG(); if (G[i]) { G[i].rng = !!on; if (on && !G[i].from) G[i].from = todayS(); } T.openG = i; renderG(); };
   window.k8TtCell = function (k) {
     loadTeachers();
     T.cell = k; T.stuQ = ''; const [d, p] = k.split('-').map(Number); const per = cfg().periods[p - 1] || {};
-    G = arr(T.draft[k]).map((e) => Object.assign({}, e, { o: (e.o || []).slice(), pick: !!(e.o && e.o.length), x: (e.x || []).slice(), xOpen: !!(e.x && e.x.length) }));
-    if (!G.length) G = [{ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: false }];
+    G = arr(T.draft[k]).map((e) => Object.assign({}, e, { o: (e.o || []).slice(), pick: !!(e.o && e.o.length), aud: e.o && e.o.length ? 'some' : (e.gx || 'all'), rng: !!(e.from || e.to), x: (e.x || []).slice(), xOpen: !!(e.x && e.x.length) }));
+    if (!G.length) G = [{ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: false, aud: 'all' }];
+    T.openG = G.length - 1;
     document.getElementById('k8TtCellTitle').textContent = (String(T.grade).indexOf('x:') === 0 ? ((T.xmeta && T.xmeta.name) || lbl(T.grade)) : 'ม.' + T.grade) + ' · วัน' + DAYN[d] + ' คาบ ' + p;
     document.getElementById('k8TtCellSub').textContent = (per.start || '') + '–' + (per.end || '') + ' น.';
     renderG(); openModal('k8TtCellModal');
   };
   window.k8TtGrpRe = function () { pullG(); renderG(); };
-  window.k8TtGrpAdd = function () { pullG(); G.push({ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: true }); renderG(); };
-  window.k8TtGrpDel = function (i) { pullG(); G.splice(i, 1); if (!G.length) G = [{ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: false }]; renderG(); };
+  window.k8TtGrpAdd = function () { pullG(); const last = G[G.length - 1] || {}; G.push({ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: false, aud: last.aud === 'm' ? 'f' : last.aud === 'f' ? 'm' : 'all' }); T.openG = G.length - 1; renderG(); };
+  window.k8TtGrpDel = function (i) { pullG(); G.splice(i, 1); if (!G.length) G = [{ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: false, aud: 'all' }]; T.openG = Math.min(T.openG || 0, G.length - 1); renderG(); };
   window.k8TtStuQ = function (v) { pullG(); T.stuQ = v; const q = v.toLowerCase(); document.querySelectorAll('#k8TtCellBody .k8-tt-stu:not(.k8-tt-xlist) label').forEach((l) => { l.hidden = !!q && l.textContent.toLowerCase().indexOf(q) === -1; }); };
   window.k8TtStuAll = function (i, on) { const box = document.querySelectorAll('#k8TtCellBody .k8-tt-grp')[i]; if (!box) return; box.querySelectorAll('.k8-tt-stu:not(.k8-tt-xlist) label:not([hidden]) input').forEach((c) => { c.checked = !!on; }); k8TtStuCount(i); };
-  window.k8TtStuCount = function (i) { const box = document.querySelectorAll('#k8TtCellBody .k8-tt-grp')[i]; if (!box) return; const n = box.querySelectorAll('.k8-tt-stu:not(.k8-tt-xlist) input:checked').length; const lab = box.querySelector('input[value="some"]'); if (lab && lab.parentElement) lab.parentElement.lastChild.textContent = ' เฉพาะนักเรียนที่เลือก (' + n + ' คน)'; };
+  window.k8TtStuCount = function (i) { const box = document.querySelectorAll('#k8TtCellBody .k8-tt-grp')[i]; if (!box) return; const n = box.querySelectorAll('.k8-tt-stu:not(.k8-tt-xlist) input:checked').length; const lg = box.querySelector('.k8-tt-who legend'); if (lg) lg.textContent = 'เลือกผู้เรียน (' + n + ' คน)'; };
   window.k8TtSubjCh = function () { window.k8TtGrpRe(); };
   window.k8TtCellOk = function () {
     pullG();
@@ -6278,9 +6329,13 @@ window.k8RegBirthChange = function (v) {
       if (!e.sn) { toast((G.length > 1 ? 'กลุ่มที่ ' + (i + 1) + ': ' : '') + 'เลือกวิชาก่อน', 'warning'); return; }
       if (e.pick && !e.o.length) { toast((G.length > 1 ? 'กลุ่มที่ ' + (i + 1) + ': ' : '') + 'เลือกนักเรียนอย่างน้อย 1 คน หรือเลือก "ทั้งชั้น"', 'warning'); return; }
       if (e.guest && !e.tn) { toast((G.length > 1 ? 'กลุ่มที่ ' + (i + 1) + ': ' : '') + 'พิมพ์ชื่ออาจารย์พิเศษ หรือเลือก "ไม่ระบุ"', 'warning'); return; }
-      const out = { s: e.s, sn: e.sn, t: e.t, tn: e.tn, r: e.r }; if (e.pick) out.o = e.o; if (e.x && e.x.length) out.x = e.x; list.push(out);
+      if (e.rng && !e.from && !e.to) { toast((G.length > 1 ? 'วิชาที่ ' + (i + 1) + ': ' : '') + 'เลือกวันที่เริ่มหรือวันสุดท้าย หรือเลือก "ตลอดภาคเรียน"', 'warning'); T.openG = i; renderG(); return; }
+      const out = { s: e.s, sn: e.sn, t: e.t, tn: e.tn, r: e.r }; if (e.pick) out.o = e.o; if (e.x && e.x.length) out.x = e.x;
+      if (e.aud === 'm' || e.aud === 'f') out.gx = e.aud;
+      if (e.rng) { let a = e.from || '', b = e.to || ''; if (a && b && b < a) { const t = a; a = b; b = t; } if (a) out.from = a; if (b) out.to = b; }
+      list.push(out);
     }
-    T.draft[T.cell] = list.length === 1 && !list[0].o ? list[0] : list;
+    T.draft[T.cell] = list.length === 1 && !list[0].o && !list[0].gx && !list[0].from && !list[0].to ? list[0] : list;
     T.dirty = true; closeModal('k8TtCellModal'); renderAdmin(); autoSave();
   };
   window.k8TtCellClear = function () { delete T.draft[T.cell]; T.dirty = true; closeModal('k8TtCellModal'); renderAdmin(); autoSave(); };
@@ -6382,8 +6437,8 @@ window.k8RegBirthChange = function (v) {
   if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'dashboard' || v === 'teacher') { paintEntry(); load(false); } return r; };
   setInterval(paintEntry, 60000);
   window.k8TtMineToday = function () { return (T.data && !T.data.hidden) ? todayList('', true) : null; };
-  window.k8TtAllOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d) || !T.data || T.data.hidden) return null; const c = cfg(); const dow = d.getDay(); const out = []; if (c.days.indexOf(dow) === -1) return out; allKeys().forEach((g) => { const cells = gradeOf(g).cells || {}; c.periods.forEach((p, i) => { arr(cells[dow + '-' + (i + 1)]).forEach((x) => { if (x && (x.s || x.sn)) out.push({ g, p: i + 1, start: p.start, end: p.end, c: x, mine: isMine(x) }); }); }); }); return out.sort((a, b) => toMin(a.start) - toMin(b.start)); }; // v17.68 · สอนแทน
-  window.k8TtMineOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d)) return null; return (T.data && !T.data.hidden) ? todayList('', true, d.getDay()) : null; }; // v17.65
+  window.k8TtAllOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d) || !T.data || T.data.hidden) return null; const c = cfg(); const dow = d.getDay(); const out = []; if (c.days.indexOf(dow) === -1) return out; const ds = ymdL(d); allKeys().forEach((g) => { const cells = gradeOf(g).cells || {}; c.periods.forEach((p, i) => { onDate(cells[dow + '-' + (i + 1)], ds).forEach((x) => { if (x && (x.s || x.sn)) out.push({ g, p: i + 1, start: p.start, end: p.end, c: x, mine: isMine(x) }); }); }); }); return out.sort((a, b) => toMin(a.start) - toMin(b.start)); }; // v17.68 · สอนแทน
+  window.k8TtMineOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d)) return null; return (T.data && !T.data.hidden) ? todayList('', true, d.getDay(), ymdL(d)) : null; }; // v17.65
   window.k8TtLoad = function () { return load(false); };
   window.addEventListener('beforeunload', (e) => { if (T.dirty) { e.preventDefault(); e.returnValue = ''; } });
   const start = () => setTimeout(() => { if (role()) { paintEntry(); load(false); } }, 2500);

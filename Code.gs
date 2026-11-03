@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.81'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.84'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3431,11 +3431,13 @@ function getTimetable_(session, isStudent, isAdmin) {
     if (g && grades[g]) {
       // นักเรียนเห็นเฉพาะกลุ่มที่ตัวเองเรียน · ไม่ส่งรายชื่อคนอื่นกลับไป
       const me = String(session.userId).replace(/\D/g, '').replace(/^0+/, '');
+      const myGx = studentGx_(session.userId);
       const cells = {};
       Object.keys(grades[g].cells || {}).forEach(function (k) {
         const list = Array.isArray(grades[g].cells[k]) ? grades[g].cells[k] : [grades[g].cells[k]];
-        const mine = list.filter(function (e) { return e && (!e.o || !e.o.length || e.o.indexOf(me) !== -1) && !(e.x && e.x.indexOf(me) !== -1); });
-        if (mine.length) { const e = Object.assign({}, mine[0]); if (e.o) { e.only = true; delete e.o; } delete e.x; cells[k] = e; }
+        const mine = list.filter(function (e) { return e && (!e.o || !e.o.length || e.o.indexOf(me) !== -1) && !(e.x && e.x.indexOf(me) !== -1) && (!e.gx || !myGx || e.gx === myGx); });
+        // v17.84 · ส่งทุกวิชาที่ตรงกับนักเรียน (อาจมีหลายช่วงวันที่) · แอปเลือกตามวันที่เอง
+        if (mine.length) cells[k] = mine.map(function (m) { const e = Object.assign({}, m); if (e.o) { e.only = true; delete e.o; } delete e.x; return e; });
       });
       one[g] = { grade: g, cells: cells, updatedAt: grades[g].updatedAt };
     }
@@ -3502,12 +3504,17 @@ function saveTimetable_(data, session) {
     const e = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
     if (o.length) e.o = o.filter(function (x, i) { return o.indexOf(x) === i; });
     const x = ttIds_(c.x); if (x.length) e.x = x; // x = นักเรียนที่ละเว้นวิชานี้
+    // v17.84 · gx = เฉพาะเพศ (m/f) · from/to = ช่วงวันที่ใช้วิชานี้ (ว่าง = ตลอดภาคเรียน)
+    const gx = cleanVal(c.gx); if (gx === 'm' || gx === 'f') e.gx = gx;
+    const d1 = cleanVal(c.from), d2 = cleanVal(c.to);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d1)) e.from = d1; if (/^\d{4}-\d{2}-\d{2}$/.test(d2)) e.to = d2;
+    if (e.from && e.to && e.to < e.from) { const t = e.from; e.from = e.to; e.to = t; }
     return e;
   };
   Object.keys(src).forEach(function (k) {
     if (!/^[0-6]-([1-9]|1[0-2])$/.test(k)) return;
     const list = (Array.isArray(src[k]) ? src[k] : [src[k]]).map(clean1).filter(Boolean).slice(0, 6);
-    if (list.length) cells[k] = list.length === 1 && !list[0].o ? list[0] : list;
+    if (list.length) cells[k] = list.length === 1 && !list[0].o && !list[0].gx && !list[0].from && !list[0].to ? list[0] : list;
   });
   const value = { grade: g, cells: cells, updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'), by: (session && (session.name || session.userId)) || '' };
   const json = JSON.stringify(value);
@@ -6602,6 +6609,15 @@ function sheetRows_(name, width) {
   return sh.getRange(2, 1, sh.getLastRow() - 1, width).getValues();
 }
 function userKey_(session) { return (session.role === 'student' ? 'S:' + cleanVal(session.userId).replace(/^0+/, '') : 'U:' + cleanVal(session.userId).toLowerCase()); }
+function studentGx_(sid) {
+  const sh = getSpreadsheet().getSheetByName(SHEETS.STUDENTS); if (!sh || sh.getLastRow() < 2) return '';
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, Math.min(18, sh.getLastColumn())).getValues();
+  for (let i = 0; i < rows.length; i++) if (isCodeMatch(rows[i][0], sid)) {
+    const g = normGender_(rows[i][16]) || genderFromPrefix_(cleanVal(rows[i][17] || '')) || (/^\s*(นางสาว|น\.ส\.|นาง|เด็กหญิง|ด\.ญ\.)/.test(cleanVal(rows[i][1])) ? 'หญิง' : /^\s*(นาย|เด็กชาย|ด\.ช\.)/.test(cleanVal(rows[i][1])) ? 'ชาย' : '');
+    return g === 'หญิง' ? 'f' : g === 'ชาย' ? 'm' : '';
+  }
+  return '';
+}
 function studentGradeNum_(sid) {
   const rows = sheetRows_(SHEETS.STUDENTS, 4);
   for (let i = 0; i < rows.length; i++) if (isCodeMatch(rows[i][0], sid)) { const m = String(rows[i][3]).match(/([1-6])/); return { grade: m ? m[1] : '', name: cleanVal(rows[i][1]), gradeText: cleanVal(rows[i][3]) }; }

@@ -4319,3 +4319,52 @@ body.k8-lim .k8-adm-modes { display: none !important; }
 /* v17.83 · ปุ่มสลับกล้องแบบมีคำบอก */
 #view-prayer .btn-flip-cam.k8-flip { width: auto !important; height: 36px !important; padding: 0 12px 0 10px; gap: 6px; border-radius: 999px !important; font: inherit; font-size: 13px; font-weight: 600; background: rgba(15,23,42,.6); border: 1.5px solid rgba(255,255,255,.45); }
 #view-prayer .btn-flip-cam.k8-flip[disabled] { opacity: .7; }
+/* v17.84 · หลายวิชาในคาบเดียว (แยกเพศ) + ช่วงวันที่ · แบบ 2 */
+.k8-tt-bands { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.k8-tt-band { display: flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 8px; background: #f8fafc; font-size: 12px; line-height: 1.25; text-align: left; min-width: 0; }
+.k8-tt-band b { flex: 1; min-width: 0; font-weight: 600; color: #0f172a; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-tt-grid.is-tt2 .k8-tt-band b::before { display: none !important; }
+.k8-tt-band.is-m { background: #dbeafe; } .k8-tt-band.is-f { background: #ccfbf1; } .k8-tt-band.is-r { background: #fef3c7; }
+.k8-tt-band.is-old { opacity: .5; } .k8-tt-band.is-old b { text-decoration: line-through; }
+.k8-tt-band.is-empty { justify-content: center; color: #cbd5e1; min-height: 34px; }
+.k8-tt-tg { flex: none; font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #fff; color: #334155; white-space: nowrap; }
+.k8-tt-tg.is-m { color: #1d4ed8; } .k8-tt-tg.is-f { color: #0f766e; } .k8-tt-tg.is-r { color: #b45309; background: #fffbeb; }
+.k8-tt-band.is-m .k8-tt-tg.is-m, .k8-tt-band.is-f .k8-tt-tg.is-f { background: transparent; }
+.k8-tt-grid.is-tt2:not(.is-edit) td:has(.k8-tt-bands) { padding: 4px; }
+.k8-tt-grid.is-tt2.is-edit td button.is-multi { padding: 4px; align-items: stretch; }
+.k8-tt-grp { border: 1.5px solid #bfdbfe; border-radius: 14px; padding: 12px; background: #fff; display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.k8-tt-grp.is-fold { border-color: #e2e8f0; padding: 10px 12px; cursor: pointer; }
+.k8-tt-gh { display: flex; align-items: center; gap: 8px; cursor: pointer; flex-wrap: wrap; }
+.k8-tt-gh b { flex: 1; font-size: 14.5px; min-width: 80px; }
+.k8-tt-gn { width: 24px; height: 24px; border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.k8-tt-gdel { border: 0; background: transparent; color: #b91c1c; font: inherit; font-size: 13px; cursor: pointer; padding: 2px 4px; }
+.k8-tt-g3 { display: grid; grid-template-columns: 1.4fr 1fr 90px; gap: 8px; }
+.k8-tt-g2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px; }
+.k8-tt-g3 .k8-nf-f, .k8-tt-g2 .k8-nf-f { margin: 0; min-width: 0; }
+.k8-tt-seg2 { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 12px; }
+.k8-tt-seg2 button { flex: 1; min-height: 38px; border: 0; border-radius: 9px; background: transparent; color: #64748b; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0 4px; }
+.k8-tt-seg2 button[aria-pressed="true"] { background: #fff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.k8-tt-seg2 button.is-m[aria-pressed="true"] { background: #dbeafe; color: #1d4ed8; } .k8-tt-seg2 button.is-f[aria-pressed="true"] { background: #ccfbf1; color: #0f766e; }
+.k8-tt-dates { display: flex; align-items: flex-end; gap: 8px; } .k8-tt-dates .k8-nf-f { flex: 1; margin: 0; } .k8-tt-dates > span { padding-bottom: 12px; color: #94a3b8; }
+.k8-tt-gadd { width: 100%; min-height: 46px; border: 1.5px dashed #94a3b8; border-radius: 14px; background: transparent; color: #0369a1; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 12px; }
+.k8-tt-gfoot { display: flex; gap: 14px; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; }
+.k8-tt-gprev { width: 240px; max-width: 100%; display: flex; flex-direction: column; gap: 4px; } .k8-tt-gprev small { color: #64748b; font-size: 12px; }
+.k8-tt-gprev .k8-tt-bands { border: 1px solid #eef0f4; border-radius: 12px; padding: 4px; background: #fff; }
+.k8-tt-gsum { flex: 1; min-width: 220px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.k8-tt-gsum p { margin: 0; font-size: 12.5px; font-weight: 600; text-align: right; } .k8-tt-gsum .is-ok { color: #15803d; } .k8-tt-gsum .is-warn { color: #b45309; }
+@media (max-width: 560px) { .k8-tt-g3 { grid-template-columns: 1fr; } .k8-tt-g2 { grid-template-columns: 1fr; } .k8-tt-gsum { align-items: stretch; } .k8-tt-gsum p { text-align: left; } }
+/* v17.84 · กล่องวิชาเป็นสีของวิชา (วิชาเดียวกันสีเดียวกันทุกวัน) · เพศเป็นป้ายเล็ก */
+.k8-tt-band, .k8-tt-band.is-m, .k8-tt-band.is-f, .k8-tt-band.is-r { background: color-mix(in srgb, var(--sc, #64748b) 15%, #fff); border-left: 3px solid var(--sc, #64748b); }
+.k8-tt-band b { color: color-mix(in srgb, var(--sc, #0f172a) 70%, #0f172a); }
+.k8-tt-band .k8-tt-tg.is-m { background: #dbeafe; } .k8-tt-band .k8-tt-tg.is-f { background: #ccfbf1; }
+.k8-tt-grid.is-tt2:not(.is-edit) td.has:not(:has(.k8-tt-bands)) { background: color-mix(in srgb, var(--sc, #64748b) 13%, #fff); border-color: color-mix(in srgb, var(--sc, #64748b) 30%, #fff); }
+.k8-tt-grid.is-tt2:not(.is-edit) td.has:not(:has(.k8-tt-bands)) b { color: color-mix(in srgb, var(--sc, #0f172a) 70%, #0f172a); }
+.k8-tt-grid.is-tt2.is-edit td button.has:not(.is-multi) { background: color-mix(in srgb, var(--sc, #64748b) 13%, #fff); border-color: color-mix(in srgb, var(--sc, #64748b) 30%, #fff); }
+.k8-tt-grid.is-tt2.is-edit td button.has:not(.is-multi) b { color: color-mix(in srgb, var(--sc, #0f172a) 70%, #0f172a); }
+.k8-tt-grid.is-tt2.is-edit td button.is-multi { background: #fff; border: 1px solid #eef0f4; }
+.k8-tt-grid.is-tt2 tr.is-today td.has:not(:has(.k8-tt-bands)) { box-shadow: 0 0 0 2px #7dd3fc; }
+.k8-tt-list li.has { background: color-mix(in srgb, var(--sc, #64748b) 9%, #fff); border-color: color-mix(in srgb, var(--sc, #64748b) 28%, #fff); }
+.k8-tt-grid.is-edit td button .k8-tt-bands { display: flex !important; }
+.k8-tt-grid.is-edit td button .k8-tt-band { display: flex !important; text-align: left !important; font-size: 12px; }
+.k8-tt-grid.is-edit td button .k8-tt-band b { display: block !important; margin: 0 !important; }
+.k8-tt-grid.is-edit td button .k8-tt-band b::before { display: none !important; }
