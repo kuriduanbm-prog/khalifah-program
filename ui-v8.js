@@ -1908,7 +1908,9 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (sel) { const opt = Array.from(sel.options).find((o) => cid(o.value) === id); if (opt) { sel.value = opt.value; if (typeof onAdminPrayerStudentSelectChange === 'function') onAdminPrayerStudentSelectChange(); } }
   };
   const o = window.renderAdminStudentsTable;
-  if (typeof o === 'function') window.renderAdminStudentsTable = function (filtered) { const r = o.apply(this, arguments); try { render(filtered); } catch (e) { console.warn('k8 students', e); } return r; };
+  let refilter = false;
+  // v17.85 · การซิงค์/บันทึกที่สั่งวาดตารางใหม่แบบไม่ส่งตัวกรอง เคยแสดงนักเรียนทุกชั้นทับตัวกรองที่เลือกไว้ (เด้งไปมา) · ใช้ตัวกรองปัจจุบันเสมอ
+  if (typeof o === 'function') window.renderAdminStudentsTable = function (filtered) { if (filtered == null && !refilter && typeof filterAdminStudents === 'function') { refilter = true; try { return filterAdminStudents(); } finally { refilter = false; } } const r = o.apply(this, arguments); try { render(filtered); } catch (e) { console.warn('k8 students', e); } return r; };
 })();
 
 /* ============ Round 3 · Admin approvals (canvas AdminApprovals) ============ */
@@ -2429,11 +2431,19 @@ window.k8RegBirthChange = function (v) {
   window.k8TaLoadEnroll = loadEnroll;
   window.k8TaEnAll = function (on) { EN.all = !!on; render(); };
   const enrolledFor = () => (S.subject && EN.map && Array.isArray(EN.map[S.subject]) && EN.map[S.subject].length) ? EN.map[S.subject] : null;
+  // v17.85 · รายชื่อ = นักเรียนตามตารางเรียนของคาบนี้ (ชั้น + เพศ + เฉพาะ/ละเว้นบางคน) + คนที่สแกนลงทะเบียนเพิ่ม (เช่น เรียนซ้ำ/แก้เกรด)
+  //           เดิมถ้ามีคนลงทะเบียนแล้ว จะแสดงเฉพาะคนที่ลงทะเบียน ทำให้คนที่ยังไม่สแกนหายไปจากรายชื่อ
   function rows() {
     const all = (typeof allStudents !== 'undefined' ? allStudents : []).filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || '')));
+    const inGrade = all.filter((s) => S.grade === 'ALL' || s.grade === S.grade);
+    if (EN.all) return inGrade;
+    const P = periods().filter((x) => String(x.subj) === String(S.subject) && x.grade === S.grade && x.c);
+    const girl = (st) => !!(window.k8IsGirl && window.k8IsGirl(st));
+    const fits = (st, c) => { const id = norm(st.studentId); if (c.o && c.o.length && c.o.map(norm).indexOf(id) === -1) return false; if (c.x && c.x.map(norm).indexOf(id) !== -1) return false; if (c.gx === 'm' && girl(st)) return false; if (c.gx === 'f' && !girl(st)) return false; return true; };
+    const base = P.length ? inGrade.filter((st) => P.some((x) => fits(st, x.c))) : inGrade;
     const en = enrolledFor();
-    const base = (en && !EN.all) ? all.filter((s) => en.indexOf(norm(s.studentId)) !== -1) : all;
-    return base.filter((s) => S.grade === 'ALL' || s.grade === S.grade);
+    if (en) { const have = new Set(base.map((st) => norm(st.studentId))); all.forEach((st) => { const id = norm(st.studentId); if (!have.has(id) && en.indexOf(id) !== -1) { base.push(st); have.add(id); } }); }
+    return base;
   }
 
   function render() {
@@ -2459,7 +2469,7 @@ window.k8RegBirthChange = function (v) {
     const gate = Pm.some((x) => String(x.subj) === String(S.subject) && x.grade === S.grade);
     const list = gate ? rows() : [];
     const en = enrolledFor();
-    const enBar = en ? '<li class="k8-ro-bar"><span>' + (EN.all ? 'แสดงนักเรียนทั้งหมด' : 'ลงทะเบียนวิชานี้ <b>' + en.length + '</b> คน') + '</span><button type="button" onclick="k8TaEnAll(' + (EN.all ? 'false' : 'true') + ')">' + (EN.all ? 'เฉพาะที่ลงทะเบียน' : 'แสดงทุกคน') + '</button></li>' : '';
+    const enBar = gate ? '<li class="k8-ro-bar"><span>' + (EN.all ? 'แสดงนักเรียนทั้งชั้น' : 'ตามตารางเรียน <b>' + list.length + '</b> คน' + (en ? ' · สแกนลงทะเบียนแล้ว ' + en.length : '')) + '</span><button type="button" onclick="k8TaEnAll(' + (EN.all ? 'false' : 'true') + ')">' + (EN.all ? 'เฉพาะตามตาราง' : 'แสดงทั้งชั้น') + '</button></li>' : '';
     listEl.innerHTML = enBar + (list.length ? list.map((s, ix) => {
       const id = cid(s.studentId), k = norm(s.studentId);
       const cur = draft[k] || saved[k] || 'present';
@@ -2502,7 +2512,7 @@ window.k8RegBirthChange = function (v) {
       const done = ids.some((id) => sv[id]);
       const st = toMin(x.start), en = toMin(x.end);
       const state = done ? 'done' : (nowM >= st && nowM < en) ? 'now' : nowM >= en ? (S.date < realToday ? 'miss' : 'late') : 'next';
-      return { i, subj: x.c.s || '', name: x.c.sn || subjLabel(x.c.s), g: x.g, grade, start: x.start, end: x.end, room: x.c.r || '', state, left: en - nowM, tn: x.c.tn || x.c.t || '' };
+      return { i, subj: x.c.s || '', name: x.c.sn || subjLabel(x.c.s), g: x.g, grade, start: x.start, end: x.end, room: x.c.r || '', state, left: en - nowM, tn: x.c.tn || x.c.t || '', c: x.c };
     });
   }
   const PST = { miss: ['ยังไม่ได้เช็คชื่อ', 'is-late'], done: ['เช็คแล้ว ✓', 'is-done'], now: ['ตอนนี้ · ยังไม่เช็ค', 'is-now'], late: ['เลยเวลาแล้ว · ยังไม่เช็ค', 'is-late'], next: ['ยังไม่ถึงเวลา', 'is-next'] };
@@ -3328,7 +3338,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.84';
+  const APP_VERSION = '17.85';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
