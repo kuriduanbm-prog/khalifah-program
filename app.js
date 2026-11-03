@@ -4486,7 +4486,7 @@ async function executePrayerCaptureStep2() {
   // ปั๊มลายน้ำพยานการละหมาด (Watermark)
   const now = new Date();
   const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-  const timeStr = now.toLocaleTimeString('th-TH');
+  const timeStr = [now.getHours(), now.getMinutes(), now.getSeconds()].map((v) => String(v).padStart(2, '0')).join(':'); // v17.86 · HH:mm:ss เสมอ (th-TH ให้ "5:54:37")
   const todayYMD = now.toLocaleDateString('sv-SE');
 
   const boxHeight = Math.round(canvas.height * 0.22);
@@ -4744,7 +4744,7 @@ function captureAndRecordPrayer() {
   // ปั๊มลายน้ำ (Watermark Overlay)
   const now = new Date();
   const dateStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-  const timeStr = now.toLocaleTimeString('th-TH');
+  const timeStr = [now.getHours(), now.getMinutes(), now.getSeconds()].map((v) => String(v).padStart(2, '0')).join(':'); // v17.86 · HH:mm:ss เสมอ (th-TH ให้ "5:54:37")
 
   // แถบดำกึ่งโปร่งใสด้านล่าง
   ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
@@ -5046,7 +5046,7 @@ async function savePrayerNoteOnly() {
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('sv-SE');
-  const timeStr = now.toLocaleTimeString('th-TH');
+  const timeStr = [now.getHours(), now.getMinutes(), now.getSeconds()].map((v) => String(v).padStart(2, '0')).join(':'); // v17.86 · HH:mm:ss เสมอ (th-TH ให้ "5:54:37")
 
   const lat = verifiedLocation ? verifiedLocation.lat : 6.78652;
   const lng = verifiedLocation ? verifiedLocation.lng : 101.24641;

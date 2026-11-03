@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.84'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.86'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -2070,12 +2070,16 @@ function formatSheetDate(val) {
  */
 function formatSheetTime(val) {
   if (!val) return '';
+  const p2 = function (n) { return ('0' + n).slice(-2); };
+  // v17.86 · เซลล์เวลาของชีตเป็นวันที่ปี 1899 · ใช้ชั่วโมง/นาทีตามที่แสดงในชีต (กันเวลาเพี้ยนจากเขตเวลาสมัยก่อน)
   if (val instanceof Date && !isNaN(val.getTime())) {
+    if (val.getFullYear() < 1950) return p2(val.getHours()) + ':' + p2(val.getMinutes()) + ':' + p2(val.getSeconds());
     return Utilities.formatDate(val, "Asia/Bangkok", "HH:mm:ss");
   }
   const s = cleanVal(val);
-  const match = s.match(/(\d{2}:\d{2}(?::\d{2})?)/);
-  if (match) return match[1];
+  // v17.86 · รองรับชั่วโมงหลักเดียว เช่น "5:54:37" (เดิมจับได้ "54:37" ทำให้เวลาแสดงผิด)
+  const match = s.match(/(^|[^\d])(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (match && +match[2] < 24) return p2(match[2]) + ':' + match[3] + (match[4] ? ':' + match[4] : '');
   return s;
 }
 

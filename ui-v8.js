@@ -3338,7 +3338,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.85';
+  const APP_VERSION = '17.86';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7515,7 +7515,7 @@ window.k8RegBirthChange = function (v) {
       const boxes = slots.map((x) => {
         const rec = r.p[x.key];
         if (!rec) return '<button type="button" class="k8-pd-b is-none" onclick="k8PeAdd(\'' + jsq(r.sid) + '\',\'' + jsq(x.key) + '\')" title="' + esc(x.label) + ' · ยังไม่เช็คชื่อ · แตะเพื่อบันทึกแทน"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>–</i></button>';
-        const k = kind(rec.status); const t = rec.time ? String(rec.time).slice(0, 5) : '✓';
+        const k = kind(rec.status); const tm = String(rec.time || '').match(/(^|[^\d])(\d{1,2}):(\d{2})/); const t = tm ? tm[2].padStart(2, '0') + ':' + tm[3] : '✓';
         return '<button type="button" class="k8-pd-b is-' + k + '" onclick="openPrayerHistoryDetailModal(\'' + jsq(rec.id || rec.logId || '') + '\')" title="' + esc(x.label + ' · ' + (rec.status || '') + ' · ' + (rec.time || '')) + '"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>' + (k === 'ex' ? 'ลา' : k === 'late' ? t : k === 'abs' ? '✕' : t) + '</i></button>';
       }).join('');
       return '<article class="k8-pd-card n' + r.n + '"><button type="button" class="k8-pd-who" onclick="adminSelectStudentForPrayerHistory(\'' + jsq(r.sid) + '\')" title="ดูประวัติรายคน">' +
