@@ -3317,7 +3317,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.73';
+  const APP_VERSION = '17.74';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3687,14 +3687,18 @@ window.k8RegBirthChange = function (v) {
     const sc = clamp(100 + logs.filter((l) => l.status !== 'cancelled').reduce((a, l) => a + (Number(l.points) || 0), 0));
     document.getElementById('k8BhModalTitle').textContent = s.fullName || k;
     document.getElementById('k8BhModalSub').textContent = shortG(s.grade) + ' · ' + (s.studentId || k) + ' · ' + window.k8Term().label;
-    document.getElementById('k8BhModalBody').innerHTML = detailHtml(sc, logs) + (me() ? '<button type="button" class="k8-bh-go" onclick="k8BhRecordFor(\'' + js(k) + '\')">บันทึกพฤติกรรมให้คนนี้</button>' : '');
+    document.getElementById('k8BhModalBody').innerHTML = detailHtml(sc, logs, !!me()) + (me() ? '<button type="button" class="k8-bh-go" onclick="k8BhRecordFor(\'' + js(k) + '\')">บันทึกพฤติกรรมให้คนนี้</button>' : '');
     openModal('k8BhModal');
   }
-  function detailHtml(sc, logs) {
+  function detailHtml(sc, logs, staff) {
     const lv = level(sc); const act = logs.filter((l) => l.status !== 'cancelled');
     const minus = act.filter((l) => l.points < 0).reduce((a, l) => a + l.points, 0), plus = act.filter((l) => l.points > 0).reduce((a, l) => a + l.points, 0);
     return '<div class="k8-bh-hero"><span class="k8-bh-ring is-big" style="--p:' + sc + ';--c:' + lv[1] + '"><b>' + sc + '</b><small>/100</small></span><div><span class="k8-bh-lv" style="color:' + lv[1] + ';background:' + lv[2] + '">' + lv[0] + '</span><p>เริ่มต้น 100 · ถูกหัก <b class="is-minus">' + Math.abs(minus) + '</b> · ได้เพิ่ม <b class="is-plus">' + plus + '</b></p></div></div>' +
-      '<ul class="k8-bh-hist">' + (logs.length ? logs.map((l) => { const c = catOf(l.cat); return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span><span class="k8-bh-who"><b>' + esc(l.title) + '</b><small>' + fmtD(l.date) + ' · ' + esc(c[1]) + (l.note ? ' · ' + esc(l.note) : '') + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีบันทึกในภาคเรียนนี้ · รักษาคะแนนเต็มไว้นะ</li>') + '</ul>';
+      '<ul class="k8-bh-hist">' + (logs.length ? logs.map((l) => { const c = catOf(l.cat); return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span><span class="k8-bh-who"><b>' + esc(l.title) + '</b><small>' + fmtD(l.date) + (l.time ? ' ' + esc(String(l.time).slice(11, 16)) : '') + ' · ' + esc(c[1]) + (l.note ? ' · ' + esc(l.note) : '') + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small>' +
+        /* v17.74 · ประวัติบอกผู้ประเมิน + รูปหลักฐานที่ผู้ตรวจการแนบ */
+        (staff && (l.byName || l.by) ? '<small class="k8-bh-by">ประเมินโดย <b>' + esc(l.byName || l.by) + '</b></small>' : '') +
+        (staff && l.photoUrl ? (() => { const U = String(l.photoUrl).split(/\s*\n\s*/).filter(Boolean).slice(0, 4); return '<span class="k8-bh-dphs" aria-label="รูปหลักฐาน ' + U.length + ' รูป">' + U.map((u, i) => '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(u) + '\',\'รูปหลักฐาน ' + (i + 1) + '/' + U.length + '\')"><img src="' + esc(u) + '" alt="รูปหลักฐานที่ ' + (i + 1) + '" loading="lazy"></button>').join('') + '</span>'; })() : '') +
+        '</span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีบันทึกในภาคเรียนนี้ · รักษาคะแนนเต็มไว้นะ</li>') + '</ul>';
   }
 
   // ---------- actions ----------

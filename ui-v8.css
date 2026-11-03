@@ -4232,3 +4232,10 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-head { grid-template-columns: minmax(
 html.k8-xnarrow .k8-bh-gcols, html.k8-narrow .k8-bh-gcols { grid-template-columns: 1fr; }
 @media (max-width: 340px) { .k8-bh-gcols { grid-template-columns: 1fr; } }
 @media (min-width: 900px) { .k8-bh-gcols { gap: 16px; } }
+/* v17.74 · ประวัติคะแนนพฤติกรรม · ผู้ประเมิน + รูปหลักฐาน */
+.k8-bh-who small.k8-bh-by { color: #475569; } .k8-bh-by b { font-size: inherit !important; font-weight: 600; white-space: normal !important; color: #0c4a6e; }
+.k8-bh-dphs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.k8-bh-dphs .k8-bh-hph { width: 64px; height: 64px; padding: 0; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #f1f5f9; cursor: zoom-in; flex: none; }
+.k8-bh-dphs .k8-bh-hph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#k8BhModalBody .k8-bh-hist li { align-items: flex-start; }
+.k8-bh-dphs .k8-bh-hph img { color: transparent; font-size: 0; }
