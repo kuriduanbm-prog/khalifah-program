@@ -3317,7 +3317,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.70';
+  const APP_VERSION = '17.71';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3617,9 +3617,11 @@ window.k8RegBirthChange = function (v) {
         return '<li><button type="button" role="checkbox" aria-checked="' + on + '" onclick="k8BhToggle(\'' + js(k) + '\')"><span class="k8-bh-chk">' + (on ? '✓' : '') + '</span><span class="k8-bh-who"><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(s.studentId) + '</small></span><span class="k8-bh-sc" style="color:' + lv[1] + ';background:' + lv[2] + '">' + sc + '</span></button></li>'; }).join('') : '<li class="k8-bh-empty">ไม่พบนักเรียน</li>') + '</ul></section>';
     const ready = rule && rule.title && rule.points && selN;
     const needPhoto = (B.cat === 'dorm' || B.cat === 'toilet') && rule && Number(rule.points) < 0;
-    const photoBlock = needPhoto ? '<div class="k8-bh-photo"><b>รูปหลักฐาน <small>ไม่บังคับ · แนะนำให้ถ่ายรูปห้องที่ตรวจ</small></b>' +
-      (B.photo ? '<div class="k8-pn-prev"><img src="' + B.photo + '" alt="รูปหลักฐาน"><div class="k8-pn-prev-b"><span class="k8-pn-src is-' + B.photoSrc + '">' + (B.photoSrc === 'camera' ? '📷 ถ่ายจากกล้อง' : '🖼️ แนบจากเครื่อง') + '</span><button type="button" onclick="k8BhPhotoClear()">ลบรูป / เลือกใหม่</button></div></div>'
-        : '<div class="k8-pn-pbtns"><label class="k8-pn-pbtn"><input type="file" accept="image/*" capture="environment" onchange="k8BhPhoto(this,\'camera\')"><i aria-hidden="true">📷</i><b>ถ่ายรูป</b><small>เปิดกล้อง</small></label><label class="k8-pn-pbtn"><input type="file" accept="image/*" onchange="k8BhPhoto(this,\'gallery\')"><i aria-hidden="true">🖼️</i><b>แนบรูป</b><small>จากอัลบั้ม/ไฟล์</small></label></div>') + '</div>' : '';
+    // v17.71 · รูปหลักฐานได้สูงสุด 4 รูป
+    const PH = B.photos || (B.photos = []);
+    const photoBlock = needPhoto ? '<div class="k8-bh-photo"><b>รูปหลักฐาน <small>ไม่บังคับ · สูงสุด 4 รูป · แนบแล้ว ' + PH.length + '/4</small></b>' +
+      (PH.length ? '<div class="k8-bh-phs">' + PH.map((p, i) => '<figure class="k8-bh-ph"><img src="' + p.data + '" alt="รูปหลักฐานที่ ' + (i + 1) + '"><figcaption class="k8-pn-src is-' + p.src + '">' + (p.src === 'camera' ? '📷 กล้อง' : '🖼️ แนบ') + '</figcaption><button type="button" class="k8-bh-phx" onclick="k8BhPhotoClear(' + i + ')" aria-label="ลบรูปที่ ' + (i + 1) + '">✕</button></figure>').join('') + '</div>' : '') +
+      (PH.length < 4 ? '<div class="k8-pn-pbtns"><label class="k8-pn-pbtn"><input type="file" accept="image/*" capture="environment" onchange="k8BhPhoto(this,\'camera\')"><i aria-hidden="true">📷</i><b>ถ่ายรูป</b><small>เปิดกล้อง</small></label><label class="k8-pn-pbtn"><input type="file" accept="image/*" multiple onchange="k8BhPhoto(this,\'gallery\')"><i aria-hidden="true">🖼️</i><b>แนบรูป</b><small>เลือกได้หลายรูป</small></label></div>' : '<p class="k8-bh-phmax">ครบ 4 รูปแล้ว · ลบรูปเดิมก่อนถ้าต้องการเปลี่ยน</p>') + '</div>' : '';
     h += '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">4</span>ยืนยันการบันทึก</h2>' + photoBlock +
       '<div class="k8-bh-confirm"><label>วันที่<input type="date" value="' + B.date + '" max="' + ymd(new Date()) + '" onchange="k8BhSet(\'date\', this.value)"></label><label>หมายเหตุ (ถ้ามี)<input type="text" maxlength="300" placeholder="เช่น ห้อง 204 ตรวจรอบเช้า" value="' + esc(B.note) + '" oninput="k8BhNote(this.value)"></label></div>' +
       '<p class="k8-bh-summary">' + (ready ? '<b class="' + (rule.points > 0 ? 'is-plus' : 'is-minus') + '">' + (rule.points > 0 ? 'เพิ่ม ' + rule.points : 'หัก ' + Math.abs(rule.points)) + ' คะแนน</b> · ' + esc(rule.title) + ' · นักเรียน ' + selN + ' คน' : 'เลือกหัวข้อและนักเรียนให้ครบก่อน') + '</p>' +
@@ -3660,7 +3662,7 @@ window.k8RegBirthChange = function (v) {
       '<input type="search" placeholder="ค้นหาชื่อนักเรียนหรือหัวข้อ" value="' + esc(B.hq) + '" oninput="k8BhHQ(this)" id="k8BhHQ" autocomplete="off"></div>' +
       '<p class="k8-bh-intro">' + list.length + ' รายการ · หักคะแนน ' + minus + ' · เพิ่มคะแนน ' + plus + (admin ? '' : ' · ยกเลิกรายการที่บันทึกผิดได้') + '</p>' +
       '<ul class="k8-bh-hist">' + (list.length ? list.slice(0, 300).map((l) => { const c = catOf(l.cat); const own = String(l.by || '').toLowerCase() === uid; const can = l.status !== 'cancelled' && (own || isAdmin());
-        return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span>' + (l.photoUrl ? '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(l.photoUrl) + '\',\'รูปหลักฐาน\')" title="' + esc(l.photoSource || 'รูปหลักฐาน') + '"><img src="' + esc(l.photoUrl) + '" alt="รูปหลักฐาน" loading="lazy"></button>' : '') + '<span class="k8-bh-who"><b>' + esc(l.studentName || l.studentId) + ' <small>' + esc(shortG(l.grade)) + '</small></b><small>' + esc(l.title) + (l.note ? ' · ' + esc(l.note) : '') + '</small><small class="k8-bh-meta">' + fmtD(l.date) + ' ' + esc(String(l.time || '').slice(11, 16)) + ' · ' + esc(l.byName || l.by) + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span>' + (can ? '<button type="button" class="k8-bh-undo" onclick="k8BhCancel(\'' + js(l.id) + '\')" aria-label="ยกเลิกรายการนี้">ยกเลิก</button>' : '') + '</li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีรายการในช่วงนี้</li>') + '</ul></section>';
+        return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span>' + (l.photoUrl ? '<span class="k8-bh-hphs">' + String(l.photoUrl).split(/\s*\n\s*/).filter(Boolean).slice(0, 4).map((u, i, A) => '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(u) + '\',\'รูปหลักฐาน ' + (i + 1) + '/' + A.length + '\')" title="' + esc((String(l.photoSource || '').split(/\n/)[i]) || 'รูปหลักฐาน') + '"><img src="' + esc(u) + '" alt="รูปหลักฐานที่ ' + (i + 1) + '" loading="lazy"></button>').join('') + '</span>' : '') + '<span class="k8-bh-who"><b>' + esc(l.studentName || l.studentId) + ' <small>' + esc(shortG(l.grade)) + '</small></b><small>' + esc(l.title) + (l.note ? ' · ' + esc(l.note) : '') + '</small><small class="k8-bh-meta">' + fmtD(l.date) + ' ' + esc(String(l.time || '').slice(11, 16)) + ' · ' + esc(l.byName || l.by) + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span>' + (can ? '<button type="button" class="k8-bh-undo" onclick="k8BhCancel(\'' + js(l.id) + '\')" aria-label="ยกเลิกรายการนี้">ยกเลิก</button>' : '') + '</li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีรายการในช่วงนี้</li>') + '</ul></section>';
   }
 
   function rulesHtml() {
@@ -3692,13 +3694,18 @@ window.k8RegBirthChange = function (v) {
 
   // ---------- actions ----------
   window.k8BhTab = function (t) { if (B.tab === 'rules' && t !== 'rules' && B.rulesDirty && !confirm('หัวข้อที่แก้ไว้ยังไม่ได้บันทึก ออกโดยไม่บันทึกใช่ไหม?')) return; B.tab = t; if (t !== 'rules') { B.editRules = null; B.rulesDirty = false; } render(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (e) {} };
-  window.k8BhSet = function (k, v) { B[k] = v; if (k === 'cat') { B.ruleId = ''; B.photo = ''; B.photoSrc = ''; } render(); };
+  window.k8BhSet = function (k, v) { B[k] = v; if (k === 'cat') { B.ruleId = ''; B.photos = []; } render(); };
   window.k8BhPhoto = async function (input, mode) {
-    const f = input && input.files && input.files[0]; if (!f) return;
-    try { const r = await window.k8EvidencePhoto(f, mode); B.photo = r.data; B.photoSrc = r.src; } catch (e) { toast('เปิดรูปนี้ไม่ได้ ลองรูปอื่น', 'error'); }
+    const files = input && input.files ? Array.from(input.files) : []; if (!files.length) return;
+    B.photos = B.photos || [];
+    const room = 4 - B.photos.length;
+    if (files.length > room) toast('แนบได้สูงสุด 4 รูป · ใช้ ' + Math.max(room, 0) + ' รูปแรก', 'warning');
+    for (const f of files.slice(0, Math.max(room, 0))) {
+      try { const r = await window.k8EvidencePhoto(f, mode); B.photos.push({ data: r.data, src: r.src }); } catch (e) { toast('เปิดรูปบางรูปไม่ได้ ลองรูปอื่น', 'error'); }
+    }
     input.value = ''; render();
   };
-  window.k8BhPhotoClear = function () { B.photo = ''; B.photoSrc = ''; render(); };
+  window.k8BhPhotoClear = function (i) { B.photos = (B.photos || []).filter((_, j) => j !== i); render(); };
   window.k8BhCustom = function (k, v) { B.custom[k] = v; const sum = document.querySelector('.k8-bh-summary'); if (sum) { render(); const el = document.querySelector('.k8-bh-custom ' + (k === 'title' ? 'input[type=text]' : 'input[type=number]')); if (el) { el.focus(); try { const n = el.value.length; el.setSelectionRange && el.type === 'text' && el.setSelectionRange(n, n); } catch (e) {} } } };
   window.k8BhNote = function (v) { B.note = v; };
   function refocus(id, el) { const pos = el.selectionStart; render(); const n = document.getElementById(id); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }
@@ -3723,12 +3730,12 @@ window.k8RegBirthChange = function (v) {
     B.saving = true; render();
     try {
       const payload = { studentIds: ids, note: B.note, date: B.date };
-      if (B.photo && (B.cat === 'dorm' || B.cat === 'toilet')) { payload.photo = B.photo; payload.photoSource = B.photoSrc; }
+      if ((B.photos || []).length && (B.cat === 'dorm' || B.cat === 'toilet')) { payload.photos = B.photos.map((p) => ({ data: p.data, source: p.src })); payload.photo = B.photos[0].data; payload.photoSource = B.photos[0].src; }
       if (custom) { payload.title = B.custom.title; payload.points = Number(B.custom.points); } else payload.ruleId = rule.id;
       const r = await api('addBehaviorLogs', { data: payload });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
       B.logs = B.logs.concat(r.logs || []);
-      B.sel.clear(); B.note = ''; B.photo = ''; B.photoSrc = '';
+      B.sel.clear(); B.note = ''; B.photos = [];
       toast('บันทึกแล้ว · ' + r.message, 'success');
     } catch (e) { toast(e.message || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
     B.saving = false; render();

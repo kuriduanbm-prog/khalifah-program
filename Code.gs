@@ -6413,8 +6413,14 @@ function addBehaviorLogs_(data, session) {
   const note = cleanVal(data.note).substring(0, 300);
   ensureSchema();
   // v17.21 · รูปหลักฐาน (ห้องน้ำ/ความสะอาดหอพัก) เก็บใน Google Drive ครั้งเดียว ใช้ร่วมกันทุกคนที่เลือก
-  const photoUrl = data.photo ? savePhotoToDrive_(data.photo, 'Khalifah_Behavior_Photos', 'bhv_' + Date.now()) : '';
-  const photoSource = photoUrl ? (data.photoSource === 'camera' ? 'ถ่ายจากกล้อง' : data.photoSource === 'gallery' ? 'แนบจากเครื่อง' : '') : '';
+  // v17.71 · แนบได้สูงสุด 4 รูป · เก็บ URL หลายรูปคั่นด้วยขึ้นบรรทัดใหม่ในคอลัมน์เดิม (รูปเดียวแบบเก่ายังอ่านได้)
+  const srcTh = function (x) { return x === 'camera' ? 'ถ่ายจากกล้อง' : x === 'gallery' ? 'แนบจากเครื่อง' : ''; };
+  const inPhotos = (Array.isArray(data.photos) ? data.photos : (data.photo ? [{ data: data.photo, source: data.photoSource }] : []))
+    .filter(function (p) { return p && typeof p.data === 'string' && p.data; }).slice(0, 4);
+  const urls = [], srcs = [];
+  inPhotos.forEach(function (p, i) { const u = savePhotoToDrive_(p.data, 'Khalifah_Behavior_Photos', 'bhv_' + Date.now() + '_' + (i + 1)); if (u) { urls.push(u); srcs.push(srcTh(p.source)); } });
+  const photoUrl = urls.join('\n');
+  const photoSource = srcs.join('\n');
   const ss = getSpreadsheet();
   const sh = ss.getSheetByName(SHEETS.BEHAVIOR);
   const stuSheet = ss.getSheetByName(SHEETS.STUDENTS);

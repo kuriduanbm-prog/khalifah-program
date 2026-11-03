@@ -4196,3 +4196,16 @@ html:not(.k8-tpd) #teacher-tab-attendance .k8-ta-subbtn { width: 100%; min-heigh
 html.k8-tpd #teacher-tab-attendance .k8-ta-head { grid-template-columns: minmax(0, 420px) !important; }
 .k8-ta-subtag { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 10px; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 13px; font-weight: 700; font-style: normal; }
 #teacher-tab-attendance .k8-ta.no-roster .k8-ta-foot, #teacher-tab-attendance .k8-ta.no-roster .k8-ta-msum-c, #teacher-tab-attendance .k8-ta.no-roster .k8-ta-mall, #teacher-tab-attendance .k8-ta.no-roster .k8-ta-dh-c, #teacher-tab-attendance .k8-ta.no-roster .k8-ta-dh-b.is-all { display: none !important; }
+
+/* v17.71 · รูปหลักฐานพฤติกรรม สูงสุด 4 รูป */
+.k8-bh-phs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+.k8-bh-ph { position: relative; margin: 0; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; }
+.k8-bh-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.k8-bh-ph figcaption { position: absolute; left: 4px; bottom: 4px; font-size: 10.5px !important; padding: 1px 6px !important; }
+.k8-bh-phx { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(15, 23, 42, .75); color: #fff; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.k8-bh-phx:focus-visible { outline: 3px solid #7dd3fc; }
+.k8-bh-phmax { margin: 4px 0 0; font-size: 13px; color: #64748b; }
+.k8-bh-hphs { display: grid; grid-template-columns: repeat(2, 22px); gap: 2px; flex: none; }
+.k8-bh-hphs:has(> :only-child) { grid-template-columns: 1fr; }
+.k8-bh-hphs .k8-bh-hph img { width: 100%; height: 100%; object-fit: cover; }
+.k8-bh-hphs:not(:has(> :only-child)) .k8-bh-hph { width: 22px !important; height: 22px !important; border-radius: 5px !important; padding: 0 !important; overflow: hidden; }
