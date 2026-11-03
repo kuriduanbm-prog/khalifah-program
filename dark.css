@@ -2084,6 +2084,10 @@ html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td button.has:not(.is-multi) 
 html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td button.has:not(.is-multi) b { color: color-mix(in srgb, var(--sc, #d6dae5) 70%, #d6dae5) !important; }
 html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td button.is-multi { background-color: #121212 !important; border: 1px solid #32363c !important; }
 html[data-theme="dark"] .k8-tt-list li.has { background-color: #64748b !important; border-color: color-mix(in srgb, var(--sc, #64748b) 28%, #333333) !important; }
+html[data-theme="dark"] .k8-tt-band b, html[data-theme="dark"] .k8-tt-grid.is-edit td button .k8-tt-band b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-tt-band .k8-tt-tg.is-f { color: #76efe6 !important; }
+html[data-theme="dark"] .k8-tt-band .k8-tt-tg.is-r { color: #f8a96d !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2:not(.is-edit) td.has:not(:has(.k8-tt-bands)) b, html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td button.has:not(.is-multi) b { color: #d6dae5 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

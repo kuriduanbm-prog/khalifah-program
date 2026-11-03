@@ -4368,3 +4368,9 @@ body.k8-lim .k8-adm-modes { display: none !important; }
 .k8-tt-grid.is-edit td button .k8-tt-band { display: flex !important; text-align: left !important; font-size: 12px; }
 .k8-tt-grid.is-edit td button .k8-tt-band b { display: block !important; margin: 0 !important; }
 .k8-tt-grid.is-edit td button .k8-tt-band b::before { display: none !important; }
+/* v17.84 · ตามแคนวาส: ชื่อวิชาสีดำ · ป้ายเป็นตัวหนังสือสี ไม่มีกรอบ */
+.k8-tt-band, .k8-tt-band.is-m, .k8-tt-band.is-f, .k8-tt-band.is-r { border-left: 0 !important; border-radius: 9px; padding: 6px 9px; }
+.k8-tt-band b, .k8-tt-grid.is-edit td button .k8-tt-band b { color: #0f172a !important; }
+.k8-tt-band .k8-tt-tg, .k8-tt-band .k8-tt-tg.is-m, .k8-tt-band .k8-tt-tg.is-f, .k8-tt-band .k8-tt-tg.is-r { background: transparent !important; padding: 0 2px; }
+.k8-tt-band .k8-tt-tg.is-m { color: #1d4ed8; } .k8-tt-band .k8-tt-tg.is-f { color: #0f766e; } .k8-tt-band .k8-tt-tg.is-r { color: #b45309; }
+.k8-tt-grid.is-tt2:not(.is-edit) td.has:not(:has(.k8-tt-bands)) b, .k8-tt-grid.is-tt2.is-edit td button.has:not(.is-multi) b { color: #0f172a !important; }

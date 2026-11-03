@@ -3437,7 +3437,7 @@ function getTimetable_(session, isStudent, isAdmin) {
         const list = Array.isArray(grades[g].cells[k]) ? grades[g].cells[k] : [grades[g].cells[k]];
         const mine = list.filter(function (e) { return e && (!e.o || !e.o.length || e.o.indexOf(me) !== -1) && !(e.x && e.x.indexOf(me) !== -1) && (!e.gx || !myGx || e.gx === myGx); });
         // v17.84 · ส่งทุกวิชาที่ตรงกับนักเรียน (อาจมีหลายช่วงวันที่) · แอปเลือกตามวันที่เอง
-        if (mine.length) cells[k] = mine.map(function (m) { const e = Object.assign({}, m); if (e.o) { e.only = true; delete e.o; } delete e.x; return e; });
+        if (mine.length) { const L = mine.map(function (m) { const e = Object.assign({}, m); if (e.o) { e.only = true; delete e.o; } delete e.x; return e; }); cells[k] = L.length === 1 ? L[0] : L; }
       });
       one[g] = { grade: g, cells: cells, updatedAt: grades[g].updatedAt };
     }
