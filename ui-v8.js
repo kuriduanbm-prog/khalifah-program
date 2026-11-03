@@ -3338,7 +3338,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.87';
+  const APP_VERSION = '17.88';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6186,12 +6186,12 @@ window.k8RegBirthChange = function (v) {
     const q = (XP.q || '').toLowerCase(); const fg = XP.g || '';
     const list = allStu().filter((st) => { const m = String(st.grade || '').match(/([1-6])/); return !fg || (m && m[1] === fg); });
     document.getElementById('k8TtCellBody').innerHTML =
-      '<label class="k8-nf-f"><span>ชื่อตาราง</span><input type="text" id="k8TtXName" maxlength="60" placeholder="เช่น ภาษาจีน (วิชาเลือก) · ซ่อมเสริมคณิต" value="' + esc(XP.name) + '"></label>' +
+      '<label class="k8-nf-f"><span>ชื่อตาราง</span><input type="text" id="k8TtXName" maxlength="60" placeholder="เช่น ภาษาจีน (วิชาเลือก) · ซ่อมเสริมคณิต" value="' + esc(XP.name) + '" oninput="k8TtXName()"></label>' +
       '<fieldset class="k8-tt-who"><legend>นักเรียนในตารางนี้ <b id="k8TtXN">' + XP.sel.size + '</b> คน (เลือกข้ามชั้นได้)</legend>' +
       '<div class="k8-tt-seg">' + [''].concat(GR).map((g) => '<button type="button" aria-pressed="' + (fg === g) + '" onclick="k8TtXG(\'' + g + '\')">' + (g ? 'ม.' + g : 'ทุกชั้น') + '</button>').join('') + '</div>' +
       '<div class="k8-tt-stu-tools"><input type="search" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(XP.q || '') + '" oninput="k8TtXQ(this.value)"><button type="button" class="k8-bh-link" onclick="k8TtXAll(1)">เลือกที่แสดงทั้งหมด</button><button type="button" class="k8-bh-link" onclick="k8TtXAll(0)">ล้าง</button></div>' +
       '<div class="k8-tt-stu">' + (list.length ? list.map((st) => { const id = nsid(st.studentId); const hide = q && (st.fullName + ' ' + st.studentId).toLowerCase().indexOf(q) === -1; return '<label' + (hide ? ' hidden' : '') + '><input type="checkbox" value="' + esc(id) + '"' + (XP.sel.has(id) ? ' checked' : '') + ' onchange="k8TtXT(this)"><span>' + esc(st.fullName || id) + ' <small>' + esc(st.studentId) + ' · ' + esc(String(st.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + '</small></span></label>'; }).join('') : '<p class="k8-pw-hint">ไม่พบรายชื่อนักเรียน</p>') + '</div></fieldset>' +
-      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ยกเลิก</button><button type="button" onclick="k8TtXOk()">' + (XP.isNew ? 'สร้างตาราง' : 'ใช้ค่านี้') + '</button></div>';
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ยกเลิก</button><span class="k8-tt-autosave is-ok" id="k8TtXSt" role="status" aria-live="polite">' + (XP.isNew ? 'ตั้งชื่อและเลือกนักเรียน ระบบจะบันทึกให้เอง' : '✓ บันทึกอัตโนมัติเมื่อแก้ไข') + '</span><button type="button" id="k8TtXGo" onclick="k8TtXOk()">' + (XP.isNew ? 'สร้างตาราง' : 'เสร็จ') + '</button></div>';
   }
   function openXP(isNew) {
     XP = { isNew, name: isNew ? '' : (T.xmeta.name || ''), sel: new Set(isNew ? [] : (T.xmeta.students || []).map(nsid)), q: '', g: '' };
@@ -6203,16 +6203,29 @@ window.k8RegBirthChange = function (v) {
   window.k8TtXEdit = function () { openXP(false); };
   window.k8TtXG = function (g) { XP.name = (document.getElementById('k8TtXName') || {}).value || XP.name; XP.g = g; renderXP(); };
   window.k8TtXQ = function (v) { XP.q = v; const q = v.toLowerCase(); document.querySelectorAll('#k8TtCellBody .k8-tt-stu label').forEach((l) => { l.hidden = !!q && l.textContent.toLowerCase().indexOf(q) === -1; }); };
-  window.k8TtXT = function (c) { if (c.checked) XP.sel.add(c.value); else XP.sel.delete(c.value); document.getElementById('k8TtXN').textContent = XP.sel.size; };
-  window.k8TtXAll = function (on) { document.querySelectorAll('#k8TtCellBody .k8-tt-stu label:not([hidden]) input').forEach((c) => { c.checked = !!on; if (on) XP.sel.add(c.value); else XP.sel.delete(c.value); }); document.getElementById('k8TtXN').textContent = XP.sel.size; };
-  window.k8TtXOk = function () {
-    const name = ((document.getElementById('k8TtXName') || {}).value || '').trim();
-    if (!name) { toast('ตั้งชื่อตารางก่อน', 'warning'); return; }
-    if (!XP.sel.size) { toast('เลือกนักเรียนอย่างน้อย 1 คน', 'warning'); return; }
-    if (XP.isNew) { T.newX = { key: 'x:new', id: '', name, students: [...XP.sel], cells: {} }; startDraft('x:new'); }
+  // v17.88 · เลือกนักเรียน/ตั้งชื่อตารางพิเศษ → บันทึกอัตโนมัติ (ไม่ต้องกดปุ่ม)
+  let xpT = null;
+  function xpStatus(t, cls) { const el = document.getElementById('k8TtXSt'); if (el) { el.className = 'k8-tt-autosave is-' + (cls || 'ok'); el.textContent = t; } }
+  function applyXP(silent) {
+    const name = ((document.getElementById('k8TtXName') || {}).value || XP.name || '').trim(); XP.name = name;
+    if (!name) { if (!silent) toast('ตั้งชื่อตารางก่อน', 'warning'); else xpStatus('ตั้งชื่อตารางก่อน แล้วระบบจะบันทึกให้เอง', 'wait'); return false; }
+    if (!XP.sel.size) { if (!silent) toast('เลือกนักเรียนอย่างน้อย 1 คน', 'warning'); else xpStatus('เลือกนักเรียนอย่างน้อย 1 คน แล้วระบบจะบันทึกให้เอง', 'wait'); return false; }
+    if (XP.isNew) { T.newX = { key: 'x:new', id: '', name, students: [...XP.sel], cells: {} }; startDraft('x:new'); XP.isNew = false; }
     else { T.xmeta.name = name; T.xmeta.students = [...XP.sel]; }
-    T.dirty = true; closeModal('k8TtCellModal'); renderAdmin();
-    if (XP.isNew) toast('สร้างตาราง "' + name + '" แล้ว · ลงคาบเรียน แล้วกดบันทึก', 'info');
+    T.dirty = true; xpStatus('กำลังบันทึก…', 'saving');
+    Promise.resolve(autoSave()).then(() => { xpStatus(T.saveSt === 'err' ? 'บันทึกไม่สำเร็จ · ลองอีกครั้ง' : '✓ บันทึกอัตโนมัติแล้ว · ' + XP.sel.size + ' คน', T.saveSt === 'err' ? 'err' : 'ok'); const b = document.getElementById('k8TtXGo'); if (b) b.textContent = 'เสร็จ'; });
+    return true;
+  }
+  const xpAuto = () => { clearTimeout(xpT); xpStatus('กำลังจะบันทึก…', 'saving'); xpT = setTimeout(() => applyXP(true), 700); };
+  window.k8TtXName = xpAuto;
+  window.k8TtXT = function (c) { if (c.checked) XP.sel.add(c.value); else XP.sel.delete(c.value); document.getElementById('k8TtXN').textContent = XP.sel.size; xpAuto(); };
+  window.k8TtXAll = function (on) { document.querySelectorAll('#k8TtCellBody .k8-tt-stu label:not([hidden]) input').forEach((c) => { c.checked = !!on; if (on) XP.sel.add(c.value); else XP.sel.delete(c.value); }); document.getElementById('k8TtXN').textContent = XP.sel.size; xpAuto(); };
+  window.k8TtXOk = function () {
+    clearTimeout(xpT);
+    const wasNew = XP.isNew;
+    if (!applyXP(false)) return;
+    closeModal('k8TtCellModal'); renderAdmin();
+    if (wasNew) toast('สร้างตาราง "' + XP.name + '" แล้ว · ลงคาบเรียนได้เลย ระบบบันทึกให้อัตโนมัติ', 'success');
   };
   window.k8TtXDel = async function () {
     if (!T.xmeta) return;
