@@ -2822,7 +2822,7 @@ window.k8RegBirthChange = function (v) {
     const h = H(); const mem = new Set(memList(h)); let list = [];
     try { list = QURAN_SURAHS || []; } catch (e) {}
     const q = (S.memQ || '').trim();
-    const shown = list.filter((x) => (S.memFilter === 'all' || (S.memFilter === 'amma' && x.num >= 78) || (S.memFilter === 'done' && mem.has(x.num)) || (S.memFilter === 'todo' && !mem.has(x.num))) && (!q || String(x.num) === q || x.name.indexOf(q) !== -1 || (x.arabic || '').indexOf(q) !== -1));
+    const shown = list.filter((x) => (S.memFilter === 'all' || (S.memFilter === 'amma' && x.num >= 78) || (S.memFilter === 'done' && mem.has(x.num)) || (S.memFilter === 'todo' && !mem.has(x.num))) && (!q || String(x.num) === q || x.name.indexOf(q) !== -1 || (x.arabic || '').indexOf(q) !== -1)).slice().sort((a, b) => b.num - a.num); // v17.76 · เรียงจากซูเราะห์ท้าย (114) ขึ้นบนสุด
     const newToday = ((h.dailyLogs || {})[S.date] || {}).memNew || [];
     return '<section class="k8h-card"><span class="k8h-lbl">ท่องจำได้แล้ว</span><div class="k8h-big">' + mem.size + ' <small>/ 114 ซูเราะห์</small></div><div class="k8h-bar is-green"><span style="width:' + (mem.size / 114 * 100).toFixed(1) + '%"></span></div>' +
       '<p class="k8h-hint">' + (newToday.length ? 'วันที่เลือกท่องจำใหม่ ' + newToday.length + ' ซูเราะห์' : 'แตะซูเราะห์ที่ท่องจำได้ ระบบบันทึกให้อัตโนมัติ') + '</p></section>' +
@@ -2846,6 +2846,16 @@ window.k8RegBirthChange = function (v) {
     root.innerHTML = header() + (S.tab === 'quran' ? quranTab() : S.tab === 'memorize' ? memTab() : sunTab());
   }
   window.renderHasanatV9 = render;
+  // v17.76 · ปุ่ม "ออก" ลอยขึ้นมาเมื่อเลื่อนหน้าผลบุญ
+  window.k8HasExit = function () { if (admin() && window.k8HasTarget) return window.k8HasBack(); try { switchView('dashboard'); } catch (e) {} try { window.scrollTo({ top: 0 }); } catch (e) {} };
+  (function () {
+    let btn = null, raf = 0;
+    const tick = () => { raf = 0; const v = document.getElementById('view-hasanat'); const on = !!(v && v.classList.contains('active') && document.getElementById('k8Has') && window.scrollY > 240);
+      if (on && !btn) { btn = document.createElement('button'); btn.type = 'button'; btn.className = 'k8h-exit'; btn.setAttribute('aria-label', 'ออกจากหน้านี้'); btn.innerHTML = '<span aria-hidden="true">✕</span> ออก'; btn.onclick = () => window.k8HasExit(); document.body.appendChild(btn); }
+      if (btn) btn.classList.toggle('is-on', on); };
+    window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(tick); }, { passive: true });
+    document.addEventListener('click', () => setTimeout(tick, 60), true);
+  })();
   window.k8HasSet = function (k, v) { S[k] = v; render(); };
   window.k8HasDate = function (v) { if (/^\d{4}-\d{2}-\d{2}$/.test(String(v || ''))) { S.date = v; S.add = 0; render(); } };
   const future = () => { if (S.date > today()) { if (typeof showToast === 'function') showToast('ยังไม่ถึงวันที่เลือก · บันทึกล่วงหน้าไม่ได้', 'warning'); return true; } return false; };
@@ -3317,7 +3327,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.75';
+  const APP_VERSION = '17.76';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
