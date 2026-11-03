@@ -3317,7 +3317,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.69';
+  const APP_VERSION = '17.70';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6815,6 +6815,7 @@ window.k8RegBirthChange = function (v) {
   const isPreview = () => { let s = null; try { s = currentStudent; } catch (e) {} return !!(stash() && s); };
   window.k8IsPreview = isPreview;
   window.k8PreviewStudent = async function (id, grade) {
+    try { window.k8SimClear && window.k8SimClear(); } catch (e) {}
     let r = null; try { r = await gasApiCall('previewAsStudent', { data: { studentId: id || 'DEMO', grade: grade || '1' } }, 25000); } catch (e) { r = null; }
     if (!r || !r.success || !r.token) { try { showToast((r && (r.message || r.error)) || 'เปิดโหมดดูตัวอย่างไม่ได้ · Deploy Code.gs ตัวล่าสุดก่อน', 'error'); } catch (e) {} return; }
     try {
@@ -6839,6 +6840,7 @@ window.k8RegBirthChange = function (v) {
   };
   window.k8PreviewExit = function () {
     const st = stash(); if (!st) return;
+    try { window.k8SimClear && window.k8SimClear(); } catch (e) {} // v17.70 · ล้างทุกอย่างที่กดในโหมดจำลอง
     try {
       localStorage.removeItem('khalifah_current_student');
       if (st.admin) localStorage.setItem('khalifah_current_admin', st.admin);
@@ -6854,15 +6856,22 @@ window.k8RegBirthChange = function (v) {
     document.documentElement.classList.add('k8-preview');
     if (document.getElementById('k8PvBar')) return;
     const b = document.createElement('div'); b.id = 'k8PvBar'; b.setAttribute('role', 'status');
-    b.innerHTML = '<span><b>โหมดดูตัวอย่าง</b><small>เห็นแบบ ' + String(stash().name || 'นักเรียน').replace(/[<>&"]/g, '') + ' · กดอะไรก็ไม่บันทึกจริง</small></span><button type="button" onclick="k8PreviewExit()">กลับหน้าแอดมิน</button>';
+    b.innerHTML = '<span><b>โหมดดูตัวอย่าง</b><small>เห็นแบบ ' + String(stash().name || 'นักเรียน').replace(/[<>&"]/g, '') + ' · กดได้ทุกปุ่มแบบจำลอง ไม่บันทึกจริง · ออกแล้วล้างทิ้ง</small></span><button type="button" onclick="k8PreviewExit()">กลับหน้าแอดมิน</button>';
     document.body.appendChild(b);
   }
   const block = (what) => { try { showToast('โหมดดูตัวอย่าง · ' + (what || 'ไม่ได้บันทึกจริง'), 'info'); } catch (e) {} };
   // กันการบันทึกในเครื่องของแอดมิน (ระบบหลังบ้านก็ปฏิเสธการเขียนจากโหมดนี้อยู่แล้ว)
-  ['handlePrayerMainButtonClick', 'submitPrayerLateApprovalRequest', 'syncRecordToGoogleSheet', 'k8OutboxSend'].forEach((fn) => {
+  // v17.70 · โหมดจำลอง: กดตรวจพิกัด/ถ่ายรูป/ส่งคำขอได้เหมือนนักเรียนจริง แต่ไม่ส่งอะไรขึ้นระบบ (เก็บไว้ชั่วคราวจนออกจากโหมด)
+  ['submitPrayerLateApprovalRequest', 'syncRecordToGoogleSheet', 'k8OutboxSend'].forEach((fn) => {
     const o = window[fn]; if (typeof o !== 'function') return;
-    window[fn] = function () { if (isPreview()) { block(fn === 'handlePrayerMainButtonClick' ? 'ไม่ได้บันทึกละหมาดจริง' : ''); return Promise.resolve({ success: false, preview: true }); } return o.apply(this, arguments); };
+    window[fn] = function () { if (isPreview()) { if (fn === 'submitPrayerLateApprovalRequest') block('จำลองส่งคำขอแล้ว · ไม่ได้ส่งถึงแอดมินจริง'); else if (fn === 'syncRecordToGoogleSheet') block('จำลองเท่านั้น · ไม่ได้บันทึกขึ้นระบบจริง'); return Promise.resolve({ success: true, preview: true }); } return o.apply(this, arguments); };
   });
+  // v17.70 · จำลองเช็คละหมาด: ทุกเวลาเปิดให้กดได้ เพื่อให้แอดมินลองตรวจพิกัด/ถ่ายรูปได้ตลอด
+  if (window.k8SimOn && typeof window.getPrayerSlotTimeStatus === 'function') {
+    const orig = window.getPrayerSlotTimeStatus;
+    window.getPrayerSlotTimeStatus = function () { const r = orig.apply(this, arguments) || {}; return Object.assign({}, r, { isPast: false, isFuture: false, isOpen: true, isActive: true, isCurrent: true, statusText: 'เปิดให้ลอง (จำลอง)' }); };
+    setTimeout(() => { try { window.checkPrayerUnlockState && window.checkPrayerUnlockState(); window.refreshPrayerChipsStatus && window.refreshPrayerChipsStatus(); } catch (e) {} }, 500);
+  }
   const lo = window.studentLogout;
   if (typeof lo === 'function') window.studentLogout = function () { if (stash()) { window.k8PreviewExit(); return; } return lo.apply(this, arguments); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(banner, 0)); else setTimeout(banner, 0);
@@ -7258,7 +7267,7 @@ window.k8RegBirthChange = function (v) {
   window.savePrayerNoteOnly = async function () {
     if (busy) return;
     if (typeof currentStudent === 'undefined' || !currentStudent) { toast('กรุณาเข้าสู่ระบบนักเรียนก่อน', 'warning'); return; }
-    if (typeof window.k8IsPreview === 'function' && window.k8IsPreview()) { toast('โหมดดูตัวอย่าง · ส่งคำร้องไม่ได้', 'info'); return; }
+    if (typeof window.k8IsPreview === 'function' && window.k8IsPreview()) { toast('จำลอง · ส่งคำขอถึงแอดมินแล้ว · ไม่ได้ส่งจริง', 'info'); return; } // v17.70
     let slots = []; try { slots = (selectedPrayerNoteTimeSlots || []).slice(); } catch (e) {}
     if (!slots.length) { toast('เลือกเวลาละหมาดอย่างน้อย 1 เวลา', 'warning'); const g = document.querySelector('.k8-pn-times'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     const inp = $('prayerNoteInput'); const reason = inp ? inp.value.trim() : '';
@@ -8550,7 +8559,7 @@ window.k8HfMiss = function (slot) {
   window.k8PerThDate = thDate;
   const stu = () => { try { return currentStudent || null; } catch (e) { return null; } };
   const adm = () => { try { return currentAdmin || null; } catch (e) { return null; } };
-  const girl = () => { const s = stu(); return !!s && !!(window.k8IsGirl && window.k8IsGirl(s)); };
+  const girl = () => { const s = stu(); return !!s && (!!(window.k8IsPreview && window.k8IsPreview()) || !!(window.k8IsGirl && window.k8IsGirl(s))); }; // v17.70 · โหมดจำลองของแอดมินเห็นเมนูประจำเดือนเสมอ
   const key = () => { const s = stu(); return s ? 'k8_period_' + String(s.studentId).replace(/^0+/, '') : ''; };
   const S = { active: null, mode: false, endOpen: false, busy: false };
   try { const v = JSON.parse(localStorage.getItem(key()) || 'null'); if (v) S.active = v; } catch (e) {}
@@ -8612,8 +8621,8 @@ window.k8HfMiss = function (slot) {
   window.k8PerEndPick = function (v) { S.endOpen = !!v; render(); };
   async function end(endDate, resume) {
     if (S.busy || !S.active) return;
-    if (preview()) { toast('โหมดดูตัวอย่าง · บันทึกไม่ได้', 'info'); return; }
     const n = countRecs(S.active.start, endDate, resume);
+    if (preview()) { S.active = null; S.endOpen = false; store(); toast('จำลอง · สิ้นสุดประจำเดือนแล้ว (ของจริงจะบันทึกอุซุร ' + n + ' เวลา) · ไม่ได้บันทึกจริง', 'info'); repaint(); return; }
     if (!confirm('สิ้นสุดประจำเดือน ' + thDate(endDate) + '\nระบบจะบันทึกอุซุรย้อนหลัง ' + n + ' เวลา (ข้ามเวลาที่บันทึกไว้แล้ว)\nยืนยันไหม?')) return;
     S.busy = true; render();
     let r = null; try { r = await gasApiCall('periodEnd', { data: { endDate: endDate, resumeSlot: resume } }, 45000); } catch (e) {}
@@ -8630,6 +8639,7 @@ window.k8HfMiss = function (slot) {
   window.k8PerEndPicked = function () { const d = ($('k8PerEndD') || {}).value, r = parseInt(($('k8PerRes') || {}).value, 10); if (!d) { toast('เลือกวันที่สิ้นสุด', 'warning'); return; } end(d, isNaN(r) ? 0 : r); };
   window.k8PerCancel = async function () {
     if (!S.active || !confirm('ยกเลิกการแจ้งมีประจำเดือน (เริ่ม ' + thDate(S.active.start) + ')?\nจะไม่มีการบันทึกอุซุรใด ๆ')) return;
+    if (preview()) { S.active = null; store(); toast('จำลอง · ยกเลิกแล้ว', 'info'); repaint(); return; }
     let r = null; try { r = await gasApiCall('periodCancel', {}, 20000); } catch (e) {}
     if (r && r.success) { S.active = null; store(); toast('ยกเลิกแล้ว', 'success'); repaint(); } else toast((r && r.message) || 'ยกเลิกไม่สำเร็จ', 'error');
   };
@@ -8683,8 +8693,8 @@ window.k8HfMiss = function (slot) {
     if (!S.mode) return sv.apply(this, arguments);
     if (S.busy) return;
     if (S.active) { window.k8PerGo(); return; }
-    if (preview()) { toast('โหมดดูตัวอย่าง · ส่งไม่ได้', 'info'); return; }
     const start = ($('k8PnDate') || {}).value || ymd(new Date());
+    if (preview()) { S.active = { start: start, note: (($('prayerNoteInput') || {}).value || ''), at: new Date().toISOString(), sim: true }; store(); formMode(false); toast('จำลอง · แจ้งเริ่มมีประจำเดือน ' + thDate(start) + ' แล้ว · ไม่ได้บันทึกจริง', 'info'); repaint(); setTimeout(() => window.k8PerGo && window.k8PerGo(), 200); return; }
     S.busy = true; const b = document.querySelector('.k8-pn-save'); if (b) { b.disabled = true; b.textContent = 'กำลังส่ง…'; }
     let r = null; try { r = await gasApiCall('periodStart', { data: { startDate: start, note: (($('prayerNoteInput') || {}).value || '') } }, 30000); } catch (e) {}
     S.busy = false; if (b) b.disabled = false;

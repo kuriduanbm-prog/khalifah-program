@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+  <script>
+  /* v17.70 · โหมดจำลอง (แอดมินดูแบบนักเรียน): ทุกอย่างที่กดจะถูกจำไว้ชั่วคราวใน sessionStorage แทนข้อมูลจริงในเครื่อง · ออกจากโหมด = ล้างทิ้ง */
+  (function(){try{
+    var ls=window.localStorage, ss=window.sessionStorage, P='k8sim:', DEL='\u0000k8del';
+    var on=!!(ls.getItem('k8_preview_stash')&&ls.getItem('khalifah_current_student'));
+    window.k8SimClear=function(){try{for(var i=ss.length-1;i>=0;i--){var k=ss.key(i);if(k&&k.indexOf(P)===0)ss.removeItem(k);}}catch(e){}};
+    if(!on){window.k8SimClear();return;}
+    var KEEP={k8_preview_stash:1,khalifah_current_student:1,khalifah_session_token:1,khalifah_auth_role:1,khalifah_current_admin:1,k8_theme:1};
+    var mem={}, sp=Storage.prototype, g=sp.getItem, st=sp.setItem, rm=sp.removeItem;
+    function sim(k){return this===ls&&!KEEP[k];}
+    sp.getItem=function(k){if(!sim.call(this,k))return g.call(this,k);var v=Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:g.call(ss,P+k);if(v===DEL)return null;return v!==null&&v!==undefined?v:g.call(this,k);};
+    sp.setItem=function(k,v){if(!sim.call(this,k))return st.call(this,k,v);v=String(v);try{st.call(ss,P+k,v);delete mem[k];}catch(e){mem[k]=v;}};
+    sp.removeItem=function(k){if(!sim.call(this,k))return rm.call(this,k);try{st.call(ss,P+k,DEL);}catch(e){mem[k]=DEL;}};
+    window.k8SimOn=true;
+  }catch(e){}})();
+  </script>
   <script>(function(){try{var m=localStorage.getItem('k8_theme')||'light';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -60,9 +76,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.69">
-  <link rel="stylesheet" href="ui-v8.css?v=17.69">
-  <link rel="stylesheet" href="dark.css?v=17.69">
+  <link rel="stylesheet" href="style.css?v=17.70">
+  <link rel="stylesheet" href="ui-v8.css?v=17.70">
+  <link rel="stylesheet" href="dark.css?v=17.70">
 </head>
 <body class="auth-locked">
   <script>
@@ -5845,7 +5861,7 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.69"></script>
-  <script defer src="ui-v8.js?v=17.69"></script>
+  <script defer src="app.js?v=17.70"></script>
+  <script defer src="ui-v8.js?v=17.70"></script>
 </body>
 </html>
