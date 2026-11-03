@@ -4209,3 +4209,26 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-head { grid-template-columns: minmax(
 .k8-bh-hphs:has(> :only-child) { grid-template-columns: 1fr; }
 .k8-bh-hphs .k8-bh-hph img { width: 100%; height: 100%; object-fit: cover; }
 .k8-bh-hphs:not(:has(> :only-child)) .k8-bh-hph { width: 22px !important; height: 22px !important; border-radius: 5px !important; padding: 0 !important; overflow: hidden; }
+
+/* v17.72 · ผู้ตรวจการ · เลือกนักเรียนแยก ชาย (ซ้าย) / หญิง (ขวา) · ตัวหนังสือใหญ่ขึ้น */
+.k8-bh-gcols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.k8-bh-gcol { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.k8-bh-ghead { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 10px 12px; border-radius: 12px; font-size: 16px; }
+.k8-bh-ghead b { font-weight: 700; } .k8-bh-ghead span { font-size: 14px; font-weight: 600; }
+.k8-bh-gcol.is-m .k8-bh-ghead { background: #dbeafe; color: #1d4ed8; }
+.k8-bh-gcol.is-f .k8-bh-ghead { background: #ccfbf1; color: #0f766e; }
+.k8-bh-gcols .k8-bh-stu button { gap: 10px; min-height: 64px; padding: 10px; align-items: center; }
+.k8-bh-gcols .k8-bh-who b { font-size: 16.5px; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
+.k8-bh-gcols .k8-bh-who small { font-size: 14px; }
+.k8-bh-gcols .k8-bh-who small i { font-style: normal; font-weight: 700; }
+.k8-bh-gcols .k8-bh-chk { width: 28px; height: 28px; font-size: 16px; }
+.k8-bh-gcol.is-m .k8-bh-stu button[aria-checked="true"] { border-color: #1d4ed8; background: #eff6ff; }
+.k8-bh-gcol.is-m .k8-bh-stu button[aria-checked="true"] .k8-bh-chk { background: #1d4ed8; border-color: #1d4ed8; }
+.k8-bh-gcols .k8-bh-all { align-self: center; font-size: 15px; }
+.k8-bh-gcol.is-m .k8-bh-all { color: #1d4ed8; }
+.k8-bh-gcols .k8-bh-empty { font-size: 14px; padding: 14px 6px; border: 1px dashed #e2e8f0; border-radius: 12px; }
+.k8-bh-gsum { display: block; font-size: 13.5px; color: #64748b; }
+.k8-bh-savebar-t { font-size: 15px; }
+html.k8-xnarrow .k8-bh-gcols, html.k8-narrow .k8-bh-gcols { grid-template-columns: 1fr; }
+@media (max-width: 340px) { .k8-bh-gcols { grid-template-columns: 1fr; } }
+@media (min-width: 900px) { .k8-bh-gcols { gap: 16px; } }

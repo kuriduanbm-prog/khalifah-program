@@ -3317,7 +3317,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.71';
+  const APP_VERSION = '17.72';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3590,6 +3590,7 @@ window.k8RegBirthChange = function (v) {
 
   function recordHtml() {
     const sm = scoreMap();
+    const girlOf = (s) => !!(window.k8IsGirl && window.k8IsGirl(s));
     const rules = B.rules.filter((r) => r.cat === B.cat);
     const custom = B.ruleId === '__custom';
     const rule = custom ? { title: B.custom.title, points: Number(B.custom.points) || 0, cat: B.cat } : B.rules.find((r) => r.id === B.ruleId);
@@ -3612,9 +3613,13 @@ window.k8RegBirthChange = function (v) {
       (custom ? '<div class="k8-bh-custom"><input type="text" maxlength="120" placeholder="ระบุสิ่งที่ตรวจพบ" value="' + esc(B.custom.title) + '" oninput="k8BhCustom(\'title\', this.value)"><label>คะแนน<input type="number" inputmode="numeric" min="-20" max="20" value="' + esc(B.custom.points) + '" oninput="k8BhCustom(\'points\', this.value)"></label><small>ติดลบ = หักคะแนน · บวก = เพิ่มคะแนน (ครั้งละไม่เกิน 20)</small></div>' : '') + '</section>';
     h += '<section class="k8-bh-card"><div class="k8-bh-h-row"><h2 class="k8-bh-h"><span class="k8-bh-step">3</span>เลือกนักเรียน</h2>' + (selN ? '<button type="button" class="k8-bh-link" onclick="k8BhClearSel()">ล้างที่เลือก (' + selN + ')</button>' : '') + '</div>' +
       '<div class="k8-bh-filter"><input type="search" id="k8BhQ" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(B.q) + '" oninput="k8BhQ(this)" autocomplete="off">' + gradeSelect(B.grade, 'grade') + '</div>' +
-      (list.length ? '<button type="button" class="k8-bh-link k8-bh-all" onclick="k8BhSelAll()">' + (list.every((s) => B.sel.has(norm(s.studentId))) ? 'ยกเลิกเลือกทั้งหมดในรายการ' : 'เลือกทั้งหมดในรายการ (' + list.length + ' คน)') + '</button>' : '') +
-      '<ul class="k8-bh-stu">' + (list.length ? list.slice(0, 200).map((s) => { const k = norm(s.studentId); const sc = clamp(100 + (sm[k] || 0)); const on = B.sel.has(k); const lv = level(sc);
-        return '<li><button type="button" role="checkbox" aria-checked="' + on + '" onclick="k8BhToggle(\'' + js(k) + '\')"><span class="k8-bh-chk">' + (on ? '✓' : '') + '</span><span class="k8-bh-who"><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(s.studentId) + '</small></span><span class="k8-bh-sc" style="color:' + lv[1] + ';background:' + lv[2] + '">' + sc + '</span></button></li>'; }).join('') : '<li class="k8-bh-empty">ไม่พบนักเรียน</li>') + '</ul></section>';
+      // v17.72 · ผู้ตรวจการ · แยกนักเรียนชาย (ซ้าย) / หญิง (ขวา) · เลือกทั้งหมดแยกตามฝั่ง
+      '<div class="k8-bh-gcols">' + [['m', 'ชาย', list.filter((s) => !girlOf(s))], ['f', 'หญิง', list.filter(girlOf)]].map(([g, l, L]) => {
+        const allOn = L.length && L.every((s) => B.sel.has(norm(s.studentId)));
+        return '<div class="k8-bh-gcol is-' + g + '"><div class="k8-bh-ghead"><b>' + l + '</b><span>' + L.length + ' คน</span></div>' +
+          '<ul class="k8-bh-stu">' + (L.length ? L.slice(0, 200).map((s) => { const k = norm(s.studentId); const sc = clamp(100 + (sm[k] || 0)); const on = B.sel.has(k); const lv = level(sc);
+            return '<li><button type="button" role="checkbox" aria-checked="' + on + '" onclick="k8BhToggle(\'' + js(k) + '\')"><span class="k8-bh-chk">' + (on ? '✓' : '') + '</span><span class="k8-bh-who"><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · <i style="color:' + lv[1] + '">' + sc + '</i></small></span></button></li>'; }).join('') : '<li class="k8-bh-empty">ไม่มีนักเรียน' + l + '</li>') + '</ul>' +
+          (L.length ? '<button type="button" class="k8-bh-link k8-bh-all" onclick="k8BhSelAll(\'' + g + '\')">' + (allOn ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด') + '</button>' : '') + '</div>'; }).join('') + '</div></section>';
     const ready = rule && rule.title && rule.points && selN;
     const needPhoto = (B.cat === 'dorm' || B.cat === 'toilet') && rule && Number(rule.points) < 0;
     // v17.71 · รูปหลักฐานได้สูงสุด 4 รูป
@@ -3627,7 +3632,7 @@ window.k8RegBirthChange = function (v) {
       '<p class="k8-bh-summary">' + (ready ? '<b class="' + (rule.points > 0 ? 'is-plus' : 'is-minus') + '">' + (rule.points > 0 ? 'เพิ่ม ' + rule.points : 'หัก ' + Math.abs(rule.points)) + ' คะแนน</b> · ' + esc(rule.title) + ' · นักเรียน ' + selN + ' คน' : 'เลือกหัวข้อและนักเรียนให้ครบก่อน') + '</p>' +
       '</section>';
     // v17.49 · ปุ่มบันทึกติดด้านล่างจอเสมอ (กดได้ทันทีโดยไม่ต้องเลื่อนลงไปข้อ 4)
-    h += '<div class="k8-bh-savebar"><span class="k8-bh-savebar-t">' + (ready ? '<b class="' + (rule.points > 0 ? 'is-plus' : 'is-minus') + '">' + (rule.points > 0 ? '+' + rule.points : rule.points) + ' คะแนน</b> · ' + selN + ' คน' : (!rule || !rule.title ? 'ยังไม่ได้เลือกหัวข้อ' : 'ยังไม่ได้เลือกนักเรียน')) + '</span>' +
+    h += '<div class="k8-bh-savebar"><span class="k8-bh-savebar-t">' + (ready ? '<b class="' + (rule.points > 0 ? 'is-plus' : 'is-minus') + '">' + (rule.points > 0 ? '+' + rule.points : rule.points) + ' คะแนน</b> · ' + selN + ' คน' : (!rule || !rule.title ? 'ยังไม่ได้เลือกหัวข้อ' : 'ยังไม่ได้เลือกนักเรียน')) + (selN ? (() => { const S = students().filter((x) => B.sel.has(norm(x.studentId))); const f = S.filter(girlOf).length; return '<small class="k8-bh-gsum">เลือกแล้ว ' + S.length + ' คน · ชาย ' + (S.length - f) + ' · หญิง ' + f + '</small>'; })() : '') + '</span>' +
       '<button type="button" class="k8-bh-go ' + (rule && rule.points > 0 ? 'is-plus' : '') + '" ' + (ready && !B.saving ? '' : 'disabled') + ' onclick="k8BhSubmit()">' + (B.saving ? 'กำลังบันทึก…' : ready ? (rule.points > 0 ? 'เพิ่มคะแนน' : 'หักคะแนน') + ' ' + selN + ' คน' : 'บันทึก') + '</button></div>';
     return h;
   }
@@ -3715,9 +3720,10 @@ window.k8RegBirthChange = function (v) {
   window.k8BhHQ = function (el) { B.hq = el.value; clearTimeout(qt); qt = setTimeout(() => refocus('k8BhHQ', el), 150); };
   window.k8BhToggle = function (k) { if (B.sel.has(k)) B.sel.delete(k); else B.sel.add(k); render(); };
   window.k8BhClearSel = function () { B.sel.clear(); render(); };
-  window.k8BhSelAll = function () {
+  window.k8BhSelAll = function (g) {
     const q = B.q.trim().toLowerCase();
-    const list = students().filter((s) => (B.grade === 'ALL' || s.grade === B.grade) && (!q || String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))));
+    const gl = (s) => !!(window.k8IsGirl && window.k8IsGirl(s));
+    const list = students().filter((s) => (B.grade === 'ALL' || s.grade === B.grade) && (!q || String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))) && (!g || (g === 'f') === gl(s)));
     const allOn = list.every((s) => B.sel.has(norm(s.studentId)));
     list.forEach((s) => { if (allOn) B.sel.delete(norm(s.studentId)); else B.sel.add(norm(s.studentId)); });
     render();
