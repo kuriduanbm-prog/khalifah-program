@@ -3317,7 +3317,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.74';
+  const APP_VERSION = '17.75';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3541,7 +3541,7 @@ window.k8RegBirthChange = function (v) {
   const api = (a, p) => (typeof gasApiCall === 'function' ? gasApiCall(a, p || {}, 25000) : Promise.reject(new Error('no api')));
   const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t); };
 
-  const B = { rules: [], logs: [], students: [], loaded: false, loading: false, tab: 'record', cat: 'dress', ruleId: '', sel: new Set(), q: '', grade: 'ALL', note: '', date: ymd(new Date()), custom: { title: '', points: -5 }, saving: false, hq: '', hRange: 'today', hMine: true, sq: '', sGrade: 'ALL', sLevel: 'all', editRules: null };
+  const B = { rules: [], logs: [], students: [], loaded: false, loading: false, tab: 'record', cat: 'dress', ruleId: '', sel: new Set(), q: '', grade: 'ALL', note: '', date: ymd(new Date()), custom: { title: '', points: -5 }, saving: false, hq: '', hRange: 'today', hMine: false, sq: '', sGrade: 'ALL', sLevel: 'all', editRules: null };
 
   function scoreMap() {
     const t = term(); const m = {};
@@ -3663,11 +3663,11 @@ window.k8RegBirthChange = function (v) {
     list.sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
     const minus = list.filter((l) => l.status !== 'cancelled' && l.points < 0).length, plus = list.filter((l) => l.status !== 'cancelled' && l.points > 0).length;
     return '<section class="k8-bh-card"><div class="k8-bh-filter"><div class="k8h-mini-seg">' + [['today', 'วันนี้'], ['week', '7 วัน'], ['term', 'ภาคเรียนนี้']].map(([k, l]) => '<button type="button" aria-pressed="' + (B.hRange === k) + '" onclick="k8BhSet(\'hRange\',\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
-      (admin ? '<div class="k8h-mini-seg">' + [[true, 'ของฉัน'], [false, 'ทุกคน']].map(([k, l]) => '<button type="button" aria-pressed="' + (B.hMine === k) + '" onclick="k8BhSet(\'hMine\',' + k + ')">' + l + '</button>').join('') + '</div>' : '') +
+      (admin ? '<div class="k8h-mini-seg">' + [[false, 'ทุกคน'], [true, 'ของฉัน']].map(([k, l]) => '<button type="button" aria-pressed="' + (B.hMine === k) + '" onclick="k8BhSet(\'hMine\',' + k + ')">' + l + '</button>').join('') + '</div>' : '') +
       '<input type="search" placeholder="ค้นหาชื่อนักเรียนหรือหัวข้อ" value="' + esc(B.hq) + '" oninput="k8BhHQ(this)" id="k8BhHQ" autocomplete="off"></div>' +
-      '<p class="k8-bh-intro">' + list.length + ' รายการ · หักคะแนน ' + minus + ' · เพิ่มคะแนน ' + plus + (admin ? '' : ' · ยกเลิกรายการที่บันทึกผิดได้') + '</p>' +
+      '<p class="k8-bh-intro">' + (admin ? 'รายการหัก/เพิ่มคะแนนที่ผู้ตรวจการและแอดมินบันทึก · ดูได้ว่าใครบันทึก เมื่อไร พร้อมรูปหลักฐาน · ยกเลิกรายการที่บันทึกผิดได้<br>' : '') + list.length + ' รายการ · หักคะแนน ' + minus + ' · เพิ่มคะแนน ' + plus + (admin ? '' : ' · ยกเลิกรายการที่บันทึกผิดได้') + '</p>' +
       '<ul class="k8-bh-hist">' + (list.length ? list.slice(0, 300).map((l) => { const c = catOf(l.cat); const own = String(l.by || '').toLowerCase() === uid; const can = l.status !== 'cancelled' && (own || isAdmin());
-        return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span>' + (l.photoUrl ? '<span class="k8-bh-hphs">' + String(l.photoUrl).split(/\s*\n\s*/).filter(Boolean).slice(0, 4).map((u, i, A) => '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(u) + '\',\'รูปหลักฐาน ' + (i + 1) + '/' + A.length + '\')" title="' + esc((String(l.photoSource || '').split(/\n/)[i]) || 'รูปหลักฐาน') + '"><img src="' + esc(u) + '" alt="รูปหลักฐานที่ ' + (i + 1) + '" loading="lazy"></button>').join('') + '</span>' : '') + '<span class="k8-bh-who"><b>' + esc(l.studentName || l.studentId) + ' <small>' + esc(shortG(l.grade)) + '</small></b><small>' + esc(l.title) + (l.note ? ' · ' + esc(l.note) : '') + '</small><small class="k8-bh-meta">' + fmtD(l.date) + ' ' + esc(String(l.time || '').slice(11, 16)) + ' · ' + esc(l.byName || l.by) + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span>' + (can ? '<button type="button" class="k8-bh-undo" onclick="k8BhCancel(\'' + js(l.id) + '\')" aria-label="ยกเลิกรายการนี้">ยกเลิก</button>' : '') + '</li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีรายการในช่วงนี้</li>') + '</ul></section>';
+        return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span>' + (l.photoUrl ? '<span class="k8-bh-hphs">' + String(l.photoUrl).split(/\s*\n\s*/).filter(Boolean).slice(0, 4).map((u, i, A) => '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(u) + '\',\'รูปหลักฐาน ' + (i + 1) + '/' + A.length + '\')" title="' + esc((String(l.photoSource || '').split(/\n/)[i]) || 'รูปหลักฐาน') + '"><img src="' + esc(u) + '" alt="รูปหลักฐานที่ ' + (i + 1) + '" loading="lazy"></button>').join('') + '</span>' : '') + '<span class="k8-bh-who"><b>' + esc(l.studentName || l.studentId) + ' <small>' + esc(shortG(l.grade)) + '</small></b><small>' + esc(l.title) + (l.note ? ' · ' + esc(l.note) : '') + '</small><small class="k8-bh-meta">' + fmtD(l.date) + ' ' + esc(String(l.time || '').slice(11, 16)) + ' · ' + esc(l.byName || l.by) + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small></span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span>' + (can ? '<button type="button" class="k8-bh-undo" onclick="k8BhCancel(\'' + js(l.id) + '\')" aria-label="ยกเลิกรายการนี้">ยกเลิก</button>' : '') + '</li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีรายการในช่วงนี้' + (B.hRange !== 'term' ? ' · ลองเลือก "ภาคเรียนนี้"' : '') + (admin && B.hMine ? ' หรือ "ทุกคน"' : '') + '</li>') + '</ul></section>';
   }
 
   function rulesHtml() {
@@ -3745,8 +3745,10 @@ window.k8RegBirthChange = function (v) {
       const r = await api('addBehaviorLogs', { data: payload });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
       B.logs = B.logs.concat(r.logs || []);
+      const sent = (payload.photos || []).length, got = (r.logs && r.logs[0] && r.logs[0].photoUrl) ? String(r.logs[0].photoUrl).split(/\s*\n\s*/).filter(Boolean).length : 0;
       B.sel.clear(); B.note = ''; B.photos = [];
-      toast('บันทึกแล้ว · ' + r.message, 'success');
+      if (sent > 1 && got < sent) toast('บันทึกแล้ว แต่ระบบหลังบ้านเก็บรูปได้ ' + got + '/' + sent + ' รูป · แจ้งแอดมินให้อัปเดต Code.gs ตัวล่าสุด', 'error');
+      else toast('บันทึกแล้ว · ' + r.message, 'success');
     } catch (e) { toast(e.message || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
     B.saving = false; render();
   };
