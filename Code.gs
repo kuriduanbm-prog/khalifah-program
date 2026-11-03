@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.77'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.79'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -967,18 +967,21 @@ function verifyToken_(token) {
 const INSPECTOR_ROLE_VALUES = ['inspector', 'ผู้ตรวจการ'];
 function isInspectorRole_(v) { return INSPECTOR_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
 // บทบาทที่เข้าระบบทางแท็บแอดมินด้วยรหัสผ่านอย่างเดียว
-const PASSWORD_ONLY_ROLE_VALUES = ['superadmin', 'subadmin', 'admin', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง', 'executive', 'ผู้บริหาร', 'inspector', 'ผู้ตรวจการ', 'activityadmin', 'activity', 'ฝ่ายกิจกรรม'];
+const PASSWORD_ONLY_ROLE_VALUES = ['superadmin', 'subadmin', 'admin', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง', 'executive', 'ผู้บริหาร', 'inspector', 'ผู้ตรวจการ', 'activityadmin', 'activity', 'ฝ่ายกิจกรรม', 'nightduty', 'ครูเวรหอพักกลางคืน', 'ครูเวรหอพัก'];
 // v17.48 · บัญชีสิทธิ์จำกัด (เข้าทางแท็บแอดมิน เห็นเฉพาะเมนูของตน · เซิร์ฟเวอร์ตรวจทุกคำสั่ง)
-function limitOfRole_(v) { const r = cleanVal(v).toLowerCase(); if (r === 'executive' || r === 'ผู้บริหาร') return 'exec'; if (r === 'activityadmin' || r === 'activity' || r === 'ฝ่ายกิจกรรม') return 'act'; return ''; }
+function limitOfRole_(v) { const r = cleanVal(v).toLowerCase(); if (r === 'executive' || r === 'ผู้บริหาร') return 'exec'; if (r === 'activityadmin' || r === 'activity' || r === 'ฝ่ายกิจกรรม') return 'act'; if (r === 'nightduty' || r === 'ครูเวรหอพักกลางคืน' || r === 'ครูเวรหอพัก') return 'night'; return ''; }
 const LIMIT_COMMON_ACTIONS_ = ['whoami', 'getMyNotifications', 'markNotificationRead', 'hideNotification', 'updateSubAdminPhoto', 'getFullDatabase', 'getSettings', 'getCalendarEvents', 'getPolicy'];
 // ผู้บริหาร: ดูได้ทุกอย่าง (อ่านอย่างเดียว) · แก้ได้เฉพาะตารางสอน และอนุมัติลาสอน
 const LIMIT_EXEC_WRITES_ = ['saveTimetable', 'saveTimetableExtra', 'deleteTimetableExtra', 'saveTimetableConfig', 'approveTeacherLeave'];
 // ฝ่ายกิจกรรม: ดูกิจกรรม + สแกน/เช็คชื่อเข้ากิจกรรม (เพิ่ม/ลบกิจกรรมไม่ได้)
 const LIMIT_ACT_ACTIONS_ = ['getActivities', 'getActivityLogs', 'activityCheckIn', 'checkInActivity', 'getAllStudents'];
+// v17.79 · ครูเวรหอพักกลางคืน: สร้าง/ลบกิจกรรม + เปิด QR/เช็คชื่อ · บันทึกคะแนนพฤติกรรม (แก้หัวข้อไม่ได้)
+const LIMIT_NIGHT_ACTIONS_ = LIMIT_ACT_ACTIONS_.concat(['createActivity', 'deleteActivity', 'deleteActivityAttendee', 'getBehaviorData', 'addBehaviorLogs', 'cancelBehaviorLog']);
 function limitAllows_(limit, action) {
   if (LIMIT_COMMON_ACTIONS_.indexOf(action) !== -1) return true;
   if (limit === 'exec') return READ_ONLY_ACTIONS.indexOf(action) !== -1 || LIMIT_EXEC_WRITES_.indexOf(action) !== -1;
   if (limit === 'act') return LIMIT_ACT_ACTIONS_.indexOf(action) !== -1;
+  if (limit === 'night') return LIMIT_NIGHT_ACTIONS_.indexOf(action) !== -1;
   return true;
 }
 function isPasswordOnlyRole_(v) { return PASSWORD_ONLY_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
@@ -1289,7 +1292,7 @@ function routeRequest_(action, req, method) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
       if (session.limit && !limitAllows_(session.limit, action)) {
-        return { success: false, forbidden: true, code: 'FORBIDDEN', message: session.limit === 'act' ? 'บัญชีฝ่ายกิจกรรมใช้ได้เฉพาะดูกิจกรรมและสแกนเช็คชื่อ' : 'บัญชีผู้บริหารดูข้อมูลได้ · แก้ไขได้เฉพาะตารางสอนและอนุมัติลาสอน' };
+        return { success: false, forbidden: true, code: 'FORBIDDEN', message: session.limit === 'act' ? 'บัญชีฝ่ายกิจกรรมใช้ได้เฉพาะดูกิจกรรมและสแกนเช็คชื่อ' : session.limit === 'night' ? 'บัญชีครูเวรหอพักกลางคืนใช้ได้เฉพาะกิจกรรม/QR และบันทึกคะแนนพฤติกรรม' : 'บัญชีผู้บริหารดูข้อมูลได้ · แก้ไขได้เฉพาะตารางสอนและอนุมัติลาสอน' };
       }
     }
 
@@ -4058,7 +4061,7 @@ function verifyAdminLogin(password, username) {
       }
       const roleVal = cleanVal(rows[i][4]) || (kind === 'admin' ? 'Admin' : 'TEACHER');
       const lim = limitOfRole_(roleVal);
-      const tokenRole = lim === 'exec' ? 'admin' : lim === 'act' ? 'teacher' : staffTokenRole_(roleVal);
+      const tokenRole = lim === 'exec' ? 'admin' : (lim === 'act' || lim === 'night') ? 'teacher' : staffTokenRole_(roleVal);
       loginSucceeded_(rlKey);
       return {
         success: true,
@@ -6331,7 +6334,9 @@ function isAdminStaff_(username) {
 // =====================================================================
 //  🧭 คะแนนพฤติกรรม (เต็ม 100 ต่อภาคเรียน) — ผู้ตรวจการหัก/เพิ่มคะแนนตามหัวข้อที่แอดมินตั้งไว้
 // =====================================================================
-const BEHAVIOR_CATS = ['dress', 'dorm', 'toilet', 'conduct', 'good'];
+const BEHAVIOR_CATS = ['dress', 'dorm', 'toilet', 'conduct', 'reading', 'good'];
+// v17.79 · หมวด "การอ่านหนังสือ" ใช้กับนักเรียนชาย ม.4–ม.6 เท่านั้น
+const READING_GRADES_ = ['4', '5', '6'];
 const DEFAULT_BEHAVIOR_RULES = [
   { id: 'd1', cat: 'dress', title: 'แต่งกายไม่ถูกระเบียบ', points: -5 },
   { id: 'd2', cat: 'dress', title: 'ไม่สวมหมวก/ผ้าคลุมผมตามระเบียบ', points: -3 },
@@ -6342,6 +6347,9 @@ const DEFAULT_BEHAVIOR_RULES = [
   { id: 'c1', cat: 'conduct', title: 'มาสาย / ไม่ตรงต่อเวลา', points: -3 },
   { id: 'c2', cat: 'conduct', title: 'ไม่เข้าร่วมกิจกรรมโดยไม่แจ้ง', points: -5 },
   { id: 'c3', cat: 'conduct', title: 'พูดจาไม่สุภาพ / ทะเลาะวิวาท', points: -10 },
+  { id: 'b1', cat: 'reading', title: 'ไม่อ่านหนังสือในเวลาอ่านหนังสือ', points: -3 },
+  { id: 'b2', cat: 'reading', title: 'ไม่อยู่ในที่อ่านหนังสือ / ออกนอกห้องโดยไม่ขออนุญาต', points: -5 },
+  { id: 'b3', cat: 'reading', title: 'คุยเสียงดัง / รบกวนผู้อื่นขณะอ่านหนังสือ', points: -3 },
   { id: 'g1', cat: 'good', title: 'ละหมาดญะมาอะฮ์ครบทุกเวลา', points: 3 },
   { id: 'g2', cat: 'good', title: 'มีน้ำใจ ช่วยเหลือผู้อื่น', points: 3 },
   { id: 'g3', cat: 'good', title: 'มีวินัย เป็นแบบอย่างที่ดี', points: 5 }
@@ -6367,7 +6375,7 @@ function sanitizeBehaviorRules_(list) {
 function getBehaviorRules_() {
   try {
     const raw = (getSettings().data || {}).BehaviorRules;
-    if (raw) { const list = sanitizeBehaviorRules_(JSON.parse(raw)); if (list.length) return list; }
+    if (raw) { const list = sanitizeBehaviorRules_(JSON.parse(raw)); if (list.length) { if (!list.some(function (r) { return r.cat === 'reading'; })) DEFAULT_BEHAVIOR_RULES.filter(function (r) { return r.cat === 'reading'; }).forEach(function (r) { if (!list.some(function (x) { return x.id === r.id; })) list.push(r); }); return list; } }
   } catch (e) {}
   return DEFAULT_BEHAVIOR_RULES.slice();
 }
@@ -6406,7 +6414,7 @@ function addBehaviorLogs_(data, session) {
     let pts = Math.round(Number(data.points));
     if (!title || !isFinite(pts) || pts === 0) return { success: false, message: 'ไม่พบหัวข้อที่เลือก' };
     pts = Math.max(-20, Math.min(20, pts));
-    rule = { id: 'custom', cat: pts > 0 ? 'good' : 'conduct', title: title, points: pts };
+    rule = { id: 'custom', cat: cleanVal(data.cat) === 'reading' ? 'reading' : (pts > 0 ? 'good' : 'conduct'), title: title, points: pts };
   }
   const date = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(data.date)) ? cleanVal(data.date) : Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
   const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
@@ -6426,20 +6434,21 @@ function addBehaviorLogs_(data, session) {
   const sh = ss.getSheetByName(SHEETS.BEHAVIOR);
   const stuSheet = ss.getSheetByName(SHEETS.STUDENTS);
   const info = {};
-  if (stuSheet && stuSheet.getLastRow() > 1) stuSheet.getRange(2, 1, stuSheet.getLastRow() - 1, 4).getValues().forEach(function (r) { info[cleanVal(r[0]).replace(/^0+/, '')] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]) }; });
+  if (stuSheet && stuSheet.getLastRow() > 1) stuSheet.getRange(2, 1, stuSheet.getLastRow() - 1, Math.min(17, stuSheet.getLastColumn())).getValues().forEach(function (r) { info[cleanVal(r[0]).replace(/^0+/, '')] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]), gender: cleanVal(r[16] || '') }; });
   const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
   const term = currentTerm_();
-  const rows = []; const missing = [];
+  const rows = []; const missing = []; const skipped = [];
   ids.forEach(function (sid, i) {
     const st = info[sid.replace(/^0+/, '')];
     if (!st) { missing.push(sid); return; }
+    if (rule.cat === 'reading') { const gm = String(st.grade).match(/([1-6])/); const girl = /หญิง|^f/i.test(st.gender) || (!/ชาย|^m/i.test(st.gender) && /^\s*(นางสาว|น\.ส\.|นาง|เด็กหญิง|ด\.ญ\.)/.test(st.name)); if (girl || !gm || READING_GRADES_.indexOf(gm[1]) === -1) { skipped.push(st.name || sid); return; } }
     rows.push(['BHV-' + Date.now() + '-' + i, date, now, term, st.id, st.name, st.grade, rule.cat, rule.id, rule.title, rule.points, note, session.userId, session.name || session.userId, 'active', '', photoUrl, photoSource]);
   });
-  if (!rows.length) return { success: false, message: 'ไม่พบรหัสนักเรียนที่เลือก' };
+  if (!rows.length) return { success: false, message: skipped.length ? 'หมวดการอ่านหนังสือใช้กับนักเรียนชาย ม.4–ม.6 เท่านั้น' : 'ไม่พบรหัสนักเรียนที่เลือก' };
   const lock = LockService.getScriptLock();
   try { lock.waitLock(15000); } catch (e) {}
   try { sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows); } finally { try { lock.releaseLock(); } catch (e) {} }
-  return { success: true, photoMax: 4, photosSaved: urls.length, added: rows.length, missing: missing, points: rule.points, logs: rows.map(function (r) { return { id: r[0], date: r[1], time: r[2], term: r[3], studentId: r[4], studentName: r[5], grade: r[6], cat: r[7], ruleId: r[8], title: r[9], points: r[10], note: r[11], by: r[12], byName: r[13], status: 'active', photoUrl: r[16], photoSource: r[17] }; }),
+  return { success: true, photoMax: 4, photosSaved: urls.length, added: rows.length, missing: missing, skipped: skipped, points: rule.points, logs: rows.map(function (r) { return { id: r[0], date: r[1], time: r[2], term: r[3], studentId: r[4], studentName: r[5], grade: r[6], cat: r[7], ruleId: r[8], title: r[9], points: r[10], note: r[11], by: r[12], byName: r[13], status: 'active', photoUrl: r[16], photoSource: r[17] }; }),
     message: (rule.points < 0 ? 'หัก ' + Math.abs(rule.points) : 'เพิ่ม ' + rule.points) + ' คะแนน · ' + rows.length + ' คน' };
 }
 function cancelBehaviorLog_(logId, session, isAdmin) {

@@ -2044,6 +2044,7 @@ html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td button { border: 1.5px das
 html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td button.has { border: 1px solid #32363c !important; background-color: #121212 !important; color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit tr.is-today td button:not(.has) { background-color: #0e2432 !important; }
 html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td.is-nowcol button:not(.has) { background-color: #0e2432 !important; }
+html[data-theme="dark"] .k8-bh-rdnote { background-color: #0f1733 !important; color: #8b85e0 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

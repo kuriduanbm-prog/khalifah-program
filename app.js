@@ -6915,7 +6915,7 @@ async function performStaffLogin({ username, password, btn, userEl, passEl, moda
     updateAdminUIVisibility(true);
     (modalsToClose || ['authModal']).forEach(id => closeModal(id));
     switchView(isSuper ? 'admin' : 'teacher');
-    const roleWelcome = profile.limited === 'exec' ? 'ผู้บริหาร' : profile.limited === 'act' ? 'ฝ่ายกิจกรรม' : isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : (/INSPECTOR|ผู้ตรวจการ/i.test(String(profile.role)) ? 'ผู้ตรวจการ' : 'อาจารย์'));
+    const roleWelcome = profile.limited === 'exec' ? 'ผู้บริหาร' : profile.limited === 'act' ? 'ฝ่ายกิจกรรม' : profile.limited === 'night' ? 'ครูเวรหอพักกลางคืน' : isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : (/INSPECTOR|ผู้ตรวจการ/i.test(String(profile.role)) ? 'ผู้ตรวจการ' : 'อาจารย์'));
     showToast(`ยินดีต้อนรับ${roleWelcome} ${profile.fullName || profile.username}`, 'success');
     if (res.securityWarning) {
       setTimeout(() => showToast('⚠️ ' + res.securityWarning, 'warning'), 1500);
@@ -8982,7 +8982,7 @@ function openEditTeacherModal(username) {
     const ownerNow = !!currentAdmin && currentAdmin.role === 'SuperAdmin' && !currentAdmin.isSubAdmin;
     Array.from(sel.options).forEach((o) => { if (o.dataset.ownerOnly) { o.hidden = !ownerNow; o.disabled = !ownerNow; } });
     sel.value = r;
-    if (sel.value !== r) sel.value = /super/.test(l) ? 'SuperAdmin' : /inspector|ผู้ตรวจการ/.test(l) ? 'INSPECTOR' : /executive|ผู้บริหาร/.test(l) ? 'EXECUTIVE' : /teacheradmin|homeroom|ประจำชั้น/.test(l) ? 'TeacherAdmin' : /activity|กิจกรรม/.test(l) ? 'ActivityAdmin' : /subadmin|admin|ผู้ช่วย/.test(l) ? 'SubAdmin' : 'TEACHER';
+    if (sel.value !== r) sel.value = /super/.test(l) ? 'SuperAdmin' : /nightduty|ครูเวร/.test(l) ? 'NIGHTDUTY' : /inspector|ผู้ตรวจการ/.test(l) ? 'INSPECTOR' : /executive|ผู้บริหาร/.test(l) ? 'EXECUTIVE' : /teacheradmin|homeroom|ประจำชั้น/.test(l) ? 'TeacherAdmin' : /activity|กิจกรรม/.test(l) ? 'ActivityAdmin' : /subadmin|admin|ผู้ช่วย/.test(l) ? 'SubAdmin' : 'TEACHER';
   }
 
   const assignedArr = Array.isArray(t.assignedSubjects)
@@ -9091,11 +9091,12 @@ function renderSubAdminsTable() {
     TeacherAdmin: { label: 'อาจารย์ประจำชั้น', bg: '#fefce8', color: '#a16207', border: '#fde047' },
     ActivityAdmin: { label: 'ฝ่ายกิจกรรม', bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
     INSPECTOR: { label: 'ผู้ตรวจการ', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+    NIGHTDUTY: { label: 'ครูเวรหอพักกลางคืน', bg: '#eef2ff', color: '#3730a3', border: '#c7d2fe' },
     SuperAdmin: { label: 'แอดมินสูงสุด', bg: '#0f172a', color: '#ffffff', border: '#0f172a' }
   };
   // ตำแหน่งที่เขียนต่างกัน (ตัวพิมพ์เล็ก/ไทย) ให้ตรงกับป้ายที่ถูกต้อง
   const roleKey = (r) => { const v = String(r || '').trim(); if (roleMap[v]) return v; const l = v.toLowerCase();
-    if (/inspector|ผู้ตรวจการ/.test(l)) return 'INSPECTOR'; if (/executive|ผู้บริหาร/.test(l)) return 'EXECUTIVE'; if (/teacheradmin|homeroom|ประจำชั้น/.test(l)) return 'TeacherAdmin';
+    if (/nightduty|ครูเวร/.test(l)) return 'NIGHTDUTY'; if (/inspector|ผู้ตรวจการ/.test(l)) return 'INSPECTOR'; if (/executive|ผู้บริหาร/.test(l)) return 'EXECUTIVE'; if (/teacheradmin|homeroom|ประจำชั้น/.test(l)) return 'TeacherAdmin';
     if (/activity|กิจกรรม/.test(l)) return 'ActivityAdmin'; if (/super/.test(l)) return 'SuperAdmin'; if (/subadmin|admin|แอดมิน|ผู้ช่วย/.test(l)) return 'SubAdmin'; return 'TEACHER'; };
 
   tbody.innerHTML = subAdmins.map(a => {
@@ -9104,8 +9105,8 @@ function renderSubAdminsTable() {
       : (a.assignedSubject ? [a.assignedSubject] : []);
 
     const rk = roleKey(a.role);
-    const noSubj = ['EXECUTIVE', 'INSPECTOR', 'SubAdmin', 'ActivityAdmin', 'SuperAdmin'].indexOf(rk) !== -1;
-    const subjNames = noSubj ? ({ EXECUTIVE: 'ทั้งโรงเรียน', INSPECTOR: 'คะแนนพฤติกรรม', SubAdmin: 'ระบบแอดมิน', ActivityAdmin: 'กิจกรรม', SuperAdmin: 'ทั้งระบบ' }[rk]) : (assignedIds.length === 0 || assignedIds.length >= appSubjects.length)
+    const noSubj = ['EXECUTIVE', 'INSPECTOR', 'NIGHTDUTY', 'SubAdmin', 'ActivityAdmin', 'SuperAdmin'].indexOf(rk) !== -1;
+    const subjNames = noSubj ? ({ EXECUTIVE: 'ทั้งโรงเรียน', INSPECTOR: 'คะแนนพฤติกรรม', NIGHTDUTY: 'เวรหอพัก · พฤติกรรม · กิจกรรม', SubAdmin: 'ระบบแอดมิน', ActivityAdmin: 'กิจกรรม', SuperAdmin: 'ทั้งระบบ' }[rk]) : (assignedIds.length === 0 || assignedIds.length >= appSubjects.length)
       ? 'ทุกวิชา / ทั้งโรงเรียน'
       : assignedIds.map(id => {
           const s = appSubjects.find(x => x.id === id);

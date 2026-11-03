@@ -4292,3 +4292,9 @@ html.k8-xnarrow .k8-bh-gcols, html.k8-narrow .k8-bh-gcols { grid-template-column
 .k8-tt-list li.is-now .k8-tt-time small { color: #bae6fd; }
 .k8-tt-grid.is-tt2 .k8-tt-dbtn { text-decoration: none; border: 0; background: transparent; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .k8-tt-list li.is-now .k8-tt-time b { color: #fff; }
+/* v17.79 · หมวดการอ่านหนังสือ (ชาย ม.4–6) */
+.k8-bh-gcols.is-one { grid-template-columns: 1fr; }
+.k8-bh-gcols.is-one .k8-bh-stu { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.k8-bh-rdnote { margin: 0; padding: 8px 12px; border-radius: 10px; background: #eef2ff; color: #3730a3 !important; font-weight: 600; }
+.k8-bh-cats { grid-template-columns: repeat(6, minmax(0, 1fr)); } @media (max-width: 760px) { .k8-bh-cats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+body.k8-lim .k8-adm-modes { display: none !important; }

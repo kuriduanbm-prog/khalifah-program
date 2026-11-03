@@ -3183,11 +3183,12 @@ window.k8RegBirthChange = function (v) {
     ['TeacherAdmin', 'ครูประจำชั้น', 'เหมือนอาจารย์ + ดูสถิติห้องเรียน', false],
     ['EXECUTIVE', 'ผู้บริหาร', 'ดูนักเรียน อาจารย์ ละหมาด อันดับ พฤติกรรม รายวิชา เกรด หะละเกาะฮฺ · แก้ตารางสอนและอนุมัติลาสอนได้ (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['ActivityAdmin', 'ฝ่ายกิจกรรม', 'ดูกิจกรรมและสแกน/เช็คชื่อเข้ากิจกรรม · เพิ่มหรือลบกิจกรรมไม่ได้ (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
+    ['NIGHTDUTY', 'ครูเวรหอพักกลางคืน', 'บันทึกคะแนนพฤติกรรม (รวมหมวดการอ่านหนังสือ ชาย ม.4–6) · สร้างกิจกรรมและเปิด QR ให้นักเรียนสแกน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['INSPECTOR', 'ผู้ตรวจการ', 'ตรวจเครื่องแต่งกาย หอพัก ห้องน้ำ ความประพฤติ · หัก/เพิ่มคะแนนพฤติกรรม (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ ยกเว้นตั้งค่าระบบและจัดการแอดมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', true],
     ['SuperAdmin', 'แอดมิน (สิทธิ์เท่าแอดมินหลัก)', 'ทำได้ทุกอย่างเหมือนแอดมินหลัก รวมถึงตั้งค่าระบบ จัดการแอดมิน และให้สิทธิ์ผู้อื่น (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว) · เฉพาะแอดมินหลักเลือกได้', true]
   ];
-  const PW_ONLY = ['EXECUTIVE', 'ActivityAdmin', 'INSPECTOR', 'SubAdmin', 'SuperAdmin'];
+  const PW_ONLY = ['EXECUTIVE', 'ActivityAdmin', 'NIGHTDUTY', 'INSPECTOR', 'SubAdmin', 'SuperAdmin'];
   const pwOnly = () => PW_ONLY.indexOf(nfRole) !== -1;
   let nfRole = 'TEACHER'; const nfSubj = new Set();
   function drawRoles() {
@@ -3327,7 +3328,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.78';
+  const APP_VERSION = '17.79';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3532,13 +3533,14 @@ window.k8RegBirthChange = function (v) {
   const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
   const fmtD = (s) => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON[d.getMonth()]; };
   const ICO = {
+    reading: '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
     dress: '<path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3a4 4 0 0 1-8 0z"/>',
     dorm: '<path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 18h18M3 18v3M21 18v3M6 10V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/>',
     toilet: '<path d="M7 3h6v7H7zM5 10h14a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6zM9 16l-1 5h8l-1-5"/>',
     conduct: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
     good: '<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/>'
   };
-  const CATS = [['dress', 'เครื่องแต่งกาย', '#1d4ed8', '#eff6ff'], ['dorm', 'ความสะอาดหอพัก', '#7c3aed', '#f5f3ff'], ['toilet', 'ห้องน้ำ', '#0e7490', '#ecfeff'], ['conduct', 'ความประพฤติ', '#b45309', '#fffbeb'], ['good', 'ทำความดี (เพิ่มคะแนน)', '#15803d', '#f0fdf4']];
+  const CATS = [['dress', 'เครื่องแต่งกาย', '#1d4ed8', '#eff6ff'], ['dorm', 'ความสะอาดหอพัก', '#7c3aed', '#f5f3ff'], ['toilet', 'ห้องน้ำ', '#0e7490', '#ecfeff'], ['conduct', 'ความประพฤติ', '#b45309', '#fffbeb'], ['reading', 'การอ่านหนังสือ', '#4338ca', '#eef2ff'], ['good', 'ทำความดี (เพิ่มคะแนน)', '#15803d', '#f0fdf4']];
   const catOf = (k) => CATS.find((c) => c[0] === k) || CATS[3];
   const svg = (k, s) => '<svg width="' + (s || 20) + '" height="' + (s || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICO[k] || ICO.conduct) + '</svg>';
   // ใช้ภาคเรียนจากเซิร์ฟเวอร์เป็นหลัก (ตรงกับที่บันทึกในชีต) ถ้ายังไม่ได้โหลดใช้ค่าในเครื่อง
@@ -3547,7 +3549,9 @@ window.k8RegBirthChange = function (v) {
   const level = (sc) => sc >= 90 ? ['ดีมาก', '#15803d', '#dcfce7'] : sc >= 70 ? ['ปกติ', '#1d4ed8', '#dbeafe'] : sc >= 50 ? ['ต้องดูแล', '#b45309', '#fef3c7'] : ['ต้องติดตามใกล้ชิด', '#b91c1c', '#fee2e2'];
   const me = () => { try { return currentAdmin || null; } catch (e) { return null; } };
   const isInspector = () => { const a = me(); return !!a && /INSPECTOR|ผู้ตรวจการ/i.test(String(a.realRole || a.role || '')); };
-  const isAdmin = () => { const a = me(); return !!a && a.role === 'SuperAdmin'; };
+  const isAdmin = () => { const a = me(); return !!a && a.role === 'SuperAdmin' && !a.limited; };
+  // v17.79 · หมวดการอ่านหนังสือ: เฉพาะนักเรียนชาย ม.4–ม.6
+  const eligible = (s) => { if (B.cat !== 'reading') return true; const m = String((s && s.grade) || '').match(/([1-6])/); return !!m && +m[1] >= 4 && !(window.k8IsGirl && window.k8IsGirl(s)); };
   const api = (a, p) => (typeof gasApiCall === 'function' ? gasApiCall(a, p || {}, 25000) : Promise.reject(new Error('no api')));
   const toast = (m, t) => { if (typeof showToast === 'function') showToast(m, t); };
 
@@ -3588,8 +3592,8 @@ window.k8RegBirthChange = function (v) {
   function renderInner() {
     roots().forEach((root) => {
       const admin = root.dataset.mode === 'admin'; const teach = root.dataset.mode === 'teacher';
-      const tabs = admin ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ'], ['rules', 'ตั้งค่าหัวข้อ']] : teach ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ']] : null;
-      if (!admin && B.tab === 'rules') B.tab = 'record';
+      const tabs = admin ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ']].concat(me() && me().limited ? [] : [['rules', 'ตั้งค่าหัวข้อ']]) : teach ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ']] : null;
+      if ((!admin || (me() && me().limited)) && B.tab === 'rules') B.tab = 'record';
       let html = tabs ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
       if (B.oldBackend && B.loaded) html += '<div class="k8-tt-warn" role="alert"><b>Code.gs ที่ใช้งานอยู่ยังเป็นรุ่นเก่า · รูปหลักฐานเก็บได้แค่ 1 รูป</b><span>แอดมิน: วาง Code.gs ตัวล่าสุด แล้วไปที่ Deploy → Manage deployments → กดไอคอนดินสอของ deployment เดิม → Version: New version → Deploy (ห้ามกด New deployment เพราะจะได้ลิงก์ใหม่ที่แอปไม่ได้ใช้)</span></div>';
       if (!B.loaded && B.loading) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
@@ -3606,12 +3610,12 @@ window.k8RegBirthChange = function (v) {
     const custom = B.ruleId === '__custom';
     const rule = custom ? { title: B.custom.title, points: Number(B.custom.points) || 0, cat: B.cat } : B.rules.find((r) => r.id === B.ruleId);
     const q = B.q.trim().toLowerCase();
-    const list = students().filter((s) => (B.grade === 'ALL' || s.grade === B.grade) && (!q || String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))))
+    const list = students().filter((s) => eligible(s) && (B.grade === 'ALL' || s.grade === B.grade) && (!q || String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))))
       .sort((a, b) => String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName), 'th'));
     const selN = B.sel.size;
     let h = '<section class="k8-bh-card"><h2 class="k8-bh-h"><span class="k8-bh-step">1</span>เลือกหมวดที่ตรวจ</h2><div class="k8-bh-cats">' +
       CATS.map(([k, l, ink, bg]) => '<button type="button" aria-pressed="' + (B.cat === k) + '" style="--ink:' + ink + ';--bg:' + bg + '" onclick="k8BhSet(\'cat\',\'' + k + '\')">' + svg(k, 22) + '<span>' + l + '</span></button>').join('') + '</div></section>';
-    const canEdit = (() => { const a = me(); return !!a && (isInspector() || /SUPER|^admin$|SubAdmin/i.test(String(a.role || ''))); })();
+    const canEdit = (() => { const a = me(); return !!a && !a.limited && (isInspector() || /SUPER|^admin$|SubAdmin/i.test(String(a.role || ''))); })();
     if (B.editCat && B.editRules) {
       const cat = CATS.find((c) => c[0] === B.cat) || CATS[0]; const rows = B.editRules.map((r, i) => [r, i]).filter(([r]) => r.cat === B.cat);
       h += '<section class="k8-bh-card k8-bh-editcat"><div class="k8-bh-stick"><h2 class="k8-bh-h"><span class="k8-bh-step">2</span>แก้ไขหัวข้อ · ' + cat[1] + '</h2><div class="k8-bh-editbtns"><button type="button" class="is-alt" onclick="k8BhEditCat(false)">ยกเลิก</button><button type="button" onclick="k8BhRulesSave()">บันทึก</button></div></div><p class="k8-bh-intro">' + (B.cat === 'good' ? 'แต่ละข้อเพิ่มคะแนน' : 'แต่ละข้อหักคะแนน') + ' 1–50 · บันทึกแล้วใช้ได้ทันทีทั้งผู้ตรวจการและแอดมิน</p>' +
@@ -3625,7 +3629,7 @@ window.k8RegBirthChange = function (v) {
     h += '<section class="k8-bh-card"><div class="k8-bh-h-row"><h2 class="k8-bh-h"><span class="k8-bh-step">3</span>เลือกนักเรียน</h2>' + (selN ? '<button type="button" class="k8-bh-link" onclick="k8BhClearSel()">ล้างที่เลือก (' + selN + ')</button>' : '') + '</div>' +
       '<div class="k8-bh-filter"><input type="search" id="k8BhQ" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(B.q) + '" oninput="k8BhQ(this)" autocomplete="off">' + gradeSelect(B.grade, 'grade') + '</div>' +
       // v17.72 · ผู้ตรวจการ · แยกนักเรียนชาย (ซ้าย) / หญิง (ขวา) · เลือกทั้งหมดแยกตามฝั่ง
-      '<div class="k8-bh-gcols">' + [['m', 'ชาย', list.filter((s) => !girlOf(s))], ['f', 'หญิง', list.filter(girlOf)]].map(([g, l, L]) => {
+      (B.cat === 'reading' ? '<p class="k8-bh-intro k8-bh-rdnote">📖 หมวดการอ่านหนังสือ · แสดงเฉพาะนักเรียนชาย ม.4–ม.6</p>' : '') + '<div class="k8-bh-gcols' + (B.cat === 'reading' ? ' is-one' : '') + '">' + (B.cat === 'reading' ? [['m', 'ชาย ม.4–6', list]] : [['m', 'ชาย', list.filter((s) => !girlOf(s))], ['f', 'หญิง', list.filter(girlOf)]]).map(([g, l, L]) => {
         const allOn = L.length && L.every((s) => B.sel.has(norm(s.studentId)));
         return '<div class="k8-bh-gcol is-' + g + '"><div class="k8-bh-ghead"><b>' + l + '</b><span>' + L.length + ' คน</span></div>' +
           '<ul class="k8-bh-stu">' + (L.length ? L.slice(0, 200).map((s) => { const k = norm(s.studentId); const sc = clamp(100 + (sm[k] || 0)); const on = B.sel.has(k); const lv = level(sc);
@@ -3714,7 +3718,7 @@ window.k8RegBirthChange = function (v) {
 
   // ---------- actions ----------
   window.k8BhTab = function (t) { if (B.tab === 'rules' && t !== 'rules' && B.rulesDirty && !confirm('หัวข้อที่แก้ไว้ยังไม่ได้บันทึก ออกโดยไม่บันทึกใช่ไหม?')) return; B.tab = t; if (t !== 'rules') { B.editRules = null; B.rulesDirty = false; } render(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (e) {} };
-  window.k8BhSet = function (k, v) { B[k] = v; if (k === 'cat') { B.ruleId = ''; B.photos = []; } render(); };
+  window.k8BhSet = function (k, v) { B[k] = v; if (k === 'cat') { B.ruleId = ''; B.photos = []; if (v === 'reading') students().forEach((x) => { if (!eligible(x)) B.sel.delete(norm(x.studentId)); }); } render(); };
   window.k8BhPhoto = async function (input, mode) {
     const files = input && input.files ? Array.from(input.files) : []; if (!files.length) return;
     B.photos = B.photos || [];
@@ -3738,7 +3742,7 @@ window.k8RegBirthChange = function (v) {
   window.k8BhSelAll = function (g) {
     const q = B.q.trim().toLowerCase();
     const gl = (s) => !!(window.k8IsGirl && window.k8IsGirl(s));
-    const list = students().filter((s) => (B.grade === 'ALL' || s.grade === B.grade) && (!q || String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))) && (!g || (g === 'f') === gl(s)));
+    const list = students().filter((s) => (B.grade === 'ALL' || s.grade === B.grade) && (!q || String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))) && (!g || (g === 'f') === gl(s)) && eligible(s));
     const allOn = list.every((s) => B.sel.has(norm(s.studentId)));
     list.forEach((s) => { if (allOn) B.sel.delete(norm(s.studentId)); else B.sel.add(norm(s.studentId)); });
     render();
@@ -3752,7 +3756,7 @@ window.k8RegBirthChange = function (v) {
     try {
       const payload = { studentIds: ids, note: B.note, date: B.date };
       if ((B.photos || []).length && (B.cat === 'dorm' || B.cat === 'toilet')) { payload.photos = B.photos.map((p) => ({ data: p.data, source: p.src })); payload.photo = B.photos[0].data; payload.photoSource = B.photos[0].src; }
-      if (custom) { payload.title = B.custom.title; payload.points = Number(B.custom.points); } else payload.ruleId = rule.id;
+      if (custom) { payload.title = B.custom.title; payload.points = Number(B.custom.points); payload.cat = B.cat; } else payload.ruleId = rule.id;
       const r = await api('addBehaviorLogs', { data: payload });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
       B.logs = B.logs.concat(r.logs || []);
@@ -8789,7 +8793,7 @@ window.k8HfMiss = function (slot) {
   window.k8SexOf = (s) => saved(s) || guess(s) || (/^(นาย|เด็กชาย)$/.test(String((s && s.prefix) || '')) ? 'ชาย' : /^(นางสาว|นาง|เด็กหญิง)$/.test(String((s && s.prefix) || '')) ? 'หญิง' : '');
   window.k8BareName = (s) => String((s && (s.nameOnly || s.fullName)) || '').replace(PRE, '').replace(/\s*(นางสาว|เด็กหญิง|เด็กชาย)$/, '').trim();
   async function autoNormalize() {
-    let a = null; try { a = currentAdmin; } catch (e) {} if (!a || a.role !== 'SuperAdmin' && !/admin/i.test(String(a.role || ''))) return;
+    let a = null; try { a = currentAdmin; } catch (e) {} if (!a || a.limited || a.role !== 'SuperAdmin' && !/admin/i.test(String(a.role || ''))) return;
     let l = []; try { l = allStudents || []; } catch (e) {} if (!l.length || !l.some((s) => 'prefix' in s)) return; // เซิร์ฟเวอร์ยังเป็นเวอร์ชันเก่า
     try { if (sessionStorage.getItem('k8_name_norm')) return; sessionStorage.setItem('k8_name_norm', '1'); } catch (e) {}
     let r = null; try { r = await gasApiCall('normalizeStudentNames', {}, 45000); } catch (e) {}
@@ -8983,15 +8987,16 @@ window.k8HfMiss = function (slot) {
   const lim = () => { try { return (currentAdmin && currentAdmin.limited) || ''; } catch (e) { return ''; } };
   const ALLOW = {
     exec: ['overview', 'approvals', 'students', 'subadmins', 'timetable', 'subjects', 'grading', 'prayers-monitor', 'prayer-rank', 'behavior', 'halaqah'],
-    act: ['activities-admin']
+    act: ['activities-admin'],
+    night: ['behavior', 'activities-admin']
   };
-  const HOME = { exec: 'overview', act: 'activities-admin' };
+  const HOME = { exec: 'overview', act: 'activities-admin', night: 'behavior' };
   const tabOf = (btn) => { const oc = String(btn.getAttribute('onclick') || ''); if (/k8HqOpen/.test(oc)) return 'halaqah'; const m = oc.match(/switchAdminTab\('([^']+)'/); return m ? m[1] : ''; };
   const allowed = (t) => { const l = lim(); return !l || (ALLOW[l] || []).indexOf(t) !== -1; };
   window.k8LimitAllows = allowed;
   function nav() {
     const l = lim();
-    document.body.classList.toggle('k8-lim', !!l); document.body.classList.toggle('k8-lim-exec', l === 'exec'); document.body.classList.toggle('k8-lim-act', l === 'act');
+    document.body.classList.toggle('k8-lim', !!l); document.body.classList.toggle('k8-lim-exec', l === 'exec'); document.body.classList.toggle('k8-lim-act', l === 'act'); document.body.classList.toggle('k8-lim-night', l === 'night');
     document.querySelectorAll('#k8AdminNav .admin-tab-btn').forEach((b) => {
       if (b.classList.contains('k8-nav-sub')) return;
       const t = tabOf(b); if (!t) return;
