@@ -3327,7 +3327,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.76';
+  const APP_VERSION = '17.77';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3568,7 +3568,7 @@ window.k8RegBirthChange = function (v) {
     B.loading = true;
     try {
       const r = await api('getBehaviorData');
-      if (r && r.success) { if (r.term) serverTerm = r.term; B.rules = r.rules || []; B.logs = r.logs || []; if (r.students && r.students.length) B.students = r.students; B.loaded = true; try { localStorage.setItem('khalifah_behavior_cache', JSON.stringify({ rules: B.rules, logs: B.logs, students: B.students })); } catch (e) {} }
+      if (r && r.success) { B.oldBackend = !r.photoMax; B.codeVersion = r.codeVersion || ''; if (r.term) serverTerm = r.term; B.rules = r.rules || []; B.logs = r.logs || []; if (r.students && r.students.length) B.students = r.students; B.loaded = true; try { localStorage.setItem('khalifah_behavior_cache', JSON.stringify({ rules: B.rules, logs: B.logs, students: B.students })); } catch (e) {} }
       else if (r && r.message) toast(r.message, 'error');
     } catch (e) {
       try { const c = JSON.parse(localStorage.getItem('khalifah_behavior_cache') || 'null'); if (c) { B.rules = c.rules || []; B.logs = c.logs || []; B.students = c.students || []; } } catch (er) {}
@@ -3591,6 +3591,7 @@ window.k8RegBirthChange = function (v) {
       const tabs = admin ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ'], ['rules', 'ตั้งค่าหัวข้อ']] : teach ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ']] : null;
       if (!admin && B.tab === 'rules') B.tab = 'record';
       let html = tabs ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
+      if (B.oldBackend && B.loaded) html += '<div class="k8-tt-warn" role="alert"><b>Code.gs ที่ใช้งานอยู่ยังเป็นรุ่นเก่า · รูปหลักฐานเก็บได้แค่ 1 รูป</b><span>แอดมิน: วาง Code.gs ตัวล่าสุด แล้วไปที่ Deploy → Manage deployments → กดไอคอนดินสอของ deployment เดิม → Version: New version → Deploy (ห้ามกด New deployment เพราะจะได้ลิงก์ใหม่ที่แอปไม่ได้ใช้)</span></div>';
       if (!B.loaded && B.loading) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
       else html += B.tab === 'record' ? recordHtml() : B.tab === 'scores' ? scoresHtml() : B.tab === 'history' ? historyHtml(admin) : rulesHtml();
       root.innerHTML = html;
@@ -3755,9 +3756,9 @@ window.k8RegBirthChange = function (v) {
       const r = await api('addBehaviorLogs', { data: payload });
       if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ');
       B.logs = B.logs.concat(r.logs || []);
-      const sent = (payload.photos || []).length, got = (r.logs && r.logs[0] && r.logs[0].photoUrl) ? String(r.logs[0].photoUrl).split(/\s*\n\s*/).filter(Boolean).length : 0;
+      const sent = (payload.photos || []).length, got = typeof r.photosSaved === 'number' ? r.photosSaved : (r.logs && r.logs[0] && r.logs[0].photoUrl) ? String(r.logs[0].photoUrl).split(/\s*\n\s*/).filter(Boolean).length : 0; if (!r.photoMax) B.oldBackend = true;
       B.sel.clear(); B.note = ''; B.photos = [];
-      if (sent > 1 && got < sent) toast('บันทึกแล้ว แต่ระบบหลังบ้านเก็บรูปได้ ' + got + '/' + sent + ' รูป · แจ้งแอดมินให้อัปเดต Code.gs ตัวล่าสุด', 'error');
+      if (sent > 1 && got < sent) toast(!r.photoMax ? 'บันทึกแล้ว แต่ Code.gs ที่ใช้อยู่เป็นรุ่นเก่า เก็บได้แค่ 1 รูป · แจ้งแอดมินให้ Deploy Code.gs ตัวล่าสุด' : 'บันทึกแล้ว แต่อัปโหลดรูปขึ้น Google Drive ได้ ' + got + '/' + sent + ' รูป · ลองส่งรูปที่เหลืออีกครั้ง', 'error');
       else toast('บันทึกแล้ว · ' + r.message, 'success');
     } catch (e) { toast(e.message || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
     B.saving = false; render();

@@ -12,6 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
+const CODE_VERSION = '17.77'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1336,7 +1337,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'ping':
     case 'checkSpreadsheet':
     case 'getSpreadsheetInfo': {
-      const out = { success: true, status: 'online', version: SCHEMA_VERSION, dataVersion: getDataVersion_() };
+      const out = { success: true, status: 'online', version: SCHEMA_VERSION, codeVersion: CODE_VERSION, dataVersion: getDataVersion_() };
       if (ctx.isAdmin) {
         const ss = getSpreadsheet();
         out.spreadsheetName = ss ? ss.getName() : 'none';
@@ -1448,7 +1449,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'cancelBehaviorLog':
       return cancelBehaviorLog_(pick('logId'), session, ctx.isAdmin);
     case 'getBehaviorData':
-      return { success: true, rules: getBehaviorRules_(), logs: getBehaviorLogs_(), term: currentTerm_(),
+      return { success: true, photoMax: 4, codeVersion: CODE_VERSION, rules: getBehaviorRules_(), logs: getBehaviorLogs_(), term: currentTerm_(),
         students: (getAllStudents().data || []).map(function (x) { return { studentId: x.studentId, fullName: x.fullName, grade: x.grade, status: x.status }; }) };
     case 'getMyBehavior': {
       const me = ownStudentId_(session, ctx, pick('studentId'));
@@ -6438,7 +6439,7 @@ function addBehaviorLogs_(data, session) {
   const lock = LockService.getScriptLock();
   try { lock.waitLock(15000); } catch (e) {}
   try { sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows); } finally { try { lock.releaseLock(); } catch (e) {} }
-  return { success: true, added: rows.length, missing: missing, points: rule.points, logs: rows.map(function (r) { return { id: r[0], date: r[1], time: r[2], term: r[3], studentId: r[4], studentName: r[5], grade: r[6], cat: r[7], ruleId: r[8], title: r[9], points: r[10], note: r[11], by: r[12], byName: r[13], status: 'active', photoUrl: r[16], photoSource: r[17] }; }),
+  return { success: true, photoMax: 4, photosSaved: urls.length, added: rows.length, missing: missing, points: rule.points, logs: rows.map(function (r) { return { id: r[0], date: r[1], time: r[2], term: r[3], studentId: r[4], studentName: r[5], grade: r[6], cat: r[7], ruleId: r[8], title: r[9], points: r[10], note: r[11], by: r[12], byName: r[13], status: 'active', photoUrl: r[16], photoSource: r[17] }; }),
     message: (rule.points < 0 ? 'หัก ' + Math.abs(rule.points) : 'เพิ่ม ' + rule.points) + ' คะแนน · ' + rows.length + ' คน' };
 }
 function cancelBehaviorLog_(logId, session, isAdmin) {
