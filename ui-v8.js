@@ -3328,7 +3328,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.80';
+  const APP_VERSION = '17.81';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5168,7 +5168,18 @@ window.k8RegBirthChange = function (v) {
     if (!window.confirm('ลบหะละเกาะฮฺ "' + H.edit.name + '"? ประวัติการเข้าที่บันทึกไว้ยังเก็บไว้ใน Google Sheets')) return;
     try { const r = await api('deleteHalaqahSession', { data: { id: H.edit.id } }); if (!r || !r.success) throw new Error((r && r.message) || 'ลบไม่สำเร็จ'); toast(r.message, 'success'); history.back(); } catch (e) { toast(e.message, 'error'); }
   };
-  async function loadRoster() { try { const r = await api('getHalaqahRoster', { id: H.cur.id, date: H.date }); if (r && r.success) H.roster = r; } catch (e) {} if (H.open && (H.view === 'qr' || H.view === 'roster')) render(); }
+  // v17.81 · เติมชื่อผู้เรียนในกลุ่มจากรายชื่อในแอป (กรณีเซิร์ฟเวอร์จับคู่รหัสไม่ได้ หรือยังไม่คืนรายชื่อ)
+  const hk = (v) => String(v == null ? '' : v).trim().toUpperCase().replace(/[^0-9A-Z\u0E00-\u0E7F]/g, '').replace(/^0+/, '');
+  function fillRoster(r) {
+    const mem = (H.cur && H.cur.members) || []; if (!r || !mem.length) return r;
+    const by = {}; allStu().forEach((x) => { by[hk(x.studentId)] = x; });
+    const have = {}; (r.students || []).forEach((x) => { if (!x.unresolved) have[hk(x.studentId)] = 1; });
+    const rest = (r.students || []).filter((x) => x.unresolved).reduce((o, x) => { o[hk(x.studentId)] = x; return o; }, {});
+    const out = (r.students || []).filter((x) => !x.unresolved);
+    mem.forEach((k) => { if (have[k]) return; const x = by[k]; const u = rest[k] || {}; out.push({ studentId: x ? x.studentId : k, fullName: x ? x.fullName : 'รหัส ' + k, grade: x ? x.grade : '', status: u.status || '', time: u.time || '', method: u.method || '', fromApp: true }); });
+    r.students = out; return r;
+  }
+  async function loadRoster() { try { const r = await api('getHalaqahRoster', { id: H.cur.id, date: H.date }); if (r && r.success) H.roster = fillRoster(r); } catch (e) {} if (H.open && (H.view === 'qr' || H.view === 'roster')) render(); }
   let qrText = '';
   async function drawQr() {
     const box = document.getElementById('k8HqQrBox'); if (!box) return;
@@ -5195,7 +5206,7 @@ window.k8RegBirthChange = function (v) {
   window.k8HqRest = function (st) { (H.roster ? H.roster.students : []).forEach((x) => { if (!x.status && !H.marks[x.studentId]) H.marks[x.studentId] = st; }); render(); };
   window.k8HqSaveMarks = async function () {
     H.saving = true; render();
-    try { const r = await api('markHalaqah', { data: { id: H.cur.id, date: H.date, marks: H.marks } }, 45000); if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ'); toast(r.message, 'success'); H.marks = {}; }
+    try { const names = {}, grades = {}; ((H.roster && H.roster.students) || []).forEach((x) => { if (x.fromApp) { names[hk(x.studentId)] = x.fullName; grades[hk(x.studentId)] = x.grade; } }); const r = await api('markHalaqah', { data: { id: H.cur.id, date: H.date, marks: H.marks, names, grades } }, 45000); if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ'); toast(r.message, 'success'); H.marks = {}; }
     catch (e) { toast(e.message, 'error'); }
     H.saving = false; render(); loadRoster();
   };
