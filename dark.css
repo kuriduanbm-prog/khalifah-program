@@ -2030,6 +2030,20 @@ html[data-theme="dark"] .k8-bh-gsum { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-bh-who small.k8-bh-by { color: #b6bcc3 !important; }
 html[data-theme="dark"] .k8-bh-by b { color: #b7d1e0 !important; }
 html[data-theme="dark"] .k8-bh-dphs .k8-bh-hph { border: 1px solid #323941 !important; background-color: #1a2229 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2 thead th { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2 thead th small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2 thead th em { background-color: #121212 !important; color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2 tbody th { background-color: #181f26 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2:not(.is-edit) td { background-color: #121212 !important; border: 1px solid #32363c !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2:not(.is-edit) td.is-free { border: 1px dashed #323941 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2 td.has b, html[data-theme="dark"] .k8-tt-grid.is-tt2 td button.has b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2 tr.is-today td.is-free { background-color: #0e2432 !important; border-color: #264555 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2 td.is-nowcol.is-free { background-color: #0e2432 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2:not(.is-edit) td.is-live { background-color: #0e2432 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td button { border: 1.5px dashed #323941 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td button.has { border: 1px solid #32363c !important; background-color: #121212 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit tr.is-today td button:not(.has) { background-color: #0e2432 !important; }
+html[data-theme="dark"] .k8-tt-grid.is-tt2.is-edit td.is-nowcol button:not(.has) { background-color: #0e2432 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

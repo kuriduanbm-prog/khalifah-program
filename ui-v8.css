@@ -4245,3 +4245,50 @@ html.k8-xnarrow .k8-bh-gcols, html.k8-narrow .k8-bh-gcols { grid-template-column
 .k8h-exit span { font-size: 14px; }
 @media (min-width: 993px) { .k8h-exit { bottom: 24px; right: 28px; } }
 @media (prefers-reduced-motion: reduce) { .k8h-exit { transition: none; } }
+
+/* v17.78 · ตารางเรียน TT2 · การ์ดขาว + จุดสีวิชา · ไฮไลต์วันนี้และคาบที่กำลังเรียน (แอดมิน/อาจารย์/นักเรียน แบบเดียวกัน) */
+.k8-tt-gridwrap:has(.is-tt2) { border: 0; background: transparent; border-radius: 0; }
+.k8-tt-grid.is-tt2 { border-collapse: separate; border-spacing: 6px; margin: -6px; min-width: calc(100% + 12px); }
+.k8-tt-grid.is-tt2 th, .k8-tt-grid.is-tt2 td { border: 0; }
+.k8-tt-grid.is-tt2 thead th { background: transparent; font-size: 13px; font-weight: 700; color: #0f172a; padding: 6px 10px; border-radius: 12px; vertical-align: bottom; }
+.k8-tt-grid.is-tt2 thead th small { font-size: 11.5px; color: #64748b; font-weight: 500; }
+.k8-tt-grid.is-tt2 thead th em { display: inline-block; margin-top: 3px; font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #fff; color: #0c4a6e; }
+.k8-tt-grid.is-tt2 thead th.is-now { background: #0c4a6e; color: #fff; }
+.k8-tt-grid.is-tt2 thead th.is-now small { color: #bae6fd; }
+.k8-tt-grid.is-tt2 tbody th { background: #f8fafc; border-radius: 12px; font-size: 14px; font-weight: 700; padding: 10px; vertical-align: middle; min-width: 52px; }
+.k8-tt-grid.is-tt2 tbody th small { display: block; font-size: 10.5px; font-weight: 500; opacity: .85; }
+.k8-tt-grid.is-tt2 tr.is-today th { background: #0c4a6e; color: #fff; }
+.k8-tt-grid.is-tt2 tr.is-today th .k8-tt-dbtn { color: #fff; }
+.k8-tt-grid.is-tt2 .k8-tt-dbtn small { color: inherit; }
+/* ช่องวิชา (ดูอย่างเดียว) */
+.k8-tt-grid.is-tt2:not(.is-edit) td { background: #fff; border: 1px solid #eef0f4; border-radius: 12px; padding: 9px 11px; min-width: 110px; height: 58px; vertical-align: middle; }
+.k8-tt-grid.is-tt2:not(.is-edit) td.is-free { background: transparent; border: 1px dashed #e2e8f0; }
+.k8-tt-grid.is-tt2 td.has b, .k8-tt-grid.is-tt2 td button.has b { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #0f172a; }
+.k8-tt-grid.is-tt2 td.has b::before, .k8-tt-grid.is-tt2 td button.has b::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--sc, #0369a1); flex: none; }
+.k8-tt-grid.is-tt2 td.has small, .k8-tt-grid.is-tt2 td button.has small { margin-left: 16px; font-size: 11.5px; }
+.k8-tt-grid.is-tt2 tr.is-today td { border-color: #7dd3fc; }
+.k8-tt-grid.is-tt2 tr.is-today td.has { box-shadow: 0 4px 14px rgba(3,105,161,.12); }
+.k8-tt-grid.is-tt2 tr.is-today td.is-free { background: #f0f9ff; border-color: #bae6fd; }
+.k8-tt-grid.is-tt2 td.is-nowcol.is-free { background: #f0f9ff; }
+.k8-tt-grid.is-tt2:not(.is-edit) td.is-nowcol { border-color: #7dd3fc; }
+.k8-tt-grid.is-tt2:not(.is-edit) td.is-live { border: 2px solid #0c4a6e; background: #f0f9ff; }
+/* ช่องแก้ไข (แอดมิน) */
+.k8-tt-grid.is-tt2.is-edit td { padding: 0; background: transparent; }
+.k8-tt-grid.is-tt2.is-edit td button { min-height: 58px; min-width: 110px; border-radius: 12px; border: 1.5px dashed #e2e8f0; background: transparent; color: #cbd5e1; }
+.k8-tt-grid.is-tt2.is-edit td button.has { border: 1px solid #eef0f4; background: #fff; color: #0f172a; }
+.k8-tt-grid.is-tt2.is-edit td button.is-group { border-color: #7dd3fc; }
+.k8-tt-grid.is-tt2.is-edit td button:hover { border-color: #0369a1; }
+.k8-tt-grid.is-tt2.is-edit tr.is-today td button { border-color: #7dd3fc; }
+.k8-tt-grid.is-tt2.is-edit tr.is-today td button:not(.has) { background: #f0f9ff; }
+.k8-tt-grid.is-tt2.is-edit td.is-nowcol button:not(.has) { background: #f0f9ff; }
+.k8-tt-grid.is-tt2.is-edit td.is-live button { border: 2px solid #0c4a6e; }
+.k8-tt-grid.is-tt2.is-edit td button em { margin-left: 16px; }
+/* รายคาบ (มือถือ) */
+.k8-tt-list li.has .k8-tt-cell b { display: flex; align-items: center; gap: 7px; }
+.k8-tt-list li.has .k8-tt-cell b::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--sc, #0369a1); flex: none; }
+.k8-tt-list li.has .k8-tt-cell small { margin-left: 16px; }
+.k8-tt-list li.is-now { border-color: #0c4a6e; box-shadow: 0 0 0 2px #bae6fd; }
+.k8-tt-list li.is-now .k8-tt-time { color: #fff; background: #0c4a6e; border-radius: 10px; padding: 4px 8px; }
+.k8-tt-list li.is-now .k8-tt-time small { color: #bae6fd; }
+.k8-tt-grid.is-tt2 .k8-tt-dbtn { text-decoration: none; border: 0; background: transparent; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.k8-tt-list li.is-now .k8-tt-time b { color: #fff; }
