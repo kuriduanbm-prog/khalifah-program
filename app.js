@@ -1939,7 +1939,7 @@ let subAdmins = [];
 
 // Geolocation & Camera State
 let verifiedLocation = null;
-const GPS_EXPIRATION_MS = 60000; // พิกัดมีอายุ 60 วินาที เพื่อป้องกันการทุจริตพิกัด (1 นาที)
+const GPS_EXPIRATION_MS = 15000; // v17.82 · พิกัดและกล้องมีอายุ 15 วินาที กันกดตรวจพิกัดแล้วเดินไปถ่ายที่อื่น
 let gpsCountdownInterval = null;
 let selectedPrayerTime = null;
 let activeCameraStream = null;
@@ -2529,6 +2529,7 @@ function switchView(viewName) {
 }
 
 function stopCameraStream() {
+  try { paintCamCountdown(null); } catch (e) {}
   if (activeCameraStream) {
     try {
       activeCameraStream.getTracks().forEach(track => track.stop());
@@ -2986,7 +2987,7 @@ function fetchFreshPrayerLocation() {
 }
 
 /**
- * ตัวจับเวลานับถอยหลังอายุพิกัด GPS (60 วินาที)
+ * ตัวจับเวลานับถอยหลังอายุพิกัด GPS + กล้อง (15 วินาที)
  */
 function startGpsCountdownTimer() {
   if (gpsCountdownInterval) {
@@ -3008,18 +3009,34 @@ function startGpsCountdownTimer() {
       clearInterval(gpsCountdownInterval);
       gpsCountdownInterval = null;
       verifiedLocation = null;
+      try { stopCameraStream(); } catch (e) {}
+      try { paintCamCountdown(null); } catch (e) {}
+      prayerCheckStep = 1;
       checkPrayerUnlockState();
-      showToast('⚠️ พิกัด GPS หมดอายุ (เกิน 60 วินาที) กรุณาตรวจสอบตำแหน่งสดใหม่', 'warning');
+      showToast('⏱️ หมดเวลา 15 วินาที · ปิดกล้องแล้ว กรุณากด "ตรวจพิกัด & เปิดกล้อง" ใหม่ที่จุดละหมาด', 'warning');
     } else {
       updateGpsCountdownDisplay();
     }
   }, 1000);
 }
 
+// v17.82 · นับถอยหลังเล็ก ๆ มุมกล้อง (ไม่บังภาพ) · แดงเมื่อเหลือ ≤ 5 วิ
+function paintCamCountdown(sec) {
+  const box = document.getElementById('cameraBox'); if (!box) return;
+  let el = document.getElementById('k8CamCd');
+  if (sec == null) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement('div'); el.id = 'k8CamCd'; el.className = 'k8-cam-cd'; el.setAttribute('role', 'timer'); el.setAttribute('aria-live', 'off'); box.appendChild(el); }
+  const total = Math.round(GPS_EXPIRATION_MS / 1000);
+  el.hidden = false; el.classList.toggle('is-low', sec <= 5);
+  el.style.setProperty('--p', Math.max(0, Math.min(100, sec / total * 100)));
+  el.innerHTML = '<i aria-hidden="true"></i><b>' + sec + '</b><small>วิ</small>';
+  el.setAttribute('aria-label', 'เหลือเวลาถ่ายรูป ' + sec + ' วินาที');
+}
 function updateGpsCountdownDisplay() {
-  if (!verifiedLocation || !verifiedLocation.timestamp) return;
+  if (!verifiedLocation || !verifiedLocation.timestamp) { paintCamCountdown(null); return; }
   const elapsed = Date.now() - new Date(verifiedLocation.timestamp).getTime();
   const remainingSec = Math.max(0, Math.ceil((GPS_EXPIRATION_MS - elapsed) / 1000));
+  paintCamCountdown(remainingSec);
 
   const locBadge = document.getElementById('prayerVerifiedLocBadge');
   const locText = document.getElementById('prayerVerifiedLocText');
@@ -4408,18 +4425,15 @@ async function executePrayerCaptureStep2() {
     }
   }
 
-  // ตรวจสอบว่าพิกัด GPS หมดอายุหรือไม่ (ถ้าเกิน 60 วินาที ให้อัปเดตใหม่)
+  // v17.82 · เกิน 15 วินาทีหลังตรวจพิกัด: ไม่ดึงพิกัดใหม่ให้เอง ต้องเริ่มตรวจพิกัดใหม่ (กันเดินไปถ่ายที่อื่น)
   const isGpsValid = verifiedLocation && (Date.now() - new Date(verifiedLocation.timestamp).getTime() <= GPS_EXPIRATION_MS);
   if (!isGpsValid) {
-    showToast('พิกัด GPS หมดอายุ (เกิน 60 วินาที) กำลังดึงพิกัดสดใหม่...', 'info');
-    try {
-      await fetchFreshPrayerLocation();
-    } catch (e) {
-      showToast('ไม่สามารถดึงพิกัด GPS สดใหม่ได้: ' + e.message, 'error');
-      prayerCheckStep = 1;
-      checkPrayerUnlockState();
-      return;
-    }
+    verifiedLocation = null;
+    try { stopCameraStream(); } catch (e) {}
+    showToast('⏱️ หมดเวลา 15 วินาที · กรุณากด "ตรวจพิกัด & เปิดกล้อง" ใหม่', 'warning');
+    prayerCheckStep = 1;
+    checkPrayerUnlockState();
+    return;
   }
 
   // 1. ถ่ายภาพจากวิดีโอพร้อมบีบอัดขนาดเหมาะสม (ความกว้างสูงสุด 640px คุณภาพ 0.65 เพื่อความรวดเร็วและบันทึกลง Sheet ได้แน่นอน)

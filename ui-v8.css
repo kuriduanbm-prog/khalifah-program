@@ -4308,3 +4308,11 @@ body.k8-lim .k8-adm-modes { display: none !important; }
 .k8-hq-mem-list span small { color: #64748b; font-size: 11.5px; }
 .k8-hq-mem-list button { width: 22px; height: 22px; border: 0; border-radius: 50%; background: #f1f5f9; color: #64748b; cursor: pointer; font-size: 11px; }
 .k8-hq-pick { max-height: none; }
+/* v17.82 · นับถอยหลัง 15 วิ มุมขวาล่างของกล้อง (เล็ก ไม่บังหน้า) */
+.k8-cam-cd { position: absolute; right: 10px; bottom: 10px; z-index: 6; display: inline-flex; align-items: baseline; gap: 2px; padding: 4px 10px 4px 26px; border-radius: 999px; background: rgba(15,23,42,.55); color: #fff; font-family: 'IBM Plex Sans Thai', sans-serif; pointer-events: none; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.k8-cam-cd i { position: absolute; left: 6px; top: 50%; width: 15px; height: 15px; margin-top: -7.5px; border-radius: 50%; background: conic-gradient(#34d399 calc(var(--p, 100) * 1%), rgba(255,255,255,.25) 0); }
+.k8-cam-cd b { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.k8-cam-cd small { font-size: 11px; opacity: .85; }
+.k8-cam-cd.is-low { background: rgba(185,28,28,.8); }
+.k8-cam-cd.is-low i { background: conic-gradient(#fff calc(var(--p, 100) * 1%), rgba(255,255,255,.3) 0); }
+.k8-cam-cd[hidden] { display: none; }
