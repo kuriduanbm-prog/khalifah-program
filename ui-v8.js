@@ -3328,7 +3328,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.79';
+  const APP_VERSION = '17.80';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5077,6 +5077,7 @@ window.k8RegBirthChange = function (v) {
   window.k8HqBack = function () { history.back(); };
   window.addEventListener('popstate', () => {
     if (!H.open) return;
+    if (H.view === 'pick') { H.view = 'edit'; render(); return; }
     if (H.view !== 'list') { stopTimers(); H.view = 'list'; render(); loadSessions().then(render); return; }
     closeHq();
   });
@@ -5088,19 +5089,33 @@ window.k8RegBirthChange = function (v) {
       title.textContent = 'หะละเกาะฮฺอัลกุรอาน'; sub.textContent = H.sessions.length + ' รอบ · ตั้งเวลา แสดง QR และเช็ครายชื่อ';
       const wd = String(new Date().getDay());
       body.innerHTML = '<button type="button" class="k8-hq-add" onclick="k8HqEdit()">+ เพิ่มหะละเกาะฮฺ</button>' +
-        (H.sessions.length ? '<ul class="k8-hq-list">' + H.sessions.slice().sort((a, b) => toMin(a.start) - toMin(b.start)).map((s) => '<li><div class="k8-hq-li-top"><span class="k8-hq-slot">' + esc(slotName(s.slot)) + '</span>' + (s.days.indexOf(wd) !== -1 ? '<span class="k8-hq-chip" style="color:#047857;background:#d1fae5">มีวันนี้</span>' : '') + '</div><b>' + esc(s.name) + '</b><small>' + esc(s.start) + '–' + esc(s.end) + ' · ' + (s.days.length === 7 ? 'ทุกวัน' : s.days.map((d) => DAYS[+d]).join(' ')) + ' · ' + (s.grades.length ? s.grades.map((g) => 'ม.' + g).join(', ') : 'ทุกชั้น') + (s.location ? ' · ' + esc(s.location) : '') + '</small>' +
+        (H.sessions.length ? '<ul class="k8-hq-list">' + H.sessions.slice().sort((a, b) => toMin(a.start) - toMin(b.start)).map((s) => '<li><div class="k8-hq-li-top"><span class="k8-hq-slot">' + (s.teacherName ? 'ผู้ดูแล ' + esc(s.teacherName) : esc(slotName(s.slot))) + '</span>' + ((s.members || []).length ? '<span class="k8-hq-chip" style="color:#0369a1;background:#e0f2fe">ผู้เรียน ' + s.members.length + ' คน</span>' : '') + (s.days.indexOf(wd) !== -1 ? '<span class="k8-hq-chip" style="color:#047857;background:#d1fae5">มีวันนี้</span>' : '') + '</div><b>' + esc(s.name) + '</b><small>' + esc(s.start) + '–' + esc(s.end) + ' · ' + (s.days.length === 7 ? 'ทุกวัน' : s.days.map((d) => DAYS[+d]).join(' ')) + ' · ' + ((s.members || []).length ? 'เฉพาะกลุ่ม' : s.grades.length ? s.grades.map((g) => 'ม.' + g).join(', ') : 'ทุกชั้น') + (s.location ? ' · ' + esc(s.location) : '') + '</small>' +
           '<div class="k8-hq-acts"><button type="button" class="is-pri" onclick="k8HqQr(\'' + js(s.id) + '\')">แสดง QR</button><button type="button" onclick="k8HqRoster(\'' + js(s.id) + '\')">เช็ครายชื่อ</button><button type="button" onclick="k8HqEdit(\'' + js(s.id) + '\')">แก้ไข</button></div></li>').join('') + '</ul>'
-          : '<div class="k8-docs-empty"><b>ยังไม่มีหะละเกาะฮฺ</b><span>เพิ่มรอบแรก เช่น หะละเกาะฮฺหลังศุบฮิ 05:30–06:30 ทุกวัน</span></div>');
+          : '<div class="k8-docs-empty"><b>ยังไม่มีหะละเกาะฮฺ</b><span>เพิ่มกลุ่มแรก ใส่ชื่อผู้ดูแล แล้วดึงรายชื่อนักเรียนเข้ากลุ่ม · ค่าเริ่มต้น วันจันทร์ 10:00–11:40</span></div>');
     } else if (H.view === 'edit') {
-      const e = H.edit; title.textContent = e.id ? 'แก้ไขหะละเกาะฮฺ' : 'เพิ่มหะละเกาะฮฺ'; sub.textContent = 'กำหนดช่วงเวลา วัน และชั้นที่เข้าร่วม';
+      const e = H.edit; title.textContent = e.id ? 'แก้ไขหะละเกาะฮฺ' : 'เพิ่มหะละเกาะฮฺ'; sub.textContent = 'ผู้ดูแล · วันเวลา · รายชื่อผู้เรียน';
+      const mem = (e.members || []); const byId = {}; allStu().forEach((x) => { byId[nid(x.studentId)] = x; });
+      const staff = staffNames();
       body.innerHTML = '<section class="k8-bh-card">' +
-        '<div class="k8-nf-f"><span>ช่วงเวลา</span><div class="k8-na-aud">' + SLOTS.map(([k, l]) => '<button type="button" aria-pressed="' + (e.slot === k) + '" onclick="k8HqSet(\'slot\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>' +
-        '<label class="k8-nf-f"><span>ชื่อ</span><input type="text" id="k8HqName" maxlength="80" value="' + esc(e.name) + '" placeholder="เช่น หะละเกาะฮฺหลังศุบฮิ"></label>' +
+        '<label class="k8-nf-f"><span>ชื่อกลุ่ม</span><input type="text" id="k8HqName" maxlength="80" value="' + esc(e.name) + '" placeholder="เช่น หะละเกาะฮฺกลุ่ม 1"></label>' +
+        '<label class="k8-nf-f"><span>ผู้ดูแล</span><input type="text" id="k8HqTeacher" maxlength="80" list="k8HqStaff" value="' + esc(e.teacherName || '') + '" placeholder="พิมพ์หรือเลือกชื่ออาจารย์ผู้ดูแล" autocomplete="off"><datalist id="k8HqStaff">' + staff.map((n) => '<option value="' + esc(n) + '"></option>').join('') + '</datalist></label>' +
         '<div class="k8-hq-times"><label class="k8-nf-f"><span>เริ่ม</span><input type="time" id="k8HqStart" value="' + esc(e.start) + '"></label><label class="k8-nf-f"><span>สิ้นสุด</span><input type="time" id="k8HqEnd" value="' + esc(e.end) + '"></label></div>' +
         '<div class="k8-nf-f"><span>วัน</span><div class="k8-na-chips">' + DAYS.map((d, i) => '<button type="button" aria-pressed="' + (e.days.indexOf(String(i)) !== -1) + '" onclick="k8HqDay(\'' + i + '\')">' + d + '</button>').join('') + '<button type="button" onclick="k8HqDay(\'all\')">ทุกวัน</button></div></div>' +
-        '<div class="k8-nf-f"><span>ชั้นที่เข้าร่วม (ไม่เลือก = ทุกชั้น)</span><div class="k8-na-chips">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" aria-pressed="' + (e.grades.indexOf(g) !== -1) + '" onclick="k8HqGrade(\'' + g + '\')">ม.' + g + '</button>').join('') + '</div></div>' +
+        '<div class="k8-nf-f"><span>ผู้เรียน</span><div class="k8-hq-mem"><div class="k8-hq-mem-top"><b>' + mem.length + ' คน</b><button type="button" class="k8-hq-pullbtn" onclick="k8HqPick()">＋ ดึงรายชื่อนักเรียน</button></div>' +
+          (mem.length ? '<div class="k8-hq-mem-list">' + mem.slice(0, 60).map((id) => { const x = byId[id]; return '<span>' + esc(x ? x.fullName : id) + (x ? ' <small>' + esc(String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + '</small>' : '') + '<button type="button" aria-label="เอาออก" onclick="k8HqMemDel(\'' + js(id) + '\')">✕</button></span>'; }).join('') + (mem.length > 60 ? '<span>และอีก ' + (mem.length - 60) + ' คน</span>' : '') + '</div>' : '<p class="k8-hq-tip">ยังไม่มีผู้เรียน · กด "ดึงรายชื่อนักเรียน" เพื่อเลือกนักเรียนเข้ากลุ่มนี้ ระบบจะเช็คชื่อและให้สแกน QR เฉพาะคนในกลุ่ม</p>') + '</div></div>' +
         '<label class="k8-nf-f"><span>สถานที่ (ไม่บังคับ)</span><input type="text" id="k8HqLoc" maxlength="80" value="' + esc(e.location) + '" placeholder="เช่น มัสยิด ชั้น 2"></label>' +
         '<div class="k8-dr-btns">' + (e.id ? '<button type="button" class="is-alt" onclick="k8HqDelete()">ลบ</button>' : '') + '<button type="button" class="k8-hq-save" ' + (H.saving ? 'disabled' : '') + ' onclick="k8HqSave()">' + (H.saving ? 'กำลังบันทึก…' : 'บันทึก') + '</button></div></section>';
+    } else if (H.view === 'pick') {
+      const e = H.edit; const P = H.pick; const q = (P.q || '').trim().toLowerCase();
+      title.textContent = 'ดึงรายชื่อนักเรียน'; sub.textContent = (e.name || 'หะละเกาะฮฺ') + ' · เลือกแล้ว ' + P.sel.size + ' คน';
+      const L = allStu().filter((x) => (P.g === 'ALL' || gnum(x.grade) === P.g) && (P.sx === 'all' || (P.sx === 'f') === !!(window.k8IsGirl && window.k8IsGirl(x))) && (!q || String(x.fullName || '').toLowerCase().includes(q) || nid(x.studentId).includes(q.replace(/^0+/, '')))).sort((a, b) => String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName), 'th'));
+      const allOn = L.length && L.every((x) => P.sel.has(nid(x.studentId)));
+      body.innerHTML = '<section class="k8-bh-card"><input type="search" id="k8HqPq" class="k8h-search" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(P.q || '') + '" oninput="k8HqPq(this)" autocomplete="off">' +
+        '<div class="k8-na-chips">' + ['ALL', '1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" aria-pressed="' + (P.g === g) + '" onclick="k8HqPset(\'g\',\'' + g + '\')">' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + g) + '</button>').join('') + '</div>' +
+        '<div class="k8-na-chips">' + [['all', 'ทั้งหมด'], ['m', 'ชาย'], ['f', 'หญิง']].map(([k, l]) => '<button type="button" aria-pressed="' + (P.sx === k) + '" onclick="k8HqPset(\'sx\',\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
+        (L.length ? '<button type="button" class="k8-bh-link" onclick="k8HqPall()">' + (allOn ? 'ยกเลิกทั้งหมดในรายการ' : 'เลือกทั้งหมดในรายการ (' + L.length + ' คน)') + '</button>' : '') +
+        '<ul class="k8-bh-stu k8-hq-pick">' + (L.length ? L.slice(0, 400).map((x) => { const k = nid(x.studentId); const on = P.sel.has(k); return '<li><button type="button" role="checkbox" aria-checked="' + on + '" onclick="k8HqPt(\'' + js(k) + '\')"><span class="k8-bh-chk">' + (on ? '✓' : '') + '</span><span class="k8-bh-who"><b>' + esc(x.fullName) + '</b><small>' + esc(String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(x.studentId) + '</small></span></button></li>'; }).join('') : '<li class="k8-bh-empty">ไม่พบนักเรียน</li>') + '</ul></section>' +
+        '<div class="k8-bh-savebar"><span class="k8-bh-savebar-t">เลือกแล้ว <b>' + P.sel.size + '</b> คน</span><button type="button" class="k8-bh-go" style="background:#0369a1" onclick="k8HqPdone()">ใช้รายชื่อนี้</button></div>';
     } else if (H.view === 'qr') {
       const s = H.cur; title.textContent = s.name; sub.textContent = s.start + '–' + s.end + ' · ' + fmtD(H.date);
       const n = H.roster ? H.roster.students.filter((x) => x.status === 'present' || x.status === 'late').length : 0, total = H.roster ? H.roster.students.length : 0;
@@ -5123,13 +5138,27 @@ window.k8RegBirthChange = function (v) {
   }
   window.k8HqEdit = function (id) {
     const s = id ? H.sessions.find((x) => x.id === id) : null;
-    H.edit = s ? JSON.parse(JSON.stringify(s)) : { id: '', name: 'หะละเกาะฮฺหลังศุบฮิ', slot: 'subuh', start: '05:30', end: '06:30', days: ['0', '1', '2', '3', '4', '5', '6'], grades: [], location: '' };
+    H.edit = s ? JSON.parse(JSON.stringify(s)) : { id: '', name: 'หะละเกาะฮฺ', slot: 'other', start: '10:00', end: '11:40', days: ['1'], grades: [], location: '', teacherName: myName(), members: [] };
+    if (!H.edit.members) H.edit.members = [];
     H.view = 'edit'; stack('edit'); render();
   };
-  function grab() { const e = H.edit; if (!e) return; const g = (id) => (document.getElementById(id) || {}).value; e.name = g('k8HqName') ?? e.name; e.start = g('k8HqStart') ?? e.start; e.end = g('k8HqEnd') ?? e.end; e.location = g('k8HqLoc') ?? e.location; }
+  function grab() { const e = H.edit; if (!e) return; const g = (id) => (document.getElementById(id) || {}).value; e.name = g('k8HqName') ?? e.name; e.start = g('k8HqStart') ?? e.start; e.end = g('k8HqEnd') ?? e.end; e.location = g('k8HqLoc') ?? e.location; e.teacherName = g('k8HqTeacher') ?? e.teacherName; }
   window.k8HqSet = function (k, v) { grab(); const e = H.edit; const was = slotName(e.slot); e[k] = v; if (k === 'slot' && (!e.name || e.name === 'หะละเกาะฮฺ' + was)) e.name = 'หะละเกาะฮฺ' + slotName(v); render(); };
   window.k8HqDay = function (d) { grab(); const e = H.edit; if (d === 'all') e.days = e.days.length === 7 ? [] : ['0', '1', '2', '3', '4', '5', '6']; else { const i = e.days.indexOf(d); if (i === -1) e.days.push(d); else e.days.splice(i, 1); } render(); };
   window.k8HqGrade = function (g) { grab(); const e = H.edit; const i = e.grades.indexOf(g); if (i === -1) e.grades.push(g); else e.grades.splice(i, 1); render(); };
+  // v17.80 · ดึงรายชื่อนักเรียนเข้ากลุ่ม
+  function allStu() { let l = []; try { l = allStudents || []; } catch (e) {} return l.filter((x) => x && x.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(x.status || ''))); }
+  const nid = (v) => String(v || '').trim().replace(/^0+/, '');
+  const gnum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
+  function myName() { try { return (currentAdmin && (currentAdmin.fullName || currentAdmin.username)) || ''; } catch (e) { return ''; } }
+  function staffNames() { const out = new Set(); ['khalifah_subadmins', 'khalifah_sub_admins'].forEach((k) => { try { (JSON.parse(localStorage.getItem(k) || '[]') || []).forEach((a) => { const n = a && (a.fullName || a.name); if (n && !/INSPECTOR|ผู้ตรวจการ|EXECUTIVE|ActivityAdmin|NIGHTDUTY/i.test(String(a.role || '')) || (n && /TEACHER|อาจารย์|ครู/i.test(String(a.role || '')))) out.add(String(n).trim()); }); } catch (e) {} }); const m = myName(); if (m) out.add(m); return Array.from(out).sort((a, b) => a.localeCompare(b, 'th')); }
+  window.k8HqPick = function () { grab(); H.pick = { q: '', g: 'ALL', sx: 'all', sel: new Set((H.edit.members || []).map(nid)) }; H.view = 'pick'; stack('pick'); render(); };
+  window.k8HqPset = function (k, v) { H.pick[k] = v; render(); };
+  window.k8HqPq = function (el) { H.pick.q = el.value; const pos = el.selectionStart; render(); const n = document.getElementById('k8HqPq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } };
+  window.k8HqPt = function (k) { const S = H.pick.sel; if (S.has(k)) S.delete(k); else S.add(k); render(); };
+  window.k8HqPall = function () { const P = H.pick; const q = (P.q || '').trim().toLowerCase(); const L = allStu().filter((x) => (P.g === 'ALL' || gnum(x.grade) === P.g) && (P.sx === 'all' || (P.sx === 'f') === !!(window.k8IsGirl && window.k8IsGirl(x))) && (!q || String(x.fullName || '').toLowerCase().includes(q) || nid(x.studentId).includes(q.replace(/^0+/, '')))); const on = L.length && L.every((x) => P.sel.has(nid(x.studentId))); L.forEach((x) => { const k = nid(x.studentId); if (on) P.sel.delete(k); else P.sel.add(k); }); render(); };
+  window.k8HqPdone = function () { H.edit.members = Array.from(H.pick.sel); history.back(); };
+  window.k8HqMemDel = function (id) { grab(); H.edit.members = (H.edit.members || []).filter((x) => x !== id); render(); };
   window.k8HqSave = async function () {
     grab(); H.saving = true; render();
     try { const r = await api('saveHalaqahSession', { data: H.edit }); if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ'); toast(r.message, 'success'); H.saving = false; history.back(); }

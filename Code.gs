@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.79'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.80'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -184,7 +184,7 @@ const HEADERS = {
     'ผู้ส่ง (username)', 'ชื่อผู้ส่ง', 'สถานะ', 'หมดอายุ'
   ],
   NOTIF_READS: ['รหัสแจ้งเตือน', 'ผู้ใช้', 'อ่านเมื่อ', 'ซ่อน'],
-  HALAQAH: ['รหัสหะละเกาะฮฺ', 'ชื่อ', 'ช่วงเวลา', 'วัน (0=อา.)', 'เริ่ม', 'สิ้นสุด', 'ระดับชั้น', 'ผู้ดูแล (username)', 'ชื่อผู้ดูแล', 'สถานที่', 'สถานะ', 'สร้างเมื่อ'],
+  HALAQAH: ['รหัสหะละเกาะฮฺ', 'ชื่อ', 'ช่วงเวลา', 'วัน (0=อา.)', 'เริ่ม', 'สิ้นสุด', 'ระดับชั้น', 'ผู้ดูแล (username)', 'ชื่อผู้ดูแล', 'สถานที่', 'สถานะ', 'สร้างเมื่อ', 'ผู้เรียน (รหัสนักเรียน)'],
   HALAQAH_LOGS: ['รหัสบันทึก', 'รหัสหะละเกาะฮฺ', 'ชื่อหะละเกาะฮฺ', 'วันที่', 'เวลา', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'วิธีบันทึก', 'ผู้บันทึก', 'สถานะ', 'หมายเหตุ'],
   DREAMS: ['รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ความใฝ่ฝัน', 'ไอคอน', 'เหตุผล/เป้าหมาย', 'อัปเดตเมื่อ'],
   POLICY_ACKS: ['รหัสยินยอม', 'รหัสข้อตกลง', 'ฉบับ', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ยินยอมเมื่อ'],
@@ -6807,14 +6807,18 @@ function hqToday_() { return Utilities.formatDate(new Date(), 'Asia/Bangkok', 'y
 function hqNowMin_() { const t = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'HH:mm').split(':'); return (+t[0]) * 60 + (+t[1]); }
 function hqMin_(hhmm) { const m = String(hhmm || '').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : -1; }
 function hqTime_(v) { if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Bangkok', 'HH:mm'); const m = String(v || '').match(/(\d{1,2}):(\d{2})/); return m ? ('0' + m[1]).slice(-2) + ':' + m[2] : ''; }
+// v17.80 · หะละเกาะฮฺแบบกลุ่ม: ผู้ดูแลกำหนดรายชื่อผู้เรียน (คอลัมน์ M) · ว่าง = ใช้ระดับชั้นแบบเดิม
+function hqRows_() { const sh = getSpreadsheet().getSheetByName(SHEETS.HALAQAH); if (!sh || sh.getLastRow() < 2) return []; return sh.getRange(2, 1, sh.getLastRow() - 1, Math.min(HEADERS.HALAQAH.length, sh.getMaxColumns())).getValues(); }
+function hqMembers_(v) { return String(v || '').split(',').map(function (x) { return cleanVal(x).replace(/^0+/, ''); }).filter(Boolean); }
+function hqIsMember_(h, sid) { return !h.members.length || h.members.indexOf(cleanVal(sid).replace(/^0+/, '')) !== -1; }
 function readHalaqah_() {
-  return sheetRows_(SHEETS.HALAQAH, HEADERS.HALAQAH.length).filter(function (r) { return cleanVal(r[0]) && cleanVal(r[10]) !== 'deleted'; }).map(function (r) {
+  return hqRows_().filter(function (r) { return cleanVal(r[0]) && cleanVal(r[10]) !== 'deleted'; }).map(function (r) {
     return { id: cleanVal(r[0]), name: cleanVal(r[1]), slot: cleanVal(r[2]) || 'other', days: String(r[3] === '' ? '0,1,2,3,4,5,6' : r[3]).split(',').map(function (x) { return cleanVal(x); }).filter(function (x) { return /^[0-6]$/.test(x); }),
       start: hqTime_(r[4]), end: hqTime_(r[5]), grades: String(r[6] || '').split(',').map(function (x) { return cleanVal(x); }).filter(function (x) { return /^[1-6]$/.test(x); }),
-      teacher: cleanVal(r[7]), teacherName: cleanVal(r[8]), location: cleanVal(r[9]), createdAt: normalizeDateStr_(r[11]) };
+      teacher: cleanVal(r[7]), teacherName: cleanVal(r[8]), location: cleanVal(r[9]), createdAt: normalizeDateStr_(r[11]), members: hqMembers_(r[12]) };
   });
 }
-function halaqahSessions_(grade, all) { return readHalaqah_().filter(function (h) { return all || !h.grades.length || h.grades.indexOf(grade) !== -1; }); }
+function halaqahSessions_(grade, all, sid) { return readHalaqah_().filter(function (h) { if (all) return true; if (h.members.length) return !!sid && hqIsMember_(h, sid); return !h.grades.length || h.grades.indexOf(grade) !== -1; }); }
 function saveHalaqahSession_(d, session) {
   d = d || {};
   const name = cleanVal(d.name).substring(0, 80) || HQ_SLOTS[cleanVal(d.slot)] && ('หะละเกาะฮฺ' + HQ_SLOTS[cleanVal(d.slot)]);
@@ -6828,7 +6832,10 @@ function saveHalaqahSession_(d, session) {
   ensureSchema();
   const sh = getSpreadsheet().getSheetByName(SHEETS.HALAQAH);
   const id = cleanVal(d.id) || ('HLQ-' + Date.now());
-  const row = [id, name, slot, days.join(','), start, end, grades.join(','), cleanVal(d.teacher) || session.userId, cleanVal(d.teacherName) || session.name || session.userId, cleanVal(d.location).substring(0, 80), 'active', Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss')];
+  const members = (Array.isArray(d.members) ? d.members : String(d.members || '').split(',')).map(function (x) { return cleanVal(x).replace(/^0+/, ''); }).filter(function (x) { return /^[0-9A-Za-z_-]{1,20}$/.test(x); }).filter(function (x, i, a) { return a.indexOf(x) === i; }).slice(0, 2000);
+  if (sh.getMaxColumns() < HEADERS.HALAQAH.length) sh.insertColumnsAfter(sh.getMaxColumns(), HEADERS.HALAQAH.length - sh.getMaxColumns());
+  if (!cleanVal(sh.getRange(1, 13).getValue())) sh.getRange(1, 13).setValue(HEADERS.HALAQAH[12]);
+  const row = [id, name, slot, days.join(','), start, end, grades.join(','), cleanVal(d.teacher) || session.userId, cleanVal(d.teacherName).substring(0, 80) || session.name || session.userId, cleanVal(d.location).substring(0, 80), 'active', Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), members.join(',')];
   const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues() : [];
   for (let i = 0; i < rows.length; i++) if (cleanVal(rows[i][0]) === id) { sh.getRange(i + 2, 1, 1, row.length).setValues([row]); return { success: true, id: id, message: 'บันทึกหะละเกาะฮฺแล้ว' }; }
   sh.appendRow(row);
@@ -6875,7 +6882,8 @@ function halaqahCheckIn_(session, qr) {
   const h = readHalaqah_().filter(function (x) { return x.id === id; })[0];
   if (!h) return { success: false, message: 'ไม่พบหะละเกาะฮฺนี้' };
   const st = studentGradeNum_(session.userId);
-  if (h.grades.length && h.grades.indexOf(st.grade) === -1) return { success: false, message: 'หะละเกาะฮฺนี้สำหรับชั้น ' + h.grades.map(function (g) { return 'ม.' + g; }).join(', ') + ' เท่านั้น' };
+  if (h.members.length && !hqIsMember_(h, session.userId)) return { success: false, message: 'คุณไม่ได้อยู่ในกลุ่ม' + h.name + (h.teacherName ? ' (ผู้ดูแล ' + h.teacherName + ')' : '') };
+  if (!h.members.length && h.grades.length && h.grades.indexOf(st.grade) === -1) return { success: false, message: 'หะละเกาะฮฺนี้สำหรับชั้น ' + h.grades.map(function (g) { return 'ม.' + g; }).join(', ') + ' เท่านั้น' };
   const now = hqNowMin_(), s = hqMin_(h.start), e = hqMin_(h.end);
   if (now < s - 20) return { success: false, message: 'ยังไม่ถึงเวลาหะละเกาะฮฺ (เริ่ม ' + h.start + ')' };
   if (now > e + 10) return { success: false, message: 'เลยเวลาหะละเกาะฮฺแล้ว (ถึง ' + h.end + ') กรุณาแจ้งอาจารย์ผู้ดูแล' };
@@ -6886,7 +6894,7 @@ function halaqahCheckIn_(session, qr) {
 }
 function getMyHalaqah_(sid) {
   const st = studentGradeNum_(sid);
-  const sessions = halaqahSessions_(st.grade, false);
+  const sessions = halaqahSessions_(st.grade, false, sid);
   const logs = hqLogs_().filter(function (l) { return isCodeMatch(l.studentId, sid); }).sort(function (a, b) { return (b.date + b.time).localeCompare(a.date + a.time); });
   return { success: true, sessions: sessions, logs: logs.slice(0, 400), today: hqToday_(), nowMin: hqNowMin_() };
 }
@@ -6895,7 +6903,7 @@ function getHalaqahRoster_(id, date) {
   if (!h) return { success: false, message: 'ไม่พบหะละเกาะฮฺ' };
   date = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(date)) ? cleanVal(date) : hqToday_();
   const logs = {}; hqLogs_().forEach(function (l) { if (l.sessionId === h.id && l.date === date) logs[cleanVal(l.studentId).replace(/^0+/, '')] = l; });
-  const students = sheetRows_(SHEETS.STUDENTS, 8).filter(function (r) { if (!cleanVal(r[0]) || /ลาออก|สำเร็จ|พ้นสภาพ/.test(String(r[7]))) return false; const m = String(r[3]).match(/([1-6])/); return !h.grades.length || (m && h.grades.indexOf(m[1]) !== -1); })
+  const students = sheetRows_(SHEETS.STUDENTS, 8).filter(function (r) { if (!cleanVal(r[0]) || /ลาออก|สำเร็จ|พ้นสภาพ/.test(String(r[7]))) return false; if (h.members.length) return hqIsMember_(h, r[0]); const m = String(r[3]).match(/([1-6])/); return !h.grades.length || (m && h.grades.indexOf(m[1]) !== -1); })
     .map(function (r) { const k = cleanVal(r[0]).replace(/^0+/, ''); const l = logs[k]; return { studentId: cleanVal(r[0]), fullName: cleanVal(r[1]), grade: cleanVal(r[3]), status: l ? l.status : '', time: l ? l.time : '', method: l ? l.method : '' }; });
   return { success: true, session: h, date: date, students: students };
 }
