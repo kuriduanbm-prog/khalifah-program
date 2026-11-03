@@ -4374,3 +4374,9 @@ body.k8-lim .k8-adm-modes { display: none !important; }
 .k8-tt-band .k8-tt-tg, .k8-tt-band .k8-tt-tg.is-m, .k8-tt-band .k8-tt-tg.is-f, .k8-tt-band .k8-tt-tg.is-r { background: transparent !important; padding: 0 2px; }
 .k8-tt-band .k8-tt-tg.is-m { color: #1d4ed8; } .k8-tt-band .k8-tt-tg.is-f { color: #0f766e; } .k8-tt-band .k8-tt-tg.is-r { color: #b45309; }
 .k8-tt-grid.is-tt2:not(.is-edit) td.has:not(:has(.k8-tt-bands)) b, .k8-tt-grid.is-tt2.is-edit td button.has:not(.is-multi) b { color: #0f172a !important; }
+/* v17.87 · หมดเวลาแล้วไม่ได้เช็ค: กากบาทแดง */
+.k8-pd-b.is-miss { background: #fef2f2; border: 1.5px solid #fca5a5; color: #b91c1c; }
+.k8-pd-b.is-miss i { font-style: normal; font-size: 18px; font-weight: 800; color: #dc2626; }
+.k8-pd-b.is-miss small { color: #b91c1c; }
+.k8-pd-b.is-miss:hover { border-color: #dc2626; }
+.k8-pd-legend .is-miss { color: #b91c1c; font-weight: 600; } .k8-pd-legend .is-miss::before { display: none; }

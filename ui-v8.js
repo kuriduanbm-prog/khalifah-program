@@ -3338,7 +3338,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.86';
+  const APP_VERSION = '17.87';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7500,6 +7500,13 @@ window.k8RegBirthChange = function (v) {
     const q = ((document.getElementById('adminPrayerSearchInput') || {}).value || '').toLowerCase().trim();
     const cid = (v) => { try { return cleanIdString(v); } catch (e) { return String(v || '').trim(); } };
     const rows = all.map((s) => { const sid = cid(s.studentId); const p = map[sid] || {}; return { s: s, sid: sid, p: p, n: slots.filter((x) => p[x.key]).length }; });
+    // v17.87 · ช่องที่หมดเวลาแล้วแต่ไม่ได้เช็ค (หลังสมัครใช้แอป) → กากบาทแดง ให้แอดมินเห็นชัด
+    const pd = (n) => String(n).padStart(2, '0'); const nowD = new Date(); const todayS = nowD.getFullYear() + '-' + pd(nowD.getMonth() + 1) + '-' + pd(nowD.getDate()); const nowM = nowD.getHours() * 60 + nowD.getMinutes();
+    const viewD = ((document.getElementById('adminPrayerDateSelect') || {}).value) || todayS;
+    const regOf = (st) => { const v = String(st.registeredAt || st.registerDate || ''); let m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) { const y = +m[1] > 2400 ? +m[1] - 543 : +m[1]; return y + '-' + m[2] + '-' + m[3]; } m = v.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) { const y = +m[3] > 2400 ? +m[3] - 543 : +m[3]; return y + '-' + pd(m[2]) + '-' + pd(m[1]); } return ''; };
+    const endOf = (k) => { try { const w = PRAYER_TIME_WINDOWS.find((w) => (w.key || w.name) === k); return w ? w.endMin : 0; } catch (e) { return 0; } };
+    const missed = (st, k) => { if (viewD > todayS) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
+    const missN = {}; rows.forEach((r) => { missN[r.sid] = slots.filter((x) => !r.p[x.key] && missed(r.s, x.key)).length; });
     const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length };
     let list = rows.filter((r) => V.f === 'all' || (V.f === 'full' ? r.n === 5 : V.f === 'part' ? r.n > 0 && r.n < 5 : r.n === 0));
     if (q) list = list.filter((r) => String(r.s.fullName || '').toLowerCase().includes(q) || r.sid.toLowerCase().includes(q) || String(r.s.grade || '').toLowerCase().includes(q));
@@ -7514,7 +7521,7 @@ window.k8RegBirthChange = function (v) {
       const av = s.avatarUrl ? (function () { try { return getDirectImageUrl(s.avatarUrl) || s.avatarUrl; } catch (e) { return s.avatarUrl; } })() : '';
       const boxes = slots.map((x) => {
         const rec = r.p[x.key];
-        if (!rec) return '<button type="button" class="k8-pd-b is-none" onclick="k8PeAdd(\'' + jsq(r.sid) + '\',\'' + jsq(x.key) + '\')" title="' + esc(x.label) + ' · ยังไม่เช็คชื่อ · แตะเพื่อบันทึกแทน"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>–</i></button>';
+        if (!rec) { const miss = missed(s, x.key); return '<button type="button" class="k8-pd-b ' + (miss ? 'is-miss' : 'is-none') + '" onclick="k8PeAdd(\'' + jsq(r.sid) + '\',\'' + jsq(x.key) + '\')" title="' + esc(x.label) + (miss ? ' · ไม่ได้เช็คชื่อ (หมดเวลาแล้ว)' : ' · ยังไม่เช็คชื่อ') + ' · แตะเพื่อบันทึกแทน"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>' + (miss ? '✕' : '–') + '</i></button>'; }
         const k = kind(rec.status); const tm = String(rec.time || '').match(/(^|[^\d])(\d{1,2}):(\d{2})/); const t = tm ? tm[2].padStart(2, '0') + ':' + tm[3] : '✓';
         return '<button type="button" class="k8-pd-b is-' + k + '" onclick="openPrayerHistoryDetailModal(\'' + jsq(rec.id || rec.logId || '') + '\')" title="' + esc(x.label + ' · ' + (rec.status || '') + ' · ' + (rec.time || '')) + '"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>' + (k === 'ex' ? 'ลา' : k === 'late' ? t : k === 'abs' ? '✕' : t) + '</i></button>';
       }).join('');
@@ -7526,7 +7533,7 @@ window.k8RegBirthChange = function (v) {
     el.innerHTML = '<div class="k8-pd-top"><div class="k8-pd-chips">' + chip('all', 'ทั้งหมด', cnt.all) + chip('zero', 'ยังไม่เช็คเลย', cnt.zero) + chip('part', 'ยังไม่ครบ', cnt.part) + chip('full', 'ครบ 5', cnt.full) + '</div>' +
       '<label class="k8-pd-sort"><span>เรียง</span><select onchange="k8PdS(this.value)"><option value="low"' + (V.sort === 'low' ? ' selected' : '') + '>เช็คน้อยก่อน</option><option value="high"' + (V.sort === 'high' ? ' selected' : '') + '>เช็คมากก่อน</option><option value="id"' + (V.sort === 'id' ? ' selected' : '') + '>รหัสนักเรียน</option></select></label></div>' +
       '<div class="k8-pd-per">' + slots.map((x, i) => '<span><small>' + esc(x.label) + '</small><b>' + per[i] + '</b><em>/' + rows.length + '</em></span>').join('') + '</div>' +
-      '<div class="k8-pd-legend"><span class="is-ok">ตรงเวลา</span><span class="is-late">มาช้า</span><span class="is-ex">ลา/อุซุร</span><span class="is-none">ยังไม่เช็ค · แตะเพื่อบันทึกแทน</span></div>' +
+      '<div class="k8-pd-legend"><span class="is-ok">ตรงเวลา</span><span class="is-late">มาช้า</span><span class="is-ex">ลา/อุซุร</span><span class="is-miss">✕ หมดเวลา ไม่ได้เช็ค</span><span class="is-none">ยังไม่ถึงเวลา/ยังไม่เช็ค · แตะเพื่อบันทึกแทน</span></div>' +
       (list.length ? '<div class="k8-pd-grid">' + list.map(card).join('') + '</div>' : '<div class="k8-li-empty">ไม่มีนักเรียนในกลุ่มนี้</div>');
     const badge = document.getElementById('dailyTableTotalBadge'); if (badge) badge.textContent = 'แสดง ' + list.length + ' จาก ' + rows.length + ' คน';
   }
