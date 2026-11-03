@@ -4217,9 +4217,9 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-head { grid-template-columns: minmax(
 .k8-bh-ghead b { font-weight: 700; } .k8-bh-ghead span { font-size: 14px; font-weight: 600; }
 .k8-bh-gcol.is-m .k8-bh-ghead { background: #dbeafe; color: #1d4ed8; }
 .k8-bh-gcol.is-f .k8-bh-ghead { background: #ccfbf1; color: #0f766e; }
-.k8-bh-gcols .k8-bh-stu button { gap: 10px; min-height: 64px; padding: 10px; align-items: center; }
-.k8-bh-gcols .k8-bh-who b { font-size: 16.5px; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
-.k8-bh-gcols .k8-bh-who small { font-size: 14px; }
+.k8-bh-gcols .k8-bh-stu button { gap: 10px; min-height: 60px; padding: 10px; align-items: center; }
+.k8-bh-gcols .k8-bh-who b { font-size: 15.5px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.k8-bh-gcols .k8-bh-who small { font-size: 13.5px; }
 .k8-bh-gcols .k8-bh-who small i { font-style: normal; font-weight: 700; }
 .k8-bh-gcols .k8-bh-chk { width: 28px; height: 28px; font-size: 16px; }
 .k8-bh-gcol.is-m .k8-bh-stu button[aria-checked="true"] { border-color: #1d4ed8; background: #eff6ff; }
