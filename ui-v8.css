@@ -4316,3 +4316,6 @@ body.k8-lim .k8-adm-modes { display: none !important; }
 .k8-cam-cd.is-low { background: rgba(185,28,28,.8); }
 .k8-cam-cd.is-low i { background: conic-gradient(#fff calc(var(--p, 100) * 1%), rgba(255,255,255,.3) 0); }
 .k8-cam-cd[hidden] { display: none; }
+/* v17.83 · ปุ่มสลับกล้องแบบมีคำบอก */
+#view-prayer .btn-flip-cam.k8-flip { width: auto !important; height: 36px !important; padding: 0 12px 0 10px; gap: 6px; border-radius: 999px !important; font: inherit; font-size: 13px; font-weight: 600; background: rgba(15,23,42,.6); border: 1.5px solid rgba(255,255,255,.45); }
+#view-prayer .btn-flip-cam.k8-flip[disabled] { opacity: .7; }

@@ -4228,8 +4228,19 @@ async function initLiveCamera() {
   }
 
   let stream = null;
-  // Tier 1: ความละเอียด 1280x720 พร้อมกล้องที่เลือก
+  // v17.83 · บังคับกล้องตามที่เลือก (exact) ก่อน · ถ้าไม่ได้ค่อยลดเงื่อนไขลง
   try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  } catch (e0) { stream = null; }
+  // ไม่มีค่า facingMode ให้ใช้ (บางเครื่อง Android/แท็บเล็ต): เลือกจากรายชื่อกล้องแทน
+  if (!stream && currentFacingMode === 'environment') {
+    try {
+      const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+      const back = devs.find((d) => /back|rear|environment|หลัง/i.test(d.label || '')) || (devs.length > 1 ? devs[devs.length - 1] : null);
+      if (back) stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: back.deviceId } }, audio: false });
+    } catch (e1) { stream = null; }
+  }
+  if (!stream) try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: currentFacingMode,
@@ -4240,6 +4251,7 @@ async function initLiveCamera() {
     });
   } catch (err1) {
     console.warn('Live camera Tier 1 failed, trying Tier 2 (facingMode only):', err1);
+    stream = null;
     // Tier 2: ไม่กำหนดขนาด width/height เผื่ออุปกรณ์มือถือบางรุ่นไม่รองรับ
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -4283,11 +4295,26 @@ async function initLiveCamera() {
   return false;
 }
 
-function switchCameraFacing() {
-  currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-  initLiveCamera();
-  showToast(`สลับไปใช้${currentFacingMode === 'user' ? 'กล้องหน้า' : 'กล้องหลัง'}`, 'info');
+// v17.83 · ปุ่มสลับกล้องแบบมีคำบอก (กล้องหน้า ⇄ กล้องหลัง)
+function paintFlipCamBtn(busy) {
+  const b = document.getElementById('btnFlipCamera'); if (!b) return;
+  const toBack = currentFacingMode === 'user';
+  b.classList.add('k8-flip');
+  b.disabled = !!busy;
+  b.setAttribute('aria-label', toBack ? 'สลับไปกล้องหลัง' : 'สลับไปกล้องหน้า');
+  b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-3.2l-1.6-2H8.8L7.2 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13.5a3 3 0 0 1 5.2-2"/><path d="M15 10v1.6h-1.6"/><path d="M15 12.5a3 3 0 0 1-5.2 2"/><path d="M9 16v-1.6h1.6"/></svg><span>' + (busy ? 'กำลังสลับ…' : toBack ? 'กล้องหลัง' : 'กล้องหน้า') + '</span>';
 }
+async function switchCameraFacing() {
+  const prev = currentFacingMode;
+  currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+  if (!activeCameraStream) { paintFlipCamBtn(); showToast(`ตั้งค่าใช้${currentFacingMode === 'user' ? 'กล้องหน้า' : 'กล้องหลัง'}แล้ว · จะใช้ตอนเปิดกล้อง`, 'info'); return; }
+  paintFlipCamBtn(true);
+  const ok = await initLiveCamera();
+  if (!ok) { currentFacingMode = prev; await initLiveCamera(); }
+  paintFlipCamBtn();
+  showToast(ok ? `สลับไปใช้${currentFacingMode === 'user' ? 'กล้องหน้า' : 'กล้องหลัง'}แล้ว` : 'เครื่องนี้สลับกล้องไม่ได้', ok ? 'info' : 'warning');
+}
+document.addEventListener('DOMContentLoaded', () => { try { paintFlipCamBtn(); } catch (e) {} });
 
 /**
  * ปุ่มหลักควบคุมระบบเช็คชื่อละหมาด 2 จังหวะ
