@@ -2146,28 +2146,3 @@ html[data-theme="dark"] [style*="border-color:#fecaca"], html[data-theme="dark"]
 html[data-theme="dark"] [style*="border-color:#bae6fd"], html[data-theme="dark"] [style*="border-color:#BAE6FD"], html[data-theme="dark"] [style*="border-color: #bae6fd"], html[data-theme="dark"] [style*="border-color: #BAE6FD"] { border-color: #264555 !important; }
 html[data-theme="dark"] [style*="border-color:#a7f3d0"], html[data-theme="dark"] [style*="border-color:#A7F3D0"], html[data-theme="dark"] [style*="border-color: #a7f3d0"], html[data-theme="dark"] [style*="border-color: #A7F3D0"] { border-color: #2e5644 !important; }
 html[data-theme="dark"] [style*="border-color:#c7d2fe"], html[data-theme="dark"] [style*="border-color:#C7D2FE"], html[data-theme="dark"] [style*="border-color: #c7d2fe"], html[data-theme="dark"] [style*="border-color: #C7D2FE"] { border-color: #252e53 !important; }
-
-/* Round 58 (v17.89): Dark mode for Attendance Summary & Halaqah Date Picker */
-html[data-theme="dark"] .k8-ta-sum-btn,
-html[data-theme="dark"] .k8-asum-card,
-html[data-theme="dark"] .k8-asum-kpi,
-html[data-theme="dark"] .k8-asum-tblwrap,
-html[data-theme="dark"] .k8-asum-tbl tbody th[scope="row"],
-html[data-theme="dark"] .k8-asum-gcard,
-html[data-theme="dark"] .k8-asum-fsub select,
-html[data-theme="dark"] .k8-asum-daterange input[type="date"],
-html[data-theme="dark"] .k8-hq-datepick-row input[type="date"],
-html[data-theme="dark"] .k8-asum-search,
-html[data-theme="dark"] .k8-asum-sort,
-html[data-theme="dark"] .k8-asum-back-inline { background-color: #121212 !important; border-color: #323941 !important; color: #e2e8f0 !important; }
-html[data-theme="dark"] .k8-asum-tabs,
-html[data-theme="dark"] .k8-asum-tbl thead th,
-html[data-theme="dark"] .k8-hq-qdate,
-html[data-theme="dark"] .k8-hq-dstep,
-html[data-theme="dark"] .k8-hq-pick-note,
-html[data-theme="dark"] .k8-asum-csv { background-color: #181f26 !important; border-color: #323941 !important; color: #cbd5e1 !important; }
-html[data-theme="dark"] .k8-asum-tabs button[aria-selected="true"] { background-color: #121212 !important; color: #f8fafc !important; }
-html[data-theme="dark"] .k8-asum-tbl tbody td,
-html[data-theme="dark"] .k8-asum-tbl tbody th[scope="row"] { border-bottom-color: #1e293b !important; }
-html[data-theme="dark"] .k8-asum-clickrow:hover td,
-html[data-theme="dark"] .k8-asum-clickrow:hover th[scope="row"] { background-color: #181f26 !important; }
