@@ -3342,7 +3342,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.90';
+  const APP_VERSION = '17.91';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4212,7 +4212,7 @@ window.k8RegBirthChange = function (v) {
     try {
       const r = await api('getMyNotifications');
       if (r && r.success) {
-        N.list = r.notifications || []; N.pending = r.pendingPolicies || []; N.unread = r.unread || 0; N.loaded = true; N.at = Date.now();
+        N.list = r.notifications || []; N.pending = r.pendingPolicies || []; N.unread = r.unread || 0; N.loaded = true; N.at = Date.now(); if (s) { window.k8ClassLeaves = r.classLeaves || []; try { localStorage.setItem('k8_class_leaves', JSON.stringify(window.k8ClassLeaves)); } catch (e) {} try { if (window.k8TtRerender) window.k8TtRerender(); } catch (e) {} }
         try { localStorage.setItem('k8_notif_cache_' + (s ? 'S' + norm(s.studentId) : 'U' + (a.username || '')), JSON.stringify({ list: N.list, pending: N.pending, unread: N.unread })); } catch (e) {}
       }
     } catch (e) {}
@@ -5720,6 +5720,9 @@ window.k8RegBirthChange = function (v) {
   const dTh = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON_S[d.getMonth()]; };
   const rangeTxt = (e) => !e || (!e.from && !e.to) ? '' : (e.from && e.to ? dTh(e.from) + '–' + dTh(e.to) : e.from ? 'ตั้งแต่ ' + dTh(e.from) : 'ถึง ' + dTh(e.to));
   const GXN = { m: 'ชาย', f: 'หญิง' };
+  // v17.90 · อาจารย์ลาสอน (อนุมัติแล้ว) ที่กระทบนักเรียน · มาจากกระดิ่ง (getMyNotifications.classLeaves)
+  const lvOf = (ds, p) => (window.k8ClassLeaves || []).find((l) => l.date === ds && Number(l.p) === Number(p));
+  const lvTag = (ds, p) => { const l = lvOf(ds, p); return l ? '<em class="k8-tt-lv' + (l.subName ? ' is-sub' : '') + '">' + (l.subName ? 'สอนแทน · ' + esc(l.subName) : 'งดสอน · ' + esc(l.teacherName || 'อาจารย์') + ' ลา') + '</em>' : ''; };
   const bandHtml = (e, ds) => { const old = e.to && e.to < (ds || todayS()); const soon = e.from && e.from > (ds || todayS()); return '<span class="k8-tt-band' + (e.gx ? ' is-' + e.gx : (rangeTxt(e) ? ' is-r' : '')) + (old ? ' is-old' : '') + (soon ? ' is-soon' : '') + '" style="--sc:' + subjColor(e.sn) + '"><b>' + esc(e.sn) + '</b>' + (e.gx ? '<i class="k8-tt-tg is-' + e.gx + '">' + GXN[e.gx] + '</i>' : '') + (e.o && e.o.length ? '<i class="k8-tt-tg">' + e.o.length + ' คน</i>' : '') + (rangeTxt(e) ? '<i class="k8-tt-tg is-r">' + (old ? 'สิ้นสุดแล้ว · ' : '') + rangeTxt(e) + '</i>' : '') + '</span>'; };
   window.k8TtActOn = actOn;
   const isMine = (c) => { const u = me(); const un = String(u.username || '').toLowerCase(), fn = String(u.fullName || u.name || '').trim(); return !!c && ((un && String(c.t || '').toLowerCase() === un) || (fn && String(c.tn || '').trim() === fn)); };
@@ -5775,6 +5778,7 @@ window.k8RegBirthChange = function (v) {
     if (role() === 'staff') { T.who = 'mine'; if (!T.grade) T.grade = '1'; }
     document.getElementById('k8TtTitle').textContent = role() === 'student' ? 'ตารางเรียน' : 'ตารางสอน';
     el.hidden = false; T.open = true; document.documentElement.classList.add('k8-docs-open');
+    if (role() === 'student' && typeof gasApiCall === 'function') gasApiCall('getMyClassLeaves', {}).then((r) => { if (r && r.success) { window.k8ClassLeaves = r.data || []; try { localStorage.setItem('k8_class_leaves', JSON.stringify(window.k8ClassLeaves)); } catch (e) {} if (T.open) renderView(); } }).catch(() => {});
     try { history.pushState({ k8tt: 1 }, ''); } catch (e) {}
     const b = document.getElementById('k8TtBody'); if (b) b.scrollTop = 0;
     renderView(); load(true);
@@ -5786,6 +5790,8 @@ window.k8RegBirthChange = function (v) {
     if (!x) return '<span class="k8-tt-free">ว่าง</span>';
     return '<b>' + esc(x.sn) + '</b><small>' + [showGrade ? lbl(g) : '', showGrade ? '' : x.tn, x.r ? 'ห้อง ' + x.r : '', x.gx ? 'เฉพาะนักเรียน' + GXN[x.gx] : (x.only && !x.multi ? 'เฉพาะบางคน' : ''), rangeTxt(x)].filter(Boolean).map(esc).join(' · ') + '</small>';
   }
+  try { window.k8ClassLeaves = window.k8ClassLeaves || JSON.parse(localStorage.getItem('k8_class_leaves') || '[]'); } catch (e) {}
+  window.k8TtRerender = function () { try { if (T.open) renderView(); } catch (e) {} };
   function renderView() {
     const body = document.getElementById('k8TtBody'); if (!body) return;
     const r = role(); const c = cfg();
@@ -5810,13 +5816,14 @@ window.k8RegBirthChange = function (v) {
     if (T.view === 'day') {
       const today = T.day === new Date().getDay(); const n = nowMin();
       const rows = c.periods.map((p, i) => { const o = cellOf(T.day, i); const live = !!o.x && today && toMin(p.start) <= n && n < toMin(p.end);
-        return '<li class="' + (o.x ? 'has ' : 'is-free ') + (live ? 'is-now' : '') + '"' + (o.x ? ' style="--sc:' + subjColor(o.x.sn) + '"' : '') + '><span class="k8-tt-time"><b>คาบ ' + (i + 1) + '</b><small>' + esc(p.start) + '–' + esc(p.end) + '</small></span><span class="k8-tt-cell">' + cellHtml(o.x, mine, o.g) + (live ? '<em>' + (staff ? 'กำลังสอน' : 'กำลังเรียน') + '</em>' : '') + '</span></li>'; }).join('');
+        const lv = o.x && !staff ? lvTag(o.ds, i + 1) : '';
+        return '<li class="' + (o.x ? 'has ' : 'is-free ') + (live ? 'is-now' : '') + (lv ? ' is-leave' : '') + '"' + (o.x ? ' style="--sc:' + subjColor(o.x.sn) + '"' : '') + '><span class="k8-tt-time"><b>คาบ ' + (i + 1) + '</b><small>' + esc(p.start) + '–' + esc(p.end) + '</small></span><span class="k8-tt-cell">' + cellHtml(o.x, mine, o.g) + lv + (live ? '<em>' + (staff ? 'กำลังสอน' : 'กำลังเรียน') + '</em>' : '') + '</span></li>'; }).join('');
       const any = c.periods.some((p, i) => cellOf(T.day, i).x);
       h += '<h3 class="k8-tt-dh">วัน' + DAYN[T.day] + (today ? ' · วันนี้' : '') + '</h3>' + (any ? '<ol class="k8-tt-list">' + rows + '</ol>' : '<p class="k8-li-empty">' + (mine ? 'ไม่มีคาบสอนวันนี้' : 'ยังไม่มีคาบเรียนในวันนี้') + '</p>');
     } else {
       const ni = nowIdx(c), td0 = new Date().getDay();
       h += '<div class="k8-tt-gridwrap"><table class="k8-tt-grid is-tt2"><thead><tr><th scope="col">วัน</th>' + c.periods.map((p, i) => '<th scope="col"' + (i === ni ? ' class="is-now"' : '') + '>คาบ ' + (i + 1) + '<small>' + esc(p.start) + '–' + esc(p.end) + '</small>' + (i === ni ? '<em>ตอนนี้</em>' : '') + '</th>').join('') + '</tr></thead><tbody>' +
-        c.days.map((d) => '<tr' + (d === td0 ? ' class="is-today"' : '') + '><th scope="row"><button type="button" class="k8-tt-dbtn" onclick="k8TtDay(' + d + ')" aria-label="ดูวัน' + DAYN[d] + 'แบบรายคาบ">' + DAYS[d] + (d === td0 ? '<small>วันนี้</small>' : '') + '</button></th>' + c.periods.map((p, i) => { const o = cellOf(d, i); return '<td class="' + (o.x ? 'has' : 'is-free') + (i === ni ? ' is-nowcol' : '') + (i === ni && d === td0 ? ' is-live' : '') + '"' + (o.x ? ' style="--sc:' + subjColor(o.x.sn) + '"' : '') + '>' + (o.x ? (o.x.multi ? '<div class="k8-tt-bands">' + o.x.multi.map((e) => bandHtml(e, o.ds)).join('') + '</div>' : '<b>' + esc(o.x.sn) + '</b><small>' + esc([mine ? lbl(o.g) : (o.x.tn || ''), o.x.r ? 'ห้อง ' + o.x.r : '', o.x.gx ? 'เฉพาะ' + GXN[o.x.gx] : '', rangeTxt(o.x)].filter(Boolean).join(' · ')) + '</small>') : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div><p class="k8-pw-hint">แตะชื่อวันเพื่อดูรายคาบของวันนั้น</p>';
+        c.days.map((d) => '<tr' + (d === td0 ? ' class="is-today"' : '') + '><th scope="row"><button type="button" class="k8-tt-dbtn" onclick="k8TtDay(' + d + ')" aria-label="ดูวัน' + DAYN[d] + 'แบบรายคาบ">' + DAYS[d] + (d === td0 ? '<small>วันนี้</small>' : '') + '</button></th>' + c.periods.map((p, i) => { const o = cellOf(d, i); const lv = o.x && !staff ? lvTag(o.ds, i + 1) : ''; return '<td class="' + (o.x ? 'has' : 'is-free') + (lv ? ' is-leave' : '') + (i === ni ? ' is-nowcol' : '') + (i === ni && d === td0 ? ' is-live' : '') + '"' + (o.x ? ' style="--sc:' + subjColor(o.x.sn) + '"' : '') + '>' + (o.x ? (o.x.multi ? '<div class="k8-tt-bands">' + o.x.multi.map((e) => bandHtml(e, o.ds)).join('') + '</div>' : '<b>' + esc(o.x.sn) + '</b><small>' + esc([mine ? lbl(o.g) : (o.x.tn || ''), o.x.r ? 'ห้อง ' + o.x.r : '', o.x.gx ? 'เฉพาะ' + GXN[o.x.gx] : '', rangeTxt(o.x)].filter(Boolean).join(' · ')) + '</small>') + lv : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div><p class="k8-pw-hint">แตะชื่อวันเพื่อดูรายคาบของวันนั้น</p>';
     }
     if (T.view === 'week' && (mine || Object.keys(gradeOf(grade).cells || {}).length)) h += '<button type="button" class="k8-tt-img" onclick="k8TtImage(\'view\')">' + IMG_ICON + 'บันทึกเป็นรูปภาพ (A4 แนวนอน)</button>';
     body.innerHTML = h;

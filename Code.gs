@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.90'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.91'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1219,7 +1219,7 @@ const ACTION_ACCESS = {
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
   saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff',
-  getMyNotifications: 'student', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  getMyNotifications: 'student', getMyClassLeaves: 'student', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
@@ -1610,6 +1610,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return markPrayersLate_(data);
     case 'getTeacherLeaves':
       return { success: true, data: readLeaves_() };
+    case 'getMyClassLeaves':
+      return { success: true, data: isStudent ? myClassLeaves_(session.userId) : [] };
     case 'saveTeacherLeave':
       return saveTeacherLeave_(data, session, !!session && session.role === 'admin');
     case 'takeTeacherLeave':
@@ -6675,6 +6677,29 @@ function readNotifs_() {
     return { id: cleanVal(r[0]), createdAt: cleanVal(r[1]), title: cleanVal(r[2]), body: cleanVal(r[3]), audience: cleanVal(r[4]), audienceValue: cleanVal(r[5]), priority: cleanVal(r[6]) || 'normal', by: cleanVal(r[7]), byName: cleanVal(r[8]), status: cleanVal(r[9]) || 'active', expires: cleanVal(r[10]) };
   });
 }
+// v17.90 · อาจารย์ลาสอน (อนุมัติแล้ว) ที่กระทบนักเรียนคนนี้ · ใช้ทั้งในตารางเรียนและกระดิ่ง
+function myClassLeaves_(sid) {
+  const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  const until = Utilities.formatDate(new Date(Date.now() + 8 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  const g = studentGradeNum_(sid).grade; if (!g) return [];
+  const me = String(sid).replace(/\D/g, '').replace(/^0+/, '');
+  const myGx = studentGx_(sid);
+  const st = (getSettings().data) || {};
+  let tt = null; try { tt = JSON.parse(st['Timetable_M' + g] || 'null'); } catch (e) {}
+  const cells = (tt && tt.cells) || {};
+  const fits = function (e) { return e && (!e.o || !e.o.length || e.o.indexOf(me) !== -1) && !(e.x && e.x.indexOf(me) !== -1) && (!e.gx || !myGx || e.gx === myGx); };
+  const out = [];
+  readLeaves_().forEach(function (lv) {
+    if (!lv || lv.status !== 'approved' || lv.date < today || lv.date > until) return;
+    const dow = new Date(lv.date + 'T00:00:00').getDay();
+    const mineCells = function (p) { const v = cells[dow + '-' + p]; return (Array.isArray(v) ? v : v ? [v] : []).filter(function (e) { return fits(e) && String(e.t || '') === String(lv.teacherId || '') && (!e.from || lv.date >= e.from) && (!e.to || lv.date <= e.to); }); };
+    const hits = [];
+    if (lv.slots && lv.slots.length) lv.slots.forEach(function (x) { if (String(x.g) !== String(g)) return; const c = mineCells(x.p); if (c.length || !x.s) hits.push({ p: x.p, sn: x.sn || (c[0] && c[0].sn) || '' }); });
+    else for (let p = 1; p <= 12; p++) { if (lv.allDay || (lv.periods || []).indexOf(p) !== -1) mineCells(p).forEach(function (e) { hits.push({ p: p, sn: e.sn || '' }); }); }
+    hits.forEach(function (h) { out.push({ id: 'LV-' + lv.id + '-' + h.p, leaveId: lv.id, date: lv.date, p: h.p, sn: h.sn, teacherName: lv.teacherName, subName: lv.subName || '' }); });
+  });
+  return out.sort(function (a, b) { return (a.date + a.p).localeCompare(b.date + b.p); });
+}
 function getMyNotifications_(session) {
   ensureSchema();
   const g = session.role === 'student' ? studentGradeNum_(session.userId).grade : '';
@@ -6686,12 +6711,21 @@ function getMyNotifications_(session) {
     .map(function (n) { const rd = reads[n.id] || {}; return { id: n.id, createdAt: n.createdAt, title: n.title, body: n.body, priority: n.priority, byName: n.byName, read: !!rd.at, hidden: !!rd.hidden }; })
     .filter(function (n) { return !n.hidden; })
     .sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }).slice(0, 100);
+  let classLeaves = [];
+  if (session.role === 'student') {
+    try { classLeaves = myClassLeaves_(session.userId); } catch (e) { classLeaves = []; }
+    classLeaves.forEach(function (c) {
+      const rd = reads[c.id] || {}; if (rd.hidden) return;
+      const dTh = leaveDateTh_(c.date); if (list.some(function (n) { return n.kind !== 'leave' && String(n.title || '').indexOf('อาจารย์ลาสอน · ' + c.teacherName) === 0 && String(n.body || '').indexOf(dTh) !== -1 && (!c.sn || String(n.body || '').indexOf(c.sn) !== -1); })) return; // มีประกาศจากการอนุมัติแล้ว
+      list.unshift({ id: c.id, createdAt: c.date + ' 00:00:00', title: (c.subName ? 'สอนแทน: ' : 'งดสอน: ') + (c.sn || 'คาบ ' + c.p) + ' · ' + leaveDateTh_(c.date), body: 'คาบ ' + c.p + (c.sn ? ' วิชา' + c.sn : '') + ' · ' + (c.teacherName || 'อาจารย์ผู้สอน') + ' ลาสอน' + (c.subName ? ' · มี ' + c.subName + ' สอนแทน' : ' · ไม่มีการเรียนการสอนในคาบนี้'), priority: 'high', byName: 'ระบบตารางเรียน', read: !!rd.at, hidden: false, kind: 'leave' });
+    });
+  }
   const pending = [];
   if (session.role === 'student') {
     const acks = myPolicyAcks_(session.userId);
     REQUIRED_POLICY_IDS.forEach(function (pid) { const p = POLICIES[pid]; if (p && !acks[pid + '|' + p.version]) pending.push({ id: pid, version: p.version, title: p.title, subtitle: p.subtitle }); });
   }
-  return { success: true, notifications: list, pendingPolicies: pending, unread: list.filter(function (n) { return !n.read; }).length + pending.length };
+  return { success: true, notifications: list, classLeaves: classLeaves, pendingPolicies: pending, unread: list.filter(function (n) { return !n.read; }).length + pending.length };
 }
 function markNotificationRead_(session, ids, hide) {
   ids = (Array.isArray(ids) ? ids : [ids]).map(cleanVal).filter(Boolean).slice(0, 200);

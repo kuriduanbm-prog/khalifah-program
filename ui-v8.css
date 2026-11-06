@@ -4390,3 +4390,10 @@ html.k8-sat-off #view-prayer .k8-pr-wrap > :not(.k8-pg-head):not(.k8-sat-off) { 
 html.k8-sat-off #view-prayer #k8PerCard, html.k8-sat-off #view-prayer #k8PwAlertPr { display: none !important; }
 html.k8-sat-off #view-prayer #k8PrSub { font-size: 0 !important; }
 html.k8-sat-off #view-prayer #k8PrSub::after { content: 'วันเสาร์ · วันหยุดประจำสัปดาห์ · งดเช็คชื่อ'; font-size: 13px; color: #b91c1c; font-weight: 600; }
+/* v17.91 · ตารางเรียนนักเรียน: อาจารย์ลาสอน */
+.k8-tt-lv { display: inline-block; margin-top: 4px; font-style: normal; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #fee2e2; color: #b91c1c; }
+.k8-tt-lv.is-sub { background: #fef3c7; color: #92400e; }
+.k8-tt-grid.is-tt2:not(.is-edit) td.is-leave { border: 1.5px dashed #fca5a5 !important; }
+.k8-tt-grid.is-tt2:not(.is-edit) td.is-leave:not(:has(.k8-tt-lv.is-sub)) > b { text-decoration: line-through; opacity: .6; }
+.k8-tt-list li.is-leave { border-style: dashed; border-color: #fca5a5; }
+.k8-tt-list li.is-leave .k8-tt-cell > b { opacity: .7; }
