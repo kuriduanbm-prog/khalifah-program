@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.91'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.92'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -184,7 +184,7 @@ const HEADERS = {
     'ผู้ส่ง (username)', 'ชื่อผู้ส่ง', 'สถานะ', 'หมดอายุ'
   ],
   NOTIF_READS: ['รหัสแจ้งเตือน', 'ผู้ใช้', 'อ่านเมื่อ', 'ซ่อน'],
-  HALAQAH: ['รหัสหะละเกาะฮฺ', 'ชื่อ', 'ช่วงเวลา', 'วัน (0=อา.)', 'เริ่ม', 'สิ้นสุด', 'ระดับชั้น', 'ผู้ดูแล (username)', 'ชื่อผู้ดูแล', 'สถานที่', 'สถานะ', 'สร้างเมื่อ', 'ผู้เรียน (รหัสนักเรียน)'],
+  HALAQAH: ['รหัสหะละเกาะฮฺ', 'ชื่อ', 'ช่วงเวลา', 'วัน (0=อา.)', 'เริ่ม', 'สิ้นสุด', 'ระดับชั้น', 'ผู้ดูแล (username)', 'ชื่อผู้ดูแล', 'สถานที่', 'สถานะ', 'สร้างเมื่อ', 'ผู้เรียน (รหัสนักเรียน)', 'วันที่จัด'],
   HALAQAH_LOGS: ['รหัสบันทึก', 'รหัสหะละเกาะฮฺ', 'ชื่อหะละเกาะฮฺ', 'วันที่', 'เวลา', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'วิธีบันทึก', 'ผู้บันทึก', 'สถานะ', 'หมายเหตุ'],
   DREAMS: ['รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ความใฝ่ฝัน', 'ไอคอน', 'เหตุผล/เป้าหมาย', 'อัปเดตเมื่อ'],
   POLICY_ACKS: ['รหัสยินยอม', 'รหัสข้อตกลง', 'ฉบับ', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ยินยอมเมื่อ'],
@@ -1459,23 +1459,25 @@ function dispatchAction_(action, req, data, session, ctx) {
       if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
       return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }) };
     }
-    case 'getHalaqahSessions':
-      return { success: true, sessions: halaqahSessions_(isStudent ? studentGradeNum_(session.userId).grade : '', !isStudent), today: hqToday_() };
+    case 'getHalaqahSessions': {
+      const L = halaqahSessions_(isStudent ? studentGradeNum_(session.userId).grade : '', !isStudent, isStudent ? session.userId : '');
+      return { success: true, sessions: isStudent || session.role === 'admin' ? L : L.filter(function (h) { return hqIsOwner_(h, session); }), today: hqToday_(), mine: session.role !== 'admin' };
+    }
     case 'saveHalaqahSession':
       return saveHalaqahSession_(data, session);
     case 'deleteHalaqahSession':
-      return deleteHalaqahSession_(pick('id'));
+      return hqOwnCheck_(pick('id'), session) || deleteHalaqahSession_(pick('id'));
     case 'getHalaqahQr':
-      return getHalaqahQr_(pick('id'), pick('date'));
+      return hqOwnCheck_(pick('id'), session) || getHalaqahQr_(pick('id'), pick('date'));
     case 'halaqahCheckIn':
       if (!isStudent) return { success: false, message: 'สแกนเข้าหะละเกาะฮฺได้เฉพาะบัญชีนักเรียน' };
       return halaqahCheckIn_(session, pick('qr'));
     case 'getMyHalaqah':
       return getMyHalaqah_(ownStudentId_(session, ctx, pick('studentId')));
     case 'getHalaqahRoster':
-      return getHalaqahRoster_(pick('id'), pick('date'));
+      return hqOwnCheck_(pick('id'), session) || getHalaqahRoster_(pick('id'), pick('date'));
     case 'markHalaqah':
-      return markHalaqah_(data, session);
+      return hqOwnCheck_((data || {}).id, session) || markHalaqah_(data, session);
     case 'getMyDream':
       return { success: true, dream: getDreamOf_(ownStudentId_(session, ctx, pick('studentId'))) };
     case 'saveMyDream':
@@ -6900,9 +6902,15 @@ function readHalaqah_() {
   return hqRows_().filter(function (r) { return cleanVal(r[0]) && cleanVal(r[10]) !== 'deleted'; }).map(function (r) {
     return { id: cleanVal(r[0]), name: cleanVal(r[1]), slot: cleanVal(r[2]) || 'other', days: String(r[3] === '' ? '0,1,2,3,4,5,6' : r[3]).split(',').map(function (x) { return cleanVal(x); }).filter(function (x) { return /^[0-6]$/.test(x); }),
       start: hqTime_(r[4]), end: hqTime_(r[5]), grades: String(r[6] || '').split(',').map(function (x) { return cleanVal(x); }).filter(function (x) { return /^[1-6]$/.test(x); }),
-      teacher: cleanVal(r[7]), teacherName: cleanVal(r[8]), location: cleanVal(r[9]), createdAt: normalizeDateStr_(r[11]), members: hqMembers_(r[12]) };
+      teacher: cleanVal(r[7]), teacherName: cleanVal(r[8]), location: cleanVal(r[9]), createdAt: normalizeDateStr_(r[11]), members: hqMembers_(r[12]),
+      dates: String(r[13] == null ? '' : r[13]).split(/[,\s]+/).map(cleanVal).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(x); }).sort() };
   });
 }
+// v17.92 · อาจารย์เห็น/แก้เฉพาะกลุ่มที่ตัวเองเป็นผู้ดูแล · แอดมินเห็นทั้งหมด
+function hqIsOwner_(h, session) { return !!session && (session.role === 'admin' || String(h.teacher || '').toLowerCase() === String(session.userId || '').toLowerCase()); }
+function hqOwnCheck_(id, session) { const h = readHalaqah_().filter(function (x) { return x.id === cleanVal(id); })[0]; if (h && !hqIsOwner_(h, session)) return { success: false, code: 'FORBIDDEN', message: 'หะละเกาะฮฺนี้อยู่ในความดูแลของ ' + (h.teacherName || 'อาจารย์ท่านอื่น') }; return null; }
+// v17.92 · วันที่จัด (กำหนดเป็นวันที่) · ว่าง = ใช้วันในสัปดาห์แบบเดิม
+function hqOnDate_(h, date) { if (h.dates && h.dates.length) return h.dates.indexOf(date) !== -1; const d = new Date(date + 'T00:00:00').getDay(); return h.days.indexOf(String(d)) !== -1; }
 function halaqahSessions_(grade, all, sid) { return readHalaqah_().filter(function (h) { if (all) return true; if (h.members.length) return !!sid && hqIsMember_(h, sid); return !h.grades.length || h.grades.indexOf(grade) !== -1; }); }
 function saveHalaqahSession_(d, session) {
   d = d || {};
@@ -6911,7 +6919,10 @@ function saveHalaqahSession_(d, session) {
   const start = hqTime_(d.start), end = hqTime_(d.end);
   if (!start || !end || hqMin_(end) <= hqMin_(start)) return { success: false, message: 'กรุณาระบุเวลาเริ่มและสิ้นสุดให้ถูกต้อง' };
   const days = (Array.isArray(d.days) ? d.days : String(d.days || '').split(',')).map(String).filter(function (x) { return /^[0-6]$/.test(x); });
-  if (!days.length) return { success: false, message: 'เลือกวันอย่างน้อย 1 วัน' };
+  const dates = (Array.isArray(d.dates) ? d.dates : String(d.dates || '').split(',')).map(cleanVal).filter(function (x) { return /^\d{4}-\d{2}-\d{2}$/.test(x); }).filter(function (x, i, a) { return a.indexOf(x) === i; }).sort().slice(0, 200);
+  if (!days.length && !dates.length) return { success: false, message: 'เลือกวันที่จัดหะละเกาะฮฺอย่างน้อย 1 วัน' };
+  const isAdm = session && session.role === 'admin';
+  if (cleanVal(d.id)) { const deny = hqOwnCheck_(d.id, session); if (deny) return deny; }
   const grades = (Array.isArray(d.grades) ? d.grades : String(d.grades || '').split(',')).map(String).filter(function (x) { return /^[1-6]$/.test(x); });
   const slot = HQ_SLOTS[cleanVal(d.slot)] ? cleanVal(d.slot) : 'other';
   ensureSchema();
@@ -6920,10 +6931,13 @@ function saveHalaqahSession_(d, session) {
   const members = (Array.isArray(d.members) ? d.members : String(d.members || '').split(',')).map(hqKey_).filter(function (x) { return x && x.length <= 30; }).filter(function (x, i, a) { return a.indexOf(x) === i; }).slice(0, 2000);
   if (sh.getMaxColumns() < HEADERS.HALAQAH.length) sh.insertColumnsAfter(sh.getMaxColumns(), HEADERS.HALAQAH.length - sh.getMaxColumns());
   if (!cleanVal(sh.getRange(1, 13).getValue())) sh.getRange(1, 13).setValue(HEADERS.HALAQAH[12]);
-  const row = [id, name, slot, days.join(','), start, end, grades.join(','), cleanVal(d.teacher) || session.userId, cleanVal(d.teacherName).substring(0, 80) || session.name || session.userId, cleanVal(d.location).substring(0, 80), 'active', Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), members.join(',')];
+  const old = readHalaqah_().filter(function (x) { return x.id === id; })[0];
+  const owner = isAdm ? (cleanVal(d.teacher) || (old && old.teacher) || session.userId) : ((old && old.teacher) || session.userId);
+  if (!cleanVal(sh.getRange(1, 14).getValue())) sh.getRange(1, 14).setValue(HEADERS.HALAQAH[13]);
+  const row = [id, name, slot, days.join(','), start, end, grades.join(','), owner, cleanVal(d.teacherName).substring(0, 80) || session.name || session.userId, cleanVal(d.location).substring(0, 80), 'active', Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), members.join(','), dates.join(',')];
   const rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues() : [];
-  for (let i = 0; i < rows.length; i++) if (cleanVal(rows[i][0]) === id) { sh.getRange(i + 2, 13).setNumberFormat('@'); sh.getRange(i + 2, 1, 1, row.length).setValues([row]); return { success: true, id: id, members: members.length, message: 'บันทึกหะละเกาะฮฺแล้ว' }; }
-  const nr = sh.getLastRow() + 1; sh.getRange(nr, 13).setNumberFormat('@'); sh.getRange(nr, 1, 1, row.length).setValues([row]);
+  for (let i = 0; i < rows.length; i++) if (cleanVal(rows[i][0]) === id) { sh.getRange(i + 2, 13, 1, 2).setNumberFormat('@'); sh.getRange(i + 2, 1, 1, row.length).setValues([row]); return { success: true, id: id, members: members.length, message: 'บันทึกหะละเกาะฮฺแล้ว' }; }
+  const nr = sh.getLastRow() + 1; sh.getRange(nr, 13, 1, 2).setNumberFormat('@'); sh.getRange(nr, 1, 1, row.length).setValues([row]);
   return { success: true, id: id, message: 'เพิ่มหะละเกาะฮฺแล้ว' };
 }
 function deleteHalaqahSession_(id) {
@@ -6969,6 +6983,7 @@ function halaqahCheckIn_(session, qr) {
   const st = studentGradeNum_(session.userId);
   if (h.members.length && !hqIsMember_(h, session.userId)) return { success: false, message: 'คุณไม่ได้อยู่ในกลุ่ม' + h.name + (h.teacherName ? ' (ผู้ดูแล ' + h.teacherName + ')' : '') };
   if (!h.members.length && h.grades.length && h.grades.indexOf(st.grade) === -1) return { success: false, message: 'หะละเกาะฮฺนี้สำหรับชั้น ' + h.grades.map(function (g) { return 'ม.' + g; }).join(', ') + ' เท่านั้น' };
+  if (!hqOnDate_(h, date)) return { success: false, message: 'วันนี้ไม่มี' + h.name + (h.dates && h.dates.length ? ' (วันที่จัด: ' + h.dates.map(function (x) { return leaveDateTh_(x); }).slice(0, 3).join(', ') + ')' : '') };
   const now = hqNowMin_(), s = hqMin_(h.start), e = hqMin_(h.end);
   if (now < s - 20) return { success: false, message: 'ยังไม่ถึงเวลาหะละเกาะฮฺ (เริ่ม ' + h.start + ')' };
   if (now > e + 10) return { success: false, message: 'เลยเวลาหะละเกาะฮฺแล้ว (ถึง ' + h.end + ') กรุณาแจ้งอาจารย์ผู้ดูแล' };

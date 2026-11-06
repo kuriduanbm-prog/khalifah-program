@@ -3342,7 +3342,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.91';
+  const APP_VERSION = '17.92';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5022,13 +5022,14 @@ window.k8RegBirthChange = function (v) {
   function studentHtml() {
     if (!my) return '<div class="k8-li-empty">กำลังโหลดหะละเกาะฮฺ…</div>';
     const now = new Date(); const today = ymd(now), wd = String(now.getDay()), nowMin = now.getHours() * 60 + now.getMinutes();
-    const todays = (my.sessions || []).filter((s) => s.days.indexOf(wd) !== -1).sort((a, b) => toMin(a.start) - toMin(b.start));
+    const onD = (s, ds, k) => (s.dates || []).length ? s.dates.indexOf(ds) !== -1 : s.days.indexOf(k) !== -1; // v17.92 · วันที่จัด
+    const todays = (my.sessions || []).filter((s) => onD(s, ymd(new Date()), wd)).sort((a, b) => toMin(a.start) - toMin(b.start));
     const logT = {}; (my.logs || []).forEach((l) => { if (l.date === today) logT[l.sessionId] = l; });
     // สถิติเดือนนี้: ครั้งที่ควรเข้า (วันที่ผ่านมาแล้วตามตาราง) เทียบกับที่บันทึกไว้
     const first = new Date(now.getFullYear(), now.getMonth(), 1); let expected = 0;
     for (let d = new Date(first); d <= now; d.setDate(d.getDate() + 1)) {
       const k = String(d.getDay()), ds = ymd(d);
-      (my.sessions || []).forEach((s) => { if (s.days.indexOf(k) !== -1 && (!s.createdAt || ds >= s.createdAt) && (ds < today || toMin(s.end) < nowMin)) expected++; });
+      (my.sessions || []).forEach((s) => { if (onD(s, ds, k) && (!s.createdAt || ds >= s.createdAt) && (ds < today || toMin(s.end) < nowMin)) expected++; });
     }
     const monthLogs = (my.logs || []).filter((l) => l.date >= ymd(first));
     const came = monthLogs.filter((l) => l.status === 'present' || l.status === 'late').length, excused = monthLogs.filter((l) => l.status === 'excused').length;
@@ -5103,7 +5104,7 @@ window.k8RegBirthChange = function (v) {
       title.textContent = 'หะละเกาะฮฺอัลกุรอาน'; sub.textContent = H.sessions.length + ' รอบ · ตั้งเวลา แสดง QR และเช็ครายชื่อ';
       const wd = String(new Date().getDay());
       body.innerHTML = '<button type="button" class="k8-hq-add" onclick="k8HqEdit()">+ เพิ่มหะละเกาะฮฺ</button>' +
-        (H.sessions.length ? '<ul class="k8-hq-list">' + H.sessions.slice().sort((a, b) => toMin(a.start) - toMin(b.start)).map((s) => '<li><div class="k8-hq-li-top"><span class="k8-hq-slot">' + (s.teacherName ? 'ผู้ดูแล ' + esc(s.teacherName) : esc(slotName(s.slot))) + '</span>' + ((s.members || []).length ? '<span class="k8-hq-chip" style="color:#0369a1;background:#e0f2fe">ผู้เรียน ' + s.members.length + ' คน</span>' : '') + (s.days.indexOf(wd) !== -1 ? '<span class="k8-hq-chip" style="color:#047857;background:#d1fae5">มีวันนี้</span>' : '') + '</div><b>' + esc(s.name) + '</b><small>' + esc(s.start) + '–' + esc(s.end) + ' · ' + (s.days.length === 7 ? 'ทุกวัน' : s.days.map((d) => DAYS[+d]).join(' ')) + ' · ' + ((s.members || []).length ? 'เฉพาะกลุ่ม' : s.grades.length ? s.grades.map((g) => 'ม.' + g).join(', ') : 'ทุกชั้น') + (s.location ? ' · ' + esc(s.location) : '') + '</small>' +
+        (H.sessions.length ? '<ul class="k8-hq-list">' + H.sessions.slice().sort((a, b) => toMin(a.start) - toMin(b.start)).map((s) => '<li><div class="k8-hq-li-top"><span class="k8-hq-slot">' + (s.teacherName ? 'ผู้ดูแล ' + esc(s.teacherName) : esc(slotName(s.slot))) + '</span>' + ((s.members || []).length ? '<span class="k8-hq-chip" style="color:#0369a1;background:#e0f2fe">ผู้เรียน ' + s.members.length + ' คน</span>' : '') + (((s.dates || []).length ? s.dates.indexOf(ymd(new Date())) !== -1 : s.days.indexOf(wd) !== -1) ? '<span class="k8-hq-chip" style="color:#047857;background:#d1fae5">มีวันนี้</span>' : '') + '</div><b>' + esc(s.name) + '</b><small>' + esc(s.start) + '–' + esc(s.end) + ' · ' + ((s.dates || []).length ? (s.dates.filter((x) => x >= ymd(new Date())).slice(0, 3).map(dTh).join(', ') || 'จัดครบทุกวันแล้ว') + (s.dates.filter((x) => x >= ymd(new Date())).length > 3 ? ' …' : '') : s.days.length === 7 ? 'ทุกวัน' : s.days.map((d) => DAYS[+d]).join(' ')) + ' · ' + ((s.members || []).length ? 'เฉพาะกลุ่ม' : s.grades.length ? s.grades.map((g) => 'ม.' + g).join(', ') : 'ทุกชั้น') + (s.location ? ' · ' + esc(s.location) : '') + '</small>' +
           '<div class="k8-hq-acts"><button type="button" class="is-pri" onclick="k8HqQr(\'' + js(s.id) + '\')">แสดง QR</button><button type="button" onclick="k8HqRoster(\'' + js(s.id) + '\')">เช็ครายชื่อ</button><button type="button" onclick="k8HqEdit(\'' + js(s.id) + '\')">แก้ไข</button></div></li>').join('') + '</ul>'
           : '<div class="k8-docs-empty"><b>ยังไม่มีหะละเกาะฮฺ</b><span>เพิ่มกลุ่มแรก ใส่ชื่อผู้ดูแล แล้วดึงรายชื่อนักเรียนเข้ากลุ่ม · ค่าเริ่มต้น วันจันทร์ 10:00–11:40</span></div>');
     } else if (H.view === 'edit') {
@@ -5114,7 +5115,10 @@ window.k8RegBirthChange = function (v) {
         '<label class="k8-nf-f"><span>ชื่อกลุ่ม</span><input type="text" id="k8HqName" maxlength="80" value="' + esc(e.name) + '" placeholder="เช่น หะละเกาะฮฺกลุ่ม 1"></label>' +
         '<label class="k8-nf-f"><span>ผู้ดูแล</span><input type="text" id="k8HqTeacher" maxlength="80" list="k8HqStaff" value="' + esc(e.teacherName || '') + '" placeholder="พิมพ์หรือเลือกชื่ออาจารย์ผู้ดูแล" autocomplete="off"><datalist id="k8HqStaff">' + staff.map((n) => '<option value="' + esc(n) + '"></option>').join('') + '</datalist></label>' +
         '<div class="k8-hq-times"><label class="k8-nf-f"><span>เริ่ม</span><input type="time" id="k8HqStart" value="' + esc(e.start) + '"></label><label class="k8-nf-f"><span>สิ้นสุด</span><input type="time" id="k8HqEnd" value="' + esc(e.end) + '"></label></div>' +
-        '<div class="k8-nf-f"><span>วัน</span><div class="k8-na-chips">' + DAYS.map((d, i) => '<button type="button" aria-pressed="' + (e.days.indexOf(String(i)) !== -1) + '" onclick="k8HqDay(\'' + i + '\')">' + d + '</button>').join('') + '<button type="button" onclick="k8HqDay(\'all\')">ทุกวัน</button></div></div>' +
+        // v17.92 · วันที่จัด: ทุกสัปดาห์ (เลือกวัน) หรือ เลือกวันที่จากปฏิทิน
+        '<div class="k8-nf-f"><span>วันที่จัดหะละเกาะฮฺ</span><div class="k8-tt-seg2"><button type="button" aria-pressed="' + !e.byDate + '" onclick="k8HqMode(0)">ทุกสัปดาห์</button><button type="button" aria-pressed="' + !!e.byDate + '" onclick="k8HqMode(1)">📅 เลือกวันที่</button></div></div>' +
+        (e.byDate ? '<div class="k8-nf-f"><div class="k8-hq-dadd"><input type="date" id="k8HqDate" value="' + esc(ymd(new Date())) + '"><button type="button" class="k8-hq-pullbtn" onclick="k8HqDateAdd()">＋ เพิ่มวันที่</button></div><div class="k8-hq-mem-list">' + ((e.dates || []).length ? e.dates.map((x) => '<span>' + esc(dTh(x)) + '<button type="button" aria-label="เอาออก" onclick="k8HqDateDel(\'' + x + '\')">✕</button></span>').join('') : '<p class="k8-hq-tip">ยังไม่ได้เลือกวันที่ · เลือกจากปฏิทินแล้วกด "เพิ่มวันที่" (เพิ่มได้หลายวัน)</p>') + '</div></div>' :
+        '<div class="k8-nf-f"><div class="k8-na-chips">' + DAYS.map((d, i) => '<button type="button" aria-pressed="' + (e.days.indexOf(String(i)) !== -1) + '" onclick="k8HqDay(\'' + i + '\')">' + d + '</button>').join('') + '<button type="button" onclick="k8HqDay(\'all\')">ทุกวัน</button></div></div>') +
         '<div class="k8-nf-f"><span>ผู้เรียน</span><div class="k8-hq-mem"><div class="k8-hq-mem-top"><b>' + mem.length + ' คน</b><button type="button" class="k8-hq-pullbtn" onclick="k8HqPick()">＋ ดึงรายชื่อนักเรียน</button></div>' +
           (mem.length ? '<div class="k8-hq-mem-list">' + mem.slice(0, 60).map((id) => { const x = byId[id]; return '<span>' + esc(x ? x.fullName : id) + (x ? ' <small>' + esc(String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + '</small>' : '') + '<button type="button" aria-label="เอาออก" onclick="k8HqMemDel(\'' + js(id) + '\')">✕</button></span>'; }).join('') + (mem.length > 60 ? '<span>และอีก ' + (mem.length - 60) + ' คน</span>' : '') + '</div>' : '<p class="k8-hq-tip">ยังไม่มีผู้เรียน · กด "ดึงรายชื่อนักเรียน" เพื่อเลือกนักเรียนเข้ากลุ่มนี้ ระบบจะเช็คชื่อและให้สแกน QR เฉพาะคนในกลุ่ม</p>') + '</div></div>' +
         '<label class="k8-nf-f"><span>สถานที่ (ไม่บังคับ)</span><input type="text" id="k8HqLoc" maxlength="80" value="' + esc(e.location) + '" placeholder="เช่น มัสยิด ชั้น 2"></label>' +
@@ -5154,6 +5158,7 @@ window.k8RegBirthChange = function (v) {
     const s = id ? H.sessions.find((x) => x.id === id) : null;
     H.edit = s ? JSON.parse(JSON.stringify(s)) : { id: '', name: 'หะละเกาะฮฺ', slot: 'other', start: '10:00', end: '11:40', days: ['1'], grades: [], location: '', teacherName: myName(), members: [] };
     if (!H.edit.members) H.edit.members = [];
+    H.edit.byDate = !!(H.edit.dates && H.edit.dates.length);
     H.view = 'edit'; stack('edit'); render();
   };
   function grab() { const e = H.edit; if (!e) return; const g = (id) => (document.getElementById(id) || {}).value; e.name = g('k8HqName') ?? e.name; e.start = g('k8HqStart') ?? e.start; e.end = g('k8HqEnd') ?? e.end; e.location = g('k8HqLoc') ?? e.location; e.teacherName = g('k8HqTeacher') ?? e.teacherName; }
@@ -5173,9 +5178,20 @@ window.k8RegBirthChange = function (v) {
   window.k8HqPall = function () { const P = H.pick; const q = (P.q || '').trim().toLowerCase(); const L = allStu().filter((x) => (P.g === 'ALL' || gnum(x.grade) === P.g) && (P.sx === 'all' || (P.sx === 'f') === !!(window.k8IsGirl && window.k8IsGirl(x))) && (!q || String(x.fullName || '').toLowerCase().includes(q) || nid(x.studentId).includes(q.replace(/^0+/, '')))); const on = L.length && L.every((x) => P.sel.has(nid(x.studentId))); L.forEach((x) => { const k = nid(x.studentId); if (on) P.sel.delete(k); else P.sel.add(k); }); render(); };
   window.k8HqPdone = function () { H.edit.members = Array.from(H.pick.sel); history.back(); };
   window.k8HqMemDel = function (id) { grab(); H.edit.members = (H.edit.members || []).filter((x) => x !== id); render(); };
+  const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  function dTh(x) { const d = new Date(x + 'T00:00:00'); return isNaN(d) ? x : DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + TH_M[d.getMonth()]; }
+  window.k8HqMode = function (on) { grab(); H.edit.byDate = !!on; if (on && !H.edit.dates) H.edit.dates = []; render(); };
+  window.k8HqDateAdd = function () { grab(); const v = (document.getElementById('k8HqDate') || {}).value; if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) { toast('เลือกวันที่ก่อน', 'warning'); return; } const L = H.edit.dates || (H.edit.dates = []); if (L.indexOf(v) === -1) L.push(v); L.sort(); render(); };
+  window.k8HqDateDel = function (x) { grab(); H.edit.dates = (H.edit.dates || []).filter((d) => d !== x); render(); };
+  function staffMap() { const m = {}; ['khalifah_subadmins', 'khalifah_sub_admins', 'khalifah_teachers'].forEach((k) => { try { (JSON.parse(localStorage.getItem(k) || '[]') || []).forEach((a) => { const n = a && (a.fullName || a.name); if (n && a.username) m[String(n).trim()] = a.username; }); } catch (e) {} }); return m; }
   window.k8HqSave = async function () {
-    grab(); H.saving = true; render();
-    try { const r = await api('saveHalaqahSession', { data: H.edit }); if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ'); toast(r.message, 'success'); H.saving = false; history.back(); }
+    grab(); const E = H.edit;
+    if (E.byDate && !(E.dates || []).length) { toast('เพิ่มวันที่จัดอย่างน้อย 1 วัน', 'warning'); return; }
+    const out = Object.assign({}, E, { dates: E.byDate ? (E.dates || []) : [], days: E.byDate ? [] : E.days });
+    let a = null; try { a = currentAdmin; } catch (e) {} const isAdm = a && /SUPER|ADMIN/i.test(String(a.role || '')) && !a.limited;
+    if (isAdm) { const u = staffMap()[String(E.teacherName || '').trim()]; if (u) out.teacher = u; }
+    H.saving = true; render();
+    try { const r = await api('saveHalaqahSession', { data: out }); if (!r || !r.success) throw new Error((r && r.message) || 'บันทึกไม่สำเร็จ'); toast(r.message, 'success'); H.saving = false; history.back(); }
     catch (e) { H.saving = false; toast(e.message, 'error'); render(); }
   };
   window.k8HqDelete = async function () {
