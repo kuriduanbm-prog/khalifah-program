@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.92'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.94'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1219,7 +1219,7 @@ const ACTION_ACCESS = {
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
   saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff',
-  getMyNotifications: 'student', getMyClassLeaves: 'student', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  getMyNotifications: 'student', getMyClassLeaves: 'student', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
@@ -1612,6 +1612,12 @@ function dispatchAction_(action, req, data, session, ctx) {
       return markPrayersLate_(data);
     case 'getTeacherLeaves':
       return { success: true, data: readLeaves_() };
+    case 'requestPeriodSwap':
+      return requestPeriodSwap_(data, session);
+    case 'respondPeriodSwap':
+      return respondPeriodSwap_(data, session);
+    case 'getPeriodSwaps':
+      return { success: true, data: swapsFor_(session) };
     case 'getMyClassLeaves':
       return { success: true, data: isStudent ? myClassLeaves_(session.userId) : [] };
     case 'saveTeacherLeave':
@@ -3066,6 +3072,66 @@ function enrollSubject_(d, studentId) {
 
 /* ===================== v17.11 · ลาสอน (อาจารย์แจ้งลา · ท่านอื่นรับสอนแทน) =====================
    เก็บใน Settings คีย์ TeacherLeaves (JSON) · ลบรายการที่เก่ากว่า 60 วันอัตโนมัติ */
+// =====================================================================
+//  🔁 v17.94 · สลับคาบระหว่างอาจารย์ (ชั่วคราว: วันเดียวหรือช่วงวันที่) · ขอ → อีกฝ่ายตอบรับ → ใช้ในตารางชั่วคราว
+// =====================================================================
+function readSwaps_() { let v = []; try { v = JSON.parse((getSettings().data || {}).PeriodSwaps || '[]'); } catch (e) { v = []; } return Array.isArray(v) ? v : []; }
+function writeSwaps_(list) {
+  const cut = Utilities.formatDate(new Date(Date.now() - 90 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  list = list.filter(function (x) { return x && String(x.to) >= cut; }).slice(-300);
+  saveSetting({ key: 'PeriodSwaps', value: JSON.stringify(list), description: 'สลับคาบระหว่างอาจารย์ (JSON)' });
+  return list;
+}
+function swapTxt_(x) { const d = x.from === x.to ? leaveDateTh_(x.from) : leaveDateTh_(x.from) + ' ถึง ' + leaveDateTh_(x.to) + ' (ทุกวัน' + LEAVE_DAYN_[x.dow] + ')'; return d + ' · ม.' + x.grade + ' · คาบ ' + x.pA + ' ' + (x.snA || '') + ' ⇄ คาบ ' + x.pB + ' ' + (x.snB || ''); }
+function requestPeriodSwap_(d, session) {
+  d = d || {};
+  const from = cleanVal(d.from), to = cleanVal(d.to || d.from);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) return { success: false, message: 'เลือกวันที่ให้ถูกต้อง' };
+  const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  if (to < today) return { success: false, message: 'เลือกวันที่ที่ยังไม่ผ่านไป' };
+  const g = cleanVal(d.grade).replace(/\D/g, ''); const pA = Number(d.pA), pB = Number(d.pB);
+  if (!/^[1-6]$/.test(g) || !(pA >= 1 && pA <= 12) || !(pB >= 1 && pB <= 12) || pA === pB) return { success: false, message: 'เลือกคาบของตัวเองและคาบที่ต้องการสลับ' };
+  const dow = new Date(from + 'T00:00:00').getDay();
+  if (to !== from) { /* ช่วงวันที่: ใช้กับทุกวันเดียวกันในสัปดาห์ */ }
+  let tt = null; try { tt = JSON.parse((getSettings().data || {})['Timetable_M' + g] || 'null'); } catch (e) {}
+  const cell = function (p) { const v = tt && tt.cells ? tt.cells[dow + '-' + p] : null; return Array.isArray(v) ? v : v ? [v] : []; };
+  const me = String(session.userId);
+  const a = cell(pA).filter(function (e) { return String(e.t || '') === me; })[0];
+  if (!a && session.role !== 'admin') return { success: false, message: 'คาบ ' + pA + ' วัน' + LEAVE_DAYN_[dow] + ' ม.' + g + ' ไม่ใช่คาบที่คุณสอน' };
+  const b = cell(pB).filter(function (e) { return e.t && String(e.t) !== me && (!d.toTeacher || String(e.t) === cleanVal(d.toTeacher)); })[0];
+  if (!b) return { success: false, message: 'คาบ ' + pB + ' ไม่มีอาจารย์ท่านอื่นสอน ม.' + g + ' วัน' + LEAVE_DAYN_[dow] };
+  const item = { id: 'SW' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), grade: g, dow: dow, from: from, to: to,
+    pA: pA, sA: a ? a.s || '' : '', snA: a ? a.sn || '' : '', tA: me, tnA: cleanVal(session.name || me),
+    pB: pB, sB: b.s || '', snB: b.sn || '', tB: String(b.t), tnB: cleanVal(b.tn || b.t),
+    note: cleanVal(d.note || '').substring(0, 160), status: 'pending', createdAt: new Date().toISOString() };
+  const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) { return { success: false, message: 'ระบบกำลังบันทึก ลองใหม่อีกครั้ง' }; }
+  try {
+    const list = readSwaps_();
+    if (list.some(function (x) { return x.status !== 'rejected' && x.status !== 'cancelled' && x.grade === g && x.dow === dow && !(x.to < from || x.from > to) && [x.pA, x.pB].some(function (p) { return p === pA || p === pB; }); })) return { success: false, message: 'คาบนี้มีคำขอสลับในช่วงวันที่นี้อยู่แล้ว' };
+    list.push(item); writeSwaps_(list);
+  } finally { lock.releaseLock(); }
+  try { sendNotification_({ title: 'คำขอสลับคาบจาก ' + item.tnA, body: swapTxt_(item) + (item.note ? ' · ' + item.note : '') + ' · เปิดเมนู "สลับคาบ" เพื่อตอบรับ', audience: 'users', values: [item.tB], expires: item.to }, { userId: session.userId, name: item.tnA }); } catch (e) {}
+  return { success: true, item: item, message: 'ส่งคำขอสลับคาบถึง ' + item.tnB + ' แล้ว' };
+}
+function respondPeriodSwap_(d, session) {
+  d = d || {}; const id = cleanVal(d.id); const act = cleanVal(d.action);
+  const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) { return { success: false, message: 'ระบบกำลังบันทึก ลองใหม่อีกครั้ง' }; }
+  let it = null;
+  try {
+    const list = readSwaps_(); it = list.filter(function (x) { return x.id === id; })[0];
+    if (!it) return { success: false, message: 'ไม่พบคำขอนี้' };
+    const isAdm = session.role === 'admin', me = String(session.userId);
+    if (act === 'cancel') { if (it.tA !== me && it.tB !== me && !isAdm) return { success: false, code: 'FORBIDDEN', message: 'ยกเลิกได้เฉพาะผู้เกี่ยวข้อง' }; it.status = 'cancelled'; }
+    else { if (it.tB !== me && !isAdm) return { success: false, code: 'FORBIDDEN', message: 'ตอบรับได้เฉพาะ ' + it.tnB }; if (it.status !== 'pending') return { success: false, message: 'คำขอนี้ตอบไปแล้ว' }; it.status = act === 'accept' ? 'approved' : 'rejected'; }
+    it.by = cleanVal(session.name || me); it.at = new Date().toISOString(); writeSwaps_(list);
+  } finally { lock.releaseLock(); }
+  const msg = it.status === 'approved' ? 'ตอบรับสลับคาบแล้ว' : it.status === 'rejected' ? 'ปฏิเสธการสลับคาบ' : 'ยกเลิกการสลับคาบแล้ว';
+  try { sendNotification_({ title: msg + ' · ' + it.by, body: swapTxt_(it), audience: 'users', values: [it.tA, it.tB].filter(function (u) { return u !== session.userId; }), expires: it.to }, { userId: session.userId, name: it.by }); } catch (e) {}
+  if (it.status === 'approved') { try { sendNotification_({ title: 'สลับคาบ ม.' + it.grade + ' · ' + leaveDateTh_(it.from), body: 'คาบ ' + it.pA + ' เรียน' + (it.snB || '') + ' (' + it.tnB + ') · คาบ ' + it.pB + ' เรียน' + (it.snA || '') + ' (' + it.tnA + ')' + (it.from !== it.to ? ' · ถึง ' + leaveDateTh_(it.to) : ''), audience: 'grade', values: [it.grade], expires: it.to }, { userId: session.userId, name: it.by }); } catch (e) {} }
+  return { success: true, item: it, message: msg };
+}
+function swapsFor_(session) { const L = readSwaps_(); if (session.role === 'admin') return L; const me = String(session.userId); return L.filter(function (x) { return x.tA === me || x.tB === me; }); }
+function activeSwaps_() { const cut = Utilities.formatDate(new Date(Date.now() - 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'); return readSwaps_().filter(function (x) { return x.status === 'approved' && x.to >= cut; }).map(function (x) { return { grade: x.grade, dow: x.dow, from: x.from, to: x.to, pA: x.pA, pB: x.pB, tA: x.tA, tB: x.tB }; }); }
 function readLeaves_() {
   let v = []; try { v = JSON.parse((getSettings().data || {}).TeacherLeaves || '[]'); } catch (e) { v = []; }
   return Array.isArray(v) ? v : [];
@@ -3450,10 +3516,10 @@ function getTimetable_(session, isStudent, isAdmin) {
       });
       one[g] = { grade: g, cells: cells, updatedAt: grades[g].updatedAt };
     }
-    return { success: true, config: cfg, grade: g, grades: one, extras: myExtras };
+    return { success: true, config: cfg, grade: g, grades: one, extras: myExtras, swaps: activeSwaps_().filter(function (x) { return x.grade === g; }) };
   }
   if (!isAdmin && !cfg.showTeachers) return { success: true, hidden: true, config: cfg, grades: {} };
-  return { success: true, config: cfg, grades: grades, extras: extras };
+  return { success: true, config: cfg, grades: grades, extras: extras, swaps: activeSwaps_() };
 }
 function ttIds_(a) { const o = (Array.isArray(a) ? a : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean).slice(0, 300); return o.filter(function (x, i) { return o.indexOf(x) === i; }); }
 function ttCleanCells_(src) {
