@@ -2413,13 +2413,17 @@ window.k8RegBirthChange = function (v) {
   }
   function subjLabel(id) { const x = subjects().find((s) => String(s.id) === String(id)); return x ? x.name : (id === '__none' || !id ? 'ยังไม่ได้เลือกคาบ' : id); }
   function logs() { return readJSON('khalifah_attendance_logs', []); }
-  function savedMap(date, subj) {
-    const m = {};
-    logs().forEach((r) => { if (r && r.date === date && String(r.subjectCode || '') === String(subj || '')) m[norm(r.studentId)] = toKey(r.status); });
+  // v17.90 · แยกตามคาบ (period) · แถวเก่าที่ไม่มีเลขคาบ ใช้เป็นค่าของคาบแรกที่ยังไม่มีบันทึก
+  function savedMap(date, subj, per) {
+    const m = {}; per = per == null ? S.period : per; per = per ? String(per) : '';
+    const L = logs().filter((r) => r && r.date === date && String(r.subjectCode || '') === String(subj || ''));
+    const exact = L.filter((r) => String(r.period || '') === per);
+    const hasAnyPer = L.some((r) => r.period);
+    (exact.length ? exact : (!hasAnyPer || !per ? L.filter((r) => !r.period) : [])).forEach((r) => { m[norm(r.studentId)] = toKey(r.status); });
     if (!subj) { const loc = (readJSON('khalifah_daily_attendance_logs', {})[date]) || {}; Object.keys(loc).forEach((k) => { if (!m[norm(k)]) m[norm(k)] = loc[k]; }); }
     return m;
   }
-  const dkey = () => S.date + '|' + (S.subject || '');
+  const dkey = () => S.date + '|' + (S.subject || '') + '|' + (S.period || '');
   // v17.26 · ถ้าวิชานี้มีนักเรียนลงทะเบียนแล้ว แสดงเฉพาะคนที่ลงทะเบียน (สลับดูทุกคนได้)
   const EN = { map: null, loading: false, all: false };
   async function loadEnroll(force) {
@@ -2507,24 +2511,24 @@ window.k8RegBirthChange = function (v) {
     const all = (typeof allStudents !== 'undefined' ? allStudents : []);
     return L.map((x, i) => {
       const grade = GN(x.g);
-      const sv = savedMap(today, x.c.s || '');
+      const sv = savedMap(today, x.c.s || '', x.p);
       const ids = all.filter((st) => grade === 'ALL' || st.grade === grade).map((st) => norm(st.studentId));
       const done = ids.some((id) => sv[id]);
       const st = toMin(x.start), en = toMin(x.end);
       const state = done ? 'done' : (nowM >= st && nowM < en) ? 'now' : nowM >= en ? (S.date < realToday ? 'miss' : 'late') : 'next';
-      return { i, subj: x.c.s || '', name: x.c.sn || subjLabel(x.c.s), g: x.g, grade, start: x.start, end: x.end, room: x.c.r || '', state, left: en - nowM, tn: x.c.tn || x.c.t || '', c: x.c };
+      return { i, subj: x.c.s || '', name: x.c.sn || subjLabel(x.c.s), g: x.g, grade, start: x.start, end: x.end, room: x.c.r || '', state, left: en - nowM, tn: x.c.tn || x.c.t || '', c: x.c, p: x.p };
     });
   }
   const PST = { miss: ['ยังไม่ได้เช็คชื่อ', 'is-late'], done: ['เช็คแล้ว ✓', 'is-done'], now: ['ตอนนี้ · ยังไม่เช็ค', 'is-now'], late: ['เลยเวลาแล้ว · ยังไม่เช็ค', 'is-late'], next: ['ยังไม่ถึงเวลา', 'is-next'] };
   let rzT = 0; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const t = document.getElementById('teacher-tab-attendance'); if (t && t.offsetParent) render(); }, 150); });
   window.k8TaMore = function () { S.showF = !S.showF; render(); };
-  window.k8TaPick = function (subj, grade, tn) { S.subject = subj; S.grade = grade; S.picked = true; S.sub = S.subMode ? { tn: tn || 'อาจารย์ประจำวิชา' } : null; S.subName = S.sub ? (P_NAME[subj + '|' + grade] || '') : ''; render(); };
+  window.k8TaPick = function (subj, grade, tn, per) { S.subject = subj; S.grade = grade; S.period = per || ''; S.picked = true; S.sub = S.subMode ? { tn: tn || 'อาจารย์ประจำวิชา' } : null; S.subName = S.sub ? (P_NAME[subj + '|' + grade] || '') : ''; render(); };
   const P_NAME = {};
   window.k8TaSubMode = function (on) { S.subMode = !!on; S.sub = null; S.subject = on ? '__none' : null; if (!on) S.autoDone = false; render(); }; // v17.65 · คงวันที่ที่เลือกไว้ (เช็คย้อนหลังได้)
   function autoPick(P) {
     if (S.subMode || S.autoDone || !P.length) return; S.autoDone = true;
     const c = P.find((x) => x.state === 'now') || P.find((x) => x.state === 'late') || P.find((x) => x.state === 'next');
-    if (c && S.date === ymd(new Date())) { S.subject = c.subj; S.grade = c.grade; setTimeout(render, 0); } else S.autoDone = S.date === ymd(new Date());
+    if (c && S.date === ymd(new Date())) { S.subject = c.subj; S.grade = c.grade; S.period = c.p || ''; setTimeout(render, 0); } else S.autoDone = S.date === ymd(new Date());
   }
   function tpPaint(cnt, n, unsaved, changed) {
     const root = document.querySelector('#teacher-tab-attendance .k8-ta'); if (!root) return;
@@ -2551,7 +2555,7 @@ window.k8RegBirthChange = function (v) {
       (S.subMode ? '<button type="button" class="k8-ta-subbtn is-on" onclick="k8TaSubMode(false)">‹ คาบของฉัน</button>' : '<button type="button" class="k8-ta-subbtn" onclick="k8TaSubMode(true)">สอนแทน</button>') + '</div>' + (P.length ? P.map((x) => {
       const on = onDay && String(S.subject) === String(x.subj) && S.grade === x.grade;
       P_NAME[x.subj + '|' + x.grade] = x.name;
-      return '<button type="button" class="k8-ta-pc ' + PST[x.state][1] + (on ? ' is-on' : '') + (S.subMode ? ' is-sub' : '') + '" aria-pressed="' + on + '" onclick="k8TaPick(\'' + js(x.subj) + '\',\'' + js(x.grade) + '\',\'' + js(x.tn) + '\')"><span class="k8-ta-pc-t"><span>' + esc(x.start + '–' + x.end) + '</span><span>คาบ ' + (x.i + 1) + '</span></span><b>' + esc(x.name) + ' · ' + esc(x.grade === 'ALL' ? 'กลุ่มพิเศษ' : shortG(x.grade)) + '</b>' + (S.subMode ? '<small class="k8-ta-pc-tn">แทน ' + esc(x.tn || 'ยังไม่ระบุผู้สอน') + '</small>' : '') + '<small>' + PST[x.state][0] + (x.state === 'now' && x.left > 0 ? ' · เหลือ ' + x.left + ' นาที' : '') + '</small></button>';
+      return '<button type="button" class="k8-ta-pc ' + PST[x.state][1] + (on ? ' is-on' : '') + (S.subMode ? ' is-sub' : '') + '" aria-pressed="' + on + '" onclick="k8TaPick(\'' + js(x.subj) + '\',\'' + js(x.grade) + '\',\'' + js(x.tn) + '\',\'' + (x.p || '') + '\')"><span class="k8-ta-pc-t"><span>' + esc(x.start + '–' + x.end) + '</span><span>คาบ ' + (x.i + 1) + '</span></span><b>' + esc(x.name) + ' · ' + esc(x.grade === 'ALL' ? 'กลุ่มพิเศษ' : shortG(x.grade)) + '</b>' + (S.subMode ? '<small class="k8-ta-pc-tn">แทน ' + esc(x.tn || 'ยังไม่ระบุผู้สอน') + '</small>' : '') + '<small>' + PST[x.state][0] + (x.state === 'now' && x.left > 0 ? ' · เหลือ ' + x.left + ' นาที' : '') + '</small></button>';
     }).join('') : '<p class="k8-ta-per-empty">' + (S.subMode ? 'ไม่มีคาบของอาจารย์ท่านอื่น' : (isToday ? 'วันนี้' : 'วันนั้น') + 'ไม่มีคาบสอนของคุณ') + '</p>');
     const cur = P.find((x) => String(S.subject) === String(x.subj) && S.grade === x.grade);
     const title = cur ? subjLabel(S.subject) + ' · ' + (S.grade === 'ALL' ? 'ทุกชั้น' : shortG(S.grade)) : (S.subMode ? 'สอนแทน · เลือกคาบ' : 'ไม่มีคาบสอน');
@@ -2594,15 +2598,15 @@ window.k8RegBirthChange = function (v) {
     const btn = document.getElementById('k8TaSaveBtn'); if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
     let res = null;
     try {
-      res = await gasApiCall('saveDailyAttendance', { subFor: S.sub ? S.sub.tn : '', date: S.date, grade: S.grade === 'ALL' ? '' : S.grade, subjectCode: subj.id || '', subjectName: subj.name || '', teacherId: a ? a.username : '', teacherName: a ? (a.fullName || a.username) : '', records: records, studentDetails: details });
+      res = await gasApiCall('saveDailyAttendance', { subFor: S.sub ? S.sub.tn : '', date: S.date, grade: S.grade === 'ALL' ? '' : S.grade, subjectCode: subj.id || '', subjectName: subj.name || '', period: S.period || '', teacherId: a ? a.username : '', teacherName: a ? (a.fullName || a.username) : '', records: records, studentDetails: details });
     } catch (e) { res = { success: false, message: (typeof describeNetworkError === 'function' ? describeNetworkError(e) : 'เชื่อมต่อไม่สำเร็จ') }; }
     if (btn) { btn.disabled = false; btn.textContent = 'บันทึก'; }
     if (!res || !res.success) { if (typeof showToast === 'function') showToast((res && res.message) || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); return; }
     // อัปเดตแคชในเครื่อง
-    const L = logs().filter((r) => !(r && r.date === S.date && String(r.subjectCode || '') === String(subj.id || '') && records[cid(r.studentId)] !== undefined));
+    const L = logs().filter((r) => !(r && r.date === S.date && String(r.subjectCode || '') === String(subj.id || '') && String(r.period || '') === String(S.period || '') && records[cid(r.studentId)] !== undefined));
     const TH = { present: 'มา', late: 'มาสาย', leave: 'ลา', absent: 'ขาด' };
     const now = new Date();
-    Object.keys(records).forEach((id) => L.push({ studentId: id, studentName: details[id].fullName, grade: details[id].grade, date: S.date, time: pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':00', status: TH[records[id]], note: S.sub ? 'เช็คชื่อแทน ' + S.sub.tn : '', subjectCode: subj.id || '', subjectName: subj.name || '', checkedBy: a ? (a.fullName || a.username) : '' }));
+    Object.keys(records).forEach((id) => L.push({ studentId: id, studentName: details[id].fullName, grade: details[id].grade, date: S.date, time: pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':00', status: TH[records[id]], note: S.sub ? 'เช็คชื่อแทน ' + S.sub.tn : '', subjectCode: subj.id || '', subjectName: subj.name || '', period: S.period || '', checkedBy: a ? (a.fullName || a.username) : '' }));
     try { localStorage.setItem('khalifah_attendance_logs', JSON.stringify(L)); } catch (e) {}
     S.draft[dkey()] = {};
     render();
@@ -3338,7 +3342,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.89';
+  const APP_VERSION = '17.90';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

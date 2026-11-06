@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.89'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.90'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -152,7 +152,7 @@ const HEADERS = {
   ],
   ATTENDANCE: [
     'รหัสบันทึก', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 
-    'วันที่', 'เวลา', 'สถานะการมาเรียน', 'หมายเหตุ', 'รหัสวิชา', 'ชื่อวิชา', 'ผู้เช็คชื่อ'
+    'วันที่', 'เวลา', 'สถานะการมาเรียน', 'หมายเหตุ', 'รหัสวิชา', 'ชื่อวิชา', 'ผู้เช็คชื่อ', 'คาบ'
   ],
   ACTIVITIES: [
     'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'รายละเอียด', 'วันเริ่มต้น', 'วันสิ้นสุด', 
@@ -3648,7 +3648,8 @@ function getAttendance(studentId, grade) {
         note: cleanVal(rows[i][7]),
         subjectCode: cleanVal(rows[i][8] || ''),
         subjectName: cleanVal(rows[i][9] || ''),
-        checkedBy: cleanVal(rows[i][10] || '')
+        checkedBy: cleanVal(rows[i][10] || ''),
+        period: cleanVal(rows[i][11] || '')
       });
     }
   }
@@ -5387,6 +5388,9 @@ function saveDailyAttendance(data) {
   const subjCode = cleanVal(data.subjectCode || '');
   const subjName = cleanVal(data.subjectName || '');
   const checkedBy = cleanVal(data.teacherName || data.teacherId || '');
+  // v17.90 · แยกตามคาบ: วิชาเดียวกันวันเดียวกันหลายคาบ ไม่ทับกัน (เดิมคาบ 2 ไปอ่าน/เขียนทับคาบ 1)
+  const period = cleanVal(data.period || '').replace(/[^0-9]/g, '').substring(0, 2);
+  if (period && sheet.getLastColumn() < 12) sheet.getRange(1, 12).setValue('คาบ');
   let count = 0;
 
   const studentRows = sheetStudents ? sheetStudents.getDataRange().getValues() : [];
@@ -5409,17 +5413,19 @@ function saveDailyAttendance(data) {
     const sGrade = cleanVal(detail.grade || gradeStr || studentGradeMap[cleanSid] || '');
 
     // ตรวจสอบว่าเคยเช็คชื่อวันนี้ไปแล้วหรือยัง ถ้ามีให้อัปเดตแถวเดิม
-    let foundAttRow = -1;
+    let foundAttRow = -1, legacyRow = -1;
     for (let i = existingAttRows.length - 1; i >= 1; i--) {
       if (isCodeMatch(existingAttRows[i][1], cleanSid) && formatSheetDate(existingAttRows[i][4]) === dateStr && cleanVal(existingAttRows[i][8] || '') === subjCode) {
-        foundAttRow = i + 1;
-        break;
+        const rp = cleanVal(existingAttRows[i][11] || '');
+        if (rp === period) { foundAttRow = i + 1; break; }
+        if (!rp && legacyRow === -1) legacyRow = i + 1; // แถวเก่าที่ยังไม่มีเลขคาบ
       }
     }
+    if (foundAttRow === -1 && legacyRow !== -1) { foundAttRow = legacyRow; existingAttRows[legacyRow - 1][11] = period; }
 
     if (foundAttRow !== -1) {
-      sheet.getRange(foundAttRow, 3, 1, 9).setValues([[
-        sName, sGrade, dateStr, timeStr, statusThai, teacherNote, subjCode, subjName, checkedBy
+      sheet.getRange(foundAttRow, 3, 1, 10).setValues([[
+        sName, sGrade, dateStr, timeStr, statusThai, teacherNote, subjCode, subjName, checkedBy, period
       ]]);
     } else {
       const logId = 'ATT-' + new Date().getTime() + '-' + count;
@@ -5434,7 +5440,8 @@ function saveDailyAttendance(data) {
         teacherNote,
         subjCode,
         subjName,
-        checkedBy
+        checkedBy,
+        period
       ]);
       const lastRow = sheet.getLastRow();
       sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
