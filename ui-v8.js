@@ -3338,7 +3338,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.88';
+  const APP_VERSION = '17.89';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9449,4 +9449,34 @@ window.k8HfMiss = function (slot) {
   document.addEventListener('k8-tt-loaded', () => { try { badge(); if (window.renderAdminOverviewV8 && document.getElementById('k8OvTodo')) window.renderAdminOverviewV8(); } catch (e) {} });
   // อาจารย์: โหลดตารางสอนเสร็จ → อัปเดตรายวิชาในหน้าอาจารย์
   document.addEventListener('k8-tt-loaded', () => { try { const v = document.getElementById('view-teacher'); if (v && v.classList.contains('active') && typeof initTeacherPortalView === 'function') { const ss = document.getElementById('teacherPortalSubjectSelect'); const keep = ss ? ss.value : ''; initTeacherPortalView(); if (ss && keep && Array.from(ss.options).some((o) => o.value === keep)) { ss.value = keep; if (typeof renderTeacherPortalGradesTable === 'function') renderTeacherPortalGradesTable(); } } } catch (e) {} });
+})();
+
+/* ---------- v17.89 · วันเสาร์ = วันหยุดประจำสัปดาห์: นักเรียนเช็คชื่อละหมาด/ถ่ายรูปไม่ได้ ---------- */
+(function () {
+  const fajr = () => { try { const w = PRAYER_TIME_WINDOWS.find((x) => x.name === 'ซุบฮิ' || x.key === 'ซุบฮิ'); return w ? w.startMin : 285; } catch (e) { return 285; } };
+  // นับตามวันละหมาด: หลังเที่ยงคืนแต่ก่อนรุ่งเช้า ยังเป็นวันก่อนหน้า (อีชาอ์คืนวันศุกร์ยังเช็คได้)
+  const isHoliday = () => { const n = new Date(); const m = n.getHours() * 60 + n.getMinutes(); const d = new Date(n.getTime() - (m < fajr() ? 86400000 : 0)); return d.getDay() === 6; };
+  const isStu = () => { try { return !!currentStudent && !window.k8SimOn; } catch (e) { return false; } };
+  const on = () => isStu() && isHoliday();
+  window.k8WeeklyHoliday = on;
+  const MSG = 'วันเสาร์เป็นวันหยุดประจำสัปดาห์ · งดเช็คชื่อละหมาดและถ่ายรูป';
+  const o = window.getPrayerSlotTimeStatus;
+  if (typeof o === 'function') window.getPrayerSlotTimeStatus = function () { const r = o.apply(this, arguments) || {}; return on() ? Object.assign({}, r, { isActive: false, isPast: false, isFuture: true, isOpen: false, isHoliday: true, statusText: 'วันหยุด (วันเสาร์)' }) : r; };
+  const og = window.gasApiCall;
+  if (typeof og === 'function') window.gasApiCall = function (action) { if ((action === 'recordPrayer' || action === 'prayerCheckIn') && on()) { try { showToast(MSG, 'warning'); } catch (e) {} return Promise.resolve({ success: false, holiday: true, message: MSG }); } return og.apply(this, arguments); };
+  function paint() {
+    const wrap = document.querySelector('#view-prayer .k8-pr-wrap'); if (!wrap) return;
+    const flag = on();
+    document.documentElement.classList.toggle('k8-sat-off', flag);
+    let b = document.getElementById('k8SatOff');
+    if (!flag) { if (b) b.hidden = true; return; }
+    if (!b) { b = document.createElement('div'); b.id = 'k8SatOff'; b.className = 'k8-sat-off'; b.setAttribute('role', 'status'); const head = wrap.querySelector('.k8-pg-head'); if (head) head.insertAdjacentElement('afterend', b); else wrap.prepend(b); }
+    b.hidden = false;
+    b.innerHTML = '<span class="k8-sat-ico" aria-hidden="true">🔒</span><b>วันนี้วันเสาร์ · วันหยุดประจำสัปดาห์</b><span>งดเช็คชื่อละหมาดและถ่ายรูปทุกเวลา · ระบบจะเปิดให้เช็คชื่ออีกครั้งตั้งแต่ซุบฮิวันอาทิตย์</span>';
+    try { stopCameraStream(); } catch (e) {}
+  }
+  window.k8SatPaint = paint;
+  const sv = window.switchView;
+  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'prayer' || v === 'dashboard') setTimeout(paint, 50); return r; };
+  setInterval(paint, 60000); setTimeout(paint, 1500);
 })();

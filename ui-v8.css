@@ -4380,3 +4380,13 @@ body.k8-lim .k8-adm-modes { display: none !important; }
 .k8-pd-b.is-miss small { color: #b91c1c; }
 .k8-pd-b.is-miss:hover { border-color: #dc2626; }
 .k8-pd-legend .is-miss { color: #b91c1c; font-weight: 600; } .k8-pd-legend .is-miss::before { display: none; }
+/* v17.89 · วันเสาร์ วันหยุด: ล็อกเช็คชื่อละหมาด */
+.k8-sat-off { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; margin: 14px 0 6px; padding: 22px 18px; border-radius: 18px; background: #fef2f2; border: 1.5px solid #fecaca; color: #7f1d1d; }
+.k8-sat-off .k8-sat-ico { font-size: 34px; line-height: 1; }
+.k8-sat-off b { font-size: 17px; color: #b91c1c; }
+.k8-sat-off span:last-child { font-size: 14px; line-height: 1.6; }
+.k8-sat-off[hidden] { display: none; }
+html.k8-sat-off #view-prayer .k8-pr-wrap > :not(.k8-pg-head):not(.k8-sat-off) { display: none !important; }
+html.k8-sat-off #view-prayer #k8PerCard, html.k8-sat-off #view-prayer #k8PwAlertPr { display: none !important; }
+html.k8-sat-off #view-prayer #k8PrSub { font-size: 0 !important; }
+html.k8-sat-off #view-prayer #k8PrSub::after { content: 'วันเสาร์ · วันหยุดประจำสัปดาห์ · งดเช็คชื่อ'; font-size: 13px; color: #b91c1c; font-weight: 600; }

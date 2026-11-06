@@ -2091,6 +2091,9 @@ html[data-theme="dark"] .k8-tt-grid.is-tt2:not(.is-edit) td.has:not(:has(.k8-tt-
 html[data-theme="dark"] .k8-pd-b.is-miss { background-color: #2f1111 !important; border: 1.5px solid #592929 !important; color: #ed7878 !important; }
 html[data-theme="dark"] .k8-pd-b.is-miss small { color: #ed7878 !important; }
 html[data-theme="dark"] .k8-pd-legend .is-miss { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-sat-off { background-color: #2f1111 !important; border: 1.5px solid #522424 !important; color: #e58080 !important; }
+html[data-theme="dark"] .k8-sat-off b { color: #ed7878 !important; }
+html[data-theme="dark"].k8-sat-off #view-prayer #k8PrSub::after { color: #ed7878 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

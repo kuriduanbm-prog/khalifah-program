@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.86'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.89'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1549,6 +1549,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     // ---------- นักเรียนบันทึกข้อมูลของตนเอง ----------
     case 'recordPrayer':
     case 'prayerCheckIn':
+      if (isStudent && isWeeklyHoliday_()) return { success: false, holiday: true, message: 'วันเสาร์เป็นวันหยุดประจำสัปดาห์ · งดเช็คชื่อละหมาด' };
       if (isStudent) data.studentId = session.userId;
       return recordPrayer(data);
     case 'recordHasanat':
@@ -6613,6 +6614,14 @@ function sheetRows_(name, width) {
   return sh.getRange(2, 1, sh.getLastRow() - 1, width).getValues();
 }
 function userKey_(session) { return (session.role === 'student' ? 'S:' + cleanVal(session.userId).replace(/^0+/, '') : 'U:' + cleanVal(session.userId).toLowerCase()); }
+// v17.89 · วันเสาร์ = วันหยุดประจำสัปดาห์ (นับตามวันละหมาด: ก่อนรุ่งเช้ายังเป็นวันก่อนหน้า)
+function isWeeklyHoliday_() {
+  const now = new Date();
+  const hm = Utilities.formatDate(now, 'Asia/Bangkok', 'H:m').split(':');
+  const mins = (+hm[0]) * 60 + (+hm[1]);
+  const d = new Date(now.getTime() - (mins < 285 ? 86400000 : 0));
+  return Utilities.formatDate(d, 'Asia/Bangkok', 'u') === '6';
+}
 function studentGx_(sid) {
   const sh = getSpreadsheet().getSheetByName(SHEETS.STUDENTS); if (!sh || sh.getLastRow() < 2) return '';
   const rows = sh.getRange(2, 1, sh.getLastRow() - 1, Math.min(18, sh.getLastColumn())).getValues();
