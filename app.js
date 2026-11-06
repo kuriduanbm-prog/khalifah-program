@@ -8457,7 +8457,7 @@ function saveAdminStudentDeepEdit() {
   playSuccessSound();
   showToast(`บันทึกการแก้ไขข้อมูลของ ${student.fullName} (${newId}) เรียบร้อยแล้ว`, 'success');
 
-  syncRecordToGoogleSheet('updateStudentFull', student);
+  syncRecordToGoogleSheet('updateStudentFull', Object.assign({}, student, { originalId: origId })); // v17.90 · ส่งรหัสเดิมไปด้วย เผื่อแก้รหัสนักเรียน
   if (statusChanged) {
     syncRecordToGoogleSheet('updateStudentStatus', {
       studentId: newId,
@@ -10871,6 +10871,20 @@ async function syncRecordToGoogleSheet(action, data) {
   if (!url) {
     console.warn(`[Offline Local] GAS Web App URL not configured. Action: ${action} saved locally on device.`);
     return;
+  }
+  // v17.90 · ส่งผ่าน gasApiCall (มีโทเค็น + อ่านผลตอบกลับได้) · เดิมส่งแบบ no-cors ไม่มีโทเค็น เซิร์ฟเวอร์ปฏิเสธเงียบ ๆ
+  //           ทำให้แอดมินแก้รหัส/เบอร์ผู้ปกครองแล้ว ข้อมูลในชีตไม่เปลี่ยน พอซิงค์รอบถัดไปค่าเดิมก็กลับมา
+  if (typeof gasApiCall === 'function') {
+    let r = null;
+    try { r = await gasApiCall(action, { data: data }, 45000); } catch (e) { r = { success: false, message: e && e.message }; }
+    if (r && r.success !== false) {
+      if (action === 'registerStudent' || action === 'updateStudentFull') showToast('✓ บันทึกข้อมูลนักเรียนลง Google Sheet เรียบร้อยแล้ว', 'success');
+      if (action === 'activityCheckIn') setTimeout(() => { if (typeof fetchActivitiesAndLogsFromCloud === 'function') fetchActivitiesAndLogsFromCloud(false); }, 600);
+    } else {
+      console.warn('Sync ' + action + ' failed:', r);
+      if (!(r && r.forbidden)) showToast('⚠️ บันทึกลง Google Sheet ไม่สำเร็จ: ' + ((r && (r.message || r.error)) || 'ลองใหม่อีกครั้ง'), 'error');
+    }
+    return r;
   }
 
   try {

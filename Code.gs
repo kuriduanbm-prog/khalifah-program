@@ -5366,7 +5366,21 @@ function updateStudentFull(student) {
   if (!student || !student.studentId) {
     return { success: false, error: 'ไม่พบรหัสนักเรียน' };
   }
-  return registerStudent(student);
+  // v17.90 · แอดมินแก้รหัสนักเรียน: เปลี่ยนรหัสในแถวเดิม (เดิมสร้างแถวใหม่ แถวรหัสเก่ายังอยู่ แล้วค่าเก่าเด้งกลับ)
+  const oldId = cleanVal(student.originalId || '');
+  const newId = cleanVal(student.studentId);
+  if (oldId && !isCodeMatch(oldId, newId)) {
+    const sh = getSpreadsheet().getSheetByName(SHEETS.STUDENTS);
+    if (sh && sh.getLastRow() > 1) {
+      const ids = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues();
+      let oldRow = -1, clash = false;
+      for (let i = 0; i < ids.length; i++) { if (isCodeMatch(ids[i][0], newId)) clash = true; if (oldRow === -1 && isCodeMatch(ids[i][0], oldId)) oldRow = i + 2; }
+      if (clash) return { success: false, duplicate: true, message: 'มีรหัสนักเรียน ' + newId + ' อยู่ในระบบแล้ว' };
+      if (oldRow !== -1) sh.getRange(oldRow, 1).setNumberFormat('@').setValue(newId);
+    }
+  }
+  const copy = Object.assign({}, student); delete copy.originalId;
+  return registerStudent(copy);
 }
 
 /**
