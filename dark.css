@@ -2137,6 +2137,23 @@ html[data-theme="dark"] .k8-sw-meta { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-sw-acts .is-no { background-color: #1a2229 !important; color: #ed7878 !important; }
 html[data-theme="dark"] .k8-sw-form label { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-sw-form input, html[data-theme="dark"] .k8-sw-form select { border: 1px solid #323941 !important; color: #d6dae5 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-pf-kpi > div { background-color: #121212 !important; border: 1px solid #32363c !important; }
+html[data-theme="dark"] .k8-pf-kpi b { color: #f8a96d !important; }
+html[data-theme="dark"] .k8-pf-kpi small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pf-kpi > div:first-child b { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-pf-yr { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pf-it { background-color: #121212 !important; border: 1px solid #32363c !important; }
+html[data-theme="dark"] .k8-pf-it small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-pf-it p { color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-pf-ico { background-color: #122938 !important; }
+html[data-theme="dark"] .k8-pf-tag { color: #69c8fc !important; background-color: #181f26 !important; }
+html[data-theme="dark"] .k8-pf-ph img { border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-pf-del { background-color: #2f1111 !important; color: #ed7878 !important; }
+html[data-theme="dark"] .k8-pf-add.is-alt { background-color: #121212 !important; color: #f8a96d !important; }
+html[data-theme="dark"] .k8-pf-thumb img { border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-pf-it b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-pf-ph img { background-color: #1a2229 !important; }
+html[data-theme="dark"] .k8-sw-l .k8-pf-add.is-alt { color: #f8a96d !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
@@ -2145,13 +2162,13 @@ html[data-theme="dark"] [style*="background:#fee2e2"], html[data-theme="dark"] [
 html[data-theme="dark"] [style*="background:#e0f2fe"], html[data-theme="dark"] [style*="background:#E0F2FE"], html[data-theme="dark"] [style*="background: #e0f2fe"], html[data-theme="dark"] [style*="background: #E0F2FE"] { background-color: #122938 !important; }
 html[data-theme="dark"] [style*="background:#d1fae5"], html[data-theme="dark"] [style*="background:#D1FAE5"], html[data-theme="dark"] [style*="background: #d1fae5"], html[data-theme="dark"] [style*="background: #D1FAE5"] { background-color: #173d2a !important; }
 html[data-theme="dark"] [style*="background:#ede9fe"], html[data-theme="dark"] [style*="background:#EDE9FE"], html[data-theme="dark"] [style*="background: #ede9fe"], html[data-theme="dark"] [style*="background: #EDE9FE"] { background-color: #181134 !important; }
+html[data-theme="dark"] [style*="background:#fef3c7"], html[data-theme="dark"] [style*="background:#FEF3C7"], html[data-theme="dark"] [style*="background: #fef3c7"], html[data-theme="dark"] [style*="background: #FEF3C7"] { background-color: #433a15 !important; }
 html[data-theme="dark"] [style*="background:#f8fafc"], html[data-theme="dark"] [style*="background:#F8FAFC"], html[data-theme="dark"] [style*="background: #f8fafc"], html[data-theme="dark"] [style*="background: #F8FAFC"] { background-color: #181f26 !important; }
 html[data-theme="dark"] [style*="background:#f0f9ff"], html[data-theme="dark"] [style*="background:#F0F9FF"], html[data-theme="dark"] [style*="background: #f0f9ff"], html[data-theme="dark"] [style*="background: #F0F9FF"] { background-color: #0e2432 !important; }
 html[data-theme="dark"] [style*="background:#fef2f2"], html[data-theme="dark"] [style*="background:#FEF2F2"], html[data-theme="dark"] [style*="background: #fef2f2"], html[data-theme="dark"] [style*="background: #FEF2F2"] { background-color: #2f1111 !important; }
 html[data-theme="dark"] [style*="background:#ffffff"], html[data-theme="dark"] [style*="background:#FFFFFF"], html[data-theme="dark"] [style*="background: #ffffff"], html[data-theme="dark"] [style*="background: #FFFFFF"] { background-color: #121212 !important; }
 html[data-theme="dark"] [style*="background:#fffbeb"], html[data-theme="dark"] [style*="background:#FFFBEB"], html[data-theme="dark"] [style*="background: #fffbeb"], html[data-theme="dark"] [style*="background: #FFFBEB"] { background-color: #342d0f !important; }
 html[data-theme="dark"] [style*="background:#e2e8f0"], html[data-theme="dark"] [style*="background:#E2E8F0"], html[data-theme="dark"] [style*="background: #e2e8f0"], html[data-theme="dark"] [style*="background: #E2E8F0"] { background-color: #21272f !important; }
-html[data-theme="dark"] [style*="background:#fef3c7"], html[data-theme="dark"] [style*="background:#FEF3C7"], html[data-theme="dark"] [style*="background: #fef3c7"], html[data-theme="dark"] [style*="background: #FEF3C7"] { background-color: #433a15 !important; }
 html[data-theme="dark"] [style*="background:#ecfdf5"], html[data-theme="dark"] [style*="background:#ECFDF5"], html[data-theme="dark"] [style*="background: #ecfdf5"], html[data-theme="dark"] [style*="background: #ECFDF5"] { background-color: #133123 !important; }
 html[data-theme="dark"] [style*="background:#fff"], html[data-theme="dark"] [style*="background:#FFF"], html[data-theme="dark"] [style*="background: #fff"], html[data-theme="dark"] [style*="background: #FFF"] { background-color: #121212 !important; }
 html[data-theme="dark"] [style*="background:#dcfce7"], html[data-theme="dark"] [style*="background:#DCFCE7"], html[data-theme="dark"] [style*="background: #dcfce7"], html[data-theme="dark"] [style*="background: #DCFCE7"] { background-color: #153821 !important; }

@@ -3342,7 +3342,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.94';
+  const APP_VERSION = '17.95';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9700,4 +9700,111 @@ window.k8HfMiss = function (slot) {
   };
   window.k8SwRefreshBtn = function () { paintBtn(); };
   const iv = setInterval(() => { if (document.querySelector('#teacher-tab-overview .k8-th-quick')) { paintBtn(); clearInterval(iv); load(); } }, 1500);
+})();
+
+/* ---------- v17.95 · กิจกรรม & ผลงาน (แฟ้มสะสมผลงาน) · นักเรียน/ผู้ปกครองดู · อาจารย์สแกนเก็บเกียรติบัตร ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const p2 = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const dTh = (s) => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00'); return isNaN(d) ? (s || '') : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + (d.getFullYear() + 543); };
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const norm = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+  const CAT = { academic: ['วิชาการ', '#2563eb'], sport: ['กีฬา', '#16a34a'], religion: ['ศาสนา/อัลกุรอาน', '#0d9488'], art: ['ศิลปะ/ดนตรี', '#c026d3'], virtue: ['คุณธรรม', '#d97706'], volunteer: ['จิตอาสา', '#e11d48'], other: ['อื่น ๆ', '#475569'] };
+  const LV = { school: 'โรงเรียน', district: 'อำเภอ/เขต', province: 'จังหวัด', region: 'ภาค', nation: 'ประเทศ', intl: 'นานาชาติ' };
+  const P = { tab: 'all', data: null, loading: false };
+  const stu = () => { try { return currentStudent; } catch (e) { return null; } };
+  function year(d) { const x = new Date(String(d).slice(0, 10) + 'T00:00:00'); return isNaN(x) ? '' : String(x.getFullYear() + 543); }
+  function render() {
+    const B = document.getElementById('k8PfB'); if (!B) return;
+    if (!P.data) { B.innerHTML = '<p class="k8-asum-empty">' + (P.loading ? 'กำลังโหลดแฟ้มผลงาน…' : 'ยังไม่มีข้อมูล') + '</p>'; return; }
+    const items = P.data.items || [], acts = P.data.activities || [];
+    const all = items.map((x) => Object.assign({ kind: 'cert' }, x)).concat(acts.map((a) => Object.assign({ kind: 'act' }, a))).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const L = P.tab === 'cert' ? all.filter((x) => x.kind === 'cert') : P.tab === 'act' ? all.filter((x) => x.kind === 'act') : all;
+    const lvUp = items.filter((x) => x.level && x.level !== 'school').length;
+    let h = '<section class="k8-pf-kpi"><div><b>' + acts.length + '</b><small>กิจกรรมที่เข้าร่วม</small></div><div><b>' + items.length + '</b><small>เกียรติบัตร/ผลงาน</small></div><div><b>' + lvUp + '</b><small>ระดับเขตขึ้นไป</small></div></section>' +
+      '<div class="k8-asum-tabs" role="tablist">' + [['all', 'ทั้งหมด'], ['cert', 'เกียรติบัตร'], ['act', 'กิจกรรม']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (P.tab === k) + '" onclick="k8PfTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>';
+    if (!L.length) { B.innerHTML = h + '<p class="k8-asum-empty">' + (P.tab === 'act' ? 'ยังไม่มีกิจกรรมที่สแกนเข้าร่วม' : 'ยังไม่มีเกียรติบัตร · อาจารย์จะสแกนเก็บไว้ให้ที่นี่') + '</p>'; return; }
+    let yr = '';
+    h += L.map((x) => {
+      const y = year(x.date); const head = y && y !== yr ? '<h3 class="k8-pf-yr">ปี ' + y + '</h3>' : ''; yr = y || yr;
+      if (x.kind === 'act') return head + '<article class="k8-pf-it is-act"><span class="k8-pf-ico" aria-hidden="true">🎯</span><div><b>' + esc(x.title) + '</b><small>' + esc(dTh(x.date)) + (x.location ? ' · ' + esc(x.location) : '') + '</small><span class="k8-pf-tag">เข้าร่วมกิจกรรม</span></div></article>';
+      const c = CAT[x.cat] || CAT.other;
+      return head + '<article class="k8-pf-it is-cert"><span class="k8-pf-ico" style="background:' + c[1] + '1a;color:' + c[1] + '" aria-hidden="true">🏅</span><div><b>' + esc(x.title) + '</b><small>' + esc(dTh(x.date)) + ' · ระดับ' + esc(LV[x.level] || LV.school) + (x.award ? ' · ' + esc(x.award) : '') + '</small><span class="k8-pf-tag" style="color:' + c[1] + '">' + c[0] + '</span>' + (x.note ? '<p>' + esc(x.note) + '</p>' : '') +
+        ((x.files || []).length ? '<div class="k8-pf-ph">' + x.files.map((u) => '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" alt="เกียรติบัตร ' + esc(x.title) + '" loading="lazy"></a>').join('') + '</div>' : '') + '<small class="k8-pf-by">บันทึกโดย ' + esc(x.byName || '-') + '</small></div></article>';
+    }).join('');
+    B.innerHTML = h;
+  }
+  async function load() {
+    const s = stu(); if (!s) return;
+    const ck = 'k8_pf_' + norm(s.studentId);
+    if (!P.data) { try { P.data = JSON.parse(localStorage.getItem(ck) || 'null'); } catch (e) {} }
+    P.loading = true; render();
+    let r = null; try { r = await gasApiCall('getMyPortfolio', {}, 30000); } catch (e) {}
+    P.loading = false;
+    if (r && r.success) { P.data = { items: r.items || [], activities: r.activities || [] }; try { localStorage.setItem(ck, JSON.stringify(P.data)); } catch (e) {} }
+    render();
+    const sub = document.getElementById('hfPfSub'); if (sub && P.data) sub.textContent = 'กิจกรรม ' + (P.data.activities || []).length + ' · เกียรติบัตร ' + (P.data.items || []).length;
+  }
+  window.k8PfOpen = function () {
+    const el = document.getElementById('k8Pf'); if (!el) return;
+    const s = stu(); document.getElementById('k8PfS').textContent = s ? (s.fullName || '') + ' · ' + String(s.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.') : 'แฟ้มสะสมผลงาน';
+    el.hidden = false; document.documentElement.classList.add('k8-docs-open'); try { history.pushState({ k8pf: 1 }, ''); } catch (e) {}
+    render(); load();
+  };
+  window.k8PfTab = function (k) { P.tab = k; render(); };
+  window.addEventListener('popstate', () => { const el = document.getElementById('k8Pf'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
+
+  // ---------- อาจารย์/แอดมิน: สแกนเก็บเกียรติบัตร ----------
+  const F = { sel: new Map(), q: '', g: 'ALL', photos: [], title: '', cat: 'academic', level: 'school', award: '', date: '', note: '', busy: false, list: null, tab: 'new' };
+  const allStu = () => { let l = []; try { l = allStudents || []; } catch (e) {} return l.filter((x) => x && x.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(x.status || ''))); };
+  const gn = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
+  function sRender() {
+    const B = document.getElementById('k8PfSBody'); if (!B) return;
+    let h = '<div class="k8-sw-tabs">' + [['new', '＋ เก็บเกียรติบัตร'], ['mine', 'ที่บันทึกไว้']].map(([k, l]) => '<button type="button" aria-pressed="' + (F.tab === k) + '" onclick="k8PfSTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>';
+    if (F.tab === 'mine') {
+      const L = F.list; h += !L ? '<p class="k8-asum-empty">กำลังโหลด…</p>' : !L.length ? '<p class="k8-asum-empty">ยังไม่มีรายการ</p>' :
+        L.map((x) => '<article class="k8-pf-it is-cert"><span class="k8-pf-ico" aria-hidden="true">🏅</span><div><b>' + esc(x.title) + '</b><small>' + esc(x.studentName) + ' · ' + esc(String(x.grade).replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(dTh(x.date)) + '</small>' + ((x.files || []).length ? '<div class="k8-pf-ph">' + x.files.slice(0, 2).map((u) => '<img src="' + esc(u) + '" alt="" loading="lazy">').join('') + '</div>' : '') + '<button type="button" class="k8-pf-del" onclick="k8PfDel(\'' + esc(x.id) + '\')">ลบ</button></div></article>').join('');
+      B.innerHTML = h; return;
+    }
+    const q = F.q.trim().toLowerCase();
+    const L = allStu().filter((x) => (F.g === 'ALL' || gn(x.grade) === F.g) && (!q || String(x.fullName || '').toLowerCase().includes(q) || norm(x.studentId).includes(q.replace(/^0+/, '')))).slice(0, 300);
+    h += '<section class="k8-sw-form">' +
+      '<label class="k8-sw-l"><span>ชื่อเกียรติบัตร / ผลงาน *</span><input type="text" id="k8PfTitle" maxlength="160" value="' + esc(F.title) + '" placeholder="เช่น การแข่งขันอ่านอัลกุรอาน" oninput="k8PfSF(\'title\', this.value, 1)"></label>' +
+      '<div class="k8-sw-dates"><label class="k8-sw-l"><span>ประเภท</span><select onchange="k8PfSF(\'cat\', this.value)">' + Object.keys(CAT).map((k) => '<option value="' + k + '"' + (F.cat === k ? ' selected' : '') + '>' + CAT[k][0] + '</option>').join('') + '</select></label><label class="k8-sw-l"><span>ระดับ</span><select onchange="k8PfSF(\'level\', this.value)">' + Object.keys(LV).map((k) => '<option value="' + k + '"' + (F.level === k ? ' selected' : '') + '>' + LV[k] + '</option>').join('') + '</select></label></div>' +
+      '<div class="k8-sw-dates"><label class="k8-sw-l"><span>รางวัล (ไม่บังคับ)</span><input type="text" maxlength="120" value="' + esc(F.award) + '" placeholder="เช่น ชนะเลิศ / เหรียญทอง / เข้าร่วม" oninput="k8PfSF(\'award\', this.value, 1)"></label><label class="k8-sw-l"><span>วันที่</span><input type="date" value="' + (F.date || ymd(new Date())) + '" onchange="k8PfSF(\'date\', this.value, 1)"></label></div>' +
+      '<div class="k8-sw-l"><span>รูปเกียรติบัตร (สูงสุด 4 รูป)</span><div class="k8-pf-cap">' + F.photos.map((p, i) => '<span class="k8-pf-thumb"><img src="' + p.data + '" alt=""><button type="button" aria-label="ลบรูป" onclick="k8PfPhDel(' + i + ')">✕</button></span>').join('') +
+        (F.photos.length < 4 ? '<label class="k8-pf-add">📷 สแกน/ถ่ายรูป<input type="file" accept="image/*" capture="environment" hidden onchange="k8PfPh(this)"></label><label class="k8-pf-add is-alt">🖼 เลือกจากเครื่อง<input type="file" accept="image/*" multiple hidden onchange="k8PfPh(this)"></label>' : '') + '</div></div>' +
+      '<label class="k8-sw-l"><span>หมายเหตุ (ไม่บังคับ)</span><input type="text" maxlength="300" value="' + esc(F.note) + '" oninput="k8PfSF(\'note\', this.value, 1)"></label>' +
+      '<div class="k8-sw-l"><span>นักเรียนที่ได้รับ (' + F.sel.size + ' คน)</span>' + (F.sel.size ? '<div class="k8-hq-mem-list">' + Array.from(F.sel.entries()).slice(0, 40).map(([k, n]) => '<span>' + esc(n) + '<button type="button" aria-label="เอาออก" onclick="k8PfT(\'' + k + '\')">✕</button></span>').join('') + '</div>' : '') +
+        '<input type="search" class="k8-asum-q" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(F.q) + '" oninput="k8PfQ(this)"><div class="k8-na-chips">' + ['ALL', '1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" aria-pressed="' + (F.g === g) + '" onclick="k8PfSF(\'g\',\'' + g + '\')">' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + g) + '</button>').join('') + '</div>' +
+        '<ul class="k8-bh-stu k8-pf-stu">' + L.map((x) => { const k = norm(x.studentId); const on = F.sel.has(k); return '<li><button type="button" role="checkbox" aria-checked="' + on + '" onclick="k8PfT(\'' + k + '\')"><span class="k8-bh-chk">' + (on ? '✓' : '') + '</span><span class="k8-bh-who"><b>' + esc(x.fullName) + '</b><small>' + esc(String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(x.studentId) + '</small></span></button></li>'; }).join('') + '</ul></div>' +
+      '<button type="button" class="k8-sw-go" style="background:#b45309" ' + (F.busy ? 'disabled' : '') + ' onclick="k8PfSave()">' + (F.busy ? 'กำลังบันทึก…' : 'บันทึกเกียรติบัตรให้ ' + F.sel.size + ' คน') + '</button></section>';
+    B.innerHTML = h;
+  }
+  window.k8PfStaffOpen = function () {
+    let m = document.getElementById('k8PfSModal');
+    if (!m) { document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8PfSModal" onclick="if(event.target===this)closeModal(\'k8PfSModal\')"><div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8PfST"><header class="k8-sheet-head"><div><h2 id="k8PfST">เก็บเกียรติบัตร/ผลงาน</h2><span>สแกนเกียรติบัตรเก็บไว้ในแฟ้มผลงานของนักเรียน · นักเรียนและผู้ปกครองเห็นในเมนู "กิจกรรม &amp; ผลงาน"</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal(\'k8PfSModal\')">✕</button></header><div class="k8-sheet-body" id="k8PfSBody"></div></div></div>'); }
+    openModal('k8PfSModal'); sRender();
+  };
+  window.k8PfSTab = async function (k) { F.tab = k; sRender(); if (k === 'mine') { let r = null; try { r = await gasApiCall('getPortfolioList', {}, 30000); } catch (e) {} F.list = (r && r.success && r.data) || []; sRender(); } };
+  window.k8PfSF = function (k, v, soft) { F[k] = v; if (!soft) sRender(); };
+  let qt = null; window.k8PfQ = function (el) { clearTimeout(qt); qt = setTimeout(() => { F.q = el.value; const pos = el.selectionStart; sRender(); const n = document.querySelector('#k8PfSBody .k8-asum-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };
+  window.k8PfT = function (k) { if (F.sel.has(k)) F.sel.delete(k); else { const x = allStu().find((s) => norm(s.studentId) === k); F.sel.set(k, x ? x.fullName : k); } sRender(); };
+  function shrink(file) { return new Promise((res) => { const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => { const M = 1600; let w = img.width, h = img.height; if (w > M || h > M) { const r = Math.min(M / w, M / h); w = Math.round(w * r); h = Math.round(h * r); } const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h); res(c.toDataURL('image/jpeg', 0.82)); }; img.onerror = () => res(''); img.src = fr.result; }; fr.onerror = () => res(''); fr.readAsDataURL(file); }); }
+  window.k8PfPh = async function (inp) { const files = Array.from(inp.files || []).slice(0, 4 - F.photos.length); for (const f of files) { const d = await shrink(f); if (d) F.photos.push({ data: d }); } inp.value = ''; sRender(); };
+  window.k8PfPhDel = function (i) { F.photos.splice(i, 1); sRender(); };
+  window.k8PfSave = async function () {
+    if (!F.title.trim()) { toast('ใส่ชื่อเกียรติบัตร/ผลงานก่อน', 'warning'); const t = document.getElementById('k8PfTitle'); if (t) t.focus(); return; }
+    if (!F.sel.size) { toast('เลือกนักเรียนอย่างน้อย 1 คน', 'warning'); return; }
+    F.busy = true; sRender();
+    let r = null; try { r = await gasApiCall('addPortfolio', { data: { title: F.title, cat: F.cat, level: F.level, award: F.award, date: F.date || ymd(new Date()), note: F.note, studentIds: Array.from(F.sel.keys()), photos: F.photos } }, 90000); } catch (e) {}
+    F.busy = false;
+    if (r && r.success) { toast(r.message, 'success'); Object.assign(F, { sel: new Map(), photos: [], title: '', award: '', note: '' }); } else toast((r && r.message) || 'บันทึกไม่สำเร็จ', 'error');
+    sRender();
+  };
+  window.k8PfDel = async function (id) { if (!window.confirm('ลบเกียรติบัตรนี้ออกจากแฟ้มผลงาน?')) return; let r = null; try { r = await gasApiCall('deletePortfolio', { id }, 30000); } catch (e) {} if (r && r.success) { toast(r.message, 'success'); F.list = (F.list || []).filter((x) => x.id !== id); sRender(); } else toast((r && r.message) || 'ลบไม่สำเร็จ', 'error'); };
+  // ปุ่มในหน้าอาจารย์ (เมนูลัด)
+  const iv = setInterval(() => { const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return; if (!q.querySelector('.k8-pf-qbtn')) q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-pf-qbtn k8-lv-qbtn" onclick="k8PfStaffOpen()"><span style="background:#fef3c7;color:#b45309"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.5 14 7 22l5-3 5 3-1.5-8"/></svg></span>เกียรติบัตร</button>'); clearInterval(iv); }, 1500);
 })();

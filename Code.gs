@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.94'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.95'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1219,7 +1219,7 @@ const ACTION_ACCESS = {
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
   saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff',
-  getMyNotifications: 'student', getMyClassLeaves: 'student', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  getMyNotifications: 'student', getMyClassLeaves: 'student', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
@@ -1612,6 +1612,14 @@ function dispatchAction_(action, req, data, session, ctx) {
       return markPrayersLate_(data);
     case 'getTeacherLeaves':
       return { success: true, data: readLeaves_() };
+    case 'getMyPortfolio':
+      return myPortfolio_(isStudent ? session.userId : (pick('studentId') || session.userId));
+    case 'addPortfolio':
+      return addPortfolio_(data, session);
+    case 'deletePortfolio':
+      return deletePortfolio_(pick('id'), session);
+    case 'getPortfolioList':
+      return { success: true, data: pfRows_().filter(function (x) { return session.role === 'admin' || x.by === session.userId || !!pick('all'); }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }).slice(0, 300) };
     case 'requestPeriodSwap':
       return requestPeriodSwap_(data, session);
     case 'respondPeriodSwap':
@@ -3075,6 +3083,52 @@ function enrollSubject_(d, studentId) {
 // =====================================================================
 //  🔁 v17.94 · สลับคาบระหว่างอาจารย์ (ชั่วคราว: วันเดียวหรือช่วงวันที่) · ขอ → อีกฝ่ายตอบรับ → ใช้ในตารางชั่วคราว
 // =====================================================================
+// =====================================================================
+//  🏅 v17.95 · แฟ้มสะสมผลงาน: กิจกรรมที่เข้าร่วม + เกียรติบัตรที่อาจารย์สแกนเก็บให้
+// =====================================================================
+const PF_SHEET_ = 'ผลงานนักเรียน';
+const PF_HEAD_ = ['รหัส', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ระดับชั้น', 'ชื่อผลงาน/เกียรติบัตร', 'ประเภท', 'ระดับ', 'วันที่', 'รางวัล', 'ไฟล์ (ลิงก์)', 'หมายเหตุ', 'ผู้บันทึก', 'ชื่อผู้บันทึก', 'บันทึกเมื่อ', 'สถานะ'];
+const PF_CATS_ = ['academic', 'sport', 'religion', 'art', 'virtue', 'volunteer', 'other'];
+const PF_LEVELS_ = ['school', 'district', 'province', 'region', 'nation', 'intl'];
+function pfSheet_() { const ss = getSpreadsheet(); let sh = ss.getSheetByName(PF_SHEET_); if (!sh) { sh = ss.insertSheet(PF_SHEET_); sh.getRange(1, 1, 1, PF_HEAD_.length).setValues([PF_HEAD_]).setFontWeight('bold').setBackground('#0369a1').setFontColor('#ffffff'); sh.setFrozenRows(1); } return sh; }
+function pfRows_() { const sh = pfSheet_(); if (sh.getLastRow() < 2) return []; return sh.getRange(2, 1, sh.getLastRow() - 1, PF_HEAD_.length).getValues().filter(function (r) { return cleanVal(r[0]) && cleanVal(r[14]) !== 'deleted'; }).map(function (r) {
+  return { id: cleanVal(r[0]), studentId: cleanVal(r[1]), studentName: cleanVal(r[2]), grade: cleanVal(r[3]), title: cleanVal(r[4]), cat: cleanVal(r[5]) || 'other', level: cleanVal(r[6]) || 'school', date: normalizeDateStr_(r[7]) || cleanVal(r[7]), award: cleanVal(r[8]), files: String(r[9] || '').split(/\s*\n\s*/).filter(Boolean), note: cleanVal(r[10]), by: cleanVal(r[11]), byName: cleanVal(r[12]), createdAt: cleanVal(r[13]) }; }); }
+function addPortfolio_(d, session) {
+  d = d || {};
+  const title = cleanVal(d.title).substring(0, 160); if (!title) return { success: false, message: 'กรุณาใส่ชื่อผลงาน/เกียรติบัตร' };
+  const ids = (Array.isArray(d.studentIds) ? d.studentIds : []).map(cleanVal).filter(Boolean).slice(0, 300);
+  if (!ids.length) return { success: false, message: 'เลือกนักเรียนอย่างน้อย 1 คน' };
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(d.date)) ? cleanVal(d.date) : Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  const cat = PF_CATS_.indexOf(cleanVal(d.cat)) !== -1 ? cleanVal(d.cat) : 'other';
+  const level = PF_LEVELS_.indexOf(cleanVal(d.level)) !== -1 ? cleanVal(d.level) : 'school';
+  const photos = (Array.isArray(d.photos) ? d.photos : []).slice(0, 4);
+  const urls = []; photos.forEach(function (p, i) { const u = savePhotoToDrive_(p && p.data ? p.data : p, 'Khalifah_Portfolio', 'pf_' + Date.now() + '_' + (i + 1)); if (u) urls.push(u); });
+  const info = {}; const stu = getSpreadsheet().getSheetByName(SHEETS.STUDENTS);
+  if (stu && stu.getLastRow() > 1) stu.getRange(2, 1, stu.getLastRow() - 1, 4).getValues().forEach(function (r) { info[cleanVal(r[0]).replace(/^0+/, '')] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]) }; });
+  const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+  const rows = []; const miss = [];
+  ids.forEach(function (sid, i) { const st = info[sid.replace(/^0+/, '')]; if (!st) { miss.push(sid); return; } rows.push(['PF-' + Date.now() + '-' + i, st.id, st.name, st.grade, title, cat, level, date, cleanVal(d.award).substring(0, 120), urls.join('\n'), cleanVal(d.note).substring(0, 300), session.userId, cleanVal(session.name || session.userId), now, 'active']); });
+  if (!rows.length) return { success: false, message: 'ไม่พบนักเรียนที่เลือก' };
+  const sh = pfSheet_(); const nr = sh.getLastRow() + 1;
+  sh.getRange(nr, 2, rows.length, 1).setNumberFormat('@'); sh.getRange(nr, 1, rows.length, PF_HEAD_.length).setValues(rows);
+  return { success: true, added: rows.length, files: urls.length, missing: miss, message: 'เก็บผลงาน "' + title + '" ให้นักเรียน ' + rows.length + ' คนแล้ว' + (urls.length ? ' · รูป ' + urls.length + ' รูป' : '') };
+}
+function deletePortfolio_(id, session) {
+  const sh = pfSheet_(); if (sh.getLastRow() < 2) return { success: false, message: 'ไม่พบรายการ' };
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, 12).getValues();
+  for (let i = 0; i < rows.length; i++) if (cleanVal(rows[i][0]) === cleanVal(id)) {
+    if (session.role !== 'admin' && cleanVal(rows[i][11]) !== session.userId) return { success: false, code: 'FORBIDDEN', message: 'ลบได้เฉพาะรายการที่คุณบันทึก' };
+    sh.getRange(i + 2, 15).setValue('deleted'); return { success: true, message: 'ลบรายการแล้ว' };
+  }
+  return { success: false, message: 'ไม่พบรายการ' };
+}
+function myPortfolio_(sid) {
+  const items = pfRows_().filter(function (x) { return isCodeMatch(x.studentId, sid); });
+  const acts = {}; try { (getActivities().data || []).forEach(function (a) { acts[cleanVal(a.id || a.activityId)] = a; }); } catch (e) {}
+  const logs = (getActivityLogs('').data || []).filter(function (l) { return isCodeMatch(l.studentId, sid); }).map(function (l) { const a = acts[l.activityId] || {}; return { activityId: l.activityId, title: a.title || a.name || l.activityTitle || 'กิจกรรม', date: l.formattedDate, time: l.formattedTime, location: a.location || '', organizer: a.creator || a.createdBy || '' }; });
+  const seen = {}; const activities = logs.filter(function (x) { const k = x.activityId + '|' + x.date; if (seen[k]) return false; seen[k] = 1; return true; }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+  return { success: true, items: items.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }), activities: activities };
+}
 function readSwaps_() { let v = []; try { v = JSON.parse((getSettings().data || {}).PeriodSwaps || '[]'); } catch (e) { v = []; } return Array.isArray(v) ? v : []; }
 function writeSwaps_(list) {
   const cut = Utilities.formatDate(new Date(Date.now() - 90 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');

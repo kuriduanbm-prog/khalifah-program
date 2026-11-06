@@ -4456,3 +4456,25 @@ html.k8-sat-off #view-prayer #k8PrSub::after { content: 'วันเสาร�
 .k8-sw-hint { margin: 0; font-size: 12.5px; color: #6d28d9; font-weight: 600; }
 .k8-sw-go { min-height: 48px; border-radius: 14px; border: 0; background: #6d28d9; color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; } .k8-sw-go[disabled] { opacity: .5; }
 @media (max-width: 520px) { .k8-sw-two { grid-template-columns: 1fr; } .k8-sw-arr { display: none; } }
+/* v17.95 · กิจกรรม & ผลงาน */
+.k8-pf-kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.k8-pf-kpi > div { background: #fff; border: 1px solid #eef0f4; border-radius: 14px; padding: 12px; text-align: center; } .k8-pf-kpi b { display: block; font-size: 26px; color: #b45309; } .k8-pf-kpi small { font-size: 12px; color: #64748b; }
+.k8-pf-kpi > div:first-child b { color: #0369a1; }
+.k8-pf-yr { margin: 8px 0 0; font-size: 14px; color: #64748b; font-weight: 700; }
+.k8-pf-it { display: flex; gap: 12px; background: #fff; border: 1px solid #eef0f4; border-radius: 16px; padding: 12px; position: relative; }
+.k8-pf-it > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .k8-pf-it b { font-size: 15px; } .k8-pf-it small { font-size: 12.5px; color: #64748b; } .k8-pf-it p { margin: 2px 0 0; font-size: 13px; color: #334155; }
+.k8-pf-ico { width: 42px; height: 42px; flex: none; border-radius: 12px; background: #e0f2fe; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.k8-pf-tag { align-self: flex-start; font-size: 11.5px; font-weight: 700; color: #0369a1; background: #f8fafc; border-radius: 999px; padding: 1px 9px; }
+.k8-pf-ph { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; } .k8-pf-ph img { width: 110px; height: 78px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; }
+.k8-pf-by { margin-top: 2px; font-size: 11.5px !important; }
+.k8-pf-del { position: absolute; top: 10px; right: 10px; border: 0; background: #fef2f2; color: #b91c1c; border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.k8-pf-cap { display: flex; gap: 8px; flex-wrap: wrap; }
+.k8-pf-add { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 14px; border-radius: 12px; background: #b45309; color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; }
+.k8-pf-add.is-alt { background: #fff; color: #b45309; border: 1.5px solid #fcd34d; }
+.k8-pf-thumb { position: relative; } .k8-pf-thumb img { width: 92px; height: 66px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; display: block; }
+.k8-pf-thumb button { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: #0f172a; color: #fff; font-size: 11px; cursor: pointer; }
+.k8-pf-stu { max-height: 300px; overflow: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.k8-pf-it, .k8-pf-it > div { text-align: left; align-items: stretch; } .k8-pf-it b { color: #0f172a; font-weight: 700; }
+.k8-pf-ph a { display: block; } .k8-pf-ph img { background: #f1f5f9; }
+.k8-sw-l .k8-pf-add { color: #fff; font-size: 14px; } .k8-sw-l .k8-pf-add.is-alt { color: #b45309; }
+.k8-pf-kpi small { display: block; line-height: 1.35; }
