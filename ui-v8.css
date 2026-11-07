@@ -4633,3 +4633,35 @@ html.k8-xnarrow .hf-p5-t b { font-size: 11.5px; } html.k8-xnarrow .hf-p5-grid { 
 @keyframes k8BehPop { 0% { transform: scale(.86); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .hf-beh-box.is-pop { animation: none; } }
 .hf-beh-box b, .hf-beh-box small { color: #fff !important; }
+/* v18.00 · แอดมิน: วิชาที่เรียนวันนี้ */
+.k8-kpi-of { font-size: 14px; font-weight: 600; opacity: .7; margin-left: 2px; }
+.k8-kpi-warn { color: #b91c1c; font-weight: 700; }
+.k8-atd .k8-asum-h { position: relative; }
+.k8-atd-rf { margin-left: auto; width: 40px; height: 40px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; color: #0369a1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.k8-atd-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.k8-atd-date { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; }
+.k8-atd-date input { height: 40px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0 10px; font: inherit; background: #fff; }
+.k8-atd-today { border: 0; background: #e0f2fe; color: #0369a1; border-radius: 10px; height: 40px; padding: 0 12px; font: inherit; font-weight: 600; cursor: pointer; }
+.k8-atd-kpi { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: 8px; }
+.k8-atd-kpi > div { background: #fff; border: 1px solid #eef0f4; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.k8-atd-kpi small { font-size: 12px; color: #64748b; } .k8-atd-kpi b { font-size: 22px; color: #0f172a; }
+.k8-atd-kpi .is-big { background: #0c4a6e; border: 0; } .k8-atd-kpi .is-big small { color: #bae6fd; } .k8-atd-kpi .is-big b { color: #fff; font-size: 28px; } .k8-atd-kpi .is-big b span { font-size: 14px; color: #bae6fd; font-weight: 500; }
+.k8-atd-kpi .is-big i { position: absolute; left: 0; bottom: 0; height: 4px; width: var(--w); background: #4ade80; }
+.k8-atd-kpi .is-miss b { color: #dc2626; } .k8-atd-kpi .is-now b { color: #d97706; } .k8-atd-kpi .is-lv b { color: #7c3aed; }
+@media (max-width: 640px) { .k8-atd-kpi { grid-template-columns: repeat(4, 1fr); } .k8-atd-kpi .is-big { grid-column: 1 / -1; } }
+.k8-atd-ph { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: #0c4a6e; } .k8-atd-ph span { font-weight: 500; color: #64748b; font-size: 12.5px; margin-left: 4px; }
+.k8-atd-it { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #eef0f4; border-left: 4px solid #cbd5e1; border-radius: 14px; padding: 10px 12px; }
+.k8-atd-it.is-done { border-left-color: #16a34a; } .k8-atd-it.is-miss { border-left-color: #dc2626; background: #fffafa; } .k8-atd-it.is-now { border-left-color: #f59e0b; } .k8-atd-it.is-lv { border-left-color: #7c3aed; }
+.k8-atd-g { flex: none; min-width: 48px; text-align: center; font-weight: 700; font-size: 14px; color: #0c4a6e; background: #f0f9ff; border-radius: 10px; padding: 6px 6px; display: flex; flex-direction: column; line-height: 1.2; }
+.k8-atd-g small { font-size: 11px; font-weight: 600; color: #64748b; }
+.k8-atd-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.k8-atd-m b { font-size: 14.5px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.k8-atd-m b i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.k8-atd-m small { font-size: 12.5px; color: #64748b; }
+.k8-atd-c { font-size: 12.5px; color: #15803d; } .k8-atd-c em { font-style: normal; color: #b91c1c; }
+.k8-atd-it.is-lv .k8-atd-c { color: #7c3aed; }
+.k8-atd-sw { font-size: 11px; font-weight: 600; color: #0369a1; background: #e0f2fe; border-radius: 999px; padding: 1px 7px; }
+.k8-atd-st { flex: none; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #f1f5f9; color: #64748b; white-space: nowrap; }
+.k8-atd-it.is-done .k8-atd-st { background: #dcfce7; color: #15803d; } .k8-atd-it.is-miss .k8-atd-st { background: #fee2e2; color: #b91c1c; } .k8-atd-it.is-now .k8-atd-st { background: #fef3c7; color: #b45309; } .k8-atd-it.is-lv .k8-atd-st { background: #ede9fe; color: #6d28d9; }
+@media (max-width: 480px) { .k8-atd-it { flex-wrap: wrap; } .k8-atd-st { margin-left: 60px; } }
+.k8-atd-lead { margin: 0; font-size: 14px; color: #334155; } .k8-atd-lead b { color: #0f172a; }

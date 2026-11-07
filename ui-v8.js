@@ -3385,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.99b';
+  const APP_VERSION = '18.00';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9996,4 +9996,150 @@ window.k8HfMiss = function (slot) {
     }
     return r;
   };
+})();
+
+/* ---------- v18.00 · แอดมิน: "มาเรียนวันนี้" = คาบตามตารางสอน + อาจารย์เช็คชื่อแล้วหรือยัง · อาจารย์: ปุ่มลัดสรุปการมาเรียน ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const p2 = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+  const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  const arr = (x) => (Array.isArray(x) ? x : (x ? [x] : []));
+  const gnum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
+  const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const KEY = (s) => { s = String(s || ''); return /สาย|late/i.test(s) ? 'late' : /ลา|leave|excuse/i.test(s) ? 'leave' : /ขาด|absent/i.test(s) ? 'absent' : 'present'; };
+  const A = { tt: null, att: null, lv: null, at: 0, loading: false, date: '', f: 'all' };
+  const isAdm = () => { try { return !!currentAdmin && (currentAdmin.role === 'Admin' || currentAdmin.isMaster || /admin/i.test(String(currentAdmin.role || ''))); } catch (e) { return false; } };
+  async function load(force) {
+    if (A.loading || (!force && A.tt && Date.now() - A.at < 60000)) return;
+    A.loading = true; paintPage();
+    const [t, a, l] = await Promise.all([
+      gasApiCall('getTimetable', {}, 30000).catch(() => null),
+      gasApiCall('getAttendance', {}, 45000).catch(() => null),
+      gasApiCall('getTeacherLeaves', {}, 20000).catch(() => null)
+    ]);
+    if (t && t.success) A.tt = t; else if (!A.tt) { try { A.tt = JSON.parse(localStorage.getItem('khalifah_timetable') || 'null'); } catch (e) {} }
+    if (a && a.success) A.att = a.data || []; else if (!A.att) { try { A.att = JSON.parse(localStorage.getItem('khalifah_attendance_logs') || '[]'); } catch (e) { A.att = []; } }
+    A.lv = (l && l.success && l.data) || A.lv || [];
+    A.at = Date.now(); A.loading = false;
+    paintKpi(); paintPage();
+  }
+  function cellsFor(cells, swaps, g, dow, p, ds) {
+    const on = (raw) => arr(raw).filter((e) => e && (!e.from || ds >= e.from) && (!e.to || ds <= e.to));
+    const base = on(cells[dow + '-' + p]);
+    const sw = (swaps || []).find((x) => String(x.grade) === String(g) && Number(x.dow) === Number(dow) && ds >= x.from && ds <= x.to && (Number(x.pA) === Number(p) || Number(x.pB) === Number(p)));
+    if (!sw) return base;
+    const mineP = Number(sw.pA) === Number(p);
+    const outT = mineP ? sw.tA : sw.tB, inT = mineP ? sw.tB : sw.tA, srcP = mineP ? sw.pB : sw.pA;
+    return base.filter((e) => String(e.t || '') !== String(outT)).concat(on(cells[dow + '-' + srcP]).filter((e) => String(e.t || '') === String(inT)).map((e) => Object.assign({}, e, { swapped: true })));
+  }
+  // รายการคาบของวันที่เลือก
+  function model(ds) {
+    const tt = A.tt || {}; const cfg = tt.config || { periods: [], days: [1, 2, 3, 4, 5] };
+    const periods = (cfg.periods || []).slice(0, 5);
+    const d = new Date(ds + 'T00:00:00'), dow = d.getDay();
+    const isToday = ds === ymd(new Date());
+    const now = new Date(); const nm = now.getHours() * 60 + now.getMinutes();
+    const off = !(cfg.days || [1, 2, 3, 4, 5]).includes(dow);
+    const rows = [];
+    if (off) return { rows, periods, off, dow };
+    const att = (A.att || []).filter((r) => r && r.date === ds && r.subjectCode);
+    const lvs = (A.lv || []).filter((l) => l && l.status === 'approved' && l.date === ds);
+    const sources = [];
+    ['1', '2', '3', '4', '5', '6'].forEach((g) => { const gg = (tt.grades || {})[g]; if (gg) sources.push({ key: g, label: 'ม.' + g, cells: gg.cells || {}, g }); });
+    (tt.extras || []).forEach((x) => { if (x && x.cells) sources.push({ key: 'x:' + x.id, label: x.name || 'ตารางพิเศษ', cells: x.cells, g: '' }); });
+    periods.forEach((pp, i) => {
+      const p = i + 1;
+      sources.forEach((src) => {
+        cellsFor(src.cells, src.g ? tt.swaps : [], src.g, dow, p, ds).forEach((e) => {
+          if (!e || !(e.s || e.sn)) return;
+          const recs = att.filter((r) => String(r.subjectCode) === String(e.s) && (!src.g || gnum(r.grade) === src.g) && (!r.period || Number(r.period) === p));
+          const c = { present: 0, late: 0, leave: 0, absent: 0 }; recs.forEach((r) => { c[KEY(r.status)]++; });
+          const lv = lvs.find((l) => String(l.teacherId || '') === String(e.t || '') && ((l.slots && l.slots.length) ? l.slots.some((x) => Number(x.p) === p && (!src.g || String(x.g) === src.g)) : (l.allDay || (l.periods || []).map(Number).indexOf(p) !== -1)));
+          const s0 = toMin(pp.start), e0 = toMin(pp.end);
+          let st;
+          if (recs.length) st = 'done';
+          else if (lv) st = 'leave';
+          else if (ds > ymd(new Date())) st = 'wait';
+          else if (isToday && nm < s0) st = 'wait';
+          else if (isToday && nm < e0) st = 'now';
+          else st = 'miss';
+          rows.push({ p, time: (pp.start || '') + '–' + (pp.end || ''), grade: src.label, sn: e.sn || e.s, tn: e.tn || e.t || 'ยังไม่ระบุผู้สอน', gx: e.gx, swapped: !!e.swapped, st, c, n: recs.length, lv });
+        });
+      });
+    });
+    return { rows, periods, off, dow };
+  }
+  function nextDay(ds) {
+    const d0 = new Date(ds + 'T00:00:00');
+    for (let i = 1; i <= 7; i++) { const d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + i); const m = model(ymd(d)); if (!m.off && m.rows.length) return { ds: ymd(d), dow: d.getDay(), total: m.rows.length, subj: new Set(m.rows.map((r) => r.sn)).size }; }
+    return null;
+  }
+  function summary(m) { const s = { total: m.rows.length, done: 0, miss: 0, now: 0, wait: 0, leave: 0 }; m.rows.forEach((r) => { s[r.st]++; }); return s; }
+  // ---------- KPI หน้าแรกแอดมิน ----------
+  function paintKpi() {
+    const box = document.getElementById('k8OvKpis'); if (!box) return;
+    const b = box.querySelectorAll('.k8-kpi')[1]; if (!b) return;
+    b.setAttribute('onclick', 'k8AtdOpen()');
+    const lab = b.querySelector('.k8-kpi-label'), val = b.querySelector('.k8-kpi-val'), sub = b.querySelector('.k8-kpi-sub');
+    if (lab) lab.textContent = 'มาเรียนวันนี้ · คาบเรียน';
+    if (!A.tt) { if (sub && !A.loading) sub.textContent = 'แตะเพื่อดูวิชาที่เรียนวันนี้'; return; }
+    const m = model(ymd(new Date())); const s = summary(m);
+    A.next = '';
+    if (m.off) {
+      const nx = nextDay(ymd(new Date())); A.next = nx ? nx.ds : '';
+      if (val) val.textContent = 'วันหยุด';
+      if (sub) sub.textContent = nx ? 'วันเรียนถัดไป วัน' + DAYS[nx.dow] + ' มี ' + nx.subj + ' วิชา · ' + nx.total + ' คาบ · แตะเพื่อดู' : 'วันนี้ไม่มีคาบเรียนตามตารางสอน';
+      return;
+    }
+    if (!s.total) { if (val) val.textContent = '0 คาบ'; if (sub) sub.textContent = 'ยังไม่มีวิชาในตารางสอนวันนี้'; return; }
+    const nSub = new Set(m.rows.map((r) => r.sn)).size;
+    if (val) val.innerHTML = s.done + '<small class="k8-kpi-of">/' + s.total + ' คาบ</small>';
+    if (sub) sub.innerHTML = 'วันนี้ ' + nSub + ' วิชา · ' + s.total + ' คาบ · อาจารย์เช็คแล้ว ' + s.done + (s.miss ? ' · <b class="k8-kpi-warn">ยังไม่เช็ค ' + s.miss + '</b>' : '') + (s.now ? ' · กำลังเรียน ' + s.now : '') + (s.leave ? ' · งดสอน ' + s.leave : '');
+  }
+  const o = window.renderAdminOverviewV8;
+  if (typeof o === 'function') window.renderAdminOverviewV8 = function () { const r = o.apply(this, arguments); try { paintKpi(); load(false); } catch (e) {} return r; };
+  // ---------- หน้ารายการวิชาวันนี้ ----------
+  function ensurePage() {
+    if (document.getElementById('k8Atd')) return;
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-asum k8-atd" id="k8Atd" hidden role="dialog" aria-modal="true" aria-labelledby="k8AtdT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8AtdT">วิชาที่เรียนวันนี้</h2><small id="k8AtdS"></small></div><button type="button" class="k8-atd-rf" aria-label="รีเฟรช" onclick="k8AtdRefresh()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button></header><div class="k8-asum-b" id="k8AtdB"></div></div></div>');
+  }
+  const ST = { done: ['เช็คชื่อแล้ว', 'is-done'], miss: ['ยังไม่เช็คชื่อ', 'is-miss'], now: ['กำลังเรียน · ยังไม่เช็ค', 'is-now'], wait: ['ยังไม่ถึงเวลา', 'is-wait'], leave: ['งดสอน', 'is-lv'] };
+  function paintPage() {
+    const B = document.getElementById('k8AtdB'); if (!B || document.getElementById('k8Atd').hidden) return;
+    const ds = A.date || ymd(new Date()); const d = new Date(ds + 'T00:00:00');
+    document.getElementById('k8AtdT').textContent = ds === ymd(new Date()) ? 'วิชาที่เรียนวันนี้' : 'วิชาที่เรียนวัน' + DAYS[d.getDay()];
+    document.getElementById('k8AtdS').textContent = 'วัน' + DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + (d.getFullYear() + 543) + ' · ทุกชั้นตามตารางสอน';
+    let h = '<div class="k8-atd-bar"><label class="k8-atd-date"><span>วันที่</span><input type="date" value="' + ds + '" max="' + ymd(new Date(Date.now() + 14 * 864e5)) + '" onchange="k8AtdDate(this.value)"></label>' + (ds !== ymd(new Date()) ? '<button type="button" class="k8-atd-today" onclick="k8AtdDate(\'\')">กลับไปวันนี้</button>' : '') + '</div>';
+    if (!A.tt) { B.innerHTML = h + '<p class="k8-asum-empty">' + (A.loading ? 'กำลังโหลดตารางสอนและการเช็คชื่อ…' : 'ยังโหลดตารางสอนไม่ได้') + '</p>'; return; }
+    const m = model(ds); const s = summary(m);
+    if (m.off) { const nx = nextDay(ds); B.innerHTML = h + '<p class="k8-asum-empty">วัน' + DAYS[m.dow] + 'ไม่มีคาบเรียนตามตารางสอน (วันหยุด)</p>' + (nx ? '<button type="button" class="k8-atd-today" style="align-self:center" onclick="k8AtdDate(\'' + nx.ds + '\')">ดูวันเรียนถัดไป · วัน' + DAYS[nx.dow] + ' (' + nx.subj + ' วิชา · ' + nx.total + ' คาบ)</button>' : ''); return; }
+    if (!s.total) { B.innerHTML = h + '<p class="k8-asum-empty">ยังไม่มีวิชาในตารางสอนวันนี้</p>'; return; }
+    h += '<p class="k8-atd-lead">' + (ds === ymd(new Date()) ? 'วันนี้' : 'วัน' + DAYS[d.getDay()]) + 'มี <b>' + new Set(m.rows.map((r) => r.sn)).size + ' วิชา · ' + s.total + ' คาบ</b> · อาจารย์เช็คชื่อแล้ว <b>' + s.done + '</b>' + (s.miss + s.now ? ' · ยังไม่เช็ค <b class="k8-kpi-warn">' + (s.miss + s.now) + '</b>' : '') + '</p>';
+    h += '<section class="k8-atd-kpi"><div class="is-big"><small>เช็คชื่อแล้ว</small><b>' + s.done + '<span> / ' + s.total + ' คาบ</span></b><i style="--w:' + Math.round(s.done / s.total * 100) + '%"></i></div>' +
+      '<div class="is-miss"><small>ยังไม่เช็ค</small><b>' + s.miss + '</b></div><div class="is-now"><small>กำลังเรียน</small><b>' + s.now + '</b></div><div><small>ยังไม่ถึงเวลา</small><b>' + s.wait + '</b></div><div class="is-lv"><small>งดสอน</small><b>' + s.leave + '</b></div></section>';
+    h += '<div class="k8-asum-tabs" role="tablist">' + [['all', 'ทั้งหมด ' + s.total], ['miss', 'ยังไม่เช็ค ' + (s.miss + s.now)], ['done', 'เช็คแล้ว ' + s.done]].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (A.f === k) + '" onclick="k8AtdF(\'' + k + '\')">' + l + '</button>').join('') + '</div>';
+    const L = m.rows.filter((r) => A.f === 'all' || (A.f === 'miss' ? (r.st === 'miss' || r.st === 'now') : r.st === 'done'));
+    if (!L.length) { B.innerHTML = h + '<p class="k8-asum-empty">' + (A.f === 'miss' ? 'ทุกคาบที่ถึงเวลาแล้วเช็คชื่อครบ ✓' : 'ไม่มีรายการ') + '</p>'; return; }
+    let lastP = 0;
+    h += L.map((r) => {
+      const head = r.p !== lastP ? '<h3 class="k8-atd-ph">คาบ ' + r.p + ' <span>' + esc(r.time) + '</span></h3>' : ''; lastP = r.p;
+      const col = window.k8SubjColor ? window.k8SubjColor(r.sn) : '#0369a1';
+      const det = r.st === 'done' ? '<span class="k8-atd-c">มา ' + r.c.present + ' · สาย ' + r.c.late + ' · ลา ' + r.c.leave + ' · <em>ขาด ' + r.c.absent + '</em></span>' : r.st === 'leave' ? '<span class="k8-atd-c">' + esc((r.lv && r.lv.teacherName) || r.tn) + ' ลาสอน</span>' : '';
+      return head + '<article class="k8-atd-it ' + ST[r.st][1] + '"><span class="k8-atd-g">' + esc(r.grade) + (r.gx ? '<small>' + (r.gx === 'f' ? 'หญิง' : 'ชาย') + '</small>' : '') + '</span><div class="k8-atd-m"><b><i style="background:' + col + '"></i>' + esc(r.sn) + (r.swapped ? ' <span class="k8-atd-sw">⇄ สลับคาบ</span>' : '') + '</b><small>' + esc(r.tn) + '</small>' + det + '</div><span class="k8-atd-st">' + ST[r.st][0] + '</span></article>';
+    }).join('');
+    B.innerHTML = h;
+  }
+  window.k8AtdOpen = function () {
+    ensurePage(); A.date = A.next || ''; A.f = 'all';
+    const el = document.getElementById('k8Atd'); el.hidden = false; document.documentElement.classList.add('k8-docs-open'); try { history.pushState({ k8atd: 1 }, ''); } catch (e) {}
+    paintPage(); load(true);
+  };
+  window.k8AtdRefresh = function () { load(true); };
+  window.k8AtdDate = function (v) { A.date = v || ''; paintPage(); };
+  window.k8AtdF = function (k) { A.f = k; paintPage(); };
+  window.addEventListener('popstate', () => { const el = document.getElementById('k8Atd'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
+  // ---------- อาจารย์: ปุ่มลัด "สรุปการมาเรียน" ----------
+  const iv = setInterval(() => { const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return; if (!q.querySelector('.k8-asum-qbtn')) q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-asum-qbtn" onclick="k8AsumOpen()"><span style="background:#dcfce7;color:#15803d"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>สรุปการมาเรียน</button>'); clearInterval(iv); }, 1500);
 })();
