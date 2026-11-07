@@ -3385,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.01';
+  const APP_VERSION = '18.02';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6864,7 +6864,7 @@ window.k8RegBirthChange = function (v) {
   const gnum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
   const DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
   const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-  const ST = [['ontime', 'ตรงเวลา'], ['late', 'มาช้า'], ['absent', 'ไม่มา']];
+  const ST = [['ontime', 'ตรงเวลา'], ['late', 'มาช้า'], ['leave', 'ลา'], ['absent', 'ไม่มา']];
   const R = { date: ymd(new Date()), grade: 'ALL', q: '', saved: {}, edits: {}, loading: false, saving: false, err: '', girls: false };
 
   const isSubuh = (t) => { try { return normalizePrayerSlotKey(t || '') === ROLL_SLOT; } catch (e) { return /ซุบฮิ|ศุบฮิ/.test(String(t || '')); } };
@@ -6895,8 +6895,8 @@ window.k8RegBirthChange = function (v) {
     const el = root(); if (!el) return;
     const list = students();
     const shown = list.filter((s) => (R.grade === 'ALL' || gnum(s.grade) === R.grade) && (!R.q || (String(s.fullName || '') + ' ' + s.studentId).toLowerCase().indexOf(R.q.toLowerCase()) !== -1));
-    const cnt = { ontime: 0, late: 0, absent: 0, none: 0 };
-    shown.forEach((s) => { const v = cur(nid(s.studentId)); cnt[v || 'none']++; });
+    const cnt = { ontime: 0, late: 0, leave: 0, absent: 0, none: 0 };
+    shown.forEach((s) => { const v = cur(nid(s.studentId)); cnt[v || 'none'] = (cnt[v || 'none'] || 0) + 1; });
     const d = new Date(R.date + 'T00:00:00');
     const today = R.date === ymd(new Date());
     const grades = ['ALL', '1', '2', '3', '4', '5', '6'];
@@ -6911,7 +6911,7 @@ window.k8RegBirthChange = function (v) {
     if (R.err === 'old') h += '<div class="k8-tt-warn" role="alert"><b>ระบบหลังบ้านยังไม่รองรับการเช็คชื่อซุบฮิ</b><span>กรุณา Deploy ไฟล์ Code.gs ตัวล่าสุด (Manage deployments → New version)</span></div>';
     else if (R.err === 'net') h += '<div class="k8-tt-warn" role="alert"><b>โหลดข้อมูลการเช็คไม่ได้</b><span>ตรวจสอบอินเทอร์เน็ต แล้วกด <button type="button" class="k8-bh-link" onclick="k8PrReload()">โหลดใหม่</button></span></div>';
     h += '<section class="k8-pr-sum" aria-label="สรุป">' +
-      '<span class="is-ontime"><b>' + cnt.ontime + '</b>ตรงเวลา</span><span class="is-late"><b>' + cnt.late + '</b>มาช้า</span><span class="is-absent"><b>' + cnt.absent + '</b>ไม่มา</span><span class="is-none"><b>' + cnt.none + '</b>ยังไม่เช็ค</span></section>';
+      '<span class="is-ontime"><b>' + cnt.ontime + '</b>ตรงเวลา</span><span class="is-late"><b>' + cnt.late + '</b>มาช้า</span><span class="is-leave"><b>' + cnt.leave + '</b>ลา</span><span class="is-absent"><b>' + cnt.absent + '</b>ไม่มา</span><span class="is-none"><b>' + cnt.none + '</b>ยังไม่เช็ค</span></section>';
     if (cnt.none) h += '<button type="button" class="k8-pr-all" onclick="k8PrAll()">✓ คนที่ยังไม่เช็ค ' + cnt.none + ' คน · มาตรงเวลาทั้งหมด</button>';
     h += R.loading ? '<p class="k8-li-empty">กำลังโหลด…</p>' : (shown.length ? '<ul class="k8-pr-list">' + shown.map((s) => {
       const k = nid(s.studentId); const v = cur(k); const ch = R.edits[k] !== undefined && R.edits[k] !== (R.saved[k] || '');
@@ -6966,7 +6966,7 @@ window.k8RegBirthChange = function (v) {
     let sel = null; try { sel = selectedPrayerTime; } catch (e) {}
     let el = document.getElementById('k8SubuhNote');
     const box = document.getElementById('cameraBox');
-    if (!el && box) { el = document.createElement('div'); el.id = 'k8SubuhNote'; el.className = 'k8-subuh-note'; el.setAttribute('role', 'status'); el.innerHTML = '<b>ซุบฮิ · แอดมินเช็คชื่อให้</b><span>ช่วงเช้ามืดนักเรียนไม่ต้องถ่ายรูปบันทึกเอง ผลจะขึ้นในกราฟหลังแอดมินเช็คชื่อ (ตรงเวลา / มาช้า / ไม่มา)</span>'; box.parentNode.insertBefore(el, box); }
+    if (!el && box) { el = document.createElement('div'); el.id = 'k8SubuhNote'; el.className = 'k8-subuh-note'; el.setAttribute('role', 'status'); el.innerHTML = '<b>ซุบฮิ · แอดมินเช็คชื่อให้</b><span>ช่วงเช้ามืดนักเรียนไม่ต้องถ่ายรูปบันทึกเอง ผลจะขึ้นในกราฟหลังแอดมินเช็คชื่อ (ตรงเวลา / มาช้า / ลา / ไม่มา)</span>'; box.parentNode.insertBefore(el, box); }
     const on = rollForMe(sel);
     if (el) el.hidden = !on;
     document.documentElement.classList.toggle('k8-subuh-roll', on);

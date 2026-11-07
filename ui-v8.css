@@ -4680,3 +4680,9 @@ html.k8-xnarrow .hf-p5-t b { font-size: 11.5px; } html.k8-xnarrow .hf-p5-grid { 
 .k8-hqr-t thead th { background: #f8fafc; font-size: 12px; color: #64748b; font-weight: 600; }
 .k8-hqr-t tbody th { text-align: left; font-weight: 500; white-space: normal; min-width: 150px; } .k8-hqr-t tbody th small { display: block; font-size: 11.5px; color: #94a3b8; }
 .k8-hqr-t td.is-bad { color: #dc2626; font-weight: 700; }
+/* v18.02 · ซุบฮิ: ปุ่ม "ลา" */
+.k8-pr-sum { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+.k8-pr-sum .is-leave { background: #dbeafe; color: #1d4ed8; }
+.k8-pr-list li.is-leave { border-left-color: #2563eb; }
+.k8-pr-seg button.is-leave[aria-pressed="true"] { background: #2563eb; border-color: #2563eb; color: #fff; }
+@media (max-width: 400px) { .k8-pr-sum b { font-size: 19px; } .k8-pr-sum span { font-size: 11px; } .k8-pr-seg button { font-size: 12.5px; padding: 0 4px; } }

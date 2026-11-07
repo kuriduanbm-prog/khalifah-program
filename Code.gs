@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.01'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.02'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3416,7 +3416,7 @@ function getPrayerRoll_(data) {
     if (formatSheetDate(r[6]) !== date || formatPrayerTimeThai(r[4]) !== slot) return;
     const k = String(r[1]).replace(/\D/g, '').replace(/^0+/, ''); if (!k) return;
     const st = String(r[14] || '');
-    marks[k] = { status: /ขาด/.test(st) ? 'absent' : /สาย/.test(st) ? 'late' : 'ontime', logId: cleanVal(r[0]), by: /\[เช็คโดย/.test(String(r[15] || '')) ? 'roll' : 'self' };
+    marks[k] = { status: /^\s*ลา/.test(st) ? 'leave' : /ขาด/.test(st) ? 'absent' : /สาย/.test(st) ? 'late' : 'ontime', logId: cleanVal(r[0]), by: /\[เช็คโดย/.test(String(r[15] || '')) ? 'roll' : 'self' };
   });
   return { success: true, date: date, slot: slot, marks: marks };
 }
@@ -3431,7 +3431,7 @@ function savePrayerRoll_(data, session) {
   const marks = (data.marks && typeof data.marks === 'object') ? data.marks : {};
   const keys = Object.keys(marks).slice(0, 600);
   if (!keys.length) return { success: false, message: 'ยังไม่ได้เช็คชื่อนักเรียน' };
-  const ST = { ontime: 'ตรงเวลา', late: 'มาสาย', absent: 'ขาด' };
+  const ST = { ontime: 'ตรงเวลา', late: 'มาสาย', absent: 'ขาด', leave: 'ลา' };
   const roster = {};
   (getAllStudents().data || []).forEach(function (s) { roster[String(s.studentId).replace(/\D/g, '').replace(/^0+/, '')] = s; });
   const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
