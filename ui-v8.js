@@ -3385,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.99';
+  const APP_VERSION = '17.99b';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3877,10 +3877,10 @@ window.k8RegBirthChange = function (v) {
     el.dataset.v = String(to);
     let reduce = false; try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
     if (reduce) { el.textContent = to; return; }
-    const start = isNaN(from) ? 0 : from, dur = isNaN(from) ? 1100 : 700, t0 = performance.now();
+    const start = isNaN(from) ? 0 : from, dur = isNaN(from) ? 3500 : 900, t0 = performance.now();
     cancelAnimationFrame(el._raf || 0);
     const box = el.closest('.hf-beh-box'); if (box) { box.classList.remove('is-pop'); void box.offsetWidth; box.classList.add('is-pop'); }
-    const step = (t) => { const p = Math.min(1, (t - t0) / dur); const e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(start + (to - start) * e); if (p < 1) el._raf = requestAnimationFrame(step); };
+    const step = (t) => { const p = Math.min(1, (t - t0) / dur); const e = 1 - Math.pow(1 - p, 2); el.textContent = Math.round(start + (to - start) * e); if (p < 1) el._raf = requestAnimationFrame(step); };
     el._raf = requestAnimationFrame(step);
   }
   function paintMine() {
