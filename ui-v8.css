@@ -4553,3 +4553,43 @@ html.k8-xnarrow .hf-p5-t b { font-size: 11.5px; } html.k8-xnarrow .hf-p5-grid { 
 .k8-gs2 .k8-asum-b { gap: 12px; }
 @media (max-width: 640px) { .k8-gs2-t .k8-gs2-n { min-width: 150px; width: 150px; } .k8-gs2-t th, .k8-gs2-t td { padding: 9px 8px; } .k8-gs2-wrap { max-height: none; } }
 .hf-p5-t b, .hf-p5-wh b { color: inherit !important; } .hf-p5-wh b { color: #0f172a !important; }
+/* v17.97 · บัตรนักเรียน ID3: แถบสีข้าง + ชิปข้อมูล */
+.hf-id3 { padding: 0 !important; display: flex; overflow: hidden; background: #fff; border: 1px solid #e2e8f0; border-radius: 22px; }
+.hf-id3-bar { width: 10px; flex: none; background: #0369a1; }
+.hf-id3-in { flex: 1; min-width: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.hf-id3-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hf-id3-brand { font-size: 12.5px; font-weight: 700; color: #0369a1; letter-spacing: .4px; }
+.hf-id3-top #hfYear { font-size: 12px; color: #64748b; }
+.hf-id3-main { display: flex; gap: 14px; align-items: center; }
+.hf-id3 .hf-photo { width: 76px !important; height: 76px !important; min-width: 76px; border-radius: 50% !important; background-color: #0369a1; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; flex: none; box-shadow: 0 0 0 4px #e0f2fe; background-size: cover; background-position: center; margin: 0 !important; }
+.hf-id3 .hf-photo.has-img { background-color: #e0f2fe; }
+.hf-id3 .hf-photo.is-png { background-size: contain; background-repeat: no-repeat; background-color: #fff; }
+.hf-id3-who { display: flex; flex-direction: column; gap: 6px; min-width: 0; align-items: flex-start; }
+.hf-id3 .hf-name { margin: 0; font-size: 19px !important; font-weight: 700; color: #0f172a; line-height: 1.35; overflow-wrap: anywhere; }
+.hf-id3 .hf-name.is-long { font-size: 16.5px !important; }
+.hf-id3 .hf-status { position: static !important; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #dcfce7; color: #15803d; margin: 0 !important; }
+.hf-id3 .hf-status::before { content: '● '; }
+.hf-id3 .hf-status.is-warn { background: #fef3c7; color: #b45309; }
+.hf-id3 .hf-dream { margin: 0 !important; }
+.hf-id3-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.hf-id3-chips > span { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; padding: 5px 10px; border-radius: 10px; min-width: 0; max-width: 100%; }
+.hf-id3-chips small { font-size: 12.5px; opacity: .75; flex: none; }
+.hf-id3-chips b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hf-id3-chips .is-id { background: #eef2ff; color: #4338ca; }
+.hf-id3-chips .is-gr { background: #ecfeff; color: #0e7490; }
+.hf-id3-chips .is-sc { background: #fff7ed; color: #c2410c; }
+/* v17.97 · ปุ่มลัดนักเรียนแบบไอคอนเล็ก (เหมือนฝั่งอาจารย์) */
+#homeF .hf-qk { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 4px !important; background: #fff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 14px 6px 12px; }
+#homeF .hf-qk .hf-qk-btn { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 6px !important; padding: 4px 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; min-height: 0 !important; height: auto !important; border-radius: 12px !important; text-align: center; }
+#homeF .hf-qk .hf-qk-btn.is-on { background: #f0f9ff !important; }
+#homeF .hf-qk .hf-cal-ico { width: 52px !important; height: 52px !important; border-radius: 16px !important; margin: 0 !important; flex: none; display: flex; align-items: center; justify-content: center; }
+#homeF .hf-qk .hf-cal-ico svg { width: 24px; height: 24px; }
+#homeF .hf-qk .hf-cal-txt { display: block !important; min-width: 0; width: 100%; }
+#homeF .hf-qk .hf-cal-txt > span { display: none !important; }
+#homeF .hf-qk .hf-cal-txt b { display: block; font: 500 12px 'IBM Plex Sans Thai', sans-serif !important; color: #0f172a; line-height: 1.3; }
+#homeF .hf-qk .hf-qk-l { display: none !important; }
+#homeF .hf-qk .hf-qk-sh { display: inline !important; }
+#homeF .hf-qk .hf-qk-btn:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+@media (max-width: 400px) { #homeF .hf-qk .hf-cal-ico { width: 46px !important; height: 46px !important; } #homeF .hf-qk .hf-cal-txt b { font-size: 11px !important; } }
+@media (min-width: 900px) { #homeF .hf-qk .hf-cal-ico { width: 56px !important; height: 56px !important; } #homeF .hf-qk .hf-cal-txt b { font-size: 13px !important; } }
+.hf-id3-chips b { color: inherit !important; font-size: 12.5px !important; } .hf-id3-chips small { color: inherit !important; }

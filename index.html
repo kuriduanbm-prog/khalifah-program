@@ -76,9 +76,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=17.96">
-  <link rel="stylesheet" href="ui-v8.css?v=17.96">
-  <link rel="stylesheet" href="dark.css?v=17.96">
+  <link rel="stylesheet" href="style.css?v=17.97">
+  <link rel="stylesheet" href="ui-v8.css?v=17.97">
+  <link rel="stylesheet" href="dark.css?v=17.97">
 </head>
 <body class="auth-locked">
   <script>
@@ -217,22 +217,25 @@
       <!-- ===== หน้าแรกแบบ F (v8) ===== -->
       <div id="homeF" class="hf">
         <button type="button" class="k8-pw-alert" id="k8PwAlertHome" hidden onclick="switchView('prayer')"></button>
-        <section class="hf-card hf-idcard" aria-label="บัตรนักเรียน">
-          <div class="hf-idcard-band">
-            <span class="hf-idcard-brand">KHALIFAH · บัตรนักเรียน</span>
-            <span id="hfYear">ปีการศึกษา 2569</span>
-          </div>
-          <div class="hf-idcard-body">
-            <div class="hf-photo" id="hfPhoto" aria-hidden="true"></div>
-            <div class="hf-idcard-info">
-              <div class="hf-name" id="hfName">-</div>
-              <dl class="hf-dl">
-                <dt>รหัส</dt><dd id="hfId">-</dd>
-                <dt>ชั้น</dt><dd id="hfGrade">-</dd>
-                <dt>โรงเรียน</dt><dd id="hfSchool">-</dd>
-              </dl>
-              <span class="hf-status" id="hfStatus">กำลังศึกษา</span>
-              <button type="button" class="hf-dream" id="hfDream" hidden onclick="k8DreamEdit()"></button>
+        <section class="hf-card hf-id3" aria-label="บัตรนักเรียน">
+          <span class="hf-id3-bar" aria-hidden="true"></span>
+          <div class="hf-id3-in">
+            <div class="hf-id3-top">
+              <span class="hf-id3-brand">KHALIFAH · บัตรนักเรียน</span>
+              <span id="hfYear">ปีการศึกษา 2569</span>
+            </div>
+            <div class="hf-id3-main">
+              <div class="hf-photo" id="hfPhoto" aria-hidden="true"></div>
+              <div class="hf-id3-who">
+                <div class="hf-name" id="hfName">-</div>
+                <span class="hf-status" id="hfStatus">กำลังศึกษา</span>
+                <button type="button" class="hf-dream" id="hfDream" hidden onclick="k8DreamEdit()"></button>
+              </div>
+            </div>
+            <div class="hf-id3-chips">
+              <span class="is-id"><small>รหัส</small><b id="hfId">-</b></span>
+              <span class="is-gr"><small>ชั้น</small><b id="hfGrade">-</b></span>
+              <span class="is-sc"><small>โรงเรียน</small><b id="hfSchool">-</b></span>
             </div>
           </div>
         </section>
@@ -5876,8 +5879,8 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=17.96"></script>
-  <script defer src="ui-v8.js?v=17.96"></script>
+  <script defer src="app.js?v=17.97"></script>
+  <script defer src="ui-v8.js?v=17.97"></script>
 <div class="k8-asum" id="k8Asum" hidden role="dialog" aria-modal="true" aria-labelledby="k8AsumT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="k8AsumClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8AsumT">สรุปการมาเรียน</h2><small id="k8AsumS">เลือกวิชา ชั้นปี และช่วงวันที่</small></div><button type="button" class="k8-asum-csv" onclick="k8AsumCsv()">⬇ CSV</button></header><div class="k8-asum-b" id="k8AsumB"></div></div></div>
 <div class="k8-asum k8-pf" id="k8Pf" hidden role="dialog" aria-modal="true" aria-labelledby="k8PfT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8PfT">กิจกรรม &amp; ผลงาน</h2><small id="k8PfS">แฟ้มสะสมผลงาน</small></div></header><div class="k8-asum-b" id="k8PfB"></div></div></div>
 <div class="k8-asum k8-gs2" id="k8Gs2" hidden role="dialog" aria-modal="true" aria-labelledby="k8Gs2T"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8Gs2T">สรุปเกรด</h2><small id="k8Gs2S"></small></div></header><div class="k8-asum-b" id="k8Gs2B"></div></div></div>

@@ -2190,6 +2190,20 @@ html[data-theme="dark"] .k8-gs2-t tbody tr:hover td.is-miss { background-color: 
 html[data-theme="dark"] .k8-gs2-lg { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-gs2-lg .is-miss::before { background-color: #2d1313 !important; border: 1px solid #522424 !important; }
 html[data-theme="dark"] .hf-p5-wh b { color: #d6dae5 !important; }
+html[data-theme="dark"] .hf-id3 { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] .hf-id3-brand { color: #69c8fc !important; }
+html[data-theme="dark"] .hf-id3-top #hfYear { color: #a6b0bf !important; }
+html[data-theme="dark"] .hf-id3 .hf-photo.has-img { background-color: #122938 !important; }
+html[data-theme="dark"] .hf-id3 .hf-photo.is-png { background-color: #121212 !important; }
+html[data-theme="dark"] .hf-id3 .hf-name { color: #d6dae5 !important; }
+html[data-theme="dark"] .hf-id3 .hf-status { background-color: #153821 !important; color: #79eca4 !important; }
+html[data-theme="dark"] .hf-id3 .hf-status.is-warn { background-color: #433a15 !important; color: #f8a96d !important; }
+html[data-theme="dark"] .hf-id3-chips .is-id { background-color: #0f1733 !important; }
+html[data-theme="dark"] .hf-id3-chips .is-gr { background-color: #0f3234 !important; color: #72d7f3 !important; }
+html[data-theme="dark"] .hf-id3-chips .is-sc { background-color: #33230f !important; color: #f7966e !important; }
+html[data-theme="dark"] #homeF .hf-qk { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] #homeF .hf-qk .hf-qk-btn.is-on { background-color: #0e2432 !important; }
+html[data-theme="dark"] #homeF .hf-qk .hf-cal-txt b { color: #d6dae5 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

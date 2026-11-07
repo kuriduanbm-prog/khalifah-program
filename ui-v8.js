@@ -280,7 +280,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     nameEl.title = name;
     nameEl.classList.toggle('is-long', name.length > 28);
     document.getElementById('hfId').textContent = sid || '-';
-    document.getElementById('hfGrade').textContent = s.grade || '-';
+    document.getElementById('hfGrade').textContent = String(s.grade || '-').replace('มัธยมศึกษาปีที่ ', 'ม.');
     document.getElementById('hfSchool').textContent = s.schoolName || '-';
     const tm = window.k8Term();
     document.getElementById('hfYear').textContent = (tm.term === 3 ? 'ภาคฤดูร้อน ' : 'เทอม ' + tm.term + '/') + tm.year;
@@ -3378,7 +3378,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.96';
+  const APP_VERSION = '17.97';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9908,4 +9908,13 @@ window.k8HfMiss = function (slot) {
     setTimeout(() => { try { if (typeof switchTeacherTab === 'function') switchTeacherTab('grades'); if (typeof renderTeacherPortalGradesTable === 'function') renderTeacherPortalGradesTable(); } catch (e) {} }, 60);
   };
   window.addEventListener('popstate', () => { const el = document.getElementById('k8Gs2'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
+})();
+
+/* ---------- v17.97 · อาจารย์: ปุ่มลัด "สรุปเกรด" ในหน้าแรก ---------- */
+(function () {
+  window.k8Gs2Quick = function () {
+    try { const ss = document.getElementById('teacherPortalSubjectSelect'); if (ss && !ss.options.length && typeof initTeacherPortalView === 'function') initTeacherPortalView(); } catch (e) {}
+    if (window.k8Gs2Open) window.k8Gs2Open();
+  };
+  const iv = setInterval(() => { const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return; if (!q.querySelector('.k8-gs2-qbtn')) q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-gs2-qbtn" onclick="k8Gs2Quick()"><span style="background:#e0f2fe;color:#0369a1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></span>สรุปเกรด</button>'); clearInterval(iv); }, 1500);
 })();
