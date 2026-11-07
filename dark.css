@@ -2154,6 +2154,42 @@ html[data-theme="dark"] .k8-pf-thumb img { border: 1px solid #323941 !important;
 html[data-theme="dark"] .k8-pf-it b { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-pf-ph img { background-color: #1a2229 !important; }
 html[data-theme="dark"] .k8-sw-l .k8-pf-add.is-alt { color: #f8a96d !important; }
+html[data-theme="dark"] .hf-p5 { background-color: #121212 !important; }
+html[data-theme="dark"] .hf-p5-cnt { background-color: rgba(31,31,31,0.21) !important; }
+html[data-theme="dark"] .hf-p5-t { background-color: #1a2229 !important; }
+html[data-theme="dark"] .hf-p5-t.is-miss { background-color: #2f1111 !important; border: 2px solid #522424 !important; color: #ed7878 !important; }
+html[data-theme="dark"] .hf-p5-t.is-now { background-color: #0e2432 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .hf-p5-t.is-off { background-color: #181f26 !important; }
+html[data-theme="dark"] .hf-p5-wh b { color: #d6dae5 !important; }
+html[data-theme="dark"] .hf-p5-wh span { color: #a6b0bf !important; }
+html[data-theme="dark"] .hf-p5-grid { color: #a6b0bf !important; }
+html[data-theme="dark"] .hf-p5-dh.is-today { color: #69c8fc !important; }
+html[data-theme="dark"] .hf-p5-c { background-color: #1a2229 !important; }
+html[data-theme="dark"] .hf-p5-c.is-miss { background-color: #371212 !important; }
+html[data-theme="dark"] .hf-p5-c.is-now { background-color: #121212 !important; }
+html[data-theme="dark"] .hf-p5-c.is-off { background: repeating-linear-gradient(45deg, #1a2229 0 4px, #21272f 4px 6px) !important; }
+html[data-theme="dark"] .hf-p5-lg { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-gs2-lead { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-gs2-lead b { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-gs2-wrap { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-gs2-t th, html[data-theme="dark"] .k8-gs2-t td { border-bottom: 1px solid #2d363f !important; }
+html[data-theme="dark"] .k8-gs2-t thead th { background-color: #181f26 !important; border-bottom: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-gs2-t thead th button:hover { background-color: #1c222a !important; }
+html[data-theme="dark"] .k8-gs2-t thead b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-gs2-t thead small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-gs2-t .k8-gs2-n { background-color: #121212 !important; }
+html[data-theme="dark"] .k8-gs2-t thead .k8-gs2-n { background-color: #181f26 !important; }
+html[data-theme="dark"] .k8-gs2-t tbody .k8-gs2-n b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-gs2-t td.is-a { color: #79eca4 !important; }
+html[data-theme="dark"] .k8-gs2-t td.is-c { color: #f8a96d !important; }
+html[data-theme="dark"] .k8-gs2-t td.is-d { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-gs2-t td.is-miss { background-color: #2d1313 !important; }
+html[data-theme="dark"] .k8-gs2-t .k8-gs2-avg { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-gs2-t tbody tr:hover td, html[data-theme="dark"] .k8-gs2-t tbody tr:hover th { background-color: #181f26 !important; }
+html[data-theme="dark"] .k8-gs2-t tbody tr:hover td.is-miss { background-color: #311616 !important; }
+html[data-theme="dark"] .k8-gs2-lg { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-gs2-lg .is-miss::before { background-color: #2d1313 !important; border: 1px solid #522424 !important; }
+html[data-theme="dark"] .hf-p5-wh b { color: #d6dae5 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

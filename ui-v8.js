@@ -207,26 +207,61 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (nx) mins = nx.start - cur; else { nx = day[0]; mins = 1440 - cur + nx.start; }
       lab = (open ? open.key + ' ✓ · ถัดไป ' : 'ถัดไป · ') + nx.key; big = fmt(nx.adhan); sub = 'อีก ' + dur(mins);
     }
+    if (window.k8WeeklyHoliday && window.k8WeeklyHoliday()) { cta = null; lab = 'วันเสาร์ · วันหยุดประจำสัปดาห์'; big = ''; sub = 'งดเช็คชื่อละหมาดและถ่ายรูป'; subCls = ''; }
     const perOn = !!(window.k8PeriodActive && window.k8PeriodActive());
     if (perOn) { cta = null; lab = '🌸 กำลังมีประจำเดือน'; big = ''; sub = 'ไม่ต้องเช็คชื่อ · กดสิ้นสุดเมื่อหมด'; subCls = ''; }
-    const node = (w) => {
-      const r = rec(w.key), k = w.key, ac = (fn) => ' onclick="' + fn + '"';
-      let cls = 'is-wait', ic = '–', act = '';
-      if (r) { cls = 'is-' + r.kind; ic = r.kind === 'late' ? 'สาย' : r.kind === 'appr' ? 'ย้อนหลัง' : r.kind === 'ex' ? 'ลา' : '✓'; act = ac("k8HfBarOpen('" + esc(r.id) + "','" + esc(todayStr) + "')"); }
-      else if (perOn) { cls = 'is-ex'; ic = '🌸'; act = ac("k8PerGo()"); }
-      else if (open && open.key === k) { cls = 'is-now'; ic = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'; act = roll(k) ? '' : ac("switchView('prayer')"); }
-      else if (k !== 'อีชาอ์' && cur > w.end && !roll(k)) { cls = 'is-miss'; ic = '✕'; act = ac("k8HfMiss('" + esc(k) + "')"); }
-      return '<button type="button" class="hf-pt-n ' + cls + '"' + act + (act ? '' : ' disabled') + '><span class="hf-pt-dot">' + ic + '</span><b>' + esc(k) + '</b><span class="hf-pt-a">' + fmt(w.adhan) + '</span><small>อิกอมะฮ์<br>' + fmt(w.iqamah) + '</small></button>';
-    };
-    const far = !!(window.k8MyPrayerLoc && window.k8MyPrayerLoc());
-    // v17.34 · ท้องฟ้าเปลี่ยนตามช่วงเวลา: ซุบฮิ (รุ่งอรุณ) · ซุฮริ (กลางวัน) · อัศรฺ (บ่าย) · มัฆริบ (อาทิตย์ตก) · อีชาอ์ (กลางคืน)
+    // v17.96 · การ์ดละหมาด: หัวน้ำเงินแถบสีบางตามช่วงเวลา (มินิมอล 3) + ไทล์ 5 เวลา + ปฏิทินสัปดาห์ (สไตล์ 5)
     const sky = cur < day[0].start ? 'isha' : cur <= day[0].end ? 'fajr' : cur < day[2].start ? 'zuhr' : cur < day[3].start ? 'asr' : cur < day[4].start ? 'maghrib' : 'isha';
-    box.className = 'hf-card hf-pt is-sky-' + sky;
-    box.innerHTML = '<div class="hf-pt-top"><div class="hf-pt-sky" aria-hidden="true">' + (SKY[sky] || '') + '</div><div class="hf-pt-row"><div class="hf-pt-ttl"><h2>ละหมาดวันนี้</h2><span>' + DN[now.getDay()] + ' ' + now.getDate() + ' ' + MN[now.getMonth()] + ' ' + (now.getFullYear() + 543) + ' · ' + esc(window.k8PrayerPlace ? window.k8PrayerPlace() : 'ต.เขาตูม อ.ยะรัง จ.ปัตตานี') + (far ? ' <i>(ตามพิกัดล่าสุด)</i>' : '') + '</span></div><span class="hf-pt-cnt">' + done + ' / 5</span></div>' +
-      '<div class="hf-pt-hero"><span class="hf-pt-lab">' + esc(lab) + '</span><b>' + big + '</b><span class="hf-pt-sub' + subCls + '">' + esc(sub) + '</span></div></div>' +
-      '<div class="hf-pt-line"><div class="hf-pt-track" aria-hidden="true"></div><div class="hf-pt-nodes">' + day.map(node).join('') + '</div></div>' +
-      '<div class="hf-pt-foot">' + (perOn ? '<button type="button" class="hf-pt-cta is-per" onclick="k8PerGo()">🌸 สิ้นสุดประจำเดือน</button>' : cta ? '<button type="button" class="hf-pt-cta" onclick="switchView(\'prayer\')">เช็คชื่อ' + esc(cta.key) + '</button>' : '<button type="button" class="hf-pt-cta is-alt" onclick="switchView(\'prayer\')">ไปหน้าละหมาด</button>') +
-      '<span>' + (cta ? 'ตรงเวลาถึง ' + fmt(cta.cutoff) + ' น. · ' : '') + 'แตะวงกลมเพื่อดูประวัติ</span></div>';
+    const far = !!(window.k8MyPrayerLoc && window.k8MyPrayerLoc());
+    const SKC = { fajr: '#a78bfa', zuhr: '#38bdf8', asr: '#f59e0b', maghrib: '#f97316', isha: '#facc15' };
+    const c = SKC[sky];
+    const ICO = {
+      fajr: '<path d="M30 8A14 14 0 1 0 30 36A18 18 0 0 1 30 8Z" fill="' + c + '"/>',
+      zuhr: '<circle cx="22" cy="22" r="11" fill="' + c + '"/><circle cx="22" cy="22" r="18" fill="none" stroke="' + c + '" stroke-width="1.5" opacity=".4"/>',
+      asr: '<circle cx="22" cy="22" r="11" fill="' + c + '"/>',
+      maghrib: '<path d="M9 28a13 13 0 0 1 26 0z" fill="' + c + '"/><path d="M3 28h38" stroke="' + c + '" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>',
+      isha: '<path d="M30 8A14 14 0 1 0 30 36A18 18 0 0 1 30 8Z" fill="' + c + '"/><path d="M36 6l1.4 3.2 3.4.3-2.6 2.2.8 3.3-3-1.8-3 1.8.8-3.3-2.6-2.2 3.4-.3z" fill="' + c + '"/>'
+    };
+    const regOf = () => { const v = String((st && (st.registeredAt || st.registerDate)) || ''); let m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) { const y = +m[1] > 2400 ? +m[1] - 543 : +m[1]; return y + '-' + m[2] + '-' + m[3]; } m = v.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) { const y = +m[3] > 2400 ? +m[3] - 543 : +m[3]; return y + '-' + pad2(m[2]) + '-' + pad2(m[1]); } return ''; };
+    const reg = regOf();
+    const sat = !!(window.k8WeeklyHoliday && window.k8WeeklyHoliday());
+    const LBL = { ok: '✓', late: 'สาย', appr: 'ย้อนหลัง', ex: 'ลา' };
+    const tile = (w) => {
+      const r = rec(w.key), k = w.key;
+      let cls = 'is-wait', sub = fmt(w.iqamah), act = '';
+      if (r) { cls = 'is-' + r.kind; sub = LBL[r.kind] || '✓'; act = "k8HfBarOpen('" + esc(r.id) + "','" + esc(todayStr) + "')"; }
+      else if (perOn) { cls = 'is-ex'; sub = '🌸'; act = 'k8PerGo()'; }
+      else if (sat) { cls = 'is-off'; sub = 'วันหยุด'; }
+      else if (open && open.key === k) { cls = 'is-now'; sub = roll(k) ? 'แอดมินเช็ค' : 'เช็คเลย'; act = roll(k) ? '' : "switchView('prayer')"; }
+      else if (k !== 'อีชาอ์' && cur > w.end && !roll(k) && !(reg && reg >= todayStr)) { cls = 'is-miss'; sub = '✕'; act = "k8HfMiss('" + esc(k) + "')"; }
+      return '<button type="button" class="hf-p5-t ' + cls + '"' + (act ? ' onclick="' + act + '"' : ' disabled') + ' aria-label="' + esc(k) + ' ' + esc(sub === '✕' ? 'ไม่ได้เช็ค' : sub) + '"><b>' + esc(k) + '</b><span>' + esc(sub) + '</span></button>';
+    };
+    // ปฏิทิน 7 วันล่าสุด (วันนี้อยู่ขวาสุด)
+    const TD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+    const days7 = []; for (let i = 6; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); days7.push(d); }
+    const KC = { ok: 1, late: 1, appr: 1, ex: 1 };
+    let nOk = 0, nLate = 0, nMiss = 0;
+    const cell = (d, w) => {
+      const ds = ymd(d), isT = ds === todayStr, k = w.key;
+      const r = prayers.find((p) => p.date === ds && p.slot === k);
+      if (r && KC[r.kind]) { if (r.kind === 'late') nLate++; else if (r.kind === 'ok' || r.kind === 'appr') nOk++; return '<button type="button" class="hf-p5-c is-' + r.kind + '" onclick="k8HfBarOpen(\'' + esc(r.id) + '\',\'' + ds + '\')" aria-label="' + TD[d.getDay()] + ' ' + esc(k) + ' ' + (LBL[r.kind] || '') + '"></button>'; }
+      if (reg && reg >= ds) return '<span class="hf-p5-c is-none"></span>';
+      if (d.getDay() === 6) return '<span class="hf-p5-c is-off" title="วันหยุด"></span>';
+      if (isT && open && open.key === k && !roll(k)) return '<span class="hf-p5-c is-now"></span>';
+      const over = !isT || (k !== 'อีชาอ์' && cur > w.end);
+      if (over && !roll(k)) { nMiss++; return '<span class="hf-p5-c is-miss" aria-label="' + TD[d.getDay()] + ' ' + esc(k) + ' ไม่ได้เช็ค">✕</span>'; }
+      return '<span class="hf-p5-c is-none"></span>';
+    };
+    const grid = day.map((w) => '<span class="hf-p5-rl">' + esc(w.key) + '</span>' + days7.map((d) => cell(d, w)).join('')).join('');
+    box.className = 'hf-card hf-p5 is-sky-' + sky;
+    box.innerHTML = '<div class="hf-p5-sk" style="--sk:' + c + '"><div class="hf-p5-sk-r"><span class="hf-p5-ttl">ละหมาดวันนี้</span><span class="hf-p5-sk-i"><svg width="30" height="30" viewBox="0 0 44 44" aria-hidden="true">' + ICO[sky] + '</svg><span class="hf-p5-cnt">' + done + ' / 5</span></span></div>' +
+      '<div class="hf-p5-hero"><span class="hf-p5-lab">' + esc(lab) + '</span>' + (big ? '<b>' + big + '</b>' : '') + '<span class="hf-p5-sub' + subCls + '">' + esc(sub) + '</span></div>' +
+      '<small class="hf-p5-place">' + DN[now.getDay()] + ' ' + now.getDate() + ' ' + MN[now.getMonth()] + ' ' + (now.getFullYear() + 543) + ' · ' + esc(window.k8PrayerPlace ? window.k8PrayerPlace() : 'ต.เขาตูม อ.ยะรัง จ.ปัตตานี') + (far ? ' (ตามพิกัดล่าสุด)' : '') + '</small></div>' +
+      '<div class="hf-p5-b"><div class="hf-p5-tiles">' + day.map(tile).join('') + '</div>' +
+      (perOn ? '<button type="button" class="hf-pt-cta is-per" onclick="k8PerGo()">🌸 สิ้นสุดประจำเดือน</button>' : '') +
+      '<div class="hf-p5-wh"><b>สัปดาห์นี้</b><span>ตรงเวลา ' + nOk + ' · สาย ' + nLate + ' · ไม่ได้เช็ค ' + nMiss + '</span></div>' +
+      '<div class="hf-p5-grid"><span></span>' + days7.map((d) => '<span class="hf-p5-dh' + (ymd(d) === todayStr ? ' is-today' : '') + '">' + TD[d.getDay()] + '</span>').join('') + grid + '</div>' +
+      '<div class="hf-p5-lg"><span class="is-ok">ตรงเวลา</span><span class="is-late">สาย</span><span class="is-appr">อนุมัติย้อนหลัง</span><span class="is-ex">ลา</span><span class="is-miss">ไม่ได้เช็ค</span></div></div>';
   }
 
   function renderHomeF() {
@@ -273,7 +308,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const todayStr = ymd(now);
     const doneToday = prayers.filter((p) => p.date === todayStr).map((p) => p.slot);
     renderPtCard(prayers, todayStr, now, s);
-    const prCard = document.getElementById('hfPrayerCard'); if (prCard) prCard.hidden = hfState.period === 'day';
+    const prCard = document.getElementById('hfPrayerCard'); if (prCard) prCard.hidden = hfState.period === 'day' || hfState.period === 'week'; // v17.96 · วัน/สัปดาห์ ดูในการ์ดละหมาดแล้ว
 
     // --- แท็บช่วงเวลา ---
     document.querySelectorAll('#hfPeriods button').forEach((b) => {
@@ -761,6 +796,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     root.classList.toggle('gs-ov', tgState.tab === 'summary' && !tgState.entry);
   }
   window.k8GsModel = gsModel;
+  window.k8GsGradeOf = gsGradeOf;
 
   function renderTeacherGradesV8() {
     tgState.tab = 'scores'; tgState.entry = false; // v17.51 · ไม่มีแท็บสรุปเกรดแล้ว
@@ -3342,7 +3378,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.95';
+  const APP_VERSION = '17.96';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9807,4 +9843,69 @@ window.k8HfMiss = function (slot) {
   window.k8PfDel = async function (id) { if (!window.confirm('ลบเกียรติบัตรนี้ออกจากแฟ้มผลงาน?')) return; let r = null; try { r = await gasApiCall('deletePortfolio', { id }, 30000); } catch (e) {} if (r && r.success) { toast(r.message, 'success'); F.list = (F.list || []).filter((x) => x.id !== id); sRender(); } else toast((r && r.message) || 'ลบไม่สำเร็จ', 'error'); };
   // ปุ่มในหน้าอาจารย์ (เมนูลัด)
   const iv = setInterval(() => { const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return; if (!q.querySelector('.k8-pf-qbtn')) q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-pf-qbtn k8-lv-qbtn" onclick="k8PfStaffOpen()"><span style="background:#fef3c7;color:#b45309"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.5 14 7 22l5-3 5 3-1.5-8"/></svg></span>เกียรติบัตร</button>'); clearInterval(iv); }, 1500);
+})();
+
+/* ---------- v17.96 · สรุปเกรด GS2: ตารางนักเรียน × วิชา (วิชาที่ฉันสอน) ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const cid = (v) => String(v == null ? '' : v).trim().replace(/^0+/, '');
+  const G = { g: 'ALL', q: '' };
+  const tone = (g) => (g == null ? '' : g >= 3.5 ? 'is-a' : g >= 2.5 ? 'is-b' : g >= 1.5 ? 'is-c' : 'is-d');
+  const fmtG = (g) => { const n = Number(g); return Number.isInteger(n) ? String(n) : String(n); };
+  const PILL = { done: ['ครบแล้ว', 'is-done'], part: ['ยังไม่ครบ', 'is-part'], none: ['ยังไม่กรอก', 'is-none'] };
+  function render() {
+    const B = document.getElementById('k8Gs2B'); if (!B) return;
+    let model = []; try { model = window.k8GsModel ? window.k8GsModel() : []; } catch (e) { model = []; }
+    const gOf = window.k8GsGradeOf || (() => null);
+    const cols = []; model.forEach((c) => { if (c.g !== '?') c.rows.forEach((r) => cols.push({ g: c.g, subj: r.subj, set: new Set(r.studs.map((s) => cid(s.studentId))), done: r.done, tot: r.studs.length })); });
+    const subjN = new Set(cols.map((x) => String(x.subj.id))).size;
+    let tm = { term: 1, year: '' }; try { tm = window.k8Term(); } catch (e) {}
+    document.getElementById('k8Gs2S').textContent = (tm.term === 3 ? 'ภาคฤดูร้อน ' : 'ภาคเรียน ' + tm.term + '/') + tm.year + ' · วิชาที่ฉันสอน ' + subjN + ' วิชา';
+    const grades = Array.from(new Set(cols.map((x) => x.g))).sort();
+    if (G.g !== 'ALL' && grades.indexOf(G.g) === -1) G.g = 'ALL';
+    const C = cols.filter((x) => G.g === 'ALL' || x.g === G.g);
+    if (!C.length) { B.innerHTML = '<p class="k8-asum-empty">ยังไม่มีรายวิชาในตารางสอนของคุณ</p>'; return; }
+    const studs = {}; model.forEach((c) => { if (G.g === 'ALL' || c.g === G.g) Object.keys(c.studs).forEach((k) => { if (c.g !== '?') studs[cid(k)] = c.studs[k]; }); });
+    const q = G.q.trim().toLowerCase();
+    const bare = (s) => (window.k8BareName ? window.k8BareName(s) : String(s.fullName || ''));
+    const L = Object.keys(studs).map((k) => studs[k]).filter((s) => !q || String(s.fullName || '').toLowerCase().includes(q) || cid(s.studentId).includes(cid(q)))
+      .sort((a, b) => String(a.grade || '').localeCompare(String(b.grade || ''), 'th', { numeric: true }) || bare(a).localeCompare(bare(b), 'th'));
+    let miss = 0; C.forEach((x) => { miss += Math.max(0, x.tot - x.done); });
+    let h = '<div class="k8-gs2-bar"><div class="k8-na-chips">' + ['ALL'].concat(grades).map((g) => '<button type="button" aria-pressed="' + (G.g === g) + '" onclick="k8Gs2G(\'' + g + '\')">' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + g) + '</button>').join('') + '</div>' +
+      '<input type="search" class="k8-asum-q" id="k8Gs2Q" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(G.q) + '" oninput="k8Gs2Q(this)"></div>' +
+      '<p class="k8-gs2-lead">' + (miss ? 'ยังขาดเกรดอีก <b>' + miss + '</b> ช่อง · แตะหัววิชาเพื่อไปกรอกเกรด' : 'กรอกเกรดครบทุกวิชาแล้ว ✓') + '</p>';
+    h += '<div class="k8-gs2-wrap"><table class="k8-gs2-t"><thead><tr><th scope="col" class="k8-gs2-n">นักเรียน (' + L.length + ' คน)</th>' +
+      C.map((x, i) => { const k = x.tot && x.done >= x.tot ? 'done' : x.done ? 'part' : 'none'; return '<th scope="col"><button type="button" onclick="k8Gs2Go(' + i + ')" title="ไปกรอกเกรดวิชานี้"><b>' + esc(x.subj.name) + '</b><small>ม.' + x.g + ' · ' + x.done + '/' + x.tot + '</small><span class="gs-pill ' + PILL[k][1] + '">' + PILL[k][0] + '</span></button></th>'; }).join('') +
+      '<th scope="col" class="k8-gs2-avg">เฉลี่ย</th></tr></thead><tbody>' +
+      L.map((s) => {
+        const k = cid(s.studentId); let sum = 0, n = 0;
+        const tds = C.map((x) => {
+          if (!x.set.has(k)) return '<td class="is-na">–</td>';
+          const g = gOf(s, x.subj);
+          if (g == null) return '<td class="is-miss" title="ยังไม่มีเกรด">–</td>';
+          sum += Number(g); n++; return '<td class="' + tone(Number(g)) + '">' + fmtG(g) + '</td>';
+        }).join('');
+        return '<tr><th scope="row" class="k8-gs2-n"><b>' + esc(s.fullName || k) + '</b><small>' + esc(String(s.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(s.studentId) + '</small></th>' + tds + '<td class="k8-gs2-avg">' + (n ? (sum / n).toFixed(2) : '–') + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      (L.length ? '' : '<p class="k8-asum-empty">ไม่พบนักเรียน</p>') +
+      '<div class="k8-gs2-lg"><span>– = ยังไม่มีเกรด</span><span class="is-miss">ช่องที่ยังขาดในวิชาที่สอน</span><span class="is-na">– เทา = ไม่ได้เรียนวิชานี้</span></div>';
+    B.innerHTML = h;
+    render.cols = C;
+  }
+  window.k8Gs2Open = function () {
+    const el = document.getElementById('k8Gs2'); if (!el) return;
+    el.hidden = false; document.documentElement.classList.add('k8-docs-open'); try { history.pushState({ k8gs2: 1 }, ''); } catch (e) {}
+    render();
+  };
+  window.k8Gs2G = function (g) { G.g = g; render(); };
+  let qt = null; window.k8Gs2Q = function (el) { clearTimeout(qt); qt = setTimeout(() => { G.q = el.value; const pos = el.selectionStart; render(); const n = document.getElementById('k8Gs2Q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };
+  window.k8Gs2Go = function (i) {
+    const x = (render.cols || [])[i]; if (!x) return;
+    const ss = document.getElementById('teacherPortalSubjectSelect'), gs = document.getElementById('teacherPortalGradeSelect');
+    if (ss && Array.from(ss.options).some((o) => o.value === String(x.subj.id))) ss.value = String(x.subj.id);
+    if (gs) gs.value = 'มัธยมศึกษาปีที่ ' + x.g;
+    history.back();
+    setTimeout(() => { try { if (typeof switchTeacherTab === 'function') switchTeacherTab('grades'); if (typeof renderTeacherPortalGradesTable === 'function') renderTeacherPortalGradesTable(); } catch (e) {} }, 60);
+  };
+  window.addEventListener('popstate', () => { const el = document.getElementById('k8Gs2'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
 })();
