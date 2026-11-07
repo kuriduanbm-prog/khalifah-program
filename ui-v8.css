@@ -4593,3 +4593,36 @@ html.k8-xnarrow .hf-p5-t b { font-size: 11.5px; } html.k8-xnarrow .hf-p5-grid { 
 @media (max-width: 400px) { #homeF .hf-qk .hf-cal-ico { width: 46px !important; height: 46px !important; } #homeF .hf-qk .hf-cal-txt b { font-size: 11px !important; } }
 @media (min-width: 900px) { #homeF .hf-qk .hf-cal-ico { width: 56px !important; height: 56px !important; } #homeF .hf-qk .hf-cal-txt b { font-size: 13px !important; } }
 .hf-id3-chips b { color: inherit !important; font-size: 12.5px !important; } .hf-id3-chips small { color: inherit !important; }
+/* v17.98 · บัตรนักเรียน "บัตรโลโก้ 1" */
+.hf-lg1 { padding: 0 !important; overflow: hidden; background: #fff; border: 1px solid #e2e8f0; border-radius: 22px; }
+.hf-lg1-head { position: relative; overflow: hidden; background: #0c4a6e; color: #fff; padding: 12px 16px 46px; }
+.hf-lg1-wm { position: absolute; right: -70px; top: -34px; width: 330px; height: auto; fill: #fff; opacity: .13; pointer-events: none; }
+.hf-lg1-top { position: relative; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.hf-lg1-brand { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.hf-lg1-logo { display: block; width: 92px; height: auto; fill: #fff; margin: -4px 0 2px -4px; }
+.hf-lg1-brand > span { font-size: 11.5px; color: #bae6fd; }
+.hf-lg1-brand #hfYear { color: inherit; font-size: inherit; }
+.hf-lg1 .hf-status { position: static !important; flex: none; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #16a34a; color: #fff; margin: 0 !important; }
+.hf-lg1 .hf-status.is-warn { background: #f59e0b; }
+.hf-lg1-body { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 0 12px 14px; }
+.hf-lg1-main { display: flex; gap: 14px; padding: 0 4px; margin-top: -34px; align-items: flex-end; }
+.hf-lg1 .hf-photo { width: 80px !important; height: 92px !important; min-width: 80px; border-radius: 16px !important; background-color: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 700; flex: none; border: 4px solid #fff; box-sizing: border-box; box-shadow: 0 6px 16px rgba(12, 74, 110, .18); background-size: cover; background-position: center; margin: 0 !important; position: relative; z-index: 1; }
+.hf-lg1 .hf-photo.is-png { background-size: contain; background-repeat: no-repeat; background-color: #fff; }
+.hf-lg1-who { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-bottom: 4px; align-items: flex-start; }
+.hf-lg1 .hf-name { margin: 0; font-size: 18px !important; font-weight: 700; color: #0f172a; line-height: 1.3; overflow-wrap: anywhere; }
+.hf-lg1 .hf-name.is-long { font-size: 15.5px !important; }
+.hf-lg1-sex { font-size: 12px; font-weight: 600; color: #0369a1; }
+.hf-lg1-sex.is-f { color: #be185d; }
+.hf-lg1 .hf-dream { margin: 2px 0 0 !important; }
+.hf-lg1-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-top: 4px; }
+.hf-lg1-grid > div { padding: 7px 10px; background: #f0f9ff; min-width: 0; }
+.hf-lg1-grid > div + div { border-left: 1px solid #e2e8f0; }
+.hf-lg1-grid span { display: block; font-size: 11.5px; color: #0369a1; }
+.hf-lg1-grid b { display: block; font-size: 13.5px; font-weight: 600; color: #0f172a !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hf-lg1-dorm { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; background: #e0f2fe; color: #0369a1; font-size: 13px; font-weight: 600; }
+.hf-lg1-dorm[hidden] { display: none !important; }
+.hf-lg1-dorm svg { flex: none; }
+.hf-lg1-dorm.is-f { background: #fce7f3; color: #be185d; }
+@media (min-width: 900px) { .hf-lg1-wm { width: 420px; right: -60px; top: -60px; } }
+.hf-lg1 .hf-status { border: 0 !important; box-shadow: none !important; } .hf-lg1-grid > div { text-align: left; } .hf-lg1-body { text-align: left; }
+.hf-lg1-main { align-items: flex-start; } .hf-lg1-who { padding-top: 40px; padding-bottom: 0; } .hf-lg1 .hf-name.is-long { font-size: 15px !important; line-height: 1.35; }

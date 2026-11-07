@@ -284,6 +284,13 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     document.getElementById('hfSchool').textContent = s.schoolName || '-';
     const tm = window.k8Term();
     document.getElementById('hfYear').textContent = (tm.term === 3 ? 'ภาคฤดูร้อน ' : 'เทอม ' + tm.term + '/') + tm.year;
+    // v17.98 · บัตรโลโก้ 1: ปีการศึกษา · เพศ · หอพัก
+    const acy = document.getElementById('hfAcYear'); if (acy) acy.textContent = tm.year || '-';
+    const girl = !!(window.k8IsGirl && window.k8IsGirl(s));
+    const sx = document.getElementById('hfSex'); if (sx) { sx.textContent = '● ' + (girl ? 'นักเรียนหญิง' : 'นักเรียนชาย') + ' · นักเรียนประจำ'; sx.classList.toggle('is-f', girl); }
+    const dk = window.k8DormOf ? window.k8DormOf(s) : '';
+    const dEl = document.getElementById('hfDorm');
+    if (dEl) { dEl.hidden = !dk; dEl.classList.toggle('is-f', girl); const dn = document.getElementById('hfDormName'); if (dn) dn.textContent = (window.K8_DORMS && window.K8_DORMS[dk]) || ''; }
     const statusText = String(s.status || 'ปกติ (กำลังศึกษา)');
     const stEl = document.getElementById('hfStatus');
     const normal = /ปกติ|กำลังศึกษา|active/i.test(statusText);
@@ -3378,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.97';
+  const APP_VERSION = '17.98';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9917,4 +9924,63 @@ window.k8HfMiss = function (slot) {
     if (window.k8Gs2Open) window.k8Gs2Open();
   };
   const iv = setInterval(() => { const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return; if (!q.querySelector('.k8-gs2-qbtn')) q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-gs2-qbtn" onclick="k8Gs2Quick()"><span style="background:#e0f2fe;color:#0369a1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></span>สรุปเกรด</button>'); clearInterval(iv); }, 1500);
+})();
+
+/* ---------- v17.98 · หอพักนักเรียน: ชายทั้งหมด = หอคณะวิทยาศาสตร์ฯ · หญิง = อิบนูอัฟฟาน / หอ 5 (แอดมินกำหนด) ---------- */
+(function () {
+  const D = { sci: 'หอพักคณะวิทยาศาสตร์และเทคโนโลยี', ibnu: 'หอพักอิบนูอัฟฟาน มหาวิทยาลัยฟาฏอนี', h5: 'หอพักนักศึกษาหญิง (หอ 5)' };
+  window.K8_DORMS = D;
+  const nid = (v) => String(v == null ? '' : v).trim().replace(/^0+/, '');
+  let MAP = {}; try { MAP = JSON.parse(localStorage.getItem('k8_dorm_map') || '{}') || {}; } catch (e) { MAP = {}; }
+  let MINE = null; try { MINE = JSON.parse(localStorage.getItem('k8_my_dorm') || 'null'); } catch (e) {}
+  const girl = (s) => !!(window.k8IsGirl && window.k8IsGirl(s));
+  window.k8DormOf = function (s) {
+    if (!s) return '';
+    const k = nid(s.studentId);
+    let v = MAP[k];
+    if (!v && MINE && MINE.id === k) v = MINE.dorm;
+    if (v && D[v]) return v;
+    return girl(s) ? '' : 'sci';
+  };
+  const isStu = () => { try { return !!currentStudent; } catch (e) { return false; } };
+  const isAdmin = () => { try { return !!currentAdmin; } catch (e) { return false; } };
+  async function loadMine() {
+    let s = null; try { s = currentStudent; } catch (e) {} if (!s) return;
+    let r = null; try { r = await gasApiCall('getMyDorm', {}, 15000); } catch (e) {}
+    if (r && r.success) { MINE = { id: nid(s.studentId), dorm: r.dorm || '' }; try { localStorage.setItem('k8_my_dorm', JSON.stringify(MINE)); } catch (e) {} try { window.renderHomeF && window.renderHomeF(); } catch (e) {} }
+  }
+  async function loadMap() {
+    let r = null; try { r = await gasApiCall('getMyDorm', {}, 15000); } catch (e) {}
+    if (r && r.success && r.data) { MAP = r.data; try { localStorage.setItem('k8_dorm_map', JSON.stringify(MAP)); } catch (e) {} }
+  }
+  let did = '';
+  setInterval(() => { const who = isStu() ? 's:' + nid(currentStudent.studentId) : isAdmin() ? 'a' : ''; if (!who || who === did) return; did = who; if (who === 'a') loadMap(); else loadMine(); }, 2000);
+  // แอดมิน: ช่องเลือกหอพักในหน้าแก้ไขนักเรียน
+  const ov = window.viewStudentDetails;
+  if (typeof ov === 'function') window.viewStudentDetails = function (id) {
+    const r = ov.apply(this, arguments);
+    try {
+      const note = document.getElementById('adminEditStdStatusNote'); if (!note || document.getElementById('adminEditStdDorm')) return r;
+      const st = (allStudents || []).find((x) => nid(x.studentId) === nid(id)) || {};
+      const cur = window.k8DormOf(st);
+      const g = girl(st);
+      const opts = [['', g ? '— ยังไม่ระบุ —' : 'อัตโนมัติ (ชาย = หอคณะวิทยาศาสตร์ฯ)']].concat(Object.keys(D).map((k) => [k, D[k]]));
+      const wrap = note.parentElement;
+      wrap.insertAdjacentHTML('afterend', '<div style="grid-column: 1 / -1;"><label class="form-label" for="adminEditStdDorm" style="font-size: 0.76rem; font-weight: 700; color: #0f172a;">หอพัก (แสดงบนบัตรนักเรียน)</label><select class="form-control" id="adminEditStdDorm" data-orig="' + (MAP[nid(id)] || '') + '" style="height: 36px; font-size: 0.85rem;">' + opts.map(([k, l]) => '<option value="' + k + '"' + ((MAP[nid(id)] || '') === k ? ' selected' : '') + '>' + l + '</option>').join('') + '</select><small style="font-size: 0.72rem; color: #64748b;">' + (g ? 'นักเรียนหญิง: เลือกหอพักอิบนูอัฟฟาน หรือ หอ 5' : 'นักเรียนชายอยู่หอพักคณะวิทยาศาสตร์และเทคโนโลยีโดยอัตโนมัติ') + (cur ? ' · ตอนนี้: ' + D[cur] : '') + '</small></div>');
+    } catch (e) {}
+    return r;
+  };
+  const os = window.saveAdminStudentDeepEdit;
+  if (typeof os === 'function') window.saveAdminStudentDeepEdit = function () {
+    let sel = null, oid = ''; try { sel = document.getElementById('adminEditStdDorm'); oid = currentAdminEditingStudentOriginalId; } catch (e) {}
+    const newId = (document.getElementById('adminEditStdId') || {}).value || oid;
+    const r = os.apply(this, arguments);
+    if (sel && (sel.value !== sel.dataset.orig || nid(newId) !== nid(oid))) {
+      const items = [{ studentId: newId, dorm: sel.value }]; if (nid(newId) !== nid(oid)) items.push({ studentId: oid, dorm: '' });
+      items.forEach((it) => { if (it.dorm) MAP[nid(it.studentId)] = it.dorm; else delete MAP[nid(it.studentId)]; });
+      try { localStorage.setItem('k8_dorm_map', JSON.stringify(MAP)); } catch (e) {}
+      gasApiCall('setStudentDorm', { data: { items } }, 20000).then((x) => { if (!x || !x.success) { try { showToast((x && x.message) || 'บันทึกหอพักไม่สำเร็จ', 'error'); } catch (e) {} } }).catch(() => {});
+    }
+    return r;
+  };
 })();

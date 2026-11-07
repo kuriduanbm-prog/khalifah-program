@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.95'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '17.98'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1149,7 +1149,7 @@ function publicSettings_(settings) {
   const o = {};
   Object.keys(settings || {}).forEach(function (k) {
     if (/master|password|secret|token|otp/i.test(k)) return;
-    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$|^PeriodEpisodes$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
+    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$|^PeriodEpisodes$|^StudentDorms$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
     if (/^Timetable/.test(k)) return; // ตารางสอน: อ่านผ่าน getTimetable (มีสิทธิ์และการเปิด/ปิดการมองเห็น)
     o[k] = settings[k];
   });
@@ -1219,7 +1219,7 @@ const ACTION_ACCESS = {
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
   saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff',
-  getMyNotifications: 'student', getMyClassLeaves: 'student', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
@@ -1626,6 +1626,13 @@ function dispatchAction_(action, req, data, session, ctx) {
       return respondPeriodSwap_(data, session);
     case 'getPeriodSwaps':
       return { success: true, data: swapsFor_(session) };
+    case 'getMyDorm': {
+      const dm = readDorms_();
+      if (!isStudent) return { success: true, data: dm };
+      return { success: true, dorm: dm[dormKey_(session.userId)] || '' };
+    }
+    case 'setStudentDorm':
+      return setStudentDorm_(data);
     case 'getMyClassLeaves':
       return { success: true, data: isStudent ? myClassLeaves_(session.userId) : [] };
     case 'saveTeacherLeave':
@@ -3128,6 +3135,25 @@ function myPortfolio_(sid) {
   const logs = (getActivityLogs('').data || []).filter(function (l) { return isCodeMatch(l.studentId, sid); }).map(function (l) { const a = acts[l.activityId] || {}; return { activityId: l.activityId, title: a.title || a.name || l.activityTitle || 'กิจกรรม', date: l.formattedDate, time: l.formattedTime, location: a.location || '', organizer: a.creator || a.createdBy || '' }; });
   const seen = {}; const activities = logs.filter(function (x) { const k = x.activityId + '|' + x.date; if (seen[k]) return false; seen[k] = 1; return true; }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
   return { success: true, items: items.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }), activities: activities };
+}
+// v17.98 · หอพักนักเรียน (หญิง: อิบนูอัฟฟาน / หอ 5 · ชายทั้งหมด: หอคณะวิทยาศาสตร์ฯ อัตโนมัติ)
+const DORMS_ = ['sci', 'ibnu', 'h5'];
+function dormKey_(id) { return String(id == null ? '' : id).trim().replace(/^0+/, ''); }
+function readDorms_() { let v = {}; try { v = JSON.parse((getSettings().data || {}).StudentDorms || '{}'); } catch (e) { v = {}; } return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+function setStudentDorm_(d) {
+  d = d || {};
+  const items = Array.isArray(d.items) ? d.items : [{ studentId: d.studentId, dorm: d.dorm }];
+  const dm = readDorms_();
+  let n = 0;
+  items.forEach(function (it) {
+    const k = dormKey_(it && it.studentId); if (!k) return;
+    const v = String((it && it.dorm) || '');
+    if (!v) { delete dm[k]; n++; return; }
+    if (DORMS_.indexOf(v) === -1) return;
+    dm[k] = v; n++;
+  });
+  saveSetting({ key: 'StudentDorms', value: JSON.stringify(dm), description: 'หอพักนักเรียน (JSON: รหัส → sci/ibnu/h5)' });
+  return { success: true, message: 'บันทึกหอพักแล้ว ' + n + ' คน', data: dm };
 }
 function readSwaps_() { let v = []; try { v = JSON.parse((getSettings().data || {}).PeriodSwaps || '[]'); } catch (e) { v = []; } return Array.isArray(v) ? v : []; }
 function writeSwaps_(list) {
