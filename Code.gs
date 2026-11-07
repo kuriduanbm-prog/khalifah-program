@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '17.98'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.01'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1219,7 +1219,7 @@ const ACTION_ACCESS = {
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
   saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff',
-  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
@@ -1626,6 +1626,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return respondPeriodSwap_(data, session);
     case 'getPeriodSwaps':
       return { success: true, data: swapsFor_(session) };
+    case 'getHalaqahReport':
+      return halaqahReport_(pick('from'), pick('to'));
     case 'getMyDorm': {
       const dm = readDorms_();
       if (!isStudent) return { success: true, data: dm };
@@ -7053,7 +7055,50 @@ function readHalaqah_() {
   });
 }
 // v17.92 · อาจารย์เห็น/แก้เฉพาะกลุ่มที่ตัวเองเป็นผู้ดูแล · แอดมินเห็นทั้งหมด
-function hqIsOwner_(h, session) { return !!session && (session.role === 'admin' || String(h.teacher || '').toLowerCase() === String(session.userId || '').toLowerCase()); }
+// v18.01 · ผู้ดูแลตรงกับบัญชี (username) หรือชื่อผู้ดูแลตรงกับชื่อบัญชี (กรณีแอดมินสร้างกลุ่มแล้วพิมพ์ชื่ออาจารย์)
+function hqNm_(v) { return cleanVal(v).replace(/^(อาจารย์|อ\.|ครู|ustaz|ustazah|อุสตาซ(ะห์)?)\s*/i, '').replace(/\s+/g, ' ').toLowerCase(); }
+function hqIsOwner_(h, session) {
+  if (!session) return false;
+  if (session.role === 'admin') return true;
+  if (String(h.teacher || '').toLowerCase() === String(session.userId || '').toLowerCase()) return true;
+  const a = hqNm_(h.teacherName), b = hqNm_(session.name);
+  return !!a && !!b && a === b;
+}
+// v18.01 · แอดมิน: สรุปการเช็คชื่อหะละเกาะฮฺรายกลุ่ม/ผู้ดูแล ในช่วงวันที่
+function halaqahReport_(from, to) {
+  const today = hqToday_();
+  from = /^\d{4}-\d{2}-\d{2}$/.test(String(from || '')) ? String(from) : today.slice(0, 8) + '01';
+  to = /^\d{4}-\d{2}-\d{2}$/.test(String(to || '')) ? String(to) : today;
+  if (to > today) to = today;
+  if (from > to) from = to;
+  const days = [];
+  let d = new Date(from + 'T00:00:00'); const end = new Date(to + 'T00:00:00');
+  for (let i = 0; d <= end && i < 400; i++) { days.push(Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd')); d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); }
+  const stu = {};
+  sheetRows_(SHEETS.STUDENTS, 4).forEach(function (r) { const k = hqKey_(r[0]); if (k) stu[k] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]) }; });
+  const logs = hqLogs_().filter(function (l) { return l.date >= from && l.date <= to; });
+  const groups = readHalaqah_().map(function (h) {
+    const dates = days.filter(function (x) { return hqOnDate_(h, x); });
+    const lg = logs.filter(function (l) { return l.sessionId === h.id; });
+    const ids = h.members.length ? h.members.slice() : [];
+    lg.forEach(function (l) { const k = hqKey_(l.studentId); if (ids.indexOf(k) === -1) ids.push(k); });
+    const tot = { present: 0, late: 0, leave: 0, absent: 0, none: 0 };
+    const held = {};
+    lg.forEach(function (l) { held[l.date] = 1; });
+    const members = ids.map(function (k) {
+      const s = stu[k] || { id: k, name: k, grade: '' };
+      const c = { present: 0, late: 0, leave: 0, absent: 0, none: 0 };
+      dates.forEach(function (x) {
+        const l = lg.filter(function (y) { return y.date === x && hqKey_(y.studentId) === k; })[0];
+        const st = !l ? 'none' : /late|สาย/i.test(l.status) ? 'late' : /leave|ลา/i.test(l.status) ? 'leave' : /absent|ขาด/i.test(l.status) ? 'absent' : 'present';
+        c[st]++; tot[st]++;
+      });
+      return { id: s.id, name: s.name, grade: s.grade, c: c };
+    }).sort(function (a, b) { return String(a.grade).localeCompare(String(b.grade)) || String(a.name).localeCompare(String(b.name)); });
+    return { id: h.id, name: h.name, teacher: h.teacher, teacherName: h.teacherName, location: h.location, start: h.start, end: h.end, dates: dates, held: Object.keys(held).sort(), members: members, total: tot };
+  });
+  return { success: true, from: from, to: to, groups: groups };
+}
 function hqOwnCheck_(id, session) { const h = readHalaqah_().filter(function (x) { return x.id === cleanVal(id); })[0]; if (h && !hqIsOwner_(h, session)) return { success: false, code: 'FORBIDDEN', message: 'หะละเกาะฮฺนี้อยู่ในความดูแลของ ' + (h.teacherName || 'อาจารย์ท่านอื่น') }; return null; }
 // v17.92 · วันที่จัด (กำหนดเป็นวันที่) · ว่าง = ใช้วันในสัปดาห์แบบเดิม
 function hqOnDate_(h, date) { if (h.dates && h.dates.length) return h.dates.indexOf(date) !== -1; const d = new Date(date + 'T00:00:00').getDay(); return h.days.indexOf(String(d)) !== -1; }
