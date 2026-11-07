@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.02'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.03'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1200,7 +1200,7 @@ const ACTION_ACCESS = {
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
-  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
+  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
@@ -1297,7 +1297,7 @@ function routeRequest_(action, req, method) {
     }
 
     // โหมดดูตัวอย่าง (แอดมินดูแอปแบบนักเรียน): ห้ามเขียนข้อมูลใด ๆ
-    if (session && session.preview && READ_ONLY_ACTIONS.indexOf(action) === -1 && ['whoami', 'refreshToken'].indexOf(action) === -1) {
+    if (session && session.preview && READ_ONLY_ACTIONS.indexOf(action) === -1 && ['whoami', 'refreshToken'].indexOf(action) === -1 && !/^get[A-Z]/.test(action)) { // v18.03 · อ่านได้ทุกคำสั่ง get*
       return { success: false, preview: true, code: 'PREVIEW', message: 'โหมดดูตัวอย่าง · ไม่ได้บันทึกจริง' };
     }
     stripMarkup_(req, 0);
@@ -1707,6 +1707,11 @@ function dispatchAction_(action, req, data, session, ctx) {
       const l = (Array.isArray((data || {}).list) ? data.list : []).map(function (x) { return cleanVal(x).toLowerCase(); }).filter(Boolean).slice(0, 50);
       saveSetting({ key: 'PreviewAllowedAdmins', value: JSON.stringify(l), description: 'แอดมินที่ได้สิทธิ์ดูแอปในมุมมองนักเรียน (JSON)' });
       return { success: true, list: l, message: 'บันทึกสิทธิ์แล้ว' };
+    }
+    case 'previewAsStaff': {
+      // v18.03 · แอดมินดูแอปในมุมมองอาจารย์/บุคลากร (อ่านอย่างเดียว) · สิทธิ์เดียวกับดูมุมมองนักเรียน
+      if (!ctx.isOwner) { let l = []; try { l = JSON.parse((getSettings().data || {}).PreviewAllowedAdmins || '[]') || []; } catch (e) {} if (l.indexOf(String(session.userId).toLowerCase()) === -1) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินสูงสุด หรือแอดมินที่ได้รับสิทธิ์เท่านั้น' }; }
+      return previewAsStaff_(cleanVal((data || {}).username));
     }
     case 'previewAsStudent': {
       // เฉพาะแอดมินสูงสุด หรือแอดมินที่แอดมินสูงสุดให้สิทธิ์
@@ -4251,6 +4256,33 @@ function verifyAdminLogin(password, username) {
   return userFound
     ? { success: false, field: 'password', message: 'รหัสผ่านไม่ถูกต้อง' }
     : { success: false, field: 'username', message: 'ไม่พบบัญชีผู้ใช้นี้ในระบบ' };
+}
+
+function previewAsStaff_(username) {
+  const u = cleanVal(username).toLowerCase();
+  if (!u) return { success: false, message: 'ไม่พบชื่อผู้ใช้' };
+  const ss = getSpreadsheet();
+  const sources = [{ name: SHEETS.ADMINS, kind: 'admin' }, { name: SHEETS.TEACHERS, kind: 'teacher' }, { name: 'ผู้ดูแลระบบ', kind: 'legacy' }];
+  for (let s = 0; s < sources.length; s++) {
+    const sheet = ss.getSheetByName(sources[s].name);
+    if (!sheet || sheet.getLastRow() <= 1) continue;
+    const rows = sheet.getDataRange().getValues(); const kind = sources[s].kind;
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (cleanVal(rows[i][1]).toLowerCase() !== u) continue;
+      const roleVal = cleanVal(rows[i][4]) || (kind === 'admin' ? 'Admin' : 'TEACHER');
+      if (isOwnerRole_(roleVal)) return { success: false, message: 'ดูมุมมองของแอดมินสูงสุดไม่ได้' };
+      let subj = []; const sc = kind === 'teacher' ? 7 : (kind === 'legacy' ? 8 : -1);
+      if (sc !== -1) { try { subj = rows[i][sc] ? JSON.parse(rows[i][sc]) : []; } catch (e) {} }
+      const lim = limitOfRole_(roleVal);
+      const tokenRole = lim === 'exec' ? 'admin' : (lim === 'act' || lim === 'night') ? 'teacher' : staffTokenRole_(roleVal);
+      return { success: true, preview: true,
+        token: issueToken_(tokenRole, cleanVal(rows[i][1]), cleanVal(rows[i][3]), false, true, lim),
+        limited: lim, isSubAdmin: !lim && tokenRole === 'admin', isOwner: false, role: roleVal, id: cleanVal(rows[i][0]),
+        username: cleanVal(rows[i][1]), fullName: cleanVal(rows[i][3]), phone: normalizePhone(rows[i][kind === 'legacy' ? 7 : 5] || ''), email: cleanVal(rows[i][6] || ''),
+        assignedSubjects: Array.isArray(subj) ? subj : [], avatarUrl: (kind === 'teacher' || kind === 'admin') ? cleanVal(rows[i][10] || '') : '' };
+    }
+  }
+  return { success: false, message: 'ไม่พบบัญชีนี้' };
 }
 
 function addSubAdmin(data) {

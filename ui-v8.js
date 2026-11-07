@@ -3385,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.02';
+  const APP_VERSION = '18.03';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10220,4 +10220,132 @@ window.k8HfMiss = function (slot) {
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   };
   window.addEventListener('popstate', () => { const el = document.getElementById('k8HqRep'); if (el && !el.hidden) el.hidden = true; });
+})();
+
+/* ---------- v18.03 · บันทึกผลบุญ: ปุ่ม "กลับไปเลือกนักเรียน" ลอยตามเมื่อเลื่อนหน้า ---------- */
+(function () {
+  let fl = null, raf = 0;
+  function tick() {
+    raf = 0;
+    const src = Array.from(document.querySelectorAll('.k8h-as')).find((e) => e.offsetParent !== null);
+    if (!src) { if (fl) fl.hidden = true; return; }
+    const r = src.getBoundingClientRect();
+    const off = r.bottom < 70 || r.top > window.innerHeight - 40;
+    if (!fl) {
+      fl = document.createElement('button'); fl.type = 'button'; fl.className = 'k8h-as-float'; fl.hidden = true;
+      fl.onclick = () => { try { window.k8HasBack(); } catch (e) {} };
+      document.body.appendChild(fl);
+    }
+    const who = src.querySelector('b'); fl.innerHTML = '‹ กลับไปเลือกนักเรียน' + (who ? '<small>' + who.textContent.replace(/[<>&]/g, '') + '</small>' : '');
+    fl.hidden = !off;
+  }
+  const q = () => { if (!raf) raf = requestAnimationFrame(tick); };
+  window.addEventListener('scroll', q, { passive: true });
+  document.addEventListener('scroll', q, { passive: true, capture: true });
+  window.addEventListener('resize', q);
+  setInterval(q, 1200);
+})();
+
+/* ---------- v18.03 · รายชื่อบุคลากรจัดกลุ่มตามตำแหน่ง + แอดมินดูแอปในมุมมองอาจารย์/บุคลากร ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const roleKey = (r) => { const v = String(r || '').trim(), l = v.toLowerCase();
+    if (/nightduty|ครูเวร/.test(l)) return 'night'; if (/inspector|ผู้ตรวจการ/.test(l)) return 'insp'; if (/executive|ผู้บริหาร/.test(l)) return 'exec';
+    if (/teacheradmin|homeroom|ประจำชั้น/.test(l)) return 'teach'; if (/activity|กิจกรรม/.test(l)) return 'act'; if (/super|subadmin|admin|แอดมิน|ผู้ช่วย/.test(l)) return 'adm'; return 'teach'; };
+  const GROUPS = [
+    ['teach', 'อาจารย์ผู้สอน', 'สอนรายวิชา · เช็คชื่อ · กรอกคะแนน', '#0369a1', '#e0f2fe'],
+    ['exec', 'ผู้บริหาร', 'ดูภาพรวมทั้งโรงเรียน · อนุมัติลาสอน', '#047857', '#d1fae5'],
+    ['adm', 'แอดมิน / ผู้ช่วยแอดมิน', 'จัดการระบบ', '#334155', '#e2e8f0'],
+    ['insp', 'ผู้ตรวจการ', 'ประเมินคะแนนพฤติกรรม', '#c2410c', '#ffedd5'],
+    ['night', 'ครูเวรหอพักกลางคืน', 'เวรหอพัก · พฤติกรรม · กิจกรรม', '#4338ca', '#e0e7ff'],
+    ['act', 'ฝ่ายกิจกรรม', 'สร้างกิจกรรม · สแกน QR', '#7c3aed', '#ede9fe']
+  ];
+  const S = { q: '', g: 'all', fold: {} };
+  const ini = (n) => { const t = String(n || '').replace(/^(นาย|นางสาว|นาง|อาจารย์|อ\.|ครู|ดร\.)\s*/, '').trim(); return t ? t.charAt(0) : '?'; };
+  function subjNames(a) { const ids = Array.isArray(a.assignedSubjects) ? a.assignedSubjects : (a.assignedSubject ? [a.assignedSubject] : []); let subs = []; try { subs = appSubjects || []; } catch (e) {} return ids.map((id) => { const s = subs.find((x) => x.id === id); return s ? s.name : id; }).filter(Boolean); }
+  function canPv() { let a = null; try { a = currentAdmin; } catch (e) {} return !!a && !a.limited; }
+  function paint() {
+    const tb = document.getElementById('subAdminsTable'); if (!tb) return;
+    const wrap = tb.closest('.table-responsive') || tb.parentElement;
+    let box = document.getElementById('k8Staff');
+    if (!box) { box = document.createElement('div'); box.id = 'k8Staff'; box.className = 'k8-staff'; wrap.after(box); }
+    wrap.hidden = true; wrap.style.display = 'none';
+    let list = []; try { list = subAdmins || []; } catch (e) {}
+    const q = S.q.trim().toLowerCase();
+    const by = {}; GROUPS.forEach((g) => { by[g[0]] = []; });
+    list.forEach((a) => { if (!a || !a.username) return; const k = roleKey(a.role); if (q && !(String(a.fullName || '') + ' ' + a.username + ' ' + subjNames(a).join(' ')).toLowerCase().includes(q)) return; by[k].push(a); });
+    Object.keys(by).forEach((k) => by[k].sort((x, y) => String(x.fullName || '').localeCompare(String(y.fullName || ''), 'th')));
+    const tot = list.filter((a) => a && a.username).length;
+    let h = '<div class="k8-staff-bar"><input type="search" class="k8-asum-q" placeholder="ค้นหาชื่อ ชื่อผู้ใช้ หรือวิชา" value="' + esc(S.q) + '" oninput="k8StaffQ(this)"><div class="k8-na-chips">' +
+      '<button type="button" aria-pressed="' + (S.g === 'all') + '" onclick="k8StaffG(\'all\')">ทั้งหมด ' + tot + '</button>' +
+      GROUPS.filter((g) => list.some((a) => a && a.username && roleKey(a.role) === g[0])).map((g) => '<button type="button" aria-pressed="' + (S.g === g[0]) + '" onclick="k8StaffG(\'' + g[0] + '\')">' + g[1] + ' ' + list.filter((a) => a && a.username && roleKey(a.role) === g[0]).length + '</button>').join('') + '</div></div>';
+    const pv = canPv();
+    GROUPS.forEach(([k, label, desc, c, bg]) => {
+      if (S.g !== 'all' && S.g !== k) return;
+      const L = by[k]; if (!L.length) return;
+      const fold = !!S.fold[k];
+      h += '<section class="k8-staff-g"><button type="button" class="k8-staff-gh" aria-expanded="' + !fold + '" onclick="k8StaffF(\'' + k + '\')" style="--c:' + c + ';--bg:' + bg + '"><span class="k8-staff-dot"></span><b>' + label + '</b><span class="k8-staff-n">' + L.length + ' คน</span><small>' + desc + '</small><span class="k8-staff-cv" aria-hidden="true">' + (fold ? '▸' : '▾') + '</span></button>' +
+        (fold ? '' : '<ul class="k8-staff-list">' + L.map((a) => {
+          const u = String(a.username).trim(); const subs = k === 'teach' ? subjNames(a) : [];
+          const pend = a.approvalStatus === 'PendingAdmin' || a.approvalStatus === 'AwaitingOtp';
+          return '<li><span class="k8-staff-av" style="background:' + bg + ';color:' + c + '">' + (a.avatarUrl ? '<img src="' + esc(a.avatarUrl) + '" alt="">' : esc(ini(a.fullName))) + '</span><div class="k8-staff-who"><b>' + esc(a.fullName || u) + '</b><small>' + esc(u) + (a.phone ? ' · ' + esc(a.phone) : '') + (a.email ? ' · ' + esc(a.email) : '') + '</small>' +
+            (subs.length ? '<span class="k8-staff-subs">' + subs.slice(0, 6).map((n) => '<i>' + esc(n) + '</i>').join('') + (subs.length > 6 ? '<i>+' + (subs.length - 6) + '</i>' : '') + '</span>' : k === 'teach' ? '<span class="k8-staff-subs"><i class="is-none">ยังไม่ได้มอบหมายวิชา</i></span>' : '') +
+            (pend ? '<span class="k8-staff-pend">รอผู้สมัครกรอก OTP</span>' : '') + '</div><div class="k8-staff-act">' +
+            (pv ? '<button type="button" class="is-pv" onclick="k8PreviewStaff(\'' + js(u) + '\')" title="ดูแอปในมุมมองของคนนี้"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>ดูมุมมอง</span></button>' : '') +
+            '<button type="button" onclick="openEditTeacherModal(\'' + js(u) + '\')"><span>แก้ไข</span></button><button type="button" class="is-del" aria-label="ลบ ' + esc(a.fullName || u) + '" onclick="deleteSubAdmin(\'' + js(u) + '\')">ลบ</button></div></li>';
+        }).join('') + '</ul>') + '</section>';
+    });
+    if (!Object.keys(by).some((k) => by[k].length)) h += '<p class="k8-asum-empty">' + (tot ? 'ไม่พบรายชื่อที่ค้นหา' : 'ยังไม่มีรายชื่ออาจารย์หรือบุคลากร') + '</p>';
+    box.innerHTML = h;
+  }
+  const o = window.renderSubAdminsTable;
+  if (typeof o === 'function') window.renderSubAdminsTable = function () { const r = o.apply(this, arguments); try { paint(); } catch (e) {} return r; };
+  window.k8StaffG = function (g) { S.g = g; paint(); };
+  window.k8StaffF = function (k) { S.fold[k] = !S.fold[k]; paint(); };
+  let qt = null; window.k8StaffQ = function (el) { clearTimeout(qt); qt = setTimeout(() => { S.q = el.value; const pos = el.selectionStart; paint(); const n = document.querySelector('#k8Staff .k8-asum-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };
+
+  // ดูแอปในมุมมองอาจารย์/บุคลากร (อ่านอย่างเดียว · ใช้ที่เก็บเดียวกับโหมดดูนักเรียน)
+  const KEY = 'k8_preview_stash';
+  const stash = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } };
+  window.k8PreviewStaff = async function (username) {
+    if (stash()) return;
+    let r = null; try { r = await gasApiCall('previewAsStaff', { data: { username } }, 25000); } catch (e) { r = null; }
+    if (!r || !r.success || !r.token) { try { showToast((r && (r.message || r.error)) || 'เปิดมุมมองนี้ไม่ได้ · Deploy Code.gs ตัวล่าสุดก่อน', 'error'); } catch (e) {} return; }
+    const p = { adminId: r.id || '', username: r.username, fullName: r.fullName, role: r.role, phone: r.phone || '', email: r.email || '', assignedSubjects: r.assignedSubjects || [], assignedSubject: (r.assignedSubjects || [])[0] || '', avatarUrl: r.avatarUrl || '', status: 'Active', approvalStatus: 'Verified', staffPreview: true };
+    if (r.isSubAdmin || r.limited) { p.realRole = p.role; p.role = 'SuperAdmin'; p.isSubAdmin = true; if (r.limited) p.limited = r.limited; }
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ admin: localStorage.getItem('khalifah_current_admin'), token: localStorage.getItem('khalifah_session_token'), role: localStorage.getItem('khalifah_auth_role'), view: 'admin', name: r.fullName || r.username, staff: 1 }));
+      localStorage.setItem('khalifah_current_admin', JSON.stringify(p));
+      localStorage.setItem('khalifah_session_token', r.token);
+      localStorage.setItem('khalifah_auth_role', p.role === 'SuperAdmin' ? 'admin' : 'teacher');
+      localStorage.removeItem('khalifah_current_student');
+      sessionStorage.setItem('k8_after_preview', p.role === 'SuperAdmin' ? 'admin' : 'teacher');
+    } catch (e) {}
+    location.reload();
+  };
+  function exitStaff() {
+    const st = stash(); if (!st) return;
+    try {
+      if (st.admin) localStorage.setItem('khalifah_current_admin', st.admin); else localStorage.removeItem('khalifah_current_admin');
+      if (st.token) localStorage.setItem('khalifah_session_token', st.token);
+      localStorage.setItem('khalifah_auth_role', st.role || 'admin');
+      localStorage.removeItem(KEY);
+      sessionStorage.setItem('k8_after_preview', 'admin');
+    } catch (e) {}
+    location.reload();
+  }
+  window.k8PreviewStaffExit = exitStaff;
+  const isStaffPv = () => { const st = stash(); let a = null; try { a = currentAdmin; } catch (e) {} return !!(st && st.staff && a && a.staffPreview); };
+  function banner() {
+    if (!isStaffPv()) return;
+    document.documentElement.classList.add('k8-preview');
+    if (document.getElementById('k8PvBar')) return;
+    const b = document.createElement('div'); b.id = 'k8PvBar'; b.setAttribute('role', 'status');
+    b.innerHTML = '<span><b>โหมดดูตัวอย่าง</b><small>เห็นแบบ ' + esc(stash().name || 'อาจารย์') + ' · ดูได้อย่างเดียว ไม่บันทึกจริง</small></span><button type="button" onclick="k8PreviewStaffExit()">ออกจากโหมดนี้</button>';
+    document.body.appendChild(b);
+  }
+  ['adminLogout', 'teacherLogout'].forEach((fn) => { const lo = window[fn]; if (typeof lo === 'function') window[fn] = function () { if (isStaffPv()) { exitStaff(); return; } return lo.apply(this, arguments); }; });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(banner, 0)); else setTimeout(banner, 0);
+  window.addEventListener('load', () => setTimeout(banner, 400));
 })();
