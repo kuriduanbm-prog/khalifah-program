@@ -4626,3 +4626,10 @@ html.k8-xnarrow .hf-p5-t b { font-size: 11.5px; } html.k8-xnarrow .hf-p5-grid { 
 @media (min-width: 900px) { .hf-lg1-wm { width: 420px; right: -60px; top: -60px; } }
 .hf-lg1 .hf-status { border: 0 !important; box-shadow: none !important; } .hf-lg1-grid > div { text-align: left; } .hf-lg1-body { text-align: left; }
 .hf-lg1-main { align-items: flex-start; } .hf-lg1-who { padding-top: 40px; padding-bottom: 0; } .hf-lg1 .hf-name.is-long { font-size: 15px !important; line-height: 1.35; }
+/* v17.99 · คะแนนพฤติกรรมใต้บัตรนักเรียน · กล่องสีเขียว + ตัวเลขเคลื่อนไหว */
+.hf-beh-box { background: linear-gradient(145deg, #16a34a 0%, #15803d 100%) !important; box-shadow: 0 6px 16px rgba(21, 128, 61, .25); }
+.hf-beh-box b { font-variant-numeric: tabular-nums; }
+.hf-beh-box.is-pop { animation: k8BehPop .9s cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes k8BehPop { 0% { transform: scale(.86); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .hf-beh-box.is-pop { animation: none; } }
+.hf-beh-box b, .hf-beh-box small { color: #fff !important; }

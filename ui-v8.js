@@ -3385,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '17.98';
+  const APP_VERSION = '17.99';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3870,12 +3870,25 @@ window.k8RegBirthChange = function (v) {
   const curSid = () => { try { return currentStudent ? norm(currentStudent.studentId) : ''; } catch (e) { return ''; } };
   const mineOk = () => !!mine && (!mine.sid || mine.sid === curSid());
   function myScore() { if (!mineOk()) return null; const t = mine.term || term(); return clamp(100 + (mine.logs || []).filter((l) => l.status !== 'cancelled' && (!l.term || l.term === t)).reduce((a, l) => a + (Number(l.points) || 0), 0)); }
+  // v17.99 · ตัวเลขคะแนนนับขึ้นแบบเคลื่อนไหว (นับใหม่เมื่อคะแนนเปลี่ยน · ปิดเมื่อผู้ใช้ตั้งลดการเคลื่อนไหว)
+  function k8BehCount(el, to) {
+    const from = Number(el.dataset.v);
+    if (el.dataset.v === String(to) && el.textContent === String(to)) return;
+    el.dataset.v = String(to);
+    let reduce = false; try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (reduce) { el.textContent = to; return; }
+    const start = isNaN(from) ? 0 : from, dur = isNaN(from) ? 1100 : 700, t0 = performance.now();
+    cancelAnimationFrame(el._raf || 0);
+    const box = el.closest('.hf-beh-box'); if (box) { box.classList.remove('is-pop'); void box.offsetWidth; box.classList.add('is-pop'); }
+    const step = (t) => { const p = Math.min(1, (t - t0) / dur); const e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(start + (to - start) * e); if (p < 1) el._raf = requestAnimationFrame(step); };
+    el._raf = requestAnimationFrame(step);
+  }
   function paintMine() {
     const el = document.getElementById('hfBehScore'); if (!el) return;
     const sc = myScore();
-    if (sc == null) { el.textContent = '…'; const sub0 = document.getElementById('hfBehSub'); if (sub0) sub0.textContent = 'กำลังโหลดคะแนนล่าสุด'; const lv0 = document.getElementById('hfBehLv'); if (lv0) lv0.textContent = ''; return; }
+    if (sc == null) { el.textContent = '…'; delete el.dataset.v; const sub0 = document.getElementById('hfBehSub'); if (sub0) sub0.textContent = 'กำลังโหลดคะแนนล่าสุด'; const lv0 = document.getElementById('hfBehLv'); if (lv0) lv0.textContent = ''; return; }
     const lv = level(sc);
-    el.textContent = sc;
+    k8BehCount(el, sc);
     const box = document.getElementById('hfBeh'); if (box) box.setAttribute('aria-label', 'คะแนนพฤติกรรม ' + sc + ' จาก 100 · ' + lv[0]);
     
     const lvEl = document.getElementById('hfBehLv'); if (lvEl) { lvEl.textContent = lv[0]; lvEl.style.color = lv[1]; lvEl.style.background = lv[2]; }
