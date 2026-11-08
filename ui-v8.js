@@ -208,7 +208,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       lab = (open ? open.key + ' ✓ · ถัดไป ' : 'ถัดไป · ') + nx.key; big = fmt(nx.adhan); sub = 'อีก ' + dur(mins);
     }
     if (window.k8WeeklyHoliday && window.k8WeeklyHoliday()) { cta = null; lab = 'วันเสาร์ · วันหยุดประจำสัปดาห์'; big = ''; sub = 'งดเช็คชื่อละหมาดและถ่ายรูป'; subCls = ''; }
-    const perOn = !!(window.k8PeriodActive && window.k8PeriodActive());
+    const perObj = window.k8PeriodActive && window.k8PeriodActive(); const perOn = !!perObj;
     if (perOn) { cta = null; lab = '🌸 กำลังมีประจำเดือน'; big = ''; sub = 'ไม่ต้องเช็คชื่อ · กดสิ้นสุดเมื่อหมด'; subCls = ''; }
     // v17.96 · การ์ดละหมาด: หัวน้ำเงินแถบสีบางตามช่วงเวลา (มินิมอล 3) + ไทล์ 5 เวลา + ปฏิทินสัปดาห์ (สไตล์ 5)
     const sky = cur < day[0].start ? 'isha' : cur <= day[0].end ? 'fajr' : cur < day[2].start ? 'zuhr' : cur < day[3].start ? 'asr' : cur < day[4].start ? 'maghrib' : 'isha';
@@ -250,6 +250,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (r && KC[r.kind]) { if (r.kind === 'late') nLate++; else if (r.kind === 'ok' || r.kind === 'appr') nOk++; return '<button type="button" class="hf-p5-c is-' + r.kind + '" onclick="k8HfBarOpen(\'' + esc(r.id) + '\',\'' + ds + '\')" aria-label="' + TD[d.getDay()] + ' ' + esc(k) + ' ' + (LBL[r.kind] || '') + '"></button>'; }
       if (reg && reg >= ds) return '<span class="hf-p5-c is-none"></span>';
       if (d.getDay() === 6) return '<span class="hf-p5-c is-off" title="วันหยุด"></span>';
+      if (perObj && ds >= String(perObj.start || '9999') && ds <= todayStr) return '<span class="hf-p5-c is-ex" title="มีประจำเดือน">🌸</span>'; // v18.32
       if (lvOn(ds, w)) { nLv++; return '<button type="button" class="hf-p5-c is-lv" onclick="k8SlOpen()" aria-label="' + TD[d.getDay()] + ' ' + esc(k) + ' ลาเรียน (อนุมัติแล้ว)"></button>'; }
       if (isT && open && open.key === k && !roll(k)) return '<span class="hf-p5-c is-now"></span>';
       const over = !isT || (k !== 'อีชาอ์' && cur > w.end);
@@ -3471,7 +3472,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.31';
+  const APP_VERSION = '18.32';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7758,6 +7759,12 @@ window.k8RegBirthChange = function (v) {
   const jsq = (t) => String(t == null ? '' : t).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const SHORT = { 'ซุบฮิ': 'ซุบฮิ', 'ซุฮริ': 'ซุฮริ', 'อัศรฺ': 'อัศรฺ', 'มัฆริบ': 'มัฆริบ', 'อีชาอ์': 'อีชาอ์' };
   function kind(st) { st = String(st || ''); if (/อุซุร|ประจำเดือน|ป่วย|^ลา|ลากิจ|ลาหยุด/.test(st)) return 'ex'; if (/สาย|ช้า/.test(st)) return 'late'; if (/ไม่มา|ขาด/.test(st)) return 'abs'; return 'ok'; }
+  // v18.32 · ช่วงมีประจำเดือนของนักเรียนหญิง (ยังไม่กดสิ้นสุด = ยังไม่มีบันทึกอุซุร) → แสดง 🌸 แทนกากบาท
+  let PER = null, perAt = 0;
+  const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+  function loadPer() { if (Date.now() - perAt < 60000) return; perAt = Date.now(); try { gasApiCall('getPeriodEpisodes', {}, 20000).then((r) => { if (r && r.success) { PER = r.data || []; try { render(); } catch (e) {} } }).catch(() => {}); } catch (e) {} }
+  const perCovers = (sid, ds) => !!PER && PER.some((x) => x && nid(x.studentId) === nid(sid) && x.status !== 'cancelled' && ds >= String(x.start || '') && (x.status === 'active' || ds <= String(x.end || x.start || '')));
+  window.k8PerCovers = perCovers;
   function host() {
     let el = document.getElementById('k8PdWrap');
     if (el) return el;
@@ -7783,7 +7790,8 @@ window.k8RegBirthChange = function (v) {
     const winOf = (k) => { try { return PRAYER_TIME_WINDOWS.find((w) => (w.key || w.name) === k) || null; } catch (e) { return null; } };
     const hm = (m) => pd(Math.floor(m / 60)) + ':' + pd(m % 60);
     const onLv = (st, k) => { try { const w = winOf(k); return !!(window.k8StuLeaveOn && window.k8StuLeaveOn(st.studentId, viewD, w ? hm(w.startMin) : '', w ? hm(Math.min(w.endMin, 1439)) : '')); } catch (e) { return false; } }; // v18.29 · ลาเรียนที่อนุมัติ = ได้รับอนุญาต
-    const missed = (st, k) => { if (viewD > todayS || onLv(st, k)) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
+    loadPer(); const onPer = (st) => perCovers(cid(st.studentId), viewD); // v18.32 · มีประจำเดือน = อุซุร (ไม่ใช่ขาด)
+    const missed = (st, k) => { if (viewD > todayS || onLv(st, k) || onPer(st)) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
     const missN = {}; rows.forEach((r) => { missN[r.sid] = slots.filter((x) => !r.p[x.key] && missed(r.s, x.key)).length; });
     const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length };
     let list = rows.filter((r) => V.f === 'all' || (V.f === 'full' ? r.n === 5 : V.f === 'part' ? r.n > 0 && r.n < 5 : r.n === 0));
@@ -7799,6 +7807,7 @@ window.k8RegBirthChange = function (v) {
       const av = s.avatarUrl ? (function () { try { return getDirectImageUrl(s.avatarUrl) || s.avatarUrl; } catch (e) { return s.avatarUrl; } })() : '';
       const boxes = slots.map((x) => {
         const rec = r.p[x.key];
+        if (!rec && onPer(s)) return '<span class="k8-pd-b is-per" title="' + esc(x.label) + ' · มีประจำเดือน (อุซุร)"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>🌸</i></span>';
         if (!rec && onLv(s, x.key)) return '<span class="k8-pd-b is-lv" title="' + esc(x.label) + ' · ลาเรียน (แอดมินอนุมัติแล้ว)"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>ลา</i></span>';
         if (!rec) { const miss = missed(s, x.key); return '<button type="button" class="k8-pd-b ' + (miss ? 'is-miss' : 'is-none') + '" onclick="k8PeAdd(\'' + jsq(r.sid) + '\',\'' + jsq(x.key) + '\')" title="' + esc(x.label) + (miss ? ' · ไม่ได้เช็คชื่อ (หมดเวลาแล้ว)' : ' · ยังไม่เช็คชื่อ') + ' · แตะเพื่อบันทึกแทน"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>' + (miss ? '✕' : '–') + '</i></button>'; }
         const k = kind(rec.status); const tm = String(rec.time || '').match(/(^|[^\d])(\d{1,2}):(\d{2})/); const t = tm ? tm[2].padStart(2, '0') + ':' + tm[3] : '✓';

@@ -5086,3 +5086,4 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-card:has(.k8-ta-sl) { row-gap: 2px; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-card:has(.k8-ta-sl) .k8-ta-no, html.k8-tpd #teacher-tab-attendance .k8-ta-card:has(.k8-ta-sl) .k8-ta-name, html.k8-tpd #teacher-tab-attendance .k8-ta-card:has(.k8-ta-sl) .k8-ta-id { grid-row: 1; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-card:has(.k8-ta-sl) .k8-ta-opts { grid-row: 1 / span 2; grid-column: 4; }
 html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-column: 2 / 4; width: auto; justify-self: start; margin: 0; }
+.k8-pd-b.is-per { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }

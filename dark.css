@@ -2454,6 +2454,7 @@ html[data-theme="dark"] .k8-cele-card p { color: #c1c7cf !important; }
 html[data-theme="dark"] .k8-cele-card small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-pd-b.is-lv { background: repeating-linear-gradient(135deg, #181134 0 6px, #140e31 6px 12px) !important; border-color: #312756 !important; }
 html[data-theme="dark"] .k8-ta-adm { background-color: #433a15 !important; color: #f3a372 !important; }
+html[data-theme="dark"] .k8-pd-b.is-per { background-color: #2d1321 !important; color: #f075a8 !important; border-color: #4f273e !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
