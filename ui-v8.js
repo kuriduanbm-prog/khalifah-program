@@ -3385,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.05';
+  const APP_VERSION = '18.06';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5795,17 +5795,32 @@ window.k8RegBirthChange = function (v) {
   const onDate = (raw, ds) => arr(raw).filter((e) => actOn(e, ds));
   // v17.94 · สลับคาบที่ตอบรับแล้ว (ชั่วคราวตามช่วงวันที่) → คาบ A ใช้วิชาของคาบ B และกลับกัน
   const swapsOf = () => (T.data && T.data.swaps) || [];
+  // v18.06 · รองรับสลับข้ามชั้น/ข้ามวัน: ชั้นเดียวกัน → สลับวิชา · ต่างชั้น → สอนแทนกัน
+  const addD = (ds, n) => { const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return ymdL(d); };
+  const swN = (x) => { const gA = String(x.grade), dA = Number(x.dow), gB = String(x.gB || x.grade), dB = (x.dowB === 0 || x.dowB) ? Number(x.dowB) : dA; return { gA, dA, gB, dB, off: dB - dA }; };
   function cellsOn(g, dow, p, ds) {
     const cells = gradeOf(g).cells || {};
     const base = onDate(cells[dow + '-' + p], ds);
     const gn = String(g).replace(/\D/g, ''); if (!gn || String(g).indexOf('x:') === 0) return base;
-    const sw = swapsOf().find((x) => String(x.grade) === gn && Number(x.dow) === Number(dow) && ds >= x.from && ds <= x.to && (Number(x.pA) === Number(p) || Number(x.pB) === Number(p)));
-    if (!sw) return base;
-    const mineP = Number(sw.pA) === Number(p);
-    const outT = mineP ? sw.tA : sw.tB, inT = mineP ? sw.tB : sw.tA, srcP = mineP ? sw.pB : sw.pA;
-    const keep = base.filter((e) => String(e.t || '') !== String(outT));
-    const moved = onDate(cells[dow + '-' + srcP], ds).filter((e) => String(e.t || '') === String(inT)).map((e) => Object.assign({}, e, { swapped: true, swapFrom: srcP }));
-    return keep.concat(moved);
+    for (const sw of swapsOf()) {
+      const n = swN(sw);
+      const isA = n.gA === gn && n.dA === Number(dow) && Number(sw.pA) === Number(p) && ds >= sw.from && ds <= sw.to;
+      const dsA = addD(ds, -n.off);
+      const isB = !isA && n.gB === gn && n.dB === Number(dow) && Number(sw.pB) === Number(p) && dsA >= sw.from && dsA <= sw.to;
+      if (!isA && !isB) continue;
+      const outT = isA ? sw.tA : sw.tB, inT = isA ? sw.tB : sw.tA, inN = isA ? (sw.tnB || sw.tB) : (sw.tnA || sw.tA);
+      const keep = base.filter((e) => String(e.t || '') !== String(outT));
+      let moved = [];
+      if (n.gA === n.gB) {
+        const srcCells = gradeOf(g).cells || {};
+        const srcD = isA ? n.dB : n.dA, srcP = isA ? sw.pB : sw.pA, srcDs = isA ? addD(ds, n.off) : dsA;
+        moved = onDate(srcCells[srcD + '-' + srcP], srcDs).filter((e) => String(e.t || '') === String(inT)).map((e) => Object.assign({}, e, { swapped: true, swapFrom: srcP }));
+      } else {
+        moved = base.filter((e) => String(e.t || '') === String(outT)).map((e) => Object.assign({}, e, { t: inT, tn: inN, swapped: true, subFor: e.tn || outT }));
+      }
+      return keep.concat(moved);
+    }
+    return base;
   }
   window.k8TtCellsOn = cellsOn;
   const MON_S = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -5880,7 +5895,7 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', (e) => { if (T.open && !(e.state && e.state.k8tt)) closePage(); });
   function cellHtml(x, showGrade, g) {
     if (!x) return '<span class="k8-tt-free">ว่าง</span>';
-    return '<b>' + esc(x.sn) + '</b><small>' + [showGrade ? lbl(g) : '', showGrade ? '' : x.tn, x.r ? 'ห้อง ' + x.r : '', x.gx ? 'เฉพาะนักเรียน' + GXN[x.gx] : (x.only && !x.multi ? 'เฉพาะบางคน' : ''), rangeTxt(x), x.swapped ? '⇄ สลับคาบ (ชั่วคราว)' : ''].filter(Boolean).map(esc).join(' · ') + '</small>';
+    return '<b>' + esc(x.sn) + '</b><small>' + [showGrade ? lbl(g) : '', showGrade ? '' : x.tn, x.r ? 'ห้อง ' + x.r : '', x.gx ? 'เฉพาะนักเรียน' + GXN[x.gx] : (x.only && !x.multi ? 'เฉพาะบางคน' : ''), rangeTxt(x), x.swapped ? (x.subFor ? '⇄ สอนแทน ' + x.subFor : '⇄ สลับคาบ (ชั่วคราว)') : ''].filter(Boolean).map(esc).join(' · ') + '</small>';
   }
   try { window.k8ClassLeaves = window.k8ClassLeaves || JSON.parse(localStorage.getItem('k8_class_leaves') || '[]'); } catch (e) {}
   window.k8TtRerender = function () { try { if (T.open) renderView(); } catch (e) {} };
@@ -9682,7 +9697,7 @@ window.k8HfMiss = function (slot) {
   const dTh = (x) => { const d = new Date(x + 'T00:00:00'); return isNaN(d) ? x : DN[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]; };
   const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
   const me = () => { try { return currentAdmin || {}; } catch (e) { return {}; } };
-  const W = { list: [], tab: 'in', form: null, busy: false, data: null };
+  const W = { list: [], tab: 'new', form: null, busy: false, data: null };
   const ST = { pending: ['รอตอบรับ', '#fef3c7', '#92400e'], approved: ['ตอบรับแล้ว', '#dcfce7', '#166534'], rejected: ['ปฏิเสธ', '#fee2e2', '#991b1b'], cancelled: ['ยกเลิก', '#f1f5f9', '#475569'] };
   async function ttData() { if (W.data) return W.data; let r = null; try { r = await gasApiCall('getTimetable', {}, 30000); } catch (e) {} W.data = (r && r.success) ? r : { grades: {}, config: { periods: [] } }; return W.data; }
   const cellsOf = (g, dow, p) => { const v = (((W.data || {}).grades || {})[g] || {}).cells || {}; const c = v[dow + '-' + p]; return Array.isArray(c) ? c : c ? [c] : []; };
@@ -9695,7 +9710,7 @@ window.k8HfMiss = function (slot) {
     const canCancel = (x.status === 'pending' || x.status === 'approved') && (x.tA === u || x.tB === u);
     return '<article class="k8-sw-it"><div class="k8-sw-top"><b>' + esc(dTh(x.from)) + (x.from !== x.to ? ' – ' + esc(dTh(x.to)) + ' <small>(ทุกวัน' + DN[x.dow] + ')</small>' : '') + '</b><span style="background:' + st[1] + ';color:' + st[2] + '">' + st[0] + '</span></div>' +
       '<div class="k8-sw-pair"><div><small>' + esc(x.tnA) + '</small><b>คาบ ' + x.pA + ' · ' + esc(x.snA || '-') + '</b></div><span aria-hidden="true">⇄</span><div><small>' + esc(x.tnB) + '</small><b>คาบ ' + x.pB + ' · ' + esc(x.snB || '-') + '</b></div></div>' +
-      '<div class="k8-sw-meta">ม.' + esc(x.grade) + ' · คาบ ' + x.pA + ' (' + esc(pTime(x.pA)) + ') ⇄ คาบ ' + x.pB + ' (' + esc(pTime(x.pB)) + ')' + (x.tB === u && x.status === 'pending' ? ' · <b>' + esc(x.tnA) + ' ขอสลับกับคุณ</b>' : '') + (x.note ? '<br>หมายเหตุ: ' + esc(x.note) : '') + (x.by && x.status !== 'pending' ? '<br>' + esc(ST[x.status][0]) + 'โดย ' + esc(x.by) : '') + '</div>' +
+      '<div class="k8-sw-meta">' + (String(x.gB || x.grade) === String(x.grade) && (x.dowB == null || Number(x.dowB) === Number(x.dow)) ? 'ม.' + esc(x.grade) + ' · คาบ ' + x.pA + ' (' + esc(pTime(x.pA)) + ') ⇄ คาบ ' + x.pB + ' (' + esc(pTime(x.pB)) + ')' : 'ม.' + esc(x.grade) + ' วัน' + DN[x.dow] + ' คาบ ' + x.pA + ' ⇄ ม.' + esc(x.gB || x.grade) + ' วัน' + DN[x.dowB == null ? x.dow : x.dowB] + ' คาบ ' + x.pB + (String(x.gB || x.grade) !== String(x.grade) ? ' · สอนแทนกัน' : '')) + (x.tB === u && x.status === 'pending' ? ' · <b>' + esc(x.tnA) + ' ขอสลับกับคุณ</b>' : '') + (x.note ? '<br>หมายเหตุ: ' + esc(x.note) : '') + (x.by && x.status !== 'pending' ? '<br>' + esc(ST[x.status][0]) + 'โดย ' + esc(x.by) : '') + '</div>' +
       ((canAns || canCancel) ? '<div class="k8-sw-acts">' + (canAns ? '<button type="button" class="is-ok" onclick="k8SwAns(\'' + x.id + '\',\'accept\')">ตอบรับ</button><button type="button" class="is-no" onclick="k8SwAns(\'' + x.id + '\',\'reject\')">ปฏิเสธ</button>' : '') + (canCancel && !canAns ? '<button type="button" class="is-no" onclick="k8SwAns(\'' + x.id + '\',\'cancel\')">ยกเลิก</button>' : '') + '</div>' : '') + '</article>';
   }
   // v18.04 · ขั้นตอนใหม่: ① แตะคาบในตารางสอนของฉัน → ② เลือกคาบ/วิชา/อาจารย์ที่จะสลับ → ③ เลือกวัน (วันเดียว/ช่วง) → ส่งคำขอ
@@ -9716,24 +9731,44 @@ window.k8HfMiss = function (slot) {
       days.map((d) => '<span class="k8-sw2-dh">' + DS[d] + '</span>' + P.map((p) => { const m = myAt(d, p); if (!m) return '<span class="k8-sw2-c is-empty"></span>'; const on = F.dow === d && Number(F.pA) === p && F.grade === m.g; return '<button type="button" class="k8-sw2-c' + (on ? ' is-on' : '') + '" style="--sc:' + ((window.k8SubjColor && window.k8SubjColor(m.e.sn)) || '#0369a1') + '" onclick="k8SwPickA(' + d + ',' + p + ',\'' + m.g + '\')" aria-pressed="' + on + '" aria-label="วัน' + DN[d] + ' คาบ ' + p + ' ' + esc(m.e.sn) + ' ม.' + m.g + '"><b>' + esc(m.e.sn) + '</b><small>ม.' + m.g + '</small></button>'; }).join('')).join('') + '</div>';
     if (F.dow == null || !F.pA) return h + '</section>';
     const A = myAt(F.dow, Number(F.pA));
-    // ②
-    const cands = P.filter((p) => p !== Number(F.pA)).map((p) => ({ p, e: cellsOf(F.grade, F.dow, p).find((x) => x.t && String(x.t) !== u && !(window.k8IsHalaqah && window.k8IsHalaqah(x))) })).filter((x) => x.e);
-    h += '<div class="k8-sw2-step"><span class="k8-sw2-n">2</span><div><b>สลับกับคาบไหน</b><small>คาบของอาจารย์ท่านอื่นที่สอน ม.' + F.grade + ' ในวัน' + DN[F.dow] + '</small></div></div>';
-    if (!cands.length) return h + '<p class="k8-asum-empty">วัน' + DN[F.dow] + ' ม.' + F.grade + ' ไม่มีคาบของอาจารย์ท่านอื่น · เลือกคาบอื่นในตาราง</p></section>';
-    if (!cands.some((x) => x.p === Number(F.pB))) F.pB = '';
-    h += '<ul class="k8-sw2-cands">' + cands.map((x) => { const on = Number(F.pB) === x.p; return '<li><button type="button" class="' + (on ? 'is-on' : '') + '" aria-pressed="' + on + '" onclick="k8SwPickB(' + x.p + ',\'' + esc(String(x.e.t)) + '\')"><span class="k8-sw2-cp">คาบ ' + x.p + '<small>' + esc(pTime(x.p)) + '</small></span><span class="k8-sw2-cw"><b>' + esc(x.e.sn) + '</b><small>' + esc(x.e.tn || x.e.t) + (x.e.r ? ' · ห้อง ' + esc(x.e.r) : '') + '</small></span><span class="k8-sw2-ck" aria-hidden="true">' + (on ? '✓' : '') + '</span></button></li>'; }).join('') + '</ul>';
-    if (!F.pB) return h + '</section>';
-    const B = cands.find((x) => x.p === Number(F.pB));
+    // ② v18.06 · ดูตารางสอนทุกชั้น · กรองตามอาจารย์ หรือดูทั้งหมด
+    const isH = (x) => window.k8IsHalaqah && window.k8IsHalaqah(x);
+    const tmap = {}; ['1', '2', '3', '4', '5', '6'].forEach((g) => days.forEach((d) => P.forEach((p) => cellsOf(g, d, p).forEach((e) => { if (e.t && String(e.t) !== u && !isH(e)) tmap[e.t] = e.tn || e.t; }))));
+    const tlist = Object.keys(tmap).sort((a, b) => String(tmap[a]).localeCompare(String(tmap[b]), 'th'));
+    if (F.ft && !tmap[F.ft]) F.ft = '';
+    const gHas = (g) => days.some((d) => P.some((p) => cellsOf(g, d, p).some((e) => e.t && String(e.t) !== u && !isH(e) && (!F.ft || String(e.t) === F.ft))));
+    const gList = ['1', '2', '3', '4', '5', '6'].filter(gHas);
+    if (!F.gB || gList.indexOf(F.gB) === -1) F.gB = gList.indexOf(F.grade) !== -1 ? F.grade : (gList[0] || '');
+    h += '<div class="k8-sw2-step"><span class="k8-sw2-n">2</span><div><b>สลับกับคาบไหน</b><small>ดูตารางสอนทุกชั้น · เลือกอาจารย์เพื่อกรองให้เร็วขึ้น</small></div></div>' +
+      '<label class="k8-sw-l"><span>อาจารย์</span><select onchange="k8SwFT(this.value)"><option value="">ทุกคน (' + tlist.length + ')</option>' + tlist.map((t) => '<option value="' + esc(t) + '"' + (F.ft === t ? ' selected' : '') + '>' + esc(tmap[t]) + '</option>').join('') + '</select></label>';
+    if (!gList.length) return h + '<p class="k8-asum-empty">ไม่พบคาบของอาจารย์ท่านนี้ในตารางสอน</p></section>';
+    h += '<div class="k8-na-chips">' + gList.map((g) => '<button type="button" aria-pressed="' + (F.gB === g) + '" onclick="k8SwGB(\'' + g + '\')">ม.' + g + (g === F.grade ? ' · ชั้นเดียวกัน' : '') + '</button>').join('') + '</div>';
+    h += '<div class="k8-sw2-grid" style="--np:' + P.length + '"><span></span>' + P.map((p) => '<span class="k8-sw2-ph">' + p + '<small>' + esc((cfg.periods[p - 1] || {}).start || '') + '</small></span>').join('') +
+      days.map((d) => '<span class="k8-sw2-dh">' + DS[d] + '</span>' + P.map((p) => {
+        const e = cellsOf(F.gB, d, p).find((x) => x.t && String(x.t) !== u && !isH(x) && (!F.ft || String(x.t) === F.ft));
+        const mineHere = cellsOf(F.gB, d, p).some((x) => String(x.t || '') === u);
+        if (!e) return '<span class="k8-sw2-c is-empty' + (mineHere ? ' is-mine' : '') + '">' + (mineHere ? '<small>ของฉัน</small>' : '') + '</span>';
+        const self = F.gB === F.grade && d === F.dow && p === Number(F.pA);
+        const on = F.dowB === d && Number(F.pB) === p;
+        return '<button type="button" class="k8-sw2-c is-b' + (on ? ' is-on' : '') + '"' + (self ? ' disabled' : '') + ' style="--sc:' + ((window.k8SubjColor && window.k8SubjColor(e.sn)) || '#6d28d9') + '" onclick="k8SwPickB2(' + d + ',' + p + ',\'' + esc(String(e.t)) + '\')" aria-pressed="' + on + '" aria-label="วัน' + DN[d] + ' คาบ ' + p + ' ' + esc(e.sn) + ' ' + esc(e.tn || e.t) + '"><b>' + esc(e.sn) + '</b><small>' + esc(String(e.tn || e.t).replace(/^(อาจารย์|อ\.)\s*/, '').split(' ')[0]) + '</small></button>';
+      }).join('')).join('') + '</div>';
+    const Bc = (F.pB && F.dowB != null) ? cellsOf(F.gB, F.dowB, Number(F.pB)).find((x) => String(x.t) === String(F.toTeacher)) : null;
+    if (!Bc) return h + '</section>';
+    const B = { p: Number(F.pB), e: Bc };
+    const same = F.gB === F.grade;
+    h += '<p class="k8-sw-hint">' + (same ? 'ชั้นเดียวกัน · นักเรียน ม.' + F.grade + ' จะเรียนสลับวิชากันตามวันที่เลือก' : 'ต่างชั้น · สอนแทนกัน: ' + esc(Bc.tn || Bc.t) + ' สอน ม.' + F.grade + ' คาบของคุณ · คุณสอน ม.' + F.gB + ' คาบของ ' + esc(Bc.tn || Bc.t)) + '</p>';
     // ③
-    const nd = nextDates(F.dow, 6);
-    if (!F.from || new Date(F.from + 'T00:00:00').getDay() !== F.dow) { F.from = nd[0]; F.to = nd[0]; }
+    const off = Number(F.dowB) - Number(F.dow); const tdy = ymd(new Date());
+    const addD2 = (ds, n) => { const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return ymd(d); };
+    const nd = nextDates(F.dow, 8).filter((d) => addD2(d, off) >= tdy).slice(0, 6);
+    if (!F.from || new Date(F.from + 'T00:00:00').getDay() !== F.dow || addD2(F.from, off) < tdy) { F.from = nd[0]; F.to = nd[0]; }
     h += '<div class="k8-sw2-step"><span class="k8-sw2-n">3</span><div><b>สลับวันไหน</b><small>วันเดียว หรือเป็นช่วง (ทุกวัน' + DN[F.dow] + 'ในช่วงนั้น) แล้วกลับเป็นตารางเดิม</small></div></div>' +
       '<div class="k8-sw-tabs k8-sw2-mode"><button type="button" aria-pressed="' + (F.mode !== 'range') + '" onclick="k8SwMode(\'one\')">วันเดียว</button><button type="button" aria-pressed="' + (F.mode === 'range') + '" onclick="k8SwMode(\'range\')">ช่วงวันที่</button></div>';
     if (F.mode !== 'range') h += '<div class="k8-sw2-days">' + nd.map((d) => '<button type="button" aria-pressed="' + (F.from === d) + '" onclick="k8SwDay(\'' + d + '\')">' + esc(dTh(d)) + '</button>').join('') + '</div>';
     else h += '<div class="k8-sw-dates"><label><span>ตั้งแต่วันที่</span><input type="date" value="' + F.from + '" min="' + ymd(new Date()) + '" onchange="k8SwF(\'from\', this.value)"></label><label><span>ถึงวันที่</span><input type="date" value="' + F.to + '" min="' + F.from + '" onchange="k8SwF(\'to\', this.value)"></label></div>';
     const n = (() => { let c = 0; const d = new Date(F.from + 'T00:00:00'), e = new Date(F.to + 'T00:00:00'); while (d <= e) { c++; d.setDate(d.getDate() + 7); } return c; })();
     // สรุป
-    h += '<div class="k8-sw2-sum"><small>สรุปคำขอ · ม.' + esc(F.grade) + ' · ' + esc(dTh(F.from)) + (F.to !== F.from ? ' – ' + esc(dTh(F.to)) + ' (' + n + ' ครั้ง)' : '') + '</small><div class="k8-sw-pair"><div><small>ฉัน · ' + esc(me().fullName || u) + '</small><b>คาบ ' + F.pA + ' · ' + esc(A ? A.e.sn : '') + '</b><small>' + esc(pTime(Number(F.pA))) + '</small></div><span aria-hidden="true">⇄</span><div><small>' + esc(B.e.tn || B.e.t) + '</small><b>คาบ ' + B.p + ' · ' + esc(B.e.sn) + '</b><small>' + esc(pTime(B.p)) + '</small></div></div></div>' +
+    h += '<div class="k8-sw2-sum"><small>สรุปคำขอ · ม.' + esc(F.grade) + ' · ' + esc(dTh(F.from)) + (F.to !== F.from ? ' – ' + esc(dTh(F.to)) + ' (' + n + ' ครั้ง)' : '') + '</small><div class="k8-sw-pair"><div><small>ฉัน · ' + esc(me().fullName || u) + '</small><b>คาบ ' + F.pA + ' · ' + esc(A ? A.e.sn : '') + '</b><small>ม.' + esc(F.grade) + ' · ' + esc(dTh(F.from)) + ' · ' + esc(pTime(Number(F.pA))) + '</small></div><span aria-hidden="true">⇄</span><div><small>' + esc(B.e.tn || B.e.t) + '</small><b>คาบ ' + B.p + ' · ' + esc(B.e.sn) + '</b><small>ม.' + esc(F.gB) + ' · ' + esc(dTh(addD2(F.from, off))) + ' · ' + esc(pTime(B.p)) + '</small></div></div></div>' +
       '<label class="k8-sw-l"><span>หมายเหตุถึงอาจารย์ (ไม่บังคับ)</span><input type="text" maxlength="160" value="' + esc(F.note || '') + '" oninput="k8SwF(\'note\', this.value, 1)" placeholder="เช่น ติดประชุมช่วงเช้า"></label>' +
       '<button type="button" class="k8-sw-go" ' + (W.busy ? 'disabled' : '') + ' onclick="k8SwSend()">' + (W.busy ? 'กำลังส่ง…' : 'ส่งคำขอถึง ' + esc(B.e.tn || B.e.t)) + '</button></section>';
     return h;
@@ -9745,7 +9780,7 @@ window.k8HfMiss = function (slot) {
     const out = W.list.filter((x) => x.tA === u).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     const all = W.list.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     const isAdm = /SUPER|ADMIN/i.test(String(me().role || '')) && !me().limited;
-    const tabs = [['in', 'คำขอถึงฉัน', inc.filter((x) => x.status === 'pending').length], ['out', 'คำขอของฉัน', 0], ['new', '＋ ขอสลับคาบ', 0]].concat(isAdm ? [['all', 'ทั้งหมด', 0]] : []);
+    const tabs = [['new', '＋ ขอสลับคาบ', 0], ['in', 'คำขอถึงฉัน', inc.filter((x) => x.status === 'pending').length], ['out', 'คำขอของฉัน', 0]].concat(isAdm ? [['all', 'ทั้งหมด', 0]] : []);
     let h = '<div class="k8-sw-tabs">' + tabs.map(([k, l, n]) => '<button type="button" aria-pressed="' + (W.tab === k) + '" onclick="k8SwTab(\'' + k + '\')">' + l + (n ? ' <em>' + n + '</em>' : '') + '</button>').join('') + '</div>';
     if (W.tab === 'new') h += W.data ? formHtml() : '<p class="k8-asum-empty">กำลังโหลดตารางสอน…</p>';
     else { const L = W.tab === 'in' ? inc : W.tab === 'out' ? out : all; h += L.length ? L.map(itemHtml).join('') : '<p class="k8-asum-empty">' + (W.tab === 'in' ? 'ยังไม่มีคำขอสลับคาบถึงคุณ' : 'ยังไม่มีรายการ') + '</p>'; }
@@ -9762,20 +9797,23 @@ window.k8HfMiss = function (slot) {
     let m = document.getElementById('k8SwModal');
     if (!m) { document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8SwModal" onclick="if(event.target===this)closeModal(\'k8SwModal\')"><div class="modal-dialog k8-sheet" role="dialog" aria-labelledby="k8SwT"><header class="k8-sheet-head"><div><h2 id="k8SwT">สลับคาบ</h2><span>สลับชั่วคราว วันเดียวหรือช่วงวันที่ · อีกฝ่ายต้องตอบรับก่อน · หลังวันสุดท้ายกลับเป็นตารางเดิม</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal(\'k8SwModal\')">✕</button></header><div class="k8-sheet-body" id="k8SwBody"></div></div></div>'); m = document.getElementById('k8SwModal'); }
     const u = String(me().username || '');
-    W.tab = W.list.some((x) => x.tB === u && x.status === 'pending') ? 'in' : W.tab;
+    W.tab = 'new'; if (!W.form) W.form = { dow: null, from: '', to: '', grade: '', pA: '', pB: '', dowB: null, gB: '', ft: '', toTeacher: '', note: '', mode: 'one' }; // v18.06 · เปิดที่ "ขอสลับคาบ" เสมอ
     openModal('k8SwModal'); render(); load(); ttData().then(render);
     clearInterval(W.poll); W.poll = setInterval(() => { const mm = document.getElementById('k8SwModal'); if (!mm || !mm.offsetParent && getComputedStyle(mm).position !== 'fixed' || (mm && getComputedStyle(mm).display === 'none')) { clearInterval(W.poll); return; } if (W.tab !== 'new') load(); }, 15000);
   };
-  window.k8SwTab = function (k) { W.tab = k; if (k === 'new' && !W.form) W.form = { dow: null, from: '', to: '', grade: '', pA: '', pB: '', toTeacher: '', note: '', mode: 'one' }; render(); };
-  window.k8SwPickA = function (d, p, g) { const F = W.form; const ch = F.dow !== d || Number(F.pA) !== p || F.grade !== g; F.dow = d; F.pA = p; F.grade = g; if (ch) { F.pB = ''; F.toTeacher = ''; F.from = ''; F.to = ''; } render(); };
+  window.k8SwTab = function (k) { W.tab = k; if (k === 'new' && !W.form) W.form = { dow: null, from: '', to: '', grade: '', pA: '', pB: '', dowB: null, gB: '', ft: '', toTeacher: '', note: '', mode: 'one' }; render(); };
+  window.k8SwPickA = function (d, p, g) { const F = W.form; const ch = F.dow !== d || Number(F.pA) !== p || F.grade !== g; F.dow = d; F.pA = p; F.grade = g; if (ch) { F.pB = ''; F.dowB = null; F.toTeacher = ''; F.from = ''; F.to = ''; F.gB = ''; } render(); };
   window.k8SwPickB = function (p, t) { W.form.pB = p; W.form.toTeacher = t; render(); };
+  window.k8SwPickB2 = function (d, p, t) { const F = W.form; F.dowB = d; F.pB = p; F.toTeacher = t; F.from = ''; F.to = ''; render(); };
+  window.k8SwFT = function (t) { const F = W.form; F.ft = t; F.pB = ''; F.dowB = null; F.toTeacher = ''; render(); };
+  window.k8SwGB = function (g) { const F = W.form; F.gB = g; F.pB = ''; F.dowB = null; F.toTeacher = ''; render(); };
   window.k8SwMode = function (m) { W.form.mode = m; if (m === 'one') W.form.to = W.form.from; render(); };
   window.k8SwDay = function (d) { W.form.from = d; W.form.to = d; render(); };
   window.k8SwF = function (k, v, soft) { const F = W.form; if ((k === 'from' || k === 'to') && F.dow != null && v) v = snapDow(v, F.dow, k === 'from' ? 1 : -1); F[k] = v; if (k === 'from' && F.to < v) F.to = v; if (k === 'to' && v < F.from) F.to = F.from; if (!soft) render(); };
   window.k8SwSend = async function () {
-    const F = W.form; if (!F.pA || !F.pB) return;
+    const F = W.form; if (!F.pA || !F.pB || F.dowB == null) return;
     W.busy = true; render();
-    let r = null; try { r = await gasApiCall('requestPeriodSwap', { data: { from: F.from, to: F.to, grade: F.grade, pA: F.pA, pB: F.pB, toTeacher: F.toTeacher, note: F.note } }, 30000); } catch (e) {}
+    let r = null; try { r = await gasApiCall('requestPeriodSwap', { data: { from: F.from, to: F.to, grade: F.grade, pA: F.pA, gradeB: F.gB, dowB: F.dowB, pB: F.pB, toTeacher: F.toTeacher, note: F.note } }, 30000); } catch (e) {}
     W.busy = false;
     if (r && r.success) { toast(r.message, 'success'); W.form = null; W.tab = 'out'; await load(); } else { toast((r && r.message) || 'ส่งคำขอไม่สำเร็จ', 'error'); render(); }
   };

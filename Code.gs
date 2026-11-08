@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.03'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.06'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3169,32 +3169,45 @@ function writeSwaps_(list) {
   saveSetting({ key: 'PeriodSwaps', value: JSON.stringify(list), description: 'สลับคาบระหว่างอาจารย์ (JSON)' });
   return list;
 }
-function swapTxt_(x) { const d = x.from === x.to ? leaveDateTh_(x.from) : leaveDateTh_(x.from) + ' ถึง ' + leaveDateTh_(x.to) + ' (ทุกวัน' + LEAVE_DAYN_[x.dow] + ')'; return d + ' · ม.' + x.grade + ' · คาบ ' + x.pA + ' ' + (x.snA || '') + ' ⇄ คาบ ' + x.pB + ' ' + (x.snB || ''); }
+// v18.06 · สลับคาบข้ามชั้น/ข้ามวันได้: คาบ A (ของผู้ขอ: gA/dowA) ⇄ คาบ B (อาจารย์อีกท่าน: gB/dowB)
+//   ชั้นเดียวกัน → นักเรียนเรียนสลับวิชากัน · ต่างชั้น → สอนแทนกัน (B สอนคาบ A, A สอนคาบ B)
+//   วันที่ from/to เป็นของคาบ A · คาบ B = วันเดียวกันในสัปดาห์เดียวกัน (เลื่อน off วัน)
+function swapNorm_(x) { const gB = x.gB || x.grade, dB = (x.dowB === 0 || x.dowB) ? Number(x.dowB) : Number(x.dow); return { gA: String(x.grade), dA: Number(x.dow), gB: String(gB), dB: dB, off: dB - Number(x.dow) }; }
+function swapAdd_(ds, n) { const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd'); }
+function swapTxt_(x) { const n = swapNorm_(x); const d = x.from === x.to ? leaveDateTh_(x.from) : leaveDateTh_(x.from) + ' ถึง ' + leaveDateTh_(x.to) + ' (ทุกวัน' + LEAVE_DAYN_[n.dA] + ')';
+  if (n.gA === n.gB && n.dA === n.dB) return d + ' · ม.' + x.grade + ' · คาบ ' + x.pA + ' ' + (x.snA || '') + ' ⇄ คาบ ' + x.pB + ' ' + (x.snB || '');
+  return d + ' · ม.' + n.gA + ' วัน' + LEAVE_DAYN_[n.dA] + ' คาบ ' + x.pA + ' ' + (x.snA || '') + ' ⇄ ม.' + n.gB + ' วัน' + LEAVE_DAYN_[n.dB] + ' คาบ ' + x.pB + ' ' + (x.snB || ''); }
 function requestPeriodSwap_(d, session) {
   d = d || {};
   const from = cleanVal(d.from), to = cleanVal(d.to || d.from);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) return { success: false, message: 'เลือกวันที่ให้ถูกต้อง' };
   const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
-  if (to < today) return { success: false, message: 'เลือกวันที่ที่ยังไม่ผ่านไป' };
   const g = cleanVal(d.grade).replace(/\D/g, ''); const pA = Number(d.pA), pB = Number(d.pB);
-  if (!/^[1-6]$/.test(g) || !(pA >= 1 && pA <= 12) || !(pB >= 1 && pB <= 12) || pA === pB) return { success: false, message: 'เลือกคาบของตัวเองและคาบที่ต้องการสลับ' };
   const dow = new Date(from + 'T00:00:00').getDay();
-  if (to !== from) { /* ช่วงวันที่: ใช้กับทุกวันเดียวกันในสัปดาห์ */ }
-  let tt = null; try { tt = JSON.parse((getSettings().data || {})['Timetable_M' + g] || 'null'); } catch (e) {}
-  const cell = function (p) { const v = tt && tt.cells ? tt.cells[dow + '-' + p] : null; return Array.isArray(v) ? v : v ? [v] : []; };
+  const gB = cleanVal(d.gradeB || d.grade).replace(/\D/g, '');
+  const dowB = (d.dowB === 0 || d.dowB) && String(d.dowB) !== '' ? Number(d.dowB) : dow;
+  if (!/^[1-6]$/.test(g) || !/^[1-6]$/.test(gB) || !(dowB >= 0 && dowB <= 6) || !(pA >= 1 && pA <= 12) || !(pB >= 1 && pB <= 12) || (g === gB && dow === dowB && pA === pB)) return { success: false, message: 'เลือกคาบของตัวเองและคาบที่ต้องการสลับ' };
+  const off = dowB - dow;
+  if (from < today || swapAdd_(from, off) < today) return { success: false, message: 'วันที่ของคาบใดคาบหนึ่งผ่านไปแล้ว · เลือกสัปดาห์ถัดไป' };
+  const ttOf = function (gg) { let tt = null; try { tt = JSON.parse((getSettings().data || {})['Timetable_M' + gg] || 'null'); } catch (e) {} return tt; };
+  const ttA = ttOf(g), ttB = gB === g ? ttA : ttOf(gB);
+  const cell = function (tt, dw, p) { const v = tt && tt.cells ? tt.cells[dw + '-' + p] : null; return Array.isArray(v) ? v : v ? [v] : []; };
   const me = String(session.userId);
-  const a = cell(pA).filter(function (e) { return String(e.t || '') === me; })[0];
+  const a = cell(ttA, dow, pA).filter(function (e) { return String(e.t || '') === me; })[0];
   if (!a && session.role !== 'admin') return { success: false, message: 'คาบ ' + pA + ' วัน' + LEAVE_DAYN_[dow] + ' ม.' + g + ' ไม่ใช่คาบที่คุณสอน' };
-  const b = cell(pB).filter(function (e) { return e.t && String(e.t) !== me && (!d.toTeacher || String(e.t) === cleanVal(d.toTeacher)); })[0];
-  if (!b) return { success: false, message: 'คาบ ' + pB + ' ไม่มีอาจารย์ท่านอื่นสอน ม.' + g + ' วัน' + LEAVE_DAYN_[dow] };
-  const item = { id: 'SW' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), grade: g, dow: dow, from: from, to: to,
+  const b = cell(ttB, dowB, pB).filter(function (e) { return e.t && String(e.t) !== me && (!d.toTeacher || String(e.t) === cleanVal(d.toTeacher)); })[0];
+  if (!b) return { success: false, message: 'คาบ ' + pB + ' วัน' + LEAVE_DAYN_[dowB] + ' ม.' + gB + ' ไม่มีอาจารย์ท่านอื่นสอน' };
+  const item = { id: 'SW' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), grade: g, dow: dow, gB: gB, dowB: dowB, from: from, to: to,
     pA: pA, sA: a ? a.s || '' : '', snA: a ? a.sn || '' : '', tA: me, tnA: cleanVal(session.name || me),
     pB: pB, sB: b.s || '', snB: b.sn || '', tB: String(b.t), tnB: cleanVal(b.tn || b.t),
     note: cleanVal(d.note || '').substring(0, 160), status: 'pending', createdAt: new Date().toISOString() };
+  const slotsOf = function (x) { const n = swapNorm_(x); return [[n.gA, n.dA, Number(x.pA), x.from, x.to], [n.gB, n.dB, Number(x.pB), swapAdd_(x.from, n.off), swapAdd_(x.to, n.off)]]; };
+  const mine = slotsOf(item);
   const lock = LockService.getScriptLock(); try { lock.waitLock(10000); } catch (e) { return { success: false, message: 'ระบบกำลังบันทึก ลองใหม่อีกครั้ง' }; }
   try {
     const list = readSwaps_();
-    if (list.some(function (x) { return x.status !== 'rejected' && x.status !== 'cancelled' && x.grade === g && x.dow === dow && !(x.to < from || x.from > to) && [x.pA, x.pB].some(function (p) { return p === pA || p === pB; }); })) return { success: false, message: 'คาบนี้มีคำขอสลับในช่วงวันที่นี้อยู่แล้ว' };
+    const clash = list.some(function (x) { if (x.status === 'rejected' || x.status === 'cancelled') return false; return slotsOf(x).some(function (s1) { return mine.some(function (s2) { return s1[0] === s2[0] && s1[1] === s2[1] && s1[2] === s2[2] && !(s1[4] < s2[3] || s1[3] > s2[4]); }); }); });
+    if (clash) return { success: false, message: 'คาบนี้มีคำขอสลับในช่วงวันที่นี้อยู่แล้ว' };
     list.push(item); writeSwaps_(list);
   } finally { lock.releaseLock(); }
   try { sendNotification_({ title: 'คำขอสลับคาบจาก ' + item.tnA, body: swapTxt_(item) + (item.note ? ' · ' + item.note : '') + ' · เปิดเมนู "สลับคาบ" เพื่อตอบรับ', audience: 'users', values: [item.tB], expires: item.to }, { userId: session.userId, name: item.tnA }); } catch (e) {}
@@ -3214,11 +3227,20 @@ function respondPeriodSwap_(d, session) {
   } finally { lock.releaseLock(); }
   const msg = it.status === 'approved' ? 'ตอบรับสลับคาบแล้ว' : it.status === 'rejected' ? 'ปฏิเสธการสลับคาบ' : 'ยกเลิกการสลับคาบแล้ว';
   try { sendNotification_({ title: msg + ' · ' + it.by, body: swapTxt_(it), audience: 'users', values: [it.tA, it.tB].filter(function (u) { return u !== session.userId; }), expires: it.to }, { userId: session.userId, name: it.by }); } catch (e) {}
-  if (it.status === 'approved') { try { sendNotification_({ title: 'สลับคาบ ม.' + it.grade + ' · ' + leaveDateTh_(it.from), body: 'คาบ ' + it.pA + ' เรียน' + (it.snB || '') + ' (' + it.tnB + ') · คาบ ' + it.pB + ' เรียน' + (it.snA || '') + ' (' + it.tnA + ')' + (it.from !== it.to ? ' · ถึง ' + leaveDateTh_(it.to) : ''), audience: 'grade', values: [it.grade], expires: it.to }, { userId: session.userId, name: it.by }); } catch (e) {} }
+  if (it.status === 'approved') {
+    const n = swapNorm_(it);
+    try {
+      if (n.gA === n.gB) sendNotification_({ title: 'สลับคาบ ม.' + it.grade + ' · ' + leaveDateTh_(it.from), body: swapTxt_(it) + ' · ' + (it.snB || '') + ' (' + it.tnB + ') ⇄ ' + (it.snA || '') + ' (' + it.tnA + ')', audience: 'grade', values: [it.grade], expires: swapAdd_(it.to, Math.max(0, n.off)) }, { userId: session.userId, name: it.by });
+      else {
+        sendNotification_({ title: 'สอนแทน ม.' + n.gA + ' · ' + leaveDateTh_(it.from), body: 'คาบ ' + it.pA + ' ' + (it.snA || '') + ' · ' + it.tnB + ' สอนแทน ' + it.tnA + (it.from !== it.to ? ' · ถึง ' + leaveDateTh_(it.to) : ''), audience: 'grade', values: [n.gA], expires: it.to }, { userId: session.userId, name: it.by });
+        sendNotification_({ title: 'สอนแทน ม.' + n.gB + ' · ' + leaveDateTh_(swapAdd_(it.from, n.off)), body: 'คาบ ' + it.pB + ' ' + (it.snB || '') + ' · ' + it.tnA + ' สอนแทน ' + it.tnB, audience: 'grade', values: [n.gB], expires: swapAdd_(it.to, n.off) }, { userId: session.userId, name: it.by });
+      }
+    } catch (e) {}
+  }
   return { success: true, item: it, message: msg };
 }
 function swapsFor_(session) { const L = readSwaps_(); if (session.role === 'admin') return L; const me = String(session.userId); return L.filter(function (x) { return x.tA === me || x.tB === me; }); }
-function activeSwaps_() { const cut = Utilities.formatDate(new Date(Date.now() - 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'); return readSwaps_().filter(function (x) { return x.status === 'approved' && x.to >= cut; }).map(function (x) { return { grade: x.grade, dow: x.dow, from: x.from, to: x.to, pA: x.pA, pB: x.pB, tA: x.tA, tB: x.tB }; }); }
+function activeSwaps_() { const cut = Utilities.formatDate(new Date(Date.now() - 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'); return readSwaps_().filter(function (x) { return x.status === 'approved' && x.to >= cut; }).map(function (x) { const n = swapNorm_(x); return { grade: x.grade, dow: x.dow, gB: n.gB, dowB: n.dB, from: x.from, to: x.to, pA: x.pA, pB: x.pB, tA: x.tA, tB: x.tB, tnA: x.tnA, tnB: x.tnB }; }); }
 function readLeaves_() {
   let v = []; try { v = JSON.parse((getSettings().data || {}).TeacherLeaves || '[]'); } catch (e) { v = []; }
   return Array.isArray(v) ? v : [];

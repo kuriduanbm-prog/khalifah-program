@@ -4766,3 +4766,7 @@ html.k8-xnarrow .hf-p5-t b { font-size: 11.5px; } html.k8-xnarrow .hf-p5-grid { 
 .k8-lb-bar button { flex: 1; min-height: 48px; border-radius: 14px; border: 0; background: #fff; color: #0c4a6e; font: inherit; font-weight: 600; font-size: 14.5px; cursor: pointer; }
 .k8-lb-bar button + button { background: #0369a1; color: #fff; }
 .k8-lb-bar button[hidden] { display: none; }
+/* v18.06 · สลับคาบ: ตารางทุกชั้น */
+.k8-sw2-c.is-b.is-on { border-color: #6d28d9; box-shadow: 0 0 0 2px #ddd6fe; }
+.k8-sw2-c:disabled { opacity: .45; cursor: not-allowed; }
+.k8-sw2-c.is-mine { background: repeating-linear-gradient(45deg, #f8fafc 0 6px, #eef2f7 6px 9px); } .k8-sw2-c.is-mine small { font-size: 10px; color: #94a3b8; }
