@@ -4901,3 +4901,4 @@ details.k8-tt-vis > summary b { font-weight: 600; color: #0f172a; } details.k8-t
 .k8-ov-tl .hf-head h2 { margin: 0; }
 .k8-ov-tl { padding: 6px 16px 12px; }
 .k8-ov-tl .hf-head h2 { margin: 12px 0 4px; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 17px; font-weight: 600; }
+.k8-en-ways.is-one { grid-template-columns: minmax(0, 1fr); }

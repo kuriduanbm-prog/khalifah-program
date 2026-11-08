@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.08'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.10'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3086,6 +3086,7 @@ function enrollSubject_(d, studentId) {
     const inTt = mineQ.some(function (t) { return (t.id && t.id === subj) || cleanVal(t.name) === cleanVal(nmQ); });
     if (inTt) { d.__warnTt = 'วิชา ' + nmQ + ' มีอยู่ในตารางเรียนของคุณแล้ว · บันทึกการลงทะเบียนให้อาจารย์แล้ว'; d.__code = codes[subj].code; d.__nm = nmQ; }
   } else {
+    return { success: false, message: 'ลงทะเบียนรายวิชาได้เฉพาะการสแกน QR Code หรือรหัสของอาจารย์' }; // v18.10 · ยกเลิก "ดึงจากระบบ"
     const want = (Array.isArray(d.subjectIds) ? d.subjectIds : [d.subjectId]).map(function (x) { return cleanVal(x); }).filter(Boolean);
     const mine = getMySubjects_(studentId).subjects;
     const okIds = {}; (mine ? getMyEnrollments_(studentId).available : []).forEach(function (x) { okIds[x.id] = 1; }); // v17.60 · ลงทะเบียนจากระบบได้เฉพาะวิชาในตารางเรียน

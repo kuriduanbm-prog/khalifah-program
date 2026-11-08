@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.10';
+  const APP_VERSION = '18.11';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8624,8 +8624,8 @@ window.k8HfBarOpen = function (id, date) {
         '<div class="k8-en-link"><input type="text" readonly value="' + esc(link) + '" onclick="this.select()" aria-label="ลิงก์ลงทะเบียน"><button type="button" onclick="k8EnCopy()">คัดลอก</button>' + (navigator.share ? '<button type="button" onclick="k8EnShare()">แชร์</button>' : '') + '</div>' +
         '<button type="button" class="k8-en-toggle' + (R.open ? '' : ' is-open') + '" onclick="k8EnToggle(' + (R.open ? 'false' : 'true') + ')">' + (R.open ? 'ปิดรับลงทะเบียน' : 'เปิดรับลงทะเบียนอีกครั้ง') + '</button></div></section>' +
         '<section class="k8-en-list"><div class="k8-en-lh"><b>ลงทะเบียนแล้ว ' + R.students.length + ' คน</b><button type="button" onclick="k8EnPick(\'' + esc(T.subj.id) + '\')">↻ รีเฟรช</button></div>' +
-        (function () { const gs = {}; R.students.forEach((x) => { const g = shortG(x.grade) || '-'; gs[g] = (gs[g] || 0) + 1; }); const ks = Object.keys(gs).sort(); if (ks.length < 2) return ''; return '<div class="k8-en-gf" role="group" aria-label="กรองตามชั้น"><button type="button" aria-pressed="' + !T.gf + '" onclick="k8EnGf(\'\')">ทุกชั้น ' + R.students.length + '</button>' + ks.map((g) => '<button type="button" aria-pressed="' + (T.gf === g) + '" onclick="k8EnGf(\'' + esc(g) + '\')">' + esc(g) + ' ' + gs[g] + '</button>').join('') + '</div><p class="k8-en-hint" style="margin:4px 0 8px">“ดึงจากระบบ” = นักเรียนกดลงทะเบียนวิชาในตารางเรียนของชั้นตัวเอง (ไม่ได้สแกน QR) · รหัสวิชาเดียวกันใช้ร่วมหลายชั้น จึงปรากฏรวมกันที่นี่</p>'; })() +
-        (R.students.length ? '<ul>' + R.students.filter((x) => !T.gf || (shortG(x.grade) || '-') === T.gf).map((x) => '<li><span><b>' + esc(x.fullName) + '</b><small>' + esc(shortG(x.grade)) + ' · ' + esc(x.studentId) + ' · ' + (x.via === 'qr' ? 'สแกน QR/ลิงก์' : 'ดึงจากระบบ (ตารางเรียนชั้นตัวเอง)') + (x.at ? ' · ' + esc(String(x.at).slice(0, 16)) : '') + '</small>' + (x.reason ? '<em class="k8-en-why">' + (x.reason === 'repeat' ? 'เรียนซ้ำชั้น' : 'แก้เกรด') + '</em>' : '') + '</span><button type="button" onclick="k8EnRemove(\'' + esc(x.studentId) + '\')" aria-label="นำออก">นำออก</button></li>').join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่มีนักเรียนลงทะเบียน · ให้นักเรียนสแกน QR หรือเปิดลิงก์</p>') + '</section>';
+        (function () { const gs = {}; R.students.forEach((x) => { const g = shortG(x.grade) || '-'; gs[g] = (gs[g] || 0) + 1; }); const ks = Object.keys(gs).sort(); if (ks.length < 2) return ''; return '<div class="k8-en-gf" role="group" aria-label="กรองตามชั้น"><button type="button" aria-pressed="' + !T.gf + '" onclick="k8EnGf(\'\')">ทุกชั้น ' + R.students.length + '</button>' + ks.map((g) => '<button type="button" aria-pressed="' + (T.gf === g) + '" onclick="k8EnGf(\'' + esc(g) + '\')">' + esc(g) + ' ' + gs[g] + '</button>').join('') + '</div><p class="k8-en-hint" style="margin:4px 0 8px">“ดึงจากระบบ” = ข้อมูลเก่าก่อนปิดฟีเจอร์นี้ (นักเรียนไม่ได้สแกน QR) · กด “นำออก” ได้ถ้าไม่ใช่นักเรียนของคุณ</p>'; })() +
+        (R.students.length ? '<ul>' + R.students.filter((x) => !T.gf || (shortG(x.grade) || '-') === T.gf).map((x) => '<li><span><b>' + esc(x.fullName) + '</b><small>' + esc(shortG(x.grade)) + ' · ' + esc(x.studentId) + ' · ' + (x.via === 'qr' ? 'สแกน QR/ลิงก์' : 'ดึงจากระบบ (ข้อมูลเก่า · ไม่ได้สแกน)') + (x.at ? ' · ' + esc(String(x.at).slice(0, 16)) : '') + '</small>' + (x.reason ? '<em class="k8-en-why">' + (x.reason === 'repeat' ? 'เรียนซ้ำชั้น' : 'แก้เกรด') + '</em>' : '') + '</span><button type="button" onclick="k8EnRemove(\'' + esc(x.studentId) + '\')" aria-label="นำออก">นำออก</button></li>').join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่มีนักเรียนลงทะเบียน · ให้นักเรียนสแกน QR หรือเปิดลิงก์</p>') + '</section>';
     }
     el.innerHTML = h;
     if (T.room) {
@@ -8673,7 +8673,7 @@ window.k8HfBarOpen = function (id, date) {
   function paintCard() {
     const sub = document.getElementById('k8EnCardSub'); if (!sub) return;
     const n = N.my && N.my.enrolled ? N.my.enrolled.length : 0;
-    sub.textContent = n ? 'ลงทะเบียนแล้ว ' + n + ' วิชา · แตะเพื่อเพิ่ม' : 'ดึงวิชาจากระบบ หรือสแกน QR ของอาจารย์';
+    sub.textContent = n ? 'ลงทะเบียนแล้ว ' + n + ' วิชา · แตะเพื่อเพิ่ม' : 'สแกน QR Code ของอาจารย์เพื่อลงทะเบียน';
   }
   function renderS() {
     const el = document.getElementById('k8EnStuBody'); if (!el) return;
@@ -8690,7 +8690,7 @@ window.k8HfBarOpen = function (id, date) {
           '<div class="k8-en-row"><button type="button" class="k8-en-alt" onclick="k8EnMode(\'home\')">กลับ</button><button type="button" class="k8-en-pri" onclick="k8EnSysSave()"' + (N.sel.size && !N.busy ? '' : ' disabled') + '>' + (N.busy ? 'กำลังลงทะเบียน…' : 'ลงทะเบียน ' + N.sel.size + ' วิชา') + '</button></div>'
           : '<p class="k8-li-empty">' + ((N.my.available || []).length ? 'ลงทะเบียนครบทุกวิชาจากระบบแล้ว' : 'ระบบยังไม่มีวิชาของชั้นคุณ · ใช้วิธีสแกน QR ของอาจารย์') + '</p><div class="k8-en-row"><button type="button" class="k8-en-alt" onclick="k8EnMode(\'home\')">กลับ</button></div>');
     } else {
-      h += '<div class="k8-en-ways"><button type="button" onclick="k8EnMode(\'system\')"><span>📚</span><b>ดึงจากระบบ</b><small>วิชาของชั้นคุณตามตารางเรียน</small></button><button type="button" onclick="k8EnMode(\'scan\')"><span>📷</span><b>สแกนเพื่อลงทะเบียน</b><small>สแกน QR Code ของอาจารย์</small></button></div>' +
+      h += '<div class="k8-en-ways is-one"><button type="button" onclick="k8EnMode(\'scan\')"><span>📷</span><b>สแกนเพื่อลงทะเบียน</b><small>สแกน QR Code ของอาจารย์</small></button></div>' +
         '<div class="k8-en-row k8-en-codein"><input type="text" id="k8EnCodeIn" maxlength="6" placeholder="หรือกรอกรหัส 6 ตัว" autocomplete="off" autocapitalize="characters" value="' + esc(N.pending || '') + '"><button type="button" class="k8-en-pri" onclick="k8EnCode()"' + (N.busy ? ' disabled' : '') + '>ลงทะเบียน</button></div>' +
         '<section class="k8-en-list"><div class="k8-en-lh"><b>วิชาที่ลงทะเบียนแล้ว ' + (N.my.enrolled || []).length + ' วิชา</b></div>' + ((N.my.enrolled || []).length ? '<ul>' + N.my.enrolled.map((x) => '<li><span><b>' + esc(x.name) + '</b><small>' + (x.teacher ? esc(x.teacher) + ' · ' : '') + (x.via === 'qr' ? 'สแกน/ลิงก์' : 'ดึงจากระบบ') + ' · ' + esc(String(x.at || '').slice(0, 10)) + '</small>' + (x.reason ? '<em class="k8-en-why">' + (x.reason === 'repeat' ? 'เรียนซ้ำชั้น' : 'แก้เกรด') + '</em>' : '') + '</span><span class="k8-en-ok">✓</span></li>').join('') + '</ul>' : '<p class="k8-li-empty">ยังไม่ได้ลงทะเบียนวิชาใด</p>') + '</section>';
     }
@@ -8726,7 +8726,7 @@ window.k8HfBarOpen = function (id, date) {
   }
   window.k8EnStuOpen = function (code) { if (!stu()) { toast('กรุณาเข้าสู่ระบบนักเรียนก่อน', 'warning'); return; } N.mode = 'home'; N.warn = ''; if (code) N.pending = code; renderS(); try { openModal('k8EnStuModal'); } catch (e) {} loadMine().then(() => { if (code) enrollCode(code); }); };
   window.k8EnStuClose = function () { stopScan(); N.mode = 'home'; try { closeModal('k8EnStuModal'); } catch (e) {} };
-  window.k8EnMode = function (m) { stopScan(); N.mode = m; N.warn = ''; if (m === 'system') { N.sel = new Set(((N.my && N.my.available) || []).filter((x) => !((N.my.enrolled || []).some((y) => String(y.subjectId) === String(x.id)))).map((x) => String(x.id))); } renderS(); };
+  window.k8EnMode = function (m) { if (m === 'system') m = 'home'; stopScan(); N.mode = m; N.warn = ''; if (m === 'system') { N.sel = new Set(((N.my && N.my.available) || []).filter((x) => !((N.my.enrolled || []).some((y) => String(y.subjectId) === String(x.id)))).map((x) => String(x.id))); } renderS(); };
   window.k8EnSel = function (id) { if (N.sel.has(id)) N.sel.delete(id); else N.sel.add(id); renderS(); };
   window.k8EnSysSave = async function () {
     if (!N.sel.size) return; N.busy = true; renderS();
