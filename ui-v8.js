@@ -748,7 +748,9 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   const GS_GR = ['1', '2', '3', '4', '5', '6'];
   const gsNum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
   const gsBare = (s) => (window.k8BareName ? window.k8BareName(s) : String(s.fullName || ''));
-  function gsMySubjects() {
+  function gsMySubjects(strict) {
+    // v18.33 · สรุปเกรด: อาจารย์ (รวมผู้บริหารที่สอน) เห็นเฉพาะวิชาที่ตัวเองสอน · แอดมินหลักเห็นทุกวิชา
+    if (strict && window.k8TeacherSubjects) { let a = null; try { a = currentAdmin; } catch (e) {} if (a && !(/SUPER/i.test(String(a.role || '')) || a.isOwner)) return window.k8TeacherSubjects(a, { strict: true }); }
     const sel = document.getElementById('teacherPortalSubjectSelect');
     const subs = (typeof appSubjects !== 'undefined' && Array.isArray(appSubjects)) ? appSubjects : [];
     return sel ? Array.from(sel.options).map((o) => subs.find((x) => String(x.id) === o.value) || { id: o.value, name: o.textContent }) : [];
@@ -762,12 +764,12 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const g = subjectGradeFor(s, subj).grade; return g == null ? null : g;
   }
   // ผูกวิชากับชั้นจากตารางสอน (ช่องของฉันก่อน) · นักเรียนที่มีเกรดแล้วนับรวมด้วยเสมอ
-  function gsModel() {
+  function gsModel(strict) {
     let tt = null; try { tt = JSON.parse(localStorage.getItem('khalifah_timetable') || 'null'); } catch (e) {}
     let me = {}; try { me = currentAdmin || {}; } catch (e) {}
     const un = String(me.username || '').toLowerCase(), fn = String(me.fullName || me.name || '').trim();
     const mine = (c) => (un && String(c.t || '').toLowerCase() === un) || (fn && String(c.tn || '').trim() === fn);
-    const pool = gsPool(); const subs = gsMySubjects();
+    const pool = gsPool(); const subs = gsMySubjects(strict);
     const cells = []; // {g, c}
     if (tt && tt.grades) GS_GR.forEach((g) => { const cs = (tt.grades[g] && tt.grades[g].cells) || {}; Object.keys(cs).forEach((k) => { (Array.isArray(cs[k]) ? cs[k] : [cs[k]]).forEach((c) => { if (c && c.s) cells.push({ g, c }); }); }); });
     const cls = {}; GS_GR.concat(['?']).forEach((g) => { cls[g] = { g, rows: [], studs: {} }; });
@@ -1221,7 +1223,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const lblG = (g) => (String(g).indexOf('x:') === 0 ? 'กลุ่มพิเศษ' : 'ม.' + g);
     const perDone = (x) => cloudAtt.some((r) => r && r.date === today && String(r.subjectCode || '') === String(x.c.s || '') && (String(x.g).indexOf('x:') === 0 || gOf[String(r.studentId).replace(/^0+/, '')] === String(x.g)));
     const perLeft = per.filter((x) => !perDone(x));
-    let gm = []; try { gm = window.k8GsModel ? window.k8GsModel() : []; } catch (e) { gm = []; }
+    let gm = []; try { gm = window.k8GsModel ? window.k8GsModel(true) : []; } catch (e) { gm = []; }
     const gLeft = [];
     gm.forEach((c) => c.rows.forEach((r) => { const miss = r.studs.length - r.done; if (r.studs.length && miss > 0 && c.g !== '?') gLeft.push({ name: r.subj.name, g: c.g, miss }); }));
     gLeft.sort((x, y) => y.miss - x.miss);
@@ -3472,7 +3474,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.32';
+  const APP_VERSION = '18.33';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6786,7 +6788,7 @@ window.k8RegBirthChange = function (v) {
       const sel = document.getElementById('teacherPortalSubjectSelect'); const sid = sel && sel.value;
       const st = (typeof allStudents !== 'undefined' && Array.isArray(allStudents)) ? allStudents.filter((s) => !/ลาออก|สำเร็จ/.test(String(s.status || ''))) : [];
       let left = 0; if (sid) st.forEach((s) => { const g = s.subjectGrades && s.subjectGrades[sid]; if (!(g !== undefined && g !== null && g !== '' && Number(g) > 0)) left++; });
-      let miss = 0; try { (window.k8GsModel ? window.k8GsModel() : []).forEach((c) => { if (c.g !== '?') c.rows.forEach((r) => { miss += Math.max(0, r.studs.length - r.done); }); }); } catch (e) { miss = sid ? left : 0; }
+      let miss = 0; try { (window.k8GsModel ? window.k8GsModel(true) : []).forEach((c) => { if (c.g !== '?') c.rows.forEach((r) => { miss += Math.max(0, r.studs.length - r.done); }); }); } catch (e) { miss = sid ? left : 0; }
       document.getElementById('k8ThGradeN').textContent = miss; // v17.62 · นับเฉพาะนักเรียนในชั้นที่สอนจริงตามตารางสอน
     } catch (e) {}
     const list = window.k8TtMineToday ? window.k8TtMineToday() : null;
@@ -9694,12 +9696,13 @@ window.k8HfMiss = function (slot) {
     return ids;
   }
   const adminish = (a) => !!a && (/SUPER|^admin$|EXEC/i.test(String(a.role || '')) || a.isOwner);
-  window.k8TeacherSubjects = function (a) {
+  window.k8TeacherSubjects = function (a, opt) {
     const subs = subsAll(); if (!a) return [];
-    if (adminish(a)) return subs.slice();
+    if (opt && opt.strict ? (/SUPER/i.test(String(a.role || '')) || a.isOwner) : adminish(a)) return subs.slice();
     const ids = explicitIds(a, subs);
     const un = String(a.username || '').toLowerCase(), fn = String(a.fullName || a.name || '').trim();
     const mineCells = cells().filter((x) => (un && String(x.c.t || '').toLowerCase() === un) || (fn && String(x.c.tn || '').trim() === fn));
+    if (opt && opt.strict && mineCells.length) return subs.filter((sub) => mineCells.some((x) => match(sub, x.c))); // v18.33 · สอนจริงตามตารางสอน
     return subs.filter((sub) => ids.indexOf(String(sub.id)) !== -1 || (sub.code && ids.indexOf(String(sub.code)) !== -1) || mineCells.some((x) => match(sub, x.c)));
   };
   // วิชาที่ยังไม่มีผู้สอน: ไม่มีอาจารย์ที่ถูกกำหนดวิชานี้ และในตารางสอนไม่มีช่องไหนระบุผู้สอนของวิชานี้
@@ -10114,12 +10117,12 @@ window.k8HfMiss = function (slot) {
   const PILL = { done: ['ครบแล้ว', 'is-done'], part: ['ยังไม่ครบ', 'is-part'], none: ['ยังไม่กรอก', 'is-none'] };
   function render() {
     const B = document.getElementById('k8Gs2B'); if (!B) return;
-    let model = []; try { model = window.k8GsModel ? window.k8GsModel() : []; } catch (e) { model = []; }
+    let model = []; try { model = window.k8GsModel ? window.k8GsModel(true) : []; } catch (e) { model = []; }
     const gOf = window.k8GsGradeOf || (() => null);
     const cols = []; model.forEach((c) => { if (c.g !== '?') c.rows.forEach((r) => cols.push({ g: c.g, subj: r.subj, set: new Set(r.studs.map((s) => cid(s.studentId))), done: r.done, tot: r.studs.length })); });
     const subjN = new Set(cols.map((x) => String(x.subj.id))).size;
     let tm = { term: 1, year: '' }; try { tm = window.k8Term(); } catch (e) {}
-    document.getElementById('k8Gs2S').textContent = (tm.term === 3 ? 'ภาคฤดูร้อน ' : 'ภาคเรียน ' + tm.term + '/') + tm.year + ' · วิชาที่ฉันสอน ' + subjN + ' วิชา';
+    document.getElementById('k8Gs2S').textContent = (tm.term === 3 ? 'ภาคฤดูร้อน ' : 'ภาคเรียน ' + tm.term + '/') + tm.year + ' · ' + ((() => { try { return /SUPER/i.test(String(currentAdmin.role || '')) || currentAdmin.isOwner; } catch (e) { return false; } })() ? 'ทุกวิชา (แอดมิน) ' : 'วิชาที่ฉันสอน ') + subjN + ' วิชา';
     const grades = Array.from(new Set(cols.map((x) => x.g))).sort();
     if (G.g !== 'ALL' && grades.indexOf(G.g) === -1) G.g = 'ALL';
     const C = cols.filter((x) => G.g === 'ALL' || x.g === G.g);
