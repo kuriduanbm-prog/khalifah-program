@@ -3474,7 +3474,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.33';
+  const APP_VERSION = '18.34';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6754,6 +6754,10 @@ window.k8RegBirthChange = function (v) {
     const head = ov.querySelector('.k8-th-head'), kpis = ov.querySelector('.k8-th-kpis'); if (!head || !kpis) return false;
     const hero = document.createElement('div'); hero.id = 'k8ThHero'; hero.className = 'k8-th-hero';
     ov.insertBefore(hero, head); hero.appendChild(head); hero.appendChild(kpis);
+    // v18.34 · โลโก้ KHALIFAH บนการ์ดอาจารย์ (ลายน้ำ + โลโก้เล็ก) เหมือนบัตรนักเรียน
+    try { const defs = document.getElementById('k8LogoCal'); const dsvg = defs && defs.closest('svg'); if (dsvg && dsvg.parentElement !== document.body) document.body.appendChild(dsvg); } catch (e) {}
+    hero.insertAdjacentHTML('afterbegin', '<svg class="k8-th-wm" viewBox="0 15 300 157" aria-hidden="true"><use href="#k8LogoCal"/></svg>');
+    head.insertAdjacentHTML('beforebegin', '<svg class="k8-th-logo" viewBox="0 15 300 157" role="img" aria-label="KHALIFAH PROGRAM"><use href="#k8LogoCal"/><use href="#k8LogoTxt"/></svg>');
     // ตัวเลขสรุป 3 ช่อง: มาเรียนวันนี้ (เดิม) · คาบสอนวันนี้ · เกรดค้าง
     kpis.insertAdjacentHTML('beforeend',
       '<button type="button" class="k8-th-kpi" onclick="k8TtOpen()"><span class="k8-th-kpi-v"><b id="k8ThPerN">-</b></span><span class="k8-th-kpi-l">คาบสอนวันนี้</span></button>' +
