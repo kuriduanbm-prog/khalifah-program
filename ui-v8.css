@@ -4981,3 +4981,4 @@ details.k8-tt-vis > summary b { font-weight: 600; color: #0f172a; } details.k8-t
 .k8-ac-go { min-height: 46px; padding: 0 22px; font-size: 14.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 14px; background: linear-gradient(135deg, #0369a1, #0c4a6e); box-shadow: 0 6px 16px rgba(3, 105, 161, .32); transition: transform .12s, box-shadow .12s; }
 .k8-ac-go:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(3, 105, 161, .38); background: linear-gradient(135deg, #075985, #0c4a6e); }
 .k8-ac-go:active { transform: translateY(0); }
+.k8-ac-more > div button small { display: block; font-size: 11px; color: #64748b; font-weight: 400; margin-top: 1px; } .k8-ac-more > div button.is-del small { color: #b91c1c; }

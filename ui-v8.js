@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.15';
+  const APP_VERSION = '18.16';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10757,7 +10757,7 @@ window.k8HfMiss = function (slot) {
   }
   function rowAct(x) {
     return '<button type="button" class="k8-ac-lk" onclick="openActivityQrModal(\'' + js(x.id) + '\')">QR</button><button type="button" class="k8-ac-lk" onclick="openActivityAttendeesModal(\'' + js(x.id) + '\')">รายชื่อ</button>' +
-      '<details class="k8-ac-more"><summary aria-label="เพิ่มเติม">⋯</summary><div><button type="button" onclick="openActivityAttendeesModal(\'' + js(x.id) + '\')">📡 มอนิเตอร์สด</button><button type="button" onclick="copyStaffMonitorLink(\'' + js(x.id) + '\')">🔗 แชร์ให้สตาฟ</button><button type="button" onclick="openStaffMonitorStandalone(\'' + js(x.id) + '\')">🖥 จอ Kiosk</button><button type="button" class="is-del" onclick="adminDeleteActivity(\'' + js(x.id) + '\')">🗑 ลบกิจกรรม</button></div></details>';
+      '<details class="k8-ac-more"><summary aria-label="เพิ่มเติม">⋯</summary><div><button type="button" onclick="copyStaffMonitorLink(\'' + js(x.id) + '\')">🔗 คัดลอกลิงก์ให้สตาฟ<small>สตาฟต้องล็อกอินบัญชีอาจารย์ก่อนเปิด</small></button><button type="button" onclick="openStaffMonitorStandalone(\'' + js(x.id) + '\')">🖥 เปิดจอ Kiosk<small>เต็มจอ ตัวใหญ่ สำหรับโปรเจกเตอร์</small></button><button type="button" class="is-del" onclick="adminDeleteActivity(\'' + js(x.id) + '\')">🗑 ลบกิจกรรม</button></div></details>';
   }
   function bar(x) { const p = x.tot ? Math.min(100, Math.round(x.n / x.tot * 100)) : 0; return '<div class="k8-ac-bar"><i><em style="width:' + p + '%;background:' + (p >= 80 ? '#15803d' : p > 0 ? '#d97706' : '#cbd5e1') + '"></em></i><small>' + x.n + '/' + (x.tot || '–') + '</small></div>'; }
   function audLbl(a) { try { return window.k8ActAudLabel ? window.k8ActAudLabel(a) : 'ทุกคน'; } catch (e) { return 'ทุกคน'; } }
@@ -10856,6 +10856,13 @@ window.k8HfMiss = function (slot) {
     m.style.top = (up ? r.top - h - 4 : r.bottom + 4) + 'px'; m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px'; m.style.visibility = '';
   }, true);
   window.addEventListener('scroll', () => { document.querySelectorAll('.k8-ac-more[open]').forEach((d) => d.removeAttribute('open')); }, true);
+  // v18.16 · ลิงก์สตาฟ: ข้อความให้ตรงกับความจริง (ต้องล็อกอินบุคลากรก่อนเปิด)
+  window.copyStaffMonitorLink = function (actId) {
+    let id = actId; if (!id) { const a0 = acts()[0]; id = a0 ? idOf(a0) : ''; } if (!id) { toast('ไม่พบกิจกรรม', 'warning'); return; }
+    const url = location.origin + location.pathname + '?monitor=' + encodeURIComponent(id);
+    const ok = () => toast('คัดลอกลิงก์แล้ว · ส่งให้สตาฟได้เลย (สตาฟต้องล็อกอินบัญชีอาจารย์บนเครื่องนั้นก่อน จึงจะเห็นรายชื่อ)', 'success');
+    try { navigator.clipboard.writeText(url).then(ok).catch(() => prompt('คัดลอกลิงก์มอนิเตอร์ (สตาฟต้องล็อกอินบัญชีอาจารย์ก่อนเปิด):', url)); } catch (e) { prompt('คัดลอกลิงก์มอนิเตอร์ (สตาฟต้องล็อกอินบัญชีอาจารย์ก่อนเปิด):', url); }
+  };
   const ot = window.renderAdminActivitiesTable;
   if (typeof ot === 'function') window.renderAdminActivitiesTable = function () { const r = ot.apply(this, arguments); try { paint(); } catch (e) {} return r; };
   const sa = window.switchAdminTab;
