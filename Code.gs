@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.06'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.07'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -181,7 +181,7 @@ const HEADERS = {
   ],
   NOTIFS: [
     'รหัสแจ้งเตือน', 'เวลาสร้าง', 'หัวข้อ', 'ข้อความ', 'ผู้รับ (ประเภท)', 'ผู้รับ (ค่า)', 'ความสำคัญ',
-    'ผู้ส่ง (username)', 'ชื่อผู้ส่ง', 'สถานะ', 'หมดอายุ'
+    'ผู้ส่ง (username)', 'ชื่อผู้ส่ง', 'สถานะ', 'หมดอายุ', 'รูปแบบการแสดง', 'ตำแหน่งป้าย'
   ],
   NOTIF_READS: ['รหัสแจ้งเตือน', 'ผู้ใช้', 'อ่านเมื่อ', 'ซ่อน'],
   HALAQAH: ['รหัสหะละเกาะฮฺ', 'ชื่อ', 'ช่วงเวลา', 'วัน (0=อา.)', 'เริ่ม', 'สิ้นสุด', 'ระดับชั้น', 'ผู้ดูแล (username)', 'ชื่อผู้ดูแล', 'สถานที่', 'สถานะ', 'สร้างเมื่อ', 'ผู้เรียน (รหัสนักเรียน)', 'วันที่จัด'],
@@ -6878,7 +6878,7 @@ function notifMatches_(n, session, gradeNum) {
 }
 function readNotifs_() {
   return sheetRows_(SHEETS.NOTIFS, HEADERS.NOTIFS.length).filter(function (r) { return cleanVal(r[0]); }).map(function (r) {
-    return { id: cleanVal(r[0]), createdAt: cleanVal(r[1]), title: cleanVal(r[2]), body: cleanVal(r[3]), audience: cleanVal(r[4]), audienceValue: cleanVal(r[5]), priority: cleanVal(r[6]) || 'normal', by: cleanVal(r[7]), byName: cleanVal(r[8]), status: cleanVal(r[9]) || 'active', expires: cleanVal(r[10]) };
+    return { id: cleanVal(r[0]), createdAt: cleanVal(r[1]), title: cleanVal(r[2]), body: cleanVal(r[3]), audience: cleanVal(r[4]), audienceValue: cleanVal(r[5]), priority: cleanVal(r[6]) || 'normal', by: cleanVal(r[7]), byName: cleanVal(r[8]), status: cleanVal(r[9]) || 'active', expires: cleanVal(r[10]), mode: cleanVal(r[11]) || 'bell', place: cleanVal(r[12]) };
   });
 }
 // v17.90 · อาจารย์ลาสอน (อนุมัติแล้ว) ที่กระทบนักเรียนคนนี้ · ใช้ทั้งในตารางเรียนและกระดิ่ง
@@ -6912,7 +6912,7 @@ function getMyNotifications_(session) {
   sheetRows_(SHEETS.NOTIF_READS, 4).forEach(function (r) { if (cleanVal(r[1]) === key) reads[cleanVal(r[0])] = { at: cleanVal(r[2]), hidden: cleanVal(r[3]) === '1' }; });
   const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
   const list = readNotifs_().filter(function (n) { return n.status === 'active' && (!n.expires || n.expires >= today) && notifMatches_(n, session, g); })
-    .map(function (n) { const rd = reads[n.id] || {}; return { id: n.id, createdAt: n.createdAt, title: n.title, body: n.body, priority: n.priority, byName: n.byName, read: !!rd.at, hidden: !!rd.hidden }; })
+    .map(function (n) { const rd = reads[n.id] || {}; return { id: n.id, createdAt: n.createdAt, title: n.title, body: n.body, priority: n.priority, byName: n.byName, mode: n.mode, place: n.place, expires: n.expires, read: !!rd.at, hidden: !!rd.hidden }; })
     .filter(function (n) { return !n.hidden; })
     .sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }).slice(0, 100);
   let classLeaves = [];
@@ -6962,7 +6962,10 @@ function sendNotification_(data, session) {
   const expires = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(data.expires)) ? cleanVal(data.expires) : '';
   ensureSchema();
   const id = 'NTF-' + Date.now();
-  const row = [id, Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), title, body, aud, vals.slice(0, 500).join(','), priority, session.userId, session.name || session.userId, 'active', expires];
+  // v18.07 · รูปแบบการแสดง: bell (กระดิ่ง) · full (ป้ายเต็มจอ ต้องกดรับทราบ) · banner (ป้ายในหน้า: home/card/all)
+  const mode = ['bell', 'full', 'banner'].indexOf(cleanVal(data.mode)) !== -1 ? cleanVal(data.mode) : 'bell';
+  const place = mode === 'banner' && ['home', 'card', 'all'].indexOf(cleanVal(data.place)) !== -1 ? cleanVal(data.place) : (mode === 'banner' ? 'home' : '');
+  const row = [id, Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), title, body, aud, vals.slice(0, 500).join(','), priority, session.userId, session.name || session.userId, 'active', expires, mode, place];
   getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(row);
   return { success: true, id: id, message: 'ส่งแจ้งเตือนแล้ว' };
 }
@@ -6970,9 +6973,13 @@ function listSentNotifications_() {
   const reads = {};
   sheetRows_(SHEETS.NOTIF_READS, 4).forEach(function (r) { const id = cleanVal(r[0]); reads[id] = (reads[id] || 0) + 1; });
   const students = sheetRows_(SHEETS.STUDENTS, 8).filter(function (r) { return cleanVal(r[0]) && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(r[7])); });
+  let staffN = 0; try { [SHEETS.ADMINS, SHEETS.TEACHERS].forEach(function (nm) { staffN += sheetRows_(nm, 2).filter(function (r) { return cleanVal(r[1]); }).length; }); } catch (e) {}
   const count = function (n) {
     const vals = String(n.audienceValue || '').split(',').filter(Boolean);
-    if (n.audience === 'all' || n.audience === 'everyone') return students.length;
+    if (n.audience === 'everyone') return students.length + staffN;
+    if (n.audience === 'staff') return staffN;
+    if (n.audience === 'users') return vals.length;
+    if (n.audience === 'all') return students.length;
     if (n.audience === 'grade') return students.filter(function (r) { const m = String(r[3]).match(/([1-6])/); return m && vals.indexOf(m[1]) !== -1; }).length;
     if (n.audience === 'students') return vals.length;
     return 0;

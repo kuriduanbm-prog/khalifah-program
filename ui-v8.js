@@ -3385,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.06';
+  const APP_VERSION = '18.07';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4268,7 +4268,7 @@ window.k8RegBirthChange = function (v) {
     try {
       const r = await api('getMyNotifications');
       if (r && r.success) {
-        N.list = r.notifications || []; N.pending = r.pendingPolicies || []; N.unread = r.unread || 0; N.loaded = true; N.at = Date.now(); if (s) { window.k8ClassLeaves = r.classLeaves || []; try { localStorage.setItem('k8_class_leaves', JSON.stringify(window.k8ClassLeaves)); } catch (e) {} try { if (window.k8TtRerender) window.k8TtRerender(); } catch (e) {} }
+        N.list = r.notifications || []; N.pending = r.pendingPolicies || []; N.unread = r.unread || 0; N.loaded = true; N.at = Date.now(); try { if (window.k8NotifModes) window.k8NotifModes(N.list); } catch (e) {} if (s) { window.k8ClassLeaves = r.classLeaves || []; try { localStorage.setItem('k8_class_leaves', JSON.stringify(window.k8ClassLeaves)); } catch (e) {} try { if (window.k8TtRerender) window.k8TtRerender(); } catch (e) {} }
         try { localStorage.setItem('k8_notif_cache_' + (s ? 'S' + norm(s.studentId) : 'U' + (a.username || '')), JSON.stringify({ list: N.list, pending: N.pending, unread: N.unread })); } catch (e) {}
       }
     } catch (e) {}
@@ -4313,7 +4313,7 @@ window.k8RegBirthChange = function (v) {
     const done = popped();
     let item = null;
     if (N.pending.length && done.indexOf('policy:' + N.pending[0].id + ':' + new Date().toDateString()) === -1) item = { kind: 'policy', id: 'policy:' + N.pending[0].id + ':' + new Date().toDateString(), title: N.pending[0].title, body: 'กรุณาอ่านและกดยินยอมข้อตกลงฉบับ ' + (N.pending[0].subtitle || '') + ' แจ้งเตือนนี้จะยังอยู่จนกว่าจะกดยินยอม', tag: 'ต้องอ่านและกดยินยอม' };
-    else { const n = N.list.find((x) => !x.read && done.indexOf(x.id) === -1); if (n) item = { kind: 'notif', id: n.id, nid: n.id, title: n.title, body: n.body, tag: n.priority === 'urgent' ? 'แจ้งเตือนสำคัญ' : 'แจ้งเตือนใหม่', urgent: n.priority === 'urgent' }; }
+    else { const n = N.list.find((x) => !x.read && done.indexOf(x.id) === -1 && x.mode !== 'full' && x.mode !== 'banner'); if (n) item = { kind: 'notif', id: n.id, nid: n.id, title: n.title, body: n.body, tag: n.priority === 'urgent' ? 'แจ้งเตือนสำคัญ' : 'แจ้งเตือนใหม่', urgent: n.priority === 'urgent' }; }
     if (!item) return;
     N.pop = item; markPopped(item.id);
     document.getElementById('k8PopTag').textContent = item.tag;
@@ -4414,25 +4414,61 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', () => { closePolicy(); });
 
   // ---------- แอดมิน: ส่งแจ้งเตือน + ติดตามการยินยอม ----------
-  const A = { title: '', body: '', priority: 'normal', audience: 'all', grades: new Set(), people: new Map(), q: '', expires: '', sent: [], summary: null, sending: false, ackGrade: 'ALL', showNot: true };
+  const A = { title: '', body: '', priority: 'normal', audience: 'all', grades: new Set(), people: new Map(), q: '', expires: '', sent: [], summary: null, sending: false, ackGrade: 'ALL', showNot: true, mode: 'bell', place: 'home', pv: 'phone' };
   const AUD = [['all', 'นักเรียนทุกคน'], ['grade', 'รายชั้นปี'], ['students', 'รายบุคคล'], ['staff', 'อาจารย์/บุคลากร'], ['everyone', 'ทุกคน (นักเรียน+บุคลากร)']];
   const audLabel = (n) => n.audience === 'grade' ? 'ชั้น ' + String(n.audienceValue).split(',').map((g) => 'ม.' + g).join(', ') : n.audience === 'students' ? 'นักเรียน ' + String(n.audienceValue).split(',').filter(Boolean).length + ' คน' : (AUD.find((x) => x[0] === n.audience) || [0, n.audience])[1];
   function allStu() { try { return (allStudents || []).filter((s) => s && s.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))); } catch (e) { return []; } }
+  function pvHtml() {
+    const T = esc(A.title || 'หัวข้อแจ้งเตือน'), B = esc((A.body || 'ข้อความที่ต้องการแจ้งจะแสดงตรงนี้').slice(0, 140));
+    const bell = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+    const urg = A.priority === 'urgent';
+    const dev = (who, pc) => {
+      let body = '';
+      const ban = '<div class="k8-pv-ban' + (urg ? ' is-urg' : '') + '"><b>📢 ' + T + '</b><small>' + B + '</small><small class="k8-pv-x">ปิด ✕</small></div>';
+      if (A.mode === 'banner' && A.place !== 'card') body += ban;
+      body += '<div class="k8-pv-blk is-a">' + (who === 'นักเรียน' ? '<i>บัตรนักเรียน</i>' : '<i>เมนูลัด</i>') + '</div>';
+      if (A.mode === 'banner' && A.place === 'card') body += who === 'นักเรียน' ? ban : '';
+      body += '<div class="k8-pv-blk"></div><div class="k8-pv-blk is-c"></div>';
+      let over = '';
+      if (A.mode === 'full') over = '<div class="k8-pv-ov"><div class="k8-pv-modal' + (urg ? ' is-urg' : '') + '"><span>📢</span><b>' + T + '</b><small>' + B + '</small><em>รับทราบ</em></div></div>';
+      if (A.mode === 'bell') over = '<div class="k8-pv-drop"><small>การแจ้งเตือน</small><div><span>🔔</span><p><b>' + T + '</b><small>' + B + '</small></p></div></div>';
+      return '<figure class="k8-pv-dev ' + (pc ? 'is-pc' : 'is-ph') + '"><div class="k8-pv-scr"><div class="k8-pv-top"><b>หน้าแรก · ' + who + '</b><span>' + bell + '<i>1</i></span></div><div class="k8-pv-body">' + body + '</div>' + over + '</div><figcaption>' + who + '</figcaption></figure>';
+    };
+    return A.pv === 'pc' ? dev('อาจารย์', true) + dev('นักเรียน', false) : dev('นักเรียน', false) + dev('อาจารย์', false);
+  }
+  window.k8NaPv = function () { const st = document.getElementById('k8NaStage'); if (st) st.innerHTML = pvHtml(); };
   function renderAdmin() {
     const root = document.getElementById('k8NotifAdmin'); if (!root) return;
     const q = A.q.trim().toLowerCase();
     const found = A.audience === 'students' && q ? allStu().filter((s) => String(s.fullName || '').toLowerCase().includes(q) || norm(s.studentId).includes(q.replace(/^0+/, ''))).slice(0, 8) : [];
     const sum = A.summary;
-    let h = '<section class="k8-bh-card"><h2 class="k8-bh-h">ส่งแจ้งเตือนใหม่</h2>' +
-      '<label class="k8-nf-f"><span>หัวข้อ *</span><input type="text" maxlength="120" id="k8NaTitle" value="' + esc(A.title) + '" placeholder="เช่น งดเรียนวันศุกร์นี้" oninput="k8NaSet(\'title\', this.value, 1)"></label>' +
-      '<label class="k8-nf-f"><span>ข้อความ</span><textarea rows="4" maxlength="2000" id="k8NaBody" placeholder="รายละเอียดที่ต้องการแจ้ง" oninput="k8NaSet(\'body\', this.value, 1)">' + esc(A.body) + '</textarea></label>' +
-      '<div class="k8-nf-f"><span>ความสำคัญ</span><div class="k8h-mini-seg">' + [['normal', 'ทั่วไป'], ['urgent', 'สำคัญ (เด้งเด่นชัด)']].map(([k, l]) => '<button type="button" aria-pressed="' + (A.priority === k) + '" onclick="k8NaSet(\'priority\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>' +
-      '<div class="k8-nf-f"><span>ส่งถึง</span><div class="k8-na-aud">' + AUD.map(([k, l]) => '<button type="button" aria-pressed="' + (A.audience === k) + '" onclick="k8NaSet(\'audience\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>';
-    if (A.audience === 'grade') h += '<div class="k8-na-chips">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" aria-pressed="' + A.grades.has(g) + '" onclick="k8NaGrade(\'' + g + '\')">ม.' + g + ' <small>' + allStu().filter((s) => String(s.grade || '').indexOf(g) !== -1).length + ' คน</small></button>').join('') + '</div>';
-    if (A.audience === 'students') h += '<div class="k8-na-people">' + Array.from(A.people.entries()).map(([id, nm]) => '<span>' + esc(nm) + '<button type="button" aria-label="เอาออก" onclick="k8NaPerson(\'' + js(id) + '\')">✕</button></span>').join('') + '</div><input type="search" class="k8-docs-q" id="k8NaQ" placeholder="พิมพ์ชื่อหรือรหัสนักเรียนเพื่อเพิ่ม" value="' + esc(A.q) + '" oninput="k8NaQ(this)" autocomplete="off">' + (found.length ? '<ul class="k8-na-found">' + found.map((s) => '<li><button type="button" onclick="k8NaPerson(\'' + js(s.studentId) + '\',\'' + js(s.fullName) + '\')"><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(s.studentId) + '</small><span>' + (A.people.has(String(s.studentId)) ? '✓' : '+ เพิ่ม') + '</span></button></li>').join('') + '</ul>' : '');
-    h += '<label class="k8-nf-f"><span>แสดงถึงวันที่ (ไม่บังคับ)</span><input type="date" value="' + esc(A.expires) + '" onchange="k8NaSet(\'expires\', this.value)"></label>' +
-      '<button type="button" class="k8-bh-go k8-term-save" ' + (A.sending ? 'disabled' : '') + ' onclick="k8NaSend()">' + (A.sending ? 'กำลังส่ง…' : 'ส่งแจ้งเตือน') + '</button></section>';
-    h += '<section class="k8-bh-card"><h2 class="k8-bh-h">การยินยอมกฎระเบียบหอพัก</h2>';
+    // v18.07 · แบบ NA2: ที่ส่งแล้ว | เขียนแจ้งเตือน | ตัวอย่าง (นักเรียน + อาจารย์) · 3 โหมดการแสดง
+    let staffN = 0; try { staffN = (subAdmins || []).filter((x) => x && x.username).length; } catch (e) {}
+    const stuN = A.audience === 'grade' ? allStu().filter((s2) => Array.from(A.grades).some((g) => String(s2.grade || '').indexOf(g) !== -1)).length : A.audience === 'students' ? A.people.size : A.audience === 'staff' ? 0 : allStu().length;
+    const recN = stuN + (A.audience === 'staff' || A.audience === 'everyone' ? staffN : 0);
+    const MODES = [['bell', 'กระดิ่ง', 'เงียบ ๆ · เห็นเมื่อเปิดกระดิ่ง', '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/>'], ['full', 'ป้ายเต็มจอ', 'เด้งทับหน้าจอ ต้องกดรับทราบ', '<rect x="3" y="3" width="18" height="18" rx="3"/><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" opacity=".35"/>'], ['banner', 'ป้ายในหน้า', 'แถบประกาศค้างในหน้าแรก', '<rect x="3" y="3" width="18" height="18" rx="3"/><rect x="5.5" y="6" width="13" height="4" rx="1" fill="currentColor" opacity=".45"/>']];
+    const ico = (m) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (MODES.find((x) => x[0] === m) || MODES[0])[3] + '</svg>';
+    const PLACES = [['home', 'บนสุดของหน้าแรก'], ['card', 'ใต้บัตรนักเรียน'], ['all', 'ทุกหน้า']];
+    // ① ที่ส่งแล้ว
+    let sentH = '<section class="k8-bh-card k8-na2-sent"><div class="k8-na2-hd"><h2 class="k8-bh-h">ที่ส่งแล้ว</h2><span>' + A.sent.length + '</span></div><ul class="k8-na2-list">' + (A.sent.length ? A.sent.map((n) => { const md = n.mode || 'bell'; const lbl = (MODES.find((x) => x[0] === md) || MODES[0])[1]; return '<li><span class="k8-na2-li is-' + md + '">' + ico(md) + '</span><div><b>' + (n.priority === 'urgent' ? '<em class="k8-nt-tag">สำคัญ</em> ' : '') + esc(n.title) + '</b><small>' + esc(lbl) + ' · ' + esc(audLabel(n)) + ' · ' + esc(ago(n.createdAt)) + (n.expires ? ' · ถึง ' + esc(n.expires) : '') + '</small>' + (n.recipients ? '<i class="k8-na2-bar"><em style="width:' + Math.min(100, Math.round(Math.min(n.reads, n.recipients) / n.recipients * 100)) + '%"></em></i><small>อ่านแล้ว ' + Math.min(n.reads, n.recipients) + '/' + n.recipients + ' คน</small>' : '<small>อ่านแล้ว ' + n.reads + ' คน</small>') + '</div><button type="button" class="k8-na2-del" aria-label="ลบ ' + esc(n.title) + '" onclick="k8NaDel(\'' + js(n.id) + '\')">✕</button></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีแจ้งเตือนที่ส่ง</li>') + '</ul></section>';
+    // ② เขียน
+    let cmp = '<section class="k8-bh-card k8-na2-cmp"><h2 class="k8-bh-h">เขียนแจ้งเตือน</h2>' +
+      '<label class="k8-nf-f"><span>หัวข้อ *</span><input type="text" maxlength="120" id="k8NaTitle" value="' + esc(A.title) + '" placeholder="เช่น งดเรียนวันศุกร์นี้" oninput="k8NaSet(\'title\', this.value, 1); k8NaPv()"></label>' +
+      '<label class="k8-nf-f"><span>ข้อความ</span><textarea rows="3" maxlength="2000" id="k8NaBody" placeholder="รายละเอียดที่ต้องการแจ้ง" oninput="k8NaSet(\'body\', this.value, 1); k8NaPv()">' + esc(A.body) + '</textarea></label>' +
+      '<div class="k8-nf-f"><span>ส่งถึง · ประมาณ ' + recN + ' คน</span><div class="k8-na-aud">' + AUD.map(([k, l]) => '<button type="button" aria-pressed="' + (A.audience === k) + '" onclick="k8NaSet(\'audience\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>';
+    if (A.audience === 'grade') cmp += '<div class="k8-na-chips">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" aria-pressed="' + A.grades.has(g) + '" onclick="k8NaGrade(\'' + g + '\')">ม.' + g + ' <small>' + allStu().filter((s2) => String(s2.grade || '').indexOf(g) !== -1).length + ' คน</small></button>').join('') + '</div>';
+    if (A.audience === 'students') cmp += '<div class="k8-na-people">' + Array.from(A.people.entries()).map(([id, nm]) => '<span>' + esc(nm) + '<button type="button" aria-label="เอาออก" onclick="k8NaPerson(\'' + js(id) + '\')">✕</button></span>').join('') + '</div><input type="search" class="k8-docs-q" id="k8NaQ" placeholder="พิมพ์ชื่อหรือรหัสนักเรียนเพื่อเพิ่ม" value="' + esc(A.q) + '" oninput="k8NaQ(this)" autocomplete="off">' + (found.length ? '<ul class="k8-na-found">' + found.map((s2) => '<li><button type="button" onclick="k8NaPerson(\'' + js(s2.studentId) + '\',\'' + js(s2.fullName) + '\')"><b>' + esc(s2.fullName) + '</b><small>' + esc(shortG(s2.grade)) + ' · ' + esc(s2.studentId) + '</small><span>' + (A.people.has(String(s2.studentId)) ? '✓' : '+ เพิ่ม') + '</span></button></li>').join('') + '</ul>' : '');
+    cmp += '<div class="k8-nf-f"><span>แสดงแบบ</span><div class="k8-na2-modes">' + MODES.map(([k, l, d]) => '<button type="button" aria-pressed="' + (A.mode === k) + '" onclick="k8NaSet(\'mode\',\'' + k + '\')">' + ico(k) + '<span><b>' + l + '</b><small>' + d + '</small></span></button>').join('') + '</div></div>';
+    if (A.mode === 'banner') cmp += '<div class="k8-nf-f"><span>ตำแหน่งป้าย</span><div class="k8-na-chips">' + PLACES.map(([k, l]) => '<button type="button" aria-pressed="' + (A.place === k) + '" onclick="k8NaSet(\'place\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>';
+    cmp += '<div class="k8-na2-opts"><button type="button" class="k8-na2-imp" aria-pressed="' + (A.priority === 'urgent') + '" onclick="k8NaSet(\'priority\', \'' + (A.priority === 'urgent' ? 'normal' : 'urgent') + '\')">⚑ สำคัญ</button><label class="k8-na2-exp"><span>📅 แสดงถึง</span><input type="date" value="' + esc(A.expires) + '" onchange="k8NaSet(\'expires\', this.value)"></label></div>' +
+      (A.mode !== 'bell' && !A.expires ? '<p class="k8-na2-tip">แนะนำให้กำหนดวันสิ้นสุด · ป้าย' + (A.mode === 'full' ? 'เต็มจอจะเด้งจนกว่าจะกดรับทราบ' : 'ในหน้าจะแสดงจนถึงวันนั้น') + '</p>' : '') +
+      '<button type="button" class="k8-bh-go k8-term-save" ' + (A.sending ? 'disabled' : '') + ' onclick="k8NaSend()">' + (A.sending ? 'กำลังส่ง…' : 'ส่งแจ้งเตือนถึง ' + recN + ' คน') + '</button></section>';
+    // ③ ตัวอย่าง
+    const ML = (MODES.find((x) => x[0] === A.mode) || MODES[0])[1];
+    let pv = '<section class="k8-bh-card k8-na2-pv"><div class="k8-na2-hd"><h2 class="k8-bh-h">ตัวอย่าง · ' + ML + '</h2><div class="k8h-mini-seg">' + [['phone', 'มือถือ'], ['pc', 'คอม']].map(([k, l]) => '<button type="button" aria-pressed="' + (A.pv === k) + '" onclick="k8NaSet(\'pv\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div><div class="k8-na2-stage" id="k8NaStage">' + pvHtml() + '</div><p class="k8-na2-note">' +
+      (A.mode === 'full' ? 'ผู้รับต้องกด "รับทราบ" ก่อนใช้งานต่อ · เหมาะกับประกาศสำคัญ/ฉุกเฉิน' : A.mode === 'banner' ? 'แถบประกาศค้างอยู่' + (PLACES.find((x) => x[0] === A.place) || PLACES[0])[1] + 'จนถึงวันสิ้นสุด · ผู้รับกด ✕ ปิดได้ และยังอยู่ในกระดิ่ง' : 'เข้ากระดิ่งแจ้งเตือนแบบเงียบ ๆ · ตัวเลขสีแดงบอกว่ามีข้อความใหม่') + '</p></section>';
+    let h = '<div class="k8-na2">' + sentH + cmp + pv + '</div>';
+    h += '<section class="k8-bh-card k8-na2-ack" id="k8NaAck"><h2 class="k8-bh-h">การยินยอมกฎระเบียบหอพัก</h2>';
     if (!sum) h += '<p class="k8-bh-intro">กำลังโหลด…</p>';
     else {
       const pct = sum.total ? Math.round(sum.acknowledged / sum.total * 100) : 0;
@@ -4442,7 +4478,7 @@ window.k8RegBirthChange = function (v) {
         '<ul class="k8-na-acks">' + (list.length ? list.slice(0, 300).map((s) => '<li><b>' + esc(s.fullName) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(s.studentId) + (s.ackAt ? ' · ' + esc(s.ackAt.slice(0, 16)) : '') + '</small></li>').join('') : '<li class="k8-bh-empty">' + (A.showNot ? 'ทุกคนยินยอมแล้ว' : 'ยังไม่มีผู้ยินยอม') + '</li>') + '</ul>' +
         (A.showNot && list.length ? '<button type="button" class="k8-bh-link" onclick="k8NaRemind()">ส่งแจ้งเตือนถึงคนที่ยังไม่ยินยอม (' + list.length + ' คน)</button>' : '');
     }
-    h += '</section><section class="k8-bh-card"><h2 class="k8-bh-h">แจ้งเตือนที่ส่งแล้ว</h2><ul class="k8-na-sent">' + (A.sent.length ? A.sent.map((n) => '<li><div><b>' + (n.priority === 'urgent' ? '<span class="k8-nt-tag">สำคัญ</span> ' : '') + esc(n.title) + '</b><small>' + esc(audLabel(n)) + ' · ' + esc(ago(n.createdAt)) + (n.expires ? ' · ถึง ' + esc(n.expires) : '') + '</small></div><span class="k8-na-read">' + (n.recipients ? 'อ่าน ' + Math.min(n.reads, n.recipients) + '/' + n.recipients : 'อ่าน ' + n.reads) + '</span><button type="button" class="k8-bh-undo" onclick="k8NaDel(\'' + js(n.id) + '\')">ลบ</button></li>').join('') : '<li class="k8-bh-empty">ยังไม่มีแจ้งเตือนที่ส่ง</li>') + '</ul></section>';
+    h += '</section>';
     root.innerHTML = h;
   }
   async function loadAdmin() {
@@ -4468,7 +4504,7 @@ window.k8RegBirthChange = function (v) {
     if (A.audience === 'students' && !values.length) { toast('เพิ่มนักเรียนอย่างน้อย 1 คน', 'warning'); return; }
     A.sending = true; renderAdmin();
     try {
-      const r = await api('sendNotification', { data: { title, body: A.body, priority: A.priority, audience: A.audience, values, expires: A.expires } });
+      const r = await api('sendNotification', { data: { title, body: A.body, priority: A.priority, audience: A.audience, values, expires: A.expires, mode: A.mode, place: A.place } });
       if (!r || !r.success) throw new Error((r && r.message) || 'ส่งไม่สำเร็จ');
       toast('ส่งแจ้งเตือนแล้ว', 'success'); A.title = ''; A.body = ''; A.people = new Map(); A.q = ''; A.expires = '';
       await loadAdmin();
@@ -10461,4 +10497,56 @@ window.k8HfMiss = function (slot) {
   window.k8LbDlAll = function () { all(L.urls, L.title); };
   window.k8DlAll = all;
   window.addEventListener('popstate', () => { const el = document.getElementById('k8Lb'); if (el && !el.hidden) el.hidden = true; });
+})();
+
+/* ---------- v18.07 · แจ้งเตือนแบบป้ายเต็มจอ (ต้องกดรับทราบ) และป้ายในหน้า ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const DK = 'k8_ban_closed';
+  let LIST = [], queue = [];
+  const closed = () => { try { return JSON.parse(localStorage.getItem(DK) || '[]'); } catch (e) { return []; } };
+  const pv = () => !!(window.k8IsPreview && window.k8IsPreview());
+  const isStu = () => { try { return !!currentStudent; } catch (e) { return false; } };
+  const mark = (id, hide) => { try { gasApiCall('markNotificationRead', { data: { ids: [id], hide: !!hide } }).catch(() => {}); } catch (e) {} };
+  function showFull() {
+    if (pv()) return;
+    const el = document.getElementById('k8Full');
+    if (el && !el.hidden) return;
+    const n = queue.shift(); if (!n) return;
+    if (!el) { document.body.insertAdjacentHTML('beforeend', '<div class="k8-full" id="k8Full" role="alertdialog" aria-modal="true" aria-labelledby="k8FullT" hidden><div class="k8-full-card"><span class="k8-full-ic" aria-hidden="true">📢</span><small id="k8FullTag"></small><h2 id="k8FullT"></h2><p id="k8FullB"></p><small id="k8FullBy"></small><button type="button" id="k8FullOk">รับทราบ</button></div></div>'); }
+    const f = document.getElementById('k8Full');
+    f.classList.toggle('is-urg', n.priority === 'urgent');
+    document.getElementById('k8FullTag').textContent = n.priority === 'urgent' ? 'ประกาศสำคัญ' : 'ประกาศ';
+    document.getElementById('k8FullT').textContent = n.title;
+    document.getElementById('k8FullB').textContent = n.body || '';
+    document.getElementById('k8FullBy').textContent = (n.byName || 'แอดมิน') + ' · ' + String(n.createdAt || '').slice(0, 16);
+    document.getElementById('k8FullOk').onclick = () => { f.hidden = true; n.read = true; mark(n.id); try { window.k8NotifReload && setTimeout(window.k8NotifReload, 400); } catch (e) {} setTimeout(showFull, 300); };
+    f.hidden = false; setTimeout(() => { try { document.getElementById('k8FullOk').focus(); } catch (e) {} }, 50);
+  }
+  function paintBanners() {
+    document.querySelectorAll('.k8-ban').forEach((b) => b.remove());
+    if (pv()) return;
+    const cl = closed();
+    const L = LIST.filter((n) => n.mode === 'banner' && cl.indexOf(n.id) === -1).slice(0, 3);
+    if (!L.length) return;
+    const html = (n) => '<div class="k8-ban' + (n.priority === 'urgent' ? ' is-urg' : '') + '" role="status" data-id="' + esc(n.id) + '"><span class="k8-ban-ic" aria-hidden="true">📢</span><div><b>' + esc(n.title) + '</b>' + (n.body ? '<p>' + esc(n.body) + '</p>' : '') + '<small>' + esc(n.byName || 'แอดมิน') + (n.expires ? ' · ถึง ' + esc(n.expires) : '') + '</small></div><button type="button" aria-label="ปิดประกาศ" onclick="k8BanClose(\'' + esc(n.id) + '\')">✕</button></div>';
+    L.forEach((n) => {
+      let host = null, where = 'afterbegin';
+      if (n.place === 'all') { host = document.querySelector('.view-section.active'); }
+      else if (isStu()) { if (n.place === 'card') { host = document.getElementById('hfBeh') || document.querySelector('#homeF .hf-lg1'); where = 'beforebegin'; if (host && host.id !== 'hfBeh') where = 'afterend'; } else { host = document.getElementById('k8HomeTop') || document.getElementById('homeF'); where = host && host.id === 'k8HomeTop' ? 'afterend' : 'afterbegin'; } }
+      else { host = document.querySelector('#teacher-tab-overview') || document.querySelector('#admin-tab-overview'); }
+      if (host) host.insertAdjacentHTML(where, html(n));
+    });
+  }
+  window.k8BanClose = function (id) { const c = closed(); if (c.indexOf(id) === -1) c.push(id); try { localStorage.setItem(DK, JSON.stringify(c.slice(-200))); } catch (e) {} mark(id); paintBanners(); };
+  window.k8NotifModes = function (list) {
+    LIST = list || [];
+    const shown = queue.map((x) => x.id); const cur = document.getElementById('k8Full');
+    LIST.filter((n) => n.mode === 'full' && !n.read && shown.indexOf(n.id) === -1).forEach((n) => queue.push(n));
+    paintBanners();
+    if (!cur || cur.hidden) setTimeout(showFull, 600);
+  };
+  const sv = window.switchView; if (typeof sv === 'function') window.switchView = function () { const r = sv.apply(this, arguments); setTimeout(paintBanners, 80); return r; };
+  const st = window.switchTeacherTab; if (typeof st === 'function') window.switchTeacherTab = function () { const r = st.apply(this, arguments); setTimeout(paintBanners, 80); return r; };
+  const rh = window.renderHomeF; if (typeof rh === 'function') window.renderHomeF = function () { const r = rh.apply(this, arguments); setTimeout(paintBanners, 0); return r; };
 })();
