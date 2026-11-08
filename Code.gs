@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.10'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.19'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -6956,9 +6956,29 @@ function notifMatches_(n, session, gradeNum) {
   if (type === 'users') return vals.some(function (v) { return String(v).toLowerCase() === String(session.userId).toLowerCase(); });
   return type === 'staff' || type === 'everyone';
 }
+// v18.19 · วันที่จากชีตอาจกลายเป็น Date object → แปลงเป็น yyyy-MM-dd ก่อนเทียบ (เดิมเทียบสตริง "Sun Nov…" ทำให้ประกาศไม่หมดอายุ)
+function notifYmd_(v) {
+  if (v instanceof Date && !isNaN(v)) return Utilities.formatDate(v, 'Asia/Bangkok', 'yyyy-MM-dd');
+  const t = cleanVal(v); if (!t || /^\d{4}-\d{2}-\d{2}/.test(t)) return t.substring(0, 10);
+  const d = new Date(t.replace(/\s*\(.*\)\s*$/, '')); return isNaN(d) ? t : Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd');
+}
+function notifTs_(v) { if (v instanceof Date && !isNaN(v)) return Utilities.formatDate(v, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'); return cleanVal(v); }
+// v18.19 · ประกาศที่เลยวันสิ้นสุดแล้ว → ลบอัตโนมัติ (สถานะ deleted เหมือนกดลบเอง)
+function purgeExpiredNotifs_() {
+  try {
+    const sh = getSpreadsheet().getSheetByName(SHEETS.NOTIFS); if (!sh) return 0;
+    const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+    const rows = sheetRows_(SHEETS.NOTIFS, HEADERS.NOTIFS.length); let n = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i]; if (!cleanVal(r[0]) || (cleanVal(r[9]) || 'active') !== 'active') continue;
+      const ex = notifYmd_(r[10]); if (/^\d{4}-\d{2}-\d{2}$/.test(ex) && ex < today) { sh.getRange(i + 2, 10).setValue('deleted'); n++; }
+    }
+    return n;
+  } catch (e) { return 0; }
+}
 function readNotifs_() {
   return sheetRows_(SHEETS.NOTIFS, HEADERS.NOTIFS.length).filter(function (r) { return cleanVal(r[0]); }).map(function (r) {
-    return { id: cleanVal(r[0]), createdAt: cleanVal(r[1]), title: cleanVal(r[2]), body: cleanVal(r[3]), audience: cleanVal(r[4]), audienceValue: cleanVal(r[5]), priority: cleanVal(r[6]) || 'normal', by: cleanVal(r[7]), byName: cleanVal(r[8]), status: cleanVal(r[9]) || 'active', expires: cleanVal(r[10]), mode: cleanVal(r[11]) || 'bell', place: cleanVal(r[12]) };
+    return { id: cleanVal(r[0]), createdAt: notifTs_(r[1]), title: cleanVal(r[2]), body: cleanVal(r[3]), audience: cleanVal(r[4]), audienceValue: cleanVal(r[5]), priority: cleanVal(r[6]) || 'normal', by: cleanVal(r[7]), byName: cleanVal(r[8]), status: cleanVal(r[9]) || 'active', expires: notifYmd_(r[10]), mode: cleanVal(r[11]) || 'bell', place: cleanVal(r[12]) };
   });
 }
 // v17.90 · อาจารย์ลาสอน (อนุมัติแล้ว) ที่กระทบนักเรียนคนนี้ · ใช้ทั้งในตารางเรียนและกระดิ่ง
@@ -7050,6 +7070,8 @@ function sendNotification_(data, session) {
   return { success: true, id: id, message: 'ส่งแจ้งเตือนแล้ว' };
 }
 function listSentNotifications_() {
+  purgeExpiredNotifs_();
+  const today0 = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
   const reads = {};
   sheetRows_(SHEETS.NOTIF_READS, 4).forEach(function (r) { const id = cleanVal(r[0]); reads[id] = (reads[id] || 0) + 1; });
   const students = sheetRows_(SHEETS.STUDENTS, 8).filter(function (r) { return cleanVal(r[0]) && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(r[7])); });
@@ -7064,7 +7086,7 @@ function listSentNotifications_() {
     if (n.audience === 'students') return vals.length;
     return 0;
   };
-  const list = readNotifs_().filter(function (n) { return n.status === 'active'; }).map(function (n) { return Object.assign(n, { reads: reads[n.id] || 0, recipients: count(n) }); })
+  const list = readNotifs_().filter(function (n) { return n.status === 'active' && !(n.expires && n.expires < today0); }).map(function (n) { return Object.assign(n, { reads: reads[n.id] || 0, recipients: count(n) }); })
     .sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
   return { success: true, data: list.slice(0, 200) };
 }
