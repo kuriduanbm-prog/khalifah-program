@@ -2340,6 +2340,23 @@ html[data-theme="dark"] .k8-ban b { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-ban p { color: #c1c7cf !important; }
 html[data-theme="dark"] .k8-ban small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-ban button { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-sl-types button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-sl-list li { border: 1px solid #32363c !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-sl-top b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-sl-top b small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-sl-list small { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-sl-when { color: #79eca4 !important; }
+html[data-theme="dark"] .k8-sl-cancel { border: 1px solid #522424 !important; background-color: #121212 !important; color: #ed7878 !important; }
+html[data-theme="dark"] .k8-sl-acts button { border: 1px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-sl-acts .is-no { color: #ed7878 !important; border-color: #522424 !important; }
+html[data-theme="dark"] .k8-sl-adm { border: 1px solid #2b5238 !important; background-color: #132e1b !important; }
+html[data-theme="dark"] .k8-sl-ah { color: #c3dfce !important; }
+html[data-theme="dark"] .k8-sl-ah small { color: #bbdcc7 !important; }
+html[data-theme="dark"] .k8-ta-sl { background-color: #0f1e32 !important; border: 1px solid #253a54 !important; }
+html[data-theme="dark"] .k8-ta-sl em { color: #79eca4 !important; }
+html[data-theme="dark"] details.k8-tt-vis > summary::after { color: #a6b0bf !important; }
+html[data-theme="dark"] details.k8-tt-vis > summary b { color: #d6dae5 !important; }
+html[data-theme="dark"] details.k8-tt-vis > summary small { color: #a6b0bf !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

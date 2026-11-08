@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.07'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.08'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1149,7 +1149,7 @@ function publicSettings_(settings) {
   const o = {};
   Object.keys(settings || {}).forEach(function (k) {
     if (/master|password|secret|token|otp/i.test(k)) return;
-    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$|^PeriodEpisodes$|^StudentDorms$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
+    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$|^PeriodEpisodes$|^StudentDorms$|^StudentLeaves$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
     if (/^Timetable/.test(k)) return; // ตารางสอน: อ่านผ่าน getTimetable (มีสิทธิ์และการเปิด/ปิดการมองเห็น)
     o[k] = settings[k];
   });
@@ -1219,7 +1219,7 @@ const ACTION_ACCESS = {
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
   saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff',
-  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', requestStudentLeave: 'student', getMyStudentLeaves: 'student', cancelStudentLeave: 'student', getStudentLeaves: 'staff', respondStudentLeave: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
@@ -1626,6 +1626,22 @@ function dispatchAction_(action, req, data, session, ctx) {
       return respondPeriodSwap_(data, session);
     case 'getPeriodSwaps':
       return { success: true, data: swapsFor_(session) };
+    case 'requestStudentLeave':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return requestStudentLeave_(data, session);
+    case 'getMyStudentLeaves': {
+      const me = slKey_(session.userId);
+      return { success: true, data: readStuLeaves_().filter(function (x) { return slKey_(x.sid) === me; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }).slice(0, 60) };
+    }
+    case 'cancelStudentLeave':
+      return cancelStudentLeave_(pick('id'), session);
+    case 'getStudentLeaves': {
+      const L = readStuLeaves_();
+      if (session.role === 'admin' && !session.limit) return { success: true, data: L.slice().sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }) };
+      return { success: true, data: L.filter(function (x) { return x.status === 'approved'; }).map(function (x) { return { id: x.id, sid: x.sid, name: x.name, grade: x.grade, from: x.from, to: x.to, allDay: x.allDay, tFrom: x.tFrom, tTo: x.tTo, type: x.type, where: x.where, reason: x.reason }; }) };
+    }
+    case 'respondStudentLeave':
+      return respondStudentLeave_(data, session);
     case 'getHalaqahReport':
       return halaqahReport_(pick('from'), pick('to'));
     case 'getMyDorm': {
@@ -3161,6 +3177,69 @@ function setStudentDorm_(d) {
   });
   saveSetting({ key: 'StudentDorms', value: JSON.stringify(dm), description: 'หอพักนักเรียน (JSON: รหัส → sci/ibnu/h5)' });
   return { success: true, message: 'บันทึกหอพักแล้ว ' + n + ' คน', data: dm };
+}
+// v18.08 · นักเรียนแจ้งลาเรียน (วันเดียว/ช่วงวัน · ทั้งวัน/ช่วงเวลา) → แอดมินอนุมัติ → อาจารย์เห็นตอนเช็คชื่อ
+function slKey_(v) { return String(v == null ? '' : v).trim().replace(/^0+/, ''); }
+function readStuLeaves_() { let v = []; try { v = JSON.parse((getSettings().data || {}).StudentLeaves || '[]'); } catch (e) { v = []; } return Array.isArray(v) ? v : []; }
+function writeStuLeaves_(list) {
+  const cut = Utilities.formatDate(new Date(Date.now() - 120 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  list = list.filter(function (x) { return x && String(x.to) >= cut; }).slice(-800);
+  saveSetting({ key: 'StudentLeaves', value: JSON.stringify(list), description: 'คำขอลาเรียนของนักเรียน (JSON)' });
+  return list;
+}
+const SL_TYPES_ = ['ป่วย', 'ลากิจ', 'กลับบ้าน', 'กิจกรรมนอกโรงเรียน', 'อื่น ๆ'];
+function requestStudentLeave_(d, session) {
+  d = d || {};
+  const from = cleanVal(d.from), to = cleanVal(d.to || d.from);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) return { success: false, message: 'เลือกวันที่ลาให้ถูกต้อง' };
+  const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  if (to < today) return { success: false, message: 'วันที่ลาผ่านไปแล้ว' };
+  const allDay = d.allDay !== false && String(d.allDay) !== 'false';
+  const tFrom = allDay ? '' : cleanVal(d.tFrom), tTo = allDay ? '' : cleanVal(d.tTo);
+  if (!allDay && (!/^\d{2}:\d{2}$/.test(tFrom) || !/^\d{2}:\d{2}$/.test(tTo) || tTo <= tFrom)) return { success: false, message: 'เลือกช่วงเวลาให้ถูกต้อง' };
+  const type = SL_TYPES_.indexOf(cleanVal(d.type)) !== -1 ? cleanVal(d.type) : 'อื่น ๆ';
+  const where = cleanVal(d.where).substring(0, 120), reason = cleanVal(d.reason).substring(0, 300);
+  if (!reason) return { success: false, message: 'กรุณาบอกว่าลาไปทำอะไร' };
+  const sid = String(session.userId), g = studentGradeNum_(sid);
+  let name = cleanVal(session.name || ''), grade = '';
+  try { const rows = sheetRows_(SHEETS.STUDENTS, 4); for (let i = 0; i < rows.length; i++) if (slKey_(rows[i][0]) === slKey_(sid)) { name = cleanVal(rows[i][1]) || name; grade = cleanVal(rows[i][3]); break; } } catch (e) {}
+  const item = { id: 'SL' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), sid: sid, name: name || sid, grade: grade || (g.grade ? 'ม.' + g.grade : ''), from: from, to: to, allDay: allDay, tFrom: tFrom, tTo: tTo, type: type, where: where, reason: reason, status: 'pending', createdAt: new Date().toISOString() };
+  const r = leaveLock_(function () {
+    const L = readStuLeaves_();
+    if (L.some(function (x) { return slKey_(x.sid) === slKey_(sid) && (x.status === 'pending' || x.status === 'approved') && !(x.to < from || x.from > to) && (x.allDay || allDay || !(x.tTo <= tFrom || x.tFrom >= tTo)); })) return { success: false, message: 'มีคำขอลาในช่วงนี้อยู่แล้ว' };
+    L.push(item); writeStuLeaves_(L); return { success: true };
+  });
+  if (!r.success) return r;
+  try { sendNotification_({ title: 'คำขอลาเรียน · ' + item.name, body: slTxt_(item) + ' · ' + type + (where ? ' · ไป ' + where : '') + ' · ' + reason + ' · อนุมัติได้ที่เมนู "นักเรียน"', audience: 'admins', values: [], expires: to }, { userId: sid, name: item.name }); } catch (e) {}
+  return { success: true, item: item, message: 'ส่งคำขอลาแล้ว · รอแอดมินอนุมัติ' };
+}
+function slTxt_(x) { return (x.from === x.to ? leaveDateTh_(x.from) : leaveDateTh_(x.from) + ' ถึง ' + leaveDateTh_(x.to)) + (x.allDay ? ' (ทั้งวัน)' : ' เวลา ' + x.tFrom + '–' + x.tTo + ' น.'); }
+function cancelStudentLeave_(id, session) {
+  id = cleanVal(id);
+  return leaveLock_(function () {
+    const L = readStuLeaves_(); const it = L.filter(function (x) { return x.id === id; })[0];
+    if (!it) return { success: false, message: 'ไม่พบคำขอนี้' };
+    if (slKey_(it.sid) !== slKey_(session.userId)) return { success: false, code: 'FORBIDDEN', message: 'ยกเลิกได้เฉพาะคำขอของตัวเอง' };
+    if (it.status !== 'pending' && it.status !== 'approved') return { success: false, message: 'คำขอนี้ปิดไปแล้ว' };
+    it.status = 'cancelled'; it.at = new Date().toISOString(); writeStuLeaves_(L);
+    return { success: true, message: 'ยกเลิกคำขอลาแล้ว' };
+  });
+}
+function respondStudentLeave_(d, session) {
+  d = d || {}; const id = cleanVal(d.id); const act = cleanVal(d.action);
+  let it = null;
+  const r = leaveLock_(function () {
+    const L = readStuLeaves_(); it = L.filter(function (x) { return x.id === id; })[0];
+    if (!it) return { success: false, message: 'ไม่พบคำขอนี้' };
+    if (act === 'revoke') { if (it.status !== 'approved') return { success: false, message: 'ยกเลิกได้เฉพาะคำขอที่อนุมัติแล้ว' }; it.status = 'cancelled'; }
+    else { if (it.status !== 'pending') return { success: false, message: 'คำขอนี้พิจารณาไปแล้ว' }; it.status = act === 'approve' ? 'approved' : 'rejected'; }
+    it.by = cleanVal(session.name || session.userId); it.at = new Date().toISOString(); it.note = cleanVal(d.note || '').substring(0, 200);
+    writeStuLeaves_(L); return { success: true };
+  });
+  if (!r.success) return r;
+  const msg = it.status === 'approved' ? 'อนุมัติการลาแล้ว' : it.status === 'rejected' ? 'ไม่อนุมัติการลา' : 'ยกเลิกการลาแล้ว';
+  try { sendNotification_({ title: msg, body: slTxt_(it) + ' · ' + it.type + (it.note ? ' · หมายเหตุ: ' + it.note : '') + ' · โดย ' + it.by, audience: 'students', values: [it.sid], expires: it.to }, { userId: session.userId, name: it.by }); } catch (e) {}
+  return { success: true, item: it, message: msg + ' · ' + it.name };
 }
 function readSwaps_() { let v = []; try { v = JSON.parse((getSettings().data || {}).PeriodSwaps || '[]'); } catch (e) { v = []; } return Array.isArray(v) ? v : []; }
 function writeSwaps_(list) {
