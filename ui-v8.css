@@ -5019,3 +5019,9 @@ details.k8-tt-vis > summary b { font-weight: 600; color: #0f172a; } details.k8-t
 .k8-sl-trk li.is-off span { background: #94a3b8; color: #fff; } .k8-sl-trk li.is-off small { color: #475569; }
 .k8-sl-trk i { flex: 1; height: 2px; background: #e2e8f0; margin-top: 12px; min-width: 10px; } .k8-sl-trk i.is-done { background: #15803d; } .k8-sl-trk i.is-no { background: #fca5a5; }
 .k8-sl-req .k8-sl-cancel { align-self: flex-start; margin-top: 4px; }
+/* v18.26 · ตรวจระบบ: แถบหัวแอดมินบนมือถือล้นจอข้างละ ~6px · ปุ่มใต้ตารางสอนล้นจอ */
+@media (max-width: 992px) {
+  #view-admin.active .k8-adm-bar { margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); width: auto; }
+  .k8-tt-save { flex-wrap: wrap; }
+  .k8-tt-save > button { flex: 1 1 auto; }
+}
