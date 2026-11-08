@@ -2491,7 +2491,9 @@ window.k8RegBirthChange = function (v) {
     const fits = (st, c) => { const id = norm(st.studentId); if (c.o && c.o.length && c.o.map(norm).indexOf(id) === -1) return false; if (c.x && c.x.map(norm).indexOf(id) !== -1) return false; if (c.gx === 'm' && girl(st)) return false; if (c.gx === 'f' && !girl(st)) return false; return true; };
     const base = P.length ? inGrade.filter((st) => P.some((x) => fits(st, x.c))) : inGrade;
     const en = enrolledFor();
-    if (en) { const have = new Set(base.map((st) => norm(st.studentId))); all.forEach((st) => { const id = norm(st.studentId); if (!have.has(id) && en.indexOf(id) !== -1) { base.push(st); have.add(id); } }); }
+    // v18.09 · นักเรียนที่ลงทะเบียน (สแกน QR) จะถูกเพิ่มเฉพาะ: ชั้นเดียวกับคาบนี้ หรือชั้นของเขาไม่มีวิชานี้ในตารางเลย (เรียนซ้ำ/ข้ามชั้นจริง)
+    //           เดิมเพิ่มทุกคนที่ลงทะเบียนวิชานี้ → วิชาเดียวกันที่สอนหลายชั้น (เช่น คณิต ม.4 และ ม.5) รายชื่อปนกัน
+    if (en) { const have = new Set(base.map((st) => norm(st.studentId))); const gnOf = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; }; all.forEach((st) => { const id = norm(st.studentId); if (have.has(id) || en.indexOf(id) === -1) return; const own = gnOf(st.grade); const same = S.grade === 'ALL' || st.grade === S.grade; const cross = !same && own && window.k8TtGradeHasSubj && !window.k8TtGradeHasSubj(own, S.subject); if (same || cross) { if (cross) st = Object.assign({}, st, { crossEnroll: true }); base.push(st); have.add(id); } }); }
     return base;
   }
 
@@ -2523,7 +2525,7 @@ window.k8RegBirthChange = function (v) {
       const id = cid(s.studentId), k = norm(s.studentId);
       const slv = slvOf(s); const cur = draft[k] || saved[k] || (slv ? 'leave' : 'present');
       cnt[cur]++; if (!saved[k]) unsaved++; else if (draft[k] && draft[k] !== saved[k]) changed++;
-      return '<li class="k8-ta-card' + (saved[k] ? ' is-saved' : '') + '"><span class="k8-ta-no" aria-hidden="true">' + (ix + 1) + '</span><div class="k8-ta-top"><span class="k8-ta-av">' + esc(initialOf(s.fullName)) + '</span><span class="k8-ta-name" title="' + esc(s.fullName) + '">' + esc(s.fullName) + '</span><span class="k8-ta-id">' + esc(id) + (S.grade === 'ALL' ? ' · ' + esc(shortG(s.grade)) : '') + '</span></div>' + (slv ? '<div class="k8-ta-sl">🗓 ' + esc(/^ลา/.test(slv.type) ? slv.type : 'ลา' + (slv.type === 'อื่น ๆ' ? '' : slv.type)) + ' · ' + esc(slv.allDay ? 'ทั้งวัน' : slv.tFrom + '–' + slv.tTo + ' น.') + (slv.where ? ' · ไป ' + esc(slv.where) : '') + (slv.reason ? ' · ' + esc(slv.reason) : '') + ' <em>แอดมินอนุมัติแล้ว</em></div>' : '') +
+      return '<li class="k8-ta-card' + (saved[k] ? ' is-saved' : '') + '"><span class="k8-ta-no" aria-hidden="true">' + (ix + 1) + '</span><div class="k8-ta-top"><span class="k8-ta-av">' + esc(initialOf(s.fullName)) + '</span><span class="k8-ta-name" title="' + esc(s.fullName) + '">' + esc(s.fullName) + '</span><span class="k8-ta-id">' + esc(id) + (S.grade === 'ALL' || s.crossEnroll ? ' · ' + esc(shortG(s.grade)) : '') + (s.crossEnroll ? ' · ลงทะเบียนข้ามชั้น' : '') + '</span></div>' + (slv ? '<div class="k8-ta-sl">🗓 ' + esc(/^ลา/.test(slv.type) ? slv.type : 'ลา' + (slv.type === 'อื่น ๆ' ? '' : slv.type)) + ' · ' + esc(slv.allDay ? 'ทั้งวัน' : slv.tFrom + '–' + slv.tTo + ' น.') + (slv.where ? ' · ไป ' + esc(slv.where) : '') + (slv.reason ? ' · ' + esc(slv.reason) : '') + ' <em>แอดมินอนุมัติแล้ว</em></div>' : '') +
         '<div class="k8-ta-opts" role="radiogroup" aria-label="สถานะของ ' + esc(s.fullName) + '">' + KINDS.map(([kk, label, ink, bg]) => { const on = cur === kk; return '<button type="button" role="radio" aria-checked="' + on + '" style="' + (on ? 'background:' + ink + ';color:#fff;border-color:' + ink : 'background:' + bg + ';color:' + ink + ';border-color:' + bg) + '" onclick="k8TaMark(\'' + js(k) + '\',\'' + kk + '\')"><span class="k8-ta-lf">' + label + '</span><span class="k8-ta-ls" aria-hidden="true">' + label.charAt(0) + '</span></button>'; }).join('') + '</div></li>';
     }).join('') : '<li class="k8-li-empty k8-ta-none">' + (gate ? 'ไม่มีนักเรียนในระดับชั้นนี้' : !Pm.length ? (S.subMode ? 'ไม่มีคาบของอาจารย์ท่านอื่นใน' + (S.date === ymd(new Date()) ? 'วันนี้' : 'วันที่ ' + fmtDate(S.date)) : '<b>ไม่มีคาบสอนของคุณใน' + (S.date === ymd(new Date()) ? 'วันนี้' : 'วันที่ ' + fmtDate(S.date)) + '</b><span>ถ้าต้องสอนแทนกะทันหัน กดปุ่ม "สอนแทน" เพื่อดูทุกคาบของ' + (S.date === ymd(new Date()) ? 'วันนี้' : 'วันนั้น') + '</span>') : 'เลือกคาบสอนจากแถบด้านบนเพื่อเช็คชื่อ') + '</li>');
     document.getElementById('k8TaSum').innerHTML = KINDS.map(([kk, label, ink, bg]) => '<div style="background:' + bg + ';color:' + ink + '"><b>' + cnt[kk] + '</b><span>' + label + '</span></div>').join('');
@@ -3387,7 +3389,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.08';
+  const APP_VERSION = '18.09';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5862,6 +5864,8 @@ window.k8RegBirthChange = function (v) {
     return base;
   }
   window.k8TtCellsOn = cellsOn;
+  // v18.09 · ชั้นนี้มีวิชานี้ในตารางไหม (ทุกวัน ทุกคาบ) · ใช้กรองนักเรียนลงทะเบียนข้ามชั้น
+  window.k8TtGradeHasSubj = function (g, subj) { const cells = gradeOf(String(g)).cells || {}; return Object.keys(cells).some((k) => arr(cells[k]).some((e) => e && String(e.s || '') === String(subj))); };
   const MON_S = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
   const dTh = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON_S[d.getMonth()]; };
   const rangeTxt = (e) => !e || (!e.from && !e.to) ? '' : (e.from && e.to ? dTh(e.from) + '–' + dTh(e.to) : e.from ? 'ตั้งแต่ ' + dTh(e.from) : 'ถึง ' + dTh(e.to));
