@@ -3411,7 +3411,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.27';
+  const APP_VERSION = '18.28';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8810,23 +8810,30 @@ window.k8HfMiss = function (slot) {
 
 /* ---------- v17.36 · สร้างกิจกรรม: เลือกกลุ่มเป้าหมาย ทุกคน / เฉพาะชั้นปี / รายบุคคล ---------- */
 (function () {
-  const A = { type: 'all', grades: [], students: [], q: '' };
+  const A = { type: 'all', grades: [], students: [], q: '', sex: '' }; // v18.28 · sex: '' | 'm' | 'f'
   const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
   const gNum = (g) => { const m = String(g || '').match(/([1-6])/); return m ? m[1] : ''; };
   const cid = (v) => String(v == null ? '' : v).trim().replace(/^0+/, '');
-  function parseAud(a) { if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } } return a && (a.type === 'grades' || a.type === 'students') ? a : null; }
+  function parseAud(a) { if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } } return a && (a.type === 'grades' || a.type === 'students' || a.sex === 'm' || a.sex === 'f') ? a : null; }
+  const girl = (s) => { try { return !!(window.k8IsGirl && window.k8IsGirl(s)); } catch (e) { return false; } };
+  const sexOk = (a, s) => !a || !a.sex || (a.sex === 'f' ? girl(s) : !girl(s));
+  const SEXL = { m: 'ชาย', f: 'หญิง' };
   // กิจกรรมนี้สำหรับนักเรียนที่ล็อกอินอยู่ไหม (แอดมิน/อาจารย์เห็นทุกกิจกรรม)
   window.k8ActForMe = function (act, stu) {
     const a = parseAud(act && act.audience); if (!a) return true;
     let st = stu; if (!st) { try { st = currentStudent; } catch (e) {} } if (!st) return true;
     let adm = null; try { adm = currentAdmin; } catch (e) {} if (adm && !stu) return true;
+    if (a.type !== 'students' && !sexOk(a, st)) return false;
     if (a.type === 'grades') return (a.grades || []).map(String).indexOf(gNum(st.grade)) !== -1;
-    return (a.students || []).some((x) => cid(x.id || x) === cid(st.studentId));
+    if (a.type === 'students') return (a.students || []).some((x) => cid(x.id || x) === cid(st.studentId));
+    return true;
   };
   window.k8ActAudLabel = function (act) {
     const a = parseAud(act && act.audience); if (!a) return 'ทุกคน';
-    if (a.type === 'grades') return 'ม.' + (a.grades || []).join(', ม.');
+    const sx = a.type !== 'students' && SEXL[a.sex] ? SEXL[a.sex] : '';
+    if (a.type === 'grades') return 'ม.' + (a.grades || []).join(', ม.') + (sx ? ' · ' + sx : '');
+    if (a.type !== 'students') return 'นักเรียน' + sx;
     return 'รายบุคคล ' + (a.students || []).length + ' คน';
   };
   function pool() { let l = []; try { l = allStudents; } catch (e) {} if (!Array.isArray(l) || !l.length) { try { l = JSON.parse(localStorage.getItem('khalifah_students') || '[]'); } catch (e) { l = []; } } return (l || []).filter((s) => s && s.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))); }
@@ -8834,9 +8841,11 @@ window.k8HfMiss = function (slot) {
     const box = document.getElementById('k8ActAud'); if (!box) return;
     const seg = [['all', 'ทุกคน'], ['grades', 'เฉพาะชั้นปี'], ['students', 'รายบุคคล']].map(([k, l]) => '<button type="button" role="radio" aria-checked="' + (A.type === k) + '" class="' + (A.type === k ? 'on' : '') + '" onclick="k8AudType(\'' + k + '\')">' + l + '</button>').join('');
     let h = '<div class="k8-aud-h"><span class="form-label">กลุ่มเป้าหมาย</span><div class="k8-aud-seg" role="radiogroup" aria-label="กลุ่มเป้าหมาย">' + seg + '</div></div>';
+    const P = pool(); const PS = P.filter((s) => sexOk(A, s));
+    if (A.type !== 'students') h += '<div class="k8-aud-sex"><span>เพศ</span><div class="k8-aud-seg" role="radiogroup" aria-label="เพศ">' + [['', 'ทั้งหมด', P.length], ['m', '👦 ชาย', P.filter((s) => !girl(s)).length], ['f', '👧 หญิง', P.filter(girl).length]].map(([k, l, n]) => '<button type="button" role="radio" aria-checked="' + (A.sex === k) + '" class="' + (A.sex === k ? 'on' : '') + '" onclick="k8AudSex(\'' + k + '\')">' + l + ' <small>' + n + '</small></button>').join('') + '</div></div>';
     if (A.type === 'grades') {
-      h += '<div class="k8-aud-grades">' + [1, 2, 3, 4, 5, 6].map((g) => { const on = A.grades.indexOf(String(g)) !== -1; const n = pool().filter((s) => gNum(s.grade) === String(g)).length; return '<button type="button" aria-pressed="' + on + '" class="' + (on ? 'on' : '') + '" onclick="k8AudGrade(' + g + ')">ม.' + g + '<small>' + n + ' คน</small></button>'; }).join('') + '</div>';
-      h += '<p class="k8-aud-sum">' + (A.grades.length ? 'นักเรียนชั้น ม.' + A.grades.join(', ม.') + ' เห็นและเช็คชื่อกิจกรรมนี้ได้ (รวม ' + pool().filter((s) => A.grades.indexOf(gNum(s.grade)) !== -1).length + ' คน)' : 'แตะเลือกชั้นปีได้มากกว่า 1 ชั้น') + '</p>';
+      h += '<div class="k8-aud-grades">' + [1, 2, 3, 4, 5, 6].map((g) => { const on = A.grades.indexOf(String(g)) !== -1; const n = PS.filter((s) => gNum(s.grade) === String(g)).length; return '<button type="button" aria-pressed="' + on + '" class="' + (on ? 'on' : '') + '" onclick="k8AudGrade(' + g + ')">ม.' + g + '<small>' + n + ' คน</small></button>'; }).join('') + '</div>';
+      h += '<p class="k8-aud-sum">' + (A.grades.length ? 'นักเรียน' + (SEXL[A.sex] || '') + 'ชั้น ม.' + A.grades.join(', ม.') + ' เห็นและเช็คชื่อกิจกรรมนี้ได้ (รวม ' + PS.filter((s) => A.grades.indexOf(gNum(s.grade)) !== -1).length + ' คน)' : 'แตะเลือกชั้นปีได้มากกว่า 1 ชั้น') + '</p>';
     } else if (A.type === 'students') {
       const q = A.q.trim().toLowerCase(), sel = {}; A.students.forEach((x) => { sel[cid(x.id)] = 1; });
       const list = pool().filter((s) => !q || String(s.fullName || '').toLowerCase().indexOf(q) !== -1 || String(s.studentId).indexOf(q) !== -1).sort((a, b) => (gNum(a.grade) - gNum(b.grade)) || String(a.fullName).localeCompare(String(b.fullName), 'th')).slice(0, 60);
@@ -8844,12 +8853,13 @@ window.k8HfMiss = function (slot) {
       h += '<input type="search" class="form-control k8-aud-q" id="k8AudQ" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(A.q) + '" oninput="k8AudSearch(this.value)">';
       h += '<div class="k8-aud-list">' + (list.length ? list.map((s) => { const on = !!sel[cid(s.studentId)]; return '<label class="' + (on ? 'on' : '') + '"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="k8AudStu(\'' + esc(s.studentId) + '\')"><span><b>' + esc(s.fullName || s.studentId) + '</b><small>' + esc(s.studentId) + ' · ม.' + (gNum(s.grade) || '-') + '</small></span></label>'; }).join('') : '<p class="k8-aud-empty">ไม่พบนักเรียน</p>') + '</div>';
       h += '<p class="k8-aud-sum">' + (A.students.length ? 'เลือกแล้ว ' + A.students.length + ' คน · เฉพาะคนที่เลือกเห็นและเช็คชื่อได้' : 'ติ๊กเลือกนักเรียนที่ต้องเข้าร่วม') + '</p>';
-    } else h += '<p class="k8-aud-sum">นักเรียนทุกคนเห็นและเช็คชื่อกิจกรรมนี้ได้</p>';
+    } else h += '<p class="k8-aud-sum">' + (A.sex ? 'เฉพาะนักเรียน' + SEXL[A.sex] + 'ทุกชั้น (' + PS.length + ' คน) เห็นและเช็คชื่อกิจกรรมนี้ได้' : 'นักเรียนทุกคนเห็นและเช็คชื่อกิจกรรมนี้ได้') + '</p>';
     box.innerHTML = h;
     const btn = document.getElementById('btnAdminCreateAct');
     if (btn) btn.innerHTML = '<i class="fa-solid fa-qrcode"></i> บันทึกกิจกรรม' + (A.type === 'all' ? '' : ' (' + (A.type === 'grades' ? (A.grades.length ? 'ม.' + A.grades.join(', ม.') : 'ยังไม่เลือกชั้น') : A.students.length + ' คน') + ')') + ' และเปิด QR Code ทันที';
   }
   window.k8AudType = function (t) { A.type = t; render(); };
+  window.k8AudSex = function (x) { A.sex = x === 'm' || x === 'f' ? x : ''; render(); };
   window.k8AudGrade = function (g) { g = String(g); const i = A.grades.indexOf(g); if (i === -1) A.grades.push(g); else A.grades.splice(i, 1); A.grades.sort(); render(); };
   window.k8AudStu = function (id) {
     const i = A.students.findIndex((x) => cid(x.id) === cid(id));
@@ -8858,7 +8868,7 @@ window.k8HfMiss = function (slot) {
     render(); const q = document.getElementById('k8AudQ'); if (q && A.q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
   };
   window.k8AudSearch = function (v) { A.q = v || ''; render(); const q = document.getElementById('k8AudQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } };
-  function current() { return A.type === 'grades' ? { type: 'grades', grades: A.grades.slice() } : A.type === 'students' ? { type: 'students', students: A.students.slice() } : { type: 'all' }; }
+  function current() { const o = A.type === 'grades' ? { type: 'grades', grades: A.grades.slice() } : A.type === 'students' ? { type: 'students', students: A.students.slice() } : { type: 'all' }; if (A.sex && o.type !== 'students') o.sex = A.sex; return o; }
   // ส่งกลุ่มเป้าหมายไปพร้อมกิจกรรม
   const oc = window.adminCreateNewActivity;
   if (typeof oc === 'function') window.adminCreateNewActivity = function () {
@@ -8868,7 +8878,7 @@ window.k8HfMiss = function (slot) {
     window.syncRecordToGoogleSheet = function (action, d) { if (action === 'createActivity' && d) d.audience = aud; return os.apply(this, arguments); };
     let r; try { r = oc.apply(this, arguments); } finally { window.syncRecordToGoogleSheet = os; }
     try { if (activities[0] && !activities[0].audience) { activities[0].audience = aud; localStorage.setItem('khalifah_activities', JSON.stringify(activities)); } } catch (e) {}
-    A.type = 'all'; A.grades = []; A.students = []; A.q = ''; render();
+    A.type = 'all'; A.grades = []; A.students = []; A.q = ''; A.sex = ''; render();
     try { renderAdminActivitiesTable(); } catch (e) {}
     return r;
   };
@@ -10771,9 +10781,10 @@ window.k8HfMiss = function (slot) {
   function audN(a) {
     let au = a.audience; if (typeof au === 'string') { try { au = JSON.parse(au); } catch (e) { au = null; } }
     const L = studs();
-    if (au && au.type === 'grades') return L.filter((s) => (au.grades || []).map(String).indexOf(gN(s.grade)) !== -1).length;
     if (au && au.type === 'students') return (au.students || []).length;
-    return L.length;
+    const Ls = au && (au.sex === 'm' || au.sex === 'f') ? L.filter((s) => { const g = !!(window.k8IsGirl && window.k8IsGirl(s)); return au.sex === 'f' ? g : !g; }) : L;
+    if (au && au.type === 'grades') return Ls.filter((s) => (au.grades || []).map(String).indexOf(gN(s.grade)) !== -1).length;
+    return Ls.length;
   }
   function stat(L) { const lg = logs(); const by = {}; lg.forEach((l) => { const k = String(l.activityId || ''); by[k] = (by[k] || 0) + 1; const t = 't:' + (l.activityTitle || ''); by[t] = (by[t] || 0) + 1; }); return L.map((a) => { const n = by[String(idOf(a))] || by['t:' + a.title] || 0; return { a, id: idOf(a), d: dOf(a), n, tot: audN(a) }; }); }
   function stOf(d, today) { if (!d) return ['ไม่ระบุวัน', 'is-none']; if (d === today) return ['วันนี้', 'is-today']; return d > today ? ['กำลังจะถึง', 'is-soon'] : ['จบแล้ว', 'is-past']; }
@@ -10813,7 +10824,7 @@ window.k8HfMiss = function (slot) {
       '<select id="k8AcTy" class="k8-ac-in" aria-label="ประเภทกิจกรรม">' + TYPES.map((t) => '<option value="' + t[0] + '">' + t[1] + ' ' + t[0] + '</option>').join('') + '</select>' +
       '<input type="text" id="k8AcLoc" class="k8-ac-in" placeholder="สถานที่ (มัสยิด)" aria-label="สถานที่">' +
       '<input type="date" id="k8AcD" class="k8-ac-in" value="' + today + '" aria-label="วันที่จัด">' +
-      '<select id="k8AcAu" class="k8-ac-in" aria-label="กลุ่มเป้าหมาย" onchange="k8AcAud(this.value)"><option value="all">ทุกคน</option><option value="grades">เฉพาะชั้นปี…</option><option value="students">รายบุคคล…</option></select>' +
+      '<select id="k8AcAu" class="k8-ac-in" aria-label="กลุ่มเป้าหมาย" onchange="k8AcAud(this.value)"><option value="all">ทุกคน</option><option value="all-m">👦 นักเรียนชายทั้งหมด</option><option value="all-f">👧 นักเรียนหญิงทั้งหมด</option><option value="grades">เฉพาะชั้นปี / เพศ…</option><option value="students">รายบุคคล…</option></select>' +
       '<button type="button" class="k8-ac-pri k8-ac-go" onclick="k8AcCreate()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> สร้างกิจกรรม + เปิด QR</button><div class="k8-ac-audslot" id="k8AcAudSlot" hidden></div></div>';
   }
   function rowAct(x) {
@@ -10875,8 +10886,9 @@ window.k8HfMiss = function (slot) {
   window.k8AcNewOn = function (d) { const i = document.getElementById('k8AcD'); if (i) i.value = d; const t = document.getElementById('k8AcT'); if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'center' }); t.focus(); } };
   window.k8AcAud = function (v) {
     const slot = document.getElementById('k8AcAudSlot'), box = document.getElementById('k8ActAud'); if (!slot) return;
-    try { k8AudType(v); } catch (e) {}
-    if (v === 'all') { slot.hidden = true; return; }
+    const sx = v === 'all-m' ? 'm' : v === 'all-f' ? 'f' : '';
+    try { k8AudType(v === 'grades' || v === 'students' ? v : 'all'); if (v !== 'grades') k8AudSex(sx); } catch (e) {}
+    if (v === 'all' || sx) { slot.hidden = true; return; }
     if (box && box.parentNode !== slot) slot.appendChild(box);
     slot.hidden = false;
   };

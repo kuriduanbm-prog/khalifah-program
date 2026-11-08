@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.27'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.28'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3937,16 +3937,18 @@ function normActivityAudience_(a) {
   if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } }
   a = a || {};
   const type = ['grades', 'students'].indexOf(cleanVal(a.type)) !== -1 ? cleanVal(a.type) : 'all';
+  const sex = ['m', 'f'].indexOf(cleanVal(a.sex)) !== -1 ? cleanVal(a.sex) : ''; // v18.28 · จำกัดเพศ (m=ชาย f=หญิง)
+  const withSex = function (o) { if (sex && o.type !== 'students') o.sex = sex; return o; };
   if (type === 'grades') {
     const g = (Array.isArray(a.grades) ? a.grades : []).map(function (v) { return String(v).replace(/\D/g, ''); }).filter(function (v, i, arr) { return /^[1-6]$/.test(v) && arr.indexOf(v) === i; }).sort();
-    return g.length ? { type: 'grades', grades: g } : { type: 'all' };
+    return withSex(g.length ? { type: 'grades', grades: g } : { type: 'all' });
   }
   if (type === 'students') {
     const seen = {};
     const st = (Array.isArray(a.students) ? a.students : []).map(function (x) { return { id: cleanVal(x && (x.id || x.studentId) || x), name: cleanVal(x && (x.name || x.fullName) || '') }; }).filter(function (x) { if (!x.id || seen[x.id]) return false; seen[x.id] = 1; return true; }).slice(0, 500);
-    return st.length ? { type: 'students', students: st } : { type: 'all' };
+    return st.length ? { type: 'students', students: st } : withSex({ type: 'all' });
   }
-  return { type: 'all' };
+  return withSex({ type: 'all' });
 }
 function activityAudienceAllows_(activityId, title, studentId) {
   try {
@@ -3976,7 +3978,7 @@ function createActivity(data, session) {
   const createdAt = cleanVal(data.createdAt || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
 
   const aud = normActivityAudience_(data.audience);
-  const audStr = aud.type === 'all' ? '' : JSON.stringify(aud);
+  const audStr = aud.type === 'all' && !aud.sex ? '' : JSON.stringify(aud);
   try { if (!cleanVal(sheet.getRange(1, 10).getValue())) sheet.getRange(1, 10).setValue('กลุ่มเป้าหมาย'); } catch (e) {}
 
   const rows = sheet.getDataRange().getValues();
@@ -4002,14 +4004,22 @@ function createActivity(data, session) {
   ]);
 
   // แจ้งเตือนเฉพาะกลุ่มเป้าหมาย (กระดิ่งในแอปนักเรียน)
-  if (session && aud.type !== 'all') {
+  if (session && (aud.type !== 'all' || aud.sex)) {
     try {
-      sendNotification_({
-        title: 'กิจกรรมใหม่: ' + title,
-        body: (startDate ? 'วันที่ ' + startDate : '') + (location ? ' · ' + location : ''),
-        audience: aud.type === 'grades' ? 'grade' : 'students',
-        values: aud.type === 'grades' ? aud.grades : aud.students.map(function (x) { return x.id; })
-      }, session);
+      let audT = aud.type === 'grades' ? 'grade' : 'students', vals = aud.type === 'grades' ? aud.grades : aud.type === 'students' ? aud.students.map(function (x) { return x.id; }) : [];
+      // v18.28 · จำกัดเพศ → แจ้งเฉพาะนักเรียนเพศนั้น (ในชั้นที่เลือก)
+      if (aud.sex && aud.type !== 'students') {
+        const sh = getSpreadsheet().getSheetByName(SHEETS.STUDENTS); vals = [];
+        if (sh && sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, Math.min(17, sh.getLastColumn())).getValues().forEach(function (r) {
+          const id = cleanVal(r[0]); if (!id) return; const gd = cleanVal(r[16] || ''), nm = cleanVal(r[1]);
+          const girl = /หญิง|^f/i.test(gd) || (!/ชาย|^m/i.test(gd) && /^\s*(นางสาว|น\.ส\.|นาง|เด็กหญิง|ด\.ญ\.)/.test(nm));
+          if ((aud.sex === 'f') !== girl) return;
+          if (aud.type === 'grades') { const m = cleanVal(r[3]).match(/([1-6])/); if (!m || aud.grades.indexOf(m[1]) === -1) return; }
+          vals.push(id);
+        });
+        audT = 'students';
+      }
+      if (vals.length) sendNotification_({ title: 'กิจกรรมใหม่: ' + title, body: (startDate ? 'วันที่ ' + startDate : '') + (location ? ' · ' + location : ''), audience: audT, values: vals }, session);
     } catch (e) {}
   }
 

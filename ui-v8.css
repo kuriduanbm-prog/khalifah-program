@@ -5038,3 +5038,7 @@ details.k8-tt-vis > summary b { font-weight: 600; color: #0f172a; } details.k8-t
 .k8-ap-late { position: relative; }
 .k8-ap-chk { position: absolute; top: 8px; left: 8px; z-index: 2; background: #fff; border-radius: 6px; padding: 3px; display: flex; box-shadow: 0 1px 4px rgba(15,23,42,.18); cursor: pointer; }
 .k8-ap-late.is-sel { outline: 2px solid #0369a1; outline-offset: -2px; background: #f0f9ff; }
+/* v18.28 · กลุ่มเป้าหมายกิจกรรม: เลือกเพศ */
+.k8-aud-sex { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 4px; }
+.k8-aud-sex > span { font-size: 13px; font-weight: 600; color: #475569; }
+.k8-aud-sex .k8-aud-seg button small { font-size: 11px; opacity: .75; }
