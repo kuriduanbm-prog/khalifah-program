@@ -3474,7 +3474,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.37';
+  const APP_VERSION = '18.38';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6019,7 +6019,24 @@ window.k8RegBirthChange = function (v) {
       else txt = r === 'student' ? 'วันนี้ไม่มีคาบเรียน' : 'วันนี้ไม่มีคาบสอน';
     }
     els.forEach((e) => { e.textContent = txt; });
+    // v18.38 · แถบตารางเรียน (นักเรียน): คาบถัดไป + เวลาที่เหลือ
+    try {
+      const bn = document.querySelector('.k8-tt-feat .k8-tt-bn'); if (!bn || r !== 'student') return;
+      let lead = 'ตารางเรียน', main = txt, left = '';
+      if (T.data && !T.data.hidden) {
+        const list = todayList(T.data.grade, false); const n = nowMin();
+        const cur = list.find((x) => toMin(x.start) <= n && n < toMin(x.end)); const nx = list.find((x) => toMin(x.start) > n);
+        const dur = (m) => m >= 60 ? Math.floor(m / 60) + ' ชม. ' + (m % 60 ? (m % 60) + ' นาที' : '') : m + ' นาที';
+        if (cur) { lead = 'ตอนนี้ · คาบ ' + cur.p; main = cur.start + '–' + cur.end + ' ' + cur.c.sn + (cur.c.r ? ' · ห้อง ' + cur.c.r : ''); left = 'เหลืออีก ' + dur(toMin(cur.end) - n) + (nx ? ' · ถัดไป ' + nx.c.sn : ''); }
+        else if (nx) { lead = 'ตารางเรียน · คาบถัดไป'; main = nx.start + ' ' + nx.c.sn + (nx.c.r ? ' · ห้อง ' + nx.c.r : ''); left = 'อีก ' + dur(toMin(nx.start) - n); }
+        else if (list.length) { lead = 'ตารางเรียน'; main = 'วันนี้เรียนครบทุกคาบแล้ว'; left = 'แตะเพื่อดูตารางพรุ่งนี้และทั้งสัปดาห์'; }
+        else { lead = 'ตารางเรียน'; main = 'วันนี้ไม่มีคาบเรียน'; left = 'แตะเพื่อดูตารางทั้งสัปดาห์'; }
+      }
+      bn.querySelector('.k8-tt-lead').textContent = lead; bn.querySelector('.k8-tt-main').textContent = main; bn.querySelector('.k8-tt-left').textContent = left;
+      bn.closest('button').setAttribute('aria-label', lead + ' ' + main + ' ' + left);
+    } catch (e) {}
   }
+  setInterval(() => { try { if (document.querySelector('.k8-tt-feat') && document.visibilityState === 'visible') paintEntry(); } catch (e) {} }, 60000);
 
   // ---------- หน้าดูตาราง (นักเรียน / อาจารย์) ----------
   // เปิดเป็นหน้าเต็ม (กดย้อนกลับเพื่อออก) · ค่าเริ่มต้นแสดงทั้งสัปดาห์
