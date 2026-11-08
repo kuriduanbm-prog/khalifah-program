@@ -5108,3 +5108,19 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 .k8-az-load a { color: #0369a1; font-weight: 600; }
 .k8-az-b iframe { opacity: 0; transition: opacity .3s; } .k8-az-b.is-ready iframe { opacity: 1; }
 #admin-tab-overview .k8-todo { display: none !important; } /* v18.36 · เอาการ์ด "ต้องดำเนินการ" ออก */
+/* v18.37 · ภาพรวม: คำขอลาเรียนรออนุมัติ (LV1) */
+.k8-ov-sl { display: flex; flex-direction: column; gap: 10px; padding: 6px 16px 14px; }
+.k8-ov-sl .hf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.k8-ov-sl .hf-head h2 { margin: 12px 0 2px; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.k8-ov-sl-n { background: #fee2e2; color: #b91c1c; border-radius: 999px; padding: 1px 9px; font-size: 12.5px; font-weight: 700; }
+.k8-ov-sl-it { border: 1px solid #e2e8f0; border-left: 4px solid var(--c, #475569); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+.k8-ov-sl-top { display: flex; gap: 10px; align-items: center; } .k8-ov-sl-top > div { min-width: 0; display: flex; flex-direction: column; }
+.k8-ov-sl-top b { font-size: 14px; } .k8-ov-sl-top small { font-size: 12px; color: #64748b; }
+.k8-ov-sl-av { width: 34px; height: 34px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: var(--c); background: color-mix(in srgb, var(--c) 12%, #fff); }
+.k8-ov-sl-it p { margin: 0; font-size: 12.5px; color: #334155; }
+.k8-ov-sl-act { display: flex; gap: 6px; justify-content: flex-end; }
+.k8-ov-sl-act button { min-height: 34px; padding: 0 14px; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.k8-ov-sl-act .is-ok { background: #15803d; border: 0; color: #fff; } .k8-ov-sl-act .is-ok:hover { background: #166534; }
+.k8-ov-sl-act .is-no { background: #fff; border: 1px solid #fecaca; color: #b91c1c; font-weight: 600; }
+.k8-ov-sl-empty { margin: 0; padding: 14px; text-align: center; color: #15803d; font-size: 13.5px; background: #f0fdf4; border-radius: 12px; }
+.k8-ov-sl-foot { font-size: 12.5px; color: #64748b; }

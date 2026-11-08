@@ -3474,7 +3474,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.36';
+  const APP_VERSION = '18.37';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10732,7 +10732,7 @@ window.k8HfMiss = function (slot) {
   async function loadApproved(force) {
     if (!force && Date.now() - loadedAt < 60000) return; loadedAt = Date.now();
     let r = null; try { r = await gasApiCall('getStudentLeaves', {}, 20000); } catch (e) {}
-    if (r && r.success) { ADM.list = r.data || []; APP = ADM.list.filter((x) => x.status === 'approved' || !x.status); try { localStorage.setItem('k8_sl_ok', JSON.stringify(APP.slice(-400))); } catch (e) {} try { if (typeof renderTeacherAttendanceTable === 'function') renderTeacherAttendanceTable(); } catch (e) {} paintAdmin(); }
+    if (r && r.success) { ADM.list = r.data || []; APP = ADM.list.filter((x) => x.status === 'approved' || !x.status); try { localStorage.setItem('k8_sl_ok', JSON.stringify(APP.slice(-400))); } catch (e) {} try { if (typeof renderTeacherAttendanceTable === 'function') renderTeacherAttendanceTable(); } catch (e) {} paintAdmin(); paintOv(); }
   }
   window.k8StuLeaveOn = function (sid, date, start, end) {
     const k = nid(sid); const a = toMin(start), b = toMin(end);
@@ -10837,8 +10837,32 @@ window.k8HfMiss = function (slot) {
     if (action === 'reject') { const v = window.prompt('เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)', ''); if (v === null) return; note = v; } // v18.23 · กดยกเลิก = ไม่ทำอะไร
     if (action === 'revoke' && !window.confirm('ยกเลิกการลาที่อนุมัติไปแล้ว?')) return;
     let r = null; try { r = await gasApiCall('respondStudentLeave', { data: { id, action, note } }, 20000); } catch (e) {}
-    if (r && r.success) { toast(r.message, 'success'); loadApproved(true); } else toast((r && r.message) || 'ไม่สำเร็จ', 'error');
+    if (r && r.success) { toast(r.message, 'success'); const it = ADM.list.find((x) => x.id === id); if (it && action !== 'revoke') { it.status = action === 'approve' ? 'approved' : 'rejected'; paintOv(); paintAdmin(); } loadApproved(true); } else { toast((r && r.message) || 'ไม่สำเร็จ', 'error'); loadApproved(true); }
   };
+  // v18.37 · ภาพรวมแอดมิน: การ์ด "คำขอลาเรียนรออนุมัติ" (แบบ LV1) · อนุมัติ/ไม่อนุมัติได้ทันที
+  const OVC = { 'ป่วย': '#dc2626', 'ลากิจ': '#0369a1', 'กลับบ้าน': '#d97706', 'กิจกรรมนอกโรงเรียน': '#7c3aed', 'อื่น ๆ': '#475569' };
+  const OVI = { 'ป่วย': '🤒', 'ลากิจ': '📝', 'กลับบ้าน': '🏠', 'กิจกรรมนอกโรงเรียน': '🏆', 'อื่น ๆ': '•••' };
+  const sg = (g) => { const m = String(g || '').match(/([1-6])/); return m ? 'ม.' + m[1] : String(g || ''); };
+  const dTh2 = (d) => { const x = new Date(d + 'T00:00:00'); return isNaN(x) ? d : ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][x.getDay()] + ' ' + x.getDate() + ' ' + ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][x.getMonth()]; };
+  const firstCh = (n) => String(n || '?').replace(/^(นาย|นางสาว|นาง|เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.)\s*/, '').charAt(0);
+  function paintOv() {
+    const row = document.querySelector('#admin-tab-overview .k8-ov-row'); if (!row || !isAdm()) return;
+    let box = document.getElementById('k8OvSl');
+    if (!box) { row.insertAdjacentHTML('afterbegin', '<section class="hf-card k8-ov-sl" id="k8OvSl" aria-labelledby="k8OvSlT"></section>'); box = document.getElementById('k8OvSl'); }
+    const t = ymd(new Date());
+    const pend = ADM.list.filter((x) => x.status === 'pending').sort((a, b) => String(a.from).localeCompare(String(b.from)));
+    const now = ADM.list.filter((x) => x.status === 'approved' && x.from <= t && (x.to || x.from) >= t);
+    const span2 = (x) => (x.to && x.to !== x.from ? dTh2(x.from) + '–' + dTh2(x.to) : dTh2(x.from)) + ' · ' + (x.allDay ? 'ทั้งวัน' : (x.tFrom || '') + '–' + (x.tTo || ''));
+    const q = (v) => "'" + esc(v) + "'";
+    let h = '<div class="hf-head"><h2 id="k8OvSlT">คำขอลาเรียนรออนุมัติ' + (pend.length ? ' <span class="k8-ov-sl-n">' + pend.length + '</span>' : '') + '</h2><button type="button" class="k8-ov-more" onclick="k8BellGo(\'sleaves\')">ดูทั้งหมด ›</button></div>';
+    if (pend.length) {
+      h += pend.slice(0, 4).map((x) => '<article class="k8-ov-sl-it" style="--c:' + (OVC[x.type] || '#475569') + '"><div class="k8-ov-sl-top"><span class="k8-ov-sl-av" aria-hidden="true">' + esc(firstCh(x.name)) + '</span><div><b>' + esc(x.name || x.sid) + ' · ' + esc(sg(x.grade)) + '</b><small>' + (OVI[x.type] || '') + ' ' + esc(x.type) + ' · ' + esc(span2(x)) + '</small></div></div>' + (x.reason && x.reason !== x.type ? '<p>“' + esc(x.reason) + '”</p>' : '') + '<div class="k8-ov-sl-act"><button type="button" class="is-no" onclick="k8SlAns(' + q(x.id) + ',\'reject\')">ไม่อนุมัติ</button><button type="button" class="is-ok" onclick="k8SlAns(' + q(x.id) + ',\'approve\')">✓ อนุมัติ</button></div></article>').join('');
+      if (pend.length > 4) h += '<button type="button" class="k8-ov-more" onclick="k8BellGo(\'sleaves\')">และอีก ' + (pend.length - 4) + ' คำขอ ›</button>';
+    } else h += '<p class="k8-ov-sl-empty">✓ ไม่มีคำขอลาเรียนค้าง</p>';
+    h += '<small class="k8-ov-sl-foot">' + (now.length ? 'วันนี้ลาอยู่ ' + now.length + ' คน · ' + now.slice(0, 2).map((x) => esc(String(x.name || '').split(' ')[0]) + ' (' + esc(sg(x.grade)) + ')').join(' · ') + (now.length > 2 ? ' · และอีก ' + (now.length - 2) : '') : 'วันนี้ไม่มีนักเรียนลา') + '</small>';
+    box.innerHTML = h;
+  }
+  { const ro = window.renderAdminOverviewV8; if (typeof ro === 'function') window.renderAdminOverviewV8 = function () { const r = ro.apply(this, arguments); try { paintOv(); loadApproved(Date.now() - loadedAt > 15000); } catch (e) {} return r; }; }
   window.k8SlPendingN = function () { return ADM.list.filter((x) => x.status === 'pending').length; };
   const sat = window.switchAdminTab; if (typeof sat === 'function') window.switchAdminTab = function (tab) { const r = sat.apply(this, arguments); if (tab === 'students') { paintAdmin(); loadApproved(true); } return r; };
   // โหลดข้อมูลสำหรับบุคลากร (เช็คชื่อ) และนักเรียน (ตัวเลขบนปุ่ม)
