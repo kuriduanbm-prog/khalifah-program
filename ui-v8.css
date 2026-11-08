@@ -5025,3 +5025,16 @@ details.k8-tt-vis > summary b { font-weight: 600; color: #0f172a; } details.k8-t
   .k8-tt-save { flex-wrap: wrap; }
   .k8-tt-save > button { flex: 1 1 auto; }
 }
+/* v18.27 · ละหมาดย้อนหลัง: เลือกหลายรายการ + ลบพร้อมกัน */
+.k8-ap-bulk { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; position: sticky; top: 8px; z-index: 5; }
+.k8-ap-all { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.k8-ap-all input, .k8-ap-chk input { width: 18px; height: 18px; accent-color: #0369a1; cursor: pointer; }
+.k8-ap-bsel, .k8-ap-bclr { border: 1px solid #e2e8f0; background: #fff; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; color: #334155; cursor: pointer; min-height: 32px; }
+.k8-ap-bsp { flex: 1; }
+.k8-ap-bn { font-size: 13px; color: #0369a1; font-weight: 600; }
+.k8-ap-bdel { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; border-radius: 10px; padding: 0 14px; min-height: 36px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.k8-ap-bdel.is-all { background: #dc2626; border-color: #dc2626; color: #fff; }
+.k8-ap-bdel:hover { filter: brightness(.96); }
+.k8-ap-late { position: relative; }
+.k8-ap-chk { position: absolute; top: 8px; left: 8px; z-index: 2; background: #fff; border-radius: 6px; padding: 3px; display: flex; box-shadow: 0 1px 4px rgba(15,23,42,.18); cursor: pointer; }
+.k8-ap-late.is-sel { outline: 2px solid #0369a1; outline-offset: -2px; background: #f0f9ff; }

@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.23'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.27'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -6233,11 +6233,14 @@ function savePrayerLateRequest(data) {
  */
 /** แอดมิน/อาจารย์ลบคำขอบันทึกละหมาดย้อนหลัง (ลบทิ้งทั้งแถว) */
 function deletePrayerLateRequest_(data) {
-  const reqId = cleanVal((data || {}).reqId || (data || {}).id);
-  if (!reqId) return { success: false, message: 'ไม่พบรหัสคำขอ' };
+  // v18.27 · ลบหลายรายการพร้อมกันได้ (reqIds: [...]) · ยังรองรับ reqId เดี่ยวเหมือนเดิม
+  const ids = {}; let k = 0;
+  (Array.isArray((data || {}).reqIds) ? data.reqIds : [(data || {}).reqId || (data || {}).id]).slice(0, 2000).forEach(function (x) { const v = cleanVal(x); if (v && !ids[v]) { ids[v] = true; k++; } });
+  if (!k) return { success: false, message: 'ไม่พบรหัสคำขอ' };
   const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYER_APPROVALS);
   if (!sheet) return { success: false, message: 'ไม่พบแผ่นงานคำขออนุมัติละหมาด' };
-  const n = deleteRowsWhere_(sheet, function (r) { return cleanVal(r[0]) === reqId; });
+  const n = deleteRowsWhere_(sheet, function (r) { return !!ids[cleanVal(r[0])]; });
+  if (k > 1) return { success: true, deleted: n, message: 'ลบคำขอแล้ว ' + n + ' รายการ' };
   return { success: true, deleted: n, message: n ? 'ลบคำขอแล้ว' : 'ไม่มีคำขอนี้ในระบบแล้ว' };
 }
 
@@ -6670,7 +6673,7 @@ function isAdminStaff_(username) {
 // =====================================================================
 //  🧭 คะแนนพฤติกรรม (เต็ม 100 ต่อภาคเรียน) — ผู้ตรวจการหัก/เพิ่มคะแนนตามหัวข้อที่แอดมินตั้งไว้
 // =====================================================================
-const BEHAVIOR_CATS = ['dress', 'dorm', 'toilet', 'conduct', 'reading', 'good'];
+const BEHAVIOR_CATS = ['dress', 'dorm', 'toilet', 'conduct', 'reading', 'mosque', 'good'];
 // v17.79 · หมวด "การอ่านหนังสือ" ใช้กับนักเรียนชาย ม.4–ม.6 เท่านั้น
 const READING_GRADES_ = ['4', '5', '6'];
 const DEFAULT_BEHAVIOR_RULES = [
@@ -6686,6 +6689,11 @@ const DEFAULT_BEHAVIOR_RULES = [
   { id: 'b1', cat: 'reading', title: 'ไม่อ่านหนังสือในเวลาอ่านหนังสือ', points: -3 },
   { id: 'b2', cat: 'reading', title: 'ไม่อยู่ในที่อ่านหนังสือ / ออกนอกห้องโดยไม่ขออนุญาต', points: -5 },
   { id: 'b3', cat: 'reading', title: 'คุยเสียงดัง / รบกวนผู้อื่นขณะอ่านหนังสือ', points: -3 },
+  { id: 'm1', cat: 'mosque', title: 'พูดคุยเสียงดัง / เล่นในมัสยิด', points: -3 }, // v18.27 · หมวดพฤติกรรมภายในมัสยิด
+  { id: 'm2', cat: 'mosque', title: 'มาละหมาดญะมาอะฮ์ไม่ทัน / ออกก่อนดุอาอ์', points: -3 },
+  { id: 'm3', cat: 'mosque', title: 'แต่งกายไม่เหมาะสมในมัสยิด', points: -3 },
+  { id: 'm4', cat: 'mosque', title: 'ใช้โทรศัพท์ในมัสยิด', points: -5 },
+  { id: 'm5', cat: 'mosque', title: 'ไม่รักษาความสะอาด / ไม่เก็บของให้เรียบร้อย', points: -3 },
   { id: 'g1', cat: 'good', title: 'ละหมาดญะมาอะฮ์ครบทุกเวลา', points: 3 },
   { id: 'g2', cat: 'good', title: 'มีน้ำใจ ช่วยเหลือผู้อื่น', points: 3 },
   { id: 'g3', cat: 'good', title: 'มีวินัย เป็นแบบอย่างที่ดี', points: 5 }
@@ -6711,7 +6719,7 @@ function sanitizeBehaviorRules_(list) {
 function getBehaviorRules_() {
   try {
     const raw = (getSettings().data || {}).BehaviorRules;
-    if (raw) { const list = sanitizeBehaviorRules_(JSON.parse(raw)); if (list.length) { if (!list.some(function (r) { return r.cat === 'reading'; })) DEFAULT_BEHAVIOR_RULES.filter(function (r) { return r.cat === 'reading'; }).forEach(function (r) { if (!list.some(function (x) { return x.id === r.id; })) list.push(r); }); return list; } }
+    if (raw) { const list = sanitizeBehaviorRules_(JSON.parse(raw)); if (list.length) { if (!list.some(function (r) { return r.cat === 'reading'; })) DEFAULT_BEHAVIOR_RULES.filter(function (r) { return r.cat === 'reading'; }).forEach(function (r) { if (!list.some(function (x) { return x.id === r.id; })) list.push(r); }); if (!list.some(function (r) { return r.cat === 'mosque'; })) DEFAULT_BEHAVIOR_RULES.filter(function (r) { return r.cat === 'mosque'; }).forEach(function (r) { if (!list.some(function (x) { return x.id === r.id; })) list.push(r); }); return list; } }
   } catch (e) {}
   return DEFAULT_BEHAVIOR_RULES.slice();
 }
@@ -6750,7 +6758,7 @@ function addBehaviorLogs_(data, session) {
     let pts = Math.round(Number(data.points));
     if (!title || !isFinite(pts) || pts === 0) return { success: false, message: 'ไม่พบหัวข้อที่เลือก' };
     pts = Math.max(-20, Math.min(20, pts));
-    rule = { id: 'custom', cat: cleanVal(data.cat) === 'reading' ? 'reading' : (pts > 0 ? 'good' : 'conduct'), title: title, points: pts };
+    rule = { id: 'custom', cat: (cleanVal(data.cat) === 'reading' || cleanVal(data.cat) === 'mosque') && pts < 0 ? cleanVal(data.cat) : (pts > 0 ? 'good' : 'conduct'), title: title, points: pts };
   }
   const date = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(data.date)) ? cleanVal(data.date) : Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
   const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');

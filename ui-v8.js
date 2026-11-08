@@ -1963,7 +1963,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   const TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const js = (v) => esc(String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
-  let tab = 'accounts';
+  let tab = 'accounts'; const SEL = new Set(); // v18.27 · เลือกหลายรายการเพื่อลบพร้อมกัน
   function fmtWhen(v) {
     if (!v) return '-';
     const d = new Date(v); if (isNaN(d)) return String(v);
@@ -2004,19 +2004,39 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       }).join('') : '<div class="k8-li-empty">ไม่มีบัญชีใหม่ที่รออนุมัติ</div>';
     } else {
       const sorted = L.slice().sort((a, b) => (ns(a.status) === 'pending' ? 0 : 1) - (ns(b.status) === 'pending' ? 0 : 1));
-      grid.innerHTML = sorted.length ? sorted.map((l) => {
+      [...SEL].forEach((id) => { if (!L.some((x) => x.id === id)) SEL.delete(id); });
+      const done = sorted.filter((l) => ns(l.status) !== 'pending');
+      const bar = sorted.length ? '<div class="k8-ap-bulk"><label class="k8-ap-all"><input type="checkbox" ' + (SEL.size && SEL.size === sorted.length ? 'checked' : '') + ' onchange="k8ApSelAll(this.checked)" aria-label="เลือกทั้งหมด"> เลือกทั้งหมด (' + sorted.length + ')</label>' +
+        (done.length ? '<button type="button" class="k8-ap-bsel" onclick="k8ApSelDone()">เลือกเฉพาะที่พิจารณาแล้ว (' + done.length + ')</button>' : '') +
+        '<span class="k8-ap-bsp"></span>' + (SEL.size ? '<span class="k8-ap-bn">เลือกแล้ว ' + SEL.size + ' รายการ</span><button type="button" class="k8-ap-bclr" onclick="k8ApSelAll(false)">ล้าง</button><button type="button" class="k8-ap-bdel" onclick="k8ApDelMany(false)">' + TRASH + 'ลบที่เลือก (' + SEL.size + ')</button>' : '') +
+        '<button type="button" class="k8-ap-bdel is-all" onclick="k8ApDelMany(true)">' + TRASH + 'ลบทั้งหมด</button></div>' : '';
+      grid.innerHTML = bar + (sorted.length ? sorted.map((l) => {
         const s = ns(l.status);
         const photo = l.photoUrl ? '<button type="button" class="k8-ap-photo" onclick="viewPhotoInNewTab(\'' + js(l.photoUrl) + '\')" aria-label="ดูภาพหลักฐาน"><img src="' + esc(l.photoUrl) + '" alt="ภาพหลักฐาน" loading="lazy"></button>' : '<div class="k8-ap-photo is-empty">ไม่มีภาพ</div>';
-        return '<article class="k8-ap-card k8-ap-late">' + photo + '<div class="k8-ap-lb"><b>' + esc(l.studentName || l.studentId) + (l.grade ? ' · ' + esc(String(l.grade).replace('มัธยมศึกษาปีที่ ', 'ม.')) : '') + '</b>' +
+        return '<article class="k8-ap-card k8-ap-late' + (SEL.has(l.id) ? ' is-sel' : '') + '"><label class="k8-ap-chk" title="เลือก"><input type="checkbox" ' + (SEL.has(l.id) ? 'checked' : '') + ' onchange="k8ApSel(\'' + js(l.id) + '\', this.checked)" aria-label="เลือกคำขอของ ' + esc(l.studentName || l.studentId) + '"></label>' + photo + '<div class="k8-ap-lb"><b>' + esc(l.studentName || l.studentId) + (l.grade ? ' · ' + esc(String(l.grade).replace('มัธยมศึกษาปีที่ ', 'ม.')) : '') + '</b>' +
           '<span class="k8-ap-meta">' + esc(l.prayerSlot || '-') + ' · ' + esc(l.date || '-') + '</span>' + (l.photoUrl ? (function () { const ps = String(l.photoSource || ''); const cam = /camera|กล้อง/.test(ps); const gal = /gallery|แนบ/.test(ps); return '<span class="k8-ap-src ' + (cam ? 'is-cam' : gal ? 'is-gal' : '') + '">' + (cam ? '📷 ถ่ายจากกล้อง' : gal ? '🖼️ แนบจากเครื่อง' : 'รูปแนบ (ไม่ทราบที่มา)') + '</span>'; })() : '') + '<span class="k8-ap-why">เหตุผล: ' + esc([l.reasonPreset, l.reasonDetail].filter(Boolean).join(' · ') || '-') + '</span>' +
           (s === 'pending'
             ? '<div class="k8-ap-acts2"><button type="button" class="is-ok" onclick="adminApprovePrayerRequest(\'' + js(l.id) + '\')">อนุมัติ</button><button type="button" class="is-no" onclick="adminRejectPrayerRequest(\'' + js(l.id) + '\')">ไม่อนุมัติ</button></div>'
             : '<span class="k8-ap-done" style="color:' + (s === 'approved' ? '#15803d' : '#b91c1c') + '">' + (s === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ') + (l.approvedBy || l.rejectedBy ? ' โดย ' + esc(l.approvedBy || l.rejectedBy) : '') + '</span>') +
           '<button type="button" class="k8-ap-del" onclick="k8ApDelLate(\'' + js(l.id) + '\')">' + TRASH + 'ลบ</button>' +
           '</div></article>';
-      }).join('') : '<div class="k8-li-empty">ไม่มีคำขอละหมาดย้อนหลัง</div>';
+      }).join('') : '<div class="k8-li-empty">ไม่มีคำขอละหมาดย้อนหลัง</div>');
     }
   }
+  window.k8ApSel = function (id, on) { if (on) SEL.add(id); else SEL.delete(id); render(); };
+  window.k8ApSelAll = function (on) { SEL.clear(); if (on) lates().forEach((l) => SEL.add(l.id)); render(); };
+  window.k8ApSelDone = function () { SEL.clear(); lates().forEach((l) => { if (ns(l.status) !== 'pending') SEL.add(l.id); }); render(); };
+  window.k8ApDelMany = async function (all) {
+    let list = []; try { list = getPrayerApprovalsList() || []; } catch (e) {}
+    const ids = all ? list.map((x) => x.id) : [...SEL]; if (!ids.length) return;
+    const pend = list.filter((x) => ids.indexOf(x.id) !== -1 && ns(x.status) === 'pending').length;
+    if (!confirm((all ? 'ลบคำขอละหมาดย้อนหลัง "ทั้งหมด" ' : 'ลบคำขอที่เลือก ') + ids.length + ' รายการ ใช่ไหม?' + (pend ? '\n⚠️ ในนี้มีคำขอที่ยังรออนุมัติ ' + pend + ' รายการ' : '') + '\nลบแล้วกู้คืนไม่ได้ (บันทึกละหมาดที่อนุมัติไปแล้วจะยังอยู่)')) return;
+    try { savePrayerApprovalsList(list.filter((x) => ids.indexOf(x.id) === -1)); } catch (e) {}
+    SEL.clear(); window.renderApprovalsV8();
+    let r = null; try { r = await gasApiCall('deletePrayerLateRequest', { data: { reqIds: ids } }, 30000); } catch (e) { r = null; }
+    try { showToast(r && r.success ? 'ลบแล้ว ' + ids.length + ' รายการ' : 'ลบในเครื่องแล้ว · ระบบหลังบ้านยังไม่ได้อัปเดต (Deploy Code.gs ตัวล่าสุด)', r && r.success ? 'success' : 'warning'); } catch (e) {}
+    try { if (typeof renderSuperAdminOverviewKpis === 'function') renderSuperAdminOverviewKpis(); } catch (e) {}
+  };
   window.k8ApDelLate = async function (id) {
     let list = []; try { list = getPrayerApprovalsList(); } catch (e) {}
     const l = list.find((x) => x.id === id);
@@ -3247,7 +3267,7 @@ window.k8RegBirthChange = function (v) {
     ['EXECUTIVE', 'ผู้บริหาร', 'ดูนักเรียน อาจารย์ ละหมาด อันดับ พฤติกรรม รายวิชา เกรด หะละเกาะฮฺ · แก้ตารางสอนและอนุมัติลาสอนได้ (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['ActivityAdmin', 'ฝ่ายกิจกรรม', 'ดูกิจกรรมและสแกน/เช็คชื่อเข้ากิจกรรม · เพิ่มหรือลบกิจกรรมไม่ได้ (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['NIGHTDUTY', 'ครูเวรหอพักกลางคืน', 'บันทึกคะแนนพฤติกรรม (รวมหมวดการอ่านหนังสือ ชาย ม.4–6) · สร้างกิจกรรมและเปิด QR ให้นักเรียนสแกน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
-    ['INSPECTOR', 'ผู้ตรวจการ', 'ตรวจเครื่องแต่งกาย หอพัก ห้องน้ำ ความประพฤติ · หัก/เพิ่มคะแนนพฤติกรรม (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
+    ['INSPECTOR', 'ผู้ตรวจการ', 'ตรวจเครื่องแต่งกาย หอพัก ห้องน้ำ มัสยิด ความประพฤติ · หัก/เพิ่มคะแนนพฤติกรรม (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', false],
     ['SubAdmin', 'แอดมินรอง', 'เข้าระบบแอดมินได้ ยกเว้นตั้งค่าระบบและจัดการแอดมิน (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว)', true],
     ['SuperAdmin', 'แอดมิน (สิทธิ์เท่าแอดมินหลัก)', 'ทำได้ทุกอย่างเหมือนแอดมินหลัก รวมถึงตั้งค่าระบบ จัดการแอดมิน และให้สิทธิ์ผู้อื่น (เข้าทางแท็บแอดมิน ใช้รหัสผ่านอย่างเดียว) · เฉพาะแอดมินหลักเลือกได้', true]
   ];
@@ -3391,7 +3411,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.26';
+  const APP_VERSION = '18.27';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3601,9 +3621,10 @@ window.k8RegBirthChange = function (v) {
     dorm: '<path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M3 18h18M3 18v3M21 18v3M6 10V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4"/>',
     toilet: '<path d="M7 3h6v7H7zM5 10h14a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6zM9 16l-1 5h8l-1-5"/>',
     conduct: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+    mosque: '<path d="M4 21h16M6 21v-7a6 6 0 0 1 12 0v7M12 4v4M10 4.5a2 2 0 1 0 2-2.5"/><path d="M10 21v-3a2 2 0 0 1 4 0v3"/>', // v18.27
     good: '<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/>'
   };
-  const CATS = [['dress', 'เครื่องแต่งกาย', '#1d4ed8', '#eff6ff'], ['dorm', 'ความสะอาดหอพัก', '#7c3aed', '#f5f3ff'], ['toilet', 'ห้องน้ำ', '#0e7490', '#ecfeff'], ['conduct', 'ความประพฤติ', '#b45309', '#fffbeb'], ['reading', 'การอ่านหนังสือ', '#4338ca', '#eef2ff'], ['good', 'ทำความดี (เพิ่มคะแนน)', '#15803d', '#f0fdf4']];
+  const CATS = [['dress', 'เครื่องแต่งกาย', '#1d4ed8', '#eff6ff'], ['dorm', 'ความสะอาดหอพัก', '#7c3aed', '#f5f3ff'], ['toilet', 'ห้องน้ำ', '#0e7490', '#ecfeff'], ['conduct', 'ความประพฤติ', '#b45309', '#fffbeb'], ['reading', 'การอ่านหนังสือ', '#4338ca', '#eef2ff'], ['mosque', 'พฤติกรรมภายในมัสยิด', '#0f766e', '#f0fdfa'], ['good', 'ทำความดี (เพิ่มคะแนน)', '#15803d', '#f0fdf4']];
   const catOf = (k) => CATS.find((c) => c[0] === k) || CATS[3];
   const svg = (k, s) => '<svg width="' + (s || 20) + '" height="' + (s || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICO[k] || ICO.conduct) + '</svg>';
   // ใช้ภาคเรียนจากเซิร์ฟเวอร์เป็นหลัก (ตรงกับที่บันทึกในชีต) ถ้ายังไม่ได้โหลดใช้ค่าในเครื่อง
