@@ -107,6 +107,7 @@
 .hf-deed { background: #fff; border: 1px solid var(--k8-line); border-radius: 16px; padding: 12px; border-style: solid; text-align: left; font-family: inherit; cursor: pointer; }
 .hf-deed span { display: block; font-size: 12px; color: var(--k8-ink-2); }
 .hf-deed b { display: block; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 17px; font-weight: 600; }
+.hf-deed .hf-deed-sub { display: block; margin-top: 2px; font-size: 11px; color: var(--k8-ink-3, #64748b); }
 
 #view-dashboard { background: transparent; }
 body.portal-mode-student .main-wrapper { background: var(--k8-bg); }

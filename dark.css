@@ -645,6 +645,7 @@ html[data-theme="dark"] .hf-subj-bar { background-color: #21272f !important; }
 html[data-theme="dark"] .hf-asg { background-color: #181f26 !important; }
 html[data-theme="dark"] .hf-asg li span:first-child { color: #c1c7cf !important; }
 html[data-theme="dark"] .hf-deed { background-color: #121212 !important; }
+html[data-theme="dark"] .hf-deed .hf-deed-sub { color: var(--k8-ink-3, #a6b0bf) !important; }
 @media (max-width: 992px) {
 html[data-theme="dark"] body .mobile-nav, html[data-theme="dark"] body.teacher-portal-active .teacher-bottom-nav-bar { background-color: #1f1f1f !important; }
 }

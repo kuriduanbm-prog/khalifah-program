@@ -480,9 +480,10 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const st = window.k8HasanatStats(ymdL(range.start), ymdL(range.end));
       pages = st.pages; rakaat = st.rakaat; memNew = st.mem;
     }
-    const deeds = [['อ่านอัลกุรอาน', fmtNum(pages) + ' หน้า', '#b45309'], ['ท่องจำใหม่', memNew + ' ซูเราะห์', '#15803d'], ['สุนัต', fmtNum(rakaat) + ' ร็อกอะฮ์', '#6d28d9']];
-    document.getElementById('hfDeeds').innerHTML = deeds.map(([label, value, ink]) =>
-      '<button type="button" class="hf-deed" onclick="switchView(\'hasanat\')"><span>' + label + '</span><b style="color:' + ink + '">' + esc(value) + '</b></button>'
+    const memTot = Math.max(memLatest, Number(mine.memorization && mine.memorization.count) || 0);
+    const deeds = [['อ่านอัลกุรอาน', fmtNum(pages) + ' หน้า', '#b45309'], ['ท่องจำใหม่', memNew + ' ซูเราะห์', '#15803d', memTot ? 'สะสม ' + memTot + ' / 114' : ''], ['สุนัต', fmtNum(rakaat) + ' ร็อกอะฮ์', '#6d28d9']];
+    document.getElementById('hfDeeds').innerHTML = deeds.map(([label, value, ink, sub]) =>
+      '<button type="button" class="hf-deed" onclick="switchView(\'hasanat\')"><span>' + label + '</span><b style="color:' + ink + '">' + esc(value) + '</b>' + (sub ? '<small class="hf-deed-sub">' + esc(sub) + '</small>' : '') + '</button>'
     ).join('');
   }
 
@@ -3068,8 +3069,31 @@ window.k8RegBirthChange = function (v) {
     try { if (typeof renderHomeF === 'function') renderHomeF(); } catch (e) {}
     if (typeof showToast === 'function') showToast('รีเซ็ตข้อมูลผลบุญเรียบร้อยแล้ว', 'success');
   };
+  // v18.39 · นักเรียนดึงผลบุญล่าสุดจากระบบ (แอดมินบันทึกให้ระหว่างที่นักเรียนเปิดแอปค้างไว้ · เดิมต้องออกแล้วเข้าใหม่จึงเห็น)
+  let pullAt = 0, pulling = false;
+  async function pullMine(gap) {
+    if (pulling || !RO()) return; let s = null; try { s = currentStudent || null; } catch (e) {} if (!s || !s.studentId) return;
+    if (Date.now() - pullAt < (gap == null ? 60000 : gap) || navigator.onLine === false) return;
+    pulling = true; pullAt = Date.now();
+    let res = null; try { res = await gasApiCall('getHasanat', { studentId: s.studentId }, 20000); } catch (e) {}
+    pulling = false;
+    if (!res || !res.success || !Array.isArray(res.data)) return;
+    const next = res.data.filter((r) => r && sameId(r.studentId, s.studentId)).map((h) => ({ studentId: h.studentId, date: h.date, quran: h.quran, memorization: h.memorization, sunnah: h.sunnah }));
+    const before = JSON.stringify(rows());
+    writeJSON('khalifah_hasanat_rows', readJSON('khalifah_hasanat_rows', []).filter((r) => !(r && sameId(r.studentId, s.studentId))).concat(next));
+    if (next.length) {
+      const all = readJSON('khalifah_student_hasanat', {});
+      const key = Object.keys(all).find((k) => sameId(k, s.studentId)) || (typeof cleanIdString === 'function' ? cleanIdString(s.studentId) : String(s.studentId));
+      const cur = all[key] = all[key] || {};
+      next.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))).forEach((it) => { ['quran', 'memorization', 'sunnah'].forEach((k) => { if (it[k]) cur[k] = Object.assign({}, cur[k] || {}, it[k]); }); });
+      writeJSON('khalifah_student_hasanat', all);
+    }
+    if (JSON.stringify(rows()) !== before) { render(); try { if (typeof renderHomeF === 'function') renderHomeF(); } catch (e) {} }
+  }
+  window.k8HasPull = pullMine;
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pullMine(); });
   const sv = window.switchView;
-  if (typeof sv === 'function') window.switchView = function (v) { const r = sv.apply(this, arguments); if (v === 'hasanat') { S.date = today(); S.add = 0; S.sun = null; S.tab = S.tab || 'quran'; render(); } else if (v !== 'hasanat' && window.k8HasTarget && v !== 'admin') { window.k8HasTarget = null; } return r; };
+  if (typeof sv === 'function') window.switchView = function (v) { if (v === 'hasanat') pullMine(5000); else if (v === 'dashboard') pullMine(); const r = sv.apply(this, arguments); if (v === 'hasanat') { S.date = today(); S.add = 0; S.sun = null; S.tab = S.tab || 'quran'; render(); } else if (v !== 'hasanat' && window.k8HasTarget && v !== 'admin') { window.k8HasTarget = null; } return r; };
   window.k8HasBack = function () { window.k8HasTarget = null; try { switchView('admin'); switchAdminTab('hasanat-admin', document.getElementById('btnAdminTabHasanat')); } catch (e) {} };
 })();
 
@@ -3474,7 +3498,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.38';
+  const APP_VERSION = '18.39';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
