@@ -2269,6 +2269,24 @@ html[data-theme="dark"] .k8-staff-pend { background-color: #433a15 !important; c
 html[data-theme="dark"] .k8-staff-act button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
 html[data-theme="dark"] .k8-staff-act .is-pv { border-color: #264555 !important; background-color: #0e2432 !important; color: #69c8fc !important; }
 html[data-theme="dark"] .k8-staff-act .is-del { color: #ed7878 !important; border-color: #522424 !important; }
+html[data-theme="dark"] .k8-sw2-step b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-sw2-step small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-sw2-ph { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-sw2-dh { color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-sw2-c { background-color: #0369a1 !important; }
+html[data-theme="dark"] .k8-sw2-c b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-sw2-c small { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-sw2-c.is-empty { background-color: #181f26 !important; }
+html[data-theme="dark"] .k8-sw2-c.is-on { background-color: #0369a1 !important; }
+html[data-theme="dark"] .k8-sw2-cands button { border: 1.5px solid #323941 !important; background-color: #121212 !important; }
+html[data-theme="dark"] .k8-sw2-cands button.is-on { background-color: #140e31 !important; }
+html[data-theme="dark"] .k8-sw2-cp small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-sw2-cw b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-sw2-cw small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-sw2-ck { border: 1.5px solid #393f46 !important; }
+html[data-theme="dark"] .k8-sw2-days button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-sw2-sum { background-color: #181f26 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-sw2-sum > small { color: #b6bcc3 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
