@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.12';
+  const APP_VERSION = '18.13';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4215,8 +4215,10 @@ window.k8RegBirthChange = function (v) {
   const adm = () => { try { return currentAdmin || null; } catch (e) { return null; } };
   const isSuper = () => { const a = adm(); return !!a && a.role === 'SuperAdmin'; };
   const N = { list: [], pending: [], unread: 0, loaded: false, loading: false, pop: null };
+  // v18.13 · วันที่จากชีต (เช่น "Sun Nov 15 2026 00:00:00 GMT+0700 (…)") → 15 พ.ย. 69
+  function naD(v) { const t = String(v || ''); let d = /^\d{4}-\d{2}-\d{2}/.test(t) ? new Date(t.slice(0, 10) + 'T00:00:00') : new Date(t.replace(/\s*\(.*\)\s*$/, '')); if (isNaN(d)) return t; const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; return d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); }
   function ago(s) {
-    const d = new Date(String(s).replace(' ', 'T')); if (isNaN(d)) return s || '';
+    let d = new Date(String(s).replace(' ', 'T')); if (isNaN(d)) d = new Date(String(s).replace(/\s*\(.*\)\s*$/, '')); if (isNaN(d)) return s || '';
     const m = Math.round((Date.now() - d.getTime()) / 60000);
     if (m < 1) return 'เมื่อสักครู่'; if (m < 60) return m + ' นาทีที่แล้ว'; const h = Math.round(m / 60); if (h < 24) return h + ' ชั่วโมงที่แล้ว';
     const dd = Math.round(h / 24); if (dd < 7) return dd + ' วันที่แล้ว';
@@ -4457,7 +4459,7 @@ window.k8RegBirthChange = function (v) {
     const ico = (m) => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (MODES.find((x) => x[0] === m) || MODES[0])[3] + '</svg>';
     const PLACES = [['home', 'บนสุดของหน้าแรก'], ['card', 'ใต้บัตรนักเรียน'], ['all', 'ทุกหน้า']];
     // ① ที่ส่งแล้ว
-    let sentH = '<section class="k8-bh-card k8-na2-sent"><div class="k8-na2-hd"><h2 class="k8-bh-h">ที่ส่งแล้ว</h2><span>' + A.sent.length + '</span></div><ul class="k8-na2-list">' + (A.sent.length ? A.sent.map((n) => { const md = n.mode || 'bell'; const lbl = (MODES.find((x) => x[0] === md) || MODES[0])[1]; return '<li><span class="k8-na2-li is-' + md + '">' + ico(md) + '</span><div><b>' + (n.priority === 'urgent' ? '<em class="k8-nt-tag">สำคัญ</em> ' : '') + esc(n.title) + '</b><small>' + esc(lbl) + ' · ' + esc(audLabel(n)) + ' · ' + esc(ago(n.createdAt)) + (n.expires ? ' · ถึง ' + esc(n.expires) : '') + '</small>' + (n.recipients ? '<i class="k8-na2-bar"><em style="width:' + Math.min(100, Math.round(Math.min(n.reads, n.recipients) / n.recipients * 100)) + '%"></em></i><small>อ่านแล้ว ' + Math.min(n.reads, n.recipients) + '/' + n.recipients + ' คน</small>' : '<small>อ่านแล้ว ' + n.reads + ' คน</small>') + '</div><button type="button" class="k8-na2-del" aria-label="ลบ ' + esc(n.title) + '" onclick="k8NaDel(\'' + js(n.id) + '\')">✕</button></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีแจ้งเตือนที่ส่ง</li>') + '</ul></section>';
+    let sentH = '<section class="k8-bh-card k8-na2-sent"><div class="k8-na2-hd"><h2 class="k8-bh-h">ที่ส่งแล้ว</h2><span>' + A.sent.length + '</span></div><ul class="k8-na2-list">' + (A.sent.length ? A.sent.map((n) => { const md = n.mode || 'bell'; const lbl = (MODES.find((x) => x[0] === md) || MODES[0])[1]; return '<li><span class="k8-na2-li is-' + md + '">' + ico(md) + '</span><div><b>' + (n.priority === 'urgent' ? '<em class="k8-nt-tag">สำคัญ</em> ' : '') + esc(n.title) + '</b><small>' + esc(lbl) + ' · ' + esc(audLabel(n)) + ' · ' + esc(ago(n.createdAt)) + (n.expires ? ' · ถึง ' + esc(naD(n.expires)) : '') + '</small>' + (n.recipients ? '<i class="k8-na2-bar"><em style="width:' + Math.min(100, Math.round(Math.min(n.reads, n.recipients) / n.recipients * 100)) + '%"></em></i><small>อ่านแล้ว ' + Math.min(n.reads, n.recipients) + '/' + n.recipients + ' คน</small>' : '<small>อ่านแล้ว ' + n.reads + ' คน</small>') + '</div><button type="button" class="k8-na2-del" aria-label="ลบ ' + esc(n.title) + '" onclick="k8NaDel(\'' + js(n.id) + '\')">✕</button></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีแจ้งเตือนที่ส่ง</li>') + '</ul></section>';
     // ② เขียน
     let cmp = '<section class="k8-bh-card k8-na2-cmp"><h2 class="k8-bh-h">เขียนแจ้งเตือน</h2>' +
       '<label class="k8-nf-f"><span>หัวข้อ *</span><input type="text" maxlength="120" id="k8NaTitle" value="' + esc(A.title) + '" placeholder="เช่น งดเรียนวันศุกร์นี้" oninput="k8NaSet(\'title\', this.value, 1); k8NaPv()"></label>' +
