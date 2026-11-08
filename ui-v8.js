@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.20';
+  const APP_VERSION = '18.21';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10632,7 +10632,6 @@ window.k8HfMiss = function (slot) {
       (F.allDay ? '' : '<div class="k8-sl-row"><label class="k8-nf-f"><span>ตั้งแต่เวลา</span><input type="time" value="' + F.tFrom + '" onchange="k8SlF(\'tFrom\', this.value, 1)"></label><label class="k8-nf-f"><span>ถึงเวลา</span><input type="time" value="' + F.tTo + '" onchange="k8SlF(\'tTo\', this.value, 1)"></label></div>') +
       '<div class="k8-nf-f"><span>ประเภทการลา</span><div class="k8-sl-types">' + TYPES.map(([k, ic]) => '<button type="button" aria-pressed="' + (F.type === k) + '" onclick="k8SlF(\'type\',\'' + k + '\')"><span aria-hidden="true">' + ic + '</span>' + k + '</button>').join('') + '</div></div>' +
       (F.type === 'อื่น ๆ' ? '<label class="k8-nf-f"><span>ระบุประเภทการลา *</span><input type="text" id="k8SlOther" maxlength="60" value="' + esc(F.other) + '" placeholder="เช่น ไปงานแต่งญาติ / ทำบัตรประชาชน" oninput="k8SlF(\'other\', this.value, 1)" required aria-required="true"></label>' : '') +
-      '<label class="k8-nf-f"><span>ลาไปไหน</span><input type="text" maxlength="120" value="' + esc(F.where) + '" placeholder="เช่น โรงพยาบาลยะรัง / บ้าน / สนามกีฬาจังหวัด" oninput="k8SlF(\'where\', this.value, 1)"></label>' +
       '<label class="k8-nf-f"><span>หมายเหตุ *</span><textarea rows="3" maxlength="300" placeholder="รายละเอียดเพิ่มเติม เช่น ไปหาหมอ มีไข้สูง / ไปแข่งฟุตบอลนักเรียน" oninput="k8SlF(\'reason\', this.value, 1)">' + esc(F.reason) + '</textarea></label>' +
       '<button type="button" class="k8-bh-go k8-term-save" ' + (F.busy ? 'disabled' : '') + ' onclick="k8SlSend()">' + (F.busy ? 'กำลังส่ง…' : 'ส่งคำขอลา') + '</button></section>';
     h += '<section class="k8-bh-card"><h2 class="k8-bh-h">คำขอลาของฉัน</h2>' + (MY == null ? '<p class="k8-asum-empty">กำลังโหลด…</p>' : !MY.length ? '<p class="k8-asum-empty">ยังไม่เคยขอลา</p>' :
