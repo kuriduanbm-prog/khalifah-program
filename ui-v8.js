@@ -3474,7 +3474,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.34';
+  const APP_VERSION = '18.35';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5877,7 +5877,7 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', (e) => {
     if (leaving) return;
     const st = e.state || {};
-    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt || st.k8bh || st.k8pf || st.k8lb || st.k8gs2 || st.k8hqr || st.k8atd) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
+    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt || st.k8bh || st.k8pf || st.k8lb || st.k8gs2 || st.k8hqr || st.k8atd || st.k8az) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
     if (closeTopModal() || goHome()) { arm(); return; }
     const now = Date.now();
     if (now - lastBack < 2000) { leaving = true; try { history.back(); } catch (e2) {} return; }
@@ -11048,4 +11048,23 @@ window.k8HfMiss = function (slot) {
     try { if (navigator.vibrate) navigator.vibrate([40, 60, 40]); } catch (e) {}
   };
   window.k8CeleClose = function () { const el = document.getElementById('k8Cele'); if (!el) return; el.classList.add('is-out'); setTimeout(() => el.remove(), 250); };
+})();
+
+/* ---------- v18.35 · นักเรียน: บทอ่านอัซกัร (เปิดหนังสือ PubHTML5 ในแอป) ---------- */
+(function () {
+  const URL_BOOK = 'https://online.pubhtml5.com/nbxq/bael/';
+  const URL_PAGE = 'https://pubhtml5.com/nbxq/bael/';
+  function ensure() {
+    if (document.getElementById('k8Az')) return;
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-az" id="k8Az" hidden role="dialog" aria-modal="true" aria-labelledby="k8AzT"><header class="k8-az-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8AzT">บทอ่านอัซกัร</h2><small>ปัดหรือแตะขอบหน้าเพื่อพลิกหน้า · ซูมได้</small></div><a class="k8-az-ext" href="' + URL_PAGE + '" target="_blank" rel="noopener">เปิดแบบเต็ม ↗</a></header><div class="k8-az-b"><p class="k8-az-load" id="k8AzLoad">กำลังเปิดหนังสือ…</p><iframe id="k8AzF" title="หนังสือบทอ่านอัซกัร" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div></div>');
+    const f = document.getElementById('k8AzF');
+    f.addEventListener('load', () => { if (!f.src) return; const l = document.getElementById('k8AzLoad'); if (l) l.hidden = true; f.parentElement.classList.add('is-ready'); });
+  }
+  window.k8AzOpen = function () {
+    ensure(); const el = document.getElementById('k8Az'); const f = document.getElementById('k8AzF');
+    if (!f.src) { f.src = URL_BOOK; setTimeout(() => { const l = document.getElementById('k8AzLoad'); if (l && !l.hidden) l.innerHTML = 'ถ้าหนังสือไม่ขึ้น <a href="' + URL_PAGE + '" target="_blank" rel="noopener">แตะเพื่อเปิดในหน้าต่างใหม่</a>'; }, 12000); }
+    el.hidden = false; document.documentElement.classList.add('k8-docs-open');
+    try { history.pushState({ k8az: 1 }, ''); } catch (e) {}
+  };
+  window.addEventListener('popstate', () => { const el = document.getElementById('k8Az'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
 })();
