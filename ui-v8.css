@@ -5072,3 +5072,10 @@ details.k8-tt-vis > summary b { font-weight: 600; color: #0f172a; } details.k8-t
 .hf-stars { top: -17px; } .hf-stars i { font-size: 21px; }
 .k8-cele { z-index: 2147483000; } .k8-cele-ar { font-size: 32px; line-height: 1.5; }
 .k8-pd-b.is-lv { background: repeating-linear-gradient(135deg, #ede9fe 0 6px, #f5f3ff 6px 12px); color: #6d28d9; border-color: #c4b5fd; }
+/* v18.30 · แอดมินแตะวิชาที่ยังไม่เช็ค → เช็คชื่อแทน */
+.k8-atd-it.is-go { cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.k8-atd-it.is-go:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(15, 23, 42, .08); }
+.k8-atd-it.is-go:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }
+.k8-atd-it.is-miss.is-go .k8-atd-st::after, .k8-atd-it.is-now.is-go .k8-atd-st::after { content: ' · เช็คแทน ›'; }
+.k8-ta-adm { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; border-radius: 14px; padding: 10px 14px; margin-bottom: 12px; font-size: 13.5px; }
+.k8-ta-adm button { border: 0; background: #0c4a6e; color: #fff; border-radius: 10px; min-height: 36px; padding: 0 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }

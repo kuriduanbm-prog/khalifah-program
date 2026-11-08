@@ -2565,6 +2565,13 @@ window.k8RegBirthChange = function (v) {
 
   function render() {
     const listEl = document.getElementById('k8TaList'); if (!listEl) return;
+    try {
+      const tab = document.getElementById('teacher-tab-attendance'); let bn = document.getElementById('k8TaAdm');
+      if (S.adminFor && tab) {
+        if (!bn) { bn = document.createElement('div'); bn.id = 'k8TaAdm'; bn.className = 'k8-ta-adm'; tab.prepend(bn); }
+        bn.innerHTML = '<span>🛡️ <b>แอดมินเช็คชื่อแทน</b> · บันทึกในนามคุณ (สอนแทน) · ' + (() => { const d = new Date(S.adminFor.ds + 'T00:00:00'); return isNaN(d) ? esc(S.adminFor.ds) : ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d.getDay()] + ' ' + d.getDate() + ' ' + ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][d.getMonth()] + ' ' + (d.getFullYear() + 543); })() + '</span><button type="button" onclick="k8AtdBack(\'' + esc(S.adminFor.ds) + '\')">‹ กลับหน้าวิชาวันนี้</button>';
+      } else if (bn) bn.remove();
+    } catch (e) {}
     const subs = subjects();
     if (S.subject !== '__none' && (S.subject == null || !subs.some((x) => String(x.id) === String(S.subject)))) S.subject = subs[0] ? subs[0].id : '';
     if (!subs.length && !S.subMode) { listEl.innerHTML = '<li class="k8-li-empty">ยังไม่มีวิชาที่คุณสอน · ให้แอดมินระบุชื่อคุณในตารางสอน หรือกำหนดวิชาให้ในข้อมูลอาจารย์</li>'; const ss0 = document.getElementById('k8TaSubject'); if (ss0) ss0.innerHTML = ''; return; }
@@ -2637,6 +2644,15 @@ window.k8RegBirthChange = function (v) {
   window.k8TaMore = function () { S.showF = !S.showF; render(); };
   window.k8TaPick = function (subj, grade, tn, per) { S.subject = subj; S.grade = grade; S.period = per || ''; S.picked = true; S.sub = S.subMode ? { tn: tn || 'อาจารย์ประจำวิชา' } : null; S.subName = S.sub ? (P_NAME[subj + '|' + grade] || '') : ''; render(); };
   const P_NAME = {};
+  // v18.30 · แอดมินเช็คชื่อแทน (มาจากหน้า "วิชาที่เรียนวันนี้")
+  window.k8TaAdminClear = function () { S.adminFor = null; S.subMode = false; S.subject = null; S.autoDone = false; S.date = ymd(new Date()); const b = document.getElementById('k8TaAdm'); if (b) b.remove(); };
+  window.k8TaAdminCheck = function (ds, code, g, p) {
+    S.date = ds; S.autoDone = true; S.adminFor = { ds, code, g: String(g), p: Number(p) };
+    const find = (sub) => { S.subMode = sub; return periods().find((x) => String(x.subj) === String(code) && String(x.g) === String(g) && Number(x.p) === Number(p)); };
+    const x = find(true) || find(false);
+    if (!x) { S.subMode = true; S.subject = '__none'; render(); try { showToast('ไม่พบคาบนี้ในตารางสอน', 'warning'); } catch (e) {} return; }
+    window.k8TaPick(x.subj, x.grade, x.tn, x.p);
+  };
   window.k8TaSubMode = function (on) { S.subMode = !!on; S.sub = null; S.subject = on ? '__none' : null; if (!on) S.autoDone = false; render(); }; // v17.65 · คงวันที่ที่เลือกไว้ (เช็คย้อนหลังได้)
   function autoPick(P) {
     if (S.subMode || S.autoDone || !P.length) return; S.autoDone = true;
@@ -3455,7 +3471,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.29';
+  const APP_VERSION = '18.30';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10280,7 +10296,7 @@ window.k8HfMiss = function (slot) {
           else if (isToday && nm < s0) st = 'wait';
           else if (isToday && nm < e0) st = 'now';
           else st = 'miss';
-          rows.push({ p, time: (pp.start || '') + '–' + (pp.end || ''), grade: src.label, sn: e.sn || e.s, tn: e.tn || e.t || 'ยังไม่ระบุผู้สอน', gx: e.gx, swapped: !!e.swapped, st, c, n: recs.length, lv });
+          rows.push({ p, time: (pp.start || '') + '–' + (pp.end || ''), grade: src.label, code: e.s || '', g: src.g, sn: e.sn || e.s, tn: e.tn || e.t || 'ยังไม่ระบุผู้สอน', gx: e.gx, swapped: !!e.swapped, st, c, n: recs.length, lv });
         });
       });
     });
@@ -10354,7 +10370,9 @@ window.k8HfMiss = function (slot) {
       const head = r.p !== lastP ? '<h3 class="k8-atd-ph">คาบ ' + r.p + ' <span>' + esc(r.time) + '</span></h3>' : ''; lastP = r.p;
       const col = window.k8SubjColor ? window.k8SubjColor(r.sn) : '#0369a1';
       const det = r.st === 'done' ? '<span class="k8-atd-c">มา ' + r.c.present + ' · สาย ' + r.c.late + ' · ลา ' + r.c.leave + ' · <em>ขาด ' + r.c.absent + '</em></span>' : r.st === 'leave' ? '<span class="k8-atd-c">' + esc((r.lv && r.lv.teacherName) || r.tn) + ' ลาสอน</span>' : '';
-      return head + '<article class="k8-atd-it ' + ST[r.st][1] + '"><span class="k8-atd-g">' + esc(r.grade) + (r.gx ? '<small>' + (r.gx === 'f' ? 'หญิง' : 'ชาย') + '</small>' : '') + '</span><div class="k8-atd-m"><b><i style="background:' + col + '"></i>' + esc(r.sn) + (r.swapped ? ' <span class="k8-atd-sw">⇄ สลับคาบ</span>' : '') + '</b><small>' + esc(r.tn) + '</small>' + det + '</div><span class="k8-atd-st">' + ST[r.st][0] + '</span></article>';
+      const canChk = (r.st === 'miss' || r.st === 'now' || r.st === 'done') && r.g && r.code; // v18.30 · แอดมินแตะเพื่อเช็คชื่อแทน
+      const go = canChk ? ' role="button" tabindex="0" onclick="k8AtdCheck(\'' + esc(ds) + '\',\'' + esc(r.code) + '\',\'' + esc(r.g) + '\',' + r.p + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" title="' + (r.st === 'done' ? 'แตะเพื่อดู/แก้ไขการเช็คชื่อ' : 'แตะเพื่อเช็คชื่อแทนอาจารย์') + '"' : '';
+      return head + '<article class="k8-atd-it ' + ST[r.st][1] + (canChk ? ' is-go' : '') + '"' + go + '><span class="k8-atd-g">' + esc(r.grade) + (r.gx ? '<small>' + (r.gx === 'f' ? 'หญิง' : 'ชาย') + '</small>' : '') + '</span><div class="k8-atd-m"><b><i style="background:' + col + '"></i>' + esc(r.sn) + (r.swapped ? ' <span class="k8-atd-sw">⇄ สลับคาบ</span>' : '') + '</b><small>' + esc(r.tn) + '</small>' + det + '</div><span class="k8-atd-st">' + ST[r.st][0] + '</span></article>';
     }).join('');
     B.innerHTML = h;
   }
@@ -10366,6 +10384,12 @@ window.k8HfMiss = function (slot) {
   window.k8AtdRefresh = function () { load(true); };
   window.k8AtdDate = function (v) { A.date = v || ''; paintPage(); };
   window.k8AtdF = function (k) { A.f = k; paintPage(); };
+  window.k8AtdCheck = function (ds, code, g, p) {
+    const el = document.getElementById('k8Atd'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); try { if (history.state && history.state.k8atd) history.replaceState(null, ''); } catch (e) {} }
+    try { switchView('teacher'); } catch (e) {}
+    setTimeout(() => { try { switchTeacherTab('attendance'); } catch (e) {} setTimeout(() => { try { window.k8TaAdminCheck && window.k8TaAdminCheck(ds, code, g, p); } catch (e) {} }, 120); }, 80);
+  };
+  window.k8AtdBack = function (ds) { try { window.k8TaAdminClear && window.k8TaAdminClear(); } catch (e) {} try { switchView('admin'); } catch (e) {} setTimeout(() => { window.k8AtdOpen(); A.date = ds || ''; paintPage(); }, 120); };
   window.addEventListener('popstate', () => { const el = document.getElementById('k8Atd'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
   // ---------- อาจารย์: ปุ่มลัด "สรุปการมาเรียน" ----------
   const iv = setInterval(() => { const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q) return; if (!q.querySelector('.k8-asum-qbtn')) q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-asum-qbtn" onclick="k8AsumOpen()"><span style="background:#dcfce7;color:#15803d"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>สรุปการมาเรียน</button>'); clearInterval(iv); }, 1500);
