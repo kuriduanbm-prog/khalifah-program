@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.14';
+  const APP_VERSION = '18.15';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10747,13 +10747,13 @@ window.k8HfMiss = function (slot) {
   function newRow() {
     if (!canCreate()) return '';
     const today = ymd(new Date());
-    return '<div class="k8-ac-new"><span class="k8-ac-plus" aria-hidden="true">＋</span>' +
+    return '<div class="k8-ac-new"><div class="k8-ac-newh"><b>สร้างกิจกรรมใหม่</b><small>กรอกชื่อ เลือกวันที่ แล้วกดสร้าง · ระบบเปิด QR ให้นักเรียนสแกนทันที</small></div>' +
       '<input type="text" id="k8AcT" class="k8-ac-in is-wide" placeholder="ชื่อกิจกรรม…" aria-label="ชื่อกิจกรรม" onkeydown="if(event.key===\'Enter\')k8AcCreate()">' +
       '<select id="k8AcTy" class="k8-ac-in" aria-label="ประเภทกิจกรรม">' + TYPES.map((t) => '<option value="' + t[0] + '">' + t[1] + ' ' + t[0] + '</option>').join('') + '</select>' +
       '<input type="text" id="k8AcLoc" class="k8-ac-in" placeholder="สถานที่ (มัสยิด)" aria-label="สถานที่">' +
       '<input type="date" id="k8AcD" class="k8-ac-in" value="' + today + '" aria-label="วันที่จัด">' +
       '<select id="k8AcAu" class="k8-ac-in" aria-label="กลุ่มเป้าหมาย" onchange="k8AcAud(this.value)"><option value="all">ทุกคน</option><option value="grades">เฉพาะชั้นปี…</option><option value="students">รายบุคคล…</option></select>' +
-      '<button type="button" class="k8-ac-pri" onclick="k8AcCreate()">สร้าง + QR</button><div class="k8-ac-audslot" id="k8AcAudSlot" hidden></div></div>';
+      '<button type="button" class="k8-ac-pri k8-ac-go" onclick="k8AcCreate()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> สร้างกิจกรรม + เปิด QR</button><div class="k8-ac-audslot" id="k8AcAudSlot" hidden></div></div>';
   }
   function rowAct(x) {
     return '<button type="button" class="k8-ac-lk" onclick="openActivityQrModal(\'' + js(x.id) + '\')">QR</button><button type="button" class="k8-ac-lk" onclick="openActivityAttendeesModal(\'' + js(x.id) + '\')">รายชื่อ</button>' +
@@ -10845,6 +10845,17 @@ window.k8HfMiss = function (slot) {
     const u = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); const l = document.createElement('a'); l.href = u; l.download = 'กิจกรรม-' + today + '.csv'; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000);
   };
   document.addEventListener('click', (e) => { document.querySelectorAll('.k8-ac-more[open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); }); });
+  // v18.15 · เมนู ⋯ ลอยเหนือทุกอย่าง (ไม่ถูกตาราง/การ์ดตัด) · เปิดขึ้นด้านบนเมื่อใกล้ขอบล่าง
+  document.addEventListener('toggle', (e) => {
+    const d = e.target; if (!d || !d.classList || !d.classList.contains('k8-ac-more') || !d.open) return;
+    document.querySelectorAll('.k8-ac-more[open]').forEach((x) => { if (x !== d) x.removeAttribute('open'); });
+    const m = d.querySelector(':scope > div'), r = d.querySelector('summary').getBoundingClientRect(); if (!m) return;
+    m.style.position = 'fixed'; m.style.right = 'auto'; m.style.width = 'max-content'; m.style.visibility = 'hidden'; m.style.top = '0px'; m.style.left = '0px';
+    const h = m.offsetHeight, w = m.offsetWidth;
+    const up = r.bottom + h + 8 > window.innerHeight && r.top - h - 8 > 0;
+    m.style.top = (up ? r.top - h - 4 : r.bottom + 4) + 'px'; m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px'; m.style.visibility = '';
+  }, true);
+  window.addEventListener('scroll', () => { document.querySelectorAll('.k8-ac-more[open]').forEach((d) => d.removeAttribute('open')); }, true);
   const ot = window.renderAdminActivitiesTable;
   if (typeof ot === 'function') window.renderAdminActivitiesTable = function () { const r = ot.apply(this, arguments); try { paint(); } catch (e) {} return r; };
   const sa = window.switchAdminTab;

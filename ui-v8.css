@@ -4972,3 +4972,12 @@ details.k8-tt-vis > summary b { font-weight: 600; color: #0f172a; } details.k8-t
 @media (max-width: 1100px) { .k8-ac-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .k8-ac-calw { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) { .k8-ac-cd { min-height: 54px; } .k8-ac-ev { font-size: 0; height: 6px; padding: 0; } .k8-ac-kpi b { font-size: 22px; } .k8-ac-q { flex: 1 1 100%; } .k8-ac-man small { flex-basis: 100%; } }
 @media (max-width: 600px) { .k8-ac-chips { flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; } .k8-ac-chips button { flex: none; } .k8-ac-new .k8-ac-pri, .k8-ac-man .k8-ac-pri { flex: 1 1 100%; } .k8-ac-tools { justify-content: flex-start; } }
+/* v18.15 · เมนู ⋯ ไม่จม · ปุ่มสร้างเด่นขึ้น */
+.k8-ac-more > div { z-index: 1000; }
+.k8-ac-new { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1.5px solid #7dd3fc; padding: 14px 16px; gap: 10px; }
+.k8-ac-newh { flex-basis: 100%; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.k8-ac-newh b { font-size: 15px; color: #0c4a6e; } .k8-ac-newh small { font-size: 12.5px; color: #475569; }
+.k8-ac-new .k8-ac-in { min-height: 44px; border-color: #bae6fd; }
+.k8-ac-go { min-height: 46px; padding: 0 22px; font-size: 14.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 14px; background: linear-gradient(135deg, #0369a1, #0c4a6e); box-shadow: 0 6px 16px rgba(3, 105, 161, .32); transition: transform .12s, box-shadow .12s; }
+.k8-ac-go:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(3, 105, 161, .38); background: linear-gradient(135deg, #075985, #0c4a6e); }
+.k8-ac-go:active { transform: translateY(0); }
