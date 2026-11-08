@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.19';
+  const APP_VERSION = '18.20';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10633,7 +10633,7 @@ window.k8HfMiss = function (slot) {
       '<div class="k8-nf-f"><span>ประเภทการลา</span><div class="k8-sl-types">' + TYPES.map(([k, ic]) => '<button type="button" aria-pressed="' + (F.type === k) + '" onclick="k8SlF(\'type\',\'' + k + '\')"><span aria-hidden="true">' + ic + '</span>' + k + '</button>').join('') + '</div></div>' +
       (F.type === 'อื่น ๆ' ? '<label class="k8-nf-f"><span>ระบุประเภทการลา *</span><input type="text" id="k8SlOther" maxlength="60" value="' + esc(F.other) + '" placeholder="เช่น ไปงานแต่งญาติ / ทำบัตรประชาชน" oninput="k8SlF(\'other\', this.value, 1)" required aria-required="true"></label>' : '') +
       '<label class="k8-nf-f"><span>ลาไปไหน</span><input type="text" maxlength="120" value="' + esc(F.where) + '" placeholder="เช่น โรงพยาบาลยะรัง / บ้าน / สนามกีฬาจังหวัด" oninput="k8SlF(\'where\', this.value, 1)"></label>' +
-      '<label class="k8-nf-f"><span>ลาไปทำอะไร *</span><textarea rows="3" maxlength="300" placeholder="เช่น ไปหาหมอ มีไข้สูง / ไปแข่งฟุตบอลนักเรียน" oninput="k8SlF(\'reason\', this.value, 1)">' + esc(F.reason) + '</textarea></label>' +
+      '<label class="k8-nf-f"><span>หมายเหตุ *</span><textarea rows="3" maxlength="300" placeholder="รายละเอียดเพิ่มเติม เช่น ไปหาหมอ มีไข้สูง / ไปแข่งฟุตบอลนักเรียน" oninput="k8SlF(\'reason\', this.value, 1)">' + esc(F.reason) + '</textarea></label>' +
       '<button type="button" class="k8-bh-go k8-term-save" ' + (F.busy ? 'disabled' : '') + ' onclick="k8SlSend()">' + (F.busy ? 'กำลังส่ง…' : 'ส่งคำขอลา') + '</button></section>';
     h += '<section class="k8-bh-card"><h2 class="k8-bh-h">คำขอลาของฉัน</h2>' + (MY == null ? '<p class="k8-asum-empty">กำลังโหลด…</p>' : !MY.length ? '<p class="k8-asum-empty">ยังไม่เคยขอลา</p>' :
       '<ul class="k8-sl-list">' + MY.map((x) => '<li><div class="k8-sl-top"><b>' + esc(span(x)) + '</b>' + pill(x.status) + '</div><small>' + esc(x.type) + (x.where ? ' · ไป ' + esc(x.where) : '') + ' · ' + esc(x.reason) + '</small>' + (x.by && x.status !== 'pending' ? '<small>' + (ST[x.status] || ST.pending)[0] + 'โดย ' + esc(x.by) + (x.note ? ' · ' + esc(x.note) : '') + '</small>' : '') + ((x.status === 'pending' || x.status === 'approved') && x.to >= ymd(new Date()) ? '<button type="button" class="k8-sl-cancel" onclick="k8SlCancel(\'' + esc(x.id) + '\')">ยกเลิกคำขอ</button>' : '') + '</li>').join('') + '</ul>') + '</section>';
@@ -10645,7 +10645,7 @@ window.k8HfMiss = function (slot) {
   window.k8SlF = function (k, v, soft) { F[k] = v; if (k === 'from' && (!F.range || F.to < v)) F.to = v; if (k === 'range' && !v) F.to = F.from; if (!soft) renderStu(); };
   window.k8SlSend = async function () {
     if (F.type === 'อื่น ๆ' && !F.other.trim()) { toast('เลือก "อื่น ๆ" ต้องระบุประเภทการลาด้วย', 'warning'); const o = document.getElementById('k8SlOther'); if (o) o.focus(); return; }
-    if (!F.reason.trim()) { toast('กรุณาบอกว่าลาไปทำอะไร', 'warning'); return; }
+    if (!F.reason.trim()) { toast('กรุณากรอกหมายเหตุ', 'warning'); return; }
     if (!F.allDay && !(F.tTo > F.tFrom)) { toast('เวลาสิ้นสุดต้องหลังเวลาเริ่ม', 'warning'); return; }
     F.busy = true; renderStu();
     let r = null; try { r = await gasApiCall('requestStudentLeave', { data: { from: F.from, to: F.range ? F.to : F.from, allDay: F.allDay, tFrom: F.tFrom, tTo: F.tTo, type: F.type, where: F.where, reason: (F.type === 'อื่น ๆ' ? F.other.trim() + ' · ' : '') + F.reason } }, 30000); } catch (e) {}
