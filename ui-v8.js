@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.11';
+  const APP_VERSION = '18.12';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5183,6 +5183,7 @@ window.k8RegBirthChange = function (v) {
   window.k8HqOpen = async function () {
     const el = document.getElementById('k8Hq'); if (!el) return;
     el.hidden = false; H.open = true; H.view = 'list'; document.documentElement.classList.add('k8-docs-open'); stack('list');
+    if (!H.loaded) { const c = hqCacheGet(); if (c) { H.sessions = c; H.loaded = true; } }
     render(); await loadSessions(); render();
   };
   // v18.01 · อาจารย์เห็นเฉพาะกลุ่มที่ตัวเองเป็นผู้ดูแล (กันไว้ฝั่งแอปด้วย แม้ Code.gs ยังเป็นรุ่นเก่า) · แอดมินเห็นทั้งหมด
@@ -5190,7 +5191,17 @@ window.k8RegBirthChange = function (v) {
   const hqNm = (v) => String(v || '').trim().replace(/^(อาจารย์|อ\.|ครู|ustaz|ustazah|อุสตาซ(ะห์)?)\s*/i, '').replace(/\s+/g, ' ').toLowerCase();
   function hqMine(h) { let a = null; try { a = currentAdmin; } catch (e) {} if (!a) return false; if (String(h.teacher || '').toLowerCase() === String(a.username || '').toLowerCase()) return true; const x = hqNm(h.teacherName), y = hqNm(a.fullName || a.name); return !!x && !!y && x === y; }
   window.k8HqIsAdm = hqAdm;
-  async function loadSessions() { try { const r = await api('getHalaqahSessions'); if (r && r.success) { const L = r.sessions || []; H.sessions = hqAdm() ? L : L.filter(hqMine); } } catch (e) {} }
+  // v18.11 · โหลดเร็วขึ้น: แสดงข้อมูลที่จำไว้ในเครื่องทันที แล้วค่อยอัปเดตจากเซิร์ฟเวอร์ · โหลดล่วงหน้าหลังเข้าสู่ระบบ · รายชื่อจำไว้ต่อรอบ/วัน
+  const hqCk = () => { let a = null; try { a = currentAdmin; } catch (e) {} return a ? 'k8_hq_sess_' + String(a.username || a.fullName || '') : ''; };
+  function hqCacheGet() { const k = hqCk(); if (!k) return null; try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return Array.isArray(v) ? v : null; } catch (e) { return null; } }
+  let hqInflight = null;
+  function loadSessions() {
+    if (hqInflight) return hqInflight;
+    hqInflight = (async () => { try { const r = await api('getHalaqahSessions'); if (r && r.success) { const L = r.sessions || []; H.sessions = hqAdm() ? L : L.filter(hqMine); H.loaded = true; try { const k = hqCk(); if (k) localStorage.setItem(k, JSON.stringify(H.sessions)); } catch (e) {} } } catch (e) {} finally { H.loaded = true; setTimeout(() => { hqInflight = null; }, 0); } })();
+    return hqInflight;
+  }
+  const hqRc = {}; const rcKey = () => (H.cur ? H.cur.id : '') + '|' + H.date;
+  setTimeout(function pre() { let a = null; try { a = currentAdmin; } catch (e) {} if (a && !H.loaded && !H.open) { const c = hqCacheGet(); if (c) H.sessions = c; loadSessions(); } else if (!a) setTimeout(pre, 4000); }, 2500);
   function stopTimers() { clearInterval(H.qrTimer); clearInterval(H.clockTimer); H.qrTimer = H.clockTimer = null; }
   function closeHq() { stopTimers(); const el = document.getElementById('k8Hq'); if (el) el.hidden = true; H.open = false; document.documentElement.classList.remove('k8-docs-open'); }
   window.k8HqBack = function () { history.back(); };
@@ -5210,7 +5221,7 @@ window.k8RegBirthChange = function (v) {
       body.innerHTML = (hqAdm() ? '<button type="button" class="k8-hq-rep" onclick="k8HqRepOpen()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> สรุปการเช็คชื่อตามผู้ดูแล · บันทึกเป็นไฟล์</button>' : '') + '<button type="button" class="k8-hq-add" onclick="k8HqEdit()">+ เพิ่มหะละเกาะฮฺ</button>' +
         (H.sessions.length ? '<ul class="k8-hq-list">' + H.sessions.slice().sort((a, b) => toMin(a.start) - toMin(b.start)).map((s) => '<li><div class="k8-hq-li-top"><span class="k8-hq-slot">' + (s.teacherName ? 'ผู้ดูแล ' + esc(s.teacherName) : esc(slotName(s.slot))) + '</span>' + ((s.members || []).length ? '<span class="k8-hq-chip" style="color:#0369a1;background:#e0f2fe">ผู้เรียน ' + s.members.length + ' คน</span>' : '') + (((s.dates || []).length ? s.dates.indexOf(ymd(new Date())) !== -1 : s.days.indexOf(wd) !== -1) ? '<span class="k8-hq-chip" style="color:#047857;background:#d1fae5">มีวันนี้</span>' : '') + '</div><b>' + esc(s.name) + '</b><small>' + esc(s.start) + '–' + esc(s.end) + ' · ' + ((s.dates || []).length ? (s.dates.filter((x) => x >= ymd(new Date())).slice(0, 3).map(dTh).join(', ') || 'จัดครบทุกวันแล้ว') + (s.dates.filter((x) => x >= ymd(new Date())).length > 3 ? ' …' : '') : s.days.length === 7 ? 'ทุกวัน' : s.days.map((d) => DAYS[+d]).join(' ')) + ' · ' + ((s.members || []).length ? 'เฉพาะกลุ่ม' : s.grades.length ? s.grades.map((g) => 'ม.' + g).join(', ') : 'ทุกชั้น') + (s.location ? ' · ' + esc(s.location) : '') + '</small>' +
           '<div class="k8-hq-acts"><button type="button" class="is-pri" onclick="k8HqQr(\'' + js(s.id) + '\')">แสดง QR</button><button type="button" onclick="k8HqRoster(\'' + js(s.id) + '\')">เช็ครายชื่อ</button><button type="button" onclick="k8HqEdit(\'' + js(s.id) + '\')">แก้ไข</button></div></li>').join('') + '</ul>'
-          : '<div class="k8-docs-empty"><b>ยังไม่มีหะละเกาะฮฺ</b><span>เพิ่มกลุ่มแรก ใส่ชื่อผู้ดูแล แล้วดึงรายชื่อนักเรียนเข้ากลุ่ม · ค่าเริ่มต้น วันจันทร์ 10:00–11:40</span></div>');
+          : !H.loaded ? '<p class="k8-li-empty">กำลังโหลดกลุ่มหะละเกาะฮฺ…</p>' : '<div class="k8-docs-empty"><b>ยังไม่มีหะละเกาะฮฺ</b><span>เพิ่มกลุ่มแรก ใส่ชื่อผู้ดูแล แล้วดึงรายชื่อนักเรียนเข้ากลุ่ม · ค่าเริ่มต้น วันจันทร์ 10:00–11:40</span></div>');
     } else if (H.view === 'edit') {
       const e = H.edit; title.textContent = e.id ? 'แก้ไขหะละเกาะฮฺ' : 'เพิ่มหะละเกาะฮฺ'; sub.textContent = 'ผู้ดูแล · วันเวลา · รายชื่อผู้เรียน';
       const mem = (e.members || []); const byId = {}; allStu().forEach((x) => { byId[nid(x.studentId)] = x; });
@@ -5313,7 +5324,7 @@ window.k8RegBirthChange = function (v) {
     mem.forEach((k) => { if (have[k]) return; const x = by[k]; const u = rest[k] || {}; out.push({ studentId: x ? x.studentId : k, fullName: x ? x.fullName : 'รหัส ' + k, grade: x ? x.grade : '', status: u.status || '', time: u.time || '', method: u.method || '', fromApp: true }); });
     r.students = out; return r;
   }
-  async function loadRoster() { try { const r = await api('getHalaqahRoster', { id: H.cur.id, date: H.date }); if (r && r.success) H.roster = fillRoster(r); } catch (e) {} if (H.open && (H.view === 'qr' || H.view === 'roster')) render(); }
+  async function loadRoster() { const k0 = rcKey(); try { const r = await api('getHalaqahRoster', { id: H.cur.id, date: H.date }); if (r && r.success && rcKey() === k0) { H.roster = fillRoster(r); hqRc[k0] = H.roster; } } catch (e) {} if (H.open && (H.view === 'qr' || H.view === 'roster')) render(); }
   let qrText = '';
   async function drawQr() {
     const box = document.getElementById('k8HqQrBox'); if (!box) return;
@@ -5326,16 +5337,17 @@ window.k8RegBirthChange = function (v) {
   }
   window.k8HqQr = async function (id) {
     H.cur = H.sessions.find((x) => x.id === id); if (!H.cur) return;
-    H.date = ymd(new Date()); H.view = 'qr'; H.roster = null; qrText = ''; stack('qr'); render();
+    H.date = ymd(new Date()); H.view = 'qr'; H.roster = hqRc[rcKey()] || null; qrText = ''; stack('qr'); render();
+    const rp = loadRoster();
     try { const r = await api('getHalaqahQr', { id }); if (!r || !r.success) throw new Error((r && r.message) || 'สร้าง QR ไม่สำเร็จ'); qrText = r.qr; } catch (e) { toast(e.message, 'error'); }
-    render(); loadRoster();
+    render(); rp.then(render);
     clearInterval(H.qrTimer); H.qrTimer = setInterval(() => { if (!document.hidden && H.view === 'qr') { if (ymd(new Date()) !== H.date) { k8HqQr(id); return; } loadRoster(); } }, 8000);
   };
   window.k8HqRoster = function (id) {
     H.cur = H.sessions.find((x) => x.id === id) || H.cur; if (!H.cur) return;
-    stopTimers(); H.view = 'roster'; H.marks = {}; H.roster = null; stack('roster'); render(); loadRoster();
+    stopTimers(); H.view = 'roster'; H.marks = {}; H.roster = hqRc[rcKey()] || null; stack('roster'); render(); loadRoster();
   };
-  window.k8HqDate = function (v) { if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return; H.date = v; H.marks = {}; H.roster = null; render(); loadRoster(); };
+  window.k8HqDate = function (v) { if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return; H.date = v; H.marks = {}; H.roster = hqRc[rcKey()] || null; render(); loadRoster(); };
   window.k8HqMark = function (sid, st) { const x = H.roster && H.roster.students.find((s) => s.studentId === sid); if (x && x.status === st) delete H.marks[sid]; else H.marks[sid] = st; render(); };
   window.k8HqRest = function (st) { (H.roster ? H.roster.students : []).forEach((x) => { if (!x.status && !H.marks[x.studentId]) H.marks[x.studentId] = st; }); render(); };
   window.k8HqSaveMarks = async function () {
@@ -9277,7 +9289,7 @@ window.k8HfMiss = function (slot) {
 (function () {
   const lim = () => { try { return (currentAdmin && currentAdmin.limited) || ''; } catch (e) { return ''; } };
   const ALLOW = {
-    exec: ['overview', 'approvals', 'students', 'subadmins', 'timetable', 'subjects', 'grading', 'prayers-monitor', 'prayer-rank', 'behavior', 'halaqah'],
+    exec: ['overview', 'approvals', 'students', 'subadmins', 'timetable', 'subjects', 'prayers-monitor', 'prayer-rank', 'behavior', 'halaqah'],
     act: ['activities-admin'],
     night: ['behavior', 'activities-admin']
   };
