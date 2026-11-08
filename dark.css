@@ -2422,6 +2422,11 @@ html[data-theme="dark"] .k8-ac-newh small { color: #b6bcc3 !important; }
 html[data-theme="dark"] .k8-ac-new .k8-ac-in { border-color: #264555 !important; }
 html[data-theme="dark"] .k8-ac-more > div button small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-ac-more > div button.is-del small { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-na2-who { color: #69c8fc !important; background-color: #122938 !important; }
+html[data-theme="dark"] .k8-pv-tiles i { background-color: #122938 !important; }
+html[data-theme="dark"] .k8-pv-tiles.is-t i { background-color: #433a15 !important; }
+html[data-theme="dark"] .k8-pv-rows i { color: #c1c7cf !important; background-color: #1a2229 !important; }
+html[data-theme="dark"] .k8-pv-blk i { color: #b6bcc3 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

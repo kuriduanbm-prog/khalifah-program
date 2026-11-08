@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.16';
+  const APP_VERSION = '18.17';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4437,13 +4437,15 @@ window.k8RegBirthChange = function (v) {
       if (A.mode === 'banner' && A.place !== 'card') body += ban;
       body += '<div class="k8-pv-blk is-a">' + (who === 'นักเรียน' ? '<i>บัตรนักเรียน</i>' : '<i>เมนูลัด</i>') + '</div>';
       if (A.mode === 'banner' && A.place === 'card') body += who === 'นักเรียน' ? ban : '';
-      body += '<div class="k8-pv-blk"></div><div class="k8-pv-blk is-c"></div>';
+      body += who === 'นักเรียน' ? '<div class="k8-pv-tiles"><i></i><i></i><i></i><i></i></div><div class="k8-pv-blk is-c"><i>ละหมาดวันนี้</i></div>' : '<div class="k8-pv-tiles is-t"><i></i><i></i><i></i><i></i><i></i></div><div class="k8-pv-rows"><i>คาบ 1 · คณิตศาสตร์</i><i>คาบ 2 · วิทยาศาสตร์</i></div>';
       let over = '';
       if (A.mode === 'full') over = '<div class="k8-pv-ov"><div class="k8-pv-modal' + (urg ? ' is-urg' : '') + '"><span>📢</span><b>' + T + '</b><small>' + B + '</small><em>รับทราบ</em></div></div>';
       if (A.mode === 'bell') over = '<div class="k8-pv-drop"><small>การแจ้งเตือน</small><div><span>🔔</span><p><b>' + T + '</b><small>' + B + '</small></p></div></div>';
-      return '<figure class="k8-pv-dev ' + (pc ? 'is-pc' : 'is-ph') + '"><div class="k8-pv-scr"><div class="k8-pv-top"><b>หน้าแรก · ' + who + '</b><span>' + bell + '<i>1</i></span></div><div class="k8-pv-body">' + body + '</div>' + over + '</div><figcaption>' + who + '</figcaption></figure>';
+      return '<figure class="k8-pv-dev ' + (pc ? 'is-pc' : 'is-ph') + '"><div class="k8-pv-scr"><div class="k8-pv-top"><b>หน้าแรก</b><span>' + bell + '<i>1</i></span></div><div class="k8-pv-body">' + body + '</div>' + over + '</div><figcaption>' + (pc ? 'คอมพิวเตอร์' : 'มือถือ') + '</figcaption></figure>';
     };
-    return A.pv === 'pc' ? dev('อาจารย์', true) + dev('นักเรียน', false) : dev('นักเรียน', false) + dev('อาจารย์', false);
+    // v18.17 · แสดงคอม + มือถือเสมอ · เนื้อหาเปลี่ยนตามกลุ่มผู้รับ (บุคลากร → หน้าอาจารย์ · ทุกคน → คอม=อาจารย์ มือถือ=นักเรียน · อื่น ๆ → หน้านักเรียน)
+    const staff = A.audience === 'staff', mix = A.audience === 'everyone';
+    return dev(staff || mix ? 'อาจารย์' : 'นักเรียน', true) + dev(staff ? 'อาจารย์' : 'นักเรียน', false);
   }
   window.k8NaPv = function () { const st = document.getElementById('k8NaStage'); if (st) st.innerHTML = pvHtml(); };
   function renderAdmin() {
@@ -4474,7 +4476,7 @@ window.k8RegBirthChange = function (v) {
       '<button type="button" class="k8-bh-go k8-term-save" ' + (A.sending ? 'disabled' : '') + ' onclick="k8NaSend()">' + (A.sending ? 'กำลังส่ง…' : 'ส่งแจ้งเตือนถึง ' + recN + ' คน') + '</button></section>';
     // ③ ตัวอย่าง
     const ML = (MODES.find((x) => x[0] === A.mode) || MODES[0])[1];
-    let pv = '<section class="k8-bh-card k8-na2-pv"><div class="k8-na2-hd"><h2 class="k8-bh-h">ตัวอย่าง · ' + ML + '</h2><div class="k8h-mini-seg">' + [['phone', 'มือถือ'], ['pc', 'คอม']].map(([k, l]) => '<button type="button" aria-pressed="' + (A.pv === k) + '" onclick="k8NaSet(\'pv\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div><div class="k8-na2-stage" id="k8NaStage">' + pvHtml() + '</div><p class="k8-na2-note">' +
+    let pv = '<section class="k8-bh-card k8-na2-pv"><div class="k8-na2-hd"><h2 class="k8-bh-h">ตัวอย่าง · ' + ML + '</h2><span class="k8-na2-who">มุมมอง' + (A.audience === 'staff' ? 'อาจารย์' : A.audience === 'everyone' ? 'นักเรียน + อาจารย์' : 'นักเรียน') + '</span></div><div class="k8-na2-stage" id="k8NaStage">' + pvHtml() + '</div><p class="k8-na2-note">' +
       (A.mode === 'full' ? 'ผู้รับต้องกด "รับทราบ" ก่อนใช้งานต่อ · เหมาะกับประกาศสำคัญ/ฉุกเฉิน' : A.mode === 'banner' ? 'แถบประกาศค้างอยู่' + (PLACES.find((x) => x[0] === A.place) || PLACES[0])[1] + 'จนถึงวันสิ้นสุด · ผู้รับกด ✕ ปิดได้ และยังอยู่ในกระดิ่ง' : 'เข้ากระดิ่งแจ้งเตือนแบบเงียบ ๆ · ตัวเลขสีแดงบอกว่ามีข้อความใหม่') + '</p></section>';
     let h = '<div class="k8-na2">' + sentH + cmp + pv + '</div>';
     h += '<section class="k8-bh-card k8-na2-ack" id="k8NaAck"><h2 class="k8-bh-h">การยินยอมกฎระเบียบหอพัก</h2>';
