@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.28'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.29'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1296,6 +1296,7 @@ function routeRequest_(action, req, method) {
       }
     }
 
+    if (session) prayerPenaltyMaybe_(); // v18.29 · หักคะแนนไม่เช็คละหมาด (ทำงานไม่เกินทุก 10 นาที)
     // โหมดดูตัวอย่าง (แอดมินดูแอปแบบนักเรียน): ห้ามเขียนข้อมูลใด ๆ
     if (session && session.preview && READ_ONLY_ACTIONS.indexOf(action) === -1 && ['whoami', 'refreshToken'].indexOf(action) === -1 && !/^get[A-Z]/.test(action)) { // v18.03 · อ่านได้ทุกคำสั่ง get*
       return { success: false, preview: true, code: 'PREVIEW', message: 'โหมดดูตัวอย่าง · ไม่ได้บันทึกจริง' };
@@ -6738,6 +6739,88 @@ function saveBehaviorRules_(rules) {
   if (!clean.length) return { success: false, message: 'ต้องมีหัวข้ออย่างน้อย 1 ข้อ' };
   saveSetting({ key: 'BehaviorRules', value: JSON.stringify(clean), description: 'หัวข้อและคะแนนพฤติกรรม (JSON)' });
   return { success: true, rules: clean, message: 'บันทึกหัวข้อคะแนนพฤติกรรมแล้ว' };
+}
+/* ===== v18.29 · หักคะแนนพฤติกรรมอัตโนมัติ: ไม่เช็คชื่อละหมาด (ครั้งละ 1 คะแนน) =====
+ * - เริ่มนับตั้งแต่วันที่เปิดใช้ฟีเจอร์ (Script Property PRAYER_PENALTY_FROM ตั้งอัตโนมัติครั้งแรก) · ไม่หักย้อนหลัง
+ * - ตรวจย้อนหลังสูงสุด 7 วัน · วันนี้ตรวจเฉพาะเวลาที่หมดช่วงแล้ว (+30 นาที) · อีชาอ์ตรวจวันถัดไป
+ * - ไม่หัก: วันเสาร์ (วันหยุด) · ก่อนวันลงทะเบียน · มีบันทึกละหมาด (ตรงเวลา/สาย/ลา/อนุมัติ) · มีคำขอย้อนหลังที่รอ/อนุมัติ
+ *   · ลาเรียนที่อนุมัติครอบเวลานั้น · มีประจำเดือน · ซุบฮิของนักเรียนชาย (แอดมินเช็คแทน) หักเฉพาะเมื่อแอดมินบันทึก "ขาด"
+ * - ไม่หักซ้ำ (รหัสบันทึก PM-<รหัส>-<วันที่>-<เวลา>) · ถ้าแอดมินยกเลิกรายการแล้วจะไม่หักซ้ำ */
+const PM_END_ = { 'ซุบฮิ': 6 * 60 + 25, 'ซุฮริ': 15 * 60 + 15, 'อัศรฺ': 18 * 60 + 5, 'มัฆริบ': 19 * 60 + 25, 'อีชาอ์': 24 * 60 };
+const PM_START_ = { 'ซุบฮิ': 4 * 60 + 45, 'ซุฮริ': 12 * 60 + 10, 'อัศรฺ': 15 * 60 + 20, 'มัฆริบ': 18 * 60 + 10, 'อีชาอ์': 19 * 60 + 30 };
+function prayerPenaltyMaybe_() {
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get('pm_run')) return null;
+    cache.put('pm_run', '1', 600);
+    const lock = LockService.getScriptLock(); if (!lock.tryLock(100)) return null;
+    try { return prayerPenaltyRun_(); } finally { try { lock.releaseLock(); } catch (e) {} }
+  } catch (e) { return null; }
+}
+function prayerPenaltyRun_(nowArg) {
+  const now = nowArg || new Date();
+  const ymd = function (d) { return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd'); };
+  const today = ymd(now);
+  let from = getProp_('PRAYER_PENALTY_FROM');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) { from = ymd(new Date(now.getTime() + 864e5)); try { setProp_('PRAYER_PENALTY_FROM', from); } catch (e) {} } // เริ่มนับวันถัดไป (ไม่หักของวันที่เปิดใช้)
+  const hm = Utilities.formatDate(now, 'Asia/Bangkok', 'H:m').split(':'); const curMin = (+hm[0]) * 60 + (+hm[1]);
+  const dates = [];
+  for (let i = 7; i >= 0; i--) { const d = ymd(new Date(now.getTime() - i * 864e5)); if (d >= from && dates.indexOf(d) === -1) dates.push(d); }
+  if (!dates.length) return { added: 0 };
+  const dow = function (ds) { return new Date(ds + 'T12:00:00+07:00').getUTCDay(); };
+  const ss = getSpreadsheet();
+  const nid = function (v) { return String(v || '').replace(/\D/g, '').replace(/^0+/, ''); };
+  const studs = (getAllStudents().data || []).filter(function (s) { return s && s.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ|จำหน่าย|พักการเรียน/.test(String(s.status || '')) && /^\d{4}-\d{2}-\d{2}/.test(String(s.registeredAt || '')); });
+  if (!studs.length) return { added: 0 };
+  // บันทึกละหมาดที่มีอยู่
+  const have = {}; const absent = {};
+  const psh = ss.getSheetByName(SHEETS.PRAYERS);
+  if (psh) readPrayerRows_(psh).forEach(function (r) {
+    const ds = formatSheetDate(r[6]); if (dates.indexOf(ds) === -1) return;
+    const k = nid(r[1]) + '|' + ds + '|' + formatPrayerTimeThai(r[4]);
+    if (/ขาด/.test(String(r[14] || ''))) absent[k] = true; else have[k] = true;
+  });
+  const ash = ss.getSheetByName(SHEETS.PRAYER_APPROVALS);
+  if (ash && ash.getLastRow() > 1) ash.getRange(2, 1, ash.getLastRow() - 1, 11).getValues().forEach(function (r) {
+    if (/reject|ไม่อนุมัติ|ปฏิเสธ/i.test(String(r[10] || ''))) return;
+    have[nid(r[1]) + '|' + formatSheetDate(r[6]) + '|' + formatPrayerTimeThai(r[5])] = true;
+  });
+  const toM = function (t) { const m = String(t || '').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  const leaves = readStuLeaves_().filter(function (x) { return x && x.status === 'approved'; });
+  const onLeave = function (sid, ds, slot) {
+    return leaves.some(function (x) {
+      if (nid(x.sid) !== sid || ds < x.from || ds > (x.to || x.from)) return false;
+      if (x.allDay) return true;
+      const a = toM(x.tFrom), b = toM(x.tTo); if (isNaN(a) || isNaN(b)) return true;
+      return a < PM_END_[slot] && b > PM_START_[slot];
+    });
+  };
+  const periods = periodList_();
+  const onPeriod = function (sid, ds) { return periods.some(function (x) { return nid(x.studentId) === sid && ds >= String(x.start || '') && ds <= String(x.end || x.status === 'active' && today || x.start || ''); }); };
+  // รายการหักที่เคยสร้าง (รวมที่ยกเลิกแล้ว)
+  const bsh = ss.getSheetByName(SHEETS.BEHAVIOR); if (!bsh) return { added: 0 };
+  const done = {};
+  if (bsh.getLastRow() > 1) bsh.getRange(2, 1, bsh.getLastRow() - 1, 1).getValues().forEach(function (r) { const v = String(r[0] || ''); if (v.indexOf('PM-') === 0) done[v] = true; });
+  const stamp = Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'); const term = currentTerm_();
+  const rows = [];
+  studs.forEach(function (st) {
+    const sid = nid(st.studentId); const reg = String(st.registeredAt).slice(0, 10); const girl = periodIsGirl_(st);
+    dates.forEach(function (ds) {
+      if (ds <= reg || dow(ds) === 6) return;
+      PRAYER_SLOTS_.forEach(function (slot0, si) {
+        const slot = formatPrayerTimeThai(slot0);
+        if (ds === today && (slot === 'อีชาอ์' || curMin < PM_END_[slot0] + 30)) return;
+        const k = sid + '|' + ds + '|' + slot; if (have[k]) return;
+        if (si === 0 && !girl && !absent[k]) return; // ซุบฮิชาย: แอดมินเช็คแทน · หักเฉพาะที่บันทึกว่าขาด
+        const id = 'PM-' + sid + '-' + ds + '-' + si; if (done[id]) return;
+        if (onLeave(sid, ds, slot0) || (girl && onPeriod(sid, ds))) return;
+        done[id] = true;
+        rows.push([id, ds, stamp, term, st.studentId, st.fullName || '', st.grade || '', 'conduct', 'prayer-miss', 'ไม่เช็คชื่อละหมาด' + slot0 + (absent[k] ? ' (ขาด)' : ''), -1, 'หักอัตโนมัติ: หมดเวลาละหมาดแล้วไม่ได้เช็คชื่อหรือแจ้งเหตุจำเป็น', 'system', 'ระบบอัตโนมัติ', 'active', '', '', '']);
+      });
+    });
+  });
+  if (rows.length) bsh.getRange(bsh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  return { added: rows.length, from: from };
 }
 function getBehaviorLogs_() {
   const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);

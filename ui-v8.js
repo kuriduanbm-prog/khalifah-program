@@ -226,6 +226,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const reg = regOf();
     const sat = !!(window.k8WeeklyHoliday && window.k8WeeklyHoliday());
     const LBL = { ok: '✓', late: 'สาย', appr: 'ย้อนหลัง', ex: 'ลา' };
+    const hhmm = (m) => pad2(Math.floor(((m % 1440) + 1440) % 1440 / 60)) + ':' + pad2(((m % 1440) + 1440) % 1440 % 60);
+    const lvOn = (ds, w) => { try { return !!(window.k8MyLeaveOn && window.k8MyLeaveOn(ds, hhmm(w.start), hhmm(Math.min(w.end, 1439)))); } catch (e) { return false; } };
     const tile = (w) => {
       const r = rec(w.key), k = w.key;
       let cls = 'is-wait', sub = fmt(w.iqamah), act = '';
@@ -233,6 +235,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       else if (perOn) { cls = 'is-ex'; sub = '🌸'; act = 'k8PerGo()'; }
       else if (sat) { cls = 'is-off'; sub = 'วันหยุด'; }
       else if (open && open.key === k) { cls = 'is-now'; sub = roll(k) ? 'แอดมินเช็ค' : 'เช็คเลย'; act = roll(k) ? '' : "switchView('prayer')"; }
+      else if (lvOn(todayStr, w)) { cls = 'is-lv'; sub = 'ลา ✓'; act = 'k8SlOpen()'; } // v18.29 · ลาเรียนที่อนุมัติ = ได้รับอนุญาต (ม่วง)
       else if (k !== 'อีชาอ์' && cur > w.end && !roll(k) && !(reg && reg >= todayStr)) { cls = 'is-miss'; sub = '✕'; act = "k8HfMiss('" + esc(k) + "')"; }
       return '<button type="button" class="hf-p5-t ' + cls + '"' + (act ? ' onclick="' + act + '"' : ' disabled') + ' aria-label="' + esc(k) + ' ' + esc(sub === '✕' ? 'ไม่ได้เช็ค' : sub) + '"><b>' + esc(k) + '</b><span>' + esc(sub) + '</span></button>';
     };
@@ -240,13 +243,14 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const TD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
     const days7 = []; for (let i = 6; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); days7.push(d); }
     const KC = { ok: 1, late: 1, appr: 1, ex: 1 };
-    let nOk = 0, nLate = 0, nMiss = 0;
+    let nOk = 0, nLate = 0, nMiss = 0, nLv = 0;
     const cell = (d, w) => {
       const ds = ymd(d), isT = ds === todayStr, k = w.key;
       const r = prayers.find((p) => p.date === ds && p.slot === k);
       if (r && KC[r.kind]) { if (r.kind === 'late') nLate++; else if (r.kind === 'ok' || r.kind === 'appr') nOk++; return '<button type="button" class="hf-p5-c is-' + r.kind + '" onclick="k8HfBarOpen(\'' + esc(r.id) + '\',\'' + ds + '\')" aria-label="' + TD[d.getDay()] + ' ' + esc(k) + ' ' + (LBL[r.kind] || '') + '"></button>'; }
       if (reg && reg >= ds) return '<span class="hf-p5-c is-none"></span>';
       if (d.getDay() === 6) return '<span class="hf-p5-c is-off" title="วันหยุด"></span>';
+      if (lvOn(ds, w)) { nLv++; return '<button type="button" class="hf-p5-c is-lv" onclick="k8SlOpen()" aria-label="' + TD[d.getDay()] + ' ' + esc(k) + ' ลาเรียน (อนุมัติแล้ว)"></button>'; }
       if (isT && open && open.key === k && !roll(k)) return '<span class="hf-p5-c is-now"></span>';
       const over = !isT || (k !== 'อีชาอ์' && cur > w.end);
       if (over && !roll(k)) { nMiss++; return '<span class="hf-p5-c is-miss" aria-label="' + TD[d.getDay()] + ' ' + esc(k) + ' ไม่ได้เช็ค">✕</span>'; }
@@ -259,9 +263,48 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       '<small class="hf-p5-place">' + DN[now.getDay()] + ' ' + now.getDate() + ' ' + MN[now.getMonth()] + ' ' + (now.getFullYear() + 543) + ' · ' + esc(window.k8PrayerPlace ? window.k8PrayerPlace() : 'ต.เขาตูม อ.ยะรัง จ.ปัตตานี') + (far ? ' (ตามพิกัดล่าสุด)' : '') + '</small></div>' +
       '<div class="hf-p5-b"><div class="hf-p5-tiles">' + day.map(tile).join('') + '</div>' +
       (perOn ? '<button type="button" class="hf-pt-cta is-per" onclick="k8PerGo()">🌸 สิ้นสุดประจำเดือน</button>' : '') +
-      '<div class="hf-p5-wh"><b>สัปดาห์นี้</b><span>ตรงเวลา ' + nOk + ' · สาย ' + nLate + ' · ไม่ได้เช็ค ' + nMiss + '</span></div>' +
+      '<div class="hf-p5-wh"><b>สัปดาห์นี้</b><span>ตรงเวลา ' + nOk + ' · สาย ' + nLate + (nLv ? ' · ลาเรียน ' + nLv : '') + ' · ไม่ได้เช็ค ' + nMiss + '</span></div>' +
       '<div class="hf-p5-grid"><span></span>' + days7.map((d) => '<span class="hf-p5-dh' + (ymd(d) === todayStr ? ' is-today' : '') + '">' + TD[d.getDay()] + '</span>').join('') + grid + '</div>' +
-      '<div class="hf-p5-lg"><span class="is-ok">ตรงเวลา</span><span class="is-late">สาย</span><span class="is-appr">อนุมัติย้อนหลัง</span><span class="is-ex">ลา</span><span class="is-miss">ไม่ได้เช็ค</span></div></div>';
+      '<div class="hf-p5-lg"><span class="is-ok">ตรงเวลา</span><span class="is-late">สาย</span><span class="is-appr">อนุมัติย้อนหลัง</span>' + (nLv ? '<span class="is-lv">ลาเรียน (อนุมัติ)</span>' : '') + '<span class="is-ex">ลา</span><span class="is-miss">ไม่ได้เช็ค</span></div></div>';
+  }
+  // v18.29 · ดาวละหมาดตรงเวลาครบสัปดาห์ (อา.–ศ. · เสาร์หยุด) · ลา/ประจำเดือน/ลาเรียนที่อนุมัติไม่นับว่าขาด · ซุบฮิชายที่แอดมินยังไม่เช็คไม่นับ
+  function weekStars(prayers, st, now) {
+    const sid = st && st.studentId; if (!sid) return { n: 0, last: '' };
+    const regOf = () => { const v = String((st.registeredAt || st.registerDate) || ''); const m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (!m) return ''; const y = +m[1] > 2400 ? +m[1] - 543 : +m[1]; return y + '-' + m[2] + '-' + m[3]; };
+    const reg = regOf();
+    const byKey = {}; prayers.forEach((p) => { byKey[p.date + '|' + p.slot] = p; });
+    const roll = (k) => !!(window.k8IsRollSlot && window.k8IsRollSlot(k));
+    const lv = (ds) => { try { return !!(window.k8MyLeaveOn && window.k8MyLeaveOn(ds, '00:00', '23:59')); } catch (e) { return false; } };
+    // สัปดาห์ที่จบแล้ว: เริ่มอาทิตย์ · จบศุกร์ (นับเมื่อถึงวันเสาร์)
+    const end0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()); end0.setDate(end0.getDate() - ((end0.getDay() + 1) % 7)); // เสาร์ล่าสุด (วันนี้ถ้าเป็นเสาร์)
+    let n = 0, last = '';
+    const earliest = prayers.reduce((m, p) => (!m || p.date < m ? p.date : m), '');
+    for (let w = 0; w < 60; w++) {
+      const sat = new Date(end0); sat.setDate(end0.getDate() - 7 * w); const sun = new Date(sat); sun.setDate(sat.getDate() - 6);
+      const sunS = ymd(sun); if (earliest && sunS < earliest.slice(0, 10) && w > 0 && (!reg || sunS < reg)) break;
+      if (reg && sunS < reg) break;
+      let ok = true, counted = 0;
+      for (let i = 0; i < 6 && ok; i++) {
+        const d = new Date(sun); d.setDate(sun.getDate() + i); const ds = ymd(d);
+        if (lv(ds)) continue;
+        SLOT_ORDER.forEach((k) => { if (!ok) return; const r = byKey[ds + '|' + k]; if (r) { if (r.kind === 'ok') counted++; else if (r.kind !== 'ex') ok = false; } else if (!roll(k)) ok = false; });
+      }
+      if (ok && counted >= 10) { n++; if (!last) last = sunS; }
+    }
+    return { n, last };
+  }
+  function paintStars(prayers, st, now) {
+    const host = document.querySelector('.hf-lg1-main'); if (!host || !st) return;
+    const r = weekStars(prayers, st, now);
+    let el = document.getElementById('hfStars');
+    if (!r.n) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.id = 'hfStars'; el.className = 'hf-stars'; el.setAttribute('role', 'img'); host.prepend(el); }
+    el.setAttribute('aria-label', 'ดาวละหมาดตรงเวลาครบสัปดาห์ ' + r.n + ' ดวง');
+    el.title = 'ละหมาดตรงเวลาครบสัปดาห์ ' + r.n + ' ครั้ง';
+    el.innerHTML = (r.n <= 5 ? '<i>★</i>'.repeat(r.n) : '<i>★</i><b>×' + r.n + '</b>');
+    const key = 'k8_star_seen_' + String(st.studentId).replace(/^0+/, '');
+    let seen = ''; try { seen = localStorage.getItem(key) || ''; } catch (e) {}
+    if (r.last && r.last !== seen) { try { localStorage.setItem(key, r.last); } catch (e) {} if (window.k8StarCelebrate) setTimeout(() => window.k8StarCelebrate(r.n), 700); }
   }
 
   function renderHomeF() {
@@ -315,6 +358,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const todayStr = ymd(now);
     const doneToday = prayers.filter((p) => p.date === todayStr).map((p) => p.slot);
     renderPtCard(prayers, todayStr, now, s);
+    try { paintStars(prayers, s, now); } catch (e) {}
     const prCard = document.getElementById('hfPrayerCard'); if (prCard) prCard.hidden = hfState.period === 'day' || hfState.period === 'week'; // v17.96 · วัน/สัปดาห์ ดูในการ์ดละหมาดแล้ว
 
     // --- แท็บช่วงเวลา ---
@@ -3411,7 +3455,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.28';
+  const APP_VERSION = '18.29';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7720,7 +7764,10 @@ window.k8RegBirthChange = function (v) {
     const viewD = ((document.getElementById('adminPrayerDateSelect') || {}).value) || todayS;
     const regOf = (st) => { const v = String(st.registeredAt || st.registerDate || ''); let m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) { const y = +m[1] > 2400 ? +m[1] - 543 : +m[1]; return y + '-' + m[2] + '-' + m[3]; } m = v.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) { const y = +m[3] > 2400 ? +m[3] - 543 : +m[3]; return y + '-' + pd(m[2]) + '-' + pd(m[1]); } return ''; };
     const endOf = (k) => { try { const w = PRAYER_TIME_WINDOWS.find((w) => (w.key || w.name) === k); return w ? w.endMin : 0; } catch (e) { return 0; } };
-    const missed = (st, k) => { if (viewD > todayS) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
+    const winOf = (k) => { try { return PRAYER_TIME_WINDOWS.find((w) => (w.key || w.name) === k) || null; } catch (e) { return null; } };
+    const hm = (m) => pd(Math.floor(m / 60)) + ':' + pd(m % 60);
+    const onLv = (st, k) => { try { const w = winOf(k); return !!(window.k8StuLeaveOn && window.k8StuLeaveOn(st.studentId, viewD, w ? hm(w.startMin) : '', w ? hm(Math.min(w.endMin, 1439)) : '')); } catch (e) { return false; } }; // v18.29 · ลาเรียนที่อนุมัติ = ได้รับอนุญาต
+    const missed = (st, k) => { if (viewD > todayS || onLv(st, k)) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
     const missN = {}; rows.forEach((r) => { missN[r.sid] = slots.filter((x) => !r.p[x.key] && missed(r.s, x.key)).length; });
     const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length };
     let list = rows.filter((r) => V.f === 'all' || (V.f === 'full' ? r.n === 5 : V.f === 'part' ? r.n > 0 && r.n < 5 : r.n === 0));
@@ -7736,6 +7783,7 @@ window.k8RegBirthChange = function (v) {
       const av = s.avatarUrl ? (function () { try { return getDirectImageUrl(s.avatarUrl) || s.avatarUrl; } catch (e) { return s.avatarUrl; } })() : '';
       const boxes = slots.map((x) => {
         const rec = r.p[x.key];
+        if (!rec && onLv(s, x.key)) return '<span class="k8-pd-b is-lv" title="' + esc(x.label) + ' · ลาเรียน (แอดมินอนุมัติแล้ว)"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>ลา</i></span>';
         if (!rec) { const miss = missed(s, x.key); return '<button type="button" class="k8-pd-b ' + (miss ? 'is-miss' : 'is-none') + '" onclick="k8PeAdd(\'' + jsq(r.sid) + '\',\'' + jsq(x.key) + '\')" title="' + esc(x.label) + (miss ? ' · ไม่ได้เช็คชื่อ (หมดเวลาแล้ว)' : ' · ยังไม่เช็คชื่อ') + ' · แตะเพื่อบันทึกแทน"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>' + (miss ? '✕' : '–') + '</i></button>'; }
         const k = kind(rec.status); const tm = String(rec.time || '').match(/(^|[^\d])(\d{1,2}):(\d{2})/); const t = tm ? tm[2].padStart(2, '0') + ':' + tm[3] : '✓';
         return '<button type="button" class="k8-pd-b is-' + k + '" onclick="openPrayerHistoryDetailModal(\'' + jsq(rec.id || rec.logId || '') + '\')" title="' + esc(x.label + ' · ' + (rec.status || '') + ' · ' + (rec.time || '')) + '"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>' + (k === 'ex' ? 'ลา' : k === 'late' ? t : k === 'abs' ? '✕' : t) + '</i></button>';
@@ -10706,7 +10754,9 @@ window.k8HfMiss = function (slot) {
     h += '<section class="k8-sl-mine"><div class="k8-sl-mh"><h2>คำขอของฉัน</h2>' + (MY && MY.length ? '<small>' + MY.length + ' รายการ</small>' : '') + '</div>' + (MY == null ? '<p class="k8-asum-empty">กำลังโหลด…</p>' : !MY.length ? '<p class="k8-asum-empty">ยังไม่เคยขอลา</p>' : MY.map(reqHtml).join('')) + '</section>';
     B.innerHTML = h;
   }
-  async function loadMine() { let r = null; try { r = await gasApiCall('getMyStudentLeaves', {}, 20000); } catch (e) {} MY = r && r.success ? r.data || [] : (MY || []); renderStu(); paintBadge(); }
+  // v18.29 · ลาเรียนที่อนุมัติของตัวเอง → การ์ดละหมาดแสดงสีม่วง (ได้รับอนุญาต)
+  window.k8MyLeaveOn = function (date, start, end) { let L = MY; if (!L) { try { L = JSON.parse(localStorage.getItem('k8_sl_mine') || '[]'); } catch (e) { L = []; } } return (L || []).some((x) => x && x.status === 'approved' && date >= x.from && date <= (x.to || x.from) && (x.allDay || !start || !end || !(toMin(end) <= toMin(x.tFrom) || toMin(start) >= toMin(x.tTo)))); };
+  async function loadMine() { let r = null; try { r = await gasApiCall('getMyStudentLeaves', {}, 20000); } catch (e) {} const had = JSON.stringify((MY || []).filter((x) => x.status === 'approved').map((x) => x.id)); MY = r && r.success ? r.data || [] : (MY || []); try { localStorage.setItem('k8_sl_mine', JSON.stringify(MY.filter((x) => x.status === 'approved').map((x) => ({ id: x.id, status: x.status, from: x.from, to: x.to, allDay: x.allDay, tFrom: x.tFrom, tTo: x.tTo })))); } catch (e) {} if (had !== JSON.stringify(MY.filter((x) => x.status === 'approved').map((x) => x.id))) { try { window.renderHomeF && window.renderHomeF(); } catch (e) {} } renderStu(); paintBadge(); }
   function paintBadge() { const e = document.getElementById('hfSlN'); if (!e || !MY) return; const n = MY.filter((x) => x.status === 'approved' && x.to >= ymd(new Date())).length; e.hidden = !n; e.textContent = n; }
   window.k8SlOpen = function () { const el = document.getElementById('k8Sl'); if (!el) return; el.hidden = false; document.documentElement.classList.add('k8-docs-open'); try { history.pushState({ k8sl: 1 }, ''); } catch (e) {} renderStu(); loadMine(); };
   window.k8SlF = function (k, v, soft) { F[k] = v; if (k === 'from' && (!F.range || F.to < v)) F.to = v; if (k === 'range' && !v) F.to = F.from; if (!soft) renderStu(); else paintSlip(); };
@@ -10940,4 +10990,22 @@ window.k8HfMiss = function (slot) {
   if (typeof ot === 'function') window.renderAdminActivitiesTable = function () { const r = ot.apply(this, arguments); try { paint(); } catch (e) {} return r; };
   const sa = window.switchAdminTab;
   if (typeof sa === 'function') window.switchAdminTab = function (tab) { const r = sa.apply(this, arguments); if (tab === 'activities-admin') setTimeout(() => { try { paint(); } catch (e) {} }, 60); return r; };
+})();
+
+/* ---------- v18.29 · ฉลองละหมาดตรงเวลาครบสัปดาห์ (ดาว + คอนเฟตติ) ---------- */
+(function () {
+  window.k8StarCelebrate = function (n) {
+    if (document.getElementById('k8Cele')) return;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const el = document.createElement('div'); el.id = 'k8Cele'; el.className = 'k8-cele'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'k8CeleT');
+    const C = ['#facc15', '#22c55e', '#38bdf8', '#f472b6', '#a78bfa', '#fb923c'];
+    let conf = ''; if (!reduce) for (let i = 0; i < 70; i++) conf += '<i style="left:' + (Math.random() * 100).toFixed(1) + '%;background:' + C[i % C.length] + ';animation-delay:' + (Math.random() * 0.8).toFixed(2) + 's;animation-duration:' + (2.4 + Math.random() * 1.6).toFixed(2) + 's;transform:rotate(' + Math.round(Math.random() * 360) + 'deg)"></i>';
+    el.innerHTML = '<div class="k8-cele-conf" aria-hidden="true">' + conf + '</div><div class="k8-cele-card"><div class="k8-cele-star" aria-hidden="true">★</div><p class="k8-cele-ar" lang="ar" dir="rtl">مَا شَاءَ ٱللَّٰهُ</p><h2 id="k8CeleT">มาชาอัลลอฮ์ ยินดีด้วย!</h2><p>คุณละหมาดตรงเวลาครบหนึ่งสัปดาห์แล้ว<br>รับดาวเพิ่ม 1 ดวง' + (n > 1 ? ' · สะสม ' + n + ' ดวง' : '') + '</p><small>รักษาความดีนี้ต่อไปนะ ขออัลลอฮ์ทรงตอบแทน 🤲</small><button type="button" onclick="k8CeleClose()">อัลฮัมดุลิลลาฮ์ 🌟</button></div>';
+    document.body.appendChild(el);
+    setTimeout(() => { const b = el.querySelector('button'); if (b) b.focus(); }, 60);
+    el.addEventListener('click', (e) => { if (e.target === el) window.k8CeleClose(); });
+    el.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.k8CeleClose(); });
+    try { if (navigator.vibrate) navigator.vibrate([40, 60, 40]); } catch (e) {}
+  };
+  window.k8CeleClose = function () { const el = document.getElementById('k8Cele'); if (!el) return; el.classList.add('is-out'); setTimeout(() => el.remove(), 250); };
 })();
