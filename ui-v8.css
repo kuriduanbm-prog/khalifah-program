@@ -4994,3 +4994,28 @@ details.k8-tt-vis > summary b { font-weight: 600; color: #0f172a; } details.k8-t
 .k8-pv-rows { display: flex; flex-direction: column; gap: 3px; } .k8-pv-rows i { font-style: normal; font-size: 8px; color: #334155; background: #f1f5f9; border-left: 3px solid #0369a1; border-radius: 4px; padding: 4px 6px; }
 .k8-pv-blk i { font-style: normal; font-size: 8px; color: #475569; }
 .k8-pv-dev.is-pc .k8-pv-tiles { grid-template-columns: repeat(8, 1fr); } .k8-pv-dev.is-pc .k8-pv-tiles.is-t { grid-template-columns: repeat(10, 1fr); }
+/* v18.25 · แจ้งลาเรียน: ใบลาตัวอย่างสด + สถานะคำขอ */
+.k8-sl-slip { position: relative; overflow: hidden; border-radius: 20px; padding: 16px 18px; color: #fff; background: linear-gradient(135deg, #0c4a6e, #0369a1); display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; box-shadow: 0 10px 24px rgba(12, 74, 110, .22); }
+.k8-sl-slip::after { content: ''; position: absolute; right: -28px; top: -28px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255, 255, 255, .08); }
+.k8-sl-sh { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; } .k8-sl-sh small { font-size: 12px; opacity: .85; }
+.k8-sl-sh em { font-style: normal; font-size: 11.5px; font-weight: 700; background: #e0f2fe; color: #0c4a6e; border-radius: 999px; padding: 2px 10px; }
+.k8-sl-st { font-size: 20px; font-weight: 700; position: relative; z-index: 1; }
+.k8-sl-sg { display: flex; gap: 18px; flex-wrap: wrap; position: relative; z-index: 1; } .k8-sl-sg span { display: flex; flex-direction: column; } .k8-sl-sg small { font-size: 11px; opacity: .75; } .k8-sl-sg b { font-size: 14px; }
+.k8-sl-sn { font-size: 12px; opacity: .9; position: relative; z-index: 1; }
+.k8-sl-sf { font-size: 12.5px; opacity: .92; border-top: 1px dashed rgba(255, 255, 255, .35); padding-top: 8px; position: relative; z-index: 1; }
+.k8-sl-mine { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.k8-sl-mh { display: flex; justify-content: space-between; align-items: baseline; } .k8-sl-mh h2 { margin: 0; font-size: 18px; font-weight: 700; } .k8-sl-mh small { font-size: 12.5px; color: #64748b; }
+.k8-sl-req { background: #fff; border: 1px solid #e2e8f0; border-left: 4px solid var(--tc, #475569); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.k8-sl-req .k8-sl-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; } .k8-sl-req .k8-sl-top b { font-size: 15px; }
+.k8-sl-req > small { font-size: 12.5px; color: #64748b; }
+.k8-sl-req.is-cancelled, .k8-sl-req.is-rejected { opacity: .85; }
+.k8-sl-trk { list-style: none; margin: 8px 0 2px; padding: 0; display: flex; align-items: flex-start; }
+.k8-sl-trk li { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 78px; flex: none; text-align: center; }
+.k8-sl-trk li span { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; background: #e2e8f0; color: #94a3b8; }
+.k8-sl-trk li small { font-size: 11px; color: #94a3b8; line-height: 1.3; }
+.k8-sl-trk li.is-done span { background: #15803d; color: #fff; } .k8-sl-trk li.is-done small { color: #0f172a; }
+.k8-sl-trk li.is-cur span { background: #d97706; color: #fff; box-shadow: 0 0 0 4px #fef3c7; } .k8-sl-trk li.is-cur small { color: #92400e; font-weight: 600; }
+.k8-sl-trk li.is-no span { background: #dc2626; color: #fff; } .k8-sl-trk li.is-no small { color: #991b1b; font-weight: 600; }
+.k8-sl-trk li.is-off span { background: #94a3b8; color: #fff; } .k8-sl-trk li.is-off small { color: #475569; }
+.k8-sl-trk i { flex: 1; height: 2px; background: #e2e8f0; margin-top: 12px; min-width: 10px; } .k8-sl-trk i.is-done { background: #15803d; } .k8-sl-trk i.is-no { background: #fca5a5; }
+.k8-sl-req .k8-sl-cancel { align-self: flex-start; margin-top: 4px; }

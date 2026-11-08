@@ -2427,6 +2427,19 @@ html[data-theme="dark"] .k8-pv-tiles i { background-color: #122938 !important; }
 html[data-theme="dark"] .k8-pv-tiles.is-t i { background-color: #433a15 !important; }
 html[data-theme="dark"] .k8-pv-rows i { color: #c1c7cf !important; background-color: #1a2229 !important; }
 html[data-theme="dark"] .k8-pv-blk i { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-sl-slip::after { background-color: rgba(31,31,31,0.13) !important; }
+html[data-theme="dark"] .k8-sl-sh em { background-color: #122938 !important; color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-sl-sf { border-top: 1px dashed rgba(51,51,51,0.35) !important; }
+html[data-theme="dark"] .k8-sl-mh small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-sl-req { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-sl-req > small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-sl-trk li span { background-color: #21272f !important; }
+html[data-theme="dark"] .k8-sl-trk li.is-done small { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-sl-trk li.is-cur small { color: #f3a372 !important; }
+html[data-theme="dark"] .k8-sl-trk li.is-no small { color: #ea7b7b !important; }
+html[data-theme="dark"] .k8-sl-trk li.is-off small { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-sl-trk i { background-color: #21272f !important; }
+html[data-theme="dark"] .k8-sl-trk i.is-no { background-color: #511a1a !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

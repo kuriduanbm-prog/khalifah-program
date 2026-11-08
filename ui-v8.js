@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.24';
+  const APP_VERSION = '18.25';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6641,6 +6641,7 @@ window.k8RegBirthChange = function (v) {
   setInterval(paintEntry, 60000);
   window.k8TtMineToday = function () { return (T.data && !T.data.hidden) ? todayList('', true) : null; };
   window.k8TtAllOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d) || !T.data || T.data.hidden) return null; const c = cfg(); const dow = d.getDay(); const out = []; if (c.days.indexOf(dow) === -1) return out; const ds = ymdL(d); allKeys().forEach((g) => { const cells = gradeOf(g).cells || {}; c.periods.forEach((p, i) => { cellsOn(g, dow, i + 1, ds).forEach((x) => { if (x && (x.s || x.sn)) out.push({ g, p: i + 1, start: p.start, end: p.end, c: x, mine: isMine(x) }); }); }); }); return out.sort((a, b) => toMin(a.start) - toMin(b.start)); }; // v17.68 · สอนแทน
+  window.k8TtStuOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d) || !T.data || T.data.hidden || !T.data.grade) return null; return todayList(T.data.grade, false, d.getDay(), ymdL(d)); }; // v18.25 · คาบของนักเรียนในวันนั้น (ใบลาบอกจำนวนคาบที่กระทบ)
   window.k8TtMineOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d)) return null; return (T.data && !T.data.hidden) ? todayList('', true, d.getDay(), ymdL(d)) : null; }; // v17.65
   window.k8TtLoad = function () { return load(false); };
   window.addEventListener('beforeunload', (e) => { if (T.dirty) { e.preventDefault(); e.returnValue = ''; } });
@@ -10622,25 +10623,62 @@ window.k8HfMiss = function (slot) {
   const F = { from: '', to: '', range: false, allDay: true, tFrom: '08:00', tTo: '12:00', type: 'ป่วย', other: '', where: '', reason: '', busy: false };
   let MY = null;
   const stu = () => { try { return currentStudent; } catch (e) { return null; } };
+  // v18.25 · ใบลาตัวอย่างสด + สถานะคำขอแบบขั้นตอน (แบบ SL3 + SL4)
+  const icOf = (t) => (TYPES.find((x) => x[0] === t) || TYPES[4])[1];
+  const TYC = { 'ป่วย': '#dc2626', 'ลากิจ': '#0369a1', 'กลับบ้าน': '#d97706', 'กิจกรรมนอกโรงเรียน': '#7c3aed', 'อื่น ๆ': '#475569' };
+  function hitPeriods() {
+    let n = 0, names = [];
+    try {
+      const d0 = new Date(F.from + 'T00:00:00'), d1 = new Date((F.range ? F.to : F.from) + 'T00:00:00'); if (isNaN(d0) || isNaN(d1)) return null;
+      let any = false;
+      for (let d = new Date(d0); d <= d1 && n < 200; d.setDate(d.getDate() + 1)) {
+        const L = window.k8TtStuOn ? window.k8TtStuOn(ymd(d)) : null; if (!L) continue; any = true;
+        L.forEach((e) => { const a = toMin(e.start || (e.time || '').split('–')[0]), b = toMin(e.end || (e.time || '').split('–')[1]); if (F.allDay || isNaN(a) || isNaN(b) || !(toMin(F.tTo) <= a || toMin(F.tFrom) >= b)) { n++; const nm = (e.c && (e.c.sn || e.c.s)) || e.sn; if (nm && names.indexOf(nm) === -1) names.push(nm); } });
+      }
+      return any ? { n, names } : null;
+    } catch (e) { return null; }
+  }
+  function slipHtml() {
+    const me = stu() || {}; const days = F.range ? Math.round((new Date(F.to + 'T00:00:00') - new Date(F.from + 'T00:00:00')) / 864e5) + 1 : 1;
+    const hp = hitPeriods();
+    return '<div class="k8-sl-sh"><small>ใบลาเรียน · ตัวอย่าง</small><em>ร่าง</em></div><b class="k8-sl-st">' + icOf(F.type) + ' ' + esc(/^ลา/.test(F.type) ? F.type : 'ลา' + (F.type === 'อื่น ๆ' ? 'อื่น ๆ' : F.type)) + '</b>' +
+      '<div class="k8-sl-sg"><span><small>วันที่</small><b>' + esc(F.range && F.to !== F.from ? dTh(F.from) + ' – ' + dTh(F.to) : dTh(F.from)) + '</b></span><span><small>เวลา</small><b>' + (F.allDay ? 'ทั้งวัน' : esc(F.tFrom + '–' + F.tTo)) + '</b></span><span><small>' + (hp ? 'กระทบ' : 'จำนวน') + '</small><b>' + (hp ? hp.n + ' คาบ' : days + ' วัน') + '</b></span></div>' +
+      (hp && hp.names.length ? '<small class="k8-sl-sn">ตรงกับ ' + esc(hp.names.slice(0, 4).join(', ')) + (hp.names.length > 4 ? ' และอีก ' + (hp.names.length - 4) : '') + '</small>' : '') +
+      '<small class="k8-sl-sf">' + esc(me.fullName || '') + (me.grade ? ' · ' + esc(String(me.grade).replace('มัธยมศึกษาปีที่ ', 'ม.')) : '') + (me.studentId ? ' · รหัส ' + esc(me.studentId) : '') + '</small>';
+  }
+  function paintSlip() { const e = document.getElementById('k8SlSlip'); if (e) e.innerHTML = slipHtml(); }
+  function track(x) {
+    const S3 = x.status === 'approved' ? 3 : x.status === 'pending' ? 1 : 2;
+    const end = x.status === 'rejected' ? ['✕', 'ไม่อนุมัติ', 'is-no'] : x.status === 'cancelled' ? ['–', 'ยกเลิกแล้ว', 'is-off'] : ['3', 'อนุมัติ · แจ้งอาจารย์', ''];
+    const step = (i, lab, cls, sym) => '<li class="' + cls + '"><span>' + sym + '</span><small>' + lab + '</small></li>';
+    const c1 = 'is-done', c2 = S3 >= 2 ? 'is-done' : 'is-cur', c3 = x.status === 'approved' ? 'is-done' : end[2];
+    return '<ol class="k8-sl-trk" aria-label="สถานะคำขอ">' + step(1, 'ส่งคำขอ', c1, '✓') + '<i class="' + (S3 >= 2 ? 'is-done' : '') + '"></i>' + step(2, 'แอดมินพิจารณา', c2, S3 >= 2 ? '✓' : '2') + '<i class="' + (x.status === 'approved' ? 'is-done' : x.status === 'rejected' ? 'is-no' : '') + '"></i>' + step(3, end[1], c3, x.status === 'approved' ? '✓' : end[0]) + '</ol>';
+  }
+  function reqHtml(x) {
+    const open = (x.status === 'pending' || x.status === 'approved') && x.to >= ymd(new Date());
+    return '<article class="k8-sl-req is-' + esc(x.status) + '" style="--tc:' + (TYC[x.type] || '#475569') + '"><div class="k8-sl-top"><b>' + icOf(x.type) + ' ' + esc(x.type) + '</b>' + pill(x.status) + '</div>' +
+      '<small>' + esc(span(x)) + (x.reason && x.reason !== x.type ? ' · ' + esc(x.reason) : '') + '</small>' +
+      (x.by && x.status !== 'pending' ? '<small>' + (ST[x.status] || ST.pending)[0] + 'โดย ' + esc(x.by) + (x.note ? ' · ' + esc(x.note) : '') + '</small>' : '') +
+      track(x) + (open ? '<button type="button" class="k8-sl-cancel" onclick="k8SlCancel(\'' + esc(x.id) + '\')">ยกเลิกคำขอ</button>' : '') + '</article>';
+  }
   function renderStu() {
     const B = document.getElementById('k8SlB'); if (!B) return;
     const t = ymd(new Date()); if (!F.from) { F.from = t; F.to = t; }
-    let h = '<section class="k8-bh-card k8-sl-form"><h2 class="k8-bh-h">ขอลาเรียน</h2>' +
+    let h = '<div class="k8-sl-slip" id="k8SlSlip">' + slipHtml() + '</div><section class="k8-bh-card k8-sl-form">' +
       '<div class="k8h-mini-seg">' + [[false, 'วันเดียว'], [true, 'หลายวัน']].map(([k, l]) => '<button type="button" aria-pressed="' + (F.range === k) + '" onclick="k8SlF(\'range\',' + k + ')">' + l + '</button>').join('') + '</div>' +
       '<div class="k8-sl-row"><label class="k8-nf-f"><span>' + (F.range ? 'ตั้งแต่วันที่' : 'วันที่') + '</span><input type="date" value="' + F.from + '" min="' + t + '" onchange="k8SlF(\'from\', this.value)"></label>' + (F.range ? '<label class="k8-nf-f"><span>ถึงวันที่</span><input type="date" value="' + F.to + '" min="' + F.from + '" onchange="k8SlF(\'to\', this.value)"></label>' : '') + '</div>' +
       '<div class="k8h-mini-seg">' + [[true, 'ทั้งวัน'], [false, 'เฉพาะช่วงเวลา']].map(([k, l]) => '<button type="button" aria-pressed="' + (F.allDay === k) + '" onclick="k8SlF(\'allDay\',' + k + ')">' + l + '</button>').join('') + '</div>' +
       (F.allDay ? '' : '<div class="k8-sl-row"><label class="k8-nf-f"><span>ตั้งแต่เวลา</span><input type="time" value="' + F.tFrom + '" onchange="k8SlF(\'tFrom\', this.value, 1)"></label><label class="k8-nf-f"><span>ถึงเวลา</span><input type="time" value="' + F.tTo + '" onchange="k8SlF(\'tTo\', this.value, 1)"></label></div>') +
       '<div class="k8-nf-f"><span>ประเภทการลา</span><div class="k8-sl-types">' + TYPES.map(([k, ic]) => '<button type="button" aria-pressed="' + (F.type === k) + '" onclick="k8SlF(\'type\',\'' + k + '\')"><span aria-hidden="true">' + ic + '</span>' + k + '</button>').join('') + '</div></div>' +
       '<label class="k8-nf-f"><span>รายละเอียด' + (F.type === 'อื่น ๆ' ? ' *' : ' (ไม่บังคับ)') + '</span><textarea id="k8SlReason" rows="3" maxlength="300"' + (F.type === 'อื่น ๆ' ? ' required aria-required="true"' : '') + ' placeholder="' + (F.type === 'อื่น ๆ' ? 'เลือก “อื่น ๆ” กรุณาบอกว่าลาเพราะอะไร เช่น ไปงานแต่งญาติ / ทำบัตรประชาชน' : 'เช่น ไปหาหมอ มีไข้สูง / ไปแข่งฟุตบอลนักเรียน') + '" oninput="k8SlF(\'reason\', this.value, 1)">' + esc(F.reason) + '</textarea></label>' +
-      '<button type="button" class="k8-bh-go k8-term-save" ' + (F.busy ? 'disabled' : '') + ' onclick="k8SlSend()">' + (F.busy ? 'กำลังส่ง…' : 'ส่งคำขอลา') + '</button></section>';
-    h += '<section class="k8-bh-card"><h2 class="k8-bh-h">คำขอลาของฉัน</h2>' + (MY == null ? '<p class="k8-asum-empty">กำลังโหลด…</p>' : !MY.length ? '<p class="k8-asum-empty">ยังไม่เคยขอลา</p>' :
-      '<ul class="k8-sl-list">' + MY.map((x) => '<li><div class="k8-sl-top"><b>' + esc(span(x)) + '</b>' + pill(x.status) + '</div><small>' + esc(x.type) + (x.where ? ' · ไป ' + esc(x.where) : '') + (x.reason && x.reason !== x.type ? ' · ' + esc(x.reason) : '') + '</small>' + (x.by && x.status !== 'pending' ? '<small>' + (ST[x.status] || ST.pending)[0] + 'โดย ' + esc(x.by) + (x.note ? ' · ' + esc(x.note) : '') + '</small>' : '') + ((x.status === 'pending' || x.status === 'approved') && x.to >= ymd(new Date()) ? '<button type="button" class="k8-sl-cancel" onclick="k8SlCancel(\'' + esc(x.id) + '\')">ยกเลิกคำขอ</button>' : '') + '</li>').join('') + '</ul>') + '</section>';
+      '<button type="button" class="k8-bh-go k8-term-save" ' + (F.busy ? 'disabled' : '') + ' onclick="k8SlSend()">' + (F.busy ? 'กำลังส่ง…' : 'ส่งใบลา') + '</button></section>';
+    h += '<section class="k8-sl-mine"><div class="k8-sl-mh"><h2>คำขอของฉัน</h2>' + (MY && MY.length ? '<small>' + MY.length + ' รายการ</small>' : '') + '</div>' + (MY == null ? '<p class="k8-asum-empty">กำลังโหลด…</p>' : !MY.length ? '<p class="k8-asum-empty">ยังไม่เคยขอลา</p>' : MY.map(reqHtml).join('')) + '</section>';
     B.innerHTML = h;
   }
   async function loadMine() { let r = null; try { r = await gasApiCall('getMyStudentLeaves', {}, 20000); } catch (e) {} MY = r && r.success ? r.data || [] : (MY || []); renderStu(); paintBadge(); }
   function paintBadge() { const e = document.getElementById('hfSlN'); if (!e || !MY) return; const n = MY.filter((x) => x.status === 'approved' && x.to >= ymd(new Date())).length; e.hidden = !n; e.textContent = n; }
   window.k8SlOpen = function () { const el = document.getElementById('k8Sl'); if (!el) return; el.hidden = false; document.documentElement.classList.add('k8-docs-open'); try { history.pushState({ k8sl: 1 }, ''); } catch (e) {} renderStu(); loadMine(); };
-  window.k8SlF = function (k, v, soft) { F[k] = v; if (k === 'from' && (!F.range || F.to < v)) F.to = v; if (k === 'range' && !v) F.to = F.from; if (!soft) renderStu(); };
+  window.k8SlF = function (k, v, soft) { F[k] = v; if (k === 'from' && (!F.range || F.to < v)) F.to = v; if (k === 'range' && !v) F.to = F.from; if (!soft) renderStu(); else paintSlip(); };
   window.k8SlSend = async function () {
     if (F.type === 'อื่น ๆ' && !F.reason.trim()) { toast('เลือก "อื่น ๆ" ต้องกรอกรายละเอียดด้วย', 'warning'); const o = document.getElementById('k8SlReason'); if (o) o.focus(); return; }
     if (!F.allDay && !(F.tTo > F.tFrom)) { toast('เวลาสิ้นสุดต้องหลังเวลาเริ่ม', 'warning'); return; }
