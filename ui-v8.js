@@ -3391,7 +3391,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.22';
+  const APP_VERSION = '18.23';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8428,7 +8428,7 @@ window.k8RegBirthChange = function (v) {
   };
   window.k8LvApprove = async function (id, ok) {
     let note = '';
-    if (!ok) { note = prompt('เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)', '') || ''; if (note === null) return; }
+    if (!ok) { const v = prompt('เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)', ''); if (v === null) return; note = v; } // v18.23 · เดิมกดยกเลิกแล้วยังไม่อนุมัติ
     else if (!confirm('อนุมัติการลานี้ใช่ไหม?\nระบบจะแจ้งเตือนนักเรียนที่เรียนคาบนั้น และแจ้งอาจารย์ผู้ลา')) return;
     let r = null; try { r = await gasApiCall('approveTeacherLeave', { data: { id: id, approve: !!ok, note: note } }, 30000); } catch (e) {}
     if (r && r.success) { V.list = r.data || V.list; render(); toast(r.message + (ok && r.notified != null ? ' (' + r.notified + ' คน)' : ''), 'success'); try { window.k8NotifReload && window.k8NotifReload(); } catch (e) {} }
@@ -10661,6 +10661,7 @@ window.k8HfMiss = function (slot) {
     const t = ymd(new Date());
     const pend = ADM.list.filter((x) => x.status === 'pending');
     const now = ADM.list.filter((x) => x.status === 'approved' && x.to >= t);
+    if (pend.length && !ADM.touched) ADM.open = true; // v18.23 · มีคำขอค้าง → เปิดแผงให้เห็นทันที
     const L = ADM.tab === 'pending' ? pend : ADM.tab === 'now' ? now : ADM.list.filter((x) => x.status !== 'pending').slice(0, 60);
     let h = '<button type="button" class="k8-sl-ah" aria-expanded="' + ADM.open + '" onclick="k8SlAdmT()"><span class="k8-sl-ai" aria-hidden="true">🗓</span><b>คำขอลาเรียน</b>' + (pend.length ? '<em class="k8-sl-an">' + pend.length + ' รออนุมัติ</em>' : '<small>ไม่มีคำขอค้าง</small>') + (now.length ? '<small>· กำลังลา/จะลา ' + now.length + ' คน</small>' : '') + '<span class="k8-sl-cv" aria-hidden="true">' + (ADM.open ? '▾' : '▸') + '</span></button>';
     if (ADM.open) {
@@ -10670,11 +10671,11 @@ window.k8HfMiss = function (slot) {
     }
     box.innerHTML = h;
   }
-  window.k8SlAdmT = function () { ADM.open = !ADM.open; paintAdmin(); };
+  window.k8SlAdmT = function () { ADM.touched = true; ADM.open = !ADM.open; paintAdmin(); };
   window.k8SlAdmTab = function (k) { ADM.tab = k; paintAdmin(); };
   window.k8SlAns = async function (id, action) {
     let note = '';
-    if (action === 'reject') { note = window.prompt('เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)', '') || ''; }
+    if (action === 'reject') { const v = window.prompt('เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)', ''); if (v === null) return; note = v; } // v18.23 · กดยกเลิก = ไม่ทำอะไร
     if (action === 'revoke' && !window.confirm('ยกเลิกการลาที่อนุมัติไปแล้ว?')) return;
     let r = null; try { r = await gasApiCall('respondStudentLeave', { data: { id, action, note } }, 20000); } catch (e) {}
     if (r && r.success) { toast(r.message, 'success'); loadApproved(true); } else toast((r && r.message) || 'ไม่สำเร็จ', 'error');

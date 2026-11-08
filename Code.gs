@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.19'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.23'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3200,7 +3200,7 @@ function requestStudentLeave_(d, session) {
   if (!allDay && (!/^\d{2}:\d{2}$/.test(tFrom) || !/^\d{2}:\d{2}$/.test(tTo) || tTo <= tFrom)) return { success: false, message: 'เลือกช่วงเวลาให้ถูกต้อง' };
   const type = SL_TYPES_.indexOf(cleanVal(d.type)) !== -1 ? cleanVal(d.type) : 'อื่น ๆ';
   const where = cleanVal(d.where).substring(0, 120), reason = cleanVal(d.reason).substring(0, 300);
-  if (!reason) return { success: false, message: 'กรุณาบอกว่าลาไปทำอะไร' };
+  if (!reason && type === 'อื่น ๆ') return { success: false, message: 'เลือก "อื่น ๆ" ต้องกรอกรายละเอียดด้วย' }; // v18.23 · รายละเอียดบังคับเฉพาะ "อื่น ๆ"
   const sid = String(session.userId), g = studentGradeNum_(sid);
   let name = cleanVal(session.name || ''), grade = '';
   try { const rows = sheetRows_(SHEETS.STUDENTS, 4); for (let i = 0; i < rows.length; i++) if (slKey_(rows[i][0]) === slKey_(sid)) { name = cleanVal(rows[i][1]) || name; grade = cleanVal(rows[i][3]); break; } } catch (e) {}
@@ -3211,7 +3211,7 @@ function requestStudentLeave_(d, session) {
     L.push(item); writeStuLeaves_(L); return { success: true };
   });
   if (!r.success) return r;
-  try { sendNotification_({ title: 'คำขอลาเรียน · ' + item.name, body: slTxt_(item) + ' · ' + type + (where ? ' · ไป ' + where : '') + ' · ' + reason + ' · อนุมัติได้ที่เมนู "นักเรียน"', audience: 'admins', values: [], expires: to }, { userId: sid, name: item.name }); } catch (e) {}
+  try { sendNotification_({ title: 'คำขอลาเรียน · ' + item.name, body: slTxt_(item) + ' · ' + type + (where ? ' · ไป ' + where : '') + (reason && reason !== type ? ' · ' + reason : '') + ' · อนุมัติได้ที่เมนู "นักเรียน"', audience: 'admins', values: [], expires: to }, { userId: sid, name: item.name }); } catch (e) {}
   return { success: true, item: item, message: 'ส่งคำขอลาแล้ว · รอแอดมินอนุมัติ' };
 }
 function slTxt_(x) { return (x.from === x.to ? leaveDateTh_(x.from) : leaveDateTh_(x.from) + ' ถึง ' + leaveDateTh_(x.to)) + (x.allDay ? ' (ทั้งวัน)' : ' เวลา ' + x.tFrom + '–' + x.tTo + ' น.'); }
@@ -3222,12 +3222,15 @@ function cancelStudentLeave_(id, session) {
     if (!it) return { success: false, message: 'ไม่พบคำขอนี้' };
     if (slKey_(it.sid) !== slKey_(session.userId)) return { success: false, code: 'FORBIDDEN', message: 'ยกเลิกได้เฉพาะคำขอของตัวเอง' };
     if (it.status !== 'pending' && it.status !== 'approved') return { success: false, message: 'คำขอนี้ปิดไปแล้ว' };
-    it.status = 'cancelled'; it.at = new Date().toISOString(); writeStuLeaves_(L);
+    const was = it.status; it.status = 'cancelled'; it.at = new Date().toISOString(); it.by = 'นักเรียน (' + (it.name || it.sid) + ')'; it.note = ''; writeStuLeaves_(L);
+    // v18.23 · ยกเลิกคำขอที่อนุมัติแล้ว → แจ้งแอดมินให้ทราบ
+    if (was === 'approved') { try { sendNotification_({ title: 'นักเรียนยกเลิกการลา · ' + it.name, body: slTxt_(it) + ' · ' + it.type, audience: 'admins', values: [], expires: it.to }, { userId: session.userId, name: it.name }); } catch (e) {} }
     return { success: true, message: 'ยกเลิกคำขอลาแล้ว' };
   });
 }
 function respondStudentLeave_(d, session) {
   d = d || {}; const id = cleanVal(d.id); const act = cleanVal(d.action);
+  if (['approve', 'reject', 'revoke'].indexOf(act) === -1) return { success: false, message: 'คำสั่งไม่ถูกต้อง' }; // v18.23
   let it = null;
   const r = leaveLock_(function () {
     const L = readStuLeaves_(); it = L.filter(function (x) { return x.id === id; })[0];
@@ -3397,6 +3400,10 @@ function saveTeacherLeave_(d, session, isAdmin) {
     const id = cleanVal(d.id || '');
     const old = id ? list.find(function (x) { return x.id === id; }) : null;
     if (old && old.teacherId !== session.userId && !isAdmin) return { success: false, code: 'FORBIDDEN', message: 'แก้ไขได้เฉพาะรายการของตัวเอง' };
+    // v18.23 · กันลาซ้ำ: วันเดียวกัน คาบทับกัน (หรือทั้งวัน) ของอาจารย์คนเดียวกัน
+    const owner = old ? old.teacherId : session.userId;
+    const dup = list.find(function (x) { return x.id !== (old && old.id) && x.teacherId === owner && x.date === date && x.status !== 'rejected' && (x.allDay || allDay || (x.periods || []).some(function (p) { return periods.indexOf(Number(p)) !== -1; })); });
+    if (dup) return { success: false, message: 'มีคำขอลาสอนวันนี้ในคาบเดียวกันอยู่แล้ว · แก้ไขรายการเดิมแทน' };
     const item = {
       id: old ? old.id : 'LV' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       teacherId: old ? old.teacherId : session.userId, teacherName: old ? old.teacherName : (cleanVal(session.name || session.userId)),
@@ -3422,6 +3429,7 @@ function approveTeacherLeave_(d, session) {
   const res = leaveLock_(function () {
     const list = readLeaves_(); const it = list.find(function (x) { return x.id === id; });
     if (!it) return { success: false, message: 'ไม่พบรายการลานี้' };
+    if (it.status === (ok ? 'approved' : 'rejected')) return { success: false, message: ok ? 'รายการนี้อนุมัติไปแล้ว' : 'รายการนี้ไม่อนุมัติไปแล้ว' }; // v18.23 · กันแจ้งเตือนซ้ำ
     it.status = ok ? 'approved' : 'rejected'; it.approvedBy = cleanVal(session.name || session.userId); it.approvedAt = new Date().toISOString(); it.note = note; it.updatedAt = it.approvedAt;
     return { success: true, message: ok ? 'อนุมัติการลาแล้ว · แจ้งนักเรียนที่เรียนคาบนั้นแล้ว' : 'ไม่อนุมัติการลา', item: it, data: writeLeaves_(list) };
   });
@@ -3470,7 +3478,16 @@ function deleteTeacherLeave_(d, session, isAdmin) {
     const list = readLeaves_(); const it = list.find(function (x) { return x.id === id; });
     if (!it) return { success: true, data: list };
     if (it.teacherId !== session.userId && !isAdmin) return { success: false, code: 'FORBIDDEN', message: 'ลบได้เฉพาะรายการของตัวเอง' };
-    return { success: true, message: 'ยกเลิกการลาแล้ว', data: writeLeaves_(list.filter(function (x) { return x.id !== id; })) };
+    const out = { success: true, message: 'ยกเลิกการลาแล้ว', data: writeLeaves_(list.filter(function (x) { return x.id !== id; })) };
+    // v18.23 · ยกเลิกการลาที่อนุมัติแล้ว (ยังไม่ถึงวัน) → แจ้งผู้สอนแทน + นักเรียนที่เคยได้รับแจ้ง
+    const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+    if (it.date >= today) {
+      const by = { userId: session.userId, name: cleanVal(session.name || session.userId) };
+      if (it.subId && it.subId !== session.userId) { try { sendNotification_({ title: 'ยกเลิกการลาสอน · ไม่ต้องสอนแทนแล้ว', body: leaveSummary_(it) + ' · ' + it.teacherName, audience: 'users', values: [it.subId], expires: it.date }, by); } catch (e) {} }
+      if (it.status === 'approved') { try { const ids = leaveStudents_(it); if (ids.length) sendNotification_({ title: 'ยกเลิกการลาสอน · ' + it.teacherName, body: leaveDateTh_(it.date) + ' · เรียนตามปกติ', audience: 'students', values: ids, expires: it.date }, by); } catch (e) {} }
+      if (it.status === 'pending' && it.teacherId === session.userId) { try { sendNotification_({ title: 'อาจารย์ยกเลิกคำขอลาสอน · ' + it.teacherName, body: leaveSummary_(it), audience: 'admins', values: [], expires: it.date }, by); } catch (e) {} }
+    }
+    return out;
   });
 }
 
