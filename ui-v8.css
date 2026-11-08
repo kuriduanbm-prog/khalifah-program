@@ -4747,3 +4747,22 @@ html.k8-xnarrow .hf-p5-t b { font-size: 11.5px; } html.k8-xnarrow .hf-p5-grid { 
 .k8-sw2-days button[aria-pressed="true"] { background: #0c4a6e; border-color: #0c4a6e; color: #fff; }
 .k8-sw2-sum { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; } .k8-sw2-sum > small { font-size: 12px; color: #475569; font-weight: 600; }
 .k8-sw2-sum .k8-sw-pair small { display: block; }
+/* v18.05 · ดูรูปในแอป */
+.k8-pf-ph button { border: 0; padding: 0; background: none; cursor: zoom-in; border-radius: 10px; }
+.k8-pf-dlall { align-self: flex-start; margin-top: 6px; min-height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #bae6fd; background: #f0f9ff; color: #0369a1; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.k8-lb { position: fixed; inset: 0; z-index: 6000; background: rgba(2, 6, 23, .98); display: flex; flex-direction: column; color: #fff; font-family: 'IBM Plex Sans Thai', sans-serif; }
+.k8-lb[hidden] { display: none; }
+.k8-lb-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px; }
+.k8-lb-top span { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-lb-x { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 18px; cursor: pointer; flex: none; }
+.k8-lb-stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 0 8px; }
+.k8-lb-stage img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; user-select: none; }
+.k8-lb-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.14); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
+.k8-lb-nav.is-prev { left: 10px; } .k8-lb-nav.is-next { right: 10px; }
+.k8-lb-nav[hidden] { display: none; }
+.k8-lb-dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0 4px; min-height: 8px; }
+.k8-lb-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.35); } .k8-lb-dots i.is-on { background: #fff; }
+.k8-lb-bar { display: flex; gap: 8px; padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 14px); }
+.k8-lb-bar button { flex: 1; min-height: 48px; border-radius: 14px; border: 0; background: #fff; color: #0c4a6e; font: inherit; font-weight: 600; font-size: 14.5px; cursor: pointer; }
+.k8-lb-bar button + button { background: #0369a1; color: #fff; }
+.k8-lb-bar button[hidden] { display: none; }

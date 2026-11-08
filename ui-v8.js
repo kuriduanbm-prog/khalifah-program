@@ -3385,7 +3385,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.04';
+  const APP_VERSION = '18.05';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5734,7 +5734,7 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', (e) => {
     if (leaving) return;
     const st = e.state || {};
-    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt || st.k8bh) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
+    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt || st.k8bh || st.k8pf || st.k8lb || st.k8gs2 || st.k8hqr || st.k8atd) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
     if (closeTopModal() || goHome()) { arm(); return; }
     const now = Date.now();
     if (now - lastBack < 2000) { leaving = true; try { history.back(); } catch (e2) {} return; }
@@ -9812,13 +9812,13 @@ window.k8HfMiss = function (slot) {
     let h = '<section class="k8-pf-kpi"><div><b>' + acts.length + '</b><small>กิจกรรมที่เข้าร่วม</small></div><div><b>' + items.length + '</b><small>เกียรติบัตร/ผลงาน</small></div><div><b>' + lvUp + '</b><small>ระดับเขตขึ้นไป</small></div></section>' +
       '<div class="k8-asum-tabs" role="tablist">' + [['all', 'ทั้งหมด'], ['cert', 'เกียรติบัตร'], ['act', 'กิจกรรม']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (P.tab === k) + '" onclick="k8PfTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>';
     if (!L.length) { B.innerHTML = h + '<p class="k8-asum-empty">' + (P.tab === 'act' ? 'ยังไม่มีกิจกรรมที่สแกนเข้าร่วม' : 'ยังไม่มีเกียรติบัตร · อาจารย์จะสแกนเก็บไว้ให้ที่นี่') + '</p>'; return; }
-    let yr = '';
+    let yr = ''; P.ph = [];
     h += L.map((x) => {
       const y = year(x.date); const head = y && y !== yr ? '<h3 class="k8-pf-yr">ปี ' + y + '</h3>' : ''; yr = y || yr;
       if (x.kind === 'act') return head + '<article class="k8-pf-it is-act"><span class="k8-pf-ico" aria-hidden="true">🎯</span><div><b>' + esc(x.title) + '</b><small>' + esc(dTh(x.date)) + (x.location ? ' · ' + esc(x.location) : '') + '</small><span class="k8-pf-tag">เข้าร่วมกิจกรรม</span></div></article>';
       const c = CAT[x.cat] || CAT.other;
       return head + '<article class="k8-pf-it is-cert"><span class="k8-pf-ico" style="background:' + c[1] + '1a;color:' + c[1] + '" aria-hidden="true">🏅</span><div><b>' + esc(x.title) + '</b><small>' + esc(dTh(x.date)) + ' · ระดับ' + esc(LV[x.level] || LV.school) + (x.award ? ' · ' + esc(x.award) : '') + '</small><span class="k8-pf-tag" style="color:' + c[1] + '">' + c[0] + '</span>' + (x.note ? '<p>' + esc(x.note) + '</p>' : '') +
-        ((x.files || []).length ? '<div class="k8-pf-ph">' + x.files.map((u) => '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" alt="เกียรติบัตร ' + esc(x.title) + '" loading="lazy"></a>').join('') + '</div>' : '') + '<small class="k8-pf-by">บันทึกโดย ' + esc(x.byName || '-') + '</small></div></article>';
+        ((x.files || []).length ? (function () { const k = P.ph.push({ files: x.files, title: x.title }) - 1; return '<div class="k8-pf-ph">' + x.files.map((u, i) => '<button type="button" onclick="k8PfView(' + k + ',' + i + ')" aria-label="ดูรูปที่ ' + (i + 1) + ' ของ ' + esc(x.title) + '"><img src="' + esc(u) + '" alt="" loading="lazy"></button>').join('') + '</div>' + (x.files.length > 1 ? '<button type="button" class="k8-pf-dlall" onclick="k8PfDlAll(' + k + ')">⬇ โหลดรูปทั้งหมด (' + x.files.length + ')</button>' : ''); })() : '') + '<small class="k8-pf-by">บันทึกโดย ' + esc(x.byName || '-') + '</small></div></article>';
     }).join('');
     B.innerHTML = h;
   }
@@ -9840,7 +9840,9 @@ window.k8HfMiss = function (slot) {
     render(); load();
   };
   window.k8PfTab = function (k) { P.tab = k; render(); };
-  window.addEventListener('popstate', () => { const el = document.getElementById('k8Pf'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
+  window.k8PfView = function (k, i) { const g = (P.ph || [])[k]; if (g && window.k8Lightbox) window.k8Lightbox(g.files, i, g.title); };
+  window.k8PfDlAll = function (k) { const g = (P.ph || [])[k]; if (g && window.k8DlAll) window.k8DlAll(g.files, g.title); };
+  window.addEventListener('popstate', () => { if (history.state && history.state.k8pf) return; const el = document.getElementById('k8Pf'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
 
   // ---------- อาจารย์/แอดมิน: สแกนเก็บเกียรติบัตร ----------
   const F = { sel: new Map(), q: '', g: 'ALL', photos: [], title: '', cat: 'academic', level: 'school', award: '', date: '', note: '', busy: false, list: null, tab: 'new' };
@@ -10373,4 +10375,52 @@ window.k8HfMiss = function (slot) {
   ['adminLogout', 'teacherLogout'].forEach((fn) => { const lo = window[fn]; if (typeof lo === 'function') window[fn] = function () { if (isStaffPv()) { exitStaff(); return; } return lo.apply(this, arguments); }; });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(banner, 0)); else setTimeout(banner, 0);
   window.addEventListener('load', () => setTimeout(banner, 400));
+})();
+
+/* ---------- v18.05 · ดูรูปในแอป (lightbox) + ดาวน์โหลดรูป/ทั้งหมด ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const L = { urls: [], i: 0, title: '' };
+  const safe = (t) => String(t || 'รูป').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 60) || 'รูป';
+  async function dl(url, name) {
+    try {
+      const r = await fetch(url, { mode: 'cors' }); if (!r.ok) throw 0;
+      const b = await r.blob(); const ext = /png/.test(b.type) ? 'png' : /webp/.test(b.type) ? 'webp' : 'jpg';
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name + '.' + ext; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); return true;
+    } catch (e) {
+      const m = String(url).match(/lh3\.googleusercontent\.com\/d\/([\w-]+)/) || String(url).match(/[?&]id=([\w-]+)/);
+      const a = document.createElement('a'); a.href = m ? 'https://drive.google.com/uc?export=download&id=' + m[1] : url; a.target = '_blank'; a.rel = 'noopener'; a.download = name;
+      document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 500); return false;
+    }
+  }
+  function ensure() {
+    if (document.getElementById('k8Lb')) return;
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-lb" id="k8Lb" hidden role="dialog" aria-modal="true" aria-label="ดูรูป"><div class="k8-lb-top"><span id="k8LbT"></span><button type="button" class="k8-lb-x" aria-label="ปิด" onclick="history.back()">✕</button></div><div class="k8-lb-stage" id="k8LbS"><button type="button" class="k8-lb-nav is-prev" aria-label="รูปก่อนหน้า" onclick="k8LbGo(-1)">‹</button><img id="k8LbImg" alt=""><button type="button" class="k8-lb-nav is-next" aria-label="รูปถัดไป" onclick="k8LbGo(1)">›</button></div><div class="k8-lb-dots" id="k8LbD"></div><div class="k8-lb-bar"><button type="button" onclick="k8LbDl()">⬇ โหลดรูปนี้</button><button type="button" id="k8LbAll" onclick="k8LbDlAll()">⬇ โหลดทั้งหมด</button></div></div>');
+    const st = document.getElementById('k8LbS'); let x0 = null;
+    st.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    st.addEventListener('touchend', (e) => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) window.k8LbGo(dx < 0 ? 1 : -1); });
+    document.addEventListener('keydown', (e) => { const el = document.getElementById('k8Lb'); if (!el || el.hidden) return; if (e.key === 'ArrowRight') window.k8LbGo(1); else if (e.key === 'ArrowLeft') window.k8LbGo(-1); else if (e.key === 'Escape') history.back(); });
+  }
+  function paint() {
+    const n = L.urls.length; document.getElementById('k8LbImg').src = L.urls[L.i] || '';
+    document.getElementById('k8LbImg').alt = L.title + ' รูปที่ ' + (L.i + 1);
+    document.getElementById('k8LbT').textContent = L.title + (n > 1 ? ' · ' + (L.i + 1) + '/' + n : '');
+    document.getElementById('k8LbD').innerHTML = n > 1 ? L.urls.map((_, i) => '<i class="' + (i === L.i ? 'is-on' : '') + '"></i>').join('') : '';
+    document.querySelectorAll('#k8Lb .k8-lb-nav').forEach((b) => { b.hidden = n < 2; });
+    document.getElementById('k8LbAll').hidden = n < 2;
+  }
+  window.k8Lightbox = function (urls, i, title) {
+    ensure(); L.urls = (urls || []).filter(Boolean); L.i = Math.max(0, Math.min(i || 0, L.urls.length - 1)); L.title = title || 'รูป';
+    const el = document.getElementById('k8Lb'); el.hidden = false; try { history.pushState({ k8lb: 1 }, ''); } catch (e) {} paint();
+  };
+  window.k8LbGo = function (d) { const n = L.urls.length; if (n < 2) return; L.i = (L.i + d + n) % n; paint(); };
+  window.k8LbDl = function () { dl(L.urls[L.i], safe(L.title) + '-' + (L.i + 1)); };
+  async function all(urls, title) {
+    try { showToast('กำลังโหลด ' + urls.length + ' รูป…', 'info'); } catch (e) {}
+    for (let i = 0; i < urls.length; i++) { await dl(urls[i], safe(title) + '-' + (i + 1)); await new Promise((r) => setTimeout(r, 450)); }
+  }
+  window.k8LbDlAll = function () { all(L.urls, L.title); };
+  window.k8DlAll = all;
+  window.addEventListener('popstate', () => { const el = document.getElementById('k8Lb'); if (el && !el.hidden) el.hidden = true; });
 })();

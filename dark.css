@@ -2287,6 +2287,12 @@ html[data-theme="dark"] .k8-sw2-ck { border: 1.5px solid #393f46 !important; }
 html[data-theme="dark"] .k8-sw2-days button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
 html[data-theme="dark"] .k8-sw2-sum { background-color: #181f26 !important; border: 1px solid #323941 !important; }
 html[data-theme="dark"] .k8-sw2-sum > small { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-pf-dlall { border: 1px solid #264555 !important; background-color: #0e2432 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-lb-x { background-color: rgba(31,31,31,0.17) !important; }
+html[data-theme="dark"] .k8-lb-nav { background-color: rgba(31,31,31,0.19) !important; }
+html[data-theme="dark"] .k8-lb-dots i { background-color: rgba(31,31,31,0.4) !important; }
+html[data-theme="dark"] .k8-lb-dots i.is-on { background-color: #121212 !important; }
+html[data-theme="dark"] .k8-lb-bar button { background-color: #121212 !important; color: #b7d1e0 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
