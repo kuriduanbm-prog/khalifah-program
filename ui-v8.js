@@ -3550,7 +3550,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.56';
+  const APP_VERSION = '18.57';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11392,4 +11392,57 @@ window.k8HfMiss = function (slot) {
   setInterval(apply, 1500);
   window.addEventListener('orientationchange', apply);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { last = null; apply(); } });
+})();
+
+/* ---------- v18.57 · นักเรียน: การ์ดเตือนบันทึกผลบุญ 18:00 น. (HC5 · สตรีค) · ปิดได้ · หุบเองใน 8 วินาที · วันละครั้ง ---------- */
+(function () {
+  const HOUR = 18, SHOW_MS = 8000;
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const sidOf = () => { try { let a = null; try { a = currentAdmin; } catch (e) {} return !a && currentStudent && currentStudent.studentId ? String(currentStudent.studentId) : ''; } catch (e) { return ''; } };
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const did = (ds) => { try { const s = window.k8HasanatStats ? window.k8HasanatStats(ds, ds) : null; return !!(s && (s.pages > 0 || s.mem > 0 || s.rakaat > 0)); } catch (e) { return false; } };
+  function streak() { const d = new Date(); let n = 0; for (let i = 1; i <= 60; i++) { d.setDate(d.getDate() - 1); if (did(ymd(d))) n++; else break; } return n; }
+  let timer = null;
+  const ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/><path d="M17 3l.7 1.6L19.3 5l-1.6.7L17 7.3l-.7-1.6L14.7 5l1.6-.4z"/></svg>';
+  function hide(now) {
+    const el = document.getElementById('k8Hr'); if (!el) return; clearTimeout(timer);
+    if (now) { el.remove(); return; }
+    el.classList.add('is-out'); setTimeout(() => el.remove(), 260);
+  }
+  function dot(on) { const b = document.getElementById('m-nav-hasanat'); if (b) b.classList.toggle('k8-hr-dot', !!on); }
+  function place(el) {
+    const nb = document.getElementById('m-nav-hasanat'); const r = nb && nb.offsetParent ? nb.getBoundingClientRect() : null;
+    if (r && r.width) { el.style.bottom = (innerHeight - r.top + 10) + 'px'; el.classList.remove('is-desk'); requestAnimationFrame(() => { const cr = el.getBoundingClientRect(); el.style.setProperty('--ax', Math.max(18, Math.min(cr.width - 18, r.left + r.width / 2 - cr.left)) + 'px'); }); }
+    else el.classList.add('is-desk');
+  }
+  function show(sid) {
+    if (document.getElementById('k8Hr')) return;
+    const n = streak();
+    const title = n ? 'บันทึกต่อเนื่อง ' + n + ' วันแล้ว!' : 'อย่าลืมบันทึกผลบุญวันนี้';
+    const sub = n ? 'บันทึกวันนี้เพื่อไปต่อวันที่ ' + (n + 1) : 'อ่านอัลกุรอาน ท่องจำ สุนัต · ไม่ถึง 1 นาที';
+    const bars = n ? '<span class="k8-hr-bars" aria-hidden="true">' + Array.from({ length: 7 }, (_, i) => '<i class="' + (i < Math.min(n, 7) ? 'on' : '') + '"></i>').join('') + '</span>' : '';
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-hr" id="k8Hr" role="status" aria-live="polite"><button type="button" class="k8-hr-main" onclick="k8HrGo()"><span class="k8-hr-ic">' + ICON + '</span><span class="k8-hr-tx"><b>' + title + '</b><small>' + sub + '</small>' + bars + '</span><span class="k8-hr-go">บันทึก</span></button><button type="button" class="k8-hr-x" aria-label="ปิด" onclick="k8HrClose()">✕</button></div>');
+    const el = document.getElementById('k8Hr'); place(el);
+    lsSet('k8_hr_' + sid + '_' + ymd(new Date()), '1');
+    timer = setTimeout(() => hide(), SHOW_MS);
+    el.addEventListener('pointerenter', () => clearTimeout(timer)); el.addEventListener('pointerleave', () => { clearTimeout(timer); timer = setTimeout(() => hide(), 3000); });
+  }
+  window.k8HrGo = function () { hide(true); try { switchView('hasanat'); } catch (e) {} };
+  window.k8HrClose = function () { hide(); };
+  function check() {
+    const sid = sidOf(); if (!sid) { hide(true); dot(false); return; }
+    const now = new Date(); const td = ymd(now); const done = did(td);
+    dot(!done && now.getHours() >= HOUR);
+    if (done) { hide(); return; }
+    if (now.getHours() < HOUR || document.hidden) return;
+    const v = document.getElementById('view-hasanat'); if (v && v.classList.contains('active')) return;
+    if (lsGet('k8_hr_' + sid + '_' + td)) return;
+    show(sid);
+  }
+  window.k8HrCheck = check; window.k8HrTest = function () { const sid = sidOf(); if (sid) { hide(true); show(sid); } };
+  setTimeout(check, 4000); setInterval(check, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(check, 1500); });
+  window.addEventListener('resize', () => { const el = document.getElementById('k8Hr'); if (el) place(el); });
 })();

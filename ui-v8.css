@@ -5321,3 +5321,23 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 .k8h-dp-edit { display: inline; padding: 0; margin: 0; font-size: 12.5px; }
 .k8h-dpbox { margin: 8px 0 10px; }
 .k8h-save.is-confirm { background: #b45309 !important; }
+/* v18.57 · การ์ดเตือนผลบุญ 18:00 */
+.k8-hr { position: fixed; left: 50%; transform: translateX(-50%); width: min(340px, calc(100vw - 32px)); z-index: 1200; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 10px 28px rgba(15,23,42,.18); display: flex; align-items: stretch; animation: k8HrIn .32s cubic-bezier(.2,.9,.3,1.2); font-family: 'IBM Plex Sans Thai', sans-serif; --ax: 50%; }
+.k8-hr::after { content: ''; position: absolute; bottom: -6px; left: var(--ax); width: 12px; height: 12px; margin-left: -6px; background: #fff; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; transform: rotate(45deg); }
+.k8-hr.is-desk { left: auto; right: 24px; bottom: 24px; transform: none; } .k8-hr.is-desk::after { display: none; }
+.k8-hr.is-out { animation: k8HrOut .26s ease forwards; }
+.k8-hr-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 9px 4px 9px 10px; border: 0; background: none; font: inherit; color: #0f172a; text-align: left; cursor: pointer; }
+.k8-hr-ic { width: 36px; height: 36px; border-radius: 11px; background: #eef2ff; color: #4338ca; display: flex; align-items: center; justify-content: center; flex: none; }
+.k8-hr-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; } .k8-hr-tx b { font-size: 13.5px; font-weight: 700; } .k8-hr-tx small { font-size: 11.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k8-hr-bars { display: flex; gap: 3px; margin-top: 4px; } .k8-hr-bars i { width: 14px; height: 4px; border-radius: 3px; background: #e0e7ff; } .k8-hr-bars i.on { background: #4f46e5; }
+.k8-hr-go { flex: none; background: #0369a1; color: #fff; border-radius: 10px; padding: 7px 11px; font-size: 12.5px; font-weight: 700; }
+.k8-hr-x { flex: none; width: 32px; border: 0; background: none; color: #94a3b8; font-size: 14px; cursor: pointer; border-radius: 0 16px 16px 0; }
+.k8-hr-x:hover { color: #475569; background: #f8fafc; }
+@keyframes k8HrIn { from { opacity: 0; transform: translate(-50%, 12px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes k8HrOut { to { opacity: 0; transform: translate(-50%, 10px) scale(.96); } }
+.k8-hr.is-desk { animation-name: k8HrInD; } .k8-hr.is-desk.is-out { animation-name: k8HrOutD; }
+@keyframes k8HrInD { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes k8HrOutD { to { opacity: 0; transform: translateY(10px); } }
+#m-nav-hasanat { position: relative; }
+#m-nav-hasanat.k8-hr-dot::after { content: ''; position: absolute; top: 6px; left: calc(50% + 6px); width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 2px #fff; }
+html[data-theme="dark"] .k8-hr, html[data-theme="dark"] .k8-hr::after { background: #1e293b; border-color: #334155; } html[data-theme="dark"] .k8-hr-main { color: #f1f5f9; }
