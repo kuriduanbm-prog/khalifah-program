@@ -3498,7 +3498,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.39';
+  const APP_VERSION = '18.40';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8411,7 +8411,7 @@ window.k8RegBirthChange = function (v) {
   function itemHtml(x) {
     const mine = isMine(x), canEdit = mine || isAdm(), iSub = myIds().indexOf(String(x.subId).toLowerCase()) !== -1;
     const st = ST[x.status || 'pending'] || ST.pending;
-    const subjLine = x.slots && x.slots.length ? x.slots.map((s) => esc(s.sn) + (s.gn ? ' · ' + esc(s.gn) : (/^x:/.test(s.g) ? '' : ' · ม.' + esc(s.g)))).filter((v, i, a) => a.indexOf(v) === i).join(' / ') : esc(x.subject) + (x.grade ? ' · ' + esc(x.grade) : '');
+    const subjLine = x.slots && x.slots.length ? x.slots.map((s) => esc(s.sn) + (s.gn ? ' · ' + esc(s.gn) : (/^hq:/.test(s.g) ? ' · หะละเกาะฮฺ' : /^x:/.test(s.g) ? '' : ' · ม.' + esc(s.g)))).filter((v, i, a) => a.indexOf(v) === i).join(' / ') : esc(x.subject) + (x.grade ? ' · ' + esc(x.grade) : '');
     return '<article class="k8-lv-item is-' + (x.status || 'pending') + (x.subName ? ' has-sub' : '') + '">' +
       '<div class="k8-lv-top"><b>' + esc(dLabel(x.date)) + '</b><span class="k8-lv-st" style="background:' + st[1] + ';color:' + st[2] + '">' + st[0] + '</span></div>' +
       '<div class="k8-lv-whens">' + whenHtml(x) + '</div>' +
@@ -8479,7 +8479,7 @@ window.k8RegBirthChange = function (v) {
       h += '<span class="k8-lv-wk-d' + (dd === curDow ? ' is-cur' : '') + '">' + DS[dd] + '</span>';
       for (let p = 1; p <= np; p++) {
         const x = T.find((y) => y.d === dd && y.p === p);
-        h += x ? '<button type="button" class="k8-lv-wk-c' + (dd === curDow && V.sel[skey(x)] ? ' on' : '') + '" onclick="k8LvPick(' + dd + ',' + p + ')" title="' + esc(x.sn + ' ' + (x.gn || '')) + '"><b>' + esc(String(x.sn).slice(0, 8)) + '</b><small>' + esc(x.gn || ('ม.' + x.g)) + '</small></button>' : '<span class="k8-lv-wk-e"></span>';
+        h += x ? '<button type="button" class="k8-lv-wk-c' + (dd === curDow && V.sel[skey(x)] ? ' on' : '') + '" onclick="k8LvPick(' + dd + ',' + p + ')" title="' + esc(x.sn + ' ' + (x.gn || '')) + '"><b>' + esc(String(x.sn).slice(0, 8)) + '</b><small>' + esc(/^hq:/.test(x.g) ? (String(x.gn || '').replace(/^หะละเกาะฮฺ\s*/, '') || 'หะละเกาะฮฺ') : (x.gn || ('ม.' + x.g))) + '</small></button>' : '<span class="k8-lv-wk-e"></span>';
       }
     });
     return h + '</div>';

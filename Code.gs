@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.29'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.40'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3340,7 +3340,7 @@ const LEAVE_DAYN_ = ['อาทิตย์', 'จันทร์', 'อัง�
 const LEAVE_MON_ = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 function leaveDateTh_(ymd) { const d = new Date(ymd + 'T00:00:00'); return isNaN(d) ? ymd : 'วัน' + LEAVE_DAYN_[d.getDay()] + 'ที่ ' + d.getDate() + ' ' + LEAVE_MON_[d.getMonth()] + ' ' + (d.getFullYear() + 543); }
 function leaveSummary_(it) {
-  const when = it.allDay ? 'ทั้งวัน' : (it.slots && it.slots.length ? it.slots.map(function (x) { return 'คาบ ' + x.p + (x.sn ? ' ' + x.sn : '') + (x.g ? ' ม.' + x.g : ''); }).join(', ') : 'คาบ ' + (it.periods || []).join(', ') + (it.subject ? ' · ' + it.subject : '') + (it.grade ? ' · ' + it.grade : ''));
+  const when = it.allDay ? 'ทั้งวัน' : (it.slots && it.slots.length ? it.slots.map(function (x) { return 'คาบ ' + x.p + (x.sn ? ' ' + x.sn : '') + (x.g && !/^(x|hq):/.test(x.g) ? ' ม.' + x.g : ''); }).join(', ') : 'คาบ ' + (it.periods || []).join(', ') + (it.subject ? ' · ' + it.subject : '') + (it.grade ? ' · ' + it.grade : ''));
   return leaveDateTh_(it.date) + ' · ' + when;
 }
 /** อีเมลถึงแอดมิน/ผู้บริหาร (แจ้งเข้ามือถือผ่านแอป Gmail) */
@@ -3364,6 +3364,7 @@ function leaveStudents_(it) {
   const out = {};
   (it.slots || []).forEach(function (sl) {
     let cells = null, base = [];
+    if (/^hq:/.test(String(sl.g))) { const h = readHalaqah_().filter(function (y) { return 'hq:' + y.id === String(sl.g); })[0]; if (!h) return; (h.members.length ? h.members : [].concat.apply([], (h.grades.length ? h.grades : ['1', '2', '3', '4', '5', '6']).map(function (gg) { return byGrade[gg] || []; }))).forEach(function (id) { if (id) out[String(id).replace(/^0+/, '')] = 1; }); return; }
     if (/^x:/.test(String(sl.g))) { let x = null; try { x = JSON.parse(st['TimetableX_' + String(sl.g).slice(2)] || 'null'); } catch (e) {} if (!x) return; cells = x.cells || {}; base = (x.students || []).slice(); }
     else { let v = null; try { v = JSON.parse(st['Timetable_M' + sl.g] || 'null'); } catch (e) {} cells = (v && v.cells) || {}; base = (byGrade[String(sl.g)] || []).slice(); }
     const list = cells[dow + '-' + sl.p]; const arr = Array.isArray(list) ? list : (list ? [list] : []);
@@ -3395,7 +3396,7 @@ function saveTeacherLeave_(d, session, isAdmin) {
   if (slots.length) subject = slots.map(function (x) { return x.sn; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).join(', ');
   if (!subject) return { success: false, message: 'ระบุวิชา' };
   let grade = cleanVal(d.grade || '').substring(0, 60);
-  if (slots.length) grade = slots.map(function (x) { return /^x:/.test(x.g) ? 'ตารางพิเศษ' : 'ม.' + x.g; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+  if (slots.length) grade = slots.map(function (x) { return /^hq:/.test(x.g) ? 'หะละเกาะฮฺ' : /^x:/.test(x.g) ? 'ตารางพิเศษ' : 'ม.' + x.g; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
   const res = leaveLock_(function () {
     const list = readLeaves_();
     const id = cleanVal(d.id || '');
@@ -3452,7 +3453,7 @@ function approveTeacherLeave_(d, session) {
     const ids = leaveStudents_(it);
     res.notified = ids.length;
     if (ids.length) {
-      const per = (it.slots || []).map(function (x) { return 'คาบ ' + x.p + (x.t ? ' (' + x.t + ')' : '') + ' ' + x.sn + (/^x:/.test(x.g) ? '' : ' ม.' + x.g); }).join('\n');
+      const per = (it.slots || []).map(function (x) { return 'คาบ ' + x.p + (x.t ? ' (' + x.t + ')' : '') + ' ' + x.sn + (/^(x|hq):/.test(x.g) ? '' : ' ม.' + x.g); }).join('\n');
       try { sendNotification_({ title: 'อาจารย์ลาสอน · ' + it.teacherName, body: leaveDateTh_(it.date) + '\n' + per + '\n' + (it.subName ? 'สอนแทนโดย ' + it.subName : 'รอประกาศผู้สอนแทน / ทำงานที่ได้รับมอบหมาย'), audience: 'students', values: ids, priority: 'urgent', expires: it.date }, by); } catch (e) {}
     }
   }
@@ -3674,6 +3675,23 @@ function getMyTeaching_(session) {
   ['1', '2', '3', '4', '5', '6'].forEach(function (g) { let v = null; try { v = JSON.parse(st['Timetable_M' + g] || 'null'); } catch (e) {} if (v && v.cells) scan(v.cells, g, 'ม.' + g); });
   let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
   ids.forEach(function (id) { let x = null; try { x = JSON.parse(st['TimetableX_' + id] || 'null'); } catch (e) {} if (x && x.cells) scan(x.cells, 'x:' + id, cleanVal(x.name || 'ตารางพิเศษ')); });
+  // v18.40 · คาบหะละเกาะฮฺที่อาจารย์เป็นผู้ดูแล (จับคู่เวลาหะละเกาะฮฺกับช่วงเวลาคาบ) · ให้เลือกแจ้งลาได้
+  try {
+    const pm = function (t) { const m = String(t || '').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : -1; };
+    const own = readHalaqah_().filter(function (h) { return String(h.teacher || '').toLowerCase() === uid || (!!hqNm_(h.teacherName) && hqNm_(h.teacherName) === hqNm_(session.name)); });
+    own.forEach(function (h) {
+      const hs = pm(h.start), he = pm(h.end); if (hs < 0 || he <= hs) return;
+      const dows = {}; (h.dates && h.dates.length ? h.dates.map(function (x) { return String(new Date(x + 'T00:00:00').getDay()); }) : h.days).forEach(function (x) { dows[x] = 1; });
+      (cfg.periods || []).forEach(function (pp, i) {
+        const ps = pm(pp && pp.start), pe = pm(pp && pp.end); if (ps < 0 || pe <= ps || Math.min(he, pe) - Math.max(hs, ps) < 15) return;
+        Object.keys(dows).forEach(function (dw) {
+          const d = +dw, p = i + 1;
+          if (out.some(function (o) { return o.d === d && o.p === p && String(o.g) === 'hq:' + h.id; })) return;
+          out.push({ d: d, p: p, g: 'hq:' + h.id, gn: h.grades.length ? 'หะละเกาะฮฺ ม.' + h.grades.join(',') : 'หะละเกาะฮฺ', s: '', sn: h.name || 'หะละเกาะฮฺ', r: h.location || '' });
+        });
+      });
+    });
+  } catch (e) {}
   return { success: true, config: cfg, slots: out };
 }
 
