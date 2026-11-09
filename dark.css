@@ -2550,6 +2550,10 @@ html[data-theme="dark"] .k8-lv4-time > span:first-child { color: #b7d1e0 !import
 html[data-theme="dark"] .k8-lv4-time input { color: #d6dae5 !important; background-color: #121212 !important; }
 html[data-theme="dark"] .k8-lv4-time > span[aria-hidden] { color: #b6bcc3 !important; }
 html[data-theme="dark"] .k8-lv4-time small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-lv4-row.is-free { background-color: #121212 !important; }
+html[data-theme="dark"] .k8-lv4-t { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-lv4-msub { background-color: #121212 !important; }
+html[data-theme="dark"] .k8-lv4-msub.is-need { border-color: #592929 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

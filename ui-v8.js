@@ -3522,7 +3522,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.50';
+  const APP_VERSION = '18.51';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8451,7 +8451,7 @@ window.k8RegBirthChange = function (v) {
   function itemHtml(x) {
     const mine = isMine(x), canEdit = mine || isAdm(), iSub = myIds().indexOf(String(x.subId).toLowerCase()) !== -1;
     const st = ST[x.status || 'pending'] || ST.pending;
-    const subjLine = x.slots && x.slots.length ? x.slots.map((s) => esc(s.sn) + (s.gn ? ' · ' + esc(s.gn) : (/^hq:/.test(s.g) ? ' · หะละเกาะฮฺ' : /^x:/.test(s.g) ? '' : ' · ม.' + esc(s.g))) + (s.subn ? ' <small class="k8-lv-ssub">(แทน: ' + esc(s.subn) + ')</small>' : '')).filter((v, i, a) => a.indexOf(v) === i).join(' / ') : esc(x.subject) + (x.grade ? ' · ' + esc(x.grade) : '');
+    const subjLine = x.slots && x.slots.length ? x.slots.map((s) => esc(s.sn) + (s.gn ? ' · ' + esc(s.gn) : (/^hq:/.test(s.g) ? ' · หะละเกาะฮฺ' : (/^x:/.test(s.g) || !s.g) ? '' : ' · ม.' + esc(s.g))) + (s.subn ? ' <small class="k8-lv-ssub">(แทน: ' + esc(s.subn) + ')</small>' : '')).filter((v, i, a) => a.indexOf(v) === i).join(' / ') : esc(x.subject) + (x.grade ? ' · ' + esc(x.grade) : '');
     return '<article class="k8-lv-item is-' + (x.status || 'pending') + (x.subName ? ' has-sub' : '') + '">' +
       '<div class="k8-lv-top"><b>' + esc(dLabel(x.date)) + '</b><span class="k8-lv-st" style="background:' + st[1] + ';color:' + st[2] + '">' + st[0] + '</span></div>' +
       '<div class="k8-lv-whens">' + whenHtml(x) + '</div>' +
@@ -8561,10 +8561,12 @@ window.k8RegBirthChange = function (v) {
   function inMode(p) { if (!timed()) return true; const c = V.cfg && V.cfg.periods && V.cfg.periods[p - 1]; if (!c) return true; const a = tmin(V.t1), b = tmin(V.t2); if (!(b > a)) return false; return Math.min(b, tmin(c.end)) - Math.max(a, tmin(c.start)) > 0; }
   function lvRows() {
     const out = [];
+    // v18.51 · ไม่พบคาบในตารางสอน (เช่น บัญชีแอดมิน/ยังไม่ได้ใส่ชื่อในตาราง) → แสดงทุกคาบของวันให้แตะเลือกเองแล้วพิมพ์วิชา (หน้าตาแบบเดียวกัน)
+    if (V.manual) { const P = (V.cfg && V.cfg.periods) || []; const days = (V.cfg && V.cfg.days) || [1, 2, 3, 4, 5]; lvDates().forEach((ds) => { if (V.mode === 'multi' && days.indexOf(new Date(ds + 'T00:00:00').getDay()) === -1) return; P.forEach((pp, i) => { const p = i + 1; if (!inMode(p)) return; const k = ds + '||' + p; out.push({ ds, k, x: { p, g: '', gn: '', s: '', sn: V.msub[k] || '', r: '', manual: true } }); }); }); return out; }
     lvDates().forEach((ds) => { const dow = new Date(ds + 'T00:00:00').getDay(); (V.teach || []).filter((x) => x.d === dow && inMode(x.p)).sort((a, b) => a.p - b.p).forEach((x) => out.push({ ds, x, k: ds + '|' + x.g + '|' + x.p })); });
     return out;
   }
-  const lvOn = (rows) => rows.filter((r) => !V.off[r.k]);
+  const lvOn = (rows) => rows.filter((r) => (r.x.manual ? !!V.pick[r.k] : !V.off[r.k]));
   function busySet(ds) {
     const set = {}; let L = null; try { L = window.k8TtAllOn ? window.k8TtAllOn(ds) : null; } catch (e) {}
     (L || []).forEach((e) => { const c = e.c || {}; [c.t].concat(c.ts || []).filter(Boolean).forEach((t) => { set[e.p + '|' + String(t).toLowerCase()] = 1; }); });
@@ -8584,8 +8586,9 @@ window.k8RegBirthChange = function (v) {
     let h = '<div class="k8-lv4-rows">', last = '', busy = {};
     rows.forEach((r) => {
       if (r.ds !== last) { last = r.ds; busy = busySet(r.ds); if (V.mode === 'multi') h += '<div class="k8-lv4-day">' + esc(dShort(r.ds)) + '</div>'; }
-      const on = !V.off[r.k], cur = V.subs[r.k] || {};
-      h += '<div class="k8-lv4-row' + (on ? '' : ' is-off') + (on && !cur.name ? ' is-need' : '') + '"><button type="button" class="k8-lv4-ck" aria-pressed="' + on + '" aria-label="รวมคาบนี้" data-k="' + esc(r.k) + '" onclick="k8Lv4Tog(this)">' + (on ? '✓' : '') + '</button><div class="k8-lv4-rt"><b>คาบ ' + r.x.p + ' · ' + esc(r.x.sn) + '</b><small>' + esc(r.x.gn || ('ม.' + r.x.g)) + ' · ' + esc((ptime(r.x.p) || '').split('–')[0]) + '</small></div>' + (on ? subSel(r, busy) : '<small class="k8-lv4-skip">ไม่ลาคาบนี้</small>') + '</div>' +
+      const on = r.x.manual ? !!V.pick[r.k] : !V.off[r.k], cur = V.subs[r.k] || {};
+      const nm = r.x.manual ? '<b>คาบ ' + r.x.p + ' <small class="k8-lv4-t">' + esc(ptime(r.x.p)) + '</small></b>' + (on ? '<input type="text" class="k8-lv4-msub' + (r.x.sn ? '' : ' is-need') + '" maxlength="80" placeholder="วิชา/ชั้น เช่น ฟิสิกส์ ม.5" value="' + esc(r.x.sn) + '" data-k="' + esc(r.k) + '" oninput="k8Lv4MS(this)">' : '<small>แตะ ☐ ถ้าคาบนี้มีสอน</small>') : '<b>คาบ ' + r.x.p + ' · ' + esc(r.x.sn) + '</b><small>' + esc(r.x.gn || ('ม.' + r.x.g)) + ' · ' + esc((ptime(r.x.p) || '').split('–')[0]) + '</small>';
+      h += '<div class="k8-lv4-row' + (on ? '' : ' is-off') + (r.x.manual && !on ? ' is-free' : '') + (on && !cur.name ? ' is-need' : '') + '"><button type="button" class="k8-lv4-ck" aria-pressed="' + on + '" aria-label="รวมคาบนี้" data-k="' + esc(r.k) + '" onclick="k8Lv4Tog(this)">' + (on ? '✓' : '') + '</button><div class="k8-lv4-rt">' + nm + '</div>' + (on ? subSel(r, busy) : (r.x.manual ? '' : '<small class="k8-lv4-skip">ไม่ลาคาบนี้</small>')) + '</div>' +
         (on && cur.other ? '<div class="k8-lv4-oth"><input type="text" maxlength="80" placeholder="พิมพ์ชื่ออาจารย์ผู้สอนแทน" value="' + esc(cur.name || '') + '" data-k="' + esc(r.k) + '" oninput="k8Lv4Oth(this)"></div>' : '');
     });
     return h + '</div>' + (lvOn(rows).length > 1 ? '<button type="button" class="k8-lv4-same" onclick="k8Lv4Same()">⇵ ใช้ผู้สอนแทนคนเดียวทุกคาบ</button>' : '');
@@ -8597,7 +8600,8 @@ window.k8RegBirthChange = function (v) {
       if (!((document.getElementById('k8LvSubj') || {}).value || '').trim()) return 'ระบุวิชา';
     } else {
       if (timed() && !(tmin(V.t2) > tmin(V.t1))) return 'ระบุเวลาลาให้ถูกต้อง (เวลาสิ้นสุดต้องหลังเวลาเริ่ม)';
-      const on = lvOn(lvRows()); if (!on.length) return 'ไม่มีคาบที่จะลา · เลือกวันหรือช่วงลาใหม่';
+      const on = lvOn(lvRows()); if (!on.length) return V.manual ? 'แตะเลือกคาบที่จะลา' : 'ไม่มีคาบที่จะลา · เลือกวันหรือช่วงลาใหม่';
+      const noSub = on.filter((r) => r.x.manual && !String(V.msub[r.k] || '').trim()); if (noSub.length) return 'พิมพ์ชื่อวิชาของคาบ ' + noSub.map((r) => r.x.p).join(', ');
       const miss = on.filter((r) => !(V.subs[r.k] && V.subs[r.k].name));
       if (miss.length) return miss.length === on.length ? 'เลือกผู้สอนแทนก่อนจึงจะส่งได้' : 'ยังไม่มีผู้สอนแทนคาบ ' + miss.map((r) => r.x.p + ' ' + r.x.sn).slice(0, 2).join(', ') + (miss.length > 2 ? ' และอีก ' + (miss.length - 2) + ' คาบ' : '');
     }
@@ -8614,7 +8618,7 @@ window.k8RegBirthChange = function (v) {
     const done = rows.filter((r) => V.subs[r.k] && V.subs[r.k].name).length;
     const sl = document.getElementById('k8Lv4Slip');
     if (sl) sl.innerHTML = '<div class="k8-lv4-sh"><small>ใบแจ้งลาสอน</small><span>' + (V.rt ? '<i class="k8-lv4-rtag">' + esc(V.rt) + '</i>' : '') + '<i>' + (V.edit ? 'แก้ไข' : 'ร่าง') + '</i></span></div><b>' + esc(when) + '</b>' +
-      (V.hasTT ? '<div class="k8-lv4-chips"><span>' + rows.length + ' คาบ</span><span>' + Object.keys(subj).length + ' วิชา</span></div><div class="k8-lv4-sf"><span>' + (ml && V.mode === 'multi' ? 'ลาหลายวัน' : 'ระบบหาคาบจากตารางสอนให้แล้ว') + '</span><span>ผู้สอนแทน: ' + done + '/' + rows.length + ' คาบ</span></div>' : '<div class="k8-lv4-sf"><span>ยังไม่พบตารางสอนของคุณ · กรอกเอง</span><span>ผู้สอนแทน: ' + esc((V.sub1 && V.sub1.name) || 'ยังไม่เลือก') + '</span></div>');
+      (V.hasTT ? '<div class="k8-lv4-chips"><span>' + rows.length + ' คาบ</span><span>' + Object.keys(subj).length + ' วิชา</span></div><div class="k8-lv4-sf"><span>' + (V.manual ? 'ไม่พบคาบของคุณในตารางสอน · เลือกคาบเอง' : ml && V.mode === 'multi' ? 'ลาหลายวัน' : 'ระบบหาคาบจากตารางสอนให้แล้ว') + '</span><span>ผู้สอนแทน: ' + done + '/' + rows.length + ' คาบ</span></div>' : '<div class="k8-lv4-sf"><span>ยังไม่พบตารางสอนของคุณ · กรอกเอง</span><span>ผู้สอนแทน: ' + esc((V.sub1 && V.sub1.name) || 'ยังไม่เลือก') + '</span></div>');
     const err = lvCheck(); const w = document.getElementById('k8Lv4Warn'), b = document.getElementById('k8LvSave');
     if (w) { w.textContent = err ? '⚠ ' + err : 'ส่งแล้วรอแอดมินอนุมัติ · นักเรียนในคาบจะได้รับแจ้งเตือน'; w.classList.toggle('is-err', !!err); }
     if (b) { b.classList.toggle('is-dis', !!err); b.setAttribute('aria-disabled', err ? 'true' : 'false'); }
@@ -8637,7 +8641,9 @@ window.k8RegBirthChange = function (v) {
     el.innerHTML = '<div class="k8-li-empty">กำลังโหลดตารางสอนของคุณ…</div>';
     const tt = document.getElementById('k8LvTitle'); if (tt) tt.textContent = V.edit ? 'แก้ไขการลาสอน' : 'แจ้งลาสอน';
     const [T, TS] = await Promise.all([myTeaching(), teachers()]);
-    V.teachers = TS; V.hasTT = T.length > 0;
+    V.teachers = TS; V.manual = !T.length; V.hasTT = true; V.pick = {}; V.msub = {};
+    if (!V.cfg || !(V.cfg.periods || []).length) { const w = window.k8TtMineWeek ? window.k8TtMineWeek() : null; V.cfg = (w && w.config) || { days: [1, 2, 3, 4, 5], periods: [{ start: '08:30', end: '09:30' }, { start: '09:40', end: '10:40' }, { start: '10:50', end: '11:50' }, { start: '13:00', end: '14:00' }, { start: '14:10', end: '15:10' }] }; }
+    if (V.manual && V.edit) { const d0 = x.date; (x.slots || []).forEach((sl) => { const k = d0 + '||' + sl.p; V.pick[k] = 1; V.msub[k] = sl.sn || ''; if (sl.subn) V.subs[k] = { id: sl.sub || '', name: sl.subn, other: !sl.sub }; }); (x.periods || []).forEach((p) => { const k = d0 + '||' + p; if (!V.pick[k]) { V.pick[k] = 1; V.msub[k] = x.subject || ''; if (x.subName) V.subs[k] = { id: x.subId || '', name: x.subName, other: !x.subId }; } }); }
     V.date = x.date || ymd(new Date()); V.to = V.date; V.mode = 'day'; V.off = {}; V.subs = {}; V.sel = {}; V.t1 = ''; V.t2 = '';
     { const m = String(x.timeText || '').match(/(\d{1,2}:\d{2})\D+(\d{1,2}:\d{2})/); if (m) { V.mode = tmin(m[1]) < 720 ? 'am' : 'pm'; V.t1 = m[1]; V.t2 = m[2]; } }
     V.rt = x.reasonType || ''; V.reason = x.reason || ''; V.sub1 = x.subName ? { id: x.subId || '', name: x.subName, other: !x.subId } : null;
@@ -8660,7 +8666,7 @@ window.k8RegBirthChange = function (v) {
     }
     h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">ลาเพราะอะไร <b>*</b></span><div class="k8-lv4-rts">' + RT.map((r) => '<button type="button" class="k8-lv4-rtile" data-r="' + r[0] + '" onclick="k8Lv4R(\'' + r[0] + '\')"><span aria-hidden="true">' + r[1] + '</span><b>' + r[0] + '</b></button>').join('') + '</div>' +
       '<input type="text" id="k8LvReason" class="k8-lv4-in" maxlength="160" value="' + esc(V.reason) + '" oninput="k8Lv4Rs(this.value)"></div>';
-    if (V.hasTT) h += '<div class="k8-lv4-sec k8-lv4-rowsec"><span class="k8-lv4-l">วิชาที่ต้องลา + ผู้สอนแทนแต่ละคาบ <b>*</b></span><div id="k8Lv4Rows"></div><small class="k8-lv4-note">🔒 ระบบหาคาบจากตารางสอนของคุณ · แตะ ✓ เพื่อไม่ลาคาบนั้น</small></div>';
+    if (V.hasTT) h += '<div class="k8-lv4-sec k8-lv4-rowsec"><span class="k8-lv4-l">วิชาที่ต้องลา + ผู้สอนแทนแต่ละคาบ <b>*</b></span><div id="k8Lv4Rows"></div><small class="k8-lv4-note">' + (V.manual ? (V.ttErr ? 'ดึงตารางสอนจากระบบไม่สำเร็จ · <button type="button" class="k8-lv4-retry" onclick="k8LvRetry()">ลองใหม่</button> หรือแตะเลือกคาบเอง' : 'ยังไม่พบชื่อคุณในตารางสอน (ให้แอดมินใส่ชื่อในตารางสอน) · ตอนนี้แตะเลือกคาบและพิมพ์วิชาเองได้') : '🔒 ระบบหาคาบจากตารางสอนของคุณ · แตะ ✓ เพื่อไม่ลาคาบนั้น') + '</small></div>';
     else {
       const mine = myIds(); const val = V.sub1 ? (V.sub1.other ? '__o' : V.sub1.id + '|' + V.sub1.name) : '';
       h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">ผู้สอนแทน <b>*</b></span><select class="k8-lv4-sub k8-lv4-sub1" onchange="k8Lv4Sub1(this)"><option value="">เลือกผู้สอนแทน</option>' + TS.filter((t) => mine.indexOf(String(t.id).toLowerCase()) === -1 && t.name !== (me().fullName || '')).map((t) => { const v = t.id + '|' + t.name; return '<option value="' + esc(v) + '"' + (v === val ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '<option value="__o"' + (val === '__o' ? ' selected' : '') + '>อื่น ๆ (พิมพ์ชื่อ)</option></select><div id="k8Lv4Oth1"' + (val === '__o' ? '' : ' hidden') + ' class="k8-lv4-oth"><input type="text" maxlength="80" placeholder="พิมพ์ชื่ออาจารย์ผู้สอนแทน" value="' + esc(V.sub1 && V.sub1.other ? V.sub1.name : '') + '" oninput="k8Lv4Oth1(this.value)"></div></div>';
@@ -8676,7 +8682,8 @@ window.k8RegBirthChange = function (v) {
   window.k8Lv4D = function (v, isTo) { if (!v) return; if (isTo) V.to = v; else { V.date = v; if (!V.to || V.to < v) V.to = v; } paintBody(); };
   window.k8Lv4R = function (r) { V.rt = r; paintBody(); if (r === 'อื่น ๆ') { const i = document.getElementById('k8LvReason'); if (i && !i.value) i.focus(); } };
   window.k8Lv4Rs = function (v) { V.reason = v; paintMeta(); };
-  window.k8Lv4Tog = function (b) { const k = b.dataset.k; if (V.off[k]) delete V.off[k]; else V.off[k] = 1; paintBody(); };
+  window.k8Lv4Tog = function (b) { const k = b.dataset.k; if (k.indexOf('||') !== -1) { if (V.pick[k]) delete V.pick[k]; else V.pick[k] = 1; paintBody(); if (V.pick[k]) { const i = document.querySelector('.k8-lv4-msub[data-k="' + CSS.escape(k) + '"]'); if (i) i.focus(); } return; } if (V.off[k]) delete V.off[k]; else V.off[k] = 1; paintBody(); };
+  window.k8Lv4MS = function (inp) { V.msub[inp.dataset.k] = inp.value; inp.classList.toggle('is-need', !inp.value.trim()); paintMeta(); };
   window.k8Lv4Sub = function (sel) { const k = sel.dataset.k, v = sel.value; if (!v) delete V.subs[k]; else if (v === '__o') V.subs[k] = { id: '', name: (V.subs[k] && V.subs[k].other ? V.subs[k].name : ''), other: true }; else { const [id, ...n] = v.split('|'); V.subs[k] = { id, name: n.join('|') }; } paintBody(); if (v === '__o') { const i = document.querySelector('.k8-lv4-oth input[data-k="' + CSS.escape(k) + '"]'); if (i) i.focus(); } };
   window.k8Lv4Oth = function (inp) { const k = inp.dataset.k; V.subs[k] = { id: '', name: inp.value.trim(), other: true }; try { const op = document.querySelector('.k8-lv4-sub[data-k="' + CSS.escape(k) + '"] option[value="__o"]'); if (op) op.textContent = inp.value.trim() || 'อื่น ๆ (พิมพ์ชื่อ)'; } catch (e) {} const row = inp.closest('.k8-lv4-oth'); const prev = row && row.previousElementSibling; if (prev) { prev.classList.toggle('is-need', !inp.value.trim()); const s = prev.querySelector('select'); if (s) s.classList.toggle('is-ok', !!inp.value.trim()); } paintMeta(); };
   window.k8Lv4Same = function () { const on = lvOn(lvRows()); const first = on.map((r) => V.subs[r.k]).find((x) => x && x.name); if (!first) return toast('เลือกผู้สอนแทนอย่างน้อย 1 คาบก่อน แล้วกดอีกครั้ง', 'info'); on.forEach((r) => { V.subs[r.k] = Object.assign({}, first); }); paintBody(); toast('ใช้ ' + first.name + ' สอนแทนทุกคาบแล้ว', 'success'); };
@@ -8711,7 +8718,7 @@ window.k8RegBirthChange = function (v) {
     const jobs = [];
     if (V.hasTT) {
       const by = {}; lvOn(lvRows()).forEach((r) => { (by[r.ds] = by[r.ds] || []).push(r); });
-      Object.keys(by).sort().forEach((ds) => { jobs.push(Object.assign({}, base, { id: V.edit && ds === V.edit.date ? V.edit.id : '', date: ds, timeText: timed() ? V.t1 + '–' + V.t2 : '', slots: by[ds].map((r) => { const sb = V.subs[r.k] || {}; return { p: r.x.p, g: r.x.g, s: r.x.s, sn: r.x.sn, r: r.x.r, t: ptime(r.x.p), sub: sb.id || '', subn: sb.name || '' }; }) })); });
+      Object.keys(by).sort().forEach((ds) => { jobs.push(Object.assign({}, base, { id: V.edit && ds === V.edit.date ? V.edit.id : '', date: ds, timeText: timed() ? V.t1 + '–' + V.t2 : '', slots: by[ds].map((r) => { const sb = V.subs[r.k] || {}; return { p: r.x.p, g: r.x.g, s: r.x.s, sn: r.x.manual ? String(V.msub[r.k] || '').trim() : r.x.sn, r: r.x.r, t: ptime(r.x.p), sub: sb.id || '', subn: sb.name || '' }; }) })); });
     } else {
       const chips = Array.from(document.querySelectorAll('.k8-lv-pchips button.on'));
       jobs.push(Object.assign({}, base, { id: V.edit ? V.edit.id : '', date: V.date, allDay: chips.some((c) => c.dataset.p === 'all'), periods: chips.filter((c) => c.dataset.p !== 'all').map((c) => +c.dataset.p), subject: ((document.getElementById('k8LvSubj') || {}).value || '').trim(), grade: (document.getElementById('k8LvGrade') || {}).value || '', subId: V.sub1.id || '', subName: V.sub1.name }));

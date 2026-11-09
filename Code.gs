@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.47'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.51'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3399,7 +3399,7 @@ function saveTeacherLeave_(d, session, isAdmin) {
   if (slots.length) subject = slots.map(function (x) { return x.sn; }).filter(function (v, i, a) { return v && a.indexOf(v) === i; }).join(', ');
   if (!subject) return { success: false, message: 'ระบุวิชา' };
   let grade = cleanVal(d.grade || '').substring(0, 60);
-  if (slots.length) grade = slots.map(function (x) { return /^hq:/.test(x.g) ? 'หะละเกาะฮฺ' : /^x:/.test(x.g) ? 'ตารางพิเศษ' : 'ม.' + x.g; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+  if (slots.length) grade = slots.map(function (x) { return /^hq:/.test(x.g) ? 'หะละเกาะฮฺ' : /^x:/.test(x.g) ? 'ตารางพิเศษ' : x.g ? 'ม.' + x.g : ''; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
   // v18.47 · ประเภทการลา (ลาป่วย/ลากิจ/อื่น ๆ) · "อื่น ๆ" ต้องระบุเหตุผล · ต้องมีผู้สอนแทนทุกคาบ (ฟอร์มใหม่ส่ง needSub)
   const LV_TYPES = ['ลาป่วย', 'ลากิจ', 'อื่น ๆ'];
   const reasonType = LV_TYPES.indexOf(cleanVal(d.reasonType)) !== -1 ? cleanVal(d.reasonType) : '';
