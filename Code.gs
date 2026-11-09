@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.67'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.69'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3225,6 +3225,7 @@ function requestStudentLeave_(d, session) {
   try { sendNotification_({ title: 'คำขอลาเรียน · ' + item.name, body: slTxt_(item) + ' · ' + type + (where ? ' · ไป ' + where : '') + (reason && reason !== type ? ' · ' + reason : '') + ' · อนุมัติได้ที่เมนู "นักเรียน"', audience: 'admins', values: [], expires: to }, { userId: sid, name: item.name }); } catch (e) {}
   return { success: true, item: item, message: 'ส่งคำขอลาแล้ว · รอแอดมินอนุมัติ' };
 }
+function slDorm_(x) { return /^หอพัก/.test(String((x && x.where) || '')); }
 function slTxt_(x) { return (x.from === x.to ? leaveDateTh_(x.from) : leaveDateTh_(x.from) + ' ถึง ' + leaveDateTh_(x.to)) + (x.allDay ? ' (ทั้งวัน)' : ' เวลา ' + x.tFrom + '–' + x.tTo + ' น.'); }
 function cancelStudentLeave_(id, session) {
   id = cleanVal(id);
@@ -6879,7 +6880,7 @@ function prayerPenaltyRun_(nowArg) {
     have[nid(r[1]) + '|' + formatSheetDate(r[6]) + '|' + formatPrayerTimeThai(r[5])] = true;
   });
   const toM = function (t) { const m = String(t || '').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
-  const leaves = readStuLeaves_().filter(function (x) { return x && x.status === 'approved'; });
+  const leaves = readStuLeaves_().filter(function (x) { return x && x.status === 'approved' && !slDorm_(x); }); // v18.69 · ลาแต่อยู่หอพัก = ยังต้องเช็คละหมาด
   const onLeave = function (sid, ds, slot) {
     return leaves.some(function (x) {
       if (nid(x.sid) !== sid || ds < x.from || ds > (x.to || x.from)) return false;

@@ -5417,3 +5417,9 @@ html[data-theme="dark"] .k8-perm { background: #431407; border-color: #9a3412; }
 .k8-ovhq-list .k8-ovhq-more { color: #64748b; font-size: 13px; justify-content: flex-start; }
 .k8-ovhq-ok { color: #15803d; font-weight: 600; font-size: 14px; margin: 4px 0 10px; }
 .k8-ov-hq .k8-ovhq-btn { width: 100%; margin: 4px 0 0; }
+
+/* v18.69 · ลาเรียน: ปัจจุบันอยู่ที่ไหน */
+.k8-sl-where { grid-template-columns: repeat(3, 1fr) !important; }
+.k8-sl-wo { margin-top: 8px; width: 100%; box-sizing: border-box; min-height: 44px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 15px; }
+.k8-sl-wnote { display: block; margin-top: 6px; color: #0369a1; font-size: 13px; background: #f0f9ff; border-radius: 10px; padding: 6px 10px; }
+.k8-sl-dorm { color: #0369a1; }

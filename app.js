@@ -11773,12 +11773,12 @@ function openActivityQrModal(actId) {
     displayEl.innerHTML = '';
     if (window.QRCode) {
       new QRCode(displayEl, {
-        text: `KHALIFAH_ACT:${resolvedId}:${act.title}`,
+        text: (window.k8ActQrText ? window.k8ActQrText(resolvedId) : `KHALIFAH_ACT:${resolvedId}`),
         width: 220,
         height: 220,
-        colorDark: '#0284c7',
+        colorDark: '#0f172a',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.M
       });
     }
   }
@@ -12477,12 +12477,12 @@ function openActivityAttendeesModal(actId) {
     qrEl.innerHTML = '';
     if (window.QRCode) {
       new QRCode(qrEl, {
-        text: `KHALIFAH_ACT:${resolvedId}:${actTitle}`,
+        text: (window.k8ActQrText ? window.k8ActQrText(resolvedId) : `KHALIFAH_ACT:${resolvedId}`),
         width: 196,
         height: 196,
-        colorDark: '#0284c7',
+        colorDark: '#0f172a',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.M
       });
     }
   }
@@ -13648,12 +13648,12 @@ function changeStaffKioskActivity(actId) {
     qrDisplay.innerHTML = '';
     if (window.QRCode) {
       new QRCode(qrDisplay, {
-        text: `KHALIFAH_ACT:${resolvedId}:${actTitle}`,
+        text: (window.k8ActQrText ? window.k8ActQrText(resolvedId) : `KHALIFAH_ACT:${resolvedId}`),
         width: 236,
         height: 236,
-        colorDark: '#0284c7',
+        colorDark: '#0f172a',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.M
       });
     }
   }
