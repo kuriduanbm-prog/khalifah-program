@@ -5341,3 +5341,4 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 #m-nav-hasanat { position: relative; }
 #m-nav-hasanat.k8-hr-dot::after { content: ''; position: absolute; top: 6px; left: calc(50% + 6px); width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 2px #fff; }
 html[data-theme="dark"] .k8-hr, html[data-theme="dark"] .k8-hr::after { background: #1e293b; border-color: #334155; } html[data-theme="dark"] .k8-hr-main { color: #f1f5f9; }
+.k8h-exit { display: none !important; }

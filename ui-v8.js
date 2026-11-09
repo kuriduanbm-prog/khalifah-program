@@ -3027,16 +3027,8 @@ window.k8RegBirthChange = function (v) {
     root.innerHTML = header() + (S.tab === 'quran' ? quranTab() : S.tab === 'memorize' ? memTab() : sunTab());
   }
   window.renderHasanatV9 = render;
-  // v17.76 · ปุ่ม "ออก" ลอยขึ้นมาเมื่อเลื่อนหน้าผลบุญ
+  // v18.58 · เอาปุ่ม "ออก" ลอยตอนเลื่อนลงออก (ใช้แถบเมนูล่างแทน)
   window.k8HasExit = function () { if (asTarget()) return window.k8HasBack(); try { switchView('dashboard'); } catch (e) {} try { window.scrollTo({ top: 0 }); } catch (e) {} };
-  (function () {
-    let btn = null, raf = 0;
-    const tick = () => { raf = 0; const v = document.getElementById('view-hasanat'); const on = !!(v && v.classList.contains('active') && document.getElementById('k8Has') && window.scrollY > 240);
-      if (on && !btn) { btn = document.createElement('button'); btn.type = 'button'; btn.className = 'k8h-exit'; btn.setAttribute('aria-label', 'ออกจากหน้านี้'); btn.innerHTML = '<span aria-hidden="true">✕</span> ออก'; btn.onclick = () => window.k8HasExit(); document.body.appendChild(btn); }
-      if (btn) btn.classList.toggle('is-on', on); };
-    window.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(tick); }, { passive: true });
-    document.addEventListener('click', () => setTimeout(tick, 60), true);
-  })();
   window.k8HasSet = function (k, v) { S[k] = v; render(); };
   window.k8HasDate = function (v) { if (/^\d{4}-\d{2}-\d{2}$/.test(String(v || ''))) { S.date = v; S.add = 0; S.editDay = false; S.confirmBig = false; render(); } };
   const tooOld = () => isSelf() && S.date < back7();
@@ -3550,7 +3542,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.57';
+  const APP_VERSION = '18.58';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
