@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.55'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.56'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1561,8 +1561,15 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'saveSurahLog':
     case 'saveHasanatLog':
       // v18.55 · นักเรียนบันทึกผลบุญของตัวเองได้ (บังคับเป็นรหัสของตัวเอง) · แอดมินบันทึกแทนได้เหมือนเดิม
-      if (isStudent) { data = Object.assign({}, data || {}, { studentId: session.userId }); }
-      return recordHasanat(data);
+      if (isStudent) {
+        data = Object.assign({}, data || {}, { studentId: session.userId });
+        // v18.56 · นักเรียนบันทึกย้อนหลังได้ไม่เกิน 7 วัน และบันทึกล่วงหน้าไม่ได้
+        const tdy = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd'), min7 = Utilities.formatDate(new Date(Date.now() - 7 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+        const dd = formatSheetDate(data.date) || tdy;
+        if (dd > tdy) return { success: false, message: 'บันทึกล่วงหน้าไม่ได้' };
+        if (dd < min7) return { success: false, message: 'บันทึกย้อนหลังได้ไม่เกิน 7 วัน · ถ้าจำเป็นให้แจ้งแอดมิน' };
+      }
+      return recordHasanat(data, isStudent ? 'นักเรียน' : ('แอดมิน' + (session && session.name ? ' · ' + session.name : '')));
     case 'checkInActivity':
     case 'activityCheckIn':
       if (isStudent) {
@@ -5084,7 +5091,12 @@ function saveHasanatBatch_(data) {
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
-function recordHasanat(data) {
+// v18.56 · คอลัมน์ที่ 16 "ผู้บันทึก" (นักเรียน / แอดมิน · ชื่อ)
+function hasanatBy_(sheet, row, by) {
+  if (!by || !sheet) return;
+  try { if (sheet.getMaxColumns() < 16) sheet.insertColumnsAfter(sheet.getMaxColumns(), 16 - sheet.getMaxColumns()); if (!cleanVal(sheet.getRange(1, 16).getValue())) sheet.getRange(1, 16).setValue('ผู้บันทึก'); sheet.getRange(row, 16).setValue(String(by).substring(0, 80)); } catch (e) {}
+}
+function recordHasanat(data, by) {
   if (!data) return { success: false, message: 'ไม่มีข้อมูลผลบุญ' };
   ensureSchema();
   const ss = getSpreadsheet();
@@ -5152,6 +5164,7 @@ function recordHasanat(data) {
       ];
       sheet.getRange(i + 1, 1, 1, 15).setValues([rowValues]);
       sheet.getRange(i + 1, 2).setNumberFormat('@').setValue(cleanSid);
+      hasanatBy_(sheet, i + 1, by);
       return {
         success: true,
         updated: true,
@@ -5182,6 +5195,7 @@ function recordHasanat(data) {
   ]);
   const lastRow = sheet.getLastRow();
   sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
+  hasanatBy_(sheet, lastRow, by);
 
   return { 
     success: true, 
@@ -5217,6 +5231,7 @@ function getHasanat(studentId) {
       studentName: cleanVal(rows[i][2]),
       grade: cleanVal(rows[i][3]),
       date: formatSheetDate(rows[i][4]),
+      by: cleanVal(rows[i][15] || ''),
       quran: {
         pagesToday: Number(rows[i][5]) || 0,
         currentPage: Number(rows[i][6]) || 1,
