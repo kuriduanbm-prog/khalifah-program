@@ -3545,7 +3545,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.64';
+  const APP_VERSION = '18.65';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5375,6 +5375,7 @@ window.k8RegBirthChange = function (v) {
     H.cur = s; H.date = date || ymd(new Date()); stopTimers(); H.view = 'roster'; H.marks = {}; H.roster = hqRc[rcKey()] || null; stack('roster'); render(); loadRoster();
     loadSessions().then(() => { const s2 = H.sessions.find((x) => String(x.id) === String(id)); if (s2 && H.cur && String(H.cur.id) === String(id)) { H.cur = s2; } });
   };
+  window.k8HqForget = function (id, date) { delete hqRc[id + '|' + date]; };
   window.k8HqPrefetchRoster = async function (id, date) { const k = id + '|' + date; if (hqRc[k]) return; try { const r = await api('getHalaqahRoster', { id, date }); if (r && r.success && !hqRc[k]) { const keep = H.cur; H.cur = H.sessions.find((x) => String(x.id) === String(id)) || keep; hqRc[k] = fillRoster(r); H.cur = keep; } } catch (e) {} };
   window.k8HqBack = function () { history.back(); };
   window.addEventListener('popstate', () => {
@@ -10690,12 +10691,34 @@ window.k8HfMiss = function (slot) {
     return 'สัปดาห์นี้ ครั้งที่ ' + held.length + ' แล้ว · ล่าสุด ' + dTh(held[held.length - 1]);
   }
   function sessHtml(g, adm) {
-    const td = ymd(new Date()); const D = (g.dates || []).slice().sort();
+    // v18.65 · รวมวันที่เช็คชื่อนอกตาราง (เช็คซ้ำ/ผิดวัน) · ครั้งที่เช็คแล้วมีปุ่ม ✎ แก้ไข และ 🗑 ลบ
+    const td = ymd(new Date()); const D = Array.from(new Set((g.dates || []).concat(g.held || []))).sort();
     if (!D.length) return '';
-    return '<div class="k8-hqr-sess"><small>ครั้งที่จัดในช่วงนี้ (' + g.held.length + '/' + D.length + ')</small><div>' + D.map((d, i) => { const ok = g.held.indexOf(d) !== -1, fut = d > td; const cls = ok ? 'is-ok' : fut ? 'is-fut' : 'is-miss'; const lab = 'ครั้งที่ ' + (i + 1) + ' · ' + dTh(d); return adm && !fut ? '<button type="button" class="' + cls + '" onclick="k8HqRepCheck(\'' + esc(g.id) + '\',\'' + d + '\')" title="' + (ok ? 'ดู/แก้การเช็คชื่อ' : 'เช็คชื่อแทนผู้ดูแล') + '">' + lab + (ok ? ' ✓' : ' · เช็คแทน') + '</button>' : '<span class="' + cls + '">' + lab + (ok ? ' ✓' : fut ? '' : ' ✗') + '</span>'; }).join('') + '</div>' +
+    const gid = esc(g.id);
+    return '<div class="k8-hqr-sess"><small>ครั้งที่จัดในช่วงนี้ (' + g.held.length + '/' + D.length + ')' + (adm && g.held.length ? ' · กด ✎ เพื่อแก้การเช็คชื่อ หรือ 🗑 เพื่อลบครั้งที่ซ้ำ' : '') + '</small><div>' + D.map((d, i) => {
+      const ok = g.held.indexOf(d) !== -1, fut = d > td, extra = (g.dates || []).indexOf(d) === -1; const cls = ok ? 'is-ok' : fut ? 'is-fut' : 'is-miss'; const lab = 'ครั้งที่ ' + (i + 1) + ' · ' + dTh(d) + (extra ? ' (นอกตาราง)' : '');
+      if (adm && ok) {
+        if (R.del === g.id + '|' + d) return '<span class="k8-hqr-chip is-del"><b>ลบการเช็คชื่อ ' + dTh(d) + ' ?</b><button type="button" class="k8-hqr-yes" onclick="k8HqRepDel(\'' + gid + '\',\'' + d + '\',1)"' + (R.busy ? ' disabled' : '') + '>' + (R.busy ? 'กำลังลบ…' : 'ลบ') + '</button><button type="button" class="k8-hqr-no" onclick="k8HqRepDel(\'' + gid + '\',\'' + d + '\',0)">ยกเลิก</button></span>';
+        return '<span class="k8-hqr-chip is-ok"><button type="button" class="k8-hqr-lab" onclick="k8HqRepCheck(\'' + gid + '\',\'' + d + '\')" title="แก้การเช็คชื่อ">' + lab + ' ✓</button><button type="button" class="k8-hqr-ic" onclick="k8HqRepCheck(\'' + gid + '\',\'' + d + '\')" aria-label="แก้ไข">✎</button><button type="button" class="k8-hqr-ic k8-hqr-ic-del" onclick="k8HqRepDel(\'' + gid + '\',\'' + d + '\')" aria-label="ลบครั้งนี้">🗑</button></span>';
+      }
+      return adm && !fut ? '<button type="button" class="' + cls + '" onclick="k8HqRepCheck(\'' + gid + '\',\'' + d + '\')" title="เช็คชื่อแทนผู้ดูแล">' + lab + ' · เช็คแทน</button>' : '<span class="' + cls + '">' + lab + (ok ? ' ✓' : fut ? '' : ' ✗') + '</span>';
+    }).join('') + '</div>' +
       (adm && D.indexOf(td) === -1 ? '<button type="button" class="k8-hqr-today" onclick="k8HqRepCheck(\'' + esc(g.id) + '\',\'' + td + '\')">✎ เช็คชื่อแทน วันนี้ (' + dTh(td) + ')</button>' : '') + '</div>';
   }
   window.k8HqOnClose = function () { if (R.reopen) { R.reopen = false; setTimeout(() => window.k8HqRepOpen(), 50); } };
+  window.k8HqRepDel = async function (id, date, go) {
+    const k = id + '|' + date;
+    if (go === 0) { R.del = null; render(); return; }
+    if (go !== 1) { R.del = k; render(); return; }
+    if (R.busy) return; R.busy = true; render();
+    let r = null; try { r = await gasApiCall('deleteHalaqahDay', { id, date }, 30000); } catch (e) {}
+    R.busy = false; R.del = null;
+    if (!r || !r.success) { render(); try { showToast((r && r.message) || 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); } catch (e) {} return; }
+    try { showToast(r.message || 'ลบแล้ว', 'success'); } catch (e) {}
+    try { if (window.k8HqForget) window.k8HqForget(id, date); } catch (e) {}
+    Object.keys(RC).forEach((x) => delete RC[x]); try { Object.keys(localStorage).filter((x) => x.indexOf('k8_hqr_') === 0).forEach((x) => localStorage.removeItem(x)); } catch (e) {}
+    load();
+  };
   window.k8HqRepAll = function (on) { ((R.data && R.data.groups) || []).forEach((g) => { R.open[g.id] = !!on; }); render(); };
   window.k8HqRepCheck = function (id, date) {
     if (!window.k8HqAdminCheck) return;

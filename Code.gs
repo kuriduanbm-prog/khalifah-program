@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.56'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.65'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1218,7 +1218,7 @@ const ACTION_ACCESS = {
   listStudyDocs: 'student', getStudyDocsConfig: 'student', getStudyFile: 'student',
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
-  saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff',
+  saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff', deleteHalaqahDay: 'staff',
   getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', requestStudentLeave: 'student', getMyStudentLeaves: 'student', cancelStudentLeave: 'student', getStudentLeaves: 'staff', respondStudentLeave: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
@@ -1479,6 +1479,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return hqOwnCheck_(pick('id'), session) || getHalaqahRoster_(pick('id'), pick('date'));
     case 'markHalaqah':
       return hqOwnCheck_((data || {}).id, session) || markHalaqah_(data, session);
+    case 'deleteHalaqahDay':
+      return hqOwnCheck_(pick('id'), session) || deleteHalaqahDay_(pick('id'), pick('date'));
     case 'getMyDream':
       return { success: true, dream: getDreamOf_(ownStudentId_(session, ctx, pick('studentId'))) };
     case 'saveMyDream':
@@ -7570,6 +7572,20 @@ function getHalaqahRoster_(id, date) {
   const missing = h.members.filter(function (k) { return !found[k]; });
   missing.forEach(function (k) { const l = logs[k]; students.push({ studentId: k, fullName: '', grade: '', status: l ? l.status : '', time: l ? l.time : '', method: l ? l.method : '', unresolved: true }); });
   return { success: true, session: h, date: date, students: students, missing: missing };
+}
+// v18.65 · ลบการเช็คชื่อหะละเกาะฮฺทั้งครั้ง (ของกลุ่มนี้ในวันที่นี้) · ใช้แก้กรณีเช็คชื่อซ้ำ/ผิดวัน
+function deleteHalaqahDay_(id, date) {
+  id = cleanVal(id); date = cleanVal(date);
+  if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { success: false, message: 'ข้อมูลไม่ครบ' };
+  const sh = getSpreadsheet().getSheetByName(SHEETS.HALAQAH_LOGS);
+  if (!sh || sh.getLastRow() < 2) return { success: true, deleted: 0, message: 'ไม่มีบันทึกของวันนี้' };
+  const lock = LockService.getScriptLock(); try { lock.waitLock(15000); } catch (e) {}
+  try {
+    const rows = sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues();
+    const hit = []; rows.forEach(function (r, i) { if (cleanVal(r[1]) === id && normalizeDateStr_(r[3]) === date) hit.push(i + 2); });
+    for (let j = hit.length - 1; j >= 0;) { let k = j; while (k > 0 && hit[k - 1] === hit[k] - 1) k--; sh.deleteRows(hit[k], hit[j] - hit[k] + 1); j = k - 1; }
+    return { success: true, deleted: hit.length, message: hit.length ? 'ลบการเช็คชื่อ ' + hit.length + ' รายการแล้ว' : 'ไม่มีบันทึกของวันนี้' };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 function markHalaqah_(d, session) {
   const h = readHalaqah_().filter(function (x) { return x.id === cleanVal(d && d.id); })[0];

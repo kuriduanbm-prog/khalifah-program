@@ -5388,3 +5388,15 @@ html[data-theme="dark"] .k8-perm { background: #431407; border-color: #9a3412; }
 @media (max-width: 520px) { .k8-hqr .k8-hqr-acts { width: 100%; justify-content: flex-end; } .k8-hqr .k8-hqr-acts .k8-asum-csv { flex: 1; text-align: center; } }
 @media (max-width: 520px) { .k8-hqr #k8HqRepT { white-space: normal; overflow: visible; text-overflow: clip; font-size: 17px; line-height: 1.3; } }
 @media (max-width: 520px) { .k8-hqr .k8-asum-h > div:not(.k8-hqr-acts) { flex: 1 1 calc(100% - 60px); } .k8-hqr .k8-hqr-acts { order: 9; flex: 1 1 100%; } .k8-hqr .k8-hqr-acts > * { flex: 1; justify-content: center; } }
+
+/* v18.65 · ครั้งที่เช็คแล้ว: แก้ไข/ลบ */
+.k8-hqr-sess .k8-hqr-chip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px 2px 2px; }
+.k8-hqr-sess .k8-hqr-chip button { border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; border-radius: 999px; }
+.k8-hqr-sess .k8-hqr-lab { padding: 4px 8px; }
+.k8-hqr-sess .k8-hqr-ic { width: 30px; height: 30px; display: inline-grid; place-items: center; font-size: 14px; background: rgba(255,255,255,.7) !important; }
+.k8-hqr-sess .k8-hqr-ic-del { color: #b91c1c !important; }
+.k8-hqr-sess .k8-hqr-chip.is-del { background: #fef2f2; color: #991b1b; border-color: #fecaca; padding: 4px 4px 4px 12px; gap: 6px; }
+.k8-hqr-sess .k8-hqr-yes { background: #dc2626 !important; color: #fff !important; padding: 6px 12px; }
+.k8-hqr-sess .k8-hqr-no { background: #fff !important; color: #334155 !important; padding: 6px 12px; border: 1px solid #e2e8f0 !important; }
+.k8-hqr-sess .k8-hqr-yes:disabled { opacity: .6; }
+.k8-hqr-sess .k8-hqr-chip.is-del { flex-wrap: wrap; }
