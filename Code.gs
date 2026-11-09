@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.65'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.67'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1218,7 +1218,7 @@ const ACTION_ACCESS = {
   listStudyDocs: 'student', getStudyDocsConfig: 'student', getStudyFile: 'student',
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
-  saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff', deleteHalaqahDay: 'staff',
+  saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff', deleteHalaqahDay: 'staff', skipHalaqahDay: 'staff',
   getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', requestStudentLeave: 'student', getMyStudentLeaves: 'student', cancelStudentLeave: 'student', getStudentLeaves: 'staff', respondStudentLeave: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
@@ -1479,6 +1479,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return hqOwnCheck_(pick('id'), session) || getHalaqahRoster_(pick('id'), pick('date'));
     case 'markHalaqah':
       return hqOwnCheck_((data || {}).id, session) || markHalaqah_(data, session);
+    case 'skipHalaqahDay':
+      return hqOwnCheck_(pick('id'), session) || skipHalaqahDay_(pick('id'), pick('date'), pick('undo'));
     case 'deleteHalaqahDay':
       return hqOwnCheck_(pick('id'), session) || deleteHalaqahDay_(pick('id'), pick('date'));
     case 'getMyDream':
@@ -7449,9 +7451,11 @@ function halaqahReport_(from, to) {
   const stu = {};
   sheetRows_(SHEETS.STUDENTS, 4).forEach(function (r) { const k = hqKey_(r[0]); if (k) stu[k] = { id: cleanVal(r[0]), name: cleanVal(r[1]), grade: cleanVal(r[3]) }; });
   const logs = hqLogs_().filter(function (l) { return l.date >= from && l.date <= to; });
+  const skips = hqSkips_();
   const groups = readHalaqah_().map(function (h) {
-    const dates = days.filter(function (x) { return hqOnDate_(h, x); });
     const lg = logs.filter(function (l) { return l.sessionId === h.id; });
+    const sk = skips[h.id] || [];
+    const dates = days.filter(function (x) { return hqOnDate_(h, x) && (sk.indexOf(x) === -1 || lg.some(function (l) { return l.date === x; })); });
     const ids = h.members.length ? h.members.slice() : [];
     lg.forEach(function (l) { const k = hqKey_(l.studentId); if (ids.indexOf(k) === -1) ids.push(k); });
     const tot = { present: 0, late: 0, leave: 0, absent: 0, none: 0 };
@@ -7572,6 +7576,19 @@ function getHalaqahRoster_(id, date) {
   const missing = h.members.filter(function (k) { return !found[k]; });
   missing.forEach(function (k) { const l = logs[k]; students.push({ studentId: k, fullName: '', grade: '', status: l ? l.status : '', time: l ? l.time : '', method: l ? l.method : '', unresolved: true }); });
   return { success: true, session: h, date: date, students: students, missing: missing };
+}
+// v18.67 · วันที่ "ไม่ได้จัด" (ตัดออกจากครั้งที่จัด) · เก็บใน Settings คีย์ HalaqahSkip = {id:[dates]}
+function hqSkips_() { let v = {}; try { v = JSON.parse((getSettings().data || {}).HalaqahSkip || '{}'); } catch (e) { v = {}; } return v && typeof v === 'object' ? v : {}; }
+function skipHalaqahDay_(id, date, undo) {
+  id = cleanVal(id); date = cleanVal(date);
+  if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { success: false, message: 'ข้อมูลไม่ครบ' };
+  const v = hqSkips_(); const L = (v[id] || []).filter(function (x) { return x !== date; });
+  const off = undo === true || undo === 'true' || undo === '1' || undo === 1;
+  if (!off) L.push(date);
+  const cut = Utilities.formatDate(new Date(Date.now() - 400 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  v[id] = L.filter(function (x) { return x >= cut; }).sort(); if (!v[id].length) delete v[id];
+  saveSetting({ key: 'HalaqahSkip', value: JSON.stringify(v), description: 'วันที่หะละเกาะฮฺไม่ได้จัด (JSON)' });
+  return { success: true, message: off ? 'นำวันที่กลับมาแล้ว' : 'ตัดวันที่นี้ออกแล้ว (ไม่ได้จัด)' };
 }
 // v18.65 · ลบการเช็คชื่อหะละเกาะฮฺทั้งครั้ง (ของกลุ่มนี้ในวันที่นี้) · ใช้แก้กรณีเช็คชื่อซ้ำ/ผิดวัน
 function deleteHalaqahDay_(id, date) {

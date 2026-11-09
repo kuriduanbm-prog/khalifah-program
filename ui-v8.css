@@ -5400,3 +5400,4 @@ html[data-theme="dark"] .k8-perm { background: #431407; border-color: #9a3412; }
 .k8-hqr-sess .k8-hqr-no { background: #fff !important; color: #334155 !important; padding: 6px 12px; border: 1px solid #e2e8f0 !important; }
 .k8-hqr-sess .k8-hqr-yes:disabled { opacity: .6; }
 .k8-hqr-sess .k8-hqr-chip.is-del { flex-wrap: wrap; }
+.k8-hqr-sess .k8-hqr-chip.is-miss { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
