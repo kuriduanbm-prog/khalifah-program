@@ -3522,7 +3522,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.53';
+  const APP_VERSION = '18.54';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11356,10 +11356,12 @@ window.k8HfMiss = function (slot) {
   function apply() {
     const stu = isStu(); document.documentElement.classList.toggle('k8-stu-ui', stu);
     if (stu === last) return; last = stu;
-    try { if (screen.orientation && screen.orientation.lock) { if (stu && phone()) screen.orientation.lock('portrait').catch(() => {}); else if (screen.orientation.unlock) screen.orientation.unlock(); } } catch (e) {}
+    // แอปที่ติดตั้งไว้ (Android) ยังจำค่าแนวตั้งจากตอนติดตั้ง → อาจารย์/แอดมินสั่งปลดเป็น 'any' ทันที (ไม่ต้องรอระบบอัปเดตแอป/ติดตั้งใหม่)
+    try { if (screen.orientation && screen.orientation.lock) { screen.orientation.lock(stu && phone() ? 'portrait' : 'any').catch(() => { if (!stu) { try { screen.orientation.unlock(); } catch (e) {} } }); } } catch (e) {}
   }
   function ensure() { if (document.getElementById('k8Rot')) return; document.body.insertAdjacentHTML('beforeend', '<div class="k8-rot" id="k8Rot" aria-live="polite"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><b>หมุนโทรศัพท์เป็นแนวตั้ง</b><small>หน้านักเรียนออกแบบสำหรับแนวตั้ง</small></div>'); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { ensure(); apply(); }); else { ensure(); apply(); }
   setInterval(apply, 1500);
   window.addEventListener('orientationchange', apply);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { last = null; apply(); } });
 })();
