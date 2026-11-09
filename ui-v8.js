@@ -3522,7 +3522,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.47';
+  const APP_VERSION = '18.48';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6805,6 +6805,8 @@ window.k8RegBirthChange = function (v) {
   window.k8TtMineToday = function () { return (T.data && !T.data.hidden) ? todayList('', true) : null; };
   window.k8TtAllOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d) || !T.data || T.data.hidden) return null; const c = cfg(); const dow = d.getDay(); const out = []; if (c.days.indexOf(dow) === -1) return out; const ds = ymdL(d); allKeys().forEach((g) => { const cells = gradeOf(g).cells || {}; c.periods.forEach((p, i) => { cellsOn(g, dow, i + 1, ds).forEach((x) => { if (x && (x.s || x.sn)) out.push({ g, p: i + 1, start: p.start, end: p.end, c: x, mine: isMine(x) }); }); }); }); return out.sort((a, b) => toMin(a.start) - toMin(b.start)); }; // v17.68 · สอนแทน
   window.k8TtStuOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d) || !T.data || T.data.hidden || !T.data.grade) return null; return todayList(T.data.grade, false, d.getDay(), ymdL(d)); }; // v18.25 · คาบของนักเรียนในวันนั้น (ใบลาบอกจำนวนคาบที่กระทบ)
+  // v18.48 · คาบสอนของฉันทั้งสัปดาห์จากตารางในเครื่อง (สำรองเมื่อดึงจากระบบไม่สำเร็จ)
+  window.k8TtMineWeek = function () { if (!T.data || T.data.hidden) return null; const c = cfg(); const slots = []; c.days.forEach((d) => { todayList('', true, d, dateForDow(d)).forEach((e) => { if (!slots.some((y) => y.d === d && y.p === e.p && y.g === e.g)) slots.push({ d, p: e.p, g: e.g, gn: String(e.g).indexOf('x:') === 0 ? 'ตารางพิเศษ' : 'ม.' + e.g, s: e.c.s || '', sn: e.c.sn || '', r: e.c.r || '' }); }); }); return { slots, config: c }; };
   window.k8TtMineOn = function (dateStr) { const d = new Date(String(dateStr) + 'T00:00:00'); if (isNaN(d)) return null; return (T.data && !T.data.hidden) ? todayList('', true, d.getDay(), ymdL(d)) : null; }; // v17.65
   window.k8TtLoad = function () { return load(false); };
   window.addEventListener('beforeunload', (e) => { if (T.dirty) { e.preventDefault(); e.returnValue = ''; } });
@@ -8494,11 +8496,21 @@ window.k8RegBirthChange = function (v) {
     return V.teachers;
   }
   async function myTeaching() {
-    if (V.teach) return V.teach;
-    let r = null; try { r = await gasApiCall('getMyTeaching', {}, 20000); } catch (e) {}
-    if (r && r.success) { V.teach = r.slots || []; V.cfg = r.config || null; } else V.teach = [];
-    return V.teach;
+    if (V.teach && V.teach.length) return V.teach;
+    // v18.48 · เดิมถ้าดึงไม่สำเร็จครั้งแรก จะจำว่า "ไม่มีคาบสอน" ไปตลอด → ลองใหม่ + ใช้ตารางในเครื่องสำรอง
+    let r = null;
+    for (let i = 0; i < 2 && !(r && r.success); i++) { try { r = await gasApiCall('getMyTeaching', {}, 25000); } catch (e) { r = null; } }
+    V.ttErr = !(r && r.success);
+    let slots = r && r.success ? (r.slots || []) : []; if (r && r.success) V.cfg = r.config || null;
+    if (!slots.length) {
+      try { if (window.k8TtLoad) await window.k8TtLoad(); } catch (e) {}
+      const w = window.k8TtMineWeek ? window.k8TtMineWeek() : null;
+      if (w && w.slots.length) { slots = w.slots; if (!V.cfg) V.cfg = w.config; V.ttErr = false; }
+    }
+    V.teach = slots.length ? slots : null;
+    return slots;
   }
+  window.k8LvRetry = function () { V.teach = null; form(V.edit); };
   const skey = (x) => x.g + '|' + x.p;
   function slotsHtml() {
     const d = new Date(V.date + 'T00:00:00'); const dow = d.getDay();
@@ -8630,7 +8642,7 @@ window.k8RegBirthChange = function (v) {
       h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">ลาช่วงไหน <b>*</b></span><div class="k8-lv4-seg" role="group">' + MODES.map((m) => '<button type="button" data-m="' + m[0] + '" onclick="k8Lv4M(\'' + m[0] + '\')"' + (V.edit && m[0] === 'multi' ? ' disabled' : '') + '>' + m[1] + '</button>').join('') + '</div></div>';
     } else {
       const P = x.periods || [];
-      h += '<div class="k8-lv4-sec"><p class="k8-lv-none">ยังไม่พบคาบสอนของคุณในตารางสอน · กรอกเองได้ด้านล่าง</p><span class="k8-lv4-l">คาบ <b>*</b></span><div class="k8-lv-pchips"><button type="button" data-p="all" class="' + (x.allDay ? 'on' : '') + '" onclick="k8LvP(this)">ทั้งวัน</button>' + [1, 2, 3, 4, 5].map((n) => '<button type="button" data-p="' + n + '" class="' + (P.indexOf(n) !== -1 ? 'on' : '') + '" onclick="k8LvP(this)">คาบ ' + n + '</button>').join('') + '</div>' +
+      h += '<div class="k8-lv4-sec"><p class="k8-lv-none">' + (V.ttErr ? 'ดึงตารางสอนจากระบบไม่สำเร็จ · <button type="button" class="k8-lv4-retry" onclick="k8LvRetry()">ลองใหม่</button> หรือกรอกเองด้านล่าง' : 'ยังไม่พบคาบสอนของคุณในตารางสอน · ให้แอดมินใส่ชื่อคุณในตารางสอน หรือกรอกเองด้านล่าง') + '</p><span class="k8-lv4-l">คาบ <b>*</b></span><div class="k8-lv-pchips"><button type="button" data-p="all" class="' + (x.allDay ? 'on' : '') + '" onclick="k8LvP(this)">ทั้งวัน</button>' + [1, 2, 3, 4, 5].map((n) => '<button type="button" data-p="' + n + '" class="' + (P.indexOf(n) !== -1 ? 'on' : '') + '" onclick="k8LvP(this)">คาบ ' + n + '</button>').join('') + '</div>' +
         '<label class="k8-lv-f"><span>วิชา</span><input type="text" id="k8LvSubj" list="k8LvSubjList" maxlength="80" value="' + esc(x.subject || '') + '" oninput="k8Lv4Meta()"><datalist id="k8LvSubjList">' + subjects().map((n) => '<option value="' + esc(n) + '">').join('') + '</datalist></label>' +
         '<label class="k8-lv-f"><span>ชั้น</span><select id="k8LvGrade"><option value="">— ไม่ระบุ —</option>' + ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'].map((g) => '<option' + (x.grade === g ? ' selected' : '') + '>' + g + '</option>').join('') + '</select></label></div>';
     }

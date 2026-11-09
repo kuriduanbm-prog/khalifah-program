@@ -5247,3 +5247,4 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 .k8-lv4-go { height: 48px; border: 0; border-radius: 14px; background: #0369a1; color: #fff; font: 700 16px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
 .k8-lv4-go.is-dis { background: #cbd5e1; cursor: not-allowed; }
 .k8-lv-ssub { color: #15803d; font-weight: 500; }
+.k8-lv4-retry { border: 0; background: #0369a1; color: #fff; border-radius: 8px; padding: 3px 10px; font: 600 12.5px "IBM Plex Sans Thai", sans-serif; cursor: pointer; }
