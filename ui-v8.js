@@ -769,7 +769,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     let tt = null; try { tt = JSON.parse(localStorage.getItem('khalifah_timetable') || 'null'); } catch (e) {}
     let me = {}; try { me = currentAdmin || {}; } catch (e) {}
     const un = String(me.username || '').toLowerCase(), fn = String(me.fullName || me.name || '').trim();
-    const mine = (c) => (un && String(c.t || '').toLowerCase() === un) || (fn && String(c.tn || '').trim() === fn);
+    const mine = (c) => (un && String(c.t || '').toLowerCase() === un) || (fn && String(c.tn || '').trim() === fn) || (un && (c.ts || []).some((u) => String(u).toLowerCase() === un)) || (fn && (c.tns || []).indexOf(fn) !== -1);
     const pool = gsPool(); const subs = gsMySubjects(strict);
     const cells = []; // {g, c}
     if (tt && tt.grades) GS_GR.forEach((g) => { const cs = (tt.grades[g] && tt.grades[g].cells) || {}; Object.keys(cs).forEach((k) => { (Array.isArray(cs[k]) ? cs[k] : [cs[k]]).forEach((c) => { if (c && c.s) cells.push({ g, c }); }); }); });
@@ -3498,7 +3498,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.40';
+  const APP_VERSION = '18.41';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6001,7 +6001,7 @@ window.k8RegBirthChange = function (v) {
   const lvTag = (ds, p) => { const l = lvOf(ds, p); return l ? '<em class="k8-tt-lv' + (l.subName ? ' is-sub' : '') + '">' + (l.subName ? 'สอนแทน · ' + esc(l.subName) : 'งดสอน · ' + esc(l.teacherName || 'อาจารย์') + ' ลา') + '</em>' : ''; };
   const bandHtml = (e, ds) => { const old = e.to && e.to < (ds || todayS()); const soon = e.from && e.from > (ds || todayS()); return '<span class="k8-tt-band' + (e.gx ? ' is-' + e.gx : (rangeTxt(e) ? ' is-r' : '')) + (old ? ' is-old' : '') + (soon ? ' is-soon' : '') + '" style="--sc:' + subjColor(e.sn) + '"><b>' + esc(e.sn) + '</b>' + (e.gx ? '<i class="k8-tt-tg is-' + e.gx + '">' + GXN[e.gx] + '</i>' : '') + (e.o && e.o.length ? '<i class="k8-tt-tg">' + e.o.length + ' คน</i>' : '') + (rangeTxt(e) ? '<i class="k8-tt-tg is-r">' + (old ? 'สิ้นสุดแล้ว · ' : '') + rangeTxt(e) + '</i>' : '') + '</span>'; };
   window.k8TtActOn = actOn;
-  const isMine = (c) => { const u = me(); const un = String(u.username || '').toLowerCase(), fn = String(u.fullName || u.name || '').trim(); return !!c && ((un && String(c.t || '').toLowerCase() === un) || (fn && String(c.tn || '').trim() === fn)); };
+  const isMine = (c) => { const u = me(); const un = String(u.username || '').toLowerCase(), fn = String(u.fullName || u.name || '').trim(); return !!c && ((un && String(c.t || '').toLowerCase() === un) || (fn && String(c.tn || '').trim() === fn) || (un && (c.ts || []).some((x) => String(x).toLowerCase() === un)) || (fn && (c.tns || []).indexOf(fn) !== -1)); };
 
   async function load(force) {
     if (T.loading) return; if (!force && T.data && Date.now() - (T.at || 0) < 60000) return;
@@ -6081,7 +6081,7 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', (e) => { if (T.open && !(e.state && e.state.k8tt)) closePage(); });
   function cellHtml(x, showGrade, g) {
     if (!x) return '<span class="k8-tt-free">ว่าง</span>';
-    return '<b>' + esc(x.sn) + '</b><small>' + [showGrade ? lbl(g) : '', showGrade ? '' : x.tn, x.r ? 'ห้อง ' + x.r : '', x.gx ? 'เฉพาะนักเรียน' + GXN[x.gx] : (x.only && !x.multi ? 'เฉพาะบางคน' : ''), rangeTxt(x), x.swapped ? (x.subFor ? '⇄ สอนแทน ' + x.subFor : '⇄ สลับคาบ (ชั่วคราว)') : ''].filter(Boolean).map(esc).join(' · ') + '</small>';
+    return '<b>' + esc(x.sn) + '</b><small>' + [showGrade ? lbl(g) : '', showGrade ? '' : [x.tn].concat(x.tns || []).filter(Boolean).join(', '), x.r ? 'ห้อง ' + x.r : '', x.gx ? 'เฉพาะนักเรียน' + GXN[x.gx] : (x.only && !x.multi ? 'เฉพาะบางคน' : ''), rangeTxt(x), x.swapped ? (x.subFor ? '⇄ สอนแทน ' + x.subFor : '⇄ สลับคาบ (ชั่วคราว)') : ''].filter(Boolean).map(esc).join(' · ') + '</small>';
   }
   try { window.k8ClassLeaves = window.k8ClassLeaves || JSON.parse(localStorage.getItem('k8_class_leaves') || '[]'); } catch (e) {}
   window.k8TtRerender = function () { try { if (T.open) renderView(); } catch (e) {} };
@@ -6477,7 +6477,7 @@ window.k8RegBirthChange = function (v) {
       (isX ? '<div class="k8-tt-xinfo"><span><b>' + esc(xm.name || 'ตารางพิเศษ') + '</b><small>ตารางแยกสำหรับนักเรียนที่เลือก ' + (xm.students || []).length + ' คน · นักเรียนจะเห็นเป็นแท็บแยกจากตารางชั้น</small></span><button type="button" class="k8-bh-link" onclick="k8TtXEdit()">ชื่อ & รายชื่อ</button><button type="button" class="k8-bh-link k8-pe-del" onclick="k8TtXDel()">ลบตาราง</button></div>' : '') +
       '<p class="k8-pw-hint">แตะช่องเพื่อเลือกวิชา อาจารย์ และห้อง · ลงแล้ว ' + filled + ' คาบ' + (gradeOf(T.grade).updatedAt ? ' · บันทึกล่าสุด ' + esc(gradeOf(T.grade).updatedAt) : '') + '</p>' +
       '<div class="k8-tt-gridwrap"><table class="k8-tt-grid is-edit is-tt2"><thead><tr><th scope="col">วัน</th>' + c.periods.map((p, i) => '<th scope="col"' + (i === nowIdx(c) ? ' class="is-now"' : '') + '>คาบ ' + (i + 1) + '<small>' + esc(p.start) + '–' + esc(p.end) + '</small>' + (i === nowIdx(c) ? '<em>ตอนนี้</em>' : '') + '</th>').join('') + '</tr></thead><tbody>' +
-      c.days.map((d) => '<tr' + (d === new Date().getDay() ? ' class="is-today"' : '') + '><th scope="row">' + DAYS[d] + (d === new Date().getDay() ? '<small>วันนี้</small>' : '') + '</th>' + c.periods.map((p, i) => { const k = d + '-' + (i + 1); const L = arr(T.draft[k]); const x = L[0]; const extra = L.length > 1 ? '+' + (L.length - 1) + ' กลุ่ม' : (x && x.o && x.o.length ? 'เฉพาะ ' + x.o.length + ' คน' : (x && x.x && x.x.length ? 'ละเว้น ' + x.x.length + ' คน' : '')); const ni = nowIdx(c); return '<td class="' + (i === ni ? 'is-nowcol' : '') + (i === ni && d === new Date().getDay() ? ' is-live' : '') + '"><button type="button"' + (x ? ' style="--sc:' + subjColor(x.sn) + '"' : '') + ' class="' + (x ? 'has' : '') + (extra ? ' is-group' : '') + ((L.length > 1 || L.some((e) => e.gx || e.from || e.to)) ? ' is-multi' : '') + '" onclick="k8TtCell(\'' + k + '\')" aria-label="วัน' + DAYN[d] + ' คาบ ' + (i + 1) + (x ? ' ' + esc(L.map((e) => e.sn).join(' และ ')) : ' ว่าง') + '">' + (x ? ((L.length > 1 || L.some((e) => e.gx || e.from || e.to)) ? '<span class="k8-tt-bands">' + L.map((e) => bandHtml(e, dateForDow(d))).join('') + '</span>' : '<b>' + esc(x.sn) + '</b><small>' + esc(x.tn || '') + (x.r ? ' · ' + esc(x.r) : '') + '</small>' + (extra ? '<em>' + esc(extra) + '</em>' : '')) : '<span aria-hidden="true">+</span>') + '</button></td>'; }).join('') + '</tr>').join('') +
+      c.days.map((d) => '<tr' + (d === new Date().getDay() ? ' class="is-today"' : '') + '><th scope="row">' + DAYS[d] + (d === new Date().getDay() ? '<small>วันนี้</small>' : '') + '</th>' + c.periods.map((p, i) => { const k = d + '-' + (i + 1); const L = arr(T.draft[k]); const x = L[0]; const extra = L.length > 1 ? '+' + (L.length - 1) + ' กลุ่ม' : (x && x.o && x.o.length ? 'เฉพาะ ' + x.o.length + ' คน' : (x && x.x && x.x.length ? 'ละเว้น ' + x.x.length + ' คน' : '')); const ni = nowIdx(c); return '<td class="' + (i === ni ? 'is-nowcol' : '') + (i === ni && d === new Date().getDay() ? ' is-live' : '') + '"><button type="button"' + (x ? ' style="--sc:' + subjColor(x.sn) + '"' : '') + ' class="' + (x ? 'has' : '') + (extra ? ' is-group' : '') + ((L.length > 1 || L.some((e) => e.gx || e.from || e.to)) ? ' is-multi' : '') + '" onclick="k8TtCell(\'' + k + '\')" aria-label="วัน' + DAYN[d] + ' คาบ ' + (i + 1) + (x ? ' ' + esc(L.map((e) => e.sn).join(' และ ')) : ' ว่าง') + '">' + (x ? ((L.length > 1 || L.some((e) => e.gx || e.from || e.to)) ? '<span class="k8-tt-bands">' + L.map((e) => bandHtml(e, dateForDow(d))).join('') + '</span>' : '<b>' + esc(x.sn) + '</b><small>' + esc(x.tn || '') + (x.ts && x.ts.length ? ' +' + x.ts.length : '') + (x.r ? ' · ' + esc(x.r) : '') + '</small>' + (extra ? '<em>' + esc(extra) + '</em>' : '')) : '<span aria-hidden="true">+</span>') + '</button></td>'; }).join('') + '</tr>').join('') +
       '</tbody></table></div>' +
       '<div class="k8-dr-btns k8-tt-save"><button type="button" class="is-alt" onclick="k8TtCopyFrom()">คัดลอกจากชั้นอื่น</button><button type="button" class="is-alt k8-tt-img-a" onclick="k8TtImage(\'admin\')"' + (filled ? '' : ' disabled') + '>' + IMG_ICON + 'บันทึกเป็นรูป A4</button>' + '<span class="k8-tt-autosave is-' + (T.saveSt || 'ok') + '" id="k8TtSaveSt" role="status" aria-live="polite">' + saveStText() + '</span>' + '</div></section>';
     try { T.visOpen = !!window.k8TtVisOpen; const xl = el.querySelector('.k8-tt-xl'); if (xl) el.appendChild(xl); } catch (e) {} // v18.08 · นำเข้า Excel อยู่ใต้ตารางสอน
@@ -6567,12 +6567,24 @@ window.k8RegBirthChange = function (v) {
       const tu = box.querySelector('.k8TtTeacher').value; const t = (T.teachers || []).find((x) => x.u === tu);
       if (tu === '__guest') { e.guest = true; e.t = ''; const gi = box.querySelector('.k8TtGuest'); e.tn = gi ? gi.value.trim() : (e.tn || ''); } else { delete e.guest; e.t = tu; e.tn = t ? t.n : ''; }
       e.r = box.querySelector('.k8TtRoom').value.trim();
+      e.ts = (e.ts || []).filter((u) => u && u !== e.t); e.tns = e.ts.map((u) => { const tt = (T.teachers || []).find((x) => x.u === u); return tt ? tt.n : ((e.tns || [])[(e.ts || []).indexOf(u)] || u); });
       e.pick = e.aud === 'some';
       if (e.rng) { const f = box.querySelector('.k8TtFrom'), t = box.querySelector('.k8TtTo'); e.from = f ? f.value : ''; e.to = t ? t.value : ''; } else { e.from = ''; e.to = ''; }
       e.o = e.pick ? Array.from(box.querySelectorAll('.k8-tt-stu:not(.k8-tt-xlist) input:checked')).map((c) => c.value) : [];
       if (box.querySelector('.k8-tt-xlist')) e.x = Array.from(box.querySelectorAll('.k8-tt-xlist input:checked')).map((c) => c.value);
     });
   }
+  // v18.41 · อาจารย์ผู้สอนร่วม (หลายคนต่อคาบ เช่น หะละเกาะฮฺ)
+  function coBlock(e, i) {
+    const ts = (e.ts || []).filter((u) => u !== e.t); const nm = (u) => { const tt = (T.teachers || []).find((x) => x.u === u); return tt ? tt.n : ((e.tns || [])[(e.ts || []).indexOf(u)] || u); };
+    const left = (T.teachers || []).filter((t) => t.u !== e.t && ts.indexOf(t.u) === -1);
+    return '<div class="k8-nf-f k8-tt-co"><span>อาจารย์ผู้สอนร่วม <small>· ไม่บังคับ · ทุกคนจะเห็นคาบนี้ในตารางสอนและแจ้งลาได้</small></span><div class="k8-tt-co-list">' +
+      ts.map((u) => '<span class="k8-tt-co-chip">' + esc(nm(u)) + '<button type="button" aria-label="เอาออก" onclick="k8TtCoDel(' + i + ',\'' + esc(u).replace(/'/g, '&#39;') + '\')">×</button></span>').join('') +
+      (left.length ? '<select class="k8-pe-sel k8-tt-co-add" onchange="k8TtCoAdd(' + i + ',this.value)"><option value="">＋ เพิ่มอาจารย์</option>' + left.map((t) => '<option value="' + esc(t.u) + '">' + esc(t.n) + '</option>').join('') + '</select>' : '') +
+      '</div></div>';
+  }
+  window.k8TtCoAdd = function (i, u) { pullG(); if (!u || !G[i]) return; G[i].ts = (G[i].ts || []).concat(u); pullG(); T.openG = i; renderG(); };
+  window.k8TtCoDel = function (i, u) { pullG(); if (!G[i]) return; G[i].ts = (G[i].ts || []).filter((x) => x !== u); T.openG = i; renderG(); };
   function exBlock(e, i) {
     const xs = new Set((e.x || []).map(nsid));
     if (!e.xOpen) return '<button type="button" class="k8-tt-exbtn" onclick="k8TtExOpen(' + i + ')"><span aria-hidden="true">⊘</span> ละเว้นวิชานี้ให้นักเรียนบางคน</button>';
@@ -6616,6 +6628,7 @@ window.k8RegBirthChange = function (v) {
         '<label class="k8-nf-f k8-tt-room"><span>ห้อง</span><input type="text" class="k8TtRoom" maxlength="40" placeholder="เช่น 401" value="' + esc(e.r || '') + '"></label></div>' +
         '<label class="k8-nf-f"' + (custom ? '' : ' hidden') + '><span>ชื่อวิชา/กิจกรรม</span><input type="text" class="k8TtCustom" maxlength="80" value="' + esc(known ? '' : (e.sn || '')) + '"></label>' +
         '<label class="k8-nf-f"' + ((e.guest || (!e.t && e.tn)) ? '' : ' hidden') + '><span>ชื่ออาจารย์พิเศษ</span><input type="text" class="k8TtGuest" maxlength="80" placeholder="เช่น อ.สมชาย (วิทยากรภายนอก)" value="' + esc(!e.t ? (e.tn || '') : '') + '"></label>' +
+        coBlock(e, i) +
         '<div class="k8-tt-g2"><div class="k8-nf-f"><span>ผู้เรียน</span><div class="k8-tt-seg2">' + AUDS.filter((a) => !isX || a[0] === 'all' || a[0] === 'm' || a[0] === 'f').map(([k, l]) => '<button type="button" class="is-' + k + '" aria-pressed="' + (e.aud === k) + '" onclick="k8TtAud(' + i + ',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>' +
         '<div class="k8-nf-f"><span>ช่วงที่เรียน</span><div class="k8-tt-seg2"><button type="button" aria-pressed="' + !e.rng + '" onclick="k8TtRng(' + i + ',0)">ตลอดภาคเรียน</button><button type="button" aria-pressed="' + !!e.rng + '" onclick="k8TtRng(' + i + ',1)">📅 กำหนดวันที่</button></div></div></div>' +
         (e.rng ? '<div class="k8-tt-dates"><label class="k8-nf-f"><span>ตั้งแต่วันที่</span><input type="date" class="k8TtFrom" value="' + esc(e.from || '') + '" onchange="k8TtGrpRe()"></label><span aria-hidden="true">→</span><label class="k8-nf-f"><span>ถึงวันที่</span><input type="date" class="k8TtTo" value="' + esc(e.to || '') + '" min="' + esc(e.from || '') + '" onchange="k8TtGrpRe()"></label></div><p class="k8-pw-hint">หลังวันสุดท้าย วิชานี้จะไม่ขึ้นในตารางของนักเรียนและอาจารย์ แต่ประวัติการเช็คชื่อที่บันทึกไว้ยังอยู่ครบ</p>' : '') +
@@ -6659,6 +6672,7 @@ window.k8RegBirthChange = function (v) {
       if (e.guest && !e.tn) { toast((G.length > 1 ? 'กลุ่มที่ ' + (i + 1) + ': ' : '') + 'พิมพ์ชื่ออาจารย์พิเศษ หรือเลือก "ไม่ระบุ"', 'warning'); return; }
       if (e.rng && !e.from && !e.to) { toast((G.length > 1 ? 'วิชาที่ ' + (i + 1) + ': ' : '') + 'เลือกวันที่เริ่มหรือวันสุดท้าย หรือเลือก "ตลอดภาคเรียน"', 'warning'); T.openG = i; renderG(); return; }
       const out = { s: e.s, sn: e.sn, t: e.t, tn: e.tn, r: e.r }; if (e.pick) out.o = e.o; if (e.x && e.x.length) out.x = e.x;
+      if (e.ts && e.ts.length) { out.ts = e.ts.slice(); out.tns = (e.tns || []).slice(); }
       if (e.aud === 'm' || e.aud === 'f') out.gx = e.aud;
       if (e.rng) { let a = e.from || '', b = e.to || ''; if (a && b && b < a) { const t = a; a = b; b = t; } if (a) out.from = a; if (b) out.to = b; }
       list.push(out);

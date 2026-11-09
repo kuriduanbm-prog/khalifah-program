@@ -4339,6 +4339,12 @@ body.k8-lim .k8-adm-modes { display: none !important; }
 .k8-tt-gh b { flex: 1; font-size: 14.5px; min-width: 80px; }
 .k8-tt-gn { width: 24px; height: 24px; border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .k8-tt-gdel { border: 0; background: transparent; color: #b91c1c; font: inherit; font-size: 13px; cursor: pointer; padding: 2px 4px; }
+.k8-tt-co { margin-top: 8px; }
+.k8-tt-co small { font-weight: 400; color: #64748b; }
+.k8-tt-co-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.k8-tt-co-chip { display: inline-flex; align-items: center; gap: 4px; background: #e0f2fe; color: #0c4a6e; border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 13px; font-weight: 500; }
+.k8-tt-co-chip button { border: 0; background: rgba(12,74,110,.12); color: #0c4a6e; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+.k8-tt-co-add { width: auto !important; min-width: 160px; flex: 0 1 auto; }
 .k8-tt-g3 { display: grid; grid-template-columns: 1.4fr 1fr 90px; gap: 8px; }
 .k8-tt-g2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px; }
 .k8-tt-g3 .k8-nf-f, .k8-tt-g2 .k8-nf-f { margin: 0; min-width: 0; }

@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.40'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.41'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3664,7 +3664,7 @@ function getMyTeaching_(session) {
   const st = (getSettings().data) || {};
   const cfg = ttConfig_(st);
   const uid = String(session.userId || '').toLowerCase(), nm = cleanVal(session.name || '');
-  const mine = function (e) { return e && ((e.t && String(e.t).toLowerCase() === uid) || (nm && e.tn && cleanVal(e.tn) === nm)); };
+  const mine = function (e) { return ttTeaches_(e, uid, nm); };
   const out = [];
   const scan = function (cells, g, gname) {
     Object.keys(cells || {}).forEach(function (k) {
@@ -3686,7 +3686,7 @@ function getMyTeaching_(session) {
         const ps = pm(pp && pp.start), pe = pm(pp && pp.end); if (ps < 0 || pe <= ps || Math.min(he, pe) - Math.max(hs, ps) < 15) return;
         Object.keys(dows).forEach(function (dw) {
           const d = +dw, p = i + 1;
-          if (out.some(function (o) { return o.d === d && o.p === p && String(o.g) === 'hq:' + h.id; })) return;
+          if (out.some(function (o) { return o.d === d && o.p === p && (String(o.g) === 'hq:' + h.id || /halaq|หะละเกาะ|ฮะละเกาะ|หะลาเกาะ|ฮาละเกาะ/i.test(o.sn + ' ' + o.s)); })) return;
           out.push({ d: d, p: p, g: 'hq:' + h.id, gn: h.grades.length ? 'หะละเกาะฮฺ ม.' + h.grades.join(',') : 'หะละเกาะฮฺ', s: '', sn: h.name || 'หะละเกาะฮฺ', r: h.location || '' });
         });
       });
@@ -3746,6 +3746,16 @@ function getTimetable_(session, isStudent, isAdmin) {
   if (!isAdmin && !cfg.showTeachers) return { success: true, hidden: true, config: cfg, grades: {} };
   return { success: true, config: cfg, grades: grades, extras: extras, swaps: activeSwaps_() };
 }
+// v18.41 · อาจารย์ผู้สอนร่วม (ts = username, tns = ชื่อ) · ใช้กับคาบที่มีผู้สอนหลายคน เช่น หะละเกาะฮฺ
+function ttCo_(c, e) {
+  const ts = (Array.isArray(c.ts) ? c.ts : []).map(function (x) { return cleanVal(x).slice(0, 60); }).slice(0, 30);
+  const tns = (Array.isArray(c.tns) ? c.tns : []).map(function (x) { return cleanVal(x).slice(0, 80); }).slice(0, 30);
+  const T = [], N = [];
+  ts.forEach(function (u, i) { if (!u || u === e.t || T.indexOf(u) !== -1) return; T.push(u); N.push(tns[i] || u); });
+  if (T.length) { e.ts = T; e.tns = N; }
+  return e;
+}
+function ttTeaches_(e, uid, nm) { if (!e) return false; uid = String(uid || '').toLowerCase(); if (uid && e.t && String(e.t).toLowerCase() === uid) return true; if (nm && e.tn && cleanVal(e.tn) === nm) return true; if (Array.isArray(e.ts) && uid && e.ts.some(function (u) { return String(u).toLowerCase() === uid; })) return true; return !!(nm && Array.isArray(e.tns) && e.tns.indexOf(nm) !== -1); }
 function ttIds_(a) { const o = (Array.isArray(a) ? a : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean).slice(0, 300); return o.filter(function (x, i) { return o.indexOf(x) === i; }); }
 function ttCleanCells_(src) {
   const cells = {};
@@ -3756,6 +3766,7 @@ function ttCleanCells_(src) {
     const sn = cleanVal(c.subjectName || c.sn).slice(0, 80); if (!sn) return;
     cells[k] = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
     const x = ttIds_(c.x); if (x.length) cells[k].x = x;
+    ttCo_(c, cells[k]);
   });
   return cells;
 }
@@ -3804,6 +3815,7 @@ function saveTimetable_(data, session) {
     const e = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
     if (o.length) e.o = o.filter(function (x, i) { return o.indexOf(x) === i; });
     const x = ttIds_(c.x); if (x.length) e.x = x; // x = นักเรียนที่ละเว้นวิชานี้
+    ttCo_(c, e);
     // v17.84 · gx = เฉพาะเพศ (m/f) · from/to = ช่วงวันที่ใช้วิชานี้ (ว่าง = ตลอดภาคเรียน)
     const gx = cleanVal(c.gx); if (gx === 'm' || gx === 'f') e.gx = gx;
     const d1 = cleanVal(c.from), d2 = cleanVal(c.to);
@@ -7132,7 +7144,7 @@ function myClassLeaves_(sid) {
   readLeaves_().forEach(function (lv) {
     if (!lv || lv.status !== 'approved' || lv.date < today || lv.date > until) return;
     const dow = new Date(lv.date + 'T00:00:00').getDay();
-    const mineCells = function (p) { const v = cells[dow + '-' + p]; return (Array.isArray(v) ? v : v ? [v] : []).filter(function (e) { return fits(e) && String(e.t || '') === String(lv.teacherId || '') && (!e.from || lv.date >= e.from) && (!e.to || lv.date <= e.to); }); };
+    const mineCells = function (p) { const v = cells[dow + '-' + p]; return (Array.isArray(v) ? v : v ? [v] : []).filter(function (e) { return fits(e) && (String(e.t || '') === String(lv.teacherId || '') || (Array.isArray(e.ts) && e.ts.indexOf(String(lv.teacherId || '')) !== -1)) && (!e.from || lv.date >= e.from) && (!e.to || lv.date <= e.to); }); };
     const hits = [];
     if (lv.slots && lv.slots.length) lv.slots.forEach(function (x) { if (String(x.g) !== String(g)) return; const c = mineCells(x.p); if (c.length || !x.s) hits.push({ p: x.p, sn: x.sn || (c[0] && c[0].sn) || '' }); });
     else for (let p = 1; p <= 12; p++) { if (lv.allDay || (lv.periods || []).indexOf(p) !== -1) mineCells(p).forEach(function (e) { hits.push({ p: p, sn: e.sn || '' }); }); }

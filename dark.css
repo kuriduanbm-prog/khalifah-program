@@ -2065,6 +2065,9 @@ html[data-theme="dark"] .k8-tt-tg.is-r { color: #f8a96d !important; background-c
 html[data-theme="dark"] .k8-tt-grp { border: 1.5px solid #253a54 !important; background-color: #121212 !important; }
 html[data-theme="dark"] .k8-tt-grp.is-fold { border-color: #323941 !important; }
 html[data-theme="dark"] .k8-tt-gdel { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-tt-co small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-tt-co-chip { background-color: #122938 !important; color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-tt-co-chip button { color: #b7d1e0 !important; }
 html[data-theme="dark"] .k8-tt-seg2 { background-color: #1a2229 !important; }
 html[data-theme="dark"] .k8-tt-seg2 button { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-tt-seg2 button[aria-pressed="true"] { background-color: #121212 !important; color: #d6dae5 !important; }
