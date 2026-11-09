@@ -492,9 +492,17 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   function grData(s, sid) {
     if (typeof loadAppSubjects === 'function') loadAppSubjects();
     const allSubj = (typeof appSubjects !== 'undefined' && Array.isArray(appSubjects)) ? appSubjects : [];
-    const subjects = typeof window.k8MySubjects === 'function' ? window.k8MySubjects(allSubj) : allSubj;
+    const subjects = (typeof window.k8MySubjects === 'function' ? window.k8MySubjects(allSubj) : allSubj).slice();
     const defsMap = readJSON('khalifah_subject_assignments', {});
     const scoreMap = (readJSON('khalifah_student_assignment_scores', {})[sid]) || {};
+    // v18.46 · วิชาที่มีผลการเรียน/คะแนนแล้วแต่ไม่อยู่ในตารางเรียน (เช่น ยังไม่จัดตาราง หรือวิชาภาคก่อน) → แสดงด้วย
+    let extra = 0;
+    { const have = (id, name) => subjects.some((x) => String(x.id) === String(id) || (x.code && String(x.code) === String(id)) || (name && String(x.name).trim() === String(name).trim()));
+      const add = (id, name) => { if (!id && !name) return; if (have(id, name)) return; const m = allSubj.find((x) => (id && (String(x.id) === String(id) || String(x.code) === String(id))) || (name && String(x.name).trim() === String(name).trim())); subjects.push(m || { id: id || ('g:' + name), name: name || id }); extra++; };
+      Object.keys(s.subjectGrades || {}).forEach((id) => { const v = s.subjectGrades[id]; if (v !== '' && v != null) add(id, ''); });
+      (Array.isArray(s.grades) ? s.grades : []).forEach((g) => { if (g && g.grade !== '' && g.grade != null) add(g.code, g.name); });
+      readJSON('khalifah_subject_grades_rows', []).forEach((g) => { if (g && sameId(g.studentId, s.studentId) && g.grade !== '' && g.grade != null) add(g.subjectCode, g.subjectName); });
+      Object.keys(scoreMap).forEach((id) => { if (Object.keys(scoreMap[id] || {}).length) add(id, ''); }); }
     let gpax = Number(s.gpax || s.gpa);
     if (!(gpax > 0) && typeof recalculateStudentGpa === 'function') gpax = Number(recalculateStudentGpa(s));
     const list = subjects.map((subj) => {
@@ -506,7 +514,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const pct = maxSum ? Math.round(got / maxSum * 100) : (g.score ? Math.min(100, Number(g.score)) : 0);
       return { subj, g, defs, mine, got, maxSum, any, pct };
     });
-    return { gpax, list };
+    return { gpax, list, extra };
   }
   function renderGradesBlock(s, sid) {
     GR.s = s; GR.sid = sid;
@@ -532,16 +540,18 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (it) {
       const [bg, ink] = gradeTone(it.g.grade);
       T.textContent = it.subj.name; S.textContent = 'คะแนนชิ้นงานและผลการเรียน';
-      B.innerHTML = '<section class="k8-gr-hero"><div><span>ผลการเรียน</span><b class="k8-gr-big" style="color:' + ink + '">' + (it.g.grade == null ? 'รอผล' : fmtNum(it.g.grade)) + '</b></div>' +
+      B.innerHTML = '<div class="k8-gr-wrap"><section class="k8-gr-hero"><div><span>ผลการเรียน</span><b class="k8-gr-big" style="color:' + ink + '">' + (it.g.grade == null ? 'รอผล' : fmtNum(it.g.grade)) + '</b></div>' +
         '<div class="k8-gr-hr"><span>คะแนนรวม</span><b>' + (it.any ? fmtNum(it.got) : '–') + ' <small>/ ' + fmtNum(it.maxSum) + '</small></b><span class="hf-subj-bar k8-gr-bar"><span style="width:' + it.pct + '%;background:' + ink + '"></span></span><small>' + (it.any ? it.pct + '%' : 'ยังไม่มีคะแนน') + '</small></div></section>' +
-        (it.defs.length ? '<h3 class="k8-gr-sec">ชิ้นงาน (' + it.defs.length + ')</h3><ul class="k8-gr-asg">' + it.defs.map((a) => { const v = it.mine[a.id]; const has = v !== '' && v !== undefined && v !== null && !isNaN(Number(v)); const p = has && Number(a.maxScore) ? Math.round(Number(v) / Number(a.maxScore) * 100) : 0; return '<li><div><b>' + esc(a.title) + '</b><span class="hf-subj-bar k8-gr-bar"><span style="width:' + p + '%;background:' + ink + '"></span></span></div><em class="' + (has ? '' : 'is-wait') + '">' + (has ? fmtNum(v) : '–') + '<small> / ' + fmtNum(a.maxScore) + '</small></em></li>'; }).join('') + '</ul>' : '<p class="k8-gr-empty">อาจารย์ยังไม่ได้เพิ่มชิ้นงานของวิชานี้</p>');
+        (it.defs.length ? '<h3 class="k8-gr-sec">ชิ้นงาน (' + it.defs.length + ')</h3><ul class="k8-gr-asg">' + it.defs.map((a) => { const v = it.mine[a.id]; const has = v !== '' && v !== undefined && v !== null && !isNaN(Number(v)); const p = has && Number(a.maxScore) ? Math.round(Number(v) / Number(a.maxScore) * 100) : 0; return '<li><div><b>' + esc(a.title) + '</b><span class="hf-subj-bar k8-gr-bar"><span style="width:' + p + '%;background:' + ink + '"></span></span></div><em class="' + (has ? '' : 'is-wait') + '">' + (has ? fmtNum(v) : '–') + '<small> / ' + fmtNum(a.maxScore) + '</small></em></li>'; }).join('') + '</ul>' : '<p class="k8-gr-empty">อาจารย์ยังไม่ได้เพิ่มชิ้นงานของวิชานี้</p>') + '</div>';
       B.scrollTop = 0; return;
     }
     T.textContent = 'ผลการเรียนรายวิชา'; S.textContent = D.list.length ? D.list.length + ' วิชา · แตะวิชาเพื่อดูคะแนน' : 'ภาคเรียนปัจจุบัน';
     let info = ''; try { info = (window.k8MySubjectsInfo && window.k8MySubjectsInfo()) || ''; } catch (e) {}
-    B.innerHTML = '<section class="k8-gr-gpax"><span>เกรดเฉลี่ยสะสม (GPAX)</span><b>' + (D.gpax > 0 ? D.gpax.toFixed(2) : '–') + '</b><small>ข้อมูลส่วนตัว · ซ่อนอัตโนมัติเมื่อออกจากหน้านี้</small></section>' +
+    if (D.extra && D.list.length === D.extra) info = 'แสดงวิชาที่มีผลการเรียนแล้ว · ' + D.extra + ' วิชา';
+    else if (D.extra) info = (info ? info + ' · ' : '') + 'รวมวิชาที่มีผลการเรียนนอกตาราง ' + D.extra + ' วิชา';
+    B.innerHTML = '<div class="k8-gr-wrap"><section class="k8-gr-gpax"><span>เกรดเฉลี่ยสะสม (GPAX)</span><b>' + (D.gpax > 0 ? D.gpax.toFixed(2) : '–') + '</b><small>ข้อมูลส่วนตัว · ซ่อนอัตโนมัติเมื่อออกจากหน้านี้</small></section>' +
       (info ? '<p class="k8-gr-note">' + esc(info) + '</p>' : '') +
-      (D.list.length ? '<div class="k8-gr-list">' + D.list.map((x) => { const [bg, ink] = gradeTone(x.g.grade); return '<button type="button" class="k8-gr-row" onclick="k8GrSubj(\'' + esc(String(x.subj.id)).replace(/'/g, '&#39;') + '\')"><span class="k8-gr-nm"><b>' + esc(x.subj.name) + '</b><small>' + (x.defs.length ? x.defs.length + ' ชิ้นงาน' + (x.any ? ' · ' + x.pct + '%' : '') : 'ยังไม่มีชิ้นงาน') + '</small>' + (x.defs.length ? '<span class="hf-subj-bar k8-gr-bar"><span style="width:' + x.pct + '%;background:' + ink + '"></span></span>' : '') + '</span><span class="hf-gpill' + (x.g.grade == null ? ' is-wait' : '') + '" style="background:' + bg + ';color:' + ink + '">' + (x.g.grade == null ? 'รอผล' : fmtNum(x.g.grade)) + '</span><i class="k8-gr-chev">' + GR_CHEV + '</i></button>'; }).join('') + '</div>' : '<p class="k8-gr-empty">ยังไม่มีรายวิชาของชั้นนี้ในตารางเรียน</p>');
+      (D.list.length ? '<div class="k8-gr-list">' + D.list.map((x) => { const [bg, ink] = gradeTone(x.g.grade); return '<button type="button" class="k8-gr-row" onclick="k8GrSubj(\'' + esc(String(x.subj.id)).replace(/'/g, '&#39;') + '\')"><span class="k8-gr-nm"><b>' + esc(x.subj.name) + '</b><small>' + (x.defs.length ? x.defs.length + ' ชิ้นงาน' + (x.any ? ' · ' + x.pct + '%' : '') : 'ยังไม่มีชิ้นงาน') + '</small>' + (x.defs.length ? '<span class="hf-subj-bar k8-gr-bar"><span style="width:' + x.pct + '%;background:' + ink + '"></span></span>' : '') + '</span><span class="hf-gpill' + (x.g.grade == null ? ' is-wait' : '') + '" style="background:' + bg + ';color:' + ink + '">' + (x.g.grade == null ? 'รอผล' : fmtNum(x.g.grade)) + '</span><i class="k8-gr-chev">' + GR_CHEV + '</i></button>'; }).join('') + '</div>' : '<p class="k8-gr-empty">ยังไม่มีรายวิชาและผลการเรียน<br><small>เมื่อแอดมินจัดตารางเรียนหรืออาจารย์บันทึกเกรด วิชาจะขึ้นที่นี่</small></p>') + '</div>';
   }
   function grClose() { const el = document.getElementById('k8Gr'); if (el && !el.hidden) { el.hidden = true; GR.subj = null; document.documentElement.classList.remove('k8-docs-open'); const B = document.getElementById('k8GrB'); if (B) B.innerHTML = ''; } }
   window.k8GrOpen = function () {
@@ -3512,7 +3522,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.45';
+  const APP_VERSION = '18.46';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
