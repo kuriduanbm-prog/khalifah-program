@@ -3545,7 +3545,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.67';
+  const APP_VERSION = '18.68';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10837,6 +10837,30 @@ window.k8HfMiss = function (slot) {
   }
   // ดึงสรุป "เดือนนี้" ล่วงหน้าหลังแอดมินเข้าสู่ระบบ
   setTimeout(function pre() { let a = null; try { a = currentAdmin; } catch (e) {} if (a && window.k8HqIsAdm && window.k8HqIsAdm()) { const t0 = new Date(); const f = ymd(new Date(t0.getFullYear(), t0.getMonth(), 1)), t = ymd(t0); if (!cacheGet(f, t)) fetchRep(f, t); } else if (!a) setTimeout(pre, 5000); }, 6000);
+  // v18.68 · การ์ดหะละเกาะฮฺในหน้าภาพรวมแอดมิน: สัปดาห์นี้ · กลุ่มที่ไม่ถึง 100% · ปุ่มเปิดสรุป/บันทึกเป็นไฟล์
+  let ovSeq = 0;
+  function ovPaint(d) {
+    const el = document.getElementById('k8OvHq'); if (!el) return;
+    const G = d ? sortG(d.groups || []) : [];
+    const T = { present: 0, late: 0, leave: 0, absent: 0, none: 0 }; let held = 0, plan = 0;
+    G.forEach((g) => { Object.keys(T).forEach((k) => { T[k] += g.total[k] || 0; }); held += g.held.filter((x) => g.dates.indexOf(x) !== -1).length; plan += g.dates.length; });
+    const tp = d ? pct(T) : null; const low = G.filter((g) => { const p = pct(g.total); return p == null || p < 100; });
+    const ico = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>';
+    el.hidden = false;
+    el.innerHTML = '<div class="hf-head"><h2 id="k8OvHqTitle">หะละเกาะฮฺ สัปดาห์นี้</h2><button type="button" class="k8-ov-more" onclick="k8HqOvOpen()">ดูสรุป ›</button></div>' +
+      (!d ? '<p class="k8-li-empty" style="text-align:left">กำลังโหลด…</p>' :
+        '<div class="k8-ovhq-top"><div class="k8-ovhq-big"><b class="' + (tp != null && tp < 100 ? 'is-low' : '') + '">' + (tp == null ? '–' : tp + '%') + '</b><small>มาเข้าร่วม · ' + G.length + ' กลุ่ม · เช็คแล้ว ' + held + '/' + plan + ' ครั้ง</small></div></div>' +
+        (low.length ? '<ul class="k8-ovhq-list">' + low.slice(0, 4).map((g) => { const p = pct(g.total); return '<li><span>' + esc(g.teacherName || g.name) + '<small>' + esc(g.name) + '</small></span><b>' + (p == null ? '–' : p + '%') + '</b></li>'; }).join('') + (low.length > 4 ? '<li class="k8-ovhq-more">และอีก ' + (low.length - 4) + ' กลุ่มที่ไม่ถึง 100%</li>' : '') + '</ul>' : (G.length ? '<p class="k8-ovhq-ok">✓ ทุกกลุ่มเข้าร่วมครบ 100%</p>' : '')) ) +
+      '<button type="button" class="k8-hq-rep k8-ovhq-btn" onclick="k8HqOvOpen()">' + ico + ' สรุปการเช็คชื่อตามผู้ดูแล · บันทึกเป็นไฟล์</button>';
+  }
+  window.k8HqOvPaint = async function () {
+    if (!(window.k8HqIsAdm && window.k8HqIsAdm())) return;
+    const f = weekStart(), t = ymd(new Date()); const my = ++ovSeq;
+    const c = cacheGet(f, t); ovPaint(c);
+    const r = await fetchRep(f, t); if (my !== ovSeq) return; if (r) ovPaint(r);
+  };
+  window.k8HqOvOpen = function () { ensure(); preset('week'); const el = document.getElementById('k8HqRep'); el.hidden = false; try { history.pushState({ k8hqr: 1 }, ''); } catch (e) {} load(); };
+  (function () { const o = window.renderAdminOverviewV8; if (typeof o === 'function') window.renderAdminOverviewV8 = function () { const r = o.apply(this, arguments); try { window.k8HqOvPaint(); } catch (e) {} return r; }; })();
   window.k8HqRepOpen = function () {
     ensure(); if (!R.from) preset('month');
     const el = document.getElementById('k8HqRep'); el.hidden = false; try { history.pushState({ k8hqr: 1 }, ''); } catch (e) {}
