@@ -3545,7 +3545,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.63';
+  const APP_VERSION = '18.64';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5364,11 +5364,18 @@ window.k8RegBirthChange = function (v) {
   function stopTimers() { clearInterval(H.qrTimer); clearInterval(H.clockTimer); H.qrTimer = H.clockTimer = null; }
   function closeHq() { stopTimers(); const el = document.getElementById('k8Hq'); if (el) el.hidden = true; H.open = false; document.documentElement.classList.remove('k8-docs-open'); try { if (window.k8HqOnClose) window.k8HqOnClose(); } catch (e) {} }
   // v18.63 · แอดมินเช็คชื่อหะละเกาะฮฺแทนผู้ดูแล (เปิดจากหน้าสรุป) · ไปหน้ารายชื่อของกลุ่ม/วันที่นั้นทันที
-  window.k8HqAdminCheck = async function (id, date) {
-    await window.k8HqOpen();
-    const s = H.sessions.find((x) => String(x.id) === String(id)); if (!s) { toast('ไม่พบกลุ่มหะละเกาะฮฺนี้', 'error'); return; }
+  // v18.64 · เปิดทันที: ไม่รอโหลดรายการกลุ่ม (ใช้ข้อมูลกลุ่มจากหน้าสรุปแทนถ้ายังไม่มี) · รายชื่อดึงล่วงหน้าไว้แล้วจากหน้าสรุป
+  window.k8HqAdminCheck = function (id, date, g) {
+    const el = document.getElementById('k8Hq'); if (!el) return;
+    if (!H.loaded) { const c = hqCacheGet(); if (c) { H.sessions = c; H.loaded = true; } }
+    let s = H.sessions.find((x) => String(x.id) === String(id));
+    if (!s && g) s = { id: g.id, name: g.name, teacherName: g.teacherName || '', teacher: g.teacher || '', location: g.location || '', start: g.start || '', end: g.end || '', members: (g.members || []).map((m) => hk(m.id)) };
+    if (!s) { toast('ไม่พบกลุ่มหะละเกาะฮฺนี้', 'error'); return; }
+    el.hidden = false; H.open = true; document.documentElement.classList.add('k8-docs-open'); stack('list');
     H.cur = s; H.date = date || ymd(new Date()); stopTimers(); H.view = 'roster'; H.marks = {}; H.roster = hqRc[rcKey()] || null; stack('roster'); render(); loadRoster();
+    loadSessions().then(() => { const s2 = H.sessions.find((x) => String(x.id) === String(id)); if (s2 && H.cur && String(H.cur.id) === String(id)) { H.cur = s2; } });
   };
+  window.k8HqPrefetchRoster = async function (id, date) { const k = id + '|' + date; if (hqRc[k]) return; try { const r = await api('getHalaqahRoster', { id, date }); if (r && r.success && !hqRc[k]) { const keep = H.cur; H.cur = H.sessions.find((x) => String(x.id) === String(id)) || keep; hqRc[k] = fillRoster(r); H.cur = keep; } } catch (e) {} };
   window.k8HqBack = function () { history.back(); };
   window.addEventListener('popstate', () => {
     if (!H.open) return;
@@ -10693,7 +10700,8 @@ window.k8HfMiss = function (slot) {
   window.k8HqRepCheck = function (id, date) {
     if (!window.k8HqAdminCheck) return;
     const el = document.getElementById('k8HqRep');
-    if (el && !el.hidden) { R.reopen = true; history.back(); setTimeout(() => window.k8HqAdminCheck(id, date), 260); } else window.k8HqAdminCheck(id, date);
+    const g = ((R.data && R.data.groups) || []).find((x) => String(x.id) === String(id));
+    if (el && !el.hidden) { R.reopen = true; el.hidden = true; history.back(); setTimeout(() => window.k8HqAdminCheck(id, date, g), 60); } else window.k8HqAdminCheck(id, date, g);
   };
   // v18.63 · บันทึกสรุปรวมทุกกลุ่ม (รายชื่อทุกคน) เป็นรูปภาพ PNG
   window.k8HqRepImg = async function () {
@@ -10768,12 +10776,23 @@ window.k8HfMiss = function (slot) {
     }).join('');
     B.innerHTML = h;
   }
+  // v18.64 · แสดงข้อมูลที่จำไว้ทันที แล้วอัปเดตจากระบบเบื้องหลัง · ดึงรายชื่อวันนี้ล่วงหน้า (กดเช็คแทนแล้วขึ้นทันที)
+  const RC = {}; const ck = (f, t) => 'k8_hqr_' + f + '_' + t;
+  const cacheGet = (f, t) => { if (RC[ck(f, t)]) return RC[ck(f, t)]; try { const v = JSON.parse(localStorage.getItem(ck(f, t)) || 'null'); if (v && v.groups) { RC[ck(f, t)] = v; return v; } } catch (e) {} return null; };
+  const cachePut = (f, t, v) => { RC[ck(f, t)] = v; try { Object.keys(localStorage).filter((k) => k.indexOf('k8_hqr_') === 0 && k !== ck(f, t)).slice(0, -3).forEach((k) => localStorage.removeItem(k)); localStorage.setItem(ck(f, t), JSON.stringify(v)); } catch (e) {} };
+  let seq = 0;
+  async function fetchRep(f, t) { let r = null; try { r = await gasApiCall('getHalaqahReport', { from: f, to: t }, 60000); } catch (e) {} if (r && r.success) cachePut(f, t, r); return r && r.success ? r : null; }
+  function prefetchRosters() { const td = ymd(new Date()); ((R.data && R.data.groups) || []).slice(0, 12).forEach((g, i) => { if (window.k8HqPrefetchRoster) setTimeout(() => window.k8HqPrefetchRoster(g.id, td), 300 + i * 250); }); }
   async function load() {
-    R.loading = true; R.data = null; render();
-    document.getElementById('k8HqRepS').textContent = 'ตามผู้ดูแลแต่ละกลุ่ม · ' + dTh(R.from) + ' – ' + dTh(R.to);
-    let r = null; try { r = await gasApiCall('getHalaqahReport', { from: R.from, to: R.to }, 60000); } catch (e) {}
-    R.loading = false; R.data = r && r.success ? r : null; render();
+    const my = ++seq; const f = R.from, t = R.to;
+    document.getElementById('k8HqRepS').textContent = dTh(f) + ' – ' + dTh(t);
+    const c = cacheGet(f, t);
+    if (c) { R.data = c; R.loading = false; R.stale = true; render(); } else { R.loading = true; R.data = null; render(); }
+    const r = await fetchRep(f, t); if (my !== seq) return;
+    R.loading = false; R.stale = false; if (r) R.data = r; else if (!c) R.data = null; render(); prefetchRosters();
   }
+  // ดึงสรุป "เดือนนี้" ล่วงหน้าหลังแอดมินเข้าสู่ระบบ
+  setTimeout(function pre() { let a = null; try { a = currentAdmin; } catch (e) {} if (a && window.k8HqIsAdm && window.k8HqIsAdm()) { const t0 = new Date(); const f = ymd(new Date(t0.getFullYear(), t0.getMonth(), 1)), t = ymd(t0); if (!cacheGet(f, t)) fetchRep(f, t); } else if (!a) setTimeout(pre, 5000); }, 6000);
   window.k8HqRepOpen = function () {
     ensure(); if (!R.from) preset('month');
     const el = document.getElementById('k8HqRep'); el.hidden = false; try { history.pushState({ k8hqr: 1 }, ''); } catch (e) {}
