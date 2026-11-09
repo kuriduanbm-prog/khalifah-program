@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.42'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.47'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3340,7 +3340,7 @@ const LEAVE_DAYN_ = ['อาทิตย์', 'จันทร์', 'อัง�
 const LEAVE_MON_ = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 function leaveDateTh_(ymd) { const d = new Date(ymd + 'T00:00:00'); return isNaN(d) ? ymd : 'วัน' + LEAVE_DAYN_[d.getDay()] + 'ที่ ' + d.getDate() + ' ' + LEAVE_MON_[d.getMonth()] + ' ' + (d.getFullYear() + 543); }
 function leaveSummary_(it) {
-  const when = it.allDay ? 'ทั้งวัน' : (it.slots && it.slots.length ? it.slots.map(function (x) { return 'คาบ ' + x.p + (x.sn ? ' ' + x.sn : '') + (x.g && !/^(x|hq):/.test(x.g) ? ' ม.' + x.g : ''); }).join(', ') : 'คาบ ' + (it.periods || []).join(', ') + (it.subject ? ' · ' + it.subject : '') + (it.grade ? ' · ' + it.grade : ''));
+  const when = it.allDay ? 'ทั้งวัน' : (it.slots && it.slots.length ? it.slots.map(function (x) { return 'คาบ ' + x.p + (x.sn ? ' ' + x.sn : '') + (x.g && !/^(x|hq):/.test(x.g) ? ' ม.' + x.g : '') + (x.subn ? ' (แทน: ' + x.subn + ')' : ''); }).join(', ') : 'คาบ ' + (it.periods || []).join(', ') + (it.subject ? ' · ' + it.subject : '') + (it.grade ? ' · ' + it.grade : ''));
   return leaveDateTh_(it.date) + ' · ' + when;
 }
 /** อีเมลถึงแอดมิน/ผู้บริหาร (แจ้งเข้ามือถือผ่านแอป Gmail) */
@@ -3380,7 +3380,10 @@ function cleanSlots_(arr) {
   return (Array.isArray(arr) ? arr : []).slice(0, 20).map(function (x) {
     const p = Number(x && x.p); if (!(p >= 1 && p <= 12)) return null;
     const g = cleanVal(x.g || '').substring(0, 40);
-    return { p: p, g: g, s: cleanVal(x.s || '').substring(0, 40), sn: cleanVal(x.sn || '').substring(0, 80), r: cleanVal(x.r || '').substring(0, 40), t: cleanVal(x.t || '').substring(0, 20) };
+    const o = { p: p, g: g, s: cleanVal(x.s || '').substring(0, 40), sn: cleanVal(x.sn || '').substring(0, 80), r: cleanVal(x.r || '').substring(0, 40), t: cleanVal(x.t || '').substring(0, 20) };
+    // v18.47 · ผู้สอนแทนรายคาบ (sub = username ในระบบ · subn = ชื่อ · ว่าง sub = อาจารย์ภายนอก/ไม่มีในรายชื่อ)
+    const subn = cleanVal(x.subn || '').substring(0, 80); if (subn) { o.subn = subn; const sub = cleanVal(x.sub || '').substring(0, 60); if (sub) o.sub = sub; }
+    return o;
   }).filter(Boolean);
 }
 function saveTeacherLeave_(d, session, isAdmin) {
@@ -3397,6 +3400,20 @@ function saveTeacherLeave_(d, session, isAdmin) {
   if (!subject) return { success: false, message: 'ระบุวิชา' };
   let grade = cleanVal(d.grade || '').substring(0, 60);
   if (slots.length) grade = slots.map(function (x) { return /^hq:/.test(x.g) ? 'หะละเกาะฮฺ' : /^x:/.test(x.g) ? 'ตารางพิเศษ' : 'ม.' + x.g; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+  // v18.47 · ประเภทการลา (ลาป่วย/ลากิจ/อื่น ๆ) · "อื่น ๆ" ต้องระบุเหตุผล · ต้องมีผู้สอนแทนทุกคาบ (ฟอร์มใหม่ส่ง needSub)
+  const LV_TYPES = ['ลาป่วย', 'ลากิจ', 'อื่น ๆ'];
+  const reasonType = LV_TYPES.indexOf(cleanVal(d.reasonType)) !== -1 ? cleanVal(d.reasonType) : '';
+  if (d.needSub && !reasonType) return { success: false, message: 'เลือกเหตุผลการลา (ลาป่วย / ลากิจ / อื่น ๆ)' };
+  if (reasonType === 'อื่น ๆ' && !cleanVal(d.reason)) return { success: false, message: 'ระบุเหตุผลเมื่อเลือก "อื่น ๆ"' };
+  let subNameAll = cleanVal(d.subName || '').substring(0, 80), subIdAll = cleanVal(d.subId || '').substring(0, 60);
+  if (slots.some(function (x) { return x.subn; })) {
+    const names = slots.map(function (x) { return x.subn || ''; });
+    if (d.needSub && names.some(function (n) { return !n; })) return { success: false, message: 'เลือกผู้สอนแทนให้ครบทุกคาบ' };
+    const uniq = names.filter(function (v, i, a) { return v && a.indexOf(v) === i; });
+    subNameAll = uniq.join(', ').substring(0, 160);
+    const ids = slots.map(function (x) { return x.sub || ''; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+    subIdAll = ids.length === 1 ? ids[0] : '';
+  } else if (d.needSub && !subNameAll) return { success: false, message: 'เลือกผู้สอนแทนก่อนส่งคำขอลา' };
   const res = leaveLock_(function () {
     const list = readLeaves_();
     const id = cleanVal(d.id || '');
@@ -3411,8 +3428,8 @@ function saveTeacherLeave_(d, session, isAdmin) {
       teacherId: old ? old.teacherId : session.userId, teacherName: old ? old.teacherName : (cleanVal(session.name || session.userId)),
       date: date, allDay: allDay, periods: allDay ? [] : periods.sort(function (a, b) { return a - b; }), slots: slots,
       timeText: cleanVal(d.timeText || '').substring(0, 60), subject: subject, grade: grade,
-      reason: cleanVal(d.reason || '').substring(0, 160),
-      subName: cleanVal(d.subName || '').substring(0, 80), subId: cleanVal(d.subId || '').substring(0, 60),
+      reason: cleanVal(d.reason || '').substring(0, 160), reasonType: reasonType,
+      subName: subNameAll, subId: subIdAll,
       status: (old && isAdmin && old.status) ? old.status : 'pending', approvedBy: (old && isAdmin) ? (old.approvedBy || '') : '', approvedAt: (old && isAdmin) ? (old.approvedAt || '') : '', note: '',
       createdAt: old ? old.createdAt : new Date().toISOString(), updatedAt: new Date().toISOString()
     };
@@ -3420,7 +3437,7 @@ function saveTeacherLeave_(d, session, isAdmin) {
     return { success: true, message: (old ? 'แก้ไขการลาแล้ว' : 'ส่งคำขอลาสอนแล้ว') + (item.status === 'pending' ? ' · รอแอดมิน/ผู้บริหารอนุมัติ' : ''), item: item, data: writeLeaves_(out), isNew: !old };
   });
   if (res.success && res.item.status === 'pending') {
-    const it = res.item, txt = it.teacherName + ' แจ้งลาสอน ' + leaveSummary_(it) + (it.reason ? ' · เหตุผล: ' + it.reason : '') + (it.subName ? ' · สอนแทน: ' + it.subName : ' · ยังไม่มีผู้สอนแทน');
+    const it = res.item, txt = it.teacherName + ' แจ้งลาสอน ' + leaveSummary_(it) + (it.reasonType || it.reason ? ' · เหตุผล: ' + [it.reasonType, it.reason].filter(Boolean).join(' · ') : '') + (it.subName ? ' · สอนแทน: ' + it.subName : ' · ยังไม่มีผู้สอนแทน');
     try { sendNotification_({ title: 'คำขอลาสอน (รออนุมัติ) · ' + it.teacherName, body: txt, audience: 'admins', priority: 'urgent', expires: it.date }, { userId: session.userId, name: it.teacherName }); } catch (e) {}
     res.mailed = leaveMailApprovers_('[KHALIFAH] คำขอลาสอนรออนุมัติ · ' + it.teacherName, txt);
   }
@@ -3437,7 +3454,7 @@ function approveTeacherLeave_(d, session) {
   });
   if (!res.success) return res;
   const it = res.item, by = { userId: session.userId, name: it.approvedBy };
-  const users = [it.teacherId].concat(it.subId ? [it.subId] : []).filter(Boolean);
+  const users = [it.teacherId].concat(it.subId ? [it.subId] : []).concat((it.slots || []).map(function (x) { return x.sub || ''; })).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
   try { sendNotification_({ title: ok ? 'อนุมัติการลาสอนแล้ว' : 'ไม่อนุมัติการลาสอน', body: leaveSummary_(it) + (note ? ' · หมายเหตุ: ' + note : '') + ' · โดย ' + it.approvedBy, audience: 'users', values: users, expires: it.date }, by); } catch (e) {}
   // อีเมลแจ้งอาจารย์ผู้ลา (ถ้ามีอีเมลในระบบ)
   try {
