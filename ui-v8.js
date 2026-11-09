@@ -3522,7 +3522,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.51';
+  const APP_VERSION = '18.52';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8587,8 +8587,8 @@ window.k8RegBirthChange = function (v) {
     rows.forEach((r) => {
       if (r.ds !== last) { last = r.ds; busy = busySet(r.ds); if (V.mode === 'multi') h += '<div class="k8-lv4-day">' + esc(dShort(r.ds)) + '</div>'; }
       const on = r.x.manual ? !!V.pick[r.k] : !V.off[r.k], cur = V.subs[r.k] || {};
-      const nm = r.x.manual ? '<b>คาบ ' + r.x.p + ' <small class="k8-lv4-t">' + esc(ptime(r.x.p)) + '</small></b>' + (on ? '<input type="text" class="k8-lv4-msub' + (r.x.sn ? '' : ' is-need') + '" maxlength="80" placeholder="วิชา/ชั้น เช่น ฟิสิกส์ ม.5" value="' + esc(r.x.sn) + '" data-k="' + esc(r.k) + '" oninput="k8Lv4MS(this)">' : '<small>แตะ ☐ ถ้าคาบนี้มีสอน</small>') : '<b>คาบ ' + r.x.p + ' · ' + esc(r.x.sn) + '</b><small>' + esc(r.x.gn || ('ม.' + r.x.g)) + ' · ' + esc((ptime(r.x.p) || '').split('–')[0]) + '</small>';
-      h += '<div class="k8-lv4-row' + (on ? '' : ' is-off') + (r.x.manual && !on ? ' is-free' : '') + (on && !cur.name ? ' is-need' : '') + '"><button type="button" class="k8-lv4-ck" aria-pressed="' + on + '" aria-label="รวมคาบนี้" data-k="' + esc(r.k) + '" onclick="k8Lv4Tog(this)">' + (on ? '✓' : '') + '</button><div class="k8-lv4-rt">' + nm + '</div>' + (on ? subSel(r, busy) : (r.x.manual ? '' : '<small class="k8-lv4-skip">ไม่ลาคาบนี้</small>')) + '</div>' +
+      const nm = r.x.manual ? '<b>คาบ ' + r.x.p + ' <small class="k8-lv4-t">' + esc(ptime(r.x.p)) + '</small></b>' + (on ? '<input type="text" class="k8-lv4-msub' + (r.x.sn ? '' : ' is-need') + '" maxlength="80" placeholder="วิชา/ชั้น เช่น ฟิสิกส์ ม.5" value="' + esc(r.x.sn) + '" data-k="' + esc(r.k) + '" oninput="k8Lv4MS(this)">' : '<small>แตะแถวนี้ถ้าคาบนี้มีสอน</small>') : '<b>คาบ ' + r.x.p + ' · ' + esc(r.x.sn) + '</b><small>' + esc(r.x.gn || ('ม.' + r.x.g)) + ' · ' + esc((ptime(r.x.p) || '').split('–')[0]) + '</small>';
+      h += '<div class="k8-lv4-row' + (on ? '' : ' is-off') + (r.x.manual ? ' is-man' : '') + (r.x.manual && !on ? ' is-free' : '') + (on && !cur.name ? ' is-need' : '') + '" data-k="' + esc(r.k) + '" onclick="k8Lv4RowTap(event,this)"><button type="button" class="k8-lv4-ck" aria-pressed="' + on + '" aria-label="รวมคาบนี้" data-k="' + esc(r.k) + '" onclick="event.stopPropagation();k8Lv4Tog(this)">' + (on ? '✓' : '') + '</button><div class="k8-lv4-rt">' + nm + '</div>' + (on ? subSel(r, busy) : (r.x.manual ? '' : '<small class="k8-lv4-skip">ไม่ลาคาบนี้</small>')) + '</div>' +
         (on && cur.other ? '<div class="k8-lv4-oth"><input type="text" maxlength="80" placeholder="พิมพ์ชื่ออาจารย์ผู้สอนแทน" value="' + esc(cur.name || '') + '" data-k="' + esc(r.k) + '" oninput="k8Lv4Oth(this)"></div>' : '');
     });
     return h + '</div>' + (lvOn(rows).length > 1 ? '<button type="button" class="k8-lv4-same" onclick="k8Lv4Same()">⇵ ใช้ผู้สอนแทนคนเดียวทุกคาบ</button>' : '');
@@ -8683,6 +8683,8 @@ window.k8RegBirthChange = function (v) {
   window.k8Lv4R = function (r) { V.rt = r; paintBody(); if (r === 'อื่น ๆ') { const i = document.getElementById('k8LvReason'); if (i && !i.value) i.focus(); } };
   window.k8Lv4Rs = function (v) { V.reason = v; paintMeta(); };
   window.k8Lv4Tog = function (b) { const k = b.dataset.k; if (k.indexOf('||') !== -1) { if (V.pick[k]) delete V.pick[k]; else V.pick[k] = 1; paintBody(); if (V.pick[k]) { const i = document.querySelector('.k8-lv4-msub[data-k="' + CSS.escape(k) + '"]'); if (i) i.focus(); } return; } if (V.off[k]) delete V.off[k]; else V.off[k] = 1; paintBody(); };
+  // v18.52 · แตะได้ทั้งแถว (ยกเว้นช่องพิมพ์/เลือกผู้สอนแทน)
+  window.k8Lv4RowTap = function (ev, row) { if (ev.target.closest('select, input, button, option, label')) return; window.k8Lv4Tog(row); };
   window.k8Lv4MS = function (inp) { V.msub[inp.dataset.k] = inp.value; inp.classList.toggle('is-need', !inp.value.trim()); paintMeta(); };
   window.k8Lv4Sub = function (sel) { const k = sel.dataset.k, v = sel.value; if (!v) delete V.subs[k]; else if (v === '__o') V.subs[k] = { id: '', name: (V.subs[k] && V.subs[k].other ? V.subs[k].name : ''), other: true }; else { const [id, ...n] = v.split('|'); V.subs[k] = { id, name: n.join('|') }; } paintBody(); if (v === '__o') { const i = document.querySelector('.k8-lv4-oth input[data-k="' + CSS.escape(k) + '"]'); if (i) i.focus(); } };
   window.k8Lv4Oth = function (inp) { const k = inp.dataset.k; V.subs[k] = { id: '', name: inp.value.trim(), other: true }; try { const op = document.querySelector('.k8-lv4-sub[data-k="' + CSS.escape(k) + '"] option[value="__o"]'); if (op) op.textContent = inp.value.trim() || 'อื่น ๆ (พิมพ์ชื่อ)'; } catch (e) {} const row = inp.closest('.k8-lv4-oth'); const prev = row && row.previousElementSibling; if (prev) { prev.classList.toggle('is-need', !inp.value.trim()); const s = prev.querySelector('select'); if (s) s.classList.toggle('is-ok', !!inp.value.trim()); } paintMeta(); };
@@ -11343,4 +11345,20 @@ window.k8HfMiss = function (slot) {
     if (first) { let n = 1; try { n = parseInt(localStorage.getItem(KEY), 10) || 1; } catch (e) {} requestAnimationFrame(() => window.k8AzGo(n, 1)); }
   };
   window.addEventListener('popstate', () => { const el = document.getElementById('k8Az'); if (el && !el.hidden) { el.hidden = true; window.k8AzGrid(0); document.documentElement.classList.remove('k8-docs-open'); } });
+})();
+
+/* ---------- v18.52 · หมุนจอ: อาจารย์/แอดมินหมุนแนวนอนได้ · นักเรียนบนมือถือใช้แนวตั้ง ---------- */
+(function () {
+  let last = null;
+  const isStu = () => { let a = null, s = null; try { a = currentAdmin; } catch (e) {} try { s = currentStudent; } catch (e) {} return !!s && !a; };
+  const phone = () => { try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch (e) { return false; } };
+  function apply() {
+    const stu = isStu(); document.documentElement.classList.toggle('k8-stu-ui', stu);
+    if (stu === last) return; last = stu;
+    try { if (screen.orientation && screen.orientation.lock) { if (stu && phone()) screen.orientation.lock('portrait').catch(() => {}); else if (screen.orientation.unlock) screen.orientation.unlock(); } } catch (e) {}
+  }
+  function ensure() { if (document.getElementById('k8Rot')) return; document.body.insertAdjacentHTML('beforeend', '<div class="k8-rot" id="k8Rot" aria-live="polite"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><b>หมุนโทรศัพท์เป็นแนวตั้ง</b><small>หน้านักเรียนออกแบบสำหรับแนวตั้ง</small></div>'); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { ensure(); apply(); }); else { ensure(); apply(); }
+  setInterval(apply, 1500);
+  window.addEventListener('orientationchange', apply);
 })();

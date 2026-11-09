@@ -4221,25 +4221,44 @@ async function initLiveCamera() {
     return false;
   }
 
+  // v18.52 · ต้องปิดกล้องเดิมให้หมดก่อน (Android หลายรุ่นเปิดกล้องที่ 2 ไม่ได้ถ้ากล้องแรกยังไม่ปล่อย) แล้วรอสักครู่
+  let prevDeviceId = '';
   if (activeCameraStream) {
-    try {
-      activeCameraStream.getTracks().forEach(track => track.stop());
-    } catch (e) {}
+    try { const t0 = activeCameraStream.getVideoTracks()[0]; prevDeviceId = (t0 && t0.getSettings && t0.getSettings().deviceId) || ''; } catch (e) {}
+    try { activeCameraStream.getTracks().forEach(track => track.stop()); } catch (e) {}
+    activeCameraStream = null;
+    if (video) { try { video.srcObject = null; } catch (e) {} }
+    await new Promise((r) => setTimeout(r, 300));
   }
+  const want = currentFacingMode;
+  const facingOf = (st) => { try { const t = st && st.getVideoTracks()[0]; const f = t && t.getSettings && t.getSettings().facingMode; return f === 'user' || f === 'environment' ? f : ''; } catch (e) { return ''; } };
+  const devIdOf = (st) => { try { const t = st && st.getVideoTracks()[0]; return (t && t.getSettings && t.getSettings().deviceId) || ''; } catch (e) { return ''; } };
+  const okFor = (st) => { const f = facingOf(st); if (f) return f === want; const id = devIdOf(st); return !(prevDeviceId && id && id === prevDeviceId); };
+  const drop = (st) => { try { st.getTracks().forEach((t) => t.stop()); } catch (e) {} };
 
   let stream = null;
   // v17.83 · บังคับกล้องตามที่เลือก (exact) ก่อน · ถ้าไม่ได้ค่อยลดเงื่อนไขลง
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: want }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    if (stream && !okFor(stream)) { drop(stream); stream = null; }
   } catch (e0) { stream = null; }
-  // ไม่มีค่า facingMode ให้ใช้ (บางเครื่อง Android/แท็บเล็ต): เลือกจากรายชื่อกล้องแทน
-  if (!stream && currentFacingMode === 'environment') {
+  // v18.52 · ไม่ได้กล้องที่ต้องการ: ไล่ลองทีละกล้องจากรายชื่อ (ตามป้ายชื่อ หน้า/หลัง ก่อน) และตรวจว่าได้กล้องที่ต้องการจริง
+  if (!stream) {
     try {
       const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
-      const back = devs.find((d) => /back|rear|environment|หลัง/i.test(d.label || '')) || (devs.length > 1 ? devs[devs.length - 1] : null);
-      if (back) stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: back.deviceId } }, audio: false });
+      const isBack = (d) => /back|rear|environment|หลัง|world/i.test(d.label || ''), isFront = (d) => /front|user|facetime|หน้า|selfie/i.test(d.label || '');
+      const pref = want === 'environment' ? devs.filter(isBack).concat(devs.filter((d) => !isBack(d) && !isFront(d)).reverse()) : devs.filter(isFront).concat(devs.filter((d) => !isBack(d) && !isFront(d)));
+      const order = pref.concat(devs.filter((d) => pref.indexOf(d) === -1 && d.deviceId !== prevDeviceId));
+      for (const d of order) {
+        if (!d.deviceId || d.deviceId === prevDeviceId) continue;
+        let st = null; try { st = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: d.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); } catch (e) { st = null; }
+        if (st && okFor(st)) { stream = st; break; }
+        if (st) drop(st);
+      }
     } catch (e1) { stream = null; }
   }
+  // สลับกล้องจากกล้องที่เปิดอยู่ แต่หาอีกกล้องไม่ได้ → แจ้งว่าสลับไม่ได้ (เดิมได้กล้องเดิมแต่แค่กลับภาพ)
+  if (!stream && prevDeviceId) { if (overlay) overlay.style.display = 'block'; return false; }
   if (!stream) try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -4280,7 +4299,8 @@ async function initLiveCamera() {
       video.srcObject = stream;
       video.style.display = 'block';
       // Mirror เฉพาะกล้องหน้า ส่วนกล้องหลังไม่ต้อง Mirror
-      video.className = currentFacingMode === 'user' ? 'camera-stream camera-front' : 'camera-stream camera-back';
+      const act = facingOf(stream) || want; window.k8CamFacing = act;
+      video.className = act === 'user' ? 'camera-stream camera-front' : 'camera-stream camera-back';
       try {
         await video.play();
       } catch (playErr) {
@@ -4474,7 +4494,7 @@ async function executePrayerCaptureStep2() {
   const ctx = canvas.getContext('2d');
 
   // วาดเฟรมกล้องพร้อมแก้ไขการ Mirror
-  if (currentFacingMode === 'user') {
+  if ((window.k8CamFacing || currentFacingMode) === 'user') {
     ctx.save();
     ctx.scale(-1, 1);
     ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
@@ -4731,7 +4751,7 @@ function captureAndRecordPrayer() {
   const ctx = canvas.getContext('2d');
 
   // วาดภาพจากกล้อง
-  if (currentFacingMode === 'user') {
+  if ((window.k8CamFacing || currentFacingMode) === 'user') {
     // กลับด้านภาพให้อ่านตัวหนังสือถูกทิศ
     ctx.save();
     ctx.scale(-1, 1);

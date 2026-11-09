@@ -5274,3 +5274,42 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 .k8-lv4-t { font-weight: 500; color: #64748b; font-size: 11.5px; margin-left: 4px; }
 .k8-lv4-msub { width: 100%; height: 34px; margin-top: 4px; border: 1.5px solid #0369a1; border-radius: 9px; padding: 0 9px; font: 500 13px 'IBM Plex Sans Thai', sans-serif; box-sizing: border-box; background: #fff; }
 .k8-lv4-msub.is-need { border-color: #fca5a5; }
+/* v18.52 · นักเรียนบนมือถือ: แนวนอน → ขอให้หมุนเป็นแนวตั้ง (อาจารย์/แอดมินใช้แนวนอนได้) */
+.k8-rot { display: none; }
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  html.k8-stu-ui .k8-rot { display: flex; position: fixed; inset: 0; z-index: 99999; background: #0c4a6e; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; font-family: 'IBM Plex Sans Thai', sans-serif; }
+  html.k8-stu-ui .k8-rot svg { animation: k8RotA 1.6s ease-in-out infinite; } html.k8-stu-ui .k8-rot b { font-size: 18px; } html.k8-stu-ui .k8-rot small { font-size: 13px; opacity: .8; }
+}
+@keyframes k8RotA { 0%, 30% { transform: rotate(-90deg); } 60%, 100% { transform: rotate(0deg); } }
+/* v18.52 · แถวคาบ: แตะได้ทั้งแถว · ช่องวิชากับช่องผู้สอนแทนสูงเท่ากันและอยู่แนวเดียวกัน */
+.k8-lv4-row { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.k8-lv4-row:not(.is-need):hover { background: #f8fafc; }
+.k8-lv4-row.is-man { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 10px; row-gap: 4px; align-items: center; }
+.k8-lv4-row.is-man > .k8-lv4-ck { grid-row: 1 / span 2; }
+.k8-lv4-row.is-man > .k8-lv4-rt { display: contents; }
+.k8-lv4-row.is-man > .k8-lv4-rt > b { grid-column: 2 / -1; grid-row: 1; }
+.k8-lv4-row.is-man > .k8-lv4-rt > small, .k8-lv4-row.is-man > .k8-lv4-rt > .k8-lv4-msub { grid-column: 2; grid-row: 2; margin-top: 0; }
+.k8-lv4-row.is-man > .k8-lv4-sub { grid-column: 3; grid-row: 2; max-width: none; width: 170px; }
+.k8-lv4-msub, .k8-lv4-row.is-man > .k8-lv4-sub { height: 38px; box-sizing: border-box; }
+@media (max-width: 420px) { .k8-lv4-row.is-man > .k8-lv4-sub { width: 140px; } }
+/* v18.52 · อาจารย์บนมือถือแนวนอน (จอเตี้ย): แถบเมนูล่างเล็กลง · ลดระยะบน · ฟอร์มลาสอน 2 คอลัมน์เต็มความสูง */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.teacher-portal-active .teacher-bottom-nav-bar { height: 50px !important; bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important; padding-top: 4px !important; padding-bottom: 4px !important; max-width: 520px; }
+  body .teacher-bottom-nav-bar .teacher-bottom-nav-item { height: 40px !important; flex-direction: row !important; gap: 6px !important; font-size: 12px !important; }
+  body .teacher-bottom-nav-bar .teacher-bottom-nav-item svg { width: 18px; height: 18px; }
+  body.teacher-portal-active .main-wrapper { padding-top: 8px !important; }
+  html #view-teacher, html.k8-tp #view-teacher { padding-top: 0 !important; padding-bottom: 76px !important; max-width: none; padding-left: max(16px, env(safe-area-inset-left)) !important; padding-right: max(16px, env(safe-area-inset-right)) !important; }
+  body.teacher-portal-active .k8-th-hero { margin-top: 0 !important; }
+  #k8LvModal.modal-overlay { padding: 0 !important; align-items: stretch !important; }
+  #k8LvModal .modal-dialog.k8-sheet.k8-lv4-dlg { max-width: none !important; width: 100vw !important; max-height: 100dvh !important; height: 100dvh; border-radius: 0 !important; }
+  #k8LvModal .k8-sheet-head { padding-top: 8px !important; padding-bottom: 8px !important; }
+}
+@media (orientation: landscape) and (max-height: 520px) and (min-width: 640px) {
+  #k8LvForm.k8-lv4f.has-rows { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 20px; align-content: start; align-items: start; }
+  #k8LvForm.k8-lv4f.has-rows > * { grid-column: 1; }
+  #k8LvForm.k8-lv4f.has-rows > .k8-lv4-rowsec { grid-column: 2; grid-row: 1 / span 4; border-bottom: 0; padding-top: 0; position: sticky; top: 0; }
+  #k8LvForm.k8-lv4f.has-rows > .k8-lv4-foot { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-end; gap: 14px; padding: 8px 0 10px; }
+  #k8LvForm.k8-lv4f.has-rows > .k8-lv4-foot .k8-lv4-go { min-width: 200px; height: 44px; }
+  #k8LvForm.k8-lv4f .k8-lv4-rows { max-height: calc(100dvh - 190px); overflow: auto; }
+}
+#k8LvForm.k8-lv4f .k8-lv4-row.is-man > .k8-lv4-sub { max-width: none; width: 180px; }

@@ -5,7 +5,7 @@
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#ffffff",
   "theme_color": "#0284c7",
   "description": "ระบบเช็คชื่อ มาเรียน ละหมาด 5 เวลา และกิจกรรม พร้อมกล้อง Live Selfie และ GPS Geofencing",
