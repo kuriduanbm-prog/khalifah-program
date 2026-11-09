@@ -2564,6 +2564,12 @@ html[data-theme="dark"] .k8-hr-ic { background-color: #0f1733 !important; }
 html[data-theme="dark"] .k8-hr-tx small { color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-hr-bars i { background-color: #101a39 !important; }
 html[data-theme="dark"] .k8-hr-x:hover { color: #b6bcc3 !important; background-color: #181f26 !important; }
+html[data-theme="dark"] .k8-geo-c { background-color: #121212 !important; color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-geo-ic { background-color: #2f1111 !important; }
+html[data-theme="dark"] .k8-geo-c h3 { color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-geo-c p { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-geo-c ol b { color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-geo-close { background-color: #1a2229 !important; color: #c1c7cf !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

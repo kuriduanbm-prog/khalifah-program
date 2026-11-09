@@ -2973,7 +2973,7 @@ function fetchFreshPrayerLocation() {
         };
 
         startGpsCountdownTimer();
-        initLiveCamera();
+        // v18.60 · ไม่เปิดกล้องตรงนี้แล้ว (ผู้เรียกเปิดเอง) · เดิมเปิดซ้อน 2 ครั้งพร้อมกัน → มือถือบางรุ่นขึ้น "กล้องถูกใช้งานอยู่"
         updateCameraOverlayText();
         checkPrayerUnlockState();
         resolve(verifiedLocation);
@@ -4212,7 +4212,14 @@ let prayerCheckStep = 1;
 /**
  * เปิดกล้องสด In-App Live Camera Stream (Resilient Tiered Fallback)
  */
-async function initLiveCamera() {
+let k8CamInitP = null;
+function initLiveCamera() {
+  // v18.60 · กันเปิดกล้องซ้อนกัน (เรียกซ้ำระหว่างกำลังเปิด → ใช้ผลเดียวกัน)
+  if (k8CamInitP) return k8CamInitP;
+  k8CamInitP = k8InitLiveCamera_().finally(() => { k8CamInitP = null; });
+  return k8CamInitP;
+}
+async function k8InitLiveCamera_() {
   const video = document.getElementById('cameraStream');
   const overlay = document.getElementById('cameraOverlayInfo');
 
@@ -4448,8 +4455,40 @@ async function startPrayerCheckStep1() {
       btnCenter.disabled = false;
       btnCenter.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> 1. ตรวจสอบพิกัด GPS & เปิดกล้อง';
     }
-    showToast('ไม่สามารถดึงพิกัดได้: ' + (err.message || err) + ' (กรุณาเปิด Location/GPS บนอุปกรณ์)', 'error');
+    k8GeoFail(err);
   }
+}
+
+// v18.60 · พิกัดไม่ได้: แยกสาเหตุ (ไม่ได้อนุญาต / GPS ปิด / หาไม่ทัน) และบอกวิธีแก้ทีละขั้นตามเครื่อง
+function k8GeoFail(err) {
+  const code = err && err.code;
+  if (code === 1) return k8GeoHelp();
+  if (code === 2) return showToast('หาตำแหน่งไม่ได้ · เปิด "ตำแหน่ง/GPS" ในแผงตั้งค่าด่วนของมือถือ แล้วกดตรวจสอบพิกัดอีกครั้ง', 'error');
+  if (code === 3) return showToast('หาตำแหน่งไม่ทันเวลา · ออกไปที่โล่งหรือใกล้หน้าต่าง แล้วลองใหม่อีกครั้ง', 'warning');
+  showToast('ไม่สามารถดึงพิกัดได้: ' + ((err && err.message) || err) + ' · ลองใหม่อีกครั้ง', 'error');
+}
+function k8GeoHelp() {
+  const ua = navigator.userAgent || ''; const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const app = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  const samsung = /SamsungBrowser/i.test(ua);
+  const steps = ios ? [
+    'เปิดแอป <b>การตั้งค่า</b> → <b>ความเป็นส่วนตัวและความปลอดภัย</b> → <b>บริการหาตำแหน่ง</b> → เปิด',
+    'ในหน้าเดียวกัน แตะ <b>' + (app ? 'Safari / เว็บไซต์ Safari' : 'Safari Websites') + '</b> → เลือก <b>ขณะใช้งานแอป</b> และเปิด <b>ตำแหน่งที่แม่นยำ</b>',
+    'กลับมาที่ Safari แตะ <b>aA</b> ข้างช่องที่อยู่ → <b>การตั้งค่าเว็บไซต์</b> → <b>ตำแหน่ง</b> → <b>อนุญาต</b>',
+    'ปิดแอปแล้วเปิดใหม่ จากนั้นกด "ตรวจสอบพิกัด" อีกครั้ง'
+  ] : app ? [
+    'กดค้างที่ไอคอนแอปบนหน้าจอ → <b>ข้อมูลแอป (App info)</b>',
+    'แตะ <b>สิทธิ์ (Permissions)</b> → <b>ตำแหน่ง</b> → เลือก <b>อนุญาตเฉพาะขณะใช้แอป</b> และเปิด <b>ใช้ตำแหน่งที่แม่นยำ</b>',
+    'ถ้ายังไม่ได้ ให้ทำแบบเดียวกันกับแอป <b>' + (samsung ? 'Samsung Internet' : 'Chrome') + '</b>',
+    'ปิดแอปแล้วเปิดใหม่ จากนั้นกด "ตรวจสอบพิกัด" อีกครั้ง'
+  ] : [
+    'แตะไอคอน <b>แม่กุญแจ / ตั้งค่า</b> หน้าช่องที่อยู่เว็บด้านบน',
+    'แตะ <b>สิทธิ์ (Permissions)</b> → <b>ตำแหน่ง (Location)</b> → <b>อนุญาต</b>',
+    'ถ้าไม่มีตัวเลือก: ไปที่ การตั้งค่ามือถือ → แอป → <b>' + (samsung ? 'Samsung Internet' : 'Chrome') + '</b> → สิทธิ์ → ตำแหน่ง → อนุญาต',
+    'รีเฟรชหน้าเว็บ แล้วกด "ตรวจสอบพิกัด" อีกครั้ง'
+  ];
+  let el = document.getElementById('k8GeoHelp'); if (el) el.remove();
+  document.body.insertAdjacentHTML('beforeend', '<div class="k8-geo" id="k8GeoHelp" role="dialog" aria-modal="true" aria-labelledby="k8GeoT"><div class="k8-geo-c"><div class="k8-geo-ic" aria-hidden="true">📍</div><h3 id="k8GeoT">ยังไม่ได้อนุญาตให้แอปใช้ตำแหน่ง</h3><p>การเช็คละหมาดต้องยืนยันว่าอยู่ที่จุดละหมาด จึงต้องใช้ตำแหน่งก่อนเปิดกล้อง · เครื่องนี้เคยกด <b>"ไม่อนุญาต/บล็อก"</b> ไว้ ต้องเปิดสิทธิ์เองตามขั้นตอนนี้</p><ol>' + steps.map((x) => '<li>' + x + '</li>').join('') + '</ol><div class="k8-geo-b"><button type="button" class="k8-geo-close" onclick="document.getElementById(\'k8GeoHelp\').remove()">ปิด</button><button type="button" class="k8-geo-retry" onclick="document.getElementById(\'k8GeoHelp\').remove();try{startPrayerCheckStep1()}catch(e){}">ลองอีกครั้ง</button></div></div></div>');
 }
 
 /**
@@ -5059,7 +5098,7 @@ async function savePrayerNoteOnly() {
     try {
       await fetchFreshPrayerLocation();
     } catch (err) {
-      showToast('⚠️ ไม่สามารถดึงพิกัด GPS ได้: ' + err.message + ' กรุณาเปิด Location บนอุปกรณ์', 'error');
+      k8GeoFail(err);
       return;
     }
   }
