@@ -3545,7 +3545,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.65';
+  const APP_VERSION = '18.66';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10690,6 +10690,9 @@ window.k8HfMiss = function (slot) {
     if (!held.length) return plan ? 'สัปดาห์นี้ยังไม่ได้เช็คชื่อ' : '';
     return 'สัปดาห์นี้ ครั้งที่ ' + held.length + ' แล้ว · ล่าสุด ' + dTh(held[held.length - 1]);
   }
+  // v18.66 · กลุ่มที่ร้อยละการเข้าร่วมไม่ถึง 100% ขึ้นก่อน (น้อยสุดอยู่บน) · ยังไม่มีข้อมูลต่อท้ายกลุ่มที่ไม่ถึง · 100% อยู่ล่าง
+  function sortG(L) { const rank = (g) => { const p = pct(g.total); return p == null ? 99.5 : p; }; return L.map((g, i) => [g, i]).sort((a, b) => (rank(a[0]) - rank(b[0])) || (a[1] - b[1])).map((x) => x[0]); }
+  function heldTxt(g) { const inP = g.held.filter((d) => g.dates.indexOf(d) !== -1).length, ex = g.held.length - inP; return inP + '/' + g.dates.length + ' ครั้ง' + (ex ? ' (+' + ex + ' นอกตาราง)' : ''); }
   function sessHtml(g, adm) {
     // v18.65 · รวมวันที่เช็คชื่อนอกตาราง (เช็คซ้ำ/ผิดวัน) · ครั้งที่เช็คแล้วมีปุ่ม ✎ แก้ไข และ 🗑 ลบ
     const td = ymd(new Date()); const D = Array.from(new Set((g.dates || []).concat(g.held || []))).sort();
@@ -10730,7 +10733,7 @@ window.k8HfMiss = function (slot) {
   window.k8HqRepImg = async function () {
     if (!R.data) { try { showToast('ยังไม่มีข้อมูลให้บันทึก', 'warning'); } catch (e) {} return; }
     try { if (document.fonts && document.fonts.load) { await document.fonts.load('600 20px "IBM Plex Sans Thai"'); await document.fonts.load('700 20px "IBM Plex Sans Thai"'); } } catch (e) {}
-    const G = R.data.groups || []; const W = 1080, P = 40, F = '"IBM Plex Sans Thai", sans-serif';
+    const G = sortG(R.data.groups || []); const W = 1080, P = 40, F = '"IBM Plex Sans Thai", sans-serif';
     const ROW = 40, GH = 112; let H = 220; G.forEach((g) => { H += GH + 44 + g.members.length * ROW + 24; }); H += 60;
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d');
     x.fillStyle = '#f1f5f9'; x.fillRect(0, 0, W, H);
@@ -10747,7 +10750,7 @@ window.k8HfMiss = function (slot) {
       const gh = GH + 44 + g.members.length * ROW; x.fillStyle = '#fff'; rr(P - 10, y, W - 2 * P + 20, gh, 18); x.fill();
       const p = pct(g.total); x.textAlign = 'left';
       x.fillStyle = '#047857'; x.font = '700 28px ' + F; x.fillText(clip(g.teacherName || 'ยังไม่ระบุผู้ดูแล', 760), P + 8, y + 42);
-      x.fillStyle = '#475569'; x.font = '500 21px ' + F; x.fillText(clip(g.name + (g.location ? ' · ' + g.location : '') + ' · ' + g.members.length + ' คน · เช็คชื่อแล้ว ' + g.held.length + '/' + g.dates.length + ' ครั้ง', 820), P + 8, y + 74);
+      x.fillStyle = '#475569'; x.font = '500 21px ' + F; x.fillText(clip(g.name + (g.location ? ' · ' + g.location : '') + ' · ' + g.members.length + ' คน · เช็คชื่อแล้ว ' + heldTxt(g) + '', 820), P + 8, y + 74);
       const wk = weekInfo(g); if (wk) { x.fillStyle = '#0369a1'; x.font = '600 20px ' + F; x.fillText(clip(wk, 820), P + 8, y + 100); }
       x.textAlign = 'right'; x.font = '800 40px ' + F; x.fillStyle = p != null && p < 80 ? '#dc2626' : '#15803d'; x.fillText(p == null ? '–' : p + '%', W - P - 4, y + 60);
       let yy = y + GH; x.fillStyle = '#f8fafc'; x.fillRect(P, yy, W - 2 * P, 40);
@@ -10776,7 +10779,7 @@ window.k8HfMiss = function (slot) {
     let h = '<div class="k8-asum-tabs" role="tablist">' + [['week', 'สัปดาห์นี้'], ['month', 'เดือนนี้'], ['term', 'ภาคเรียนนี้']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (R.pre === k) + '" onclick="k8HqRepPre(\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
       '<div class="k8-atd-bar"><label class="k8-atd-date"><span>ตั้งแต่</span><input type="date" value="' + R.from + '" onchange="k8HqRepD(\'from\', this.value)"></label><label class="k8-atd-date"><span>ถึง</span><input type="date" value="' + R.to + '" max="' + ymd(new Date()) + '" onchange="k8HqRepD(\'to\', this.value)"></label></div>';
     if (!R.data) { B.innerHTML = h + '<p class="k8-asum-empty">' + (R.loading ? 'กำลังโหลดสรุปการเช็คชื่อ…' : 'โหลดข้อมูลไม่สำเร็จ · ตรวจว่าอัปเดต Code.gs เป็นรุ่นล่าสุดแล้ว') + '</p>'; return; }
-    const G = R.data.groups || [];
+    const G = sortG(R.data.groups || []);
     if (!G.length) { B.innerHTML = h + '<p class="k8-asum-empty">ยังไม่มีกลุ่มหะละเกาะฮฺ</p>'; return; }
     const T = { present: 0, late: 0, leave: 0, absent: 0, none: 0 }; let held = 0, plan = 0, mem = 0;
     G.forEach((g) => { Object.keys(T).forEach((k) => { T[k] += g.total[k] || 0; }); held += g.held.length; plan += g.dates.length; mem += g.members.length; });
@@ -10790,7 +10793,7 @@ window.k8HfMiss = function (slot) {
       const op = !!R.open[g.id];
       const wk = weekInfo(g);
       return '<article class="k8-hqr-g"><button type="button" class="k8-hqr-h" aria-expanded="' + op + '" onclick="k8HqRepT(\'' + esc(g.id) + '\')"><div><b>' + esc(g.teacherName || 'ยังไม่ระบุผู้ดูแล') + '</b><small>' + esc(g.name) + (g.location ? ' · ' + esc(g.location) : '') + ' · ผู้เรียน ' + g.members.length + ' คน</small>' +
-        '<small class="k8-hqr-s">เช็คชื่อแล้ว ' + g.held.length + '/' + g.dates.length + ' ครั้ง · มา ' + g.total.present + ' · สาย ' + g.total.late + ' · ลา ' + g.total.leave + ' · ขาด ' + g.total.absent + (g.total.none ? ' · ไม่ได้เช็ค ' + g.total.none : '') + '</small>' +
+        '<small class="k8-hqr-s">เช็คชื่อแล้ว ' + heldTxt(g) + ' · มา ' + g.total.present + ' · สาย ' + g.total.late + ' · ลา ' + g.total.leave + ' · ขาด ' + g.total.absent + (g.total.none ? ' · ไม่ได้เช็ค ' + g.total.none : '') + '</small>' +
         (wk ? '<small class="k8-hqr-wk">' + wk + '</small>' : '') +
         (miss.length ? '<small class="k8-hqr-miss">ยังไม่เช็คชื่อ: ' + miss.slice(0, 6).map(dTh).join(', ') + (miss.length > 6 ? ' และอีก ' + (miss.length - 6) + ' วัน' : '') + '</small>' : '') + '</div><span class="k8-hqr-p' + (p != null && p < 80 ? ' is-low' : '') + '">' + (p == null ? '–' : p + '%') + '</span></button>' +
         (op ? sessHtml(g, adm) : '') +
