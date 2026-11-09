@@ -5342,3 +5342,9 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 #m-nav-hasanat.k8-hr-dot::after { content: ''; position: absolute; top: 6px; left: calc(50% + 6px); width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 2px #fff; }
 html[data-theme="dark"] .k8-hr, html[data-theme="dark"] .k8-hr::after { background: #1e293b; border-color: #334155; } html[data-theme="dark"] .k8-hr-main { color: #f1f5f9; }
 .k8h-exit { display: none !important; }
+
+/* v18.59 · ดาวละหมาด: ป้ายทองกึ่งกลางขอบบนของรูปโปรไฟล์ */
+.hf-lg1-main { position: relative; }
+.hf-stars.hf-stars-badge { position: absolute; left: 44px; top: -11px; width: auto; translate: -50% 0; display: inline-flex; align-items: center; gap: 3px; background: linear-gradient(180deg, #fbbf24, #f59e0b); color: #fff; border-radius: 8px; padding: 2px 8px; box-shadow: 0 2px 6px rgba(0,0,0,.2); white-space: nowrap; z-index: 4; animation: k8StarPop .45s ease-out both; cursor: default; }
+.hf-stars.hf-stars-badge b { background: none; padding: 0; margin: 0; font: 700 12px 'IBM Plex Sans Thai', sans-serif; color: #fff; }
+.hf-stars.hf-stars-badge svg { display: block; flex: none; }

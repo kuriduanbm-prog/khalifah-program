@@ -302,7 +302,10 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (!el) { el = document.createElement('div'); el.id = 'hfStars'; el.className = 'hf-stars'; el.setAttribute('role', 'img'); host.prepend(el); }
     el.setAttribute('aria-label', 'ดาวละหมาดตรงเวลาครบสัปดาห์ ' + r.n + ' ดวง');
     el.title = 'ละหมาดตรงเวลาครบสัปดาห์ ' + r.n + ' ครั้ง';
-    el.innerHTML = (r.n <= 5 ? '<i>★</i>'.repeat(r.n) : '<i>★</i><b>×' + r.n + '</b>');
+    // v18.59 · ป้ายทองบนขอบบนของรูป "★ N" (ST4) · ไม่ทับข้อความบนบัตร ไม่ล้นขอบ
+    el.className = 'hf-stars hf-stars-badge';
+    el.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><b>' + r.n + '</b>';
+    { const ph = document.getElementById('hfPhoto'); if (ph) { const a = ph.getBoundingClientRect(), b = host.getBoundingClientRect(); if (a.width) el.style.left = (a.left - b.left + a.width / 2) + 'px'; } }
     const key = 'k8_star_seen_' + String(st.studentId).replace(/^0+/, '');
     let seen = ''; try { seen = localStorage.getItem(key) || ''; } catch (e) {}
     if (r.last && r.last !== seen) { try { localStorage.setItem(key, r.last); } catch (e) {} if (window.k8StarCelebrate) setTimeout(() => window.k8StarCelebrate(r.n), 700); }
@@ -3542,7 +3545,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.58';
+  const APP_VERSION = '18.59';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
