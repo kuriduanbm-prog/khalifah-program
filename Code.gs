@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.41'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.42'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3756,6 +3756,32 @@ function ttCo_(c, e) {
   return e;
 }
 function ttTeaches_(e, uid, nm) { if (!e) return false; uid = String(uid || '').toLowerCase(); if (uid && e.t && String(e.t).toLowerCase() === uid) return true; if (nm && e.tn && cleanVal(e.tn) === nm) return true; if (Array.isArray(e.ts) && uid && e.ts.some(function (u) { return String(u).toLowerCase() === uid; })) return true; return !!(nm && Array.isArray(e.tns) && e.tns.indexOf(nm) !== -1); }
+// v18.42 · คาบหะละเกาะฮฺ: แก้ผู้สอน (หลัก + ร่วม) ในชั้นใดชั้นหนึ่ง → ใช้กับคาบหะละเกาะฮฺเวลาเดียวกันทุกชั้น
+// ทำเฉพาะช่องที่ผู้สอนเปลี่ยนจากค่าเดิม (กันการบันทึกจากข้อมูลเก่าของชั้นอื่นทับกลับ)
+function ttIsHq_(e) { return !!e && /halaq|halak|หะละเกาะ|ฮะละเกาะ|หะลาเกาะ|ฮาลาเกาะ|ฮาละเกาะ/i.test(String(e.s || '') + ' ' + String(e.sn || '')); }
+function ttHqOf_(c) { return (Array.isArray(c) ? c : c ? [c] : []).filter(ttIsHq_)[0] || null; }
+function ttSig_(e) { return e ? JSON.stringify([e.t || '', e.tn || '', e.ts || [], e.tns || []]) : ''; }
+function ttSyncHalaqah_(g, cells, prevCells, session) {
+  const changed = {};
+  Object.keys(cells).forEach(function (k) { const e = ttHqOf_(cells[k]), was = ttHqOf_(prevCells[k]); if (!e || ttSig_(e) === ttSig_(was)) return; if (!was && !e.t && !e.tn && !(e.ts && e.ts.length)) return; changed[k] = e; });
+  const keys = Object.keys(changed); if (!keys.length) return {};
+  const st = (getSettings().data) || {}; const out = {};
+  ['1', '2', '3', '4', '5', '6'].forEach(function (og) {
+    if (og === String(g)) return;
+    let v = null; try { v = JSON.parse(st['Timetable_M' + og] || 'null'); } catch (e) {} if (!v || !v.cells) return;
+    let dirty = false;
+    keys.forEach(function (k) {
+      const src = changed[k]; const list = Array.isArray(v.cells[k]) ? v.cells[k] : v.cells[k] ? [v.cells[k]] : [];
+      list.forEach(function (e) { if (!ttIsHq_(e) || ttSig_(e) === ttSig_(src)) return; e.t = src.t || ''; e.tn = src.tn || ''; if (src.ts && src.ts.length) { e.ts = src.ts.slice(); e.tns = (src.tns || []).slice(); } else { delete e.ts; delete e.tns; } dirty = true; });
+    });
+    if (!dirty) return;
+    v.updatedAt = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'); v.by = (session && (session.name || session.userId)) || '';
+    const json = JSON.stringify(v); if (json.length > 45000) return;
+    saveSetting({ key: 'Timetable_M' + og, value: json, description: 'ตารางสอน ม.' + og + ' (JSON)' });
+    out[og] = v;
+  });
+  return out;
+}
 function ttIds_(a) { const o = (Array.isArray(a) ? a : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean).slice(0, 300); return o.filter(function (x, i) { return o.indexOf(x) === i; }); }
 function ttCleanCells_(src) {
   const cells = {};
@@ -3831,8 +3857,10 @@ function saveTimetable_(data, session) {
   const value = { grade: g, cells: cells, updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'), by: (session && (session.name || session.userId)) || '' };
   const json = JSON.stringify(value);
   if (json.length > 45000) return { success: false, message: 'ตารางยาวเกินไป ลองย่อชื่อวิชาหรือห้องเรียน' };
+  let prevCells = {}; try { prevCells = (JSON.parse(((getSettings().data) || {})['Timetable_M' + g] || 'null') || {}).cells || {}; } catch (e) {}
   saveSetting({ key: 'Timetable_M' + g, value: json, description: 'ตารางสอน ม.' + g + ' (JSON)' });
-  return { success: true, message: 'บันทึกตารางสอน ม.' + g + ' แล้ว', timetable: value };
+  let synced = {}; try { if (!data.noSync) synced = ttSyncHalaqah_(g, cells, prevCells, session); } catch (e) {}
+  return { success: true, message: 'บันทึกตารางสอน ม.' + g + ' แล้ว' + (Object.keys(synced).length ? ' · อัปเดตผู้สอนหะละเกาะฮฺใน ม.' + Object.keys(synced).join(', ม.') + ' ด้วย' : ''), timetable: value, synced: synced };
 }
 function saveTimetableConfig_(data) {
   data = data || {};

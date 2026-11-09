@@ -3498,7 +3498,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.41';
+  const APP_VERSION = '18.42';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6352,7 +6352,7 @@ window.k8RegBirthChange = function (v) {
     const gs = Object.keys(XL).sort(); const fail = [];
     for (let i = 0; i < gs.length; i++) {
       const g = gs[i]; if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก ม.' + g + ' (' + (i + 1) + '/' + gs.length + ')…'; }
-      let r = null; try { r = await gasApiCall('saveTimetable', { data: { grade: g, cells: XL[g].cells } }, 30000); } catch (e) { r = null; }
+      let r = null; try { r = await gasApiCall('saveTimetable', { data: { grade: g, cells: XL[g].cells, noSync: true } }, 30000); } catch (e) { r = null; }
       if (r && r.success) { T.data.grades = T.data.grades || {}; T.data.grades[g] = r.timetable; } else fail.push('ม.' + g + ((r && r.message) ? ' (' + r.message + ')' : ''));
     }
     try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
@@ -6578,7 +6578,7 @@ window.k8RegBirthChange = function (v) {
   function coBlock(e, i) {
     const ts = (e.ts || []).filter((u) => u !== e.t); const nm = (u) => { const tt = (T.teachers || []).find((x) => x.u === u); return tt ? tt.n : ((e.tns || [])[(e.ts || []).indexOf(u)] || u); };
     const left = (T.teachers || []).filter((t) => t.u !== e.t && ts.indexOf(t.u) === -1);
-    return '<div class="k8-nf-f k8-tt-co"><span>อาจารย์ผู้สอนร่วม <small>· ไม่บังคับ · ทุกคนจะเห็นคาบนี้ในตารางสอนและแจ้งลาได้</small></span><div class="k8-tt-co-list">' +
+    return '<div class="k8-nf-f k8-tt-co"><span>อาจารย์ผู้สอนร่วม <small>· ไม่บังคับ · ทุกคนจะเห็นคาบนี้ในตารางสอนและแจ้งลาได้' + (window.k8IsHalaqah && window.k8IsHalaqah(e) ? ' · คาบหะละเกาะฮฺ: ใช้กับทุกชั้นในเวลาเดียวกันอัตโนมัติ' : '') + '</small></span><div class="k8-tt-co-list">' +
       ts.map((u) => '<span class="k8-tt-co-chip">' + esc(nm(u)) + '<button type="button" aria-label="เอาออก" onclick="k8TtCoDel(' + i + ',\'' + esc(u).replace(/'/g, '&#39;') + '\')">×</button></span>').join('') +
       (left.length ? '<select class="k8-pe-sel k8-tt-co-add" onchange="k8TtCoAdd(' + i + ',this.value)"><option value="">＋ เพิ่มอาจารย์</option>' + left.map((t) => '<option value="' + esc(t.u) + '">' + esc(t.n) + '</option>').join('') + '</select>' : '') +
       '</div></div>';
@@ -6701,7 +6701,7 @@ window.k8RegBirthChange = function (v) {
     if (isX && r.extra) {
       T.data.extras = extrasOf().filter((e) => e.id !== r.extra.id).concat([r.extra]);
       if (T.grade === g) { T.xmeta = Object.assign({}, T.xmeta, { id: r.extra.id }); T.grade = 'x:' + r.extra.id; T.newX = null; }
-    } else if (!isX) { T.data.grades = T.data.grades || {}; T.data.grades[g] = r.timetable; }
+    } else if (!isX) { T.data.grades = T.data.grades || {}; T.data.grades[g] = r.timetable; if (r.synced && Object.keys(r.synced).length) { Object.keys(r.synced).forEach((og) => { T.data.grades[og] = r.synced[og]; }); toast('อัปเดตผู้สอนหะละเกาะฮฺใน ม.' + Object.keys(r.synced).join(', ม.') + ' ให้ตรงกันแล้ว', 'success'); } }
     try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
     const changed = JSON.stringify(T.draft || {}) !== snap; // แก้เพิ่มระหว่างบันทึก → บันทึกรอบถัดไป
     if (!changed) T.dirty = false;
@@ -6727,7 +6727,7 @@ window.k8RegBirthChange = function (v) {
       try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
       toast(r.message, 'success'); renderAdmin(); return;
     }
-    T.data.grades = T.data.grades || {}; T.data.grades[T.grade] = r.timetable; T.dirty = false; startDraft(T.grade);
+    T.data.grades = T.data.grades || {}; T.data.grades[T.grade] = r.timetable; if (r.synced) Object.keys(r.synced).forEach((og) => { T.data.grades[og] = r.synced[og]; }); T.dirty = false; startDraft(T.grade);
     try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
     toast(r.message, 'success'); renderAdmin();
   };
