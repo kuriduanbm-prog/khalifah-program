@@ -3498,7 +3498,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.42';
+  const APP_VERSION = '18.43';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11129,21 +11129,64 @@ window.k8HfMiss = function (slot) {
   window.k8CeleClose = function () { const el = document.getElementById('k8Cele'); if (!el) return; el.classList.add('is-out'); setTimeout(() => el.remove(), 250); };
 })();
 
-/* ---------- v18.35 · นักเรียน: บทอ่านอัซกัร (เปิดหนังสือ PubHTML5 ในแอป) ---------- */
+/* ---------- v18.35 · นักเรียน: บทอ่านอัซกัร · v18.43 ตัวอ่านของแอปเอง (เลื่อนอ่านทีละหน้า + เลือกหน้า + ซูม) ---------- */
 (function () {
-  const URL_BOOK = 'https://online.pubhtml5.com/nbxq/bael/';
+  const BASE = 'https://online.pubhtml5.com/nbxq/bael/files/';
   const URL_PAGE = 'https://pubhtml5.com/nbxq/bael/';
+  const N = 66, KEY = 'k8_az_page';
+  let cur = 1, zoom = 1, io = null, built = false;
+  const big = (n) => BASE + 'large/' + n + '.webp';
+  const thumb = (n) => BASE + 'thumb/' + n + '.webp';
+  const IC = { back: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>', prev: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>', next: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>', grid: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' };
   function ensure() {
     if (document.getElementById('k8Az')) return;
-    document.body.insertAdjacentHTML('beforeend', '<div class="k8-az" id="k8Az" hidden role="dialog" aria-modal="true" aria-labelledby="k8AzT"><header class="k8-az-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8AzT">บทอ่านอัซกัร</h2><small>ปัดหรือแตะขอบหน้าเพื่อพลิกหน้า · ซูมได้</small></div><a class="k8-az-ext" href="' + URL_PAGE + '" target="_blank" rel="noopener">เปิดแบบเต็ม ↗</a></header><div class="k8-az-b"><p class="k8-az-load" id="k8AzLoad">กำลังเปิดหนังสือ…</p><iframe id="k8AzF" title="หนังสือบทอ่านอัซกัร" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div></div>');
-    const f = document.getElementById('k8AzF');
-    f.addEventListener('load', () => { if (!f.src) return; const l = document.getElementById('k8AzLoad'); if (l) l.hidden = true; f.parentElement.classList.add('is-ready'); });
+    let pages = ''; for (let n = 1; n <= N; n++) pages += '<figure class="k8-az-pg" id="k8AzP' + n + '" data-n="' + n + '"><img alt="หน้า ' + n + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="1353" height="1800" data-src="' + big(n) + '"><figcaption>' + n + '</figcaption></figure>';
+    let th = ''; for (let n = 1; n <= N; n++) th += '<button type="button" class="k8-az-th" data-n="' + n + '" onclick="k8AzGo(' + n + ',1)"><img alt="" loading="lazy" referrerpolicy="no-referrer" data-src="' + thumb(n) + '"><span>' + n + '</span></button>';
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-az" id="k8Az" hidden role="dialog" aria-modal="true" aria-labelledby="k8AzT">' +
+      '<header class="k8-az-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()">' + IC.back + '</button><div><h2 id="k8AzT">บทอ่านอัซกัร</h2><small>เลื่อนขึ้น–ลงเพื่ออ่าน · แตะ "หน้า" เพื่อเลือกหน้า</small></div><a class="k8-az-ext" href="' + URL_PAGE + '" target="_blank" rel="noopener">เปิดแบบเต็ม ↗</a></header>' +
+      '<div class="k8-az-b" id="k8AzB"><div class="k8-az-pages" id="k8AzPages">' + pages + '</div></div>' +
+      '<nav class="k8-az-bar" aria-label="เลือกหน้า"><button type="button" class="k8-az-nb" aria-label="หน้าก่อนหน้า" onclick="k8AzStep(-1)">' + IC.prev + '</button>' +
+      '<button type="button" class="k8-az-cur" onclick="k8AzGrid(1)">' + IC.grid + '<span>หน้า <b id="k8AzNo">1</b> / ' + N + '</span></button>' +
+      '<button type="button" class="k8-az-zm" id="k8AzZm" onclick="k8AzZoom()" aria-label="ขยาย">100%</button>' +
+      '<button type="button" class="k8-az-nb" aria-label="หน้าถัดไป" onclick="k8AzStep(1)">' + IC.next + '</button></nav>' +
+      '<div class="k8-az-grid" id="k8AzGrid" hidden><div class="k8-az-gh"><b>เลือกหน้า</b><label>ไปหน้า <input type="number" id="k8AzIn" min="1" max="' + N + '" inputmode="numeric" onkeydown="if(event.key===\'Enter\')k8AzGo(this.value,1)"></label><button type="button" onclick="k8AzGo(document.getElementById(\'k8AzIn\').value,1)">ไป</button><button type="button" class="k8-az-gx" aria-label="ปิด" onclick="k8AzGrid(0)">×</button></div><div class="k8-az-ths">' + th + '</div></div></div>');
+    // โหลดรูปเฉพาะหน้าที่ใกล้จะเห็น (ประหยัดเน็ต)
+    const B = document.getElementById('k8AzB');
+    io = new IntersectionObserver((es) => {
+      es.forEach((e) => { const img = e.target.querySelector('img'); if (e.isIntersecting && img && !img.src) img.src = img.dataset.src; });
+      let best = null, bv = 0; document.querySelectorAll('#k8AzPages .k8-az-pg').forEach((f) => { const r = f.getBoundingClientRect(), br = B.getBoundingClientRect(); const v = Math.min(r.bottom, br.bottom) - Math.max(r.top, br.top); if (v > bv) { bv = v; best = f; } });
+      if (best) setCur(+best.dataset.n);
+    }, { root: B, rootMargin: '150% 0px', threshold: [0, 0.25, 0.5, 0.75] });
+    document.querySelectorAll('#k8AzPages .k8-az-pg').forEach((f) => io.observe(f));
+    B.addEventListener('scroll', () => { clearTimeout(B._t); B._t = setTimeout(() => { const br = B.getBoundingClientRect(); let best = null, bv = 0; document.querySelectorAll('#k8AzPages .k8-az-pg').forEach((f) => { const r = f.getBoundingClientRect(); const v = Math.min(r.bottom, br.bottom) - Math.max(r.top, br.top); if (v > bv) { bv = v; best = f; } }); if (best) setCur(+best.dataset.n); }, 80); }, { passive: true });
+    document.querySelectorAll('#k8AzPages img').forEach((img) => img.addEventListener('error', () => { const f = img.closest('figure'); if (f && !f.querySelector('.k8-az-err')) f.insertAdjacentHTML('beforeend', '<p class="k8-az-err">โหลดหน้านี้ไม่ได้ · <a href="' + URL_PAGE + '" target="_blank" rel="noopener">เปิดแบบเต็ม</a></p>'); }));
+    built = true;
   }
+  function setCur(n) { cur = n; const no = document.getElementById('k8AzNo'); if (no) no.textContent = n; try { localStorage.setItem(KEY, String(n)); } catch (e) {} }
+  window.k8AzGo = function (n, closeGrid) {
+    n = Math.max(1, Math.min(N, parseInt(n, 10) || 1));
+    const f = document.getElementById('k8AzP' + n); const B = document.getElementById('k8AzB'); if (!f || !B) return;
+    const img = f.querySelector('img'); if (img && !img.src) img.src = img.dataset.src;
+    B.scrollTo({ top: f.offsetTop - 8, behavior: closeGrid ? 'auto' : 'smooth' }); setCur(n);
+    if (closeGrid) window.k8AzGrid(0);
+  };
+  window.k8AzStep = function (d) { window.k8AzGo(cur + d); };
+  window.k8AzZoom = function () {
+    const B = document.getElementById('k8AzB'); const ratio = B.scrollTop / Math.max(1, B.scrollHeight);
+    zoom = zoom === 1 ? 1.5 : zoom === 1.5 ? 2 : 1;
+    document.getElementById('k8AzPages').style.setProperty('--z', zoom);
+    document.getElementById('k8AzZm').textContent = Math.round(zoom * 100) + '%';
+    requestAnimationFrame(() => { B.scrollTop = ratio * B.scrollHeight; });
+  };
+  window.k8AzGrid = function (on) {
+    const g = document.getElementById('k8AzGrid'); if (!g) return; g.hidden = !on;
+    if (on) { g.querySelectorAll('.k8-az-th').forEach((b) => { const im = b.querySelector('img'); if (!im.src) im.src = im.dataset.src; b.classList.toggle('on', +b.dataset.n === cur); }); const a = g.querySelector('.k8-az-th.on'); if (a) a.scrollIntoView({ block: 'center' }); const i = document.getElementById('k8AzIn'); if (i) i.value = ''; }
+  };
   window.k8AzOpen = function () {
-    ensure(); const el = document.getElementById('k8Az'); const f = document.getElementById('k8AzF');
-    if (!f.src) { f.src = URL_BOOK; setTimeout(() => { const l = document.getElementById('k8AzLoad'); if (l && !l.hidden) l.innerHTML = 'ถ้าหนังสือไม่ขึ้น <a href="' + URL_PAGE + '" target="_blank" rel="noopener">แตะเพื่อเปิดในหน้าต่างใหม่</a>'; }, 12000); }
+    const first = !built; ensure(); const el = document.getElementById('k8Az');
     el.hidden = false; document.documentElement.classList.add('k8-docs-open');
     try { history.pushState({ k8az: 1 }, ''); } catch (e) {}
+    if (first) { let n = 1; try { n = parseInt(localStorage.getItem(KEY), 10) || 1; } catch (e) {} requestAnimationFrame(() => window.k8AzGo(n, 1)); }
   };
-  window.addEventListener('popstate', () => { const el = document.getElementById('k8Az'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
+  window.addEventListener('popstate', () => { const el = document.getElementById('k8Az'); if (el && !el.hidden) { el.hidden = true; window.k8AzGrid(0); document.documentElement.classList.remove('k8-docs-open'); } });
 })();
