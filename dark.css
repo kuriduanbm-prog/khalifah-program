@@ -2573,6 +2573,15 @@ html[data-theme="dark"] .k8-geo-close { background-color: #1a2229 !important; co
 html[data-theme="dark"] .k8-perm { background-color: #33230f !important; }
 html[data-theme="dark"] .k8-perm-tx b { color: #f19374 !important; }
 html[data-theme="dark"] .k8-perm-tx small { color: #f19374 !important; }
+html[data-theme="dark"] .k8-hqr-tools button { border: 1px solid #264555 !important; background-color: #0e2432 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-hqr-tools small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-hqr-h .k8-hqr-wk { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-hqr-sess { border-top: 1px solid #2d363f !important; }
+html[data-theme="dark"] .k8-hqr-sess > small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-hqr-sess .is-ok { background-color: #153821 !important; color: #79eca4 !important; border-color: #2b5238 !important; }
+html[data-theme="dark"] .k8-hqr-sess .is-miss { background-color: #2f1111 !important; color: #ed7878 !important; border-color: #522424 !important; }
+html[data-theme="dark"] .k8-hqr-sess .is-fut { background-color: #181f26 !important; border-color: #323941 !important; }
+html[data-theme="dark"] .k8-hq-asadm { background-color: #0f1733 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
