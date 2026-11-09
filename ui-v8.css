@@ -5095,8 +5095,11 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-card:has(.k8-ta-sl) .k8-ta-opts { gri
 html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-column: 2 / 4; width: auto; justify-self: start; margin: 0; }
 .k8-pd-b.is-per { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
 /* v18.34 · โลโก้บนการ์ดอาจารย์ */
-.k8-th-hero { position: relative; overflow: hidden; }
-.k8-th-hero > :not(.k8-th-wm) { position: relative; z-index: 1; }
+.k8-th-hero { position: relative; }
+.k8-th-hero > :not(.k8-th-wm):not(.k8-th-wmbox) { position: relative; z-index: 1; }
+/* v18.45 · ลายน้ำถูกตัดในกรอบของตัวเอง → เมนูบัญชี (ออกจากระบบ) ไม่ถูกตัด และอยู่เหนือการ์ดตัวเลข */
+.k8-th-wmbox { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; z-index: 0; }
+#view-teacher .k8-th-hero > .k8-th-head { z-index: 5; }
 .k8-th-wm { position: absolute; right: -70px; top: -30px; width: 330px; height: auto; fill: #fff; opacity: .12; pointer-events: none; z-index: 0; }
 @media (min-width: 900px) { .k8-th-wm { width: 420px; right: -50px; top: -60px; } }
 .k8-th-logo { display: block; width: 92px; height: auto; fill: #fff; margin: 0 0 6px -4px; }
