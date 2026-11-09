@@ -5215,7 +5215,7 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 .k8-lv4-date { width: 100%; max-width: 260px; }
 .k8-lv4-range { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end; } .k8-lv4-range > span { color: #94a3b8; padding-bottom: 12px; }
 .k8-lv4-range label { display: flex; flex-direction: column; gap: 2px; min-width: 0; } .k8-lv4-range small { font-size: 11px; color: #64748b; } .k8-lv4-range input { width: 100%; border-color: #0369a1; }
-.k8-lv4-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: #f1f5f9; border-radius: 12px; padding: 4px; }
+.k8-lv4-seg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #f1f5f9; border-radius: 12px; padding: 4px; }
 .k8-lv4-seg button { height: 38px; border: 0; border-radius: 9px; background: transparent; color: #64748b; font: 600 13.5px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; padding: 0 2px; }
 .k8-lv4-seg button[aria-pressed="true"] { background: #fff; color: #0c4a6e; box-shadow: 0 1px 3px rgba(15,23,42,.12); }
 .k8-lv4-seg button:disabled { opacity: .4; cursor: not-allowed; }
@@ -5248,3 +5248,13 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 .k8-lv4-go.is-dis { background: #cbd5e1; cursor: not-allowed; }
 .k8-lv-ssub { color: #15803d; font-weight: 500; }
 .k8-lv4-retry { border: 0; background: #0369a1; color: #fff; border-radius: 8px; padding: 3px 10px; font: 600 12.5px "IBM Plex Sans Thai", sans-serif; cursor: pointer; }
+
+.k8-lv4-seg button { font-size: 12.5px; white-space: nowrap; letter-spacing: -.2px; }
+.k8-lv4-time { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 8px 10px; }
+.k8-lv4-time[hidden] { display: none; }
+.k8-lv4-time > span:first-child { font-size: 12.5px; font-weight: 600; color: #0c4a6e; margin-right: 2px; }
+.k8-lv4-time input { height: 38px; border: 1.5px solid #0369a1; border-radius: 10px; padding: 0 8px; font: 600 15px 'IBM Plex Sans Thai', sans-serif; color: #0f172a; background: #fff; min-width: 0; width: 124px; }
+.k8-lv4-time > span[aria-hidden] { font-size: 13px; color: #475569; } .k8-lv4-time small { font-size: 12px; color: #64748b; }
+.k8-lv4-time:not([hidden]) { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 6px 8px; }
+.k8-lv4-time > span:first-child { grid-column: 1 / -1; }
+.k8-lv4-time input { width: 100%; }
