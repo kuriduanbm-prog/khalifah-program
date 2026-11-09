@@ -2885,9 +2885,13 @@ window.k8RegBirthChange = function (v) {
   // v17.18 · แอดมินเลือกนักเรียนแล้วบันทึกแทน (window.k8HasTarget) · นักเรียนดูได้อย่างเดียว
   function admin() { try { return currentAdmin || null; } catch (e) { return null; } }
   function stu() { if (admin() && window.k8HasTarget) return window.k8HasTarget; try { return currentStudent || null; } catch (e) { return null; } }
-  const RO = () => !(admin() && window.k8HasTarget);
+  // v18.55 · นักเรียนบันทึกผลบุญเองได้แล้ว (เดิมดูได้อย่างเดียว) · RO = ไม่มีใครให้บันทึก (ไม่ได้เข้าสู่ระบบ/แอดมินยังไม่เลือกนักเรียน)
+  const asTarget = () => !!(admin() && window.k8HasTarget);
+  const isSelf = () => { if (asTarget()) return false; try { return !!currentStudent; } catch (e) { return false; } };
+  const RO = () => !asTarget() && !isSelf();
   window.k8HasRO = RO;
-  const roMsg = () => { if (typeof showToast === 'function') showToast('ข้อมูลผลบุญบันทึกโดยแอดมิน · นักเรียนดูได้อย่างเดียว', 'info'); };
+  let dirtyUntil = 0; // มีการแก้ไขในเครื่องที่ยังส่งไม่ถึงระบบ → ยังไม่ดึงข้อมูลจากระบบมาทับ
+  const roMsg = () => { if (typeof showToast === 'function') showToast('เข้าสู่ระบบก่อนจึงจะบันทึกได้', 'info'); };
   function H() { const s = stu(); if (!s) return null; try { return getStudentHasanat(s.studentId); } catch (e) { return null; } }
   function saveH(h) { const s = stu(); if (h && s && !h.studentId) h.studentId = s.studentId; try { saveStudentHasanat(h); } catch (e) {} }
   function rows() { const s = stu(); return s ? readJSON('khalifah_hasanat_rows', []).filter((r) => r && sameId(r.studentId, s.studentId)) : []; }
@@ -2915,8 +2919,8 @@ window.k8RegBirthChange = function (v) {
     const done = Math.min(30, Math.floor(page / PER_JUZ));
     return { page, khatam, done, juz: Math.min(30, done + 1), stars: done };
   }
-  function dayPages(date) { if (RO()) { const r0 = rowOf(date); return r0 ? Number(r0.quran && r0.quran.pagesToday) || 0 : 0; } const h = H(); const d = h && h.dailyLogs && h.dailyLogs[date]; if (d && typeof d.quranPages === 'number') return d.quranPages; if (d && typeof d.pagesToday === 'number') return d.pagesToday; const r = rowOf(date); return r && r.quran ? Number(r.quran.pagesToday) || 0 : 0; }
-  function daySunnah(date) { const h = H(); const d = !RO() && h && h.dailyLogs && h.dailyLogs[date]; if (d && d.sunnah) return d.sunnah; const r = rowOf(date); if (r && r.sunnah) { const rw = r.sunnah.rawatib || {}; return { rawatib: rw, duhaRakaat: Number(rw.duhaRakaat) || 0, witrRakaat: Number(rw.witrRakaat) || 0, tahajjudRakaat: Number(rw.tahajjudRakaat) || 0, totalRakaat: Number(r.sunnah.totalRakaat) || 0 }; } return null; }
+  function dayPages(date) { if (RO() || isSelf()) { const rr = rowOf(date); if (rr && rr.quran && rr.quran.pagesToday != null) return Number(rr.quran.pagesToday) || 0; } if (RO()) { const r0 = rowOf(date); return r0 ? Number(r0.quran && r0.quran.pagesToday) || 0 : 0; } const h = H(); const d = h && h.dailyLogs && h.dailyLogs[date]; if (d && typeof d.quranPages === 'number') return d.quranPages; if (d && typeof d.pagesToday === 'number') return d.pagesToday; const r = rowOf(date); return r && r.quran ? Number(r.quran.pagesToday) || 0 : 0; }
+  function daySunnah(date) { const h = H(); const r1 = isSelf() ? rowOf(date) : null; const d = !RO() && !(r1 && r1.sunnah && r1.sunnah.rawatib) && h && h.dailyLogs && h.dailyLogs[date]; if (d && d.sunnah) return d.sunnah; const r = rowOf(date); if (r && r.sunnah) { const rw = r.sunnah.rawatib || {}; return { rawatib: rw, duhaRakaat: Number(rw.duhaRakaat) || 0, witrRakaat: Number(rw.witrRakaat) || 0, tahajjudRakaat: Number(rw.tahajjudRakaat) || 0, totalRakaat: Number(r.sunnah.totalRakaat) || 0 }; } return null; }
   function sunTotal(x) { let t = 0; RAWATIB.forEach(([k, , n]) => { if (x.rawatib && x.rawatib[k]) t += n; }); return t + (Number(x.duhaRakaat) || 0) + (Number(x.witrRakaat) || 0) + (Number(x.tahajjudRakaat) || 0); }
   function range() {
     const t = new Date(); const d0 = new Date(t.getFullYear(), t.getMonth(), t.getDate());
@@ -2942,6 +2946,8 @@ window.k8RegBirthChange = function (v) {
     return { pages, mem, rakaat };
   };
 
+  let pendingDate = null;
+  window.addEventListener('online', () => { if (pendingDate) push(pendingDate); });
   async function push(date, extra) {
     const s = stu(), h = H(); if (!s || !h) return;
     const q = quranState(h); const su = daySunnah(date) || { rawatib: {}, totalRakaat: 0 };
@@ -2953,16 +2959,16 @@ window.k8RegBirthChange = function (v) {
       sunnah: { totalRakaat: Number(su.totalRakaat) || 0, rawatib: rawatib } };
     upsertRow(date, payload);
     try { if (typeof renderHomeF === 'function') renderHomeF(); } catch (e) {}
-    let res = null;
+    let res = null; dirtyUntil = Date.now() + 10 * 60 * 1000;
     try { res = await gasApiCall('saveHasanatLog', payload); } catch (e) { res = { success: false }; }
-    if (!res || !res.success) { if (typeof showToast === 'function') showToast('บันทึกในเครื่องแล้ว แต่ยังส่งขึ้นระบบไม่สำเร็จ จะลองใหม่เมื่อออนไลน์', 'warning'); }
-    else if (extra && typeof showToast === 'function') showToast(extra, 'success');
+    if (!res || !res.success) { if (typeof showToast === 'function') showToast((res && res.message && /แอดมิน|สิทธิ์/.test(res.message)) ? 'ระบบยังไม่อัปเดต · แจ้งแอดมินให้อัปเดตระบบ (Code.gs)' : 'บันทึกในเครื่องแล้ว แต่ยังส่งขึ้นระบบไม่สำเร็จ จะลองใหม่เมื่อออนไลน์', 'warning'); pendingDate = date; }
+    else { dirtyUntil = 0; pendingDate = null; if (extra && typeof showToast === 'function') showToast(extra, 'success'); }
   }
 
   function header() {
     const d = new Date(S.date + 'T00:00:00'); const isToday = S.date === today();
     const [from, to, lbl] = range(); const st = window.k8HasanatStats(from, to);
-    const tg = !RO() ? stu() : null;
+    const tg = asTarget() ? stu() : null;
     return (tg ? '<div class="k8h-as"><span>กำลังบันทึกให้ <b>' + esc(tg.fullName || tg.studentId) + '</b> · ' + esc(String(tg.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + '</span><button type="button" onclick="k8HasBack()">‹ กลับไปเลือกนักเรียน</button></div>' : '') + '<header class="k8h-head"><h1>' + (tg ? 'บันทึกผลบุญ' : 'ผลบุญของฉัน') + '</h1>' + (RO() ? '<p class="k8h-ro-note">บันทึกโดยแอดมิน · ดูได้อย่างเดียว</p>' : '') +
       '<div class="k8h-date"><button type="button" aria-label="วันก่อนหน้า" onclick="k8HasDay(-1)">‹</button><label><span>' + (isToday ? 'วันนี้ · ' : '') + DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()] + '</span><input type="date" value="' + S.date + '" onchange="k8HasDate(this.value)" aria-label="เลือกวันที่บันทึก"></label><button type="button" aria-label="วันถัดไป" onclick="k8HasDay(1)">›</button></div></header>' +
       (S.date > today() ? '<p class="k8h-future">วันที่เลือกยังมาไม่ถึง · ดูได้อย่างเดียว บันทึกได้เมื่อถึงวันนั้น <button type="button" onclick="k8HasDate(\'' + today() + '\')">กลับวันนี้</button></p>' : (!isToday ? '<p class="k8h-future is-past">กำลังดูวันย้อนหลัง <button type="button" onclick="k8HasDate(\'' + today() + '\')">กลับวันนี้</button></p>' : '')) +
@@ -3003,7 +3009,7 @@ window.k8RegBirthChange = function (v) {
   }
   function sunTab() {
     if (!S.sun || S.sunDate !== S.date) { const d = daySunnah(S.date); S.sun = d ? JSON.parse(JSON.stringify({ rawatib: d.rawatib || {}, duhaRakaat: d.duhaRakaat || 0, witrRakaat: d.witrRakaat || 0, tahajjudRakaat: d.tahajjudRakaat || 0 })) : { rawatib: {}, duhaRakaat: 0, witrRakaat: 0, tahajjudRakaat: 0 }; S.sunDate = S.date; }
-    const x = S.sun; const total = sunTotal(x); const saved = daySunnah(S.date); const dirty = !saved || sunTotal(saved) !== total || JSON.stringify(saved.rawatib || {}) !== JSON.stringify(x.rawatib);
+    const x = S.sun; const total = sunTotal(x); const saved = daySunnah(S.date); const sig = (o) => RAWATIB.map(([k]) => (o.rawatib && o.rawatib[k] ? 1 : 0)).join('') + '|' + (Number(o.duhaRakaat) || 0) + '|' + (Number(o.witrRakaat) || 0) + '|' + (Number(o.tahajjudRakaat) || 0); const dirty = !saved ? total > 0 : sig(saved) !== sig(x); // v18.55 · เดิมเทียบ JSON ทั้งก้อน (มีค่าดุฮา/วิตร์ปนใน rawatib) ปุ่มบันทึกจึงไม่เปลี่ยนเป็น "บันทึกแล้ว"
     return '<section class="k8h-card"><div class="k8h-row-b"><h2>' + (S.date === today() ? 'ละหมาดสุนัตวันนี้' : 'ละหมาดสุนัตวันที่เลือก') + '</h2><span class="k8h-sun-total">' + total + ' ร็อกอะฮ์</span></div><div class="k8h-bar is-purple"><span style="width:' + Math.min(100, total / 12 * 100) + '%"></span></div><p class="k8h-hint">เป้าหมายรอติบมุอักกัด 12 ร็อกอะฮ์ต่อวัน</p>' +
       '<h3 class="k8h-sub">รอติบ (ก่อน-หลังฟัรฎู)</h3><ul class="k8h-checks">' + RAWATIB.map(([k, l, n, mu]) => '<li><label><input type="checkbox"' + (x.rawatib[k] ? ' checked' : '') + (RO() ? ' disabled' : '') + ' onchange="k8HasSun(\'' + k + '\', this.checked)"><span><b>' + l + '</b><small>' + n + ' ร็อกอะฮ์' + (mu ? ' · มุอักกัด' : '') + '</small></span></label></li>').join('') + '</ul>' +
       EXTRA.map(([k, l, opts]) => '<h3 class="k8h-sub">' + l + '</h3><div class="k8h-chips">' + opts.map((o) => '<button type="button" aria-pressed="' + ((Number(x[k + 'Rakaat']) || 0) === o) + '" onclick="k8HasSunN(\'' + k + '\',' + o + ')">' + (o ? o + ' ร็อกอะฮ์' : 'ไม่ได้ทำ') + '</button>').join('') + '</div>').join('') +
@@ -3018,7 +3024,7 @@ window.k8RegBirthChange = function (v) {
   }
   window.renderHasanatV9 = render;
   // v17.76 · ปุ่ม "ออก" ลอยขึ้นมาเมื่อเลื่อนหน้าผลบุญ
-  window.k8HasExit = function () { if (admin() && window.k8HasTarget) return window.k8HasBack(); try { switchView('dashboard'); } catch (e) {} try { window.scrollTo({ top: 0 }); } catch (e) {} };
+  window.k8HasExit = function () { if (asTarget()) return window.k8HasBack(); try { switchView('dashboard'); } catch (e) {} try { window.scrollTo({ top: 0 }); } catch (e) {} };
   (function () {
     let btn = null, raf = 0;
     const tick = () => { raf = 0; const v = document.getElementById('view-hasanat'); const on = !!(v && v.classList.contains('active') && document.getElementById('k8Has') && window.scrollY > 240);
@@ -3042,6 +3048,7 @@ window.k8RegBirthChange = function (v) {
     h.dailyLogs = h.dailyLogs || {}; const dl = h.dailyLogs[S.date] = Object.assign({}, h.dailyLogs[S.date] || {}, { date: S.date });
     dl.quranPages = (typeof dl.quranPages === 'number' ? dl.quranPages : (typeof dl.pagesToday === 'number' ? dl.pagesToday : dayPages(S.date))) + S.add; dl.pagesToday = dl.quranPages; dl.currentPage = page;
     if (S.date === today()) h.quran.pagesToday = dl.quranPages;
+    upsertRow(S.date, { quran: { pagesToday: dl.quranPages } }); // ให้ dayPages (อ่านจากแถว) เห็นค่าใหม่ทันที
     saveH(h); const added = S.add; S.add = 0; render();
     push(S.date, finished ? '🎉 ขอแสดงความยินดี อ่านจบ 30 ยุซ! ค็อตม์ครั้งที่ ' + kh : 'บันทึกการอ่าน ' + added + ' หน้าแล้ว · ★ ' + Math.min(30, Math.floor(page / PER_JUZ)) + ' ดาว');
   };
@@ -3078,6 +3085,7 @@ window.k8RegBirthChange = function (v) {
     rec.totalRakaat = sunTotal(rec);
     h.dailyLogs = h.dailyLogs || {}; h.dailyLogs[S.date] = Object.assign({}, h.dailyLogs[S.date] || {}, { date: S.date, sunnah: rec });
     if (S.date === today()) h.sunnah = rec;
+    upsertRow(S.date, { sunnah: { totalRakaat: rec.totalRakaat, rawatib: Object.assign({}, rec.rawatib, { duhaRakaat: rec.duhaRakaat, witrRakaat: rec.witrRakaat, tahajjudRakaat: rec.tahajjudRakaat }) } });
     saveH(h); render(); push(S.date, 'บันทึกละหมาดสุนัต ' + rec.totalRakaat + ' ร็อกอะฮ์แล้ว');
   };
   window.k8HasAskReset = function () { const i = document.getElementById('k8HasResetInput'); if (i) i.value = ''; const g = document.getElementById('k8HasResetGo'); if (g) g.disabled = true; openModal('k8HasResetModal'); setTimeout(() => i && i.focus(), 60); };
@@ -3096,7 +3104,7 @@ window.k8RegBirthChange = function (v) {
   // v18.39 · นักเรียนดึงผลบุญล่าสุดจากระบบ (แอดมินบันทึกให้ระหว่างที่นักเรียนเปิดแอปค้างไว้ · เดิมต้องออกแล้วเข้าใหม่จึงเห็น)
   let pullAt = 0, pulling = false;
   async function pullMine(gap) {
-    if (pulling || !RO()) return; let s = null; try { s = currentStudent || null; } catch (e) {} if (!s || !s.studentId) return;
+    if (pulling || !isSelf() || Date.now() < dirtyUntil) return; let s = null; try { s = currentStudent || null; } catch (e) {} if (!s || !s.studentId) return;
     if (Date.now() - pullAt < (gap == null ? 60000 : gap) || navigator.onLine === false) return;
     pulling = true; pullAt = Date.now();
     let res = null; try { res = await gasApiCall('getHasanat', { studentId: s.studentId }, 20000); } catch (e) {}
@@ -3522,7 +3530,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.54';
+  const APP_VERSION = '18.55';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

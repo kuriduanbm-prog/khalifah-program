@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.51'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.55'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1517,7 +1517,6 @@ function dispatchAction_(action, req, data, session, ctx) {
       if (!ctx.isAdmin && !(session && session.role === 'inspector')) return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'แก้ไขหัวข้อได้เฉพาะแอดมินและผู้ตรวจการ' };
       return saveBehaviorRules_(data.rules);
     case 'resetMyHasanat':
-      if (isStudent) return { success: false, forbidden: true, code: 'ADMIN_ONLY', message: 'ข้อมูลผลบุญบันทึกโดยแอดมินเท่านั้น' };
       if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
       return resetMyHasanat_(session.userId);
     case 'setEvalOpen': {
@@ -1561,8 +1560,8 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'saveSurahMemorizationLog':
     case 'saveSurahLog':
     case 'saveHasanatLog':
-      // v17.17 · อ่านอัลกุรอาน/ท่องจำ/สุนัต: แอดมินเป็นผู้บันทึก นักเรียนดูได้อย่างเดียว
-      if (isStudent) return { success: false, forbidden: true, code: 'ADMIN_ONLY', message: 'ข้อมูลผลบุญบันทึกโดยแอดมินเท่านั้น' };
+      // v18.55 · นักเรียนบันทึกผลบุญของตัวเองได้ (บังคับเป็นรหัสของตัวเอง) · แอดมินบันทึกแทนได้เหมือนเดิม
+      if (isStudent) { data = Object.assign({}, data || {}, { studentId: session.userId }); }
       return recordHasanat(data);
     case 'checkInActivity':
     case 'activityCheckIn':
