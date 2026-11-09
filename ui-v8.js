@@ -487,18 +487,9 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     ).join('');
   }
 
-  function renderGradesBlock(s, sid) {
-    const open = hfState.gradesOpen;
-    const toggle = document.getElementById('hfGradesToggle');
-    { const sec = document.getElementById('hfGrades'), qk = document.getElementById('hfGradesQk'); if (sec) sec.hidden = !open; if (qk) qk.classList.toggle('is-on', !!open); }
-    const body = document.getElementById('hfGradesBody');
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    document.getElementById('hfGradesIcon').innerHTML = open ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-    document.getElementById('hfGradesHint').textContent = open ? 'คนรอบข้างอาจเห็นได้ · ซ่อนอัตโนมัติเมื่อออกจากหน้านี้' : 'ซ่อนไว้เพื่อความเป็นส่วนตัว';
-    document.getElementById('hfGradesAction').textContent = open ? 'ซ่อน' : 'แตะเพื่อดู';
-    body.hidden = !open;
-    if (!open) { body.innerHTML = ''; return; }
-
+  // v18.44 · ผลการเรียน: แตะแล้วเข้าไปเป็นหน้าเต็ม (รายวิชา → แตะวิชาเพื่อดูคะแนนชิ้นงาน) แทนแบบหุบ/ขยายบนหน้าแรก
+  const GR = { s: null, sid: '', subj: null };
+  function grData(s, sid) {
     if (typeof loadAppSubjects === 'function') loadAppSubjects();
     const allSubj = (typeof appSubjects !== 'undefined' && Array.isArray(appSubjects)) ? appSubjects : [];
     const subjects = typeof window.k8MySubjects === 'function' ? window.k8MySubjects(allSubj) : allSubj;
@@ -506,40 +497,67 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const scoreMap = (readJSON('khalifah_student_assignment_scores', {})[sid]) || {};
     let gpax = Number(s.gpax || s.gpa);
     if (!(gpax > 0) && typeof recalculateStudentGpa === 'function') gpax = Number(recalculateStudentGpa(s));
-    let html = '<div class="hf-gpax"><span>เกรดเฉลี่ยสะสม (GPAX)</span><b>' + (gpax > 0 ? gpax.toFixed(2) : '–') + '</b></div>';
-    try { const info = window.k8MySubjectsInfo && window.k8MySubjectsInfo(); if (info) html += '<p class="hf-subj-note">' + esc(info) + '</p>'; } catch (e) {}
-    if (!subjects.length) html += '<p class="hf-subj-note">ยังไม่มีรายวิชาของชั้นนี้ในตารางเรียน</p>';
-    html += subjects.map((subj) => {
+    const list = subjects.map((subj) => {
       const g = subjectGradeFor(s, subj);
-      const [bg, ink] = gradeTone(g.grade);
       const defs = Array.isArray(defsMap[subj.id]) ? defsMap[subj.id] : [];
       const mine = scoreMap[subj.id] || {};
       let got = 0, maxSum = 0, any = false;
-      defs.forEach((a) => {
-        maxSum += Number(a.maxScore) || 0;
-        const v = mine[a.id];
-        if (v !== '' && v !== undefined && v !== null && !isNaN(Number(v))) { got += Number(v); any = true; }
-      });
+      defs.forEach((a) => { maxSum += Number(a.maxScore) || 0; const v = mine[a.id]; if (v !== '' && v !== undefined && v !== null && !isNaN(Number(v))) { got += Number(v); any = true; } });
       const pct = maxSum ? Math.round(got / maxSum * 100) : (g.score ? Math.min(100, Number(g.score)) : 0);
-      const expanded = hfState.openSubj === subj.id;
-      const canExpand = defs.length > 0;
-      let detail = '';
-      if (expanded && canExpand) {
-        detail = '<ul class="hf-asg">' + defs.map((a) => {
-          const v = mine[a.id];
-          const has = v !== '' && v !== undefined && v !== null && !isNaN(Number(v));
-          return '<li><span>' + esc(a.title) + '</span><b>' + (has ? fmtNum(v) : '–') + ' / ' + fmtNum(a.maxScore) + '</b></li>';
-        }).join('') + '<li class="hf-asg-total"><span>รวม</span><b>' + (any ? fmtNum(got) : '–') + ' / ' + fmtNum(maxSum) + (any ? ' (' + pct + '%)' : '') + '</b></li></ul>';
-      }
-      return '<div class="hf-subj">' +
-        '<button type="button" class="hf-subj-row" data-subj="' + esc(subj.id) + '" ' + (canExpand ? 'aria-expanded="' + expanded + '"' : 'disabled') + '>' +
-        '<span class="hf-subj-name">' + esc(subj.name) + (canExpand ? '<small>' + defs.length + ' ชิ้นงาน · แตะเพื่อดูคะแนน</small>' : '') + '</span>' +
-        '<span class="hf-subj-bar" aria-hidden="true"><span style="width:' + pct + '%;background:' + ink + '"></span></span>' +
-        '<span class="hf-gpill' + (g.grade == null ? ' is-wait' : '') + '" style="background:' + bg + ';color:' + ink + '">' + (g.grade == null ? 'รอผล' : fmtNum(g.grade)) + '</span>' +
-        '</button>' + detail + '</div>';
-    }).join('');
-    body.innerHTML = html;
+      return { subj, g, defs, mine, got, maxSum, any, pct };
+    });
+    return { gpax, list };
   }
+  function renderGradesBlock(s, sid) {
+    GR.s = s; GR.sid = sid;
+    const sec = document.getElementById('hfGrades'); if (sec) sec.hidden = true;
+    const qk = document.getElementById('hfGradesQk');
+    if (qk) {
+      const sub = qk.querySelector('.hf-cal-txt > span:last-child');
+      if (sub) { let t = 'ซ่อนไว้เพื่อความเป็นส่วนตัว · แตะเพื่อดู'; if (!k8HideGrades()) { const gp = Number(s.gpax || s.gpa); t = gp > 0 ? 'เกรดเฉลี่ยสะสม ' + gp.toFixed(2) + ' · แตะเพื่อดูรายวิชา' : 'แตะเพื่อดูรายวิชาและคะแนน'; } sub.textContent = t; }
+    }
+    const pg = document.getElementById('k8Gr'); if (pg && !pg.hidden) grPaint();
+  }
+  const GR_BACK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+  const GR_CHEV = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+  function grEnsure() {
+    if (document.getElementById('k8Gr')) return;
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-gr" id="k8Gr" hidden role="dialog" aria-modal="true" aria-labelledby="k8GrT"><header class="k8-gr-h"><button type="button" class="k8-pg-back" aria-label="ย้อนกลับ" onclick="history.back()">' + GR_BACK + '</button><div><h2 id="k8GrT">ผลการเรียนรายวิชา</h2><small id="k8GrS">ภาคเรียนปัจจุบัน</small></div></header><div class="k8-gr-b" id="k8GrB"></div></div>');
+  }
+  function grPaint() {
+    const B = document.getElementById('k8GrB'); if (!B || !GR.s) return;
+    const D = grData(GR.s, GR.sid);
+    const T = document.getElementById('k8GrT'), S = document.getElementById('k8GrS');
+    const it = GR.subj ? D.list.find((x) => String(x.subj.id) === String(GR.subj)) : null;
+    if (it) {
+      const [bg, ink] = gradeTone(it.g.grade);
+      T.textContent = it.subj.name; S.textContent = 'คะแนนชิ้นงานและผลการเรียน';
+      B.innerHTML = '<section class="k8-gr-hero"><div><span>ผลการเรียน</span><b class="k8-gr-big" style="color:' + ink + '">' + (it.g.grade == null ? 'รอผล' : fmtNum(it.g.grade)) + '</b></div>' +
+        '<div class="k8-gr-hr"><span>คะแนนรวม</span><b>' + (it.any ? fmtNum(it.got) : '–') + ' <small>/ ' + fmtNum(it.maxSum) + '</small></b><span class="hf-subj-bar k8-gr-bar"><span style="width:' + it.pct + '%;background:' + ink + '"></span></span><small>' + (it.any ? it.pct + '%' : 'ยังไม่มีคะแนน') + '</small></div></section>' +
+        (it.defs.length ? '<h3 class="k8-gr-sec">ชิ้นงาน (' + it.defs.length + ')</h3><ul class="k8-gr-asg">' + it.defs.map((a) => { const v = it.mine[a.id]; const has = v !== '' && v !== undefined && v !== null && !isNaN(Number(v)); const p = has && Number(a.maxScore) ? Math.round(Number(v) / Number(a.maxScore) * 100) : 0; return '<li><div><b>' + esc(a.title) + '</b><span class="hf-subj-bar k8-gr-bar"><span style="width:' + p + '%;background:' + ink + '"></span></span></div><em class="' + (has ? '' : 'is-wait') + '">' + (has ? fmtNum(v) : '–') + '<small> / ' + fmtNum(a.maxScore) + '</small></em></li>'; }).join('') + '</ul>' : '<p class="k8-gr-empty">อาจารย์ยังไม่ได้เพิ่มชิ้นงานของวิชานี้</p>');
+      B.scrollTop = 0; return;
+    }
+    T.textContent = 'ผลการเรียนรายวิชา'; S.textContent = D.list.length ? D.list.length + ' วิชา · แตะวิชาเพื่อดูคะแนน' : 'ภาคเรียนปัจจุบัน';
+    let info = ''; try { info = (window.k8MySubjectsInfo && window.k8MySubjectsInfo()) || ''; } catch (e) {}
+    B.innerHTML = '<section class="k8-gr-gpax"><span>เกรดเฉลี่ยสะสม (GPAX)</span><b>' + (D.gpax > 0 ? D.gpax.toFixed(2) : '–') + '</b><small>ข้อมูลส่วนตัว · ซ่อนอัตโนมัติเมื่อออกจากหน้านี้</small></section>' +
+      (info ? '<p class="k8-gr-note">' + esc(info) + '</p>' : '') +
+      (D.list.length ? '<div class="k8-gr-list">' + D.list.map((x) => { const [bg, ink] = gradeTone(x.g.grade); return '<button type="button" class="k8-gr-row" onclick="k8GrSubj(\'' + esc(String(x.subj.id)).replace(/'/g, '&#39;') + '\')"><span class="k8-gr-nm"><b>' + esc(x.subj.name) + '</b><small>' + (x.defs.length ? x.defs.length + ' ชิ้นงาน' + (x.any ? ' · ' + x.pct + '%' : '') : 'ยังไม่มีชิ้นงาน') + '</small>' + (x.defs.length ? '<span class="hf-subj-bar k8-gr-bar"><span style="width:' + x.pct + '%;background:' + ink + '"></span></span>' : '') + '</span><span class="hf-gpill' + (x.g.grade == null ? ' is-wait' : '') + '" style="background:' + bg + ';color:' + ink + '">' + (x.g.grade == null ? 'รอผล' : fmtNum(x.g.grade)) + '</span><i class="k8-gr-chev">' + GR_CHEV + '</i></button>'; }).join('') + '</div>' : '<p class="k8-gr-empty">ยังไม่มีรายวิชาของชั้นนี้ในตารางเรียน</p>');
+  }
+  function grClose() { const el = document.getElementById('k8Gr'); if (el && !el.hidden) { el.hidden = true; GR.subj = null; document.documentElement.classList.remove('k8-docs-open'); const B = document.getElementById('k8GrB'); if (B) B.innerHTML = ''; } }
+  window.k8GrOpen = function () {
+    grEnsure(); if (!GR.s) { try { window.renderHomeF(); } catch (e) {} }
+    GR.subj = null; grPaint();
+    const el = document.getElementById('k8Gr'); el.hidden = false; document.documentElement.classList.add('k8-docs-open');
+    try { history.pushState({ k8gr: 1 }, ''); } catch (e) {}
+  };
+  window.k8GrSubj = function (id) { GR.subj = id; grPaint(); try { history.pushState({ k8gr: 2 }, ''); } catch (e) {} };
+  window.addEventListener('popstate', (e) => {
+    const el = document.getElementById('k8Gr'); if (!el || el.hidden) return;
+    const st = e.state || {};
+    if (st.k8gr === 1 && GR.subj) { GR.subj = null; grPaint(); return; }
+    grClose();
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && k8HideGrades()) { const el = document.getElementById('k8Gr'); if (el && !el.hidden) { try { history.back(); } catch (e) { grClose(); } } } });
 
   function bindHomeF() {
     const root = document.getElementById('homeF');
@@ -1722,11 +1740,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (hg) hg.checked = getPref('hideGrades', true);
     if (nt) nt.checked = getPref('notify', false) && ('Notification' in window) && Notification.permission === 'granted';
   };
-  window.k8OpenGrades = function () {
-    switchView('dashboard');
-    if (window.k8HfSetGradesOpen) window.k8HfSetGradesOpen(true);
-    setTimeout(() => { const t = document.getElementById('hfGradesToggle'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
-  };
+  window.k8OpenGrades = function () { if (window.k8GrOpen) window.k8GrOpen(); };
   window.k8SetPref = async function (key, on) {
     if (key === 'notify' && on) {
       if (!('Notification' in window)) { if (typeof showToast === 'function') showToast('อุปกรณ์นี้ไม่รองรับการแจ้งเตือน', 'warning'); on = false; }
@@ -3498,7 +3512,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.43';
+  const APP_VERSION = '18.44';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5901,7 +5915,7 @@ window.k8RegBirthChange = function (v) {
   window.addEventListener('popstate', (e) => {
     if (leaving) return;
     const st = e.state || {};
-    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt || st.k8bh || st.k8pf || st.k8lb || st.k8gs2 || st.k8hqr || st.k8atd || st.k8az) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
+    if (st.k8guard || st.k8docs || st.k8policy || st.k8pv || st.k8hq || st.k8tt || st.k8bh || st.k8pf || st.k8lb || st.k8gs2 || st.k8hqr || st.k8atd || st.k8az || st.k8gr) return; // หน้าต่างพิเศษจัดการย้อนกลับเอง
     if (closeTopModal() || goHome()) { arm(); return; }
     const now = Date.now();
     if (now - lastBack < 2000) { leaving = true; try { history.back(); } catch (e2) {} return; }
