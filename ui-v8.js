@@ -3522,7 +3522,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.49';
+  const APP_VERSION = '18.50';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8542,7 +8542,7 @@ window.k8RegBirthChange = function (v) {
   function subjects() { let a = []; try { a = (appSubjects || []).map((s) => s.name || s); } catch (e) {} return Array.from(new Set(a.filter(Boolean))); }
   // v18.47 · ฟอร์มแจ้งลาสอนแบบใหม่ (LR4): ใบลาสด · ช่วงลา ครึ่งเช้า/ครึ่งบ่าย/ทั้งวัน/หลายวัน · ระบบหาคาบที่สอนให้ · เหตุผล 3 แบบ · ผู้สอนแทนรายคาบ (บังคับ)
   const RT = [['ลาป่วย', '🤒'], ['ลากิจ', '📋'], ['อื่น ๆ', '✏️']];
-  const MODES = [['day', 'ทั้งวัน'], ['am', 'ครึ่งเช้า'], ['pm', 'ครึ่งบ่าย'], ['time', 'ระบุเวลา'], ['multi', 'หลายวัน']];
+  const MODES = [['day', 'ทั้งวัน'], ['am', 'ครึ่งเช้า'], ['pm', 'ครึ่งบ่าย'], ['multi', 'หลายวัน']];
   const hhmm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   function dayBounds() { const P = (V.cfg && V.cfg.periods) || []; const a = P.length ? tmin(P[0].start) : 480, b = P.length ? tmin(P[P.length - 1].end) : 960; return [a, b]; }
   function modeTimes(m) { const [a, b] = dayBounds(); if (m === 'am') return [hhmm(a), '12:00']; if (m === 'pm') return ['12:00', hhmm(b)]; return [hhmm(a), hhmm(b)]; }
@@ -8639,7 +8639,7 @@ window.k8RegBirthChange = function (v) {
     const [T, TS] = await Promise.all([myTeaching(), teachers()]);
     V.teachers = TS; V.hasTT = T.length > 0;
     V.date = x.date || ymd(new Date()); V.to = V.date; V.mode = 'day'; V.off = {}; V.subs = {}; V.sel = {}; V.t1 = ''; V.t2 = '';
-    { const m = String(x.timeText || '').match(/(\d{1,2}:\d{2})\D+(\d{1,2}:\d{2})/); if (m) { V.mode = 'time'; V.t1 = m[1]; V.t2 = m[2]; } }
+    { const m = String(x.timeText || '').match(/(\d{1,2}:\d{2})\D+(\d{1,2}:\d{2})/); if (m) { V.mode = tmin(m[1]) < 720 ? 'am' : 'pm'; V.t1 = m[1]; V.t2 = m[2]; } }
     V.rt = x.reasonType || ''; V.reason = x.reason || ''; V.sub1 = x.subName ? { id: x.subId || '', name: x.subName, other: !x.subId } : null;
     if (V.edit && (x.slots || []).length) {
       const keep = {}; (x.slots || []).forEach((s) => { const k = x.date + '|' + s.g + '|' + s.p; keep[k] = 1; if (s.subn) V.subs[k] = { id: s.sub || '', name: s.subn, other: !s.sub }; else if (x.subName) V.subs[k] = { id: x.subId || '', name: x.subName, other: !x.subId }; });
@@ -8660,13 +8660,14 @@ window.k8RegBirthChange = function (v) {
     }
     h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">ลาเพราะอะไร <b>*</b></span><div class="k8-lv4-rts">' + RT.map((r) => '<button type="button" class="k8-lv4-rtile" data-r="' + r[0] + '" onclick="k8Lv4R(\'' + r[0] + '\')"><span aria-hidden="true">' + r[1] + '</span><b>' + r[0] + '</b></button>').join('') + '</div>' +
       '<input type="text" id="k8LvReason" class="k8-lv4-in" maxlength="160" value="' + esc(V.reason) + '" oninput="k8Lv4Rs(this.value)"></div>';
-    if (V.hasTT) h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">วิชาที่ต้องลา + ผู้สอนแทนแต่ละคาบ <b>*</b></span><div id="k8Lv4Rows"></div><small class="k8-lv4-note">🔒 ระบบหาคาบจากตารางสอนของคุณ · แตะ ✓ เพื่อไม่ลาคาบนั้น</small></div>';
+    if (V.hasTT) h += '<div class="k8-lv4-sec k8-lv4-rowsec"><span class="k8-lv4-l">วิชาที่ต้องลา + ผู้สอนแทนแต่ละคาบ <b>*</b></span><div id="k8Lv4Rows"></div><small class="k8-lv4-note">🔒 ระบบหาคาบจากตารางสอนของคุณ · แตะ ✓ เพื่อไม่ลาคาบนั้น</small></div>';
     else {
       const mine = myIds(); const val = V.sub1 ? (V.sub1.other ? '__o' : V.sub1.id + '|' + V.sub1.name) : '';
       h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">ผู้สอนแทน <b>*</b></span><select class="k8-lv4-sub k8-lv4-sub1" onchange="k8Lv4Sub1(this)"><option value="">เลือกผู้สอนแทน</option>' + TS.filter((t) => mine.indexOf(String(t.id).toLowerCase()) === -1 && t.name !== (me().fullName || '')).map((t) => { const v = t.id + '|' + t.name; return '<option value="' + esc(v) + '"' + (v === val ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '<option value="__o"' + (val === '__o' ? ' selected' : '') + '>อื่น ๆ (พิมพ์ชื่อ)</option></select><div id="k8Lv4Oth1"' + (val === '__o' ? '' : ' hidden') + ' class="k8-lv4-oth"><input type="text" maxlength="80" placeholder="พิมพ์ชื่ออาจารย์ผู้สอนแทน" value="' + esc(V.sub1 && V.sub1.other ? V.sub1.name : '') + '" oninput="k8Lv4Oth1(this.value)"></div></div>';
     }
     h += '<div class="k8-lv4-foot"><small id="k8Lv4Warn"></small><button type="button" id="k8LvSave" class="k8-lv4-go" onclick="k8LvSave()">' + (V.edit ? 'บันทึกการแก้ไข' : 'ส่งใบลา') + '</button></div>';
-    el.innerHTML = h;
+    el.innerHTML = h; el.classList.add('k8-lv4f'); el.classList.toggle('has-rows', !!V.hasTT);
+    const dlg = el.closest('.modal-dialog'); if (dlg) dlg.classList.add('k8-lv4-dlg');
     paintBody();
   }
   window.k8Lv4Meta = paintMeta;

@@ -5215,7 +5215,7 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 .k8-lv4-date { width: 100%; max-width: 260px; }
 .k8-lv4-range { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end; } .k8-lv4-range > span { color: #94a3b8; padding-bottom: 12px; }
 .k8-lv4-range label { display: flex; flex-direction: column; gap: 2px; min-width: 0; } .k8-lv4-range small { font-size: 11px; color: #64748b; } .k8-lv4-range input { width: 100%; border-color: #0369a1; }
-.k8-lv4-seg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #f1f5f9; border-radius: 12px; padding: 4px; }
+.k8-lv4-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: #f1f5f9; border-radius: 12px; padding: 4px; }
 .k8-lv4-seg button { height: 38px; border: 0; border-radius: 9px; background: transparent; color: #64748b; font: 600 13.5px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; padding: 0 2px; }
 .k8-lv4-seg button[aria-pressed="true"] { background: #fff; color: #0c4a6e; box-shadow: 0 1px 3px rgba(15,23,42,.12); }
 .k8-lv4-seg button:disabled { opacity: .4; cursor: not-allowed; }
@@ -5258,3 +5258,15 @@ html.k8-tpd #teacher-tab-attendance .k8-ta-top .k8-ta-sl { grid-row: 2; grid-col
 .k8-lv4-time:not([hidden]) { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 6px 8px; }
 .k8-lv4-time > span:first-child { grid-column: 1 / -1; }
 .k8-lv4-time input { width: 100%; }
+/* v18.50 · แจ้งลาสอนบนจอใหญ่: 2 คอลัมน์ (ซ้าย ใบลา/ช่วง/วัน/เหตุผล · ขวา คาบ + ผู้สอนแทน) */
+@media (min-width: 993px) {
+  #k8LvModal .modal-dialog.k8-sheet.k8-lv4-dlg { max-width: 980px !important; width: calc(100vw - 64px) !important; max-height: calc(100dvh - 48px) !important; }
+  #k8LvForm.k8-lv4f.has-rows { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 28px; align-content: start; align-items: start; }
+  #k8LvForm.k8-lv4f.has-rows > * { grid-column: 1; }
+  #k8LvForm.k8-lv4f.has-rows > .k8-lv4-rowsec { grid-column: 2; grid-row: 1 / span 4; border-bottom: 0; padding-top: 0; position: sticky; top: 0; }
+  #k8LvForm.k8-lv4f.has-rows > .k8-lv4-foot { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: flex-end; gap: 16px; }
+  #k8LvForm.k8-lv4f.has-rows > .k8-lv4-foot small { text-align: right; }
+  #k8LvForm.k8-lv4f.has-rows > .k8-lv4-foot .k8-lv4-go { min-width: 240px; padding: 0 28px; }
+  #k8LvForm.k8-lv4f .k8-lv4-sub { max-width: 52%; }
+  #k8LvForm.k8-lv4f .k8-lv4-rows { max-height: calc(100vh - 300px); overflow: auto; }
+}
