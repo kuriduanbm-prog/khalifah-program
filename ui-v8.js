@@ -3522,7 +3522,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.52';
+  const APP_VERSION = '18.53';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8652,7 +8652,7 @@ window.k8RegBirthChange = function (v) {
       lvRows().forEach((r) => { if (!keep[r.k]) V.off[r.k] = 1; });
     }
     try { if (window.k8TtLoad) window.k8TtLoad().then(() => { if (document.getElementById('k8Lv4Rows')) { const b = document.getElementById('k8Lv4Rows'); const y = b ? b.scrollTop : 0; paintBody(); } }).catch(() => {}); } catch (e) {}
-    let h = '<div class="k8-lv4-slip" id="k8Lv4Slip"></div>';
+    let h = '<div class="k8-lv4-colL"><div class="k8-lv4-slip" id="k8Lv4Slip"></div>';
     if (!V.t1) { const t = modeTimes(V.mode); V.t1 = t[0]; V.t2 = t[1]; }
     if (V.hasTT) {
       h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">ลาช่วงไหน <b>*</b></span><div class="k8-lv4-seg" role="group">' + MODES.map((m) => '<button type="button" data-m="' + m[0] + '" onclick="k8Lv4M(\'' + m[0] + '\')"' + (V.edit && m[0] === 'multi' ? ' disabled' : '') + '>' + m[1] + '</button>').join('') + '</div><div class="k8-lv4-time" id="k8Lv4Time" hidden></div></div>';
@@ -8666,7 +8666,8 @@ window.k8RegBirthChange = function (v) {
     }
     h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">ลาเพราะอะไร <b>*</b></span><div class="k8-lv4-rts">' + RT.map((r) => '<button type="button" class="k8-lv4-rtile" data-r="' + r[0] + '" onclick="k8Lv4R(\'' + r[0] + '\')"><span aria-hidden="true">' + r[1] + '</span><b>' + r[0] + '</b></button>').join('') + '</div>' +
       '<input type="text" id="k8LvReason" class="k8-lv4-in" maxlength="160" value="' + esc(V.reason) + '" oninput="k8Lv4Rs(this.value)"></div>';
-    if (V.hasTT) h += '<div class="k8-lv4-sec k8-lv4-rowsec"><span class="k8-lv4-l">วิชาที่ต้องลา + ผู้สอนแทนแต่ละคาบ <b>*</b></span><div id="k8Lv4Rows"></div><small class="k8-lv4-note">' + (V.manual ? (V.ttErr ? 'ดึงตารางสอนจากระบบไม่สำเร็จ · <button type="button" class="k8-lv4-retry" onclick="k8LvRetry()">ลองใหม่</button> หรือแตะเลือกคาบเอง' : 'ยังไม่พบชื่อคุณในตารางสอน (ให้แอดมินใส่ชื่อในตารางสอน) · ตอนนี้แตะเลือกคาบและพิมพ์วิชาเองได้') : '🔒 ระบบหาคาบจากตารางสอนของคุณ · แตะ ✓ เพื่อไม่ลาคาบนั้น') + '</small></div>';
+    h += '</div>';
+    if (V.hasTT) h += '<div class="k8-lv4-sec k8-lv4-rowsec"><span class="k8-lv4-l">วิชาที่ต้องลา + ผู้สอนแทนแต่ละคาบ <b>*</b></span><div id="k8Lv4Rows"></div><small class="k8-lv4-note">' + (V.manual ? (V.ttErr ? 'ดึงตารางสอนจากระบบไม่สำเร็จ · <button type="button" class="k8-lv4-retry" onclick="k8LvRetry()">ลองใหม่</button> หรือแตะเลือกคาบเอง' : 'ยังไม่พบชื่อคุณในตารางสอน (ให้แอดมินใส่ชื่อในตารางสอน) · ตอนนี้แตะเลือกคาบและพิมพ์วิชาเองได้') : '🔒 ระบบหาคาบจากตารางสอนของคุณ · แตะแถวเพื่อไม่ลาคาบนั้น') + '</small></div>';
     else {
       const mine = myIds(); const val = V.sub1 ? (V.sub1.other ? '__o' : V.sub1.id + '|' + V.sub1.name) : '';
       h += '<div class="k8-lv4-sec"><span class="k8-lv4-l">ผู้สอนแทน <b>*</b></span><select class="k8-lv4-sub k8-lv4-sub1" onchange="k8Lv4Sub1(this)"><option value="">เลือกผู้สอนแทน</option>' + TS.filter((t) => mine.indexOf(String(t.id).toLowerCase()) === -1 && t.name !== (me().fullName || '')).map((t) => { const v = t.id + '|' + t.name; return '<option value="' + esc(v) + '"' + (v === val ? ' selected' : '') + '>' + esc(t.name) + '</option>'; }).join('') + '<option value="__o"' + (val === '__o' ? ' selected' : '') + '>อื่น ๆ (พิมพ์ชื่อ)</option></select><div id="k8Lv4Oth1"' + (val === '__o' ? '' : ' hidden') + ' class="k8-lv4-oth"><input type="text" maxlength="80" placeholder="พิมพ์ชื่ออาจารย์ผู้สอนแทน" value="' + esc(V.sub1 && V.sub1.other ? V.sub1.name : '') + '" oninput="k8Lv4Oth1(this.value)"></div></div>';
