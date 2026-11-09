@@ -3545,7 +3545,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.61';
+  const APP_VERSION = '18.62';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11463,9 +11463,22 @@ window.k8HfMiss = function (slot) {
     el.hidden = false;
     el.innerHTML = '<div class="k8-perm-ic" aria-hidden="true">' + (need.length > 1 ? '📷📍' : need[0][0] === 'cam' ? '📷' : '📍') + '</div><div class="k8-perm-tx"><b>' + (denied ? 'สิทธิ์' + need.filter((n) => n[2] === 'denied').map((n) => n[1]).join('และ') + 'ถูกปิดอยู่' : 'ยังไม่ได้อนุญาต' + need.map((n) => n[1]).join('และ')) + '</b><small>' + (denied ? 'ต้องเปิดเองในการตั้งค่า · แตะเพื่อดูวิธี' : 'ต้องใช้เพื่อเช็คละหมาด · แตะแล้วกด "อนุญาต"') + '</small></div><button type="button" class="k8-perm-go" onclick="k8PermAsk()">' + (denied ? 'ดูวิธีเปิด' : 'เปิดสิทธิ์') + '</button>';
   }
+  // v18.62 · จำผลจริงจากการเปิดกล้อง/ขอตำแหน่ง (iPhone หลายรุ่นตรวจสิทธิ์ล่วงหน้าไม่ได้) → ถ้าเคยถูกปฏิเสธ แถบจะขึ้นเตือนทุกครั้งจนกว่าจะเปิดได้
+  const LS = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} } };
+  const mark = (kind, ok) => { LS.set('k8_perm_' + kind, ok ? 'ok' : 'denied'); setTimeout(check, 50); };
+  try {
+    const md = navigator.mediaDevices;
+    if (md && md.getUserMedia && !md.__k8wrap) { const g0 = md.getUserMedia.bind(md); md.getUserMedia = function (c) { const p = g0(c); if (c && c.video) p.then(() => mark('cam', true), (e) => { if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'PermissionDeniedError')) mark('cam', false); }); return p; }; md.__k8wrap = 1; }
+    const geo = navigator.geolocation;
+    if (geo && !geo.__k8wrap) {
+      const wrap = (fn) => function (ok, er, o) { return fn.call(geo, (p) => { mark('geo', true); ok && ok(p); }, (e) => { if (e && e.code === 1) mark('geo', false); er && er(e); }, o); };
+      if (geo.getCurrentPosition) geo.getCurrentPosition = wrap(geo.getCurrentPosition); if (geo.watchPosition) geo.watchPosition = wrap(geo.watchPosition); geo.__k8wrap = 1;
+    }
+  } catch (e) {}
+  const merge = (state, kind) => { const f = LS.get('k8_perm_' + kind); if (state === 'granted') return 'granted'; if (state === 'denied') return 'denied'; if (f === 'denied') return 'denied'; if (state === 'unknown') return f === 'ok' ? 'granted' : 'prompt'; return state; };
   async function check() {
     const v = document.getElementById('view-prayer'); if (!v || !v.classList.contains('active')) return;
-    const [c, g] = await Promise.all([q('camera'), q('geolocation')]); st = { cam: c, geo: g }; paint();
+    const [c, g] = await Promise.all([q('camera'), q('geolocation')]); st = { cam: merge(c, 'cam'), geo: merge(g, 'geo') }; paint();
   }
   function help(kinds) {
     const names = kinds.map((k) => (k === 'cam' ? 'กล้อง' : 'ตำแหน่ง')).join(' และ ');
@@ -11490,8 +11503,13 @@ window.k8HfMiss = function (slot) {
   }
   window.k8PermRecheck = check;
   window.k8PermAsk = async function () {
-    const denied = []; if (st.cam === 'denied') denied.push('cam'); if (st.geo === 'denied') denied.push('geo');
-    if (denied.length) return help(denied);
+    // ลองขอสิทธิ์ก่อนเสมอ (บางเครื่องถามซ้ำได้) · ถ้ายังถูกปฏิเสธค่อยแสดงวิธีเปิดในการตั้งค่า
+    if (st.cam !== 'granted') { try { const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); s.getTracks().forEach((t) => t.stop()); } catch (e) {} }
+    if (st.geo !== 'granted') { await new Promise((r) => { try { navigator.geolocation.getCurrentPosition(() => r(), () => r(), { timeout: 15000, maximumAge: 60000 }); } catch (e) { r(); } }); }
+    await check();
+    { const d0 = []; if (st.cam === 'denied') d0.push('cam'); if (st.geo === 'denied') d0.push('geo'); if (d0.length) return help(d0); }
+    if (st.cam === 'granted' && st.geo === 'granted' && typeof showToast === 'function') showToast('เปิดสิทธิ์กล้องและตำแหน่งแล้ว · กด "ตรวจสอบพิกัด & เปิดกล้อง" ได้เลย', 'success');
+    return;
     // ยังไม่เคยถาม → เรียกให้เครื่องขึ้นหน้าต่างถามสิทธิ์
     if (st.cam === 'prompt') { try { const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); s.getTracks().forEach((t) => t.stop()); } catch (e) {} }
     if (st.geo === 'prompt') { await new Promise((r) => { try { navigator.geolocation.getCurrentPosition(() => r(), () => r(), { timeout: 15000, maximumAge: 60000 }); } catch (e) { r(); } }); }
