@@ -3546,7 +3546,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.71';
+  const APP_VERSION = '18.72';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5631,6 +5631,7 @@ window.k8RegBirthChange = function (v) {
   const tok = () => { try { return getSessionToken() || ''; } catch (e) { return ''; } };
   const gasUrl = () => { try { return getGasUrl(); } catch (e) { return ''; } };
 
+  const PG = Math.random().toString(36).slice(2) + Date.now().toString(36);
   function askBgSync() {
     try { if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then((r) => r.sync && r.sync.register('k8-outbox')).catch(() => {}); } catch (e) {}
   }
@@ -5638,7 +5639,7 @@ window.k8RegBirthChange = function (v) {
   window.k8OutboxSend = async function (action, data) {
     const d = slim(action, data);
     const id = String(d.logId || d.id || (action + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
-    const item = { id, action, url: gasUrl(), body: JSON.stringify({ action, data: d, token: tok() }), createdAt: Date.now(), tries: 0 };
+    const item = { id, action, url: gasUrl(), body: JSON.stringify({ action, data: d, token: tok() }), createdAt: Date.now(), tries: 0, pg: PG, perf: performance.now() };
     const m = metaGet().filter((x) => x.id !== id); m.push({ id, action, rec: data, at: item.createdAt }); metaSet(m);
     try { await put(item); } catch (e) { /* IndexedDB ใช้ไม่ได้ (โหมดส่วนตัวบางรุ่น): ส่งตรง */ return sendOne(item, true); }
     askBgSync();
@@ -5650,7 +5651,8 @@ window.k8RegBirthChange = function (v) {
     const url = gasUrl() || item.url; if (!url) return 'retry';
     let body = item.body;
     const t = tok();
-    if (t) { try { const b = JSON.parse(body); if (b.token !== t) { b.token = t; body = JSON.stringify(b); } } catch (e) {} }
+    // v18.72 · แนบเวลาเครื่องตอนส่ง + อายุรายการจากนาฬิกาที่ปรับไม่ได้ (ถ้ายังเป็นหน้าเดิม) ให้เซิร์ฟเวอร์ตรวจว่าเวลาเครื่องถูกปรับไหม
+    try { const b = JSON.parse(body); if (t) b.token = t; if (b.data) { b.data.sentAt = Date.now(); if (item.pg === PG && item.perf != null) b.data.ageMs = Math.max(0, Math.round(performance.now() - item.perf)); else delete b.data.ageMs; } body = JSON.stringify(b); } catch (e) {}
     let r;
     try {
       const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });

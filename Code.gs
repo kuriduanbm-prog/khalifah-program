@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.69'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.72'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1555,7 +1555,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     // ---------- นักเรียนบันทึกข้อมูลของตนเอง ----------
     case 'recordPrayer':
     case 'prayerCheckIn':
-      if (isStudent && isWeeklyHoliday_()) return { success: false, holiday: true, message: 'วันเสาร์เป็นวันหยุดประจำสัปดาห์ · งดเช็คชื่อละหมาด' };
+      if (isStudent && (data && data.date ? isHolidayAt_(data.date, data.time) : isWeeklyHoliday_())) return { success: false, holiday: true, message: 'วันเสาร์เป็นวันหยุดประจำสัปดาห์ · งดเช็คชื่อละหมาด' };
       if (isStudent) data.studentId = session.userId;
       return recordPrayer(data);
     case 'recordHasanat':
@@ -2910,6 +2910,8 @@ function recordPrayer(data) {
   }
 
   const statusThai = formatStatusThai(data.status || 'ตรงเวลา');
+  // v18.72 · ตรวจเวลาเครื่อง (กันปรับนาฬิกาตอนไม่มีเน็ต) → ติดป้ายเตือนในหมายเหตุให้แอดมินตรวจ
+  const timeFlags = prayerTimeFlags_(data, timestamp);
   const isWithin = (data.isWithinZone === true || data.isWithinZone === 'ใช่' || data.isWithinZone === 'true');
   const withinZoneThai = isWithin ? 'ใช่' : 'ไม่ใช่';
 
@@ -2943,7 +2945,7 @@ function recordPrayer(data) {
     withinZoneThai,
     photoRef,
     statusThai,
-    data.note || ''
+    (timeFlags ? '⚠ ' + timeFlags + (data.note ? ' · ' : '') : '') + (data.note || '')
   ]);
   const lastRow = sheet.getLastRow();
   sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
@@ -2951,6 +2953,18 @@ function recordPrayer(data) {
   return { success: true, message: 'บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef };
 }
 
+function prayerTimeFlags_(data, timestamp) {
+  const now = Date.now(), out = [];
+  let claimed = Date.parse(timestamp); if (isNaN(claimed)) return '';
+  const mn = (ms) => { const m = Math.round(Math.abs(ms) / 60000); return m >= 120 ? Math.round(m / 60) + ' ชม.' : m + ' นาที'; };
+  const sentAt = Number(data.sentAt), hasAge = data.ageMs !== undefined && data.ageMs !== null && data.ageMs !== '', age = Number(data.ageMs);
+  // นาฬิกาเครื่องคลาดตอนส่ง → ปรับเวลาที่อ้างให้ตรงก่อนตรวจข้ออื่น
+  if (sentAt > 0 && Math.abs(now - sentAt) > 5 * 60000) { out.push('นาฬิกาเครื่องไม่ตรง (คลาด ' + mn(now - sentAt) + ')'); claimed += now - sentAt; }
+  if (hasAge && age >= 0 && Math.abs(claimed - (now - age)) > 5 * 60000) out.push('เวลาในเครื่องถูกเปลี่ยนระหว่างถ่ายรูป (ต่าง ' + mn(claimed - (now - age)) + ')');
+  if (now - claimed > 15 * 60000) out.push('ส่งย้อนหลัง ' + mn(now - claimed) + ' (ถ่ายตอนไม่มีเน็ต)');
+  else if (claimed - now > 5 * 60000) out.push('เวลาถ่ายอยู่ในอนาคต ' + mn(claimed - now));
+  return out.join(' · ');
+}
 function deletePrayerRecord(data) {
   ensureSchema();
   const ss = getSpreadsheet();
@@ -7134,6 +7148,13 @@ function sheetRows_(name, width) {
 }
 function userKey_(session) { return (session.role === 'student' ? 'S:' + cleanVal(session.userId).replace(/^0+/, '') : 'U:' + cleanVal(session.userId).toLowerCase()); }
 // v17.89 · วันเสาร์ = วันหยุดประจำสัปดาห์ (นับตามวันละหมาด: ก่อนรุ่งเช้ายังเป็นวันก่อนหน้า)
+// v18.72 · วันหยุดตามวันที่ถ่ายรูปจริง (รูปถ่ายวันศุกร์ตอนไม่มีเน็ต แล้วส่งวันเสาร์ ต้องไม่ถูกปฏิเสธ)
+function isHolidayAt_(date, time) {
+  const ds = formatSheetDate(date); if (!/^\d{4}-\d{2}-\d{2}$/.test(ds)) return isWeeklyHoliday_();
+  const m = String(time || '').match(/^(\d{1,2}):(\d{2})/); const mins = m ? (+m[1]) * 60 + (+m[2]) : 720;
+  const p = ds.split('-'); const d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]) - (mins < 285 ? 86400000 : 0));
+  return d.getUTCDay() === 6;
+}
 function isWeeklyHoliday_() {
   const now = new Date();
   const hm = Utilities.formatDate(now, 'Asia/Bangkok', 'H:m').split(':');

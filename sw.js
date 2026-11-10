@@ -1,5 +1,5 @@
 // KHALIFAH PROGRAM - Production PWA Service Worker (v7.7)
-const CACHE_NAME = 'khalifah-cache-v18.71';
+const CACHE_NAME = 'khalifah-cache-v18.72';
 
 // Critical local assets required for the app shell to function offline
 const PRECACHE_ASSETS = [
@@ -7,12 +7,12 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
-  'style.css?v=18.71',
-  'ui-v8.css?v=18.71',
-  'dark.css?v=18.71',
-  'ui-v8.js?v=18.71',
+  'style.css?v=18.72',
+  'ui-v8.css?v=18.72',
+  'dark.css?v=18.72',
+  'ui-v8.js?v=18.72',
   'app.js',
-  'app.js?v=18.71',
+  'app.js?v=18.72',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',
@@ -150,7 +150,8 @@ async function k8OutboxFlushSw() {
   for (const it of items) {
     let ok = false;
     try {
-      const resp = await fetch(it.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: it.body });
+      let body = it.body; try { const b = JSON.parse(body); if (b.data) { b.data.sentAt = Date.now(); delete b.data.ageMs; } body = JSON.stringify(b); } catch (e) {}
+      const resp = await fetch(it.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
       const j = await resp.json();
       ok = !!j && (j.success !== false || (j.code && j.code !== 'AUTH_REQUIRED'));
     } catch (e) { ok = false; }
