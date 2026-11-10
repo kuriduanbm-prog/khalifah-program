@@ -5512,3 +5512,35 @@ html[data-theme="dark"] .k8-hqd-view button[aria-selected="true"] { background: 
 .k8-hqr-h { padding: 14px 16px; }
 .k8-hqd-gridw { padding: 16px; }
 .k8-hqr .k8-atd-bar { margin-top: -6px; }
+
+/* v18.77 · แก้การเช็คชื่อหะละเกาะฮฺในหน้าสรุป */
+.k8-hqd-m button { width: 100%; height: 100%; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; border-radius: 7px; }
+.k8-hqd-m button:hover { box-shadow: inset 0 0 0 2px #0369a1; }
+.k8-hqd-m.is-x button { color: #cbd5e1; }
+.k8-hqe { position: fixed; inset: 0; z-index: 5200; display: flex; align-items: flex-end; justify-content: center; }
+.k8-hqe-bg { position: absolute; inset: 0; background: rgba(15,23,42,.45); animation: k8hqeF .18s ease; }
+.k8-hqe-sh { position: relative; width: 100%; max-width: 560px; max-height: 86vh; display: flex; flex-direction: column; background: #fff; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(15,23,42,.2); animation: k8hqeU .22s ease; padding-bottom: env(safe-area-inset-bottom); }
+@media (min-width: 700px) { .k8-hqe { align-items: center; } .k8-hqe-sh { border-radius: 22px; } }
+@keyframes k8hqeF { from { opacity: 0; } } @keyframes k8hqeU { from { transform: translateY(24px); opacity: 0; } }
+.k8-hqe-sh header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 18px 10px; }
+.k8-hqe-sh h3 { margin: 0; font-size: 17px; font-weight: 700; color: #0f172a; }
+.k8-hqe-sh header small { font-size: 13px; color: #64748b; }
+.k8-hqe-x { flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; background: #f1f5f9; color: #475569; font-size: 15px; cursor: pointer; }
+.k8-hqe-all { display: flex; align-items: center; gap: 6px; padding: 0 18px 10px; flex-wrap: wrap; font-size: 13px; color: #64748b; }
+.k8-hqe-all button { border: 1px solid #e2e8f0; background: #fff; border-radius: 999px; padding: 5px 12px; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; color: #334155; }
+.k8-hqe-list { list-style: none; margin: 0; padding: 0 18px; overflow-y: auto; flex: 1; }
+.k8-hqe-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-top: 1px solid #f1f5f9; }
+.k8-hqe-list li span { display: flex; flex-direction: column; min-width: 0; }
+.k8-hqe-list li b { font-size: 14.5px; font-weight: 600; color: #0f172a; }
+.k8-hqe-list li small { font-size: 12px; color: #94a3b8; }
+.k8-hqe-seg { display: grid; grid-template-columns: repeat(4, 46px); gap: 4px; flex: none; }
+.k8-hqe-seg button { height: 38px; border: 1px solid #e2e8f0; background: #fff; border-radius: 10px; font: 600 13.5px 'IBM Plex Sans Thai', sans-serif; color: #64748b; cursor: pointer; }
+.k8-hqe-seg button.is-p[aria-pressed="true"] { background: #16a34a; border-color: #16a34a; color: #fff; }
+.k8-hqe-seg button.is-l[aria-pressed="true"] { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+.k8-hqe-seg button.is-v[aria-pressed="true"] { background: #8b5cf6; border-color: #8b5cf6; color: #fff; }
+.k8-hqe-seg button.is-a[aria-pressed="true"] { background: #dc2626; border-color: #dc2626; color: #fff; }
+.k8-hqe-sh footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px 16px; border-top: 1px solid #f1f5f9; }
+.k8-hqe-sh footer small { font-size: 13px; color: #64748b; }
+.k8-hqe-save { min-width: 140px; height: 46px; border: 0; border-radius: 14px; background: linear-gradient(135deg, #38bdf8, #0369a1); color: #fff; font: 700 15px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+.k8-hqe-save:disabled { opacity: .5; cursor: default; }
+html[data-theme="dark"] .k8-hqe-sh { background: #16191e !important; }

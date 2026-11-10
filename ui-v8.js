@@ -3546,7 +3546,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.76';
+  const APP_VERSION = '18.77';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10762,11 +10762,50 @@ window.k8HfMiss = function (slot) {
     load();
   };
   window.k8HqRepAll = function (on) { ((R.data && R.data.groups) || []).forEach((g) => { R.open[g.id] = !!on; }); render(); };
-  window.k8HqRepCheck = function (id, date) {
-    if (!window.k8HqAdminCheck) return;
-    const el = document.getElementById('k8HqRep');
-    const g = ((R.data && R.data.groups) || []).find((x) => String(x.id) === String(id));
-    if (el && !el.hidden) { R.reopen = true; el.hidden = true; history.back(); setTimeout(() => window.k8HqAdminCheck(id, date, g), 60); } else window.k8HqAdminCheck(id, date, g);
+  // v18.77 · แก้การเช็คชื่อในหน้าสรุปเลย (แผงเลื่อนขึ้นจากด้านล่าง) · ไม่ต้องออกไปหน้าอื่น จึงไม่กระพริบ/วาร์ป
+  const EDST = [['p', 'มา', 'present'], ['l', 'สาย', 'late'], ['v', 'ลา', 'excused'], ['a', 'ขาด', 'absent']];
+  const grpOf = (id) => ((R.data && R.data.groups) || []).find((x) => String(x.id) === String(id));
+  function recount(g) {
+    const T = { present: 0, late: 0, leave: 0, absent: 0, none: 0 }; const held = {};
+    g.members.forEach((m) => { Object.keys(m.d || {}).forEach((d) => { held[d] = 1; }); const c = { present: 0, late: 0, leave: 0, absent: 0, none: 0 }; g.dates.forEach((d) => { const x = m.d && m.d[d]; const k = x ? { p: 'present', l: 'late', v: 'leave', a: 'absent' }[x] : 'none'; c[k]++; T[k]++; }); m.c = c; });
+    g.total = T; g.held = Object.keys(held).sort();
+  }
+  function dropCache() { Object.keys(RC).forEach((x) => delete RC[x]); try { Object.keys(localStorage).filter((x) => x.indexOf('k8_hqr_') === 0).forEach((x) => localStorage.removeItem(x)); } catch (e) {} try { window.k8HqForget && R.ed && window.k8HqForget(R.ed.id, R.ed.date); } catch (e) {} }
+  function edPaint() {
+    let el = document.getElementById('k8HqEd');
+    if (!R.ed) { if (el) el.remove(); return; }
+    const g = grpOf(R.ed.id); if (!g) { R.ed = null; return edPaint(); }
+    if (!el) { el = document.createElement('div'); el.id = 'k8HqEd'; el.className = 'k8-hqe'; document.getElementById('k8HqRep').appendChild(el); }
+    const E = R.ed, n = g.members.filter((m) => E.marks[m.id]).length;
+    el.innerHTML = '<div class="k8-hqe-bg" onclick="k8HqEdClose()"></div><section class="k8-hqe-sh" role="dialog" aria-modal="true" aria-labelledby="k8HqEdT"><header><div><h3 id="k8HqEdT">' + (E.one ? 'แก้สถานะ' : 'เช็คชื่อ / แก้การเช็คชื่อ') + '</h3><small>' + esc(tName(g)) + ' · ' + esc(g.name) + ' · ' + esc(dTh(E.date)) + '</small></div><button type="button" class="k8-hqe-x" onclick="k8HqEdClose()" aria-label="ปิด">✕</button></header>' +
+      (E.one ? '' : '<div class="k8-hqe-all"><span>ทุกคน:</span>' + EDST.map(([k, l]) => '<button type="button" class="is-' + k + '" onclick="k8HqEdAll(\'' + k + '\')">' + l + '</button>').join('') + '</div>') +
+      '<ul class="k8-hqe-list">' + g.members.filter((m) => !E.one || m.id === E.one).map((m) => '<li><span><b>' + esc(m.name) + '</b><small>' + esc(sg(m)) + ' · ' + esc(m.id) + '</small></span><div class="k8-hqe-seg">' + EDST.map(([k, l]) => '<button type="button" class="is-' + k + '" aria-pressed="' + (E.marks[m.id] === k) + '" onclick="k8HqEdSet(\'' + js(m.id) + '\',\'' + k + '\')">' + l + '</button>').join('') + '</div></li>').join('') + '</ul>' +
+      (E.one ? '<footer><small>' + (E.busy ? 'กำลังบันทึก…' : 'แตะสถานะเพื่อบันทึกทันที') + '</small></footer></section>' : '') + (E.one ? '' : '<footer><small>เลือกแล้ว ' + n + '/' + g.members.length + ' คน</small><button type="button" class="k8-hqe-save" onclick="k8HqEdSave()"' + (E.busy || !n ? ' disabled' : '') + '>' + (E.busy ? 'กำลังบันทึก…' : 'บันทึก') + '</button></footer></section>');
+  }
+  const js = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  window.k8HqRepCheck = function (id, date, sid) {
+    const g = grpOf(id); if (!g) return;
+    const marks = {}; g.members.forEach((m) => { const x = m.d && m.d[date]; if (x) marks[m.id] = x; });
+    R.ed = { id: g.id, date, marks, orig: Object.assign({}, marks), one: sid || '' }; edPaint();
+  };
+  window.k8HqRepCell = function (id, sid, date) { window.k8HqRepCheck(id, date, sid); };
+  window.k8HqEdClose = function () { if (R.ed && R.ed.busy) return; R.ed = null; edPaint(); };
+  window.k8HqEdSet = function (sid, k) { if (!R.ed) return; R.ed.marks[sid] = k; if (R.ed.one) return window.k8HqEdSave(); edPaint(); };
+  window.k8HqEdAll = function (k) { const g = grpOf(R.ed.id); g.members.forEach((m) => { R.ed.marks[m.id] = k; }); edPaint(); };
+  window.k8HqEdSave = async function () {
+    const E = R.ed; if (!E || E.busy) return; const g = grpOf(E.id); if (!g) return;
+    const ch = {}; Object.keys(E.marks).forEach((sid) => { if (E.marks[sid] !== E.orig[sid]) ch[sid] = E.marks[sid]; });
+    if (!Object.keys(ch).length) { R.ed = null; edPaint(); return; }
+    // เปลี่ยนบนจอทันที แล้วส่งเบื้องหลัง · ไม่สำเร็จคืนค่าเดิม
+    const before = g.members.map((m) => Object.assign({}, m.d || {}));
+    g.members.forEach((m) => { if (ch[m.id]) { m.d = Object.assign({}, m.d || {}); m.d[E.date] = ch[m.id]; } });
+    if (g.dates.indexOf(E.date) === -1 && E.date >= R.from && E.date <= R.to) { /* วันนอกตาราง: แสดงเป็นครั้งนอกตาราง */ }
+    recount(g); E.busy = true; render(); edPaint();
+    const marks = {}; Object.keys(ch).forEach((sid) => { marks[sid] = EDST.find((x) => x[0] === ch[sid])[2]; });
+    let r = null; try { r = await gasApiCall('markHalaqah', { data: { id: g.id, date: E.date, marks } }, 30000); } catch (e) {}
+    E.busy = false;
+    if (r && r.success) { dropCache(); R.ed = null; edPaint(); render(); try { showToast('บันทึกแล้ว ' + Object.keys(ch).length + ' คน', 'success'); } catch (e) {} }
+    else { g.members.forEach((m, i) => { m.d = before[i]; }); recount(g); render(); edPaint(); try { showToast((r && r.message) || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); } catch (e) {} }
   };
   // v18.63 · บันทึกสรุปรวมทุกกลุ่ม (รายชื่อทุกคน) เป็นรูปภาพ PNG
   window.k8HqRepImg = async function () {
@@ -10859,11 +10898,12 @@ window.k8HfMiss = function (slot) {
     return '<section class="k8-hqd-card"><h3>รายผู้ดูแล <small>· แตะเพื่อดูรายละเอียดกลุ่ม</small></h3><ul class="k8-hqd-tl">' + G.map((g) => { const p = pct(g.total); return '<li><button type="button" onclick="k8HqRepGo(\'' + esc(g.id) + '\')"><span><b>' + esc(tName(g)) + '</b><small>' + esc(g.name) + ' · ' + g.members.length + ' คน · เช็คแล้ว ' + heldTxt(g) + '</small></span><i><em class="' + pcls(p) + '" style="width:' + (p || 0) + '%"></em></i><strong class="' + pcls(p) + '">' + (p == null ? '–' : p + '%') + '</strong></button></li>'; }).join('') + '</ul></section>';
   }
   function gridHtml(g) {
+    const adm = !!(window.k8HqIsAdm && window.k8HqIsAdm());
     const D = Array.from(new Set(g.dates.concat(g.held))).sort();
     if (!D.length || !g.members.some((m) => m.d)) return '';
     return '<div class="k8-hqd-gridw"><h3>การเข้าร่วมรายวัน</h3><div class="k8-hqd-gscroll"><table class="k8-hqd-grid"><thead><tr><th scope="col">นักเรียน</th>' + D.map((d) => '<th scope="col">' + esc(dTh(d).replace(/ \d{2}$/, '')) + '</th>').join('') + '</tr></thead><tbody>' +
-      g.members.map((m) => '<tr><th scope="row">' + esc(m.name) + '</th>' + D.map((d) => { const x = m.d && m.d[d]; const plan = g.dates.indexOf(d) !== -1; return '<td class="k8-hqd-m is-' + (x || (plan ? 'n' : 'x')) + '">' + (x ? MK[x] : plan ? '–' : '') + '</td>'; }).join('') + '</tr>').join('') +
-      '</tbody></table></div><p class="k8-hqd-note">ม = มา · ส = สาย · ล = ลา · ข = ขาด · – = ไม่ได้เช็ค</p></div>';
+      g.members.map((m) => '<tr><th scope="row">' + esc(m.name) + '</th>' + D.map((d) => { const x = m.d && m.d[d]; const plan = g.dates.indexOf(d) !== -1; const lab = x ? MK[x] : plan ? '–' : ''; return '<td class="k8-hqd-m is-' + (x || (plan ? 'n' : 'x')) + '">' + (adm ? '<button type="button" onclick="k8HqRepCell(\'' + esc(g.id) + '\',\'' + esc(m.id) + '\',\'' + d + '\')" aria-label="แก้สถานะ ' + esc(m.name) + ' ' + esc(dTh(d)) + '">' + (lab || '+') + '</button>' : lab) + '</td>'; }).join('') + '</tr>').join('') +
+      '</tbody></table></div><p class="k8-hqd-note">ม = มา · ส = สาย · ล = ลา · ข = ขาด · – = ไม่ได้เช็ค' + (adm ? ' · <b>แตะช่องเพื่อแก้สถานะได้ทันที</b>' : '') + '</p></div>';
   }
   function groupCard(g, adm, solo) {
     const p = pct(g.total), miss = g.dates.filter((d) => g.held.indexOf(d) === -1);
@@ -10875,7 +10915,7 @@ window.k8HfMiss = function (slot) {
       (miss.length ? '<small class="k8-hqr-miss">ยังไม่เช็คชื่อ: ' + miss.slice(0, 6).map(dTh).join(', ') + (miss.length > 6 ? ' และอีก ' + (miss.length - 6) + ' วัน' : '') + '</small>' : '') + '</div><span class="k8-hqr-p' + (p != null && p < 80 ? ' is-low' : '') + '">' + (p == null ? '–' : p + '%') + '</span>';
     return '<article class="k8-hqr-g' + (solo ? ' is-solo' : '') + '">' + (solo ? '<div class="k8-hqr-h">' + head + '</div>' : '<button type="button" class="k8-hqr-h" aria-expanded="' + op + '" onclick="k8HqRepT(\'' + esc(g.id) + '\')">' + head + '</button>') +
       (op ? sessHtml(g, adm) : '') +
-      (solo ? gridHtml(g) : '') +
+      (op ? gridHtml(g) : '') +
       (op ? '<div class="k8-hqr-wrap"><table class="k8-hqr-t"><thead><tr><th scope="col">นักเรียน</th><th scope="col">มา</th><th scope="col">สาย</th><th scope="col">ลา</th><th scope="col">ขาด</th><th scope="col">ไม่เช็ค</th><th scope="col">%</th></tr></thead><tbody>' +
         g.members.map((m) => { const q = pct(m.c); return '<tr><th scope="row">' + esc(m.name) + '<small>' + esc(sg(m)) + ' · ' + esc(m.id) + '</small></th><td>' + m.c.present + '</td><td>' + m.c.late + '</td><td>' + m.c.leave + '</td><td class="' + (m.c.absent ? 'is-bad' : '') + '">' + m.c.absent + '</td><td class="' + (m.c.none ? 'is-bad' : '') + '">' + m.c.none + '</td><td><b>' + (q == null ? '–' : q + '%') + '</b></td></tr>'; }).join('') + '</tbody></table></div>' : '') + '</article>';
   }
