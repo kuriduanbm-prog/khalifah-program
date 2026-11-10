@@ -5578,3 +5578,41 @@ html[data-theme="dark"] .k8-hqe-sh { background: #16191e !important; }
 .k8-docs-del { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 2; width: 36px; height: 36px; border-radius: 10px; border: 0; background: #fef2f2; color: #dc2626; display: grid; place-items: center; cursor: pointer; }
 .k8-docs-del:hover { background: #fee2e2; }
 .k8-docs-folders .k8-docs-del, .k8-docs-files .k8-docs-del { width: 36px; min-height: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px; display: grid; gap: 0; background: #fef2f2; }
+
+/* v18.81 · ภาพรวมแอดมิน: ละหมาดวันนี้ (ตารางชั้น × เวลา) */
+.k8-opg-sum { display: flex; align-items: center; gap: 14px; margin: 6px 0 14px; }
+.k8-opg-sum > b { font-size: 32px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.k8-opg-sum > b.is-ok { color: #15803d; } .k8-opg-sum > b.is-mid { color: #d97706; } .k8-opg-sum > b.is-low { color: #dc2626; }
+.k8-opg-sum span { font-size: 14px; color: #334155; line-height: 1.5; } .k8-opg-sum small { color: #94a3b8; font-size: 12px; }
+.k8-opg-wrap { overflow-x: auto; }
+.k8-opg { width: 100%; border-collapse: separate; border-spacing: 6px; table-layout: fixed; min-width: 420px; }
+.k8-opg thead th { font-size: 12.5px; font-weight: 600; color: #64748b; padding: 2px 0 4px; text-align: center; }
+.k8-opg thead th:first-child { width: 64px; text-align: left; }
+.k8-opg thead th.is-now { color: #0369a1; }
+.k8-opg thead th.is-now::after { content: ' • ตอนนี้'; font-size: 10.5px; }
+.k8-opg tbody th { text-align: left; font-size: 15px; font-weight: 700; color: #0f172a; white-space: nowrap; }
+.k8-opg tbody th small { display: block; font-size: 11.5px; font-weight: 500; color: #94a3b8; }
+.k8-opg td { position: relative; height: 54px; border-radius: 12px; text-align: center; overflow: hidden; background: #f1f5f9; }
+.k8-opg td b { position: relative; z-index: 1; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.k8-opg td b small { font-size: 11.5px; font-weight: 600; opacity: .7; }
+.k8-opg td i { position: absolute; left: 0; bottom: 0; height: 4px; width: var(--p); }
+.k8-opg td.is-ok { background: #dcfce7; color: #15803d; } .k8-opg td.is-ok i { background: #16a34a; }
+.k8-opg td.is-mid { background: #fef3c7; color: #b45309; } .k8-opg td.is-mid i { background: #f59e0b; }
+.k8-opg td.is-low { background: #fee2e2; color: #b91c1c; } .k8-opg td.is-low i { background: #ef4444; }
+.k8-opg td.is-now { box-shadow: inset 0 0 0 2px #0369a1; }
+.k8-opg td.is-wait { background: repeating-linear-gradient(135deg, #f8fafc 0 6px, #f1f5f9 6px 12px); color: #94a3b8; font-size: 11.5px; }
+.k8-opg-leg { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font-size: 12.5px; color: #64748b; }
+.k8-opg-leg span { display: inline-flex; align-items: center; gap: 6px; }
+.k8-opg-leg i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+.k8-opg-leg i.is-ok { background: #86efac; } .k8-opg-leg i.is-mid { background: #fcd34d; } .k8-opg-leg i.is-low { background: #fca5a5; }
+.k8-opg-no { color: #94a3b8; }
+html[data-theme="dark"] .k8-opg td.is-wait { background: #1c2027 !important; }
+.k8-opg { min-width: 0; border-spacing: 4px; }
+.k8-opg thead th:first-child { width: 46px; }
+.k8-opg thead th { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k8-opg thead th.is-now::after { content: none; }
+.k8-opg thead th.is-now { color: #0369a1; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+.k8-opg tbody th { font-size: 14px; }
+.k8-opg td { height: 50px; border-radius: 10px; }
+.k8-opg td b { font-size: 15px; }
+.k8-opg td.is-wait { font-size: 15px; }

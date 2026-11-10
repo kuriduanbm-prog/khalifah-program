@@ -1410,10 +1410,24 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       '<button type="button" class="k8-todo-row" onclick="' + t.go + '"><span class="k8-todo-badge" style="background:' + t.bg + ';color:' + t.ink + '">' + t.n + '</span><span class="k8-todo-text"><b>' + esc(t.label) + '</b></span><span class="k8-todo-cta">' + t.cta + '</span></button>'
     ).join('');
 
-    const slotNames = wins.slice(0, passed).map((w) => w.name).join(', ');
-    document.getElementById('k8OvPray').innerHTML = '<p class="k8-gbar-hint">เช็คชื่อแล้วกี่ครั้ง จากที่ควรมี (นักเรียนในชั้น × เวลาที่ผ่านมาแล้ว: ' + esc(slotNames) + ')</p>' + byGrade.map((g) =>
-      '<div class="k8-gbar"><span class="k8-gbar-l">' + g.label + '</span><span class="k8-gbar-track" role="img" aria-label="' + g.label + ' เช็คแล้ว ' + g.done + ' จาก ' + g.possible + ' ครั้ง"><span style="width:' + g.pct + '%;background:' + (g.pct < 70 ? '#f59e0b' : '#0369a1') + '"></span></span><span class="k8-gbar-v">' + (g.n ? '<b>' + g.done + '/' + g.possible + '</b><small>' + g.pct + '%</small>' : '<small>ไม่มีนักเรียน</small>') + '</span></div>'
-    ).join('');
+    // v18.81 · ตารางชั้น × เวลาละหมาด (อ่านง่าย): ช่อง = เช็คแล้วกี่คน / ทั้งชั้น · สีตามสัดส่วน · เวลาที่ยังไม่ถึงเป็นสีเทา
+    const SH = (n) => String(n || '').replace('ศุบฮิ', 'ซุบฮิ').replace(/\s*\(.*$/, '');
+    const curIdx = wins.findIndex((w) => cur >= w.startMin && cur <= w.endMin);
+    const rowsG = GRADES.map((g) => ({ g, label: g.replace('มัธยมศึกษาปีที่ ', 'ม.'), list: students.filter((s) => s.grade === g) })).filter((r) => r.list.length);
+    const noStu = GRADES.filter((g) => !students.some((s) => s.grade === g)).map((g) => g.replace('มัธยมศึกษาปีที่ ', 'ม.'));
+    const tone = (p) => p >= 90 ? 'is-ok' : p >= 60 ? 'is-mid' : 'is-low';
+    const cell = (r, w, wi) => {
+      if (wi >= passed && wi !== curIdx) return '<td class="is-wait" title="ยังไม่ถึงเวลา"><span>–</span></td>';
+      let n = 0; r.list.forEach((s) => { if (seen[String(s.studentId).replace(/^0+/, '') + '|' + w.name]) n++; });
+      const p = Math.round(n / r.list.length * 100);
+      return '<td class="' + tone(p) + (wi === curIdx ? ' is-now' : '') + '" title="' + esc(r.label + ' · ' + SH(w.name) + ': เช็คแล้ว ' + n + ' จาก ' + r.list.length + ' คน') + '"><b>' + n + '<small>/' + r.list.length + '</small></b><i style="--p:' + p + '%"></i></td>';
+    };
+    document.getElementById('k8OvPraySlot').textContent = curIdx >= 0 ? 'ตอนนี้: ' + SH(wins[curIdx].name) : passed + ' เวลาที่ผ่านมาแล้ว';
+    document.getElementById('k8OvPray').innerHTML = !rowsG.length ? '<div class="k8-li-empty">ยังไม่มีนักเรียน</div>' :
+      '<div class="k8-opg-sum"><b class="' + tone(prayPct) + '">' + prayPct + '%</b><span>เช็คละหมาดแล้ว <b>' + totalDone + '</b> จาก ' + prayPossible + ' ครั้ง<br><small>นับเฉพาะเวลาที่ถึงแล้ววันนี้</small></span></div>' +
+      '<div class="k8-opg-wrap"><table class="k8-opg"><thead><tr><th scope="col">ชั้น</th>' + wins.map((w, wi) => '<th scope="col" class="' + (wi === curIdx ? 'is-now' : '') + '">' + esc(SH(w.name)) + '</th>').join('') + '</tr></thead><tbody>' +
+      rowsG.map((r) => '<tr><th scope="row">' + r.label + '<small>' + r.list.length + ' คน</small></th>' + wins.map((w, wi) => cell(r, w, wi)).join('') + '</tr>').join('') + '</tbody></table></div>' +
+      '<p class="k8-opg-leg"><span><i class="is-ok"></i>90% ขึ้นไป</span><span><i class="is-mid"></i>60–89%</span><span><i class="is-low"></i>ต่ำกว่า 60%</span>' + (noStu.length ? '<span class="k8-opg-no">' + noStu.join(', ') + ' ยังไม่มีนักเรียน</span>' : '') + '</p>';
   }
 
   window.renderAdminOverviewV8 = function () { try { renderAdminOverview(); } catch (e) { console.warn('admin overview', e); } };
@@ -3546,7 +3560,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.80';
+  const APP_VERSION = '18.81';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
