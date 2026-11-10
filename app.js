@@ -4651,12 +4651,8 @@ async function executePrayerCaptureStep2() {
   }
   localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
 
-  // อัปเดต UI ทันทีแบบเรียลไทม์
-  refreshPrayerChipsStatus();
-  renderTodayPrayerTable();
-  renderDashboardCharts();
-  renderCurrentStudentProfile();
-  renderPrayerHistory();
+  // อัปเดต UI ทันทีแบบเรียลไทม์ (v18.71 · แต่ละส่วนพังได้โดยไม่กระทบการบันทึก/ส่งข้อมูล)
+  [refreshPrayerChipsStatus, renderTodayPrayerTable, renderDashboardCharts, renderCurrentStudentProfile, renderPrayerHistory].forEach((fn) => { try { fn(); } catch (e) { console.warn('prayer ui', e); } });
 
   if (document.getElementById('prayerNoteInput')) {
     document.getElementById('prayerNoteInput').value = '';
@@ -5381,6 +5377,8 @@ function checkInActivity(actId) {
 // ----------------- CHARTS & ANALYTICS ----------------- //
 
 function renderDashboardCharts() {
+  // v18.71 · ออฟไลน์แล้วไลบรารีกราฟโหลดไม่ได้ → ข้ามกราฟ ไม่ให้การบันทึกละหมาด/เช็คชื่อพังตาม
+  if (typeof Chart === 'undefined') return;
   renderSkillRadarChart();
   renderAttendanceDoughnutChart();
   renderPrayerBarChart();
