@@ -1782,6 +1782,7 @@ function renderPrayerHistory(filterDate = null) {
               <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">เวลา: ${p.prayerName || p.prayerTime}</span>
               <span class="status-badge ${statusClass}">${status}</span>
               ${repeatBadge}
+              ${typeof window.k8PrReactPill === 'function' ? window.k8PrReactPill(cardId) : ''}
             </div>
             <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem;">
               <i class="fa-solid fa-clock"></i> ${dateStr} • ${timeStr} น. • ณ ${p.locationName || 'พิกัด GPS'}

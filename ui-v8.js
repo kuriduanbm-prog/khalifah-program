@@ -3606,7 +3606,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.92';
+  const APP_VERSION = '18.93';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12068,4 +12068,103 @@ window.k8HfMiss = function (slot) {
     try { sessionStorage.removeItem('k8_act_pending'); } catch (e) {} clearInterval(tick);
     setTimeout(() => { try { wrap(); window.handleQrCodeDetected('KHALIFAH_ACT:' + pend); } catch (e) { console.warn('act link', e); } }, 800);
   }, 1000);
+})();
+
+/* ============ v18.93 · แอดมิน/ครูเปิดดู·ถูกใจรูปรายงานละหมาด · นักเรียนเห็นว่ามีคนใส่ใจ ============ */
+(function () {
+  const KEY = 'k8_pr_reacts';
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } };
+  const write = (m) => { try { localStorage.setItem(KEY, JSON.stringify(m)); } catch (e) {} };
+  const staff = () => { try { return !!currentAdmin; } catch (e) { return false; } };
+  const student = () => { try { return !!currentStudent && !currentAdmin; } catch (e) { return false; } };
+  const whoTxt = (r) => (r && r.by === 'teacher') ? 'คุณครู' : 'แอดมิน';
+  let lastFetch = 0, busy = false;
+  const seenSent = {};
+
+  // ป้ายเล็กในรายการประวัติของนักเรียน
+  window.k8PrReactPill = function (logId) {
+    if (!student()) return '';
+    const r = read()[logId]; if (!r || (!r.liked && !r.seen)) return '';
+    return r.liked
+      ? '<span class="k8-prr-pill is-like" title="' + whoTxt(r) + 'เปิดดูรูปและกดถูกใจแล้ว"><i class="fa-solid fa-heart"></i> ' + whoTxt(r) + 'ถูกใจ</span>'
+      : '<span class="k8-prr-pill" title="' + whoTxt(r) + 'เปิดดูรูปนี้แล้ว"><i class="fa-solid fa-eye"></i> เปิดดูแล้ว</span>';
+  };
+
+  async function fetchMine(force) {
+    if (!student() || busy || typeof gasApiCall !== 'function') return;
+    if (!force && Date.now() - lastFetch < 90000) return;
+    busy = true; lastFetch = Date.now();
+    try {
+      const r = await gasApiCall('getMyPrayerReacts', {}, 15000);
+      if (r && r.success && r.reacts) {
+        const before = localStorage.getItem(KEY) || '{}'; write(r.reacts);
+        if (JSON.stringify(r.reacts) !== before && typeof window.renderPrayerHistory === 'function') { try { window.renderPrayerHistory(); } catch (e) {} }
+      }
+    } catch (e) {} finally { busy = false; }
+  }
+  const rph = window.renderPrayerHistory;
+  if (typeof rph === 'function') window.renderPrayerHistory = function () { const out = rph.apply(this, arguments); setTimeout(() => fetchMine(false), 50); return out; };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fetchMine(false); });
+
+  function findRec(id) {
+    const lists = [];
+    try { lists.push(JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]')); } catch (e) {}
+    try { lists.push(todayPrayers || []); } catch (e) {}
+    for (const L of lists) { const r = (L || []).find((p) => p && (p.id === id || p.logId === id)); if (r) return r; }
+    try {
+      const m = cachedDailyStudentPrayerMap || {};
+      for (const sid of Object.keys(m)) for (const k of Object.keys(m[sid] || {})) { const r = m[sid][k]; if (r && (r.id === id || r.logId === id)) return r; }
+    } catch (e) {}
+    return null;
+  }
+  function box() {
+    let b = document.getElementById('k8PrReact');
+    if (!b) {
+      const anchor = document.getElementById('modalPrayerPhotoWrapper'); if (!anchor) return null;
+      b = document.createElement('div'); b.id = 'k8PrReact'; b.className = 'k8-prr';
+      anchor.insertAdjacentElement('afterend', b);
+    }
+    return b;
+  }
+  function paintStaff(b, id, sid, r) {
+    const liked = !!(r && r.likedAt);
+    b.innerHTML = '<button type="button" class="k8-prr-like' + (liked ? ' is-on' : '') + '" aria-pressed="' + liked + '" onclick="k8PrLike()">'
+      + '<i class="fa-' + (liked ? 'solid' : 'regular') + ' fa-heart"></i><span>' + (liked ? 'ถูกใจแล้ว' : 'ถูกใจ') + '</span></button>'
+      + '<span class="k8-prr-note">' + (liked ? 'นักเรียนจะเห็นว่า' + (r.likedRole === 'teacher' ? 'คุณครู' : 'แอดมิน') + 'ถูกใจรูปนี้' : (r && r.seenAt ? 'นักเรียนจะเห็นว่าเปิดดูแล้ว · กดถูกใจเพื่อให้กำลังใจ' : 'กดถูกใจเพื่อให้นักเรียนรู้ว่าเราเปิดดู')) + '</span>';
+    b.dataset.id = id; b.dataset.sid = sid || ''; b.hidden = false;
+  }
+  window.k8PrLike = async function () {
+    const b = document.getElementById('k8PrReact'); if (!b || !b.dataset.id) return;
+    const id = b.dataset.id, sid = b.dataset.sid; const btn = b.querySelector('.k8-prr-like'); const on = btn && btn.classList.contains('is-on');
+    const optimistic = on ? { seenAt: '1' } : { seenAt: '1', likedAt: new Date().toISOString(), likedRole: (currentAdmin && currentAdmin.role === 'teacher') ? 'teacher' : 'admin' };
+    paintStaff(b, id, sid, optimistic);
+    let r = null; try { r = await gasApiCall('reactPrayer', { data: { logId: id, studentId: sid, kind: on ? 'unlike' : 'like' } }, 15000); } catch (e) {}
+    if (!r || !r.success) { paintStaff(b, id, sid, on ? { seenAt: '1', likedAt: '1' } : { seenAt: '1' }); if (typeof showToast === 'function') showToast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); return; }
+    if (b.dataset.id === id) paintStaff(b, id, sid, r.react);
+  };
+
+  const od = window.openPrayerHistoryDetailModal;
+  if (typeof od === 'function') window.openPrayerHistoryDetailModal = function (id) {
+    const out = od.apply(this, arguments);
+    const b = box(); if (!b) return out;
+    b.hidden = true; b.innerHTML = ''; b.dataset.id = '';
+    const rec = findRec(id); const realId = rec ? (rec.logId || rec.id) : id;
+    if (staff()) {
+      if (!rec || !realId) return out;
+      paintStaff(b, realId, rec.studentId, seenSent[realId] || null);
+      gasApiCall('reactPrayer', { data: { logId: realId, studentId: rec.studentId, kind: 'seen' } }, 15000).then((r) => {
+        if (r && r.success) { seenSent[realId] = r.react; if (b.dataset.id === realId) paintStaff(b, realId, rec.studentId, r.react); }
+      }).catch(() => {});
+    } else if (student()) {
+      const r = read()[realId] || read()[id];
+      if (r && (r.liked || r.seen)) {
+        b.innerHTML = r.liked
+          ? '<div class="k8-prr-stu is-like"><i class="fa-solid fa-heart"></i><span><b>' + whoTxt(r) + 'เปิดดูรูปและกดถูกใจแล้ว</b><small>ขอบคุณที่ตั้งใจรายงานการละหมาด</small></span></div>'
+          : '<div class="k8-prr-stu"><i class="fa-solid fa-eye"></i><span><b>' + whoTxt(r) + 'เปิดดูรูปนี้แล้ว</b></span></div>';
+        b.hidden = false;
+      }
+      fetchMine(false);
+    }
+    return out;
+  };
 })();

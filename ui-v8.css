@@ -5739,3 +5739,28 @@ html[data-theme="dark"] .k8-ovm-list button { background: #1f1416 !important; bo
 .k8-as-school[hidden] { display: none; }
 @media (max-width: 640px) { .k8-as-school { flex: 1 1 100%; } }
 .k8-ss-t small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
+/* v18.93 · ถูกใจรูปรายงานละหมาด */
+.k8-prr{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin:-.35rem 0 .85rem}
+.k8-prr[hidden]{display:none}
+.k8-prr-like{display:inline-flex;align-items:center;gap:.4rem;border:1.5px solid #fbcfe8;background:#fff;color:#db2777;font:inherit;font-weight:600;font-size:.86rem;padding:.38rem .9rem;border-radius:999px;cursor:pointer;transition:transform .15s ease,background .15s ease}
+.k8-prr-like:hover{background:#fdf2f8}
+.k8-prr-like:active{transform:scale(.94)}
+.k8-prr-like.is-on{background:#db2777;border-color:#db2777;color:#fff}
+.k8-prr-like.is-on i{animation:k8PrrPop .35s ease}
+@keyframes k8PrrPop{0%{transform:scale(.6)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+.k8-prr-note{font-size:.76rem;color:#64748b;flex:1;min-width:160px}
+.k8-prr-stu{display:flex;align-items:center;gap:.6rem;width:100%;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:12px;padding:.55rem .8rem}
+.k8-prr-stu.is-like{background:#fdf2f8;border-color:#fbcfe8;color:#be185d}
+.k8-prr-stu i{font-size:1.15rem}
+.k8-prr-stu span{display:flex;flex-direction:column;line-height:1.35}
+.k8-prr-stu b{font-weight:600;font-size:.88rem}
+.k8-prr-stu small{font-size:.74rem;opacity:.85}
+.k8-prr-pill{display:inline-flex;align-items:center;gap:.25rem;font-size:.7rem;font-weight:600;padding:.12rem .5rem;border-radius:999px;background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd}
+.k8-prr-pill.is-like{background:#fdf2f8;color:#db2777;border-color:#fbcfe8}
+html[data-theme="dark"] .k8-prr-like{background:#1e293b;border-color:#9d174d;color:#f9a8d4}
+html[data-theme="dark"] .k8-prr-like.is-on{background:#db2777;border-color:#db2777;color:#fff}
+html[data-theme="dark"] .k8-prr-note{color:#94a3b8}
+html[data-theme="dark"] .k8-prr-stu{background:#0c2a3f;border-color:#075985;color:#7dd3fc}
+html[data-theme="dark"] .k8-prr-stu.is-like,html[data-theme="dark"] .k8-prr-pill.is-like{background:#3b0d24;border-color:#9d174d;color:#f9a8d4}
+html[data-theme="dark"] .k8-prr-pill{background:#0c2a3f;border-color:#075985;color:#7dd3fc}

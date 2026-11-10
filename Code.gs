@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.86'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.93'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -64,7 +64,8 @@ const SHEETS = {
   HALAQAH: 'ตารางหะละเกาะฮฺ',
   HALAQAH_LOGS: 'บันทึกการเข้าหะละเกาะฮฺ',
   SETTINGS: 'การตั้งค่า',
-  CALENDAR: 'ปฏิทินกิจกรรม'
+  CALENDAR: 'ปฏิทินกิจกรรม',
+  PRAYER_REACTS: 'การเปิดดูรูปละหมาด'
 };
 
 // ลำดับแท็บมาตรฐานใน Google Sheets เพื่อความสะอาด เป็นหมวดหมู่ และค้นหาง่าย
@@ -91,7 +92,8 @@ const SHEET_ORDER = [
   SHEETS.HALAQAH,        // ตารางหะละเกาะฮฺอัลกุรอาน
   SHEETS.HALAQAH_LOGS,   // บันทึกการเข้าหะละเกาะฮฺ
   SHEETS.SETTINGS,       // 13. การตั้งค่า
-  SHEETS.CALENDAR        // 14. ปฏิทินกิจกรรม
+  SHEETS.CALENDAR,       // 14. ปฏิทินกิจกรรม
+  SHEETS.PRAYER_REACTS   // แอดมิน/ครูเปิดดู·ถูกใจรูปรายงานละหมาด
 ];
 
 // ชื่อแผ่นงานเดิมภาษาอังกฤษ / ชื่อเดิม (สำหรับแปลงของเดิมให้เป็นโครงสร้างใหม่เป็นระเบียบอัตโนมัติ)
@@ -208,7 +210,8 @@ const HEADERS = {
   CALENDAR: [
     'รหัสกิจกรรม', 'ชื่อกิจกรรม', 'วันที่เริ่มต้น', 'วันที่สิ้นสุด', 'เวลาเริ่มต้น', 'เวลาสิ้นสุด',
     'สถานที่', 'หมวดหมู่', 'กลุ่มเป้าหมาย', 'รายละเอียด', 'ผู้สร้าง', 'อัปเดตล่าสุด'
-  ]
+  ],
+  PRAYER_REACTS: ['รหัสบันทึกละหมาด', 'รหัสนักเรียน', 'เปิดดูครั้งแรก', 'ผู้เปิดดู', 'ถูกใจเมื่อ', 'ผู้กดถูกใจ', 'บทบาทผู้กดถูกใจ']
 };
 
 /**
@@ -1211,7 +1214,7 @@ const ACTION_ACCESS = {
   resetMyHasanat: 'student', submitTeacherEvaluation: 'student', getMyEvaluationStatus: 'student', getEvaluationTargets: 'student',
   getTeacherEvaluationSummary: 'staff',
   // คะแนนพฤติกรรม: ผู้ตรวจการ อาจารย์ และแอดมิน บันทึก/ยกเลิก (ยกเลิกได้เฉพาะรายการของตนเอง ยกเว้นแอดมิน) · แอดมินตั้งค่าหัวข้อ
-  addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student',
+  addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student', reactPrayer: 'staff', getMyPrayerReacts: 'student',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
@@ -1251,7 +1254,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1474,6 +1477,10 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'getBehaviorData':
       return { success: true, photoMax: 4, codeVersion: CODE_VERSION, rules: getBehaviorRules_(), logs: getBehaviorLogs_(), term: currentTerm_(),
         students: (getAllStudents().data || []).map(function (x) { return { studentId: x.studentId, fullName: x.fullName, grade: x.grade, status: x.status }; }) };
+    case 'reactPrayer':
+      return reactPrayer_(data, session);
+    case 'getMyPrayerReacts':
+      return { success: true, reacts: myPrayerReacts_(session.userId) };
     case 'getMyBehavior': {
       const me = ownStudentId_(session, ctx, pick('studentId'));
       if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
@@ -7847,4 +7854,59 @@ function periodAction_(action, data, session) {
     try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
     return { success: true, ended: active, added: out.length, message: 'บันทึกอุซุรย้อนหลังให้แล้ว ' + out.length + ' เวลา' };
   } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+
+// ==================== v18.93 · แอดมิน/ครูเปิดดู·ถูกใจรูปรายงานละหมาด ====================
+function prayerReactSheet_() {
+  ensureSchema();
+  const ss = getSpreadsheet();
+  let sh = ss.getSheetByName(SHEETS.PRAYER_REACTS);
+  if (!sh) { sh = ss.insertSheet(SHEETS.PRAYER_REACTS); sh.appendRow(HEADERS.PRAYER_REACTS); }
+  return sh;
+}
+function prayerReactRow_(r) {
+  return { logId: cleanVal(r[0]), studentId: cleanVal(r[1]), seenAt: cleanVal(r[2]), seenBy: cleanVal(r[3]), likedAt: cleanVal(r[4]), likedBy: cleanVal(r[5]), likedRole: cleanVal(r[6]) };
+}
+function reactPrayer_(data, session) {
+  const logId = cleanVal(data && data.logId);
+  const kind = cleanVal(data && data.kind) || 'seen';
+  if (!logId || ['seen', 'like', 'unlike'].indexOf(kind) === -1) return { success: false, message: 'ข้อมูลไม่ครบ' };
+  const who = cleanVal(session.name || session.userId);
+  const role = session.role === 'admin' ? 'admin' : 'teacher';
+  const now = new Date().toISOString();
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { success: false, message: 'ระบบกำลังทำงาน ลองใหม่อีกครั้ง' }; }
+  try {
+    const sh = prayerReactSheet_();
+    const rows = readAllRows_(sh);
+    let idx = -1;
+    for (let i = 1; i < rows.length; i++) if (cleanVal(rows[i][0]) === logId) { idx = i; break; }
+    let row = idx > 0 ? rows[idx].slice(0, 7) : [logId, formatAsText(data.studentId || ''), '', '', '', '', ''];
+    while (row.length < 7) row.push('');
+    const before = row.join('|');
+    if (!row[1] && data.studentId) row[1] = formatAsText(data.studentId);
+    if (!cleanVal(row[2])) { row[2] = now; row[3] = who; }
+    if (kind === 'like') { row[4] = now; row[5] = who; row[6] = role; }
+    if (kind === 'unlike') { row[4] = ''; row[5] = ''; row[6] = ''; }
+    if (row.join('|') !== before) {
+      if (idx > 0) sh.getRange(idx + 1, 1, 1, 7).setValues([row]);
+      else { sh.appendRow(row); sh.getRange(sh.getLastRow(), 1, 1, 2).setNumberFormat('@'); sh.getRange(sh.getLastRow(), 1, 1, 2).setValues([[row[0], row[1]]]); }
+    }
+    return { success: true, react: prayerReactRow_(row) };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+// นักเรียนเห็นเฉพาะของตนเอง · ไม่เปิดเผยชื่อผู้เปิดดู/ผู้กดถูกใจ (บอกแค่ว่าเป็นแอดมินหรือคุณครู)
+function myPrayerReacts_(studentId) {
+  const out = {};
+  if (!studentId) return out;
+  const sh = getSpreadsheet().getSheetByName(SHEETS.PRAYER_REACTS);
+  if (!sh) return out;
+  const rows = readAllRows_(sh);
+  for (let i = 1; i < rows.length; i++) {
+    const r = prayerReactRow_(rows[i]);
+    if (!r.logId || !isCodeMatch(r.studentId, studentId)) continue;
+    out[r.logId] = { seen: !!r.seenAt, seenAt: r.seenAt, liked: !!r.likedAt, likedAt: r.likedAt, by: r.likedRole === 'teacher' ? 'teacher' : 'admin' };
+  }
+  return out;
 }
