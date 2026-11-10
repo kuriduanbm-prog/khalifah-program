@@ -5544,3 +5544,17 @@ html[data-theme="dark"] .k8-hqd-view button[aria-selected="true"] { background: 
 .k8-hqe-save { min-width: 140px; height: 46px; border: 0; border-radius: 14px; background: linear-gradient(135deg, #38bdf8, #0369a1); color: #fff; font: 700 15px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
 .k8-hqe-save:disabled { opacity: .5; cursor: default; }
 html[data-theme="dark"] .k8-hqe-sh { background: #16191e !important; }
+
+/* v18.79 · หน้า "วิชาที่เรียนวันนี้" เว้นช่วงให้โปร่ง ไม่ติดกัน */
+.k8-atd .k8-asum-in { gap: 18px; padding-bottom: 56px; }
+.k8-atd #k8AtdB { display: flex; flex-direction: column; gap: 10px; }
+.k8-atd .k8-atd-bar { margin-bottom: 4px; }
+.k8-atd .k8-atd-lead { margin: 4px 0 2px; line-height: 1.6; }
+.k8-atd .k8-atd-kpi { gap: 12px; margin-bottom: 6px; }
+.k8-atd .k8-atd-kpi > div { padding: 14px 16px; border-radius: 16px; gap: 4px; }
+.k8-atd .k8-asum-tabs { margin: 4px 0 6px; gap: 8px; }
+.k8-atd .k8-atd-ph { margin: 16px 0 2px; font-size: 14.5px; }
+.k8-atd .k8-atd-ph:first-of-type { margin-top: 6px; }
+.k8-atd .k8-atd-it { padding: 14px 16px; gap: 14px; border-radius: 16px; }
+.k8-atd .k8-atd-m { gap: 3px; }
+@media (max-width: 640px) { .k8-atd .k8-atd-kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); } .k8-atd .k8-atd-kpi .is-big { grid-column: 1 / -1; } }
