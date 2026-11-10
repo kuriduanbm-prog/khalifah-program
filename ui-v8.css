@@ -5705,3 +5705,5 @@ html[data-theme="dark"] .k8-pq-st.is-sel { background: #0c2a3d !important; }
 @media (min-width: 761px) { .k8-bh-cats { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; } }
 .k8-bh-dphs { display: grid; grid-template-columns: repeat(4, minmax(0, 64px)); }
 .k8-bh-dphs .k8-bh-hph { width: 100%; aspect-ratio: 1; height: auto; }
+/* v18.87 · ผู้ตรวจการ: ไอคอน "ประวัติ" สีแดง */
+.k8-insp-nav button[data-tab="history"] svg { color: #dc2626; }
