@@ -3546,7 +3546,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.73';
+  const APP_VERSION = '18.75';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10673,17 +10673,18 @@ window.k8HfMiss = function (slot) {
   const ymd = (d) => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
   const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
   const dTh = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); };
-  const R = { from: '', to: '', pre: 'month', data: null, loading: false, open: {} };
+  const R = { from: '', to: '', pre: 'month', data: null, loading: false, open: {}, view: 'dash', gsel: '' };
   function preset(k) {
     const t = new Date(); let f = new Date(t);
     if (k === 'week') f = new Date(t.getFullYear(), t.getMonth(), t.getDate() - ((t.getDay() + 6) % 7));
     else if (k === 'month') f = new Date(t.getFullYear(), t.getMonth(), 1);
+    else if (k === 'year') f = new Date(t.getMonth() >= 4 ? t.getFullYear() : t.getFullYear() - 1, 4, 1); // ปีการศึกษา เริ่ม 1 พ.ค.
     else if (k === 'term') { try { const tm = window.k8Term(); if (tm && tm.start) f = new Date(tm.start + 'T00:00:00'); else f = new Date(t.getFullYear(), t.getMonth() - 3, t.getDate()); } catch (e) { f = new Date(t.getFullYear(), t.getMonth() - 3, t.getDate()); } }
     R.from = ymd(f); R.to = ymd(t); R.pre = k;
   }
   function ensure() {
     if (document.getElementById('k8HqRep')) return;
-    document.body.insertAdjacentHTML('beforeend', '<div class="k8-asum k8-hqr" id="k8HqRep" hidden role="dialog" aria-modal="true" aria-labelledby="k8HqRepT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8HqRepT">สรุปการเช็คชื่อหะละเกาะฮฺ</h2><small id="k8HqRepS">ตามผู้ดูแลแต่ละกลุ่ม</small></div><div class="k8-hqr-acts"><button type="button" class="k8-asum-csv" onclick="k8HqRepImg()" title="บันทึกสรุปรวมทุกกลุ่มเป็นรูปภาพ">🖼 รูปภาพ</button><button type="button" class="k8-asum-csv" onclick="k8HqRepCsv()" title="บันทึกเป็นไฟล์ Excel (CSV)">⬇ CSV</button></div></header><div class="k8-asum-b" id="k8HqRepB"></div></div></div>');
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-asum k8-hqr" id="k8HqRep" hidden role="dialog" aria-modal="true" aria-labelledby="k8HqRepT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8HqRepT">สรุปการเช็คชื่อหะละเกาะฮฺ</h2><small id="k8HqRepS">ตามผู้ดูแลแต่ละกลุ่ม</small></div><div class="k8-hqr-acts"><button type="button" class="k8-asum-csv" onclick="k8HqRepImg()" title="บันทึกสรุปรวมทุกกลุ่มเป็นรูปภาพ">🖼 รูปภาพ</button><button type="button" class="k8-asum-csv" onclick="k8HqRepXlsx()" title="บันทึกเป็นไฟล์ Excel แยกแผ่นตามผู้ดูแล/กลุ่ม">⬇ Excel</button><button type="button" class="k8-asum-csv" onclick="k8HqRepCsv()" title="บันทึกเป็นไฟล์ CSV แยกตามผู้ดูแล/กลุ่ม">⬇ CSV</button></div></header><div class="k8-asum-b" id="k8HqRepB"></div></div></div>');
   }
   const pct = (c) => { const n = c.present + c.late + c.leave + c.absent + c.none; return n ? Math.round((c.present + c.late) / n * 100) : null; };
   // v18.63 · ครั้งที่จัด: นับวันที่ต้องจัดในช่วงที่เลือกตามลำดับ · สรุปของสัปดาห์นี้
@@ -10797,34 +10798,150 @@ window.k8HfMiss = function (slot) {
       try { showToast('บันทึกรูปภาพแล้ว', 'success'); } catch (e) {}
     }, 'image/png');
   };
+  // ---------- v18.75 · แดชบอร์ด + รายกลุ่ม + สรุปรายสัปดาห์/เดือน ----------
+  const ST = { p: ['มา', 'present'], l: ['สาย', 'late'], v: ['ลา', 'leave'], a: ['ขาด', 'absent'] };
+  const MK = { p: 'ม', l: 'ส', v: 'ล', a: 'ข' };
+  const hasDaily = (G) => G.some((g) => g.members.some((m) => m.d));
+  const sg = (g) => String(g.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.');
+  const tName = (g) => g.teacherName || 'ยังไม่ระบุผู้ดูแล';
+  const byTeacher = (L) => L.slice().sort((a, b) => tName(a).localeCompare(tName(b), 'th') || String(a.name).localeCompare(String(b.name), 'th'));
+  function monday(ds) { const d = new Date(ds + 'T00:00:00'); return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7))); }
+  function bucketOf(ds, mode) { return mode === 'month' ? ds.slice(0, 7) : monday(ds); }
+  function bucketLabel(k, mode) {
+    if (mode === 'month') { const y = +k.slice(0, 4), m = +k.slice(5, 7); return MON[m - 1] + ' ' + String(y + 543).slice(2); }
+    const a = new Date(k + 'T00:00:00'), b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 6);
+    return a.getDate() + (a.getMonth() !== b.getMonth() ? ' ' + MON[a.getMonth()] : '') + '–' + b.getDate() + ' ' + MON[b.getMonth()];
+  }
+  // นับสถานะต่อช่วง (สัปดาห์/เดือน) จากสถานะรายวัน · วันที่ต้องจัดแต่ไม่มีบันทึก = ไม่ได้เช็ค
+  function buckets(L, mode) {
+    const out = {};
+    L.forEach((g) => { g.dates.forEach((d) => { const k = bucketOf(d, mode); const c = out[k] || (out[k] = { present: 0, late: 0, leave: 0, absent: 0, none: 0, n: 0 }); c.n++; g.members.forEach((m) => { const x = m.d && m.d[d]; c[x ? ST[x][1] : 'none']++; }); }); });
+    return Object.keys(out).sort().map((k) => ({ k, label: bucketLabel(k, mode), c: out[k] }));
+  }
+  const autoMode = () => { const a = new Date(R.from + 'T00:00:00'), b = new Date(R.to + 'T00:00:00'); return (b - a) / 864e5 > 45 ? 'month' : 'week'; };
+  const pcls = (p) => p == null ? '' : p >= 100 ? 'is-ok' : p >= 80 ? 'is-mid' : 'is-low';
+  function kpiHtml(G) {
+    const T = { present: 0, late: 0, leave: 0, absent: 0, none: 0 }; let held = 0, plan = 0, mem = 0;
+    G.forEach((g) => { Object.keys(T).forEach((k) => { T[k] += g.total[k] || 0; }); held += g.held.filter((x) => g.dates.indexOf(x) !== -1).length; plan += g.dates.length; mem += g.members.length; });
+    const tp = pct(T), n = T.present + T.late + T.leave + T.absent + T.none || 1;
+    const low = G.filter((g) => { const p = pct(g.total); return p != null && p < 100; }).length;
+    const seg = [['present', 'มา', '#16a34a'], ['late', 'สาย', '#f59e0b'], ['leave', 'ลา', '#8b5cf6'], ['absent', 'ขาด', '#dc2626'], ['none', 'ไม่ได้เช็ค', '#cbd5e1']];
+    return '<section class="k8-hqd-kpis">' +
+      '<div class="k8-hqd-k is-main"><small>มาเข้าร่วม (มา + สาย)</small><b class="' + pcls(tp) + '">' + (tp == null ? '–' : tp + '%') + '</b><span>' + G.length + ' กลุ่ม · ' + mem + ' คน</span></div>' +
+      '<div class="k8-hqd-k"><small>เช็คชื่อแล้ว</small><b>' + held + '<em> / ' + plan + '</em></b><span>ครั้ง (ตามตาราง)</span></div>' +
+      (G.length > 1 ? '<div class="k8-hqd-k"><small>กลุ่มที่ไม่ถึง 100%</small><b class="' + (low ? 'is-low' : 'is-ok') + '">' + low + '</b><span>จาก ' + G.length + ' กลุ่ม</span></div>' : '<div class="k8-hqd-k"><small>สาย / ลา</small><b>' + T.late + '<em> / ' + T.leave + '</em></b><span>ครั้ง-คน</span></div>') +
+      '<div class="k8-hqd-k"><small>ขาด / ไม่ได้เช็ค</small><b class="' + (T.absent + T.none ? 'is-low' : '') + '">' + (T.absent + T.none) + '</b><span>ครั้ง-คน</span></div>' +
+      '</section><section class="k8-hqd-card"><h3>สัดส่วนการเข้าร่วม</h3><div class="k8-hqd-stack">' + seg.map(([k, , c]) => T[k] ? '<i style="flex:' + T[k] + ';background:' + c + '"></i>' : '').join('') + '</div><ul class="k8-hqd-leg">' + seg.map(([k, l, c]) => '<li><i style="background:' + c + '"></i>' + l + ' <b>' + T[k] + '</b><small>' + Math.round(T[k] / n * 100) + '%</small></li>').join('') + '</ul></section>';
+  }
+  function trendHtml(G) {
+    if (!hasDaily(G)) return '<section class="k8-hqd-card"><h3>แนวโน้มการเข้าร่วม</h3><p class="k8-hqd-note">อัปเดต Code.gs เป็นรุ่นล่าสุด เพื่อดูสรุปรายสัปดาห์/รายเดือน</p></section>';
+    const mode = R.trend || autoMode(); const B = buckets(G, mode);
+    if (!B.length) return '';
+    return '<section class="k8-hqd-card"><div class="k8-hqd-ch"><h3>แนวโน้มการเข้าร่วม</h3><div class="k8-hqd-seg">' + [['week', 'รายสัปดาห์'], ['month', 'รายเดือน']].map(([k, l]) => '<button type="button" aria-pressed="' + (mode === k) + '" onclick="k8HqRepTrend(\'' + k + '\')">' + l + '</button>').join('') + '</div></div>' +
+      '<div class="k8-hqd-bars">' + B.map((b) => { const p = pct(b.c); return '<div class="k8-hqd-bar"><span class="' + pcls(p) + '">' + (p == null ? '–' : p + '%') + '</span><i><em class="' + pcls(p) + '" style="height:' + (p || 0) + '%"></em></i><small>' + esc(b.label) + '</small></div>'; }).join('') + '</div></section>';
+  }
+  function teacherHtml(G) {
+    return '<section class="k8-hqd-card"><h3>รายผู้ดูแล <small>· แตะเพื่อดูรายละเอียดกลุ่ม</small></h3><ul class="k8-hqd-tl">' + G.map((g) => { const p = pct(g.total); return '<li><button type="button" onclick="k8HqRepGo(\'' + esc(g.id) + '\')"><span><b>' + esc(tName(g)) + '</b><small>' + esc(g.name) + ' · ' + g.members.length + ' คน · เช็คแล้ว ' + heldTxt(g) + '</small></span><i><em class="' + pcls(p) + '" style="width:' + (p || 0) + '%"></em></i><strong class="' + pcls(p) + '">' + (p == null ? '–' : p + '%') + '</strong></button></li>'; }).join('') + '</ul></section>';
+  }
+  function gridHtml(g) {
+    const D = Array.from(new Set(g.dates.concat(g.held))).sort();
+    if (!D.length || !g.members.some((m) => m.d)) return '';
+    return '<div class="k8-hqd-gridw"><h3>การเข้าร่วมรายวัน</h3><div class="k8-hqd-gscroll"><table class="k8-hqd-grid"><thead><tr><th scope="col">นักเรียน</th>' + D.map((d) => '<th scope="col">' + esc(dTh(d).replace(/ \d{2}$/, '')) + '</th>').join('') + '</tr></thead><tbody>' +
+      g.members.map((m) => '<tr><th scope="row">' + esc(m.name) + '</th>' + D.map((d) => { const x = m.d && m.d[d]; const plan = g.dates.indexOf(d) !== -1; return '<td class="k8-hqd-m is-' + (x || (plan ? 'n' : 'x')) + '">' + (x ? MK[x] : plan ? '–' : '') + '</td>'; }).join('') + '</tr>').join('') +
+      '</tbody></table></div><p class="k8-hqd-note">ม = มา · ส = สาย · ล = ลา · ข = ขาด · – = ไม่ได้เช็ค</p></div>';
+  }
+  function groupCard(g, adm, solo) {
+    const p = pct(g.total), miss = g.dates.filter((d) => g.held.indexOf(d) === -1);
+    const op = solo || !!R.open[g.id];
+    const wk = weekInfo(g);
+    const head = '<div><b>' + esc(tName(g)) + '</b><small>' + esc(g.name) + (g.location ? ' · ' + esc(g.location) : '') + ' · ผู้เรียน ' + g.members.length + ' คน</small>' +
+      '<small class="k8-hqr-s">เช็คชื่อแล้ว ' + heldTxt(g) + ' · มา ' + g.total.present + ' · สาย ' + g.total.late + ' · ลา ' + g.total.leave + ' · ขาด ' + g.total.absent + (g.total.none ? ' · ไม่ได้เช็ค ' + g.total.none : '') + '</small>' +
+      (wk ? '<small class="k8-hqr-wk">' + wk + '</small>' : '') +
+      (miss.length ? '<small class="k8-hqr-miss">ยังไม่เช็คชื่อ: ' + miss.slice(0, 6).map(dTh).join(', ') + (miss.length > 6 ? ' และอีก ' + (miss.length - 6) + ' วัน' : '') + '</small>' : '') + '</div><span class="k8-hqr-p' + (p != null && p < 80 ? ' is-low' : '') + '">' + (p == null ? '–' : p + '%') + '</span>';
+    return '<article class="k8-hqr-g' + (solo ? ' is-solo' : '') + '">' + (solo ? '<div class="k8-hqr-h">' + head + '</div>' : '<button type="button" class="k8-hqr-h" aria-expanded="' + op + '" onclick="k8HqRepT(\'' + esc(g.id) + '\')">' + head + '</button>') +
+      (op ? sessHtml(g, adm) : '') +
+      (solo ? gridHtml(g) : '') +
+      (op ? '<div class="k8-hqr-wrap"><table class="k8-hqr-t"><thead><tr><th scope="col">นักเรียน</th><th scope="col">มา</th><th scope="col">สาย</th><th scope="col">ลา</th><th scope="col">ขาด</th><th scope="col">ไม่เช็ค</th><th scope="col">%</th></tr></thead><tbody>' +
+        g.members.map((m) => { const q = pct(m.c); return '<tr><th scope="row">' + esc(m.name) + '<small>' + esc(sg(m)) + ' · ' + esc(m.id) + '</small></th><td>' + m.c.present + '</td><td>' + m.c.late + '</td><td>' + m.c.leave + '</td><td class="' + (m.c.absent ? 'is-bad' : '') + '">' + m.c.absent + '</td><td class="' + (m.c.none ? 'is-bad' : '') + '">' + m.c.none + '</td><td><b>' + (q == null ? '–' : q + '%') + '</b></td></tr>'; }).join('') + '</tbody></table></div>' : '') + '</article>';
+  }
   function render() {
     const B = document.getElementById('k8HqRepB'); if (!B) return;
-    let h = '<div class="k8-asum-tabs" role="tablist">' + [['week', 'สัปดาห์นี้'], ['month', 'เดือนนี้'], ['term', 'ภาคเรียนนี้']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (R.pre === k) + '" onclick="k8HqRepPre(\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
+    let h = '<div class="k8-asum-tabs" role="tablist">' + [['week', 'สัปดาห์'], ['month', 'เดือน'], ['term', 'ภาคเรียน'], ['year', 'ปีการศึกษา']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (R.pre === k) + '" onclick="k8HqRepPre(\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
       '<div class="k8-atd-bar"><label class="k8-atd-date"><span>ตั้งแต่</span><input type="date" value="' + R.from + '" onchange="k8HqRepD(\'from\', this.value)"></label><label class="k8-atd-date"><span>ถึง</span><input type="date" value="' + R.to + '" max="' + ymd(new Date()) + '" onchange="k8HqRepD(\'to\', this.value)"></label></div>';
     if (!R.data) { B.innerHTML = h + '<p class="k8-asum-empty">' + (R.loading ? 'กำลังโหลดสรุปการเช็คชื่อ…' : 'โหลดข้อมูลไม่สำเร็จ · ตรวจว่าอัปเดต Code.gs เป็นรุ่นล่าสุดแล้ว') + '</p>'; return; }
     const G = sortG(R.data.groups || []);
     if (!G.length) { B.innerHTML = h + '<p class="k8-asum-empty">ยังไม่มีกลุ่มหะละเกาะฮฺ</p>'; return; }
-    const T = { present: 0, late: 0, leave: 0, absent: 0, none: 0 }; let held = 0, plan = 0, mem = 0;
-    G.forEach((g) => { Object.keys(T).forEach((k) => { T[k] += g.total[k] || 0; }); held += g.held.length; plan += g.dates.length; mem += g.members.length; });
-    const tp = pct(T);
-    h += '<section class="k8-atd-kpi"><div class="is-big"><small>มาเข้าร่วม (มา + สาย)</small><b>' + (tp == null ? '–' : tp + '%') + '<span> · ' + G.length + ' กลุ่ม · ' + mem + ' คน</span></b><i style="--w:' + (tp || 0) + '%"></i></div>' +
-      '<div><small>เช็คชื่อแล้ว</small><b>' + held + '<span style="font-size:13px;color:#64748b"> / ' + plan + ' ครั้ง</span></b></div><div class="is-now"><small>สาย</small><b>' + T.late + '</b></div><div class="is-lv"><small>ลา</small><b>' + T.leave + '</b></div><div class="is-miss"><small>ขาด/ไม่ได้เช็ค</small><b>' + (T.absent + T.none) + '</b></div></section>';
     const adm = !!(window.k8HqIsAdm && window.k8HqIsAdm());
-    h += '<div class="k8-hqr-tools"><button type="button" onclick="k8HqRepAll(' + (G.every((g) => R.open[g.id]) ? 0 : 1) + ')">' + (G.every((g) => R.open[g.id]) ? '▴ ย่อทุกกลุ่ม' : '▾ ดูรายชื่อทุกกลุ่ม') + '</button><small>' + (adm ? 'แตะวันที่ในกลุ่มเพื่อเช็คชื่อแทนผู้ดูแลได้' : '') + '</small></div>';
-    h += G.map((g) => {
-      const p = pct(g.total), miss = g.dates.filter((d) => g.held.indexOf(d) === -1);
-      const op = !!R.open[g.id];
-      const wk = weekInfo(g);
-      return '<article class="k8-hqr-g"><button type="button" class="k8-hqr-h" aria-expanded="' + op + '" onclick="k8HqRepT(\'' + esc(g.id) + '\')"><div><b>' + esc(g.teacherName || 'ยังไม่ระบุผู้ดูแล') + '</b><small>' + esc(g.name) + (g.location ? ' · ' + esc(g.location) : '') + ' · ผู้เรียน ' + g.members.length + ' คน</small>' +
-        '<small class="k8-hqr-s">เช็คชื่อแล้ว ' + heldTxt(g) + ' · มา ' + g.total.present + ' · สาย ' + g.total.late + ' · ลา ' + g.total.leave + ' · ขาด ' + g.total.absent + (g.total.none ? ' · ไม่ได้เช็ค ' + g.total.none : '') + '</small>' +
-        (wk ? '<small class="k8-hqr-wk">' + wk + '</small>' : '') +
-        (miss.length ? '<small class="k8-hqr-miss">ยังไม่เช็คชื่อ: ' + miss.slice(0, 6).map(dTh).join(', ') + (miss.length > 6 ? ' และอีก ' + (miss.length - 6) + ' วัน' : '') + '</small>' : '') + '</div><span class="k8-hqr-p' + (p != null && p < 80 ? ' is-low' : '') + '">' + (p == null ? '–' : p + '%') + '</span></button>' +
-        (op ? sessHtml(g, adm) : '') +
-        (op ? '<div class="k8-hqr-wrap"><table class="k8-hqr-t"><thead><tr><th scope="col">นักเรียน</th><th scope="col">มา</th><th scope="col">สาย</th><th scope="col">ลา</th><th scope="col">ขาด</th><th scope="col">ไม่เช็ค</th><th scope="col">%</th></tr></thead><tbody>' +
-          g.members.map((m) => { const q = pct(m.c); return '<tr><th scope="row">' + esc(m.name) + '<small>' + esc(String(m.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(m.id) + '</small></th><td>' + m.c.present + '</td><td>' + m.c.late + '</td><td>' + m.c.leave + '</td><td class="' + (m.c.absent ? 'is-bad' : '') + '">' + m.c.absent + '</td><td class="' + (m.c.none ? 'is-bad' : '') + '">' + m.c.none + '</td><td><b>' + (q == null ? '–' : q + '%') + '</b></td></tr>'; }).join('') + '</tbody></table></div>' : '') + '</article>';
-    }).join('');
+    h += '<div class="k8-hqd-view" role="tablist">' + [['dash', 'แดชบอร์ดสรุป'], ['groups', 'รายกลุ่ม']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (R.view === k) + '" onclick="k8HqRepView(\'' + k + '\')">' + l + '</button>').join('') + '</div>';
+    if (R.view === 'dash') {
+      h += kpiHtml(G) + trendHtml(G) + teacherHtml(G);
+    } else {
+      const sel = G.find((g) => String(g.id) === String(R.gsel));
+      h += '<label class="k8-hqd-pick"><span>เลือกกลุ่ม</span><select onchange="k8HqRepGo(this.value)"><option value="">ทุกกลุ่ม (' + G.length + ')</option>' + byTeacher(G).map((g) => { const p = pct(g.total); return '<option value="' + esc(g.id) + '"' + (sel && sel.id === g.id ? ' selected' : '') + '>' + esc(tName(g)) + ' · ' + esc(g.name) + (p == null ? '' : ' (' + p + '%)') + '</option>'; }).join('') + '</select></label>';
+      if (sel) {
+        h += kpiHtml([sel]) + trendHtml([sel]) + groupCard(sel, adm, true);
+      } else {
+        h += '<div class="k8-hqr-tools"><button type="button" onclick="k8HqRepAll(' + (G.every((g) => R.open[g.id]) ? 0 : 1) + ')">' + (G.every((g) => R.open[g.id]) ? '▴ ย่อทุกกลุ่ม' : '▾ ดูรายชื่อทุกกลุ่ม') + '</button><small>' + (adm ? 'เลือกกลุ่มด้านบนเพื่อดูแบบละเอียด · แตะวันที่เพื่อเช็คชื่อแทนได้' : '') + '</small></div>';
+        h += G.map((g) => groupCard(g, adm, false)).join('');
+      }
+    }
     B.innerHTML = h;
   }
+  const top = () => { const b = document.getElementById('k8HqRepB'); if (b) b.scrollTop = 0; const i = document.querySelector('#k8HqRep .k8-asum-in'); if (i) i.scrollTop = 0; };
+  window.k8HqRepView = function (v) { R.view = v; if (v === 'dash') R.gsel = ''; render(); top(); };
+  window.k8HqRepGo = function (id) { R.view = 'groups'; R.gsel = id || ''; render(); top(); };
+  window.k8HqRepTrend = function (m) { R.trend = m; render(); };
+  // ---------- ไฟล์ส่งออก: แยกตามผู้ดูแล/กลุ่ม + รายสัปดาห์ + รายเดือน ----------
+  function exportData() {
+    const G = byTeacher(R.data.groups || []); const per = 'ช่วงวันที่ ' + dTh(R.from) + ' – ' + dTh(R.to);
+    const pv = (c) => { const p = pct(c); return p == null ? '' : p; };
+    const summary = [['สรุปการเช็คชื่อหะละเกาะฮฺ (แยกตามผู้ดูแล)'], [per], [], ['ผู้ดูแล', 'ชื่อกลุ่ม', 'สถานที่', 'ผู้เรียน (คน)', 'วันที่ต้องจัด', 'เช็คชื่อแล้ว (ครั้ง)', 'มา', 'สาย', 'ลา', 'ขาด', 'ไม่ได้เช็ค', 'ร้อยละมาเข้าร่วม', 'วันที่ยังไม่เช็คชื่อ']];
+    const T = { present: 0, late: 0, leave: 0, absent: 0, none: 0 };
+    G.forEach((g) => { Object.keys(T).forEach((k) => { T[k] += g.total[k] || 0; }); summary.push([tName(g), g.name, g.location || '', g.members.length, g.dates.length, g.held.length, g.total.present, g.total.late, g.total.leave, g.total.absent, g.total.none, pv(g.total), g.dates.filter((d) => g.held.indexOf(d) === -1).map(dTh).join(', ')]); });
+    summary.push(['รวมทุกกลุ่ม', '', '', G.reduce((a, g) => a + g.members.length, 0), '', '', T.present, T.late, T.leave, T.absent, T.none, pv(T), '']);
+    const daily = hasDaily(G);
+    const period = (mode, title) => {
+      if (!daily) return null;
+      const keys = buckets(G, mode).map((b) => b.k);
+      const rows = [[title + ' · ร้อยละมาเข้าร่วม (มา + สาย)'], [per], [], ['ผู้ดูแล', 'ชื่อกลุ่ม'].concat(keys.map((k) => bucketLabel(k, mode))).concat(['ทั้งช่วง'])];
+      G.forEach((g) => { const m = {}; buckets([g], mode).forEach((b) => { m[b.k] = pct(b.c); }); rows.push([tName(g), g.name].concat(keys.map((k) => m[k] == null ? '' : m[k])).concat([pv(g.total)])); });
+      const all = {}; buckets(G, mode).forEach((b) => { all[b.k] = pct(b.c); }); rows.push(['รวมทุกกลุ่ม', ''].concat(keys.map((k) => all[k] == null ? '' : all[k])).concat([pv(T)]));
+      return rows;
+    };
+    const groups = G.map((g) => {
+      const D = daily ? Array.from(new Set(g.dates.concat(g.held))).sort() : [];
+      const rows = [['ผู้ดูแล: ' + tName(g)], ['กลุ่ม: ' + g.name + (g.location ? ' · ' + g.location : '') + ' · ผู้เรียน ' + g.members.length + ' คน'], [per + ' · เช็คชื่อแล้ว ' + heldTxt(g)], [],
+        ['รหัสนักเรียน', 'ชื่อนักเรียน', 'ชั้น'].concat(D.map((d) => dTh(d))).concat(['มา', 'สาย', 'ลา', 'ขาด', 'ไม่ได้เช็ค', 'ร้อยละ'])];
+      g.members.forEach((m) => rows.push([m.id, m.name, sg(m)].concat(D.map((d) => { const x = m.d && m.d[d]; return x ? ST[x][0] : g.dates.indexOf(d) !== -1 ? '-' : ''; })).concat([m.c.present, m.c.late, m.c.leave, m.c.absent, m.c.none, pv(m.c)])));
+      rows.push(['', 'รวมทั้งกลุ่ม', ''].concat(D.map(() => '')).concat([g.total.present, g.total.late, g.total.leave, g.total.absent, g.total.none, pv(g.total)]));
+      return { g, rows };
+    });
+    return { summary, week: period('week', 'สรุปรายสัปดาห์'), month: period('month', 'สรุปรายเดือน'), groups };
+  }
+  window.k8HqRepExportData = function () { return R.data ? exportData() : null; };
+  const fname = (ext) => 'หะละเกาะฮฺ_' + R.from + '_' + R.to + '.' + ext;
+  function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800); }
+  window.k8HqRepXlsx = function () {
+    if (!R.data) { try { showToast('ยังไม่มีข้อมูลให้บันทึก', 'warning'); } catch (e) {} return; }
+    if (typeof XLSX === 'undefined' || !XLSX.utils || !XLSX.utils.aoa_to_sheet) { try { showToast('โหลดตัวสร้างไฟล์ Excel ไม่สำเร็จ (อาจไม่มีเน็ต) · บันทึกเป็น CSV แทน', 'warning'); } catch (e) {} return window.k8HqRepCsv(); }
+    const E = exportData(); const wb = XLSX.utils.book_new(); const used = {};
+    const add = (rows, name, widths) => { const n = String(name).replace(/[\\\/\?\*\[\]:]/g, ' ').trim().slice(0, 28) || 'แผ่น'; let k = n, i = 2; while (used[k]) k = n.slice(0, 24) + ' (' + (i++) + ')'; used[k] = 1; const ws = XLSX.utils.aoa_to_sheet(rows); if (widths) ws['!cols'] = widths.map((w) => ({ wch: w })); XLSX.utils.book_append_sheet(wb, ws, k); };
+    add(E.summary, 'สรุปรวม', [24, 24, 16, 12, 12, 14, 8, 8, 8, 8, 10, 14, 40]);
+    if (E.week) add(E.week, 'รายสัปดาห์', [24, 24].concat(E.week[3].slice(2).map(() => 13)));
+    if (E.month) add(E.month, 'รายเดือน', [24, 24].concat(E.month[3].slice(2).map(() => 10)));
+    E.groups.forEach(({ g, rows }) => add(rows, tName(g), [12, 26, 8].concat(rows[4].slice(3).map(() => 10))));
+    XLSX.writeFile(wb, fname('xlsx'));
+    try { showToast('บันทึกไฟล์ Excel แล้ว · แผ่นละ 1 กลุ่ม', 'success'); } catch (e) {}
+  };
+  window.k8HqRepCsv = function () {
+    if (!R.data) { try { showToast('ยังไม่มีข้อมูลให้บันทึก', 'warning'); } catch (e) {} return; }
+    const E = exportData(); const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    let rows = E.summary.concat([[], []]);
+    if (E.week) rows = rows.concat(E.week, [[], []]);
+    if (E.month) rows = rows.concat(E.month, [[], []]);
+    E.groups.forEach(({ rows: r }) => { rows = rows.concat(r, [[], []]); });
+    download(new Blob(['﻿' + rows.map((r) => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), fname('csv'));
+  };
   // v18.64 · แสดงข้อมูลที่จำไว้ทันที แล้วอัปเดตจากระบบเบื้องหลัง · ดึงรายชื่อวันนี้ล่วงหน้า (กดเช็คแทนแล้วขึ้นทันที)
   const RC = {}; const ck = (f, t) => 'k8_hqr_' + f + '_' + t;
   const cacheGet = (f, t) => { if (RC[ck(f, t)]) return RC[ck(f, t)]; try { const v = JSON.parse(localStorage.getItem(ck(f, t)) || 'null'); if (v && v.groups) { RC[ck(f, t)] = v; return v; } } catch (e) {} return null; };
@@ -10874,17 +10991,6 @@ window.k8HfMiss = function (slot) {
   window.k8HqRepPre = function (k) { preset(k); load(); };
   window.k8HqRepD = function (k, v) { if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) return; R[k] = v; R.pre = ''; if (R.from > R.to) { const t = R.from; R.from = R.to; R.to = t; } load(); };
   window.k8HqRepT = function (id) { R.open[id] = !R.open[id]; render(); };
-  window.k8HqRepCsv = function () {
-    if (!R.data) { try { showToast('ยังไม่มีข้อมูลให้บันทึก', 'warning'); } catch (e) {} return; }
-    const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const rows = [['ผู้ดูแล', 'ชื่อกลุ่ม', 'สถานที่', 'รหัสนักเรียน', 'ชื่อนักเรียน', 'ชั้น', 'จำนวนครั้งที่จัด', 'มา', 'สาย', 'ลา', 'ขาด', 'ไม่ได้เช็ค', 'ร้อยละมาเข้าร่วม']];
-    (R.data.groups || []).forEach((g) => { g.members.forEach((m) => { const p = pct(m.c); rows.push([g.teacherName || '', g.name, g.location || '', m.id, m.name, m.grade, g.dates.length, m.c.present, m.c.late, m.c.leave, m.c.absent, m.c.none, p == null ? '' : p]); }); });
-    rows.push([]); rows.push(['สรุปรายกลุ่ม']); rows.push(['ผู้ดูแล', 'ชื่อกลุ่ม', 'ผู้เรียน (คน)', 'วันที่ต้องจัด', 'เช็คชื่อแล้ว (ครั้ง)', 'มา', 'สาย', 'ลา', 'ขาด', 'ไม่ได้เช็ค', 'ร้อยละ', 'วันที่ยังไม่เช็คชื่อ']);
-    (R.data.groups || []).forEach((g) => { const p = pct(g.total); rows.push([g.teacherName || '', g.name, g.members.length, g.dates.length, g.held.length, g.total.present, g.total.late, g.total.leave, g.total.absent, g.total.none, p == null ? '' : p, g.dates.filter((d) => g.held.indexOf(d) === -1).join(' ')]); });
-    const csv = '﻿' + rows.map((r) => r.map(q).join(',')).join('\r\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'halaqah-' + R.from + '_' + R.to + '.csv';
-    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-  };
   window.addEventListener('popstate', () => { const el = document.getElementById('k8HqRep'); if (el && !el.hidden) el.hidden = true; });
 })();
 

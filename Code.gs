@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.74'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.75'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -7539,7 +7539,9 @@ function halaqahReport_(from, to) {
         const st = !l ? 'none' : /late|สาย/i.test(l.status) ? 'late' : /leave|ลา/i.test(l.status) ? 'leave' : /absent|ขาด/i.test(l.status) ? 'absent' : 'present';
         c[st]++; tot[st]++;
       });
-      return { id: s.id, name: s.name, grade: s.grade, c: c };
+      // v18.75 · สถานะรายวัน (p มา · l สาย · v ลา · a ขาด) สำหรับสรุปรายสัปดาห์/เดือน และไฟล์ส่งออก
+      const dm = {}; lg.forEach(function (y) { if (hqKey_(y.studentId) !== k) return; dm[y.date] = /late|สาย/i.test(y.status) ? 'l' : /leave|ลา/i.test(y.status) ? 'v' : /absent|ขาด/i.test(y.status) ? 'a' : 'p'; });
+      return { id: s.id, name: s.name, grade: s.grade, c: c, d: dm };
     }).sort(function (a, b) { return String(a.grade).localeCompare(String(b.grade)) || String(a.name).localeCompare(String(b.name)); });
     return { id: h.id, name: h.name, teacher: h.teacher, teacherName: h.teacherName, location: h.location, start: h.start, end: h.end, dates: dates, held: Object.keys(held).sort(), members: members, total: tot };
   });
