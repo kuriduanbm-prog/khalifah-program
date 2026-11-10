@@ -7627,7 +7627,8 @@ function renderSuperAdminOverviewKpis() {
   if (kpiActSub) kpiActSub.innerText = `กิจกรรม ${activities.length} รายการ • สแกนเข้าแล้ว ${actLogs.length} ครั้ง`;
   if (liveCodeBadge) liveCodeBadge.innerText = masterOtp;
   if (masterOtpDisplay) masterOtpDisplay.innerText = masterOtp;
-  if (badgePending) {
+  // v18.78 · ตัวเลขที่เมนู "อนุมัติบัญชี & คำขอ" ให้ส่วนแจ้งเตือน (ui-v8) ดูแลที่เดียว · เดิมสองที่เขียนทับกันไปมา ตัวเลขจึงกระพริบ
+  if (badgePending && !window.k8ReqBadgeOwned) {
     badgePending.innerText = pendingList.length;
     badgePending.style.display = pendingList.length > 0 ? 'inline-block' : 'none';
   }

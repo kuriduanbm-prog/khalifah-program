@@ -3546,7 +3546,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.77';
+  const APP_VERSION = '18.78';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4416,7 +4416,7 @@ window.k8RegBirthChange = function (v) {
     const perN = !rc && stu() && window.k8PeriodActive && window.k8PeriodActive() ? 1 : 0;
     const n = rc ? rc.total + other : N.unread + perN, el = document.getElementById('k8BellN');
     // v17.38 · ตัวเลขคำขอรออนุมัติที่เมนู "อนุมัติบัญชี & คำขอ"
-    if (rc) { const pill = document.getElementById('adminTabPendingBadge'); if (pill) { pill.textContent = rc.total > 99 ? '99+' : String(rc.total); pill.style.display = 'inline-flex'; pill.classList.toggle('is-zero', !rc.total); pill.title = 'บัญชีใหม่ ' + rc.accounts + ' · ละหมาดย้อนหลัง ' + rc.prayers + ' · ลาสอน ' + rc.leaves; } }
+    if (rc) { window.k8ReqBadgeOwned = true; const pill = document.getElementById('adminTabPendingBadge'); if (pill) { const tx = rc.total > 99 ? '99+' : String(rc.total); if (pill.textContent !== tx) pill.textContent = tx; if (pill.style.display !== 'inline-flex') pill.style.display = 'inline-flex'; pill.classList.toggle('is-zero', !rc.total); const tt = 'บัญชีใหม่ ' + rc.accounts + ' · ละหมาดย้อนหลัง ' + rc.prayers + ' · ลาสอน ' + rc.leaves; if (pill.title !== tt) pill.title = tt; } }
     const bl = document.getElementById('k8Bell'); if (bl) { bl.classList.toggle('is-staff', !!rc); bl.title = rc ? (rc.total ? 'คำขอรออนุมัติ ' + rc.total + ' รายการ' : 'การแจ้งเตือน') : ''; }
     if (el) { el.hidden = !n; el.textContent = n > 99 ? '99+' : String(n); }
     const b = document.getElementById('k8Bell'); if (b) { b.setAttribute('aria-label', 'การแจ้งเตือน' + (n ? ' ยังไม่อ่าน ' + n + ' รายการ' : '')); b.classList.toggle('has-new', !!n); }
