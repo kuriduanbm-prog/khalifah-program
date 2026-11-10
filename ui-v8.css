@@ -5423,3 +5423,13 @@ html[data-theme="dark"] .k8-perm { background: #431407; border-color: #9a3412; }
 .k8-sl-wo { margin-top: 8px; width: 100%; box-sizing: border-box; min-height: 44px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 15px; }
 .k8-sl-wnote { display: block; margin-top: 6px; color: #0369a1; font-size: 13px; background: #f0f9ff; border-radius: 10px; padding: 6px 10px; }
 .k8-sl-dorm { color: #0369a1; }
+
+/* v18.70 · แท็บผลบุญ HT4 · แคปซูลไล่สีฟ้า */
+.k8h-tabs { background: #fff !important; border-radius: 999px !important; padding: 5px !important; gap: 4px !important; box-shadow: 0 2px 10px rgba(3,105,161,.08); }
+.k8h-tabs button { height: 42px !important; border-radius: 999px !important; display: inline-flex !important; align-items: center; justify-content: center; gap: 6px; color: #64748b !important; font-size: 14.5px !important; transition: background .2s, color .2s, box-shadow .2s; }
+.k8h-tabs button svg { flex: none; }
+.k8h-tabs button span { overflow: hidden; text-overflow: ellipsis; }
+.k8h-tabs button.on { background: linear-gradient(135deg, #38bdf8, #0369a1) !important; color: #fff !important; box-shadow: 0 4px 12px rgba(3,105,161,.3) !important; }
+@media (max-width: 340px) { .k8h-tabs button svg { display: none; } }
+html[data-theme="dark"] .k8-seg.k8h-tabs button.on { color: #fff !important; background: linear-gradient(135deg, #38bdf8, #0369a1) !important; }
+html[data-theme="dark"] .k8-seg.k8h-tabs { background: #111418 !important; }

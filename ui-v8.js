@@ -2980,7 +2980,8 @@ window.k8RegBirthChange = function (v) {
       (function () { const r = rowOf(S.date); const by = r && r.by; if (!by) return ''; const adm = /แอดมิน/.test(by); return '<p class="k8h-by' + (adm ? ' is-adm' : '') + '">' + (adm ? '🛡 วันนี้มีข้อมูลที่บันทึกโดย' + esc(by) : (asTarget() ? '✎ นักเรียนบันทึกเอง' : '✎ บันทึกโดยคุณ')) + '</p>'; })() +
       '<section class="k8h-sum"><div class="k8h-sum-top"><b>สรุปผลบุญ</b><div class="k8h-mini-seg">' + [['day', 'วันนี้'], ['week', 'สัปดาห์'], ['month', 'เดือน']].map(([k, l]) => '<button type="button" aria-pressed="' + (S.period === k) + '" onclick="k8HasSet(\'period\',\'' + k + '\')">' + l + '</button>').join('') + '</div></div>' +
       '<div class="k8h-sum-grid"><div><span>อ่านอัลกุรอาน</span><b style="color:#b45309">' + st.pages + ' <small>หน้า</small></b></div><div><span>ท่องจำใหม่</span><b style="color:#15803d">' + st.mem + ' <small>ซูเราะห์</small></b></div><div><span>สุนัต</span><b style="color:#6d28d9">' + st.rakaat + ' <small>ร็อกอะฮ์</small></b></div></div></section>' +
-      '<div class="k8-seg k8h-tabs" role="tablist">' + [['quran', 'อัลกุรอาน'], ['memorize', 'ท่องจำ'], ['sunnah', 'สุนัต']].map(([k, l]) => '<button type="button" role="tab" class="' + (S.tab === k ? 'on' : '') + '" aria-selected="' + (S.tab === k) + '" onclick="k8HasSet(\'tab\',\'' + k + '\')">' + l + '</button>').join('') + '</div>';
+      // v18.70 · แท็บแบบ HT4 (แคปซูลไล่สีฟ้า + ไอคอนเส้น)
+      '<div class="k8-seg k8h-tabs" role="tablist">' + [['quran', 'อัลกุรอาน', '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>'], ['memorize', 'ท่องจำ', '<path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>'], ['sunnah', 'สุนัต', '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>']].map(([k, l, ic]) => '<button type="button" role="tab" class="' + (S.tab === k ? 'on' : '') + '" aria-selected="' + (S.tab === k) + '" onclick="k8HasSet(\'tab\',\'' + k + '\')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ic + '</svg><span>' + l + '</span></button>').join('') + '</div>';
   }
   function quranTab() {
     const h = H(); const q = quranState(h); const add = Math.max(0, S.add | 0);
@@ -3545,7 +3546,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.69';
+  const APP_VERSION = '18.70';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
