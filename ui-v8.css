@@ -5645,3 +5645,46 @@ html[data-theme="dark"] .k8-opg td.is-wait { background: #1c2027 !important; }
 .k8-docs-perm-em { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .k8-docs-perm-em code { background: #fff; border: 1px solid #fde68a; border-radius: 8px; padding: 6px 10px; font-size: 13.5px; color: #0f172a; word-break: break-all; }
 .k8-docs-perm-em button { height: 34px; padding: 0 12px; border-radius: 10px; border: 0; background: #b45309; color: #fff; font: 600 13px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+
+/* v18.84 · หน้าละหมาด แบบ PQ1: การ์ดสรุป % + ขั้นตอน 5 เวลา */
+.k8-pq-on .prayer-kpi-grid, .k8-pq-on #adminPrayerSlotsGridContainer, .k8-pq-on .k8-pq-hide { display: none !important; }
+.k8-pq { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 16px; margin: 4px 0 18px; }
+.k8-pq-hero { background: linear-gradient(135deg, #0c4a6e, #0369a1); color: #fff; border-radius: 20px; padding: 18px; display: flex; align-items: center; gap: 14px; }
+.k8-pq-rw { position: relative; width: 96px; height: 96px; flex: none; }
+.k8-pq-rw .k8-pq-pct { position: absolute; inset: 0; display: grid; place-items: center; font-size: 24px; font-weight: 700; }
+.k8-pq-hero small { display: block; font-size: 12.5px; opacity: .8; line-height: 1.45; }
+.k8-pq-hero > div > b { display: block; font-size: 26px; font-weight: 700; line-height: 1.25; }
+.k8-pq-hero > div > b span { font-size: 14px; opacity: .75; font-weight: 600; }
+.k8-pq-steps { background: #f8fafc; border-radius: 20px; padding: 16px 8px 12px; display: flex; }
+.k8-pq-st { flex: 1; min-width: 0; border: 0; background: none; font: inherit; color: #0f172a; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; cursor: pointer; border-radius: 14px; padding: 2px 2px 8px; }
+.k8-pq-st:hover { background: #eef6fc; }
+.k8-pq-st.is-sel { background: #e0f2fe; box-shadow: inset 0 0 0 2px #0369a1; }
+.k8-pq-st + .k8-pq-st::before { content: ''; position: absolute; top: 19px; left: -50%; right: 50%; height: 3px; background: #e2e8f0; z-index: 0; }
+.k8-pq-st.is-past::before, .k8-pq-st.is-now::before { background: #16a34a !important; }
+.k8-pq-dot { position: relative; z-index: 1; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: #f1f5f9; color: #94a3b8; }
+.k8-pq-st.is-past .k8-pq-dot { background: #16a34a; color: #fff; }
+.k8-pq-st.is-now .k8-pq-dot { background: #0369a1; color: #fff; box-shadow: 0 0 0 5px #e0f2fe; }
+.k8-pq-st b { font-size: 14px; font-weight: 700; }
+.k8-pq-st small { font-size: 11.5px; color: #64748b; white-space: nowrap; }
+.k8-pq-st em { font-style: normal; font-size: 14px; font-weight: 700; }
+.k8-pq-st em.is-wait { color: #cbd5e1; font-weight: 600; font-size: 12.5px; }
+.k8-pq-st i { font-style: normal; font-size: 11.5px; color: #15803d; white-space: nowrap; }
+.k8-pq-st i span { color: #b45309; } .k8-pq-st i.is-now { color: #0369a1; font-weight: 600; }
+.k8-pm2 .k8-pt-filters .k8-pm-sync { width: 42px; padding: 0 !important; justify-content: center; } .k8-pm2 .k8-pt-filters .k8-pm-sync span { display: none; }
+.k8-pm2 .prayer-dash-seg-btn i { display: none; }
+@media (max-width: 900px) { .k8-pq { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .k8-pq-steps { overflow-x: auto; padding: 14px 4px 10px; }
+  .k8-pq-st { flex: 0 0 76px; }
+  .k8-pq-st small { font-size: 10.5px; } .k8-pq-st i { font-size: 10.5px; white-space: normal; text-align: center; }
+  .k8-pq-hero { padding: 14px; }
+}
+html[data-theme="dark"] .k8-pq-steps { background: #16191e !important; }
+html[data-theme="dark"] .k8-pq-st.is-sel { background: #0c2a3d !important; }
+.k8-pm2 .k8-pt-img, .k8-pm2 .k8-pt-xls { width: 46px; padding: 0 !important; justify-content: center; font-size: 0 !important; gap: 0 !important; }
+.k8-pm2 .k8-pt-img svg, .k8-pm2 .k8-pt-xls svg { width: 18px; height: 18px; }
+.k8-pm2 .k8-pt-filters .k8-pm-sync { height: 46px !important; width: 46px; background: #fff; border: 1.5px solid #e2e8f0 !important; color: #0369a1 !important; }
+.k8-pm2 .k8-pt-search { flex: 1 1 200px; }
+.k8-pm2 .k8-pt-filters .k8-pt-sel { order: 0; } .k8-pm2 .k8-pt-filters .k8-pt-search { order: 1; } .k8-pm2 .k8-pt-filters .k8-pt-img { order: 2; } .k8-pm2 .k8-pt-filters .k8-pt-xls { order: 3; } .k8-pm2 .k8-pt-filters .k8-pm-sync { order: 4; }
+@media (max-width: 640px) { .k8-pm2 .k8-pt-filters .k8-pt-search { flex: 1 1 0; min-width: 0; } .k8-pm2 .k8-pt-filters .k8-pt-sel { flex: 1 1 100%; } .k8-pm2 .k8-pt-filters { flex-wrap: wrap; } }
+@media (max-width: 640px) { .k8-pm2 .k8-pt-filters .k8-pt-img, .k8-pm2 .k8-pt-filters .k8-pt-xls, .k8-pm2 .k8-pt-filters .k8-pm-sync { flex: 0 0 46px !important; width: 46px !important; } }

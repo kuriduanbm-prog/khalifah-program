@@ -3560,7 +3560,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.83';
+  const APP_VERSION = '18.84';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8027,6 +8027,8 @@ window.k8RegBirthChange = function (v) {
     };
     const fl = slotObj ? 'ยังไม่เช็คชื่อ ' + (slotObj.label || slotObj.key) : { all: 'นักเรียนทั้งหมด', zero: 'ยังไม่เช็คเลย', part: 'เช็คแล้วแต่ยังไม่ครบ', full: 'ครบ 5 เวลา' }[V.f];
     V.cnt = cnt; V.per = per; V.slots = slots; V.rows = rows.length;
+    // v18.84 · สถิติต่อเวลา (ตรงเวลา/สาย) + สถานะเวลา (ผ่านแล้ว/ตอนนี้/ยังไม่ถึง) สำหรับแถบขั้นตอน 5 เวลา
+    V.stat = slots.map((x) => { let ok = 0, late = 0, n = 0; rows.forEach((r) => { const rec = r.p[x.key]; if (!rec) return; n++; const k = kind(rec.status); if (k === 'late') late++; else ok++; }); const w = winOf(x.key); const st = viewD < todayS ? 'past' : viewD > todayS ? 'wait' : !w ? 'past' : nowM < w.startMin ? 'wait' : nowM <= w.endMin ? 'now' : 'past'; return { key: x.key, label: x.label || x.key, n, ok, late, st, time: w ? hm(w.startMin) + '–' + hm(Math.min(w.endMin, 1439)) : '' }; });
     el.innerHTML = (slotObj || V.f !== 'all' ? '' : '<!--') + '<div class="k8-pd-now"><span>กำลังแสดง: <b>' + esc(fl) + '</b> · ' + list.length + ' คน</span>' + (slotObj || V.f !== 'all' ? '<button type="button" onclick="k8PdClear()">✕ ดูทั้งหมด</button>' : '') + '</div>' + (slotObj || V.f !== 'all' ? '' : '-->') +
       '<div class="k8-pd-top"><div class="k8-pd-chips">' + chip('all', 'ทั้งหมด', cnt.all) + chip('zero', 'ยังไม่เช็คเลย', cnt.zero) + chip('part', 'ยังไม่ครบ', cnt.part) + chip('full', 'ครบ 5', cnt.full) + '</div>' +
       '<label class="k8-pd-sort"><span>เรียง</span><select onchange="k8PdS(this.value)"><option value="low"' + (V.sort === 'low' ? ' selected' : '') + '>เช็คน้อยก่อน</option><option value="high"' + (V.sort === 'high' ? ' selected' : '') + '>เช็คมากก่อน</option><option value="id"' + (V.sort === 'id' ? ' selected' : '') + '>รหัสนักเรียน</option></select></label></div>' +
@@ -8039,13 +8041,16 @@ window.k8RegBirthChange = function (v) {
   window.k8PdSlot = function (k) { V.slot = V.slot === k ? '' : k; V.f = 'all'; render(); decorate(); const w = document.getElementById('k8PdWrap'); if (w && V.slot) w.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   window.k8PdClear = function () { V.f = 'all'; V.slot = ''; render(); decorate(); };
   // v18.82 · หน้าละหมาด (แอดมิน) ใช้ง่ายขึ้น: หัวสั้น · การ์ดตัวเลข/การ์ดเวลาแตะเพื่อกรองรายชื่อ · ปุ่มซิงค์เป็นไอคอน
-  function decorate() {
+  let decorate = function () {
     const sec = document.getElementById('adminPrayerDailySection'); if (!sec) return;
     const card = sec.closest('.card');
     if (card && !card.classList.contains('k8-pm2')) {
       card.classList.add('k8-pm2');
       const t = card.querySelector('.card-header .card-title'); if (t) t.innerHTML = 'ติดตามการเช็คชื่อละหมาด';
-      const sb = card.querySelector('.card-header button[onclick^="syncAllDataFromCloud"]'); if (sb) { sb.classList.add('k8-pm-sync'); sb.title = 'ดึงข้อมูลล่าสุดจาก Google Sheets'; sb.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></svg><span>รีเฟรช</span>'; }
+      const lab = { btnPrayerModeDaily: 'รายวัน', btnPrayerModeIndividual: 'รายบุคคล', btnPrayerModeApprovals: 'คำขอย้อนหลัง' }; Object.keys(lab).forEach((id) => { const b = document.getElementById(id); if (!b) return; const badge = b.querySelector('.badge-pending-count'); b.textContent = lab[id]; if (badge) b.appendChild(badge); });
+      const fl = card.querySelector('.k8-pt-filters'); const sb0 = card.querySelector('.card-header button[onclick^="syncAllDataFromCloud"]'); if (fl && sb0) { fl.appendChild(sb0); }
+      const xb = card.querySelector('.k8-pt-xls'); if (xb) xb.setAttribute('aria-label', 'ส่งออก Excel'); const ib = card.querySelector('.k8-pt-img'); if (ib) ib.setAttribute('aria-label', 'รูปสรุป');
+      const sb = card.querySelector('button[onclick^="syncAllDataFromCloud"]'); if (sb) { sb.classList.add('k8-pm-sync'); sb.title = 'ดึงข้อมูลล่าสุดจาก Google Sheets'; sb.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></svg><span>รีเฟรช</span>'; }
       const sl = document.getElementById('adminPrayerSlotsGridContainer'); const h4 = sl && sl.previousElementSibling; if (h4) { const hh = h4.querySelector('h4'); if (hh) hh.innerHTML = 'แยกตามเวลา <small>· แตะเวลาเพื่อดูคนที่ยังไม่เช็ค</small>'; }
       const tb = document.getElementById('dailyTableTotalBadge'); const th = tb && tb.parentElement && tb.parentElement.querySelector('h4'); if (th) th.textContent = 'รายชื่อนักเรียน';
     }
@@ -8055,6 +8060,20 @@ window.k8RegBirthChange = function (v) {
     sc.forEach((c, i) => { const x = S[i]; if (!x) return; c.setAttribute('role', 'button'); c.tabIndex = 0; c.onclick = () => window.k8PdSlot(x.key); c.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.k8PdSlot(x.key); } }; c.classList.toggle('is-on', V.slot === x.key); c.title = 'แตะเพื่อดูคนที่ยังไม่เช็ค' + (x.label || x.key); });
   }
   window.k8PdDecorate = decorate;
+  // v18.84 · แบบ PQ1: การ์ดสรุป % + ขั้นตอน 5 เวลา (แทนการ์ดตัวเลข 4 ใบ + การ์ดเวลา 5 ใบ)
+  function pq1() {
+    const sec = document.getElementById('adminPrayerDailySection'); if (!sec || !V.stat) return;
+    let el = document.getElementById('k8Pq');
+    if (!el) { el = document.createElement('div'); el.id = 'k8Pq'; el.className = 'k8-pq'; const k = sec.querySelector('.prayer-kpi-grid'); (k ? k.parentNode : sec).insertBefore(el, k || sec.firstChild); }
+    const N = V.rows || 0; const act = V.stat.filter((x) => x.st !== 'wait'); const done = act.reduce((a, x) => a + x.n, 0), poss = N * act.length; const p = poss ? Math.round(done / poss * 100) : 0;
+    const C = 2 * Math.PI * 38;
+    const ring = '<svg class="k8-pq-ring" width="96" height="96" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="38" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="10"/><circle cx="48" cy="48" r="38" fill="none" stroke="#4ade80" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (C * p / 100).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 48 48)"/></svg><b class="k8-pq-pct">' + p + '%</b>';
+    const steps = V.stat.map((x, i) => '<button type="button" class="k8-pq-st is-' + x.st + (V.slot === x.key ? ' is-sel' : '') + '" onclick="k8PdSlot(\'' + x.key + '\')" title="แตะเพื่อดูคนที่ยังไม่เช็ค' + esc(x.label) + '"><span class="k8-pq-dot">' + (x.st === 'past' ? '✓' : (i + 1)) + '</span><b>' + esc(SHORT[x.key] || x.label) + '</b><small>' + esc(x.time) + '</small>' +
+      (x.st === 'wait' ? '<em class="is-wait">ยังไม่ถึง</em><i>&nbsp;</i>' : '<em>' + x.n + '/' + N + '</em>' + (x.st === 'now' ? '<i class="is-now">● กำลังเช็คชื่อ</i>' : '<i>ตรงเวลา ' + x.ok + ' · <span>สาย ' + x.late + '</span></i>')) + '</button>').join('');
+    const card = sec.closest('.card'); if (card) card.classList.add('k8-pq-on'); const sl = document.getElementById('adminPrayerSlotsGridContainer'); if (sl && sl.previousElementSibling) sl.previousElementSibling.classList.add('k8-pq-hide');
+    el.innerHTML = '<div class="k8-pq-hero">' + '<div class="k8-pq-rw">' + ring + '</div><div><small>เช็คแล้ว' + ((document.getElementById('k8PtDayLbl') || {}).textContent === 'วันนี้' ? 'วันนี้' : 'วันนั้น') + '</small><b>' + done + '<span> / ' + poss + ' ครั้ง</span></b><small>นับเฉพาะเวลาที่ถึงแล้ว · ' + N + ' คน</small></div></div><div class="k8-pq-steps">' + steps + '</div>';
+  }
+  const dec0 = decorate; decorate = function () { dec0(); try { pq1(); } catch (e) { console.warn('pq1', e); } };
   const oSlots = window.renderAdminPrayerSlotsGrid;
   if (typeof oSlots === 'function') window.renderAdminPrayerSlotsGrid = function () { const r = oSlots.apply(this, arguments); try { decorate(); } catch (e) {} return r; };
   window.k8PdS = function (s) { V.sort = s; render(); };
