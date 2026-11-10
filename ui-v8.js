@@ -2127,8 +2127,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   function wrap(fn) {
     const o = window[fn]; if (typeof o !== 'function') return;
     window[fn] = function () {
-      const r = o.apply(this, arguments);
       const f = () => window.renderApprovalsV8();
+      let r; try { r = o.apply(this, arguments); } catch (e) { console.warn('approvals ' + fn, e); f(); return; } // v18.76 · ถ้าส่วนเก่าพัง ก็ยังวาดหน้าใหม่ให้
       if (r && typeof r.then === 'function') r.then(f, f); else f();
       return r;
     };
@@ -3546,7 +3546,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.75';
+  const APP_VERSION = '18.76';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8470,10 +8470,18 @@ window.k8RegBirthChange = function (v) {
     if (x.slots && x.slots.length) return x.slots.map((s) => '<span class="k8-lv-when">คาบ ' + s.p + (s.t ? ' · ' + esc(s.t) : '') + '</span>').join('');
     return '<span class="k8-lv-when">คาบ ' + esc((x.periods || []).join(', ')) + (x.timeText ? ' · ' + esc(x.timeText) : '') + '</span>';
   }
+  // v18.76 · คำสั่งอนุมัติที่กำลังส่ง: คงสถานะใหม่ไว้บนจอ (ไม่ให้การดึงข้อมูลรอบใหม่ทับกลับเป็น "รออนุมัติ")
+  const PEND = {};
+  const keepPend = (L) => (L || []).map((x) => PEND[x.id] && (x.status || 'pending') === 'pending' ? Object.assign({}, x, { status: PEND[x.id], k8Sending: true }) : x);
+  let loading = null;
   async function load() {
-    let r = null; try { r = await gasApiCall('getTeacherLeaves', {}, 20000); } catch (e) {}
-    if (r && r.success) V.list = r.data || []; else if (!V.list) V.list = [];
-    render();
+    if (loading) return loading;
+    loading = (async () => {
+      let r = null; try { r = await gasApiCall('getTeacherLeaves', {}, 20000); } catch (e) {}
+      if (r && r.success) V.list = keepPend(r.data || []); else if (!V.list) V.list = [];
+      render();
+    })().finally(() => { loading = null; });
+    return loading;
   }
   function place() {
     const q = document.querySelector('#teacher-tab-overview .k8-th-quick');
@@ -8785,9 +8793,16 @@ window.k8RegBirthChange = function (v) {
     let note = '';
     if (!ok) { const v = prompt('เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)', ''); if (v === null) return; note = v; } // v18.23 · เดิมกดยกเลิกแล้วยังไม่อนุมัติ
     else if (!confirm('อนุมัติการลานี้ใช่ไหม?\nระบบจะแจ้งเตือนนักเรียนที่เรียนคาบนั้น และแจ้งอาจารย์ผู้ลา')) return;
-    let r = null; try { r = await gasApiCall('approveTeacherLeave', { data: { id: id, approve: !!ok, note: note } }, 30000); } catch (e) {}
-    if (r && r.success) { V.list = r.data || V.list; render(); toast(r.message + (ok && r.notified != null ? ' (' + r.notified + ' คน)' : ''), 'success'); try { window.k8NotifReload && window.k8NotifReload(); } catch (e) {} }
-    else toast((r && (r.message || r.error)) || 'ไม่สำเร็จ · Deploy Code.gs ตัวล่าสุดก่อน', 'error');
+    if (PEND[id]) return; // กันกดซ้ำ
+    // v18.76 · เปลี่ยนสถานะบนจอทันที แล้วส่งเบื้องหลัง · ไม่สำเร็จค่อยคืนสถานะเดิม
+    const before = (V.list || []).map((x) => Object.assign({}, x));
+    PEND[id] = ok ? 'approved' : 'rejected';
+    V.list = keepPend(V.list); render();
+    toast(ok ? 'อนุมัติแล้ว · กำลังแจ้งนักเรียนและอาจารย์สอนแทน…' : 'ไม่อนุมัติแล้ว · กำลังบันทึก…', 'info');
+    let r = null; try { r = await gasApiCall('approveTeacherLeave', { data: { id: id, approve: !!ok, note: note } }, 45000); } catch (e) {}
+    delete PEND[id];
+    if (r && r.success) { V.list = keepPend(r.data || V.list).map((x) => x.id === id ? Object.assign({}, x, { k8Sending: false }) : x); render(); toast(r.message + (ok && r.notified != null ? ' (' + r.notified + ' คน)' : ''), 'success'); try { window.k8NotifReload && window.k8NotifReload(); } catch (e) {} try { window.renderApprovalsV8 && window.renderApprovalsV8(); } catch (e) {} }
+    else { V.list = before; render(); toast(((r && (r.message || r.error)) || 'ส่งไม่สำเร็จ (เน็ตหรือระบบหลังบ้าน)') + ' · ลองกดใหม่อีกครั้ง', 'error'); }
   };
   window.k8LvTake = async function (id, undo) {
     if (undo && !confirm('ยกเลิกการรับสอนแทนใช่ไหม?')) return;

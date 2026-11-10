@@ -3379,6 +3379,9 @@ async function fetchPrayerApprovalsFromCloud(force = false) {
       json.data.forEach(cloudItem => {
         const idx = localList.findIndex(l => l.id === cloudItem.id);
         if (idx > -1) {
+          // v18.76 · เพิ่งกดอนุมัติ/ไม่อนุมัติในเครื่อง (ภายใน 3 นาที) แต่ระบบหลังบ้านยังไม่อัปเดต → คงผลที่กดไว้ ไม่ให้เด้งกลับเป็น "รออนุมัติ"
+          const L0 = localList[idx], at = Date.parse(L0.approvedAt || L0.rejectedAt || '') || 0;
+          if (L0.status && L0.status !== 'pending' && String(cloudItem.status || 'pending').toLowerCase() === 'pending' && Date.now() - at < 180000) return;
           localList[idx] = { ...localList[idx], ...cloudItem };
         } else {
           localList.push(cloudItem);
@@ -4070,8 +4073,8 @@ function adminApprovePrayerRequest(reqId) {
   // สร้างบันทึกผลการละหมาดให้นักเรียนอัตโนมัติ
   const now = new Date();
   const approvedRecord = {
-    id: 'PRY-APPR-' + Date.now(),
-    logId: 'PRY-APPR-' + Date.now(),
+    id: 'PRY-APPR-' + req.id, // v18.76 · รหัสคงที่ต่อคำขอ → ส่งซ้ำ/กดซ้ำก็ไม่เกิดบันทึกละหมาดซ้ำ
+    logId: 'PRY-APPR-' + req.id,
     studentId: req.studentId,
     studentName: req.studentName,
     grade: req.grade,
@@ -7695,7 +7698,10 @@ async function fetchPendingApprovalsFromCloud() {
           phone: r.phone || (idx !== -1 ? localList[idx].phone : '') || '',
           gradeOrSubj: r.gradeOrSubj || r.detail || (idx !== -1 ? localList[idx].gradeOrSubj : '') || '',
           otpCode: cleanIdString(r.otpCode),
-          status: idx !== -1 && localList[idx].status === 'Verified' ? 'Verified' : normStatus,
+          // v18.76 · เพิ่งกดอนุมัติในเครื่อง (ภายใน 3 นาที) แต่ระบบหลังบ้านยังไม่อัปเดต → คงสถานะ "ส่งรหัสแล้ว" ไว้ ไม่เด้งกลับเป็นรออนุมัติ
+          status: idx !== -1 && localList[idx].status === 'Verified' ? 'Verified' : (idx !== -1 && localList[idx].status === 'Approved' && normStatus !== 'Approved' && Date.now() - (Date.parse(localList[idx].approvedAt || '') || 0) < 180000) ? 'Approved' : normStatus,
+          approvedAt: idx !== -1 ? (localList[idx].approvedAt || '') : '',
+          emailSent: idx !== -1 ? localList[idx].emailSent : undefined, emailError: idx !== -1 ? localList[idx].emailError : undefined,
           createdAt: r.requestedAt || r.createdAt || '',
           payload: (r.payload && Object.keys(r.payload).length > 0) ? r.payload : (idx !== -1 ? localList[idx].payload : null)
         };
@@ -7894,6 +7900,7 @@ async function adminApproveRegistration(reqId) {
       const L2 = getPendingRegistrations(); const j = L2.findIndex(p => (p.reqId || p.id) === (item.reqId || item.id) || isIdMatch(p.userId, item.userId));
       if (j !== -1) {
         if (resJson && /^\d{6}$/.test(String(resJson.otpCode || ''))) L2[j].otpCode = String(resJson.otpCode);
+        if (resJson && resJson.success !== false && L2[j].status !== 'Verified') { L2[j].status = 'Approved'; L2[j].approvedAt = L2[j].approvedAt || new Date().toISOString(); }
         L2[j].emailSent = !!(resJson && resJson.emailSent); L2[j].emailError = (resJson && (resJson.emailError || (resJson.success === false ? (resJson.message || 'ส่งไม่สำเร็จ') : ''))) || '';
         L2[j].emailAt = new Date().toISOString();
         savePendingRegistrations(L2); renderPendingApprovalsTable(true);
@@ -7939,6 +7946,8 @@ function adminRejectRegistration(reqId) {
     .catch(() => showToast('ลบในเครื่องแล้ว · จะลบในระบบเมื่อเชื่อมต่ออินเทอร์เน็ต', 'warning'));
 }
 
+// v18.76 · ฟังก์ชันนี้ถูกเรียกในรายการคำขอละหมาดย้อนหลังแต่ไม่เคยมี → กดอนุมัติแล้วหน้าจอค้าง
+function formatThaiDate(dateStr) { try { return formatThaiDateDisplay(dateStr); } catch (e) { return String(dateStr || ''); } }
 function formatThaiDateShort(dateStr) {
   if (!dateStr) return '';
   try {
