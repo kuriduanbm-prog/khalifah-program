@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.72'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.73'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -964,6 +964,22 @@ function verifyToken_(token) {
   }
 }
 
+// ลายเซ็นถูกต้อง + เป็นนักเรียน + ถ่ายก่อนโทเค็นหมดอายุ/ก่อนแอดมินสั่งออกจากระบบทุกเครื่อง + ไม่เกิน 14 วัน
+function verifyTokenGrace_(token, capturedMs) {
+  if (!token || typeof token !== 'string' || !(capturedMs > 0)) return null;
+  const parts = token.split('.');
+  if (parts.length !== 3 || parts[0] !== 'v1' || !safeEquals_(signToken_(parts[1]), parts[2])) return null;
+  try {
+    const p = JSON.parse(b64urlDecodeToString_(parts[1]));
+    if (!p || p.r !== 'student' || !p.u || p.pv) return null;
+    const now = Date.now();
+    if (capturedMs > now + 10 * 60000 || now - capturedMs > 14 * 864e5) return null;
+    if (capturedMs > Number(p.exp || 0)) return null;
+    const ep = getProp_('SESSION_EPOCH') || '0';
+    if ((p.ep || '0') !== ep && !(capturedMs < Number(ep))) return null;
+    return { role: 'student', userId: p.u, name: p.n || '', owner: false, preview: false, limit: '', grace: true };
+  } catch (e) { return null; }
+}
 const INSPECTOR_ROLE_VALUES = ['inspector', 'ผู้ตรวจการ'];
 function isInspectorRole_(v) { return INSPECTOR_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
 // บทบาทที่เข้าระบบทางแท็บแอดมินด้วยรหัสผ่านอย่างเดียว
@@ -1274,7 +1290,9 @@ function routeRequest_(action, req, method) {
     if (!access) return { success: false, error: 'Unknown action: ' + action };
 
     const token = req.token || (req.data && typeof req.data === 'object' ? req.data.token : '') || '';
-    const session = verifyToken_(token);
+    let session = verifyToken_(token);
+    // v18.73 · รูปละหมาด/เช็คชื่อที่ค้างในคิวตอนไม่มีเน็ต: ส่งเบื้องหลังได้แม้เซสชันหมดอายุภายหลัง (ถ้าถ่ายตอนเซสชันยังใช้ได้)
+    if (!session && (action === 'prayerCheckIn' || action === 'activityCheckIn') && req.data && typeof req.data === 'object') session = verifyTokenGrace_(token, Date.parse(req.data.timestamp || ''));
     const isStaff = !!session && (session.role === 'teacher' || session.role === 'admin');
     const isAdmin = !!session && session.role === 'admin';
     const isOwner = !!session && !!session.owner;

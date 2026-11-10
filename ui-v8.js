@@ -3546,7 +3546,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.72';
+  const APP_VERSION = '18.73';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5652,7 +5652,9 @@ window.k8RegBirthChange = function (v) {
     let body = item.body;
     const t = tok();
     // v18.72 · แนบเวลาเครื่องตอนส่ง + อายุรายการจากนาฬิกาที่ปรับไม่ได้ (ถ้ายังเป็นหน้าเดิม) ให้เซิร์ฟเวอร์ตรวจว่าเวลาเครื่องถูกปรับไหม
-    try { const b = JSON.parse(body); if (t) b.token = t; if (b.data) { b.data.sentAt = Date.now(); if (item.pg === PG && item.perf != null) b.data.ageMs = Math.max(0, Math.round(performance.now() - item.perf)); else delete b.data.ageMs; } body = JSON.stringify(b); } catch (e) {}
+    // ใช้โทเค็นปัจจุบันเฉพาะเมื่อเป็นนักเรียนคนเดียวกับเจ้าของรายการ (กันส่งรูปของคนหนึ่งด้วยบัญชีอีกคนที่เข้าเครื่องเดียวกัน)
+    let me = ''; try { me = String((currentStudent && currentStudent.studentId) || ''); } catch (e) {}
+    try { const b = JSON.parse(body); const owner = String((b.data && b.data.studentId) || ''); if (t && (!owner || !me || cleanIdString(owner) === cleanIdString(me))) b.token = t; if (b.data) { b.data.sentAt = Date.now(); if (item.pg === PG && item.perf != null) b.data.ageMs = Math.max(0, Math.round(performance.now() - item.perf)); else delete b.data.ageMs; } body = JSON.stringify(b); } catch (e) {}
     let r;
     try {
       const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
