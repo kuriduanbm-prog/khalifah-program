@@ -3606,7 +3606,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.94';
+  const APP_VERSION = '18.95';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12072,9 +12072,10 @@ window.k8HfMiss = function (slot) {
 
 /* ============ v18.93 · แอดมิน/ครูเปิดดู·ถูกใจรูปรายงานละหมาด · นักเรียนเห็นว่ามีคนใส่ใจ ============ */
 (function () {
-  const KEY = 'k8_pr_reacts';
-  const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } };
-  const write = (m) => { try { localStorage.setItem(KEY, JSON.stringify(m)); } catch (e) {} };
+  const KEY0 = 'k8_pr_reacts';
+  const KEY = () => { let id = ''; try { id = (currentStudent && currentStudent.studentId) || ''; } catch (e) {} return KEY0 + ':' + id; };
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY()) || '{}') || {}; } catch (e) { return {}; } };
+  const write = (m) => { try { localStorage.setItem(KEY(), JSON.stringify(m)); } catch (e) {} };
   const staff = () => { try { return !!currentAdmin; } catch (e) { return false; } };
   const student = () => { try { return !!currentStudent && !currentAdmin; } catch (e) { return false; } };
   const whoTxt = (r) => (r && r.by === 'teacher') ? 'คุณครู' : 'แอดมิน';
@@ -12091,21 +12092,36 @@ window.k8HfMiss = function (slot) {
       : '<span class="k8-prr-pill" title="' + whoTxt(r) + 'เปิดดูรูปนี้แล้ว"><i class="fa-solid fa-eye"></i> เปิดดูแล้ว</span>';
   };
 
-  async function fetchMine(force) {
+  // v18.95 · ดึงสถานะล่าสุดบ่อยขึ้น (ทุก 20 วินาทีเมื่อมีการเปิดดู · ทุก 60 วินาทีขณะเปิดแอป) และอัปเดตหน้าต่างรายละเอียดที่เปิดอยู่ทันที
+  async function fetchMine(minGap) {
     if (!student() || busy || typeof gasApiCall !== 'function') return;
-    if (!force && Date.now() - lastFetch < 90000) return;
+    if (Date.now() - lastFetch < (minGap == null ? 20000 : minGap)) return;
     busy = true; lastFetch = Date.now();
     try {
       const r = await gasApiCall('getMyPrayerReacts', {}, 15000);
       if (r && r.success && r.reacts) {
-        const before = localStorage.getItem(KEY) || '{}'; write(r.reacts);
-        if (JSON.stringify(r.reacts) !== before && typeof window.renderPrayerHistory === 'function') { try { window.renderPrayerHistory(); } catch (e) {} }
+        const before = localStorage.getItem(KEY()) || '{}'; write(r.reacts);
+        if (JSON.stringify(r.reacts) !== before) {
+          if (typeof window.renderPrayerHistory === 'function') { try { window.renderPrayerHistory(); } catch (e) {} }
+          const b = document.getElementById('k8PrReact'); const m = document.getElementById('prayerDetailModal');
+          if (b && b.dataset.stu && m && m.classList.contains('open')) paintStu(b, b.dataset.stu);
+        }
       }
     } catch (e) {} finally { busy = false; }
   }
+  setInterval(() => { if (document.visibilityState === 'visible') fetchMine(55000); }, 60000);
+  function paintStu(b, id) {
+    const r = read()[id];
+    b.dataset.stu = id;
+    if (!r || (!r.liked && !r.seen)) { b.hidden = true; b.innerHTML = ''; return; }
+    b.innerHTML = r.liked
+      ? '<div class="k8-prr-stu is-like"><i class="fa-solid fa-heart"></i><span><b>' + whoTxt(r) + 'เปิดดูรูปและกดถูกใจแล้ว</b><small>ขอบคุณที่ตั้งใจรายงานการละหมาด</small></span></div>'
+      : '<div class="k8-prr-stu"><i class="fa-solid fa-eye"></i><span><b>' + whoTxt(r) + 'เปิดดูรูปนี้แล้ว</b></span></div>';
+    b.hidden = false;
+  }
   const rph = window.renderPrayerHistory;
-  if (typeof rph === 'function') window.renderPrayerHistory = function () { const out = rph.apply(this, arguments); setTimeout(() => fetchMine(false), 50); return out; };
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fetchMine(false); });
+  if (typeof rph === 'function') window.renderPrayerHistory = function () { const out = rph.apply(this, arguments); setTimeout(() => fetchMine(), 50); return out; };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fetchMine(); });
 
   function findRec(id) {
     const lists = [];
@@ -12151,7 +12167,7 @@ window.k8HfMiss = function (slot) {
   if (typeof od === 'function') window.openPrayerHistoryDetailModal = function (id) {
     const out = od.apply(this, arguments);
     const b = box(); if (!b) return out;
-    b.hidden = true; b.innerHTML = ''; b.dataset.id = '';
+    b.hidden = true; b.innerHTML = ''; b.dataset.id = ''; b.dataset.stu = '';
     const rec = findRec(id); const realId = rec ? (rec.logId || rec.id) : id;
     if (staff()) {
       if (!rec || !realId) return out;
@@ -12164,14 +12180,8 @@ window.k8HfMiss = function (slot) {
         }).catch(() => {});
       }
     } else if (student()) {
-      const r = read()[realId] || read()[id];
-      if (r && (r.liked || r.seen)) {
-        b.innerHTML = r.liked
-          ? '<div class="k8-prr-stu is-like"><i class="fa-solid fa-heart"></i><span><b>' + whoTxt(r) + 'เปิดดูรูปและกดถูกใจแล้ว</b><small>ขอบคุณที่ตั้งใจรายงานการละหมาด</small></span></div>'
-          : '<div class="k8-prr-stu"><i class="fa-solid fa-eye"></i><span><b>' + whoTxt(r) + 'เปิดดูรูปนี้แล้ว</b></span></div>';
-        b.hidden = false;
-      }
-      fetchMine(false);
+      paintStu(b, realId);
+      fetchMine(3000);
     }
     return out;
   };
