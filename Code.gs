@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.80'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.83'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -7123,6 +7123,14 @@ function docsPlace_(id, roots) {
 function docsInTree_(id) { const roots = getStudyDocsFolders_(); if (Object.keys(roots).some(function (g) { return roots[g] === id; })) return true; return !!docsPlace_(id, roots); }
 function docsBy_(session) { return 'อัปโหลดโดย ' + (session.name || session.userId) + ' |uid:' + session.userId; }
 function docsUid_(desc) { const m = String(desc || '').match(/\|uid:([^|\s]+)/); return m ? m[1] : ''; }
+// อีเมลของบัญชีที่ Deploy (ใช้บอกแอดมินว่าต้องแชร์โฟลเดอร์ให้ใครเป็นผู้แก้ไข)
+function docsMe_() { try { const c = CacheService.getScriptCache(); const h = c.get('DOCS_ME'); if (h) return h; const e = DriveApp.getRootFolder().getOwner().getEmail(); if (e) c.put('DOCS_ME', e, 21600); return e || ''; } catch (e) { return ''; } }
+function docsCanEdit_(folder) {
+  const me = docsMe_(); if (!me) return null;
+  try { if (folder.getOwner() && folder.getOwner().getEmail() === me) return true; } catch (e) {}
+  try { return folder.getEditors().some(function (u) { return u.getEmail() === me; }); } catch (e) { return false; }
+}
+function docsNoEdit_(e) { const me = docsMe_(); return { success: false, code: 'DRIVE_EDIT', deployer: me, message: 'ยังเพิ่มลงโฟลเดอร์นี้ไม่ได้ · ให้เจ้าของโฟลเดอร์ใน Google Drive กด "แชร์" แล้วเพิ่ม ' + (me || 'บัญชีที่ Deploy Code.gs') + ' เป็น "ผู้แก้ไข"' + (e ? ' (' + e.message + ')' : '') }; }
 function docsClear_(id) { try { CacheService.getScriptCache().remove('DOCS_' + id); } catch (e) {} }
 function createStudyFolder_(parentId, name, session) {
   const pid = extractDriveId_(parentId); name = cleanVal(name).replace(/[\\/:*?"<>|]/g, ' ').trim().substring(0, 80);
@@ -7134,7 +7142,7 @@ function createStudyFolder_(parentId, name, session) {
     const f = parent.createFolder(name); try { f.setDescription(docsBy_(session).replace('อัปโหลด', 'สร้าง')); } catch (e) {}
     docsClear_(pid);
     return { success: true, folder: { id: f.getId(), name: f.getName() }, message: 'สร้างโฟลเดอร์ "' + name + '" แล้ว' };
-  } catch (e) { return { success: false, code: 'DRIVE_EDIT', message: 'สร้างโฟลเดอร์ไม่ได้ · บัญชีที่ Deploy Code.gs ต้องมีสิทธิ์ "ผู้แก้ไข" ในโฟลเดอร์ Google Drive ต้นทาง (' + e.message + ')' }; }
+  } catch (e) { return docsNoEdit_(e); }
 }
 const DOCS_UPLOAD_EXT = /\.(pdf|docx?|xlsx?|csv)$/i;
 function uploadStudyFile_(folderId, name, mime, data, session) {
@@ -7150,7 +7158,7 @@ function uploadStudyFile_(folderId, name, mime, data, session) {
     const file = folder.createFile(blob); try { file.setDescription(docsBy_(session)); } catch (e) {}
     docsClear_(fid);
     return { success: true, file: { id: file.getId(), name: file.getName(), size: bytes.length }, message: 'อัปโหลด "' + name + '" แล้ว' };
-  } catch (e) { return { success: false, code: 'DRIVE_EDIT', message: 'อัปโหลดไม่ได้ · บัญชีที่ Deploy Code.gs ต้องมีสิทธิ์ "ผู้แก้ไข" ในโฟลเดอร์ Google Drive ต้นทาง (' + e.message + ')' }; }
+  } catch (e) { return docsNoEdit_(e); }
 }
 function deleteStudyItem_(id, kind, session) {
   id = extractDriveId_(id); if (!id) return { success: false, message: 'ไม่พบรายการ' };
@@ -7205,7 +7213,7 @@ function listStudyDocs_(grade, folderId, refresh) {
   }
   const byName = function (a, b) { return String(a.name).localeCompare(String(b.name), 'th', { numeric: true }); };
   folders.sort(byName); files.sort(byName);
-  const out = { success: true, grade: where.grade, folder: { id: id, name: folder.getName() }, path: where.path, folders: folders, files: files, cachedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'HH:mm') };
+  const out = { success: true, canEdit: docsCanEdit_(folder), deployer: docsMe_(), grade: where.grade, folder: { id: id, name: folder.getName() }, path: where.path, folders: folders, files: files, cachedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'HH:mm') };
   try { const js = JSON.stringify(out); if (js.length < 90000) cache.put(key, js, 60); } catch (e) {}
   return out;
 }

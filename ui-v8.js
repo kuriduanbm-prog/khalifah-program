@@ -3560,7 +3560,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.82';
+  const APP_VERSION = '18.83';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4256,6 +4256,12 @@ window.k8RegBirthChange = function (v) {
   const delBtn = (f, kind) => canDel(f) ? '<button type="button" class="k8-docs-del" onclick="event.stopPropagation();k8DocsDel(\'' + js(f.id) + '\',\'' + kind + '\',\'' + js(f.name) + '\')" aria-label="ลบ ' + esc(f.name) + '">' + TRASH + '</button>' : '';
   const UP = { busy: false, msg: '', newOpen: false, del: '' };
   function toolHtml() {
+    const v = D.view[curKey()] || {};
+    if (v.canEdit === false) {
+      const em = v.deployer || '';
+      return '<div class="k8-docs-perm"><b>ยังเพิ่มโฟลเดอร์/อัปโหลดไฟล์ในโฟลเดอร์นี้ไม่ได้</b><span>ระบบมีสิทธิ์แค่ "ดู" โฟลเดอร์นี้ใน Google Drive · ' + (isAdm() ? 'ให้เจ้าของโฟลเดอร์เปิด Google Drive → คลิกขวาที่โฟลเดอร์เอกสาร (ม.' + esc(D.grade) + ') → แชร์ → เพิ่มอีเมลด้านล่างเป็น <b>"ผู้แก้ไข"</b> → ส่ง แล้วกดรีเฟรชหน้านี้' : 'แจ้งแอดมินให้แชร์โฟลเดอร์นี้ให้อีเมลด้านล่างเป็น "ผู้แก้ไข"') + '</span>' +
+        (em ? '<div class="k8-docs-perm-em"><code>' + esc(em) + '</code><button type="button" onclick="k8DocsCopyEm(\'' + js(em) + '\')">คัดลอกอีเมล</button></div>' : '') + '</div>';
+    }
     return '<div class="k8-docs-tools"><button type="button" class="k8-docs-tb" onclick="k8DocsNewFolder()"' + (UP.busy ? ' disabled' : '') + '><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/></svg>โฟลเดอร์ใหม่</button>' +
       '<label class="k8-docs-tb is-up' + (UP.busy ? ' is-dis' : '') + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>อัปโหลดไฟล์<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="k8DocsUpload(this)"' + (UP.busy ? ' disabled' : '') + ' hidden></label>' +
       '<small>PDF · Word · Excel · ไม่เกิน 25 MB/ไฟล์</small></div>' +
@@ -4264,6 +4270,8 @@ window.k8RegBirthChange = function (v) {
       (UP.msg ? '<p class="k8-docs-up-msg">' + UP.msg + '</p>' : '');
   }
   const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  window.k8DocsCopyEm = function (em) { const ok = () => toast('คัดลอก ' + em + ' แล้ว', 'success'); try { navigator.clipboard.writeText(em).then(ok, () => prompt('คัดลอกอีเมล', em)); } catch (e) { prompt('คัดลอกอีเมล', em); } };
+  const noEdit = (r) => { if (r && r.code === 'DRIVE_EDIT') { const k = curKey(); if (D.view[k]) { D.view[k].canEdit = false; if (r.deployer) D.view[k].deployer = r.deployer; } } };
   function after(msg) { UP.busy = false; UP.msg = ''; const k = curKey(); if (D.view[k]) { try { localStorage.removeItem('khalifah_docs_' + k); } catch (e) {} } fetchFolder(k, false); if (msg) toast(msg, 'success'); }
   window.k8DocsNewFolder = function (on) { UP.newOpen = on !== 0; render(); if (UP.newOpen) setTimeout(() => { const i = document.getElementById('k8DocsNewName'); if (i) i.focus(); }, 30); };
   window.k8DocsMkdir = async function () {
@@ -4272,7 +4280,7 @@ window.k8RegBirthChange = function (v) {
     UP.busy = true; UP.msg = 'กำลังสร้างโฟลเดอร์ "' + esc(name) + '" …'; render();
     let r = null; try { r = await gasApiCall('createStudyFolder', { parentId: curFolderId(), name }, 45000); } catch (e) {}
     if (r && r.success) { UP.newOpen = false; after(r.message); }
-    else { UP.busy = false; UP.msg = ''; render(); toast((r && r.message) || 'สร้างโฟลเดอร์ไม่สำเร็จ · ตรวจว่า Deploy Code.gs ล่าสุดแล้ว', 'error'); }
+    else { noEdit(r); UP.busy = false; UP.msg = ''; UP.newOpen = false; render(); toast((r && r.message) || 'สร้างโฟลเดอร์ไม่สำเร็จ · ตรวจว่า Deploy Code.gs ล่าสุดแล้ว', 'error'); }
   };
   const readB64 = (file) => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result || '')); fr.onerror = () => rej(fr.error); fr.readAsDataURL(file); });
   window.k8DocsUpload = async function (input) {
@@ -4287,7 +4295,7 @@ window.k8RegBirthChange = function (v) {
       const f = ok[i];
       UP.msg = 'กำลังอัปโหลด ' + (ok.length > 1 ? (i + 1) + '/' + ok.length + ' · ' : '') + esc(f.name) + ' (' + fmtSize(f.size) + ') …'; render();
       let r = null; try { const data = await readB64(f); const ext = (f.name.match(/\.([a-z0-9]+)$/i) || [])[1] || ''; const MM = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', csv: 'text/csv' }; r = await gasApiCall('uploadStudyFile', { folderId: fid, name: f.name, mime: f.type || MM[ext.toLowerCase()] || '', data }, 180000); } catch (e) {}
-      if (r && r.success) done++; else fail.push(f.name + ': ' + ((r && r.message) || 'ไม่สำเร็จ'));
+      if (r && r.success) done++; else { fail.push(f.name + ': ' + ((r && r.message) || 'ไม่สำเร็จ')); if (r && r.code === 'DRIVE_EDIT') { noEdit(r); break; } }
     }
     after(done ? 'อัปโหลดแล้ว ' + done + ' ไฟล์ · เข้าโฟลเดอร์ Google Drive แล้ว' : '');
     if (fail.length) toast(fail.slice(0, 2).join(' / '), 'error');
