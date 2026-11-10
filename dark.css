@@ -2641,6 +2641,17 @@ html[data-theme="dark"] .k8-hqe-list li b { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-hqe-seg button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #a6b0bf !important; }
 html[data-theme="dark"] .k8-hqe-sh footer { border-top: 1px solid #2d363f !important; }
 html[data-theme="dark"] .k8-hqe-sh footer small { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-docs-tb { border: 1px solid #264555 !important; background-color: #0e2432 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-docs-newf, html[data-theme="dark"] .k8-docs-delq { background-color: #121212 !important; border: 1px solid #323941 !important; }
+html[data-theme="dark"] .k8-docs-newf input { border: 1px solid #393f46 !important; }
+html[data-theme="dark"] .k8-docs-newf button, html[data-theme="dark"] .k8-docs-delq button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #c1c7cf !important; }
+html[data-theme="dark"] .k8-docs-delq { background-color: #2f1111 !important; border-color: #522424 !important; }
+html[data-theme="dark"] .k8-docs-delq span { color: #e58080 !important; }
+html[data-theme="dark"] .k8-docs-delq small { color: #ed7878 !important; }
+html[data-theme="dark"] .k8-docs-up-msg { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-docs-del { background-color: #2f1111 !important; }
+html[data-theme="dark"] .k8-docs-del:hover { background-color: #371212 !important; }
+html[data-theme="dark"] .k8-docs-folders .k8-docs-del, html[data-theme="dark"] .k8-docs-files .k8-docs-del { background-color: #2f1111 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

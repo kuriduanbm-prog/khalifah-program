@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.77'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.80'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1231,6 +1231,7 @@ const ACTION_ACCESS = {
   getAdmins: 'admin', addSubAdmin: 'admin', deleteSubAdmin: 'admin', deleteStudent: 'admin',
   batchPromote: 'admin', fullSchoolBatchPromote: 'admin',
   saveSetting: 'admin', saveSubjects: 'admin', saveCurrentTerm: 'admin', saveStudyDocsFolders: 'admin',
+  createStudyFolder: 'staff', uploadStudyFile: 'staff', deleteStudyItem: 'staff',
   listStudyDocs: 'student', getStudyDocsConfig: 'student', getStudyFile: 'student',
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
@@ -1529,6 +1530,12 @@ function dispatchAction_(action, req, data, session, ctx) {
       return getStudyFile_(pick('fileId'), pick('asPdf'));
     case 'listStudyDocs':
       return listStudyDocs_(pick('grade'), pick('folderId'), pick('refresh'));
+    case 'createStudyFolder':
+      return createStudyFolder_(pick('parentId'), pick('name'), session);
+    case 'uploadStudyFile':
+      return uploadStudyFile_(pick('folderId'), pick('name'), pick('mime'), pick('data'), session);
+    case 'deleteStudyItem':
+      return deleteStudyItem_(pick('id'), pick('kind'), session);
     case 'getStudyDocsConfig':
       return { success: true, folders: getStudyDocsFolders_() };
     case 'saveStudyDocsFolders':
@@ -7112,6 +7119,50 @@ function docsPlace_(id, roots) {
   }
   return null;
 }
+// v18.80 · อาจารย์สร้างโฟลเดอร์ / อัปโหลดไฟล์ / ลบของตัวเอง ในเอกสารประกอบการเรียน (เข้า Google Drive ต้นทางโดยตรง)
+function docsInTree_(id) { const roots = getStudyDocsFolders_(); if (Object.keys(roots).some(function (g) { return roots[g] === id; })) return true; return !!docsPlace_(id, roots); }
+function docsBy_(session) { return 'อัปโหลดโดย ' + (session.name || session.userId) + ' |uid:' + session.userId; }
+function docsUid_(desc) { const m = String(desc || '').match(/\|uid:([^|\s]+)/); return m ? m[1] : ''; }
+function docsClear_(id) { try { CacheService.getScriptCache().remove('DOCS_' + id); } catch (e) {} }
+function createStudyFolder_(parentId, name, session) {
+  const pid = extractDriveId_(parentId); name = cleanVal(name).replace(/[\\/:*?"<>|]/g, ' ').trim().substring(0, 80);
+  if (!pid || !name) return { success: false, message: 'ตั้งชื่อโฟลเดอร์ก่อน' };
+  if (!docsInTree_(pid)) return { success: false, message: 'ไม่พบโฟลเดอร์นี้ในเอกสารประกอบการเรียน' };
+  try {
+    const parent = DriveApp.getFolderById(pid);
+    const dup = parent.getFoldersByName(name); if (dup.hasNext()) return { success: false, message: 'มีโฟลเดอร์ชื่อ "' + name + '" อยู่แล้ว' };
+    const f = parent.createFolder(name); try { f.setDescription(docsBy_(session).replace('อัปโหลด', 'สร้าง')); } catch (e) {}
+    docsClear_(pid);
+    return { success: true, folder: { id: f.getId(), name: f.getName() }, message: 'สร้างโฟลเดอร์ "' + name + '" แล้ว' };
+  } catch (e) { return { success: false, code: 'DRIVE_EDIT', message: 'สร้างโฟลเดอร์ไม่ได้ · บัญชีที่ Deploy Code.gs ต้องมีสิทธิ์ "ผู้แก้ไข" ในโฟลเดอร์ Google Drive ต้นทาง (' + e.message + ')' }; }
+}
+const DOCS_UPLOAD_EXT = /\.(pdf|docx?|xlsx?|csv)$/i;
+function uploadStudyFile_(folderId, name, mime, data, session) {
+  const fid = extractDriveId_(folderId); name = cleanVal(name).replace(/[\\/:*?"<>|]/g, ' ').trim().substring(0, 150);
+  if (!fid || !name || !data) return { success: false, message: 'ข้อมูลไฟล์ไม่ครบ' };
+  if (!DOCS_UPLOAD_EXT.test(name)) return { success: false, message: 'อัปโหลดได้เฉพาะไฟล์ PDF, Word (.doc/.docx) และ Excel (.xls/.xlsx/.csv)' };
+  if (!docsInTree_(fid)) return { success: false, message: 'ไม่พบโฟลเดอร์นี้ในเอกสารประกอบการเรียน' };
+  let bytes; try { bytes = Utilities.base64Decode(String(data).replace(/^data:[^,]*,/, '')); } catch (e) { return { success: false, message: 'อ่านไฟล์ไม่สำเร็จ' }; }
+  if (bytes.length > 25 * 1024 * 1024) return { success: false, message: 'ไฟล์ใหญ่เกิน 25 MB' };
+  try {
+    const folder = DriveApp.getFolderById(fid);
+    const blob = Utilities.newBlob(bytes, cleanVal(mime) || 'application/octet-stream', name);
+    const file = folder.createFile(blob); try { file.setDescription(docsBy_(session)); } catch (e) {}
+    docsClear_(fid);
+    return { success: true, file: { id: file.getId(), name: file.getName(), size: bytes.length }, message: 'อัปโหลด "' + name + '" แล้ว' };
+  } catch (e) { return { success: false, code: 'DRIVE_EDIT', message: 'อัปโหลดไม่ได้ · บัญชีที่ Deploy Code.gs ต้องมีสิทธิ์ "ผู้แก้ไข" ในโฟลเดอร์ Google Drive ต้นทาง (' + e.message + ')' }; }
+}
+function deleteStudyItem_(id, kind, session) {
+  id = extractDriveId_(id); if (!id) return { success: false, message: 'ไม่พบรายการ' };
+  try {
+    const it = kind === 'folder' ? DriveApp.getFolderById(id) : DriveApp.getFileById(id);
+    const parents = it.getParents(); const pid = parents.hasNext() ? parents.next().getId() : '';
+    if (!pid || !docsInTree_(pid)) return { success: false, message: 'ไม่พบรายการนี้ในเอกสารประกอบการเรียน' };
+    if (session.role !== 'admin' && docsUid_(it.getDescription && it.getDescription()) !== session.userId) return { success: false, code: 'FORBIDDEN', message: 'ลบได้เฉพาะไฟล์/โฟลเดอร์ที่คุณอัปโหลดเอง' };
+    it.setTrashed(true); docsClear_(pid);
+    return { success: true, message: 'ย้ายไปถังขยะของ Google Drive แล้ว (กู้คืนได้ภายใน 30 วัน)' };
+  } catch (e) { return { success: false, message: 'ลบไม่ได้ (' + e.message + ')' }; }
+}
 function listStudyDocs_(grade, folderId, refresh) {
   const roots = getStudyDocsFolders_();
   const g = String(cleanVal(grade)).replace(/\D/g, '');
@@ -7140,14 +7191,16 @@ function listStudyDocs_(grade, folderId, refresh) {
     let nFiles = 0, nDirs = 0;
     try { const a = f.getFiles(); while (a.hasNext() && nFiles < 999) { const x = a.next(); if (!(x.isTrashed && x.isTrashed())) nFiles++; } } catch (e) {}
     try { const b = f.getFolders(); while (b.hasNext() && nDirs < 999) { b.next(); nDirs++; } } catch (e) {}
-    folders.push({ id: f.getId(), name: f.getName(), files: nFiles, folders: nDirs, updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
+    let fby = ''; try { fby = docsUid_(f.getDescription()); } catch (e) {}
+    folders.push({ id: f.getId(), name: f.getName(), by: fby, files: nFiles, folders: nDirs, updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
     try { cache.put('DOCS_IN_' + f.getId(), JSON.stringify({ grade: where.grade, path: where.path.concat([{ id: f.getId(), name: f.getName() }]) }), 21600); } catch (e) {}
   }
   const it = folder.getFiles();
   while (it.hasNext() && files.length < 500) {
     const f = it.next();
     if (f.isTrashed && f.isTrashed()) continue;
-    files.push({ id: f.getId(), name: f.getName(), mime: f.getMimeType(), size: f.getSize ? f.getSize() : 0, updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
+    let by = ''; try { by = docsUid_(f.getDescription()); } catch (e) {}
+    files.push({ id: f.getId(), name: f.getName(), by: by, mime: f.getMimeType(), size: f.getSize ? f.getSize() : 0, updated: f.getLastUpdated ? Utilities.formatDate(f.getLastUpdated(), 'Asia/Bangkok', 'yyyy-MM-dd') : '' });
     try { cache.put('DOCS_F_' + f.getId(), id, 21600); } catch (e) {}
   }
   const byName = function (a, b) { return String(a.name).localeCompare(String(b.name), 'th', { numeric: true }); };

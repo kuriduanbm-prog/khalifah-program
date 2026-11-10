@@ -3546,7 +3546,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.79';
+  const APP_VERSION = '18.80';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4232,6 +4232,58 @@ window.k8RegBirthChange = function (v) {
       if (!quiet) { D.err[key] = e.message || 'โหลดเอกสารไม่สำเร็จ'; if (key === curKey()) render(); }
     }
   }
+  // ---------- v18.80 · อาจารย์: สร้างโฟลเดอร์ / อัปโหลดไฟล์ / ลบของตัวเอง (เข้า Google Drive ต้นทาง) ----------
+  const staff = () => { try { return !!currentAdmin && !currentAdmin.limited; } catch (e) { return false; } };
+  const me = () => { try { return String(currentAdmin.username || currentAdmin.userId || ''); } catch (e) { return ''; } };
+  const isAdm = () => { let a = null; try { a = currentAdmin; } catch (e) {} return !!a && (a.isMaster || (/SUPER|ADMIN/i.test(String(a.role || '')) && !a.limited)); };
+  const curFolderId = () => D.nav.length ? D.nav[D.nav.length - 1].id : (D.config || {})[D.grade] || '';
+  const canDel = (f) => staff() && (isAdm() || (f.by && f.by === me()));
+  const TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>';
+  const delBtn = (f, kind) => canDel(f) ? '<button type="button" class="k8-docs-del" onclick="event.stopPropagation();k8DocsDel(\'' + js(f.id) + '\',\'' + kind + '\',\'' + js(f.name) + '\')" aria-label="ลบ ' + esc(f.name) + '">' + TRASH + '</button>' : '';
+  const UP = { busy: false, msg: '', newOpen: false, del: '' };
+  function toolHtml() {
+    return '<div class="k8-docs-tools"><button type="button" class="k8-docs-tb" onclick="k8DocsNewFolder()"' + (UP.busy ? ' disabled' : '') + '><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/></svg>โฟลเดอร์ใหม่</button>' +
+      '<label class="k8-docs-tb is-up' + (UP.busy ? ' is-dis' : '') + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>อัปโหลดไฟล์<input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="k8DocsUpload(this)"' + (UP.busy ? ' disabled' : '') + ' hidden></label>' +
+      '<small>PDF · Word · Excel · ไม่เกิน 25 MB/ไฟล์</small></div>' +
+      (UP.newOpen ? '<div class="k8-docs-newf"><input type="text" id="k8DocsNewName" maxlength="80" placeholder="ชื่อโฟลเดอร์ เช่น บทที่ 3 พันธะเคมี" onkeydown="if(event.key===\'Enter\')k8DocsMkdir();if(event.key===\'Escape\')k8DocsNewFolder(0)"><button type="button" class="is-ok" onclick="k8DocsMkdir()"' + (UP.busy ? ' disabled' : '') + '>สร้าง</button><button type="button" onclick="k8DocsNewFolder(0)">ยกเลิก</button></div>' : '') +
+      (UP.del ? UP.del : '') +
+      (UP.msg ? '<p class="k8-docs-up-msg">' + UP.msg + '</p>' : '');
+  }
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  function after(msg) { UP.busy = false; UP.msg = ''; const k = curKey(); if (D.view[k]) { try { localStorage.removeItem('khalifah_docs_' + k); } catch (e) {} } fetchFolder(k, false); if (msg) toast(msg, 'success'); }
+  window.k8DocsNewFolder = function (on) { UP.newOpen = on !== 0; render(); if (UP.newOpen) setTimeout(() => { const i = document.getElementById('k8DocsNewName'); if (i) i.focus(); }, 30); };
+  window.k8DocsMkdir = async function () {
+    const i = document.getElementById('k8DocsNewName'); const name = i ? i.value.trim() : '';
+    if (!name) { toast('ตั้งชื่อโฟลเดอร์ก่อน', 'warning'); if (i) i.focus(); return; }
+    UP.busy = true; UP.msg = 'กำลังสร้างโฟลเดอร์ "' + esc(name) + '" …'; render();
+    let r = null; try { r = await gasApiCall('createStudyFolder', { parentId: curFolderId(), name }, 45000); } catch (e) {}
+    if (r && r.success) { UP.newOpen = false; after(r.message); }
+    else { UP.busy = false; UP.msg = ''; render(); toast((r && r.message) || 'สร้างโฟลเดอร์ไม่สำเร็จ · ตรวจว่า Deploy Code.gs ล่าสุดแล้ว', 'error'); }
+  };
+  const readB64 = (file) => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result || '')); fr.onerror = () => rej(fr.error); fr.readAsDataURL(file); });
+  window.k8DocsUpload = async function (input) {
+    const files = Array.from((input && input.files) || []); if (input) input.value = '';
+    if (!files.length || UP.busy) return;
+    const ok = files.filter((f) => /\.(pdf|docx?|xlsx?|csv)$/i.test(f.name) && f.size <= 25 * 1024 * 1024);
+    const bad = files.filter((f) => ok.indexOf(f) === -1);
+    if (bad.length) toast('ข้าม ' + bad.length + ' ไฟล์ (รองรับ PDF/Word/Excel ไม่เกิน 25 MB): ' + bad.map((f) => f.name).slice(0, 3).join(', '), 'warning');
+    if (!ok.length) return;
+    UP.busy = true; let done = 0; const fail = []; const fid = curFolderId();
+    for (let i = 0; i < ok.length; i++) {
+      const f = ok[i];
+      UP.msg = 'กำลังอัปโหลด ' + (ok.length > 1 ? (i + 1) + '/' + ok.length + ' · ' : '') + esc(f.name) + ' (' + fmtSize(f.size) + ') …'; render();
+      let r = null; try { const data = await readB64(f); const ext = (f.name.match(/\.([a-z0-9]+)$/i) || [])[1] || ''; const MM = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', csv: 'text/csv' }; r = await gasApiCall('uploadStudyFile', { folderId: fid, name: f.name, mime: f.type || MM[ext.toLowerCase()] || '', data }, 180000); } catch (e) {}
+      if (r && r.success) done++; else fail.push(f.name + ': ' + ((r && r.message) || 'ไม่สำเร็จ'));
+    }
+    after(done ? 'อัปโหลดแล้ว ' + done + ' ไฟล์ · เข้าโฟลเดอร์ Google Drive แล้ว' : '');
+    if (fail.length) toast(fail.slice(0, 2).join(' / '), 'error');
+  };
+  window.k8DocsDel = function (id, kind, name, go) {
+    if (go === 0) { UP.del = ''; render(); return; }
+    if (go !== 1) { UP.del = '<div class="k8-docs-delq"><span>ลบ' + (kind === 'folder' ? 'โฟลเดอร์' : 'ไฟล์') + ' <b>' + esc(name) + '</b> ? <small>(ย้ายไปถังขยะ Google Drive กู้คืนได้ใน 30 วัน)</small></span><button type="button" class="is-del" onclick="k8DocsDel(\'' + js(id) + '\',\'' + kind + '\',\'' + js(name) + '\',1)">ลบ</button><button type="button" onclick="k8DocsDel(\'\',\'\',\'\',0)">ยกเลิก</button></div>'; render(); try { document.getElementById('k8DocsBody').scrollTop = 0; } catch (e) {} return; }
+    UP.del = ''; UP.busy = true; UP.msg = 'กำลังลบ "' + esc(name) + '" …'; render();
+    gasApiCall('deleteStudyItem', { id, kind }, 45000).catch(() => null).then((r) => { if (r && r.success) after(r.message); else { UP.busy = false; UP.msg = ''; render(); toast((r && r.message) || 'ลบไม่สำเร็จ', 'error'); } });
+  };
   function listHtml() {
     const key = curKey(); const v = D.view[key]; const cfg = D.config || {};
     if (!v && D.loading === key) return '<div class="k8-docs-skel">' + '<div></div>'.repeat(5) + '</div>';
@@ -4243,9 +4295,9 @@ window.k8RegBirthChange = function (v) {
     const files = v.files.filter((f) => !q || f.name.toLowerCase().includes(q));
     let h = '';
     if (D.err[key]) h += '<p class="k8-docs-note">แสดงรายการล่าสุดที่จำไว้ · ' + esc(D.err[key]) + '</p>';
-    if (folders.length) h += '<h3 class="k8-docs-h">โฟลเดอร์ (' + folders.length + ')</h3><ul class="k8-docs-folders">' + folders.map((f) => '<li><button type="button" onclick="k8DocsFolder(\'' + js(f.id) + '\',\'' + js(f.name) + '\')"><span class="k8-docs-fic"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="k8-docs-fname"><b>' + esc(f.name) + '</b>' + (f.files != null ? '<small>' + f.files + ' ไฟล์' + (f.folders ? ' · ' + f.folders + ' โฟลเดอร์' : '') + '</small>' : '') + '</span>' + (f.files != null ? '<span class="k8-docs-cnt' + (f.files ? '' : ' is-zero') + '">' + f.files + '</span>' : '') + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></li>').join('') + '</ul>';
+    if (folders.length) h += '<h3 class="k8-docs-h">โฟลเดอร์ (' + folders.length + ')</h3><ul class="k8-docs-folders">' + folders.map((f) => '<li' + (canDel(f) ? ' class="has-del"' : '') + '>' + delBtn(f, 'folder') + '<button type="button" onclick="k8DocsFolder(\'' + js(f.id) + '\',\'' + js(f.name) + '\')"><span class="k8-docs-fic"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4.2l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="k8-docs-fname"><b>' + esc(f.name) + '</b>' + (f.files != null ? '<small>' + f.files + ' ไฟล์' + (f.folders ? ' · ' + f.folders + ' โฟลเดอร์' : '') + '</small>' : '') + '</span>' + (f.files != null ? '<span class="k8-docs-cnt' + (f.files ? '' : ' is-zero') + '">' + f.files + '</span>' : '') + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></li>').join('') + '</ul>';
     if (files.length) h += '<h3 class="k8-docs-h">ไฟล์ (' + files.length + ')</h3><ul class="k8-docs-files">' + files.map((f) => { const t = typeOf(f.mime);
-      return '<li><button type="button" onclick="k8DocsFile(\'' + js(f.id) + '\')"><span class="k8-docs-tic" style="color:' + t[2] + ';background:' + t[3] + '">' + t[1] + '</span><span class="k8-docs-fn"><b>' + esc(f.name) + '</b><small>' + [fmtD(f.updated), fmtSize(f.size)].filter(Boolean).join(' · ') + '</small></span></button></li>'; }).join('') + '</ul>';
+      return '<li' + (canDel(f) ? ' class="has-del"' : '') + '>' + delBtn(f, 'file') + '<button type="button" onclick="k8DocsFile(\'' + js(f.id) + '\')"><span class="k8-docs-tic" style="color:' + t[2] + ';background:' + t[3] + '">' + t[1] + '</span><span class="k8-docs-fn"><b>' + esc(f.name) + '</b><small>' + [fmtD(f.updated), fmtSize(f.size)].filter(Boolean).join(' · ') + '</small></span></button></li>'; }).join('') + '</ul>';
     if (!folders.length && !files.length) h += '<div class="k8-docs-empty"><b>' + (q ? 'ไม่พบเอกสารที่ค้นหา' : 'โฟลเดอร์นี้ยังว่าง') + '</b></div>';
     return h;
   }
@@ -4259,6 +4311,7 @@ window.k8RegBirthChange = function (v) {
     if (!D.nav.length) h += '<div class="k8-docs-grades" role="tablist" aria-label="ระดับชั้น">' + ['1', '2', '3', '4', '5', '6'].map((g) => '<button type="button" role="tab" aria-selected="' + (D.grade === g) + '" class="' + (cfg[g] ? 'has' : 'none') + '" onclick="k8DocsGrade(\'' + g + '\')">ม.' + g + (g === myGrade() ? '<small>ชั้นของฉัน</small>' : '') + '</button>').join('') + '</div>';
     else h += '<button type="button" class="k8-docs-up" onclick="k8DocsBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>ย้อนกลับไป ' + esc(D.nav.length > 1 ? D.nav[D.nav.length - 2].name : 'ม.' + D.grade) + '</button>';
     if (v && !v.empty && (v.files.length + v.folders.length) > 6) h += '<input type="search" class="k8-docs-q" id="k8DocsQ" placeholder="ค้นหาชื่อเอกสาร" value="' + esc(D.q) + '" oninput="k8DocsQ(this)" autocomplete="off">';
+    if (staff() && curFolderId() && !(v && v.empty)) h += toolHtml();
     h += '<div id="k8DocsList">' + listHtml() + '</div>';
     if (D.loading === key && v) h += '<p class="k8-docs-note">กำลังตรวจหาเอกสารใหม่…</p>';
     const keepQ = document.activeElement && document.activeElement.id === 'k8DocsQ';

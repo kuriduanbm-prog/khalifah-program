@@ -5558,3 +5558,23 @@ html[data-theme="dark"] .k8-hqe-sh { background: #16191e !important; }
 .k8-atd .k8-atd-it { padding: 14px 16px; gap: 14px; border-radius: 16px; }
 .k8-atd .k8-atd-m { gap: 3px; }
 @media (max-width: 640px) { .k8-atd .k8-atd-kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); } .k8-atd .k8-atd-kpi .is-big { grid-column: 1 / -1; } }
+
+/* v18.80 · เอกสารประกอบการเรียน: อาจารย์สร้างโฟลเดอร์ / อัปโหลด / ลบ */
+.k8-docs-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+.k8-docs-tb { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid #bae6fd; background: #f0f9ff; color: #0369a1; font: 600 14px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; }
+.k8-docs-tb.is-up { background: linear-gradient(135deg, #38bdf8, #0369a1); color: #fff; border-color: transparent; }
+.k8-docs-tb:disabled, .k8-docs-tb.is-dis { opacity: .55; pointer-events: none; }
+.k8-docs-tools small { font-size: 12px; color: #94a3b8; }
+.k8-docs-newf, .k8-docs-delq { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid #e2e8f0; }
+.k8-docs-newf input { flex: 1 1 200px; min-height: 42px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; font: 500 15px 'IBM Plex Sans Thai', sans-serif; }
+.k8-docs-newf button, .k8-docs-delq button { height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; font: 600 14px 'IBM Plex Sans Thai', sans-serif; cursor: pointer; color: #334155; }
+.k8-docs-newf button.is-ok { background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-docs-delq { background: #fef2f2; border-color: #fecaca; }
+.k8-docs-delq span { flex: 1 1 220px; font-size: 14px; color: #7f1d1d; } .k8-docs-delq small { color: #b91c1c; font-size: 12px; }
+.k8-docs-delq button.is-del { background: #dc2626; border-color: #dc2626; color: #fff; }
+.k8-docs-up-msg { margin: 0 0 12px; font-size: 13.5px; color: #0369a1; font-weight: 600; }
+.k8-docs-folders li.has-del, .k8-docs-files li.has-del { position: relative; }
+.k8-docs-folders li.has-del > button:not(.k8-docs-del), .k8-docs-files li.has-del > button:not(.k8-docs-del) { padding-right: 52px; }
+.k8-docs-del { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 2; width: 36px; height: 36px; border-radius: 10px; border: 0; background: #fef2f2; color: #dc2626; display: grid; place-items: center; cursor: pointer; }
+.k8-docs-del:hover { background: #fee2e2; }
+.k8-docs-folders .k8-docs-del, .k8-docs-files .k8-docs-del { width: 36px; min-height: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px; display: grid; gap: 0; background: #fef2f2; }
