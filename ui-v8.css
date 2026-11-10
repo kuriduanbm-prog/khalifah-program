@@ -5734,3 +5734,8 @@ html[data-theme="dark"] .k8-ovm-list button { background: #1f1416 !important; bo
 .k8-pd-row.is-one { display: grid !important; grid-template-columns: 1fr !important; }
 .k8-pd-row.is-one .k8-pd-b { flex-direction: row !important; justify-content: center; gap: 8px; min-height: 44px; }
 .k8-pd-row.is-one .k8-pd-b small { font-size: 13px; }
+/* v18.92 · นักเรียน (แอดมิน): กรองตามโรงเรียนต้นสังกัด */
+.k8-as-school { flex: 0 1 260px; min-width: 0; height: 42px; border-radius: 12px; border: 1px solid #cbd5e1; padding: 0 12px; font: 500 14px 'IBM Plex Sans Thai', sans-serif; background: #fff; color: #0f172a; text-overflow: ellipsis; }
+.k8-as-school[hidden] { display: none; }
+@media (max-width: 640px) { .k8-as-school { flex: 1 1 100%; } }
+.k8-ss-t small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }

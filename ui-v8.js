@@ -2007,7 +2007,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const bare = (s) => (window.k8BareName ? window.k8BareName(s) : String(s.fullName || ''));
     list = list.slice().sort((a, b) => (SEXK[sexOf(a)] - SEXK[sexOf(b)]) || bare(a).localeCompare(bare(b), 'th'));
     lastList = list;
-    document.getElementById('k8AsSub').textContent = 'แสดง ' + list.length + ' คน · กดแถวเพื่อดูรายละเอียด';
+    document.getElementById('k8AsSub').textContent = 'แสดง ' + list.length + ' คน' + (window.k8AsSchoolSel ? ' · ' + (window.k8AsSchoolSel === '__none' ? 'ไม่ระบุโรงเรียน' : window.k8AsSchoolSel) : '') + ' · กดแถวเพื่อดูรายละเอียด';
+    try { window.k8AsFillSchools && window.k8AsFillSchools(); } catch (e) {}
     const gSel = document.getElementById('filterGradeSelect');
     const g = gSel ? gSel.value : '';
     document.getElementById('k8AsChips').innerHTML = [['', 'ทั้งหมด'], ...GR.map((x) => [x, shortG(x)])].map(([v, l]) =>
@@ -2040,7 +2041,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const id = cid(s.studentId); const [stL, stBg, stInk] = statusPill(s.status); const pn = pr[norm(s.studentId)] || 0;
       const odd = !/ปกติ|กำลังศึกษา/.test(stL);
       return '<button type="button" class="k8-ss-row" onclick="k8AsSelect(\'' + esc(id) + '\')">' + pic(s) +
-        '<span class="k8-ss-t"><b>' + esc(s.fullName || id) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(id) + (odd ? ' · <i style="color:' + stInk + '">' + esc(stL) + '</i>' : '') + '</small></span>' +
+        '<span class="k8-ss-t"><b>' + esc(s.fullName || id) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(id) + ((s.schoolName || s.school) ? ' · ' + esc(s.schoolName || s.school) : '') + (odd ? ' · <i style="color:' + stInk + '">' + esc(stL) + '</i>' : '') + '</small></span>' +
         '<span class="k8-ss-pr" title="ละหมาด 7 วัน"><b>' + pn + '</b>/35</span></button>';
     };
     const col = (sx, cls, title) => { const l = list.filter((s) => sexOf(s) === sx); return '<section class="k8-ss-col ' + cls + '" aria-label="' + title + '"><header><span class="k8-ss-dot" aria-hidden="true"></span><b>' + title + '</b><em>' + l.length + ' คน</em></header>' + (l.length ? '<div class="k8-ss-list">' + l.map(card).join('') + '</div>' : '<p class="k8-ss-empty">ไม่มีนักเรียนตามเงื่อนไข</p>') + '</section>'; };
@@ -2067,6 +2068,18 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   }
   window.k8AsSelect = function (id) { selId = id; render(lastList); };
   window.k8AsGrade = function (v) { const g = document.getElementById('filterGradeSelect'); if (g) { g.value = v; filterAdminStudents(); } };
+  window.k8AsSchool = function (v) { window.k8AsSchoolSel = v || ''; try { filterAdminStudents(); } catch (e) {} };
+  // เติมรายชื่อโรงเรียนต้นสังกัด (เรียงตามจำนวนนักเรียน)
+  window.k8AsFillSchools = function () {
+    const sel = document.getElementById('k8AsSchool'); if (!sel) return;
+    let L = []; try { L = allStudents || []; } catch (e) {}
+    const cnt = {}; let none = 0; L.forEach((s) => { const n = String(s.schoolName || s.school || '').trim(); if (n) cnt[n] = (cnt[n] || 0) + 1; else none++; });
+    const keys = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || a.localeCompare(b, 'th'));
+    const cur = window.k8AsSchoolSel || '';
+    const html = '<option value="">ทุกโรงเรียน (' + keys.length + ')</option>' + keys.map((k) => '<option value="' + esc(k) + '"' + (k === cur ? ' selected' : '') + '>' + esc(k) + ' · ' + cnt[k] + ' คน</option>').join('') + (none ? '<option value="__none"' + (cur === '__none' ? ' selected' : '') + '>ไม่ระบุโรงเรียน · ' + none + ' คน</option>' : '');
+    if (sel.innerHTML !== html) sel.innerHTML = html;
+    sel.hidden = keys.length < 1;
+  };
   window.k8AsSearch = function (v) { const i = document.getElementById('searchStudentInput'); if (i) { i.value = v; filterAdminStudents(); } };
   window.k8AsPrayerHistory = function (id) {
     if (typeof switchAdminTab === 'function') switchAdminTab('prayers-monitor', document.getElementById('btnAdminTabPrayers'));
@@ -3593,7 +3606,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.91';
+  const APP_VERSION = '18.92';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

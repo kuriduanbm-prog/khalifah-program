@@ -2691,6 +2691,7 @@ html[data-theme="dark"] .k8-ovm-av { background-color: #371212 !important; color
 html[data-theme="dark"] .k8-ovm-list b { color: #d6dae5 !important; }
 html[data-theme="dark"] .k8-ovm-ok { color: #79eca4 !important; }
 html[data-theme="dark"] .k8-ovm-more { color: #a6b0bf !important; }
+html[data-theme="dark"] .k8-as-school { border: 1px solid #393f46 !important; background-color: #121212 !important; color: #d6dae5 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

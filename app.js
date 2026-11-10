@@ -8190,8 +8190,12 @@ function filterAdminStudents() {
     const matchName = (s.fullName || '').toLowerCase().includes(search);
     const matchId = sId.includes(searchClean) || (searchWithoutZero && sIdWithoutZero.includes(searchWithoutZero));
     const matchPhone = sPhone.includes(searchClean) || (searchWithoutZero && sPhoneWithoutZero.includes(searchWithoutZero));
-    const matchSearch = !rawSearch || matchName || matchId || matchPhone;
-    const matchGrade = !grade || s.grade === grade;
+    // v18.92 · ค้นหาด้วยชื่อโรงเรียนต้นสังกัดได้ + กรองตามโรงเรียน
+    const sSchool = String(s.schoolName || s.school || '').toLowerCase();
+    const matchSchool = !!search && sSchool.includes(search);
+    const matchSearch = !rawSearch || matchName || matchId || matchPhone || matchSchool;
+    const schoolSel = (window.k8AsSchoolSel || '');
+    const matchGrade = (!grade || s.grade === grade) && (!schoolSel || (schoolSel === '__none' ? !sSchool.trim() : String(s.schoolName || s.school || '').trim() === schoolSel));
 
     let matchStatus = true;
     if (statusFilter) {
