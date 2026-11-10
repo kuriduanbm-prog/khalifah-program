@@ -5688,3 +5688,15 @@ html[data-theme="dark"] .k8-pq-st.is-sel { background: #0c2a3d !important; }
 .k8-pm2 .k8-pt-filters .k8-pt-sel { order: 0; } .k8-pm2 .k8-pt-filters .k8-pt-search { order: 1; } .k8-pm2 .k8-pt-filters .k8-pt-img { order: 2; } .k8-pm2 .k8-pt-filters .k8-pt-xls { order: 3; } .k8-pm2 .k8-pt-filters .k8-pm-sync { order: 4; }
 @media (max-width: 640px) { .k8-pm2 .k8-pt-filters .k8-pt-search { flex: 1 1 0; min-width: 0; } .k8-pm2 .k8-pt-filters .k8-pt-sel { flex: 1 1 100%; } .k8-pm2 .k8-pt-filters { flex-wrap: wrap; } }
 @media (max-width: 640px) { .k8-pm2 .k8-pt-filters .k8-pt-img, .k8-pm2 .k8-pt-filters .k8-pt-xls, .k8-pm2 .k8-pt-filters .k8-pm-sync { flex: 0 0 46px !important; width: 46px !important; } }
+
+/* v18.85 · มือถือ: ปุ่มลัด 4 ปุ่ม (หน้าละหมาดแอดมิน) เรียงแถวเดียว ไอคอนบน ชื่อสั้นล่าง */
+@media (max-width: 640px) {
+  .k8-pr-tools { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 8px !important; }
+  .k8-pr-tools .hf-cal-btn { flex-direction: column !important; align-items: center !important; justify-content: flex-start; text-align: center; gap: 6px !important; padding: 10px 4px !important; min-height: 0 !important; border-radius: 16px !important; }
+  .k8-pr-tools .hf-cal-ico { width: 40px !important; height: 40px !important; border-radius: 12px !important; flex: none; }
+  .k8-pr-tools .hf-cal-ico svg { width: 20px; height: 20px; }
+  .k8-pr-tools .hf-cal-txt { align-items: center; min-width: 0; width: 100%; }
+  .k8-pr-tools .hf-cal-txt b { font-size: 12px !important; line-height: 1.3; font-weight: 600; white-space: normal; word-break: break-word; }
+  .k8-pr-tools .hf-cal-txt > span { display: none !important; }
+  .k8-pr-tools .hf-cal-btn::after { display: none !important; }
+}
