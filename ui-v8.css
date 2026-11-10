@@ -5743,7 +5743,7 @@ html[data-theme="dark"] .k8-ovm-list button { background: #1f1416 !important; bo
 /* v18.93 · ถูกใจรูปรายงานละหมาด */
 .k8-prr{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin:-.35rem 0 .85rem}
 .k8-prr[hidden]{display:none}
-.k8-prr-like{display:inline-flex;align-items:center;gap:.4rem;border:1.5px solid #fbcfe8;background:#fff;color:#db2777;font:inherit;font-weight:600;font-size:.86rem;padding:.38rem .9rem;border-radius:999px;cursor:pointer;transition:transform .15s ease,background .15s ease}
+.k8-prr-like{touch-action:manipulation;-webkit-tap-highlight-color:transparent;display:inline-flex;align-items:center;gap:.4rem;border:1.5px solid #fbcfe8;background:#fff;color:#db2777;font:inherit;font-weight:600;font-size:.86rem;padding:.38rem .9rem;border-radius:999px;cursor:pointer;transition:transform .15s ease,background .15s ease}
 .k8-prr-like:hover{background:#fdf2f8}
 .k8-prr-like:active{transform:scale(.94)}
 .k8-prr-like.is-on{background:#db2777;border-color:#db2777;color:#fff}

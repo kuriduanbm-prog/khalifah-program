@@ -3606,7 +3606,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.93';
+  const APP_VERSION = '18.94';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12080,6 +12080,7 @@ window.k8HfMiss = function (slot) {
   const whoTxt = (r) => (r && r.by === 'teacher') ? 'คุณครู' : 'แอดมิน';
   let lastFetch = 0, busy = false;
   const seenSent = {};
+  const ver = {}; // v18.94 · นับการกดของแต่ละรายการ: ผลที่ตอบกลับช้ากว่าการกดล่าสุดจะไม่ทับหน้าจอ
 
   // ป้ายเล็กในรายการประวัติของนักเรียน
   window.k8PrReactPill = function (logId) {
@@ -12136,11 +12137,14 @@ window.k8HfMiss = function (slot) {
   window.k8PrLike = async function () {
     const b = document.getElementById('k8PrReact'); if (!b || !b.dataset.id) return;
     const id = b.dataset.id, sid = b.dataset.sid; const btn = b.querySelector('.k8-prr-like'); const on = btn && btn.classList.contains('is-on');
-    const optimistic = on ? { seenAt: '1' } : { seenAt: '1', likedAt: new Date().toISOString(), likedRole: (currentAdmin && currentAdmin.role === 'teacher') ? 'teacher' : 'admin' };
-    paintStaff(b, id, sid, optimistic);
+    const prev = seenSent[id] || { seenAt: '1' };
+    const optimistic = on ? { seenAt: prev.seenAt || '1' } : { seenAt: prev.seenAt || '1', likedAt: new Date().toISOString(), likedRole: (currentAdmin && currentAdmin.role === 'teacher') ? 'teacher' : 'admin' };
+    const v = (ver[id] = (ver[id] || 0) + 1);
+    seenSent[id] = optimistic; paintStaff(b, id, sid, optimistic);
     let r = null; try { r = await gasApiCall('reactPrayer', { data: { logId: id, studentId: sid, kind: on ? 'unlike' : 'like' } }, 15000); } catch (e) {}
-    if (!r || !r.success) { paintStaff(b, id, sid, on ? { seenAt: '1', likedAt: '1' } : { seenAt: '1' }); if (typeof showToast === 'function') showToast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); return; }
-    if (b.dataset.id === id) paintStaff(b, id, sid, r.react);
+    if (ver[id] !== v) return; // กดซ้ำไปแล้ว ใช้สถานะล่าสุดบนหน้าจอ
+    if (!r || !r.success) { seenSent[id] = prev; if (b.dataset.id === id) paintStaff(b, id, sid, prev); if (typeof showToast === 'function') showToast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); return; }
+    seenSent[id] = r.react;
   };
 
   const od = window.openPrayerHistoryDetailModal;
@@ -12152,9 +12156,13 @@ window.k8HfMiss = function (slot) {
     if (staff()) {
       if (!rec || !realId) return out;
       paintStaff(b, realId, rec.studentId, seenSent[realId] || null);
-      gasApiCall('reactPrayer', { data: { logId: realId, studentId: rec.studentId, kind: 'seen' } }, 15000).then((r) => {
-        if (r && r.success) { seenSent[realId] = r.react; if (b.dataset.id === realId) paintStaff(b, realId, rec.studentId, r.react); }
-      }).catch(() => {});
+      if (!seenSent[realId]) {
+        const v0 = ver[realId] || 0;
+        gasApiCall('reactPrayer', { data: { logId: realId, studentId: rec.studentId, kind: 'seen' } }, 15000).then((r) => {
+          // ถ้ากดถูกใจระหว่างรอ ไม่ต้องทับสถานะที่กดไว้
+          if (r && r.success && (ver[realId] || 0) === v0) { seenSent[realId] = r.react; if (b.dataset.id === realId) paintStaff(b, realId, rec.studentId, r.react); }
+        }).catch(() => {});
+      }
     } else if (student()) {
       const r = read()[realId] || read()[id];
       if (r && (r.liked || r.seen)) {
