@@ -1425,7 +1425,10 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     document.getElementById('k8OvPraySlot').textContent = curIdx >= 0 ? 'ตอนนี้: ' + SH(wins[curIdx].name) : passed + ' เวลาที่ผ่านมาแล้ว';
     try {
       const hmm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-      const onLv = (st, w) => { try { return !!(window.k8StuLeaveOn && window.k8StuLeaveOn(st.studentId, today, hmm(w.startMin), hmm(Math.min(w.endMin, 1439)), 'pray')); } catch (e) { return false; } };
+      // ไม่นับคนที่แจ้งเหตุแล้ว: ลา (ไม่ใช่อยู่หอพัก) · มีประจำเดือน (อุซุร) · ส่งคำขอละหมาดย้อนหลังของเวลานั้น (รอ/อนุมัติ)
+      let req = []; try { req = (getPrayerApprovalsList() || []).filter((x) => x && x.date === today && !/reject|ไม่อนุมัติ/i.test(String(x.status || ''))); } catch (e) {}
+      const hasReq = (st, w) => req.some((x) => String(x.studentId).replace(/^0+/, '') === String(st.studentId).replace(/^0+/, '') && SH(x.prayerSlot || x.prayerTime || '') === SH(w.name));
+      const onLv = (st, w) => { try { if (window.k8StuLeaveOn && window.k8StuLeaveOn(st.studentId, today, hmm(w.startMin), hmm(Math.min(w.endMin, 1439)), 'pray')) return true; } catch (e) {} try { if (window.k8PerOn && window.k8PerOn(st.studentId, today)) return true; } catch (e) {} return hasReq(st, w); };
       OVM.data = { slots: wins.map((w, wi) => ({ w, wi })).filter((x) => x.wi < passed || x.wi === curIdx).map(({ w, wi }) => ({ name: SH(w.name), now: wi === curIdx, list: students.filter((st) => !seen[String(st.studentId).replace(/^0+/, '') + '|' + w.name] && !onLv(st, w)).sort((a, b) => String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName), 'th')) })) };
       let mel = document.getElementById('k8OvMiss');
       if (!mel) { const host = document.getElementById('k8OvPray').closest('section, .hf-card'); if (host) { mel = document.createElement('section'); mel.id = 'k8OvMiss'; mel.className = 'hf-card k8-ov-miss'; host.parentNode.insertBefore(mel, host.nextSibling); } }
@@ -1458,7 +1461,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     const ini = (n) => String(n || '?').replace(/^(เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.|นาย|นางสาว|น\.ส\.|นาง)\s*/, '').charAt(0);
     el.innerHTML = '<div class="hf-head"><h2>ยังไม่เช็คชื่อละหมาด</h2><button type="button" class="k8-ov-more" onclick="k8OvPrayGo(\'\',\'' + esc(S.name) + '\')">ดูทั้งหมด ›</button></div>' +
       '<div class="k8-ovm-tabs" role="tablist">' + D.slots.map((x, j) => '<button type="button" role="tab" aria-selected="' + (j === i) + '" onclick="k8OvMissSlot(' + j + ')">' + esc(x.name) + (x.now ? ' • ตอนนี้' : '') + ' <b>' + x.list.length + '</b></button>').join('') + '</div>' +
-      (S.list.length ? '<ul class="k8-ovm-list">' + S.list.slice(0, 40).map((st) => '<li><button type="button" onclick="k8OvPrayGo(\'' + esc(st.grade) + '\',\'' + esc(S.name) + '\')"><span class="k8-ovm-av">' + (st.avatarUrl && /^https?:|^data:image/.test(st.avatarUrl) ? '<img src="' + esc(st.avatarUrl) + '" alt="" loading="lazy">' : esc(ini(st.fullName))) + '</span><span><b>' + esc(st.fullName || st.studentId) + '</b><small>' + esc(String(st.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(st.studentId) + '</small></span></button></li>').join('') + '</ul>' + (S.list.length > 40 ? '<p class="k8-ovm-more">และอีก ' + (S.list.length - 40) + ' คน · กด "ดูทั้งหมด"</p>' : '') : '<p class="k8-ovm-ok">✓ ทุกคนเช็คชื่อ' + esc(S.name) + 'แล้ว (ไม่นับคนที่ลา)</p>');
+      (S.list.length ? '<ul class="k8-ovm-list">' + S.list.slice(0, 40).map((st) => '<li><button type="button" onclick="k8OvPrayGo(\'' + esc(st.grade) + '\',\'' + esc(S.name) + '\')"><span class="k8-ovm-av">' + (st.avatarUrl && /^https?:|^data:image/.test(st.avatarUrl) ? '<img src="' + esc(st.avatarUrl) + '" alt="" loading="lazy">' : esc(ini(st.fullName))) + '</span><span><b>' + esc(st.fullName || st.studentId) + '</b><small>' + esc(String(st.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(st.studentId) + '</small></span></button></li>').join('') + '</ul>' + (S.list.length > 40 ? '<p class="k8-ovm-more">และอีก ' + (S.list.length - 40) + ' คน · กด "ดูทั้งหมด"</p>' : '') : '<p class="k8-ovm-ok">✓ ทุกคนเช็คชื่อ' + esc(S.name) + 'แล้ว</p>') + '<p class="k8-ovm-more">ไม่รวมคนที่แจ้งเหตุแล้ว: ลา · มีประจำเดือน · ขอละหมาดย้อนหลัง</p>';
   }
   window.renderAdminOverviewV8 = function () { try { renderAdminOverview(); } catch (e) { console.warn('admin overview', e); } };
 
@@ -3590,7 +3593,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.88';
+  const APP_VERSION = '18.89';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7999,6 +8002,8 @@ window.k8RegBirthChange = function (v) {
   const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
   function loadPer() { if (Date.now() - perAt < 60000) return; perAt = Date.now(); try { gasApiCall('getPeriodEpisodes', {}, 20000).then((r) => { if (r && r.success) { PER = r.data || []; try { render(); } catch (e) {} } }).catch(() => {}); } catch (e) {} }
   const perCovers = (sid, ds) => !!PER && PER.some((x) => x && nid(x.studentId) === nid(sid) && x.status !== 'cancelled' && ds >= String(x.start || '') && (x.status === 'active' || ds <= String(x.end || x.start || '')));
+  // v18.89 · ให้หน้าภาพรวมใช้ตรวจ "มีประจำเดือน (อุซุร)" ได้ · โหลดข้อมูลครั้งแรกแล้ววาดการ์ดภาพรวมใหม่
+  window.k8PerOn = function (sid, ds) { if (!PER && !window.__k8PerReq) { window.__k8PerReq = 1; try { gasApiCall('getPeriodEpisodes', {}, 20000).then((r) => { if (r && r.success) { PER = r.data || []; perAt = Date.now(); try { window.renderAdminOverviewV8 && window.renderAdminOverviewV8(); } catch (e) {} } }).catch(() => {}); } catch (e) {} } return perCovers(sid, ds); };
   window.k8PerCovers = perCovers;
   function host() {
     let el = document.getElementById('k8PdWrap');
