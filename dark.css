@@ -2683,6 +2683,14 @@ html[data-theme="dark"] .k8-pq-st i { color: #79eca4 !important; }
 html[data-theme="dark"] .k8-pq-st i span { color: #f8a96d !important; }
 html[data-theme="dark"] .k8-pq-st i.is-now { color: #69c8fc !important; }
 html[data-theme="dark"] .k8-pm2 .k8-pt-filters .k8-pm-sync { background-color: #121212 !important; border: 1.5px solid #323941 !important; color: #69c8fc !important; }
+html[data-theme="dark"] .k8-opg-tap { color: #69c8fc !important; }
+html[data-theme="dark"] .k8-ovm-tabs button { border: 1px solid #323941 !important; background-color: #121212 !important; color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-ovm-list button { border: 1px solid #4c2323 !important; background-color: #2e0d0d !important; }
+html[data-theme="dark"] .k8-ovm-list button:hover { border-color: #592929 !important; }
+html[data-theme="dark"] .k8-ovm-av { background-color: #371212 !important; color: #ed7878 !important; }
+html[data-theme="dark"] .k8-ovm-list b { color: #d6dae5 !important; }
+html[data-theme="dark"] .k8-ovm-ok { color: #79eca4 !important; }
+html[data-theme="dark"] .k8-ovm-more { color: #a6b0bf !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

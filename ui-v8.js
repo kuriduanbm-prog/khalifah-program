@@ -1420,16 +1420,46 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       if (wi >= passed && wi !== curIdx) return '<td class="is-wait" title="ยังไม่ถึงเวลา"><span>–</span></td>';
       let n = 0; r.list.forEach((s) => { if (seen[String(s.studentId).replace(/^0+/, '') + '|' + w.name]) n++; });
       const p = Math.round(n / r.list.length * 100);
-      return '<td class="' + tone(p) + (wi === curIdx ? ' is-now' : '') + '" title="' + esc(r.label + ' · ' + SH(w.name) + ': เช็คแล้ว ' + n + ' จาก ' + r.list.length + ' คน') + '"><b>' + n + '<small>/' + r.list.length + '</small></b><i style="--p:' + p + '%"></i></td>';
+      return '<td class="' + tone(p) + (wi === curIdx ? ' is-now' : '') + '"><button type="button" onclick="k8OvPrayGo(\'' + esc(r.g) + '\',\'' + esc(SH(w.name)) + '\')" title="' + esc(r.label + ' · ' + SH(w.name) + ': เช็คแล้ว ' + n + ' จาก ' + r.list.length + ' คน · แตะเพื่อดูรายชื่อ') + '"><b>' + n + '<small>/' + r.list.length + '</small></b></button><i style="--p:' + p + '%"></i></td>';
     };
     document.getElementById('k8OvPraySlot').textContent = curIdx >= 0 ? 'ตอนนี้: ' + SH(wins[curIdx].name) : passed + ' เวลาที่ผ่านมาแล้ว';
+    try {
+      const hmm = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+      const onLv = (st, w) => { try { return !!(window.k8StuLeaveOn && window.k8StuLeaveOn(st.studentId, today, hmm(w.startMin), hmm(Math.min(w.endMin, 1439)), 'pray')); } catch (e) { return false; } };
+      OVM.data = { slots: wins.map((w, wi) => ({ w, wi })).filter((x) => x.wi < passed || x.wi === curIdx).map(({ w, wi }) => ({ name: SH(w.name), now: wi === curIdx, list: students.filter((st) => !seen[String(st.studentId).replace(/^0+/, '') + '|' + w.name] && !onLv(st, w)).sort((a, b) => String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName), 'th')) })) };
+      let mel = document.getElementById('k8OvMiss');
+      if (!mel) { const host = document.getElementById('k8OvPray').closest('section, .hf-card'); if (host) { mel = document.createElement('section'); mel.id = 'k8OvMiss'; mel.className = 'hf-card k8-ov-miss'; host.parentNode.insertBefore(mel, host.nextSibling); } }
+      paintMiss();
+    } catch (e) { console.warn('ov miss', e); }
     document.getElementById('k8OvPray').innerHTML = !rowsG.length ? '<div class="k8-li-empty">ยังไม่มีนักเรียน</div>' :
       '<div class="k8-opg-sum"><b class="' + tone(prayPct) + '">' + prayPct + '%</b><span>เช็คละหมาดแล้ว <b>' + totalDone + '</b> จาก ' + prayPossible + ' ครั้ง<br><small>นับเฉพาะเวลาที่ถึงแล้ววันนี้</small></span></div>' +
       '<div class="k8-opg-wrap"><table class="k8-opg"><thead><tr><th scope="col">ชั้น</th>' + wins.map((w, wi) => '<th scope="col" class="' + (wi === curIdx ? 'is-now' : '') + '">' + esc(SH(w.name)) + '</th>').join('') + '</tr></thead><tbody>' +
       rowsG.map((r) => '<tr><th scope="row">' + r.label + '<small>' + r.list.length + ' คน</small></th>' + wins.map((w, wi) => cell(r, w, wi)).join('') + '</tr>').join('') + '</tbody></table></div>' +
-      '<p class="k8-opg-leg"><span><i class="is-ok"></i>90% ขึ้นไป</span><span><i class="is-mid"></i>60–89%</span><span><i class="is-low"></i>ต่ำกว่า 60%</span>' + (noStu.length ? '<span class="k8-opg-no">' + noStu.join(', ') + ' ยังไม่มีนักเรียน</span>' : '') + '</p>';
+      '<p class="k8-opg-leg"><span class="k8-opg-tap">แตะช่องเพื่อดูรายชื่อชั้นนั้น</span><span><i class="is-ok"></i>90% ขึ้นไป</span><span><i class="is-mid"></i>60–89%</span><span><i class="is-low"></i>ต่ำกว่า 60%</span>' + (noStu.length ? '<span class="k8-opg-no">' + noStu.join(', ') + ' ยังไม่มีนักเรียน</span>' : '') + '</p>';
   }
 
+  // v18.88 · แตะช่องในตารางละหมาด → ไปหน้าละหมาด กรองชั้น + เวลานั้น (คนที่ยังไม่เช็ค)
+  window.k8OvPrayGo = function (grade, slot) {
+    const btn = document.getElementById('btnAdminTabPrayers');
+    try { switchAdminTab('prayers-monitor', btn); } catch (e) { return; }
+    const d = document.getElementById('adminPrayerDateSelect'); if (d) { try { d.value = ymd(new Date()); } catch (e) {} }
+    const g = document.getElementById('adminPrayerGradeFilter'); if (g && grade) { if (![...g.options].some((o) => o.value === grade)) { const o = document.createElement('option'); o.value = grade; o.textContent = grade; g.appendChild(o); } g.value = grade; }
+    try { renderAdminPrayerDailyDashboard(); } catch (e) {}
+    setTimeout(() => { try { window.k8PdSlotByName && window.k8PdSlotByName(slot); } catch (e) {} }, 120);
+  };
+  // v18.88 · การ์ด "ยังไม่เช็คชื่อละหมาด" ในหน้าภาพรวม
+  window.k8OvMissSlot = function (i) { OVM.sel = i; paintMiss(); };
+  const OVM = { sel: -1, data: null };
+  function paintMiss() {
+    const el = document.getElementById('k8OvMiss'); const D = OVM.data; if (!el || !D) return;
+    if (!D.slots.length) { el.hidden = true; return; }
+    el.hidden = false;
+    const i = OVM.sel >= 0 && OVM.sel < D.slots.length ? OVM.sel : D.slots.length - 1; const S = D.slots[i];
+    const ini = (n) => String(n || '?').replace(/^(เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.|นาย|นางสาว|น\.ส\.|นาง)\s*/, '').charAt(0);
+    el.innerHTML = '<div class="hf-head"><h2>ยังไม่เช็คชื่อละหมาด</h2><button type="button" class="k8-ov-more" onclick="k8OvPrayGo(\'\',\'' + esc(S.name) + '\')">ดูทั้งหมด ›</button></div>' +
+      '<div class="k8-ovm-tabs" role="tablist">' + D.slots.map((x, j) => '<button type="button" role="tab" aria-selected="' + (j === i) + '" onclick="k8OvMissSlot(' + j + ')">' + esc(x.name) + (x.now ? ' • ตอนนี้' : '') + ' <b>' + x.list.length + '</b></button>').join('') + '</div>' +
+      (S.list.length ? '<ul class="k8-ovm-list">' + S.list.slice(0, 40).map((st) => '<li><button type="button" onclick="k8OvPrayGo(\'' + esc(st.grade) + '\',\'' + esc(S.name) + '\')"><span class="k8-ovm-av">' + (st.avatarUrl && /^https?:|^data:image/.test(st.avatarUrl) ? '<img src="' + esc(st.avatarUrl) + '" alt="" loading="lazy">' : esc(ini(st.fullName))) + '</span><span><b>' + esc(st.fullName || st.studentId) + '</b><small>' + esc(String(st.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(st.studentId) + '</small></span></button></li>').join('') + '</ul>' + (S.list.length > 40 ? '<p class="k8-ovm-more">และอีก ' + (S.list.length - 40) + ' คน · กด "ดูทั้งหมด"</p>' : '') : '<p class="k8-ovm-ok">✓ ทุกคนเช็คชื่อ' + esc(S.name) + 'แล้ว (ไม่นับคนที่ลา)</p>');
+  }
   window.renderAdminOverviewV8 = function () { try { renderAdminOverview(); } catch (e) { console.warn('admin overview', e); } };
 
   if (typeof window.switchAdminTab === 'function') {
@@ -3560,7 +3590,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.87';
+  const APP_VERSION = '18.88';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8041,6 +8071,7 @@ window.k8RegBirthChange = function (v) {
   window.k8PdF = function (f) { V.f = f; V.slot = ''; render(); decorate(); };
   window.k8PdSlot = function (k) { V.slot = V.slot === k ? '' : k; V.f = 'all'; render(); decorate(); const w = document.getElementById('k8PdWrap'); if (w && V.slot) w.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   window.k8PdClear = function () { V.f = 'all'; V.slot = ''; render(); decorate(); };
+  window.k8PdSlotByName = function (nm) { if (!nm) return; const n = String(nm).replace('ศุบฮิ', 'ซุบฮิ'); const x = (V.slots || []).find((y) => String(y.key).replace('ศุบฮิ', 'ซุบฮิ').indexOf(n) === 0 || String(y.label || '').replace('ศุบฮิ', 'ซุบฮิ').indexOf(n) === 0 || n.indexOf(String(y.key).replace('ศุบฮิ', 'ซุบฮิ')) === 0); if (x) { V.slot = ''; window.k8PdSlot(x.key); } };
   // v18.82 · หน้าละหมาด (แอดมิน) ใช้ง่ายขึ้น: หัวสั้น · การ์ดตัวเลข/การ์ดเวลาแตะเพื่อกรองรายชื่อ · ปุ่มซิงค์เป็นไอคอน
   let decorate = function () {
     const sec = document.getElementById('adminPrayerDailySection'); if (!sec) return;
