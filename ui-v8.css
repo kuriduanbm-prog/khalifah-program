@@ -5700,3 +5700,8 @@ html[data-theme="dark"] .k8-pq-st.is-sel { background: #0c2a3d !important; }
   .k8-pr-tools .hf-cal-txt > span { display: none !important; }
   .k8-pr-tools .hf-cal-btn::after { display: none !important; }
 }
+
+/* v18.86 · ผู้ตรวจการ: หมวด 7 ช่องแถวเดียวบนจอกว้าง · รูปหลักฐาน 4 รูปเรียงแถวเดียว */
+@media (min-width: 761px) { .k8-bh-cats { grid-template-columns: repeat(7, minmax(0, 1fr)) !important; } }
+.k8-bh-dphs { display: grid; grid-template-columns: repeat(4, minmax(0, 64px)); }
+.k8-bh-dphs .k8-bh-hph { width: 100%; aspect-ratio: 1; height: auto; }

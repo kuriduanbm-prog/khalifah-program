@@ -3560,7 +3560,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.85';
+  const APP_VERSION = '18.86';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3945,7 +3945,8 @@ window.k8RegBirthChange = function (v) {
       '<ul class="k8-bh-hist">' + (logs.length ? logs.map((l) => { const c = catOf(l.cat); return '<li class="' + (l.status === 'cancelled' ? 'is-cancel' : '') + '"><span class="k8-bh-hico" style="color:' + c[2] + ';background:' + c[3] + '">' + svg(l.cat, 18) + '</span><span class="k8-bh-who"><b>' + esc(l.title) + '</b><small>' + fmtD(l.date) + (l.time ? ' ' + esc(String(l.time).slice(11, 16)) : '') + ' · ' + esc(c[1]) + (l.note ? ' · ' + esc(l.note) : '') + (l.status === 'cancelled' ? ' · ยกเลิกแล้ว' : '') + '</small>' +
         /* v17.74 · ประวัติบอกผู้ประเมิน + รูปหลักฐานที่ผู้ตรวจการแนบ */
         (staff && (l.byName || l.by) ? '<small class="k8-bh-by">ประเมินโดย <b>' + esc(l.byName || l.by) + '</b></small>' : '') +
-        (staff && l.photoUrl ? (() => { const U = String(l.photoUrl).split(/\s*\n\s*/).filter(Boolean).slice(0, 4); return '<span class="k8-bh-dphs" aria-label="รูปหลักฐาน ' + U.length + ' รูป">' + U.map((u, i) => '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(u) + '\',\'รูปหลักฐาน ' + (i + 1) + '/' + U.length + '\')"><img src="' + esc(u) + '" alt="รูปหลักฐานที่ ' + (i + 1) + '" loading="lazy"></button>').join('') + '</span>'; })() : '') +
+        /* v18.86 · นักเรียนเห็นรูปหลักฐานด้วย (แต่ไม่เห็นชื่อผู้ประเมิน) */
+        (l.photoUrl ? (() => { const U = String(l.photoUrl).split(/\s*\n\s*/).filter(Boolean).slice(0, 4); return '<span class="k8-bh-dphs" aria-label="รูปหลักฐาน ' + U.length + ' รูป">' + U.map((u, i) => '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(u) + '\',\'รูปหลักฐาน ' + (i + 1) + '/' + U.length + '\')"><img src="' + esc(u) + '" alt="รูปหลักฐานที่ ' + (i + 1) + '" loading="lazy"></button>').join('') + '</span>'; })() : '') +
         '</span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีบันทึกในภาคเรียนนี้ · รักษาคะแนนเต็มไว้นะ</li>') + '</ul>';
   }
 

@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.83'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.86'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1477,7 +1477,8 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'getMyBehavior': {
       const me = ownStudentId_(session, ctx, pick('studentId'));
       if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
-      return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }) };
+      // v18.86 · นักเรียนไม่ต้องรู้ว่าใครประเมิน → ตัดชื่อผู้บันทึก/ผู้ยกเลิกออกตั้งแต่ฝั่งเซิร์ฟเวอร์
+      return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }).map(behaviorForStudent_) };
     }
     case 'getHalaqahSessions': {
       const L = halaqahSessions_(isStudent ? studentGradeNum_(session.userId).grade : '', !isStudent, isStudent ? session.userId : '');
@@ -1947,7 +1948,7 @@ function scopeDatabase_(db, session) {
     activities: db.activities || [],
     activityLogs: (db.activityLogs || []).filter(mine),
     prayers: (db.prayers || []).filter(mine),
-    behaviorLogs: (db.behaviorLogs || []).filter(mine),
+    behaviorLogs: (db.behaviorLogs || []).filter(mine).map(behaviorForStudent_),
     behaviorRules: db.behaviorRules || [],
     attendance: (db.attendance || []).filter(mine),
     hasanat: (db.hasanat || []).filter(mine),
@@ -6985,6 +6986,7 @@ function prayerPenaltyRun_(nowArg) {
   if (rows.length) bsh.getRange(bsh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
   return { added: rows.length, from: from };
 }
+function behaviorForStudent_(x) { const o = {}; Object.keys(x || {}).forEach(function (k) { if (k !== 'by' && k !== 'byName' && k !== 'cancelledBy') o[k] = x[k]; }); return o; }
 function getBehaviorLogs_() {
   const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);
   if (!sh || sh.getLastRow() < 2) return [];
@@ -7019,6 +7021,7 @@ function addBehaviorLogs_(data, session) {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(data.date)) ? cleanVal(data.date) : Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
   const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
   if (date > today) return { success: false, message: 'บันทึกล่วงหน้าไม่ได้' };
+  if (session.role !== 'admin' && date < Utilities.formatDate(new Date(Date.now() - 30 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd')) return { success: false, message: 'บันทึกย้อนหลังได้ไม่เกิน 30 วัน' }; // v18.86
   const note = cleanVal(data.note).substring(0, 300);
   ensureSchema();
   // v17.21 · รูปหลักฐาน (ห้องน้ำ/ความสะอาดหอพัก) เก็บใน Google Drive ครั้งเดียว ใช้ร่วมกันทุกคนที่เลือก
@@ -7027,7 +7030,9 @@ function addBehaviorLogs_(data, session) {
   const inPhotos = (Array.isArray(data.photos) ? data.photos : (data.photo ? [{ data: data.photo, source: data.photoSource }] : []))
     .filter(function (p) { return p && typeof p.data === 'string' && p.data; }).slice(0, 4);
   const urls = [], srcs = [];
-  inPhotos.forEach(function (p, i) { const u = savePhotoToDrive_(p.data, 'Khalifah_Behavior_Photos', 'bhv_' + Date.now() + '_' + (i + 1)); if (u) { urls.push(u); srcs.push(srcTh(p.source)); } });
+  // v18.86 · ถ้าเก็บลง Drive ไม่ได้ (ได้รูปแบบข้อความยาวกลับมา) ต้องไม่ให้รวมเกินขีดจำกัดเซลล์ 50,000 ตัวอักษร ไม่งั้นบันทึกทั้งรายการล้มเหลว
+  let room = 45000;
+  inPhotos.forEach(function (p, i) { const u = savePhotoToDrive_(p.data, 'Khalifah_Behavior_Photos', 'bhv_' + Date.now() + '_' + (i + 1)); if (u && u.length + 1 <= room) { urls.push(u); srcs.push(srcTh(p.source)); room -= u.length + 1; } });
   const photoUrl = urls.join('\n');
   const photoSource = srcs.join('\n');
   const ss = getSpreadsheet();
