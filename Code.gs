@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.73'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.74'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -2858,10 +2858,10 @@ function recordPrayer(data) {
   const sheet = ss.getSheetByName(SHEETS.PRAYERS);
 
   const logId = cleanVal(data.logId || data.id || ('PRY-' + new Date().getTime()));
-  const timestamp = data.timestamp || new Date().toISOString();
+  let timestamp = data.timestamp || new Date().toISOString();
   const now = new Date();
-  const dateStr = formatSheetDate(data.date) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
-  const timeStr = formatSheetTime(data.time) || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
+  let dateStr = formatSheetDate(data.date) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
+  let timeStr = formatSheetTime(data.time) || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
   const cleanSid = formatAsText(data.studentId);
 
   // รองรับทั้ง prayerTime, prayerName, timeSlot
@@ -2927,9 +2927,9 @@ function recordPrayer(data) {
     }
   }
 
-  const statusThai = formatStatusThai(data.status || 'ตรงเวลา');
-  // v18.72 · ตรวจเวลาเครื่อง (กันปรับนาฬิกาตอนไม่มีเน็ต) → ติดป้ายเตือนในหมายเหตุให้แอดมินตรวจ
-  const timeFlags = prayerTimeFlags_(data, timestamp);
+  let statusThai = formatStatusThai(data.status || 'ตรงเวลา');
+  // v18.74 · ตรวจเวลาเครื่องอัตโนมัติ (กันปรับนาฬิกาตอนไม่มีเน็ต)
+  const tc = prayerTimeCheck_(data, timestamp); let timeFlags = tc.flags;
   const isWithin = (data.isWithinZone === true || data.isWithinZone === 'ใช่' || data.isWithinZone === 'true');
   const withinZoneThai = isWithin ? 'ใช่' : 'ไม่ใช่';
 
@@ -2947,6 +2947,20 @@ function recordPrayer(data) {
     locationDisplay += ` (แผนที่: https://www.google.com/maps?q=${lat},${lng})`;
   }
 
+  // v18.74 · เวลาเครื่องไม่ตรง → ใช้เวลาที่ถ่ายจริง และตัดสินสถานะเองตามช่วงละหมาด
+  if (tc.shifted && !isNaN(tc.trueMs)) {
+    const T = new Date(tc.trueMs);
+    const tDate = Utilities.formatDate(T, 'Asia/Bangkok', 'yyyy-MM-dd'), tTime = Utilities.formatDate(T, 'Asia/Bangkok', 'HH:mm:ss');
+    const hm = tTime.split(':'); const tMin = (+hm[0]) * 60 + (+hm[1]);
+    const win = prayerWinOf_(rawPrayerTime || prayerNameThai);
+    let verdict = '';
+    if (tDate !== dateStr) verdict = 'ขาด';
+    else if (win && tMin < win[0] - 20) verdict = 'ขาด';
+    else if (win && tMin > win[1] + 20) verdict = 'มาสาย';
+    if (verdict && /^(ตรงเวลา|มาสาย)/.test(statusThai)) statusThai = verdict;
+    timeFlags += ' · ระบบใช้เวลาถ่ายจริง ' + tDate + ' ' + tTime.slice(0, 5) + (verdict ? ' → ' + (verdict === 'ขาด' ? 'ไม่นับ (นอกช่วงละหมาดนี้)' : 'นับเป็นมาสาย') : ' (ยังอยู่ในช่วงละหมาด นับตามปกติ)');
+    dateStr = tDate; timeStr = tTime; timestamp = T.toISOString();
+  }
   sheet.appendRow([
     logId,
     cleanSid,
@@ -2971,17 +2985,33 @@ function recordPrayer(data) {
   return { success: true, message: 'บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef };
 }
 
-function prayerTimeFlags_(data, timestamp) {
+// v18.74 · ตรวจเวลาเครื่องอัตโนมัติ: หาเวลาที่ถ่ายจริง แล้วแก้วันที่/เวลา/สถานะเองโดยไม่ต้องให้แอดมินตรวจ
+function prayerTimeCheck_(data, timestamp) {
   const now = Date.now(), out = [];
-  let claimed = Date.parse(timestamp); if (isNaN(claimed)) return '';
+  const claimed0 = Date.parse(timestamp); if (isNaN(claimed0)) return { flags: '', trueMs: NaN, shifted: false };
   const mn = (ms) => { const m = Math.round(Math.abs(ms) / 60000); return m >= 120 ? Math.round(m / 60) + ' ชม.' : m + ' นาที'; };
   const sentAt = Number(data.sentAt), hasAge = data.ageMs !== undefined && data.ageMs !== null && data.ageMs !== '', age = Number(data.ageMs);
-  // นาฬิกาเครื่องคลาดตอนส่ง → ปรับเวลาที่อ้างให้ตรงก่อนตรวจข้ออื่น
-  if (sentAt > 0 && Math.abs(now - sentAt) > 5 * 60000) { out.push('นาฬิกาเครื่องไม่ตรง (คลาด ' + mn(now - sentAt) + ')'); claimed += now - sentAt; }
-  if (hasAge && age >= 0 && Math.abs(claimed - (now - age)) > 5 * 60000) out.push('เวลาในเครื่องถูกเปลี่ยนระหว่างถ่ายรูป (ต่าง ' + mn(claimed - (now - age)) + ')');
-  if (now - claimed > 15 * 60000) out.push('ส่งย้อนหลัง ' + mn(now - claimed) + ' (ถ่ายตอนไม่มีเน็ต)');
-  else if (claimed - now > 5 * 60000) out.push('เวลาถ่ายอยู่ในอนาคต ' + mn(claimed - now));
-  return out.join(' · ');
+  let trueMs = claimed0;
+  if (hasAge && age >= 0) {
+    trueMs = now - age; // นาฬิกาที่ปรับไม่ได้ (แอปยังเปิดอยู่ตั้งแต่ถ่ายจนส่ง) → แม่นที่สุด
+    if (Math.abs(claimed0 - trueMs) > 5 * 60000) out.push((sentAt > 0 && Math.abs(now - sentAt) > 5 * 60000 ? 'นาฬิกาเครื่องไม่ตรง' : 'เวลาในเครื่องถูกเปลี่ยนระหว่างถ่ายรูป') + ' (ต่าง ' + mn(claimed0 - trueMs) + ')');
+  } else if (sentAt > 0 && Math.abs(now - sentAt) > 5 * 60000) {
+    trueMs = claimed0 + (now - sentAt); out.push('นาฬิกาเครื่องไม่ตรง (คลาด ' + mn(now - sentAt) + ')');
+  }
+  if (now - trueMs > 15 * 60000) out.push('ส่งย้อนหลัง ' + mn(now - trueMs) + ' (ถ่ายตอนไม่มีเน็ต)');
+  else if (trueMs - now > 5 * 60000) { out.push('เวลาถ่ายอยู่ในอนาคต ' + mn(trueMs - now)); trueMs = now; }
+  return { flags: out.join(' · '), trueMs: trueMs, shifted: Math.abs(claimed0 - trueMs) > 5 * 60000 };
+}
+function prayerTimeFlags_(data, timestamp) { return prayerTimeCheck_(data, timestamp).flags; }
+// ช่วงเวลาละหมาดโดยประมาณ (นาทีจาก 00:00) · ใช้ตัดสินเฉพาะเมื่อเวลาเครื่องไม่ตรง (ผ่อนผัน 20 นาที)
+function prayerWinOf_(name) {
+  const s = String(name || '').toLowerCase();
+  if (/ซุบ|ศุบ|fajr|subh/.test(s)) return [285, 385];
+  if (/ซุฮ|ดุฮ|dhuhr|zuhr/.test(s)) return [730, 915];
+  if (/อัศ|อัส|asr/.test(s)) return [920, 1085];
+  if (/มัฆ|maghrib/.test(s)) return [1090, 1165];
+  if (/อิชา|อีชา|isha/.test(s)) return [1170, 1439];
+  return null;
 }
 function deletePrayerRecord(data) {
   ensureSchema();
