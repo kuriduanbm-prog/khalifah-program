@@ -5730,3 +5730,7 @@ html[data-theme="dark"] .k8-pq-st.is-sel { background: #0c2a3d !important; }
 .k8-ovm-ok { color: #15803d; font-weight: 600; font-size: 14px; margin: 6px 0; }
 .k8-ovm-more { font-size: 12.5px; color: #64748b; margin: 8px 0 0; }
 html[data-theme="dark"] .k8-ovm-list button { background: #1f1416 !important; border-color: #3b1d1f !important; }
+/* v18.90 · เลือกเวลาเดียว: ช่องเดียวเต็มแถว */
+.k8-pd-row.is-one { display: grid !important; grid-template-columns: 1fr !important; }
+.k8-pd-row.is-one .k8-pd-b { flex-direction: row !important; justify-content: center; gap: 8px; min-height: 44px; }
+.k8-pd-row.is-one .k8-pd-b small { font-size: 13px; }

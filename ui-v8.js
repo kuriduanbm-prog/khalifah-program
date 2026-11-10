@@ -3593,7 +3593,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.89';
+  const APP_VERSION = '18.90';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8048,7 +8048,8 @@ window.k8RegBirthChange = function (v) {
     const card = (r) => {
       const s = r.s; const g = String(s.grade || '').match(/(\d)/);
       const av = s.avatarUrl ? (function () { try { return getDirectImageUrl(s.avatarUrl) || s.avatarUrl; } catch (e) { return s.avatarUrl; } })() : '';
-      const boxes = slots.map((x) => {
+      // v18.90 · เลือกดูเวลาเดียว → แสดงเฉพาะช่องของเวลานั้น
+      const boxes = (V.slot ? slots.filter((x) => x.key === V.slot) : slots).map((x) => {
         const rec = r.p[x.key];
         if (!rec && onPer(s)) return '<span class="k8-pd-b is-per" title="' + esc(x.label) + ' · มีประจำเดือน (อุซุร)"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>🌸</i></span>';
         if (!rec && onLv(s, x.key)) return '<span class="k8-pd-b is-lv" title="' + esc(x.label) + ' · ลาเรียน (แอดมินอนุมัติแล้ว)"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>ลา</i></span>';
@@ -8059,7 +8060,7 @@ window.k8RegBirthChange = function (v) {
       return '<article class="k8-pd-card n' + r.n + '"><button type="button" class="k8-pd-who" onclick="adminSelectStudentForPrayerHistory(\'' + jsq(r.sid) + '\')" title="ดูประวัติรายคน">' +
         '<span class="k8-pd-av">' + (av ? '<img src="' + esc(av) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '<em>' + esc(String(s.fullName || '?').replace(/^(นางสาว|นาย|เด็กหญิง|เด็กชาย|ด\.ญ\.|ด\.ช\.)\s*/, '').charAt(0)) + '</em></span>' +
         '<span class="k8-pd-nm"><b>' + esc(s.fullName || r.sid) + '</b><small>' + esc(r.sid) + (g ? ' · ม.' + g[1] : '') + '</small></span>' +
-        '<span class="k8-pd-n">' + r.n + '<small>/5</small></span></button><div class="k8-pd-row">' + boxes + '</div></article>';
+        '<span class="k8-pd-n">' + r.n + '<small>/5</small></span></button><div class="k8-pd-row' + (V.slot ? ' is-one' : '') + '">' + boxes + '</div></article>';
     };
     const fl = slotObj ? 'ยังไม่เช็คชื่อ ' + (slotObj.label || slotObj.key) : { all: 'นักเรียนทั้งหมด', zero: 'ยังไม่เช็คเลย', part: 'เช็คแล้วแต่ยังไม่ครบ', full: 'ครบ 5 เวลา' }[V.f];
     V.cnt = cnt; V.per = per; V.slots = slots; V.rows = rows.length;
