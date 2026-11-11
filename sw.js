@@ -1,5 +1,6 @@
 // KHALIFAH PROGRAM - Production PWA Service Worker (v7.7)
-const CACHE_NAME = 'khalifah-cache-v18.95';
+const CACHE_NAME = 'khalifah-cache-v18.96';
+const NAV_TIMEOUT_MS = 3000;
 
 // Critical local assets required for the app shell to function offline
 const PRECACHE_ASSETS = [
@@ -7,12 +8,12 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
-  'style.css?v=18.95',
-  'ui-v8.css?v=18.95',
-  'dark.css?v=18.95',
-  'ui-v8.js?v=18.95',
+  'style.css?v=18.96',
+  'ui-v8.css?v=18.96',
+  'dark.css?v=18.96',
+  'ui-v8.js?v=18.96',
   'app.js',
-  'app.js?v=18.95',
+  'app.js?v=18.96',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',
@@ -87,31 +88,33 @@ self.addEventListener('fetch', (event) => {
   // 1. NAVIGATION REQUESTS (Opening the PWA, refreshing, or clicking links)
   // Strategy: Network-First with Cache Fallback -> Guaranteed to never show "Site can't be reached"
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const copy = networkResponse.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-          }
-          return networkResponse;
-        })
-        .catch(async () => {
-          console.log('[KHALIFAH PWA] Network unavailable, serving cached app shell for navigation');
-          const cached = await caches.match(request);
-          if (cached) return cached;
-
-          // Fallback to index.html if exact request URL didn't match cache key
-          const fallback = await caches.match('index.html') || await caches.match('./index.html') || await caches.match('./');
-          if (fallback) return fallback;
-
-          // Ultimate fallback Response if cache was cleared
-          return new Response(
-            '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>KHALIFAH PROGRAM</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;text-align:center;padding:2rem;background:#f8fafc;color:#1e293b;}</style></head><body><h2>KHALIFAH PROGRAM</h2><p>กำลังเชื่อมต่อข้อมูล กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วเปิดใหม่อีกครั้ง</p><button onclick="location.reload()" style="padding:0.6rem 1.2rem;background:#0284c7;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;">ลองใหม่อีกครั้ง</button></body></html>',
-            { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-          );
-        })
-    );
+    // v18.96 · เน็ตอ่อน/ต่อ Wi-Fi แต่ไม่มีอินเทอร์เน็ต/แพ็กเกจหมด: คำขอค้างนานจนหน้าขาว
+    // รอเครือข่ายไม่เกิน 3 วินาที ถ้าไม่ตอบใช้หน้าแอปที่เก็บไว้ในเครื่องทันที (เครือข่ายยังโหลดต่อเบื้องหลังเพื่ออัปเดตแคช)
+    const net = fetch(request).then((networkResponse) => {
+      if (networkResponse && networkResponse.status === 200) {
+        const copy = networkResponse.clone();
+        const copy2 = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => { cache.put(request, copy); if (url.origin === self.location.origin) cache.put('index.html', copy2); });
+      }
+      return networkResponse;
+    });
+    event.waitUntil(net.catch(() => {}));
+    event.respondWith((async () => {
+      const shell = async () => (await caches.match(request)) || (await caches.match(request, { ignoreSearch: true })) ||
+        (await caches.match('index.html')) || (await caches.match('./index.html')) || (await caches.match('./'));
+      const first = await Promise.race([
+        net.then((r) => (r && r.status === 200 ? r : 'bad'), () => 'fail'),
+        new Promise((r) => setTimeout(() => r('timeout'), NAV_TIMEOUT_MS))
+      ]);
+      if (first && typeof first === 'object') return first;
+      const cached = await shell();
+      if (cached) return cached;
+      try { const r = await net; if (r) return r; } catch (e) {}
+      return new Response(
+        '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>KHALIFAH PROGRAM</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:sans-serif;text-align:center;padding:2rem;background:#f8fafc;color:#1e293b;}</style></head><body><h2>KHALIFAH PROGRAM</h2><p>เครื่องนี้ยังไม่มีแอปเก็บไว้สำหรับใช้ตอนไม่มีเน็ต</p><p style="font-size:.9rem;color:#475569">เชื่อมต่ออินเทอร์เน็ตแล้วเปิดแอป 1 ครั้ง หลังจากนั้นจะเปิดและเช็คละหมาดได้แม้ไม่มีเน็ต</p><button onclick="location.reload()" style="padding:0.6rem 1.2rem;background:#0284c7;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;">ลองใหม่อีกครั้ง</button></body></html>',
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+      );
+    })());
     return;
   }
 
