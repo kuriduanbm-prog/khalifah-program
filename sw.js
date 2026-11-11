@@ -1,5 +1,5 @@
 // KHALIFAH PROGRAM - Production PWA Service Worker (v7.7)
-const CACHE_NAME = 'khalifah-cache-v18.96';
+const CACHE_NAME = 'khalifah-cache-v18.97';
 const NAV_TIMEOUT_MS = 3000;
 
 // Critical local assets required for the app shell to function offline
@@ -8,12 +8,12 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
-  'style.css?v=18.96',
-  'ui-v8.css?v=18.96',
-  'dark.css?v=18.96',
-  'ui-v8.js?v=18.96',
+  'style.css?v=18.97',
+  'ui-v8.css?v=18.97',
+  'dark.css?v=18.97',
+  'ui-v8.js?v=18.97',
   'app.js',
-  'app.js?v=18.96',
+  'app.js?v=18.97',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',
@@ -31,6 +31,15 @@ const OPTIONAL_CDN_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
 ];
 
+// v18.97 · Vercel (cleanUrls) ตอบ /index.html ด้วยการ redirect ไปที่ /
+// Safari/Chrome ไม่ยอมให้ service worker ส่ง response ที่ผ่าน redirect ให้หน้าเว็บ ("Response served by service worker has redirections")
+// จึงต้องเก็บ/ส่งเป็น response ใหม่ที่ไม่มีประวัติ redirect เสมอ
+async function cleanResponse(res) {
+  if (!res || !res.redirected) return res;
+  const body = await res.blob();
+  return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+}
+
 // Install Event: Safely pre-cache assets without failing if one URL has issues
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -38,7 +47,9 @@ self.addEventListener('install', (event) => {
       console.log('[KHALIFAH PWA] Pre-caching local app shell');
       for (const asset of PRECACHE_ASSETS) {
         try {
-          await cache.add(asset);
+          const res = await fetch(asset, { cache: 'reload' });
+          if (!res || !res.ok) throw new Error('HTTP ' + (res && res.status));
+          await cache.put(asset, await cleanResponse(res));
         } catch (err) {
           console.warn('[KHALIFAH PWA] Pre-cache item failed (non-fatal):', asset, err);
         }
@@ -88,9 +99,9 @@ self.addEventListener('fetch', (event) => {
   // 1. NAVIGATION REQUESTS (Opening the PWA, refreshing, or clicking links)
   // Strategy: Network-First with Cache Fallback -> Guaranteed to never show "Site can't be reached"
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    // v18.96 · เน็ตอ่อน/ต่อ Wi-Fi แต่ไม่มีอินเทอร์เน็ต/แพ็กเกจหมด: คำขอค้างนานจนหน้าขาว
+    // v18.97 · เน็ตอ่อน/ต่อ Wi-Fi แต่ไม่มีอินเทอร์เน็ต/แพ็กเกจหมด: คำขอค้างนานจนหน้าขาว
     // รอเครือข่ายไม่เกิน 3 วินาที ถ้าไม่ตอบใช้หน้าแอปที่เก็บไว้ในเครื่องทันที (เครือข่ายยังโหลดต่อเบื้องหลังเพื่ออัปเดตแคช)
-    const net = fetch(request).then((networkResponse) => {
+    const net = fetch(request).then(cleanResponse).then((networkResponse) => {
       if (networkResponse && networkResponse.status === 200) {
         const copy = networkResponse.clone();
         const copy2 = networkResponse.clone();
@@ -100,8 +111,8 @@ self.addEventListener('fetch', (event) => {
     });
     event.waitUntil(net.catch(() => {}));
     event.respondWith((async () => {
-      const shell = async () => (await caches.match(request)) || (await caches.match(request, { ignoreSearch: true })) ||
-        (await caches.match('index.html')) || (await caches.match('./index.html')) || (await caches.match('./'));
+      const shell = async () => cleanResponse((await caches.match(request)) || (await caches.match('./')) || (await caches.match(request, { ignoreSearch: true })) ||
+        (await caches.match('index.html')) || (await caches.match('./index.html')));
       const first = await Promise.race([
         net.then((r) => (r && r.status === 200 ? r : 'bad'), () => 'fail'),
         new Promise((r) => setTimeout(() => r('timeout'), NAV_TIMEOUT_MS))
