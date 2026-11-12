@@ -2491,7 +2491,8 @@ window.k8RegBirthChange = function (v) {
       if (!tab || tab.querySelector(':scope > .k8-page-head')) return;
       const h = document.createElement('div');
       h.className = 'k8-page-head';
-      h.innerHTML = '<h1>' + HEAD[id][0] + '</h1><div class="k8-as-sub">' + HEAD[id][1] + '</div>';
+      h.className = 'k8-page-head has-x';
+      h.innerHTML = '<button type="button" class="k8-pg-back k8-ph-x" aria-label="ออกจากหน้านี้ กลับหน้าภาพรวม" title="ออกจากหน้านี้" onclick="k8AdminHome()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><h1>' + HEAD[id][0] + '</h1><div class="k8-as-sub">' + HEAD[id][1] + '</div>';
       tab.insertBefore(h, tab.firstChild);
     });
     const tg = document.getElementById('admin-tab-grading');
@@ -2502,6 +2503,12 @@ window.k8RegBirthChange = function (v) {
       tg.insertBefore(tip, tg.children[1] || null);
     }
   }
+  // v19.10 · ปุ่มออกจากหน้า (หัวเรื่องหน้าแอดมิน) → กลับหน้าภาพรวม
+  window.k8AdminHome = function () {
+    const b = document.getElementById('btnAdminTabOverview');
+    try { switchAdminTab('overview', b); } catch (e) { if (b) b.click(); }
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
 
@@ -3608,7 +3615,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.09';
+  const APP_VERSION = '19.10';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

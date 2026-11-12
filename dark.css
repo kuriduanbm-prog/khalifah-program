@@ -2810,6 +2810,8 @@ html[data-theme="dark"] .k8ai-choose button:hover { border-color: #264555 !impor
 html[data-theme="dark"] .k8ai-fu button:hover { border-color: #264555 !important; }
 html[data-theme="dark"] .k8ai-x { border-top: 1px solid #2d363f !important; }
 html[data-theme="dark"] .k8ai-dl li { border-top: 1px solid #2d363f !important; }
+html[data-theme="dark"] .k8-page-head.has-x > .k8-ph-x { background-color: #121212 !important; border: 1px solid #323941 !important; color: #b7d1e0 !important; }
+html[data-theme="dark"] .k8-page-head.has-x > .k8-ph-x:hover { background-color: #1a2229 !important; border-color: #393f46 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

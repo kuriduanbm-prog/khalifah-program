@@ -6233,3 +6233,13 @@ html[data-theme="dark"] .k8ai-list li > em { background: #222b37; }
 html[data-theme="dark"] .k8ai-grid { stroke: #2a3442; }
 html[data-theme="dark"] .k8ai-line circle { fill: #121820; }
 html[data-theme="dark"] .k8ai-dw { background: rgba(0,0,0,.5); }
+
+/* v19.10 · ปุ่มออกจากหน้า (หัวเรื่องหน้าแอดมิน) */
+.k8-page-head.has-x { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
+.k8-page-head.has-x > .k8-ph-x { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+.k8-page-head.has-x > h1, .k8-page-head.has-x > .k8-as-sub { grid-column: 2; min-width: 0; }
+.k8-page-head.has-x > :not(.k8-ph-x):not(h1):not(.k8-as-sub) { grid-column: 3; grid-row: 1 / span 2; }
+.k8-page-head.has-x > .k8-ph-x { margin-left: 0; width: 42px; height: 42px; border-radius: 12px; background: #fff; border: 1px solid #e2e8f0; color: #0c4a6e; }
+.k8-page-head.has-x > .k8-ph-x:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.k8-page-head.has-x > .k8-ph-x:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+html[data-theme="dark"] .k8-page-head.has-x > .k8-ph-x { background: #121212; border-color: #32363c; color: #7dd3fc; }
