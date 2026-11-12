@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.07'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.14'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -986,9 +986,9 @@ function verifyTokenGrace_(token, capturedMs) {
 const INSPECTOR_ROLE_VALUES = ['inspector', 'ผู้ตรวจการ'];
 function isInspectorRole_(v) { return INSPECTOR_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
 // บทบาทที่เข้าระบบทางแท็บแอดมินด้วยรหัสผ่านอย่างเดียว
-const PASSWORD_ONLY_ROLE_VALUES = ['superadmin', 'subadmin', 'admin', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง', 'executive', 'ผู้บริหาร', 'inspector', 'ผู้ตรวจการ', 'activityadmin', 'activity', 'ฝ่ายกิจกรรม', 'nightduty', 'ครูเวรหอพักกลางคืน', 'ครูเวรหอพัก'];
+const PASSWORD_ONLY_ROLE_VALUES = ['superadmin', 'subadmin', 'admin', 'ผู้ช่วยแอดมิน', 'ผู้ดูแลระบบ', 'แอดมินรอง', 'executive', 'ผู้บริหาร', 'inspector', 'ผู้ตรวจการ', 'activityadmin', 'activity', 'ฝ่ายกิจกรรม', 'nightduty', 'ครูเวรหอพักกลางคืน', 'ครูเวรหอพัก', 'schoolteacher', 'ครูโรงเรียนต้นสังกัด'];
 // v17.48 · บัญชีสิทธิ์จำกัด (เข้าทางแท็บแอดมิน เห็นเฉพาะเมนูของตน · เซิร์ฟเวอร์ตรวจทุกคำสั่ง)
-function limitOfRole_(v) { const r = cleanVal(v).toLowerCase(); if (r === 'executive' || r === 'ผู้บริหาร') return 'exec'; if (r === 'activityadmin' || r === 'activity' || r === 'ฝ่ายกิจกรรม') return 'act'; if (r === 'nightduty' || r === 'ครูเวรหอพักกลางคืน' || r === 'ครูเวรหอพัก') return 'night'; return ''; }
+function limitOfRole_(v) { const r = cleanVal(v).toLowerCase(); if (r === 'executive' || r === 'ผู้บริหาร') return 'exec'; if (r === 'activityadmin' || r === 'activity' || r === 'ฝ่ายกิจกรรม') return 'act'; if (r === 'nightduty' || r === 'ครูเวรหอพักกลางคืน' || r === 'ครูเวรหอพัก') return 'night'; if (r === 'schoolteacher' || r === 'ครูโรงเรียนต้นสังกัด') return 'school'; return ''; }
 const LIMIT_COMMON_ACTIONS_ = ['whoami', 'getMyNotifications', 'markNotificationRead', 'hideNotification', 'updateSubAdminPhoto', 'getFullDatabase', 'getSettings', 'getCalendarEvents', 'getPolicy'];
 // ผู้บริหาร: ดูได้ทุกอย่าง (อ่านอย่างเดียว) · แก้ได้เฉพาะตารางสอน และอนุมัติลาสอน
 const LIMIT_EXEC_WRITES_ = ['saveTimetable', 'saveTimetableExtra', 'deleteTimetableExtra', 'saveTimetableConfig', 'approveTeacherLeave'];
@@ -996,12 +996,58 @@ const LIMIT_EXEC_WRITES_ = ['saveTimetable', 'saveTimetableExtra', 'deleteTimeta
 const LIMIT_ACT_ACTIONS_ = ['getActivities', 'getActivityLogs', 'activityCheckIn', 'checkInActivity', 'getAllStudents'];
 // v17.79 · ครูเวรหอพักกลางคืน: สร้าง/ลบกิจกรรม + เปิด QR/เช็คชื่อ · บันทึกคะแนนพฤติกรรม (แก้หัวข้อไม่ได้)
 const LIMIT_NIGHT_ACTIONS_ = LIMIT_ACT_ACTIONS_.concat(['createActivity', 'deleteActivity', 'deleteActivityAttendee', 'getBehaviorData', 'addBehaviorLogs', 'cancelBehaviorLog']);
+// v19.14 · ครูโรงเรียนต้นสังกัด: ดูข้อมูลได้อย่างเดียว เฉพาะนักเรียนจากโรงเรียนของตน (เซิร์ฟเวอร์กรองผลทุกคำสั่ง)
+const LIMIT_SCHOOL_ACTIONS_ = ['whoami', 'getMyNotifications', 'markNotificationRead', 'hideNotification', 'updateSubAdminPhoto', 'getFullDatabase', 'getSettings', 'getCalendarEvents', 'getPolicy',
+  'getAllStudents', 'getStudent', 'getPrayers', 'getAttendance', 'getHasanat', 'getBehaviorData', 'getStudentLeaves', 'getPeriodEpisodes', 'getHalaqahReport', 'getPortfolioList', 'getSubjectGrades', 'getPrayerApprovals', 'getStatusLogs', 'getActivityLogs', 'getActivities'];
 function limitAllows_(limit, action) {
+  if (limit === 'school') return LIMIT_SCHOOL_ACTIONS_.indexOf(action) !== -1;
   if (LIMIT_COMMON_ACTIONS_.indexOf(action) !== -1) return true;
   if (limit === 'exec') return READ_ONLY_ACTIONS.indexOf(action) !== -1 || LIMIT_EXEC_WRITES_.indexOf(action) !== -1;
   if (limit === 'act') return LIMIT_ACT_ACTIONS_.indexOf(action) !== -1;
   if (limit === 'night') return LIMIT_NIGHT_ACTIONS_.indexOf(action) !== -1;
   return true;
+}
+function stNormSchool_(v) { return cleanVal(v).replace(/\s+/g, ' ').trim().toLowerCase(); }
+function stSchoolMap_() { let m = {}; try { m = JSON.parse((getSettings().data || {}).SchoolTeacherSchools || '{}'); } catch (e) { m = {}; } return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; }
+function stSchoolOf_(user) { return cleanVal(stSchoolMap_()[cleanVal(user).toLowerCase()] || ''); }
+function stSetSchool_(user, school) {
+  const m = stSchoolMap_(); const k = cleanVal(user).toLowerCase(); if (!k) return;
+  if (cleanVal(school)) m[k] = cleanVal(school).substring(0, 160); else delete m[k];
+  saveSetting({ key: 'SchoolTeacherSchools', value: JSON.stringify(m), description: 'โรงเรียนต้นสังกัดของบัญชีครูโรงเรียนต้นสังกัด (JSON)' });
+}
+/** รหัสนักเรียน (คีย์ hqKey_) ของโรงเรียนนี้ */
+function stSchoolIds_(school) {
+  const sc = stNormSchool_(school); const ids = {};
+  if (!sc) return ids;
+  (getAllStudents().data || []).forEach(function (x) { if (stNormSchool_(x.schoolName) === sc) ids[hqKey_(x.studentId)] = 1; });
+  return ids;
+}
+function stRowIn_(ids, x) { if (!x || typeof x !== 'object') return false; const k = x.studentId || x.sid || x.studentID || x.id; return !!k && !!ids[hqKey_(k)]; }
+function stRowInSid_(ids, x) { if (!x || typeof x !== 'object') return false; const k = x.studentId || x.sid || x.studentID; return !!k && !!ids[hqKey_(k)]; }
+/** กรองผลลัพธ์คำสั่งอ่านสำหรับบัญชีครูโรงเรียนต้นสังกัด */
+function scopeSchoolResult_(action, r, session) {
+  if (!r || r.success === false) return r;
+  const ids = stSchoolIds_(session.school);
+  const f = function (arr, byAnyId) { return (Array.isArray(arr) ? arr : []).filter(function (x) { return byAnyId ? stRowIn_(ids, x) : stRowInSid_(ids, x); }); };
+  switch (action) {
+    case 'getAllStudents': r.data = f(r.data, false); return r;
+    case 'getStudent': return (r.student && stRowInSid_(ids, r.student)) ? r : { success: false, forbidden: true, code: 'FORBIDDEN', message: 'ดูได้เฉพาะนักเรียนจากโรงเรียนต้นสังกัดของท่าน' };
+    case 'getPrayers': case 'getAttendance': case 'getHasanat': case 'getSubjectGrades': case 'getPrayerApprovals': case 'getStatusLogs': case 'getStudentLeaves': case 'getPeriodEpisodes': case 'getPortfolioList': case 'getActivityLogs':
+      if (Array.isArray(r.data)) r.data = f(r.data, false);
+      else if (r.data && typeof r.data === 'object') { const o = {}; Object.keys(r.data).forEach(function (k) { if (ids[hqKey_(k)]) o[k] = r.data[k]; }); r.data = o; }
+      return r;
+    case 'getBehaviorData': r.logs = f(r.logs, false); r.students = f(r.students, false); return r;
+    case 'getHalaqahReport':
+      r.groups = (r.groups || []).map(function (g) {
+        const m = (g.members || []).filter(function (x) { return !!ids[hqKey_(x.id)]; });
+        const tot = { present: 0, late: 0, leave: 0, absent: 0, none: 0 };
+        m.forEach(function (x) { Object.keys(tot).forEach(function (k) { tot[k] += Number((x.c || {})[k] || 0); }); });
+        return Object.assign({}, g, { members: m, total: tot });
+      }).filter(function (g) { return g.members.length; });
+      return r;
+    case 'getSettings': if (r.data && typeof r.data === 'object') r.data = publicSettings_(r.data); return r;
+    default: return r;
+  }
 }
 function isPasswordOnlyRole_(v) { return PASSWORD_ONLY_ROLE_VALUES.indexOf(cleanVal(v).toLowerCase()) !== -1; }
 function passwordOnlyRows_() {
@@ -1168,7 +1214,7 @@ function publicSettings_(settings) {
   const o = {};
   Object.keys(settings || {}).forEach(function (k) {
     if (/master|password|secret|token|otp/i.test(k)) return;
-    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$|^PeriodEpisodes$|^StudentDorms$|^StudentLeaves$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
+    if (/^TeacherLeaves$|^EnrollCodes$|^Enrollments$|^PeriodEpisodes$|^StudentDorms$|^StudentLeaves$|^SchoolTeacherSchools$/.test(k)) return; // ลาสอน / ลงทะเบียนรายวิชา: ไม่เปิดสาธารณะ
     if (/^Timetable/.test(k)) return; // ตารางสอน: อ่านผ่าน getTimetable (มีสิทธิ์และการเปิด/ปิดการมองเห็น)
     o[k] = settings[k];
   });
@@ -1314,10 +1360,12 @@ function routeRequest_(action, req, method) {
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีของท่านไม่มีสิทธิ์ใช้งานคำสั่งนี้' };
       }
       if (session.limit && !limitAllows_(session.limit, action)) {
+        if (session.limit === 'school') return { success: false, forbidden: true, code: 'FORBIDDEN', message: 'บัญชีครูโรงเรียนต้นสังกัดดูข้อมูลได้อย่างเดียว · แก้ไขข้อมูลไม่ได้' };
         return { success: false, forbidden: true, code: 'FORBIDDEN', message: session.limit === 'act' ? 'บัญชีฝ่ายกิจกรรมใช้ได้เฉพาะดูกิจกรรมและสแกนเช็คชื่อ' : session.limit === 'night' ? 'บัญชีครูเวรหอพักกลางคืนใช้ได้เฉพาะกิจกรรม/QR และบันทึกคะแนนพฤติกรรม' : 'บัญชีผู้บริหารดูข้อมูลได้ · แก้ไขได้เฉพาะตารางสอนและอนุมัติลาสอน' };
       }
     }
 
+    if (session && session.limit === 'school') session.school = stSchoolOf_(session.userId);
     if (session) prayerPenaltyMaybe_(); // v18.29 · หักคะแนนไม่เช็คละหมาด (ทำงานไม่เกินทุก 10 นาที)
     // โหมดดูตัวอย่าง (แอดมินดูแอปแบบนักเรียน): ห้ามเขียนข้อมูลใด ๆ
     if (session && session.preview && READ_ONLY_ACTIONS.indexOf(action) === -1 && ['whoami', 'refreshToken'].indexOf(action) === -1 && !/^get[A-Z]/.test(action)) { // v18.03 · อ่านได้ทุกคำสั่ง get*
@@ -1327,7 +1375,8 @@ function routeRequest_(action, req, method) {
     const data = (req.data && typeof req.data === 'object') ? req.data : req;
     if (data && data.token) delete data.token;
 
-    const result = dispatchAction_(action, req, data, session, { isStaff: isStaff, isAdmin: isAdmin && !(session && session.limit), isOwner: isOwner, method: method });
+    let result = dispatchAction_(action, req, data, session, { isStaff: isStaff, isAdmin: isAdmin && !(session && session.limit), isOwner: isOwner, method: method });
+    if (session && session.limit === 'school' && action !== 'getFullDatabase') result = scopeSchoolResult_(action, result, session);
     if (result && result.success !== false && READ_ONLY_ACTIONS.indexOf(action) === -1) {
       bumpDataVersion_();
     }
@@ -1373,7 +1422,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'whoami':
       // ต่ออายุโทเค็นทุกครั้งที่แอปเปิด เพื่อให้อยู่ในระบบได้ต่อเนื่องจนกว่าจะออกจากระบบเอง
-      return session ? { success: true, session: { role: session.role, userId: session.userId, name: session.name, owner: !!session.owner }, token: issueToken_(session.role, session.userId, session.name, !!session.owner, !!session.preview, session.limit || ''), preview: !!session.preview, limit: session.limit || '' } : { success: false, authRequired: true, code: 'AUTH_REQUIRED' };
+      return session ? { success: true, session: { role: session.role, userId: session.userId, name: session.name, owner: !!session.owner }, token: issueToken_(session.role, session.userId, session.name, !!session.owner, !!session.preview, session.limit || ''), preview: !!session.preview, limit: session.limit || '', school: session.limit === 'school' ? (session.school || '') : undefined } : { success: false, authRequired: true, code: 'AUTH_REQUIRED' };
 
     // ---------- เข้าสู่ระบบ ----------
     case 'loginStudent':
@@ -1900,7 +1949,8 @@ function buildFullDatabaseRaw_() {
   try {
     const teachers = (getTeachers().data || []).map(function (t) { return publicStaff_(t, true); });
     const admins = (getAdmins().data || []).map(function (t) { return publicStaff_(t, true); });
-    const subAdmins = (getSubAdmins().data || []).map(function (t) { return publicStaff_(t, true); });
+    const stMap = stSchoolMap_();
+    const subAdmins = (getSubAdmins().data || []).map(function (t) { const o = publicStaff_(t, true); if (limitOfRole_(o.role) === 'school') o.school = cleanVal(stMap[cleanVal(o.username).toLowerCase()] || ''); return o; });
     return {
       success: true,
       timestamp: new Date().toISOString(),
@@ -1929,6 +1979,21 @@ function buildFullDatabaseRaw_() {
 }
 
 function scopeDatabase_(db, session) {
+  if (session.limit === 'school') {
+    const ids = stSchoolIds_(session.school);
+    const f = function (arr) { return (arr || []).filter(function (x) { return stRowInSid_(ids, x); }); };
+    return {
+      success: true, scope: 'school', school: session.school || '', timestamp: db.timestamp,
+      students: f(db.students),
+      teachers: (db.teachers || []).map(function (t) { return { username: t.username, fullName: t.fullName, role: t.role, avatarUrl: t.avatarUrl || '' }; }),
+      admins: [], subAdmins: [], pendingRegistrations: [],
+      statusLogs: f(db.statusLogs), activities: db.activities || [], activityLogs: f(db.activityLogs),
+      prayers: f(db.prayers), behaviorLogs: f(db.behaviorLogs), behaviorRules: db.behaviorRules || [],
+      attendance: f(db.attendance), hasanat: f(db.hasanat), subjectGrades: f(db.subjectGrades), assignmentScores: f(db.assignmentScores),
+      calendarEvents: (db.calendarEvents || []).filter(function (ev) { return ev.targetAudience !== 'teachers'; }),
+      prayerApprovals: f(db.prayerApprovals), settings: db.settings || {}
+    };
+  }
   const role = session.limit ? 'teacher' : session.role; // บัญชีสิทธิ์จำกัด: ไม่เห็นรหัส OTP/ข้อมูลลับของแอดมิน
   if (role === 'admin') return db;
   if (role === 'inspector') {
@@ -4558,12 +4623,13 @@ function verifyAdminLogin(password, username) {
       }
       const roleVal = cleanVal(rows[i][4]) || (kind === 'admin' ? 'Admin' : 'TEACHER');
       const lim = limitOfRole_(roleVal);
-      const tokenRole = lim === 'exec' ? 'admin' : (lim === 'act' || lim === 'night') ? 'teacher' : staffTokenRole_(roleVal);
+      const tokenRole = (lim === 'exec' || lim === 'school') ? 'admin' : (lim === 'act' || lim === 'night') ? 'teacher' : staffTokenRole_(roleVal);
       loginSucceeded_(rlKey);
       return {
         success: true,
         token: issueToken_(tokenRole, cleanVal(rows[i][1]), cleanVal(rows[i][3]), !lim && tokenRole === 'admin' && isOwnerRole_(roleVal), false, lim),
         limited: lim,
+        school: lim === 'school' ? stSchoolOf_(cleanVal(rows[i][1])) : undefined,
         isSubAdmin: !lim && tokenRole === 'admin' && !isOwnerRole_(roleVal),
         isOwner: tokenRole === 'admin' && isOwnerRole_(roleVal),
         role: roleVal,
@@ -4601,10 +4667,10 @@ function previewAsStaff_(username) {
       let subj = []; const sc = kind === 'teacher' ? 7 : (kind === 'legacy' ? 8 : -1);
       if (sc !== -1) { try { subj = rows[i][sc] ? JSON.parse(rows[i][sc]) : []; } catch (e) {} }
       const lim = limitOfRole_(roleVal);
-      const tokenRole = lim === 'exec' ? 'admin' : (lim === 'act' || lim === 'night') ? 'teacher' : staffTokenRole_(roleVal);
+      const tokenRole = (lim === 'exec' || lim === 'school') ? 'admin' : (lim === 'act' || lim === 'night') ? 'teacher' : staffTokenRole_(roleVal);
       return { success: true, preview: true,
         token: issueToken_(tokenRole, cleanVal(rows[i][1]), cleanVal(rows[i][3]), false, true, lim),
-        limited: lim, isSubAdmin: !lim && tokenRole === 'admin', isOwner: false, role: roleVal, id: cleanVal(rows[i][0]),
+        limited: lim, school: lim === 'school' ? stSchoolOf_(cleanVal(rows[i][1])) : undefined, isSubAdmin: !lim && tokenRole === 'admin', isOwner: false, role: roleVal, id: cleanVal(rows[i][0]),
         username: cleanVal(rows[i][1]), fullName: cleanVal(rows[i][3]), phone: normalizePhone(rows[i][kind === 'legacy' ? 7 : 5] || ''), email: cleanVal(rows[i][6] || ''),
         assignedSubjects: Array.isArray(subj) ? subj : [], avatarUrl: (kind === 'teacher' || kind === 'admin') ? cleanVal(rows[i][10] || '') : '' };
     }
@@ -4669,6 +4735,7 @@ function addSubAdmin(data) {
     return { success: false, message: 'กรุณากำหนดรหัสผ่านสำหรับบัญชีใหม่' };
   }
 
+  if (limitOfRole_(roleCode) === 'school' && !cleanVal(data.school || '') && !stSchoolOf_(cleanUser)) return { success: false, field: 'school', message: 'กรุณาเลือกโรงเรียนต้นสังกัด' };
   const recordId = keep(data.id || data.adminId, 0, (isTeacher ? 'TCH-' : 'ADM-') + new Date().getTime());
   const fullName = keep(data.fullName, 3, cleanUser);
   const phone = normalizePhone(keep(data.phone, 5, ''));
@@ -4706,6 +4773,11 @@ function addSubAdmin(data) {
   sheet.getRange(rowNum, 3).setNumberFormat('@').setValue(storedPass);
   sheet.getRange(rowNum, 6).setNumberFormat('@').setValue(phone);
   if (otherRow > 0) { try { otherSheet.deleteRow(otherRow); } catch (e) {} }
+  // v19.14 · ครูโรงเรียนต้นสังกัด: เก็บชื่อโรงเรียนต้นสังกัด (ไม่ได้ส่งมา = คงค่าเดิม) · เปลี่ยนเป็นประเภทอื่น = ลบออก
+  try {
+    if (limitOfRole_(roleCode) === 'school') { if (data.school !== undefined && data.school !== null) stSetSchool_(cleanUser, data.school); }
+    else if (stSchoolOf_(cleanUser)) stSetSchool_(cleanUser, '');
+  } catch (e) {}
   return {
     success: true,
     role: roleCode,

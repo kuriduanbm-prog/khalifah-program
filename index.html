@@ -76,9 +76,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=19.13">
-  <link rel="stylesheet" href="ui-v8.css?v=19.13">
-  <link rel="stylesheet" href="dark.css?v=19.13">
+  <link rel="stylesheet" href="style.css?v=19.14">
+  <link rel="stylesheet" href="ui-v8.css?v=19.14">
+  <link rel="stylesheet" href="dark.css?v=19.14">
 </head>
 <body class="auth-locked">
   <script>
@@ -4861,11 +4861,13 @@
             <option value="EXECUTIVE">ผู้บริหาร (ดูข้อมูล + แก้ตารางสอน + อนุมัติลาสอน · เข้าทางแท็บแอดมิน)</option>
             <option value="TeacherAdmin">อาจารย์ประจำชั้น (เช็คชื่อ + กรอกเกรด + ดูสถิติ)</option>
             <option value="ActivityAdmin">ฝ่ายกิจกรรม (ดูกิจกรรม + สแกนเช็คชื่อ · เข้าทางแท็บแอดมิน)</option><option value="NIGHTDUTY">ครูเวรหอพักกลางคืน (พฤติกรรม + กิจกรรม/QR · เข้าทางแท็บแอดมิน)</option>
+            <option value="SCHOOLTEACHER">ครูโรงเรียนต้นสังกัด (ดูข้อมูลนักเรียนโรงเรียนของตนอย่างเดียว · เข้าทางแท็บแอดมิน)</option>
             <option value="INSPECTOR">ผู้ตรวจการ (หัก/เพิ่มคะแนนพฤติกรรม · เข้าทางแท็บแอดมินด้วยรหัสผ่าน)</option>
             <option value="SubAdmin">ผู้ช่วยแอดมินทั่วไป</option>
             <option value="SuperAdmin" data-owner-only="1">แอดมิน · สิทธิ์เท่าแอดมินหลัก (เฉพาะแอดมินหลักให้ได้)</option>
           </select>
         </div>
+        <div class="form-group" id="subSchoolGroup" style="display:none"><label class="form-label" for="subSchool">โรงเรียนต้นสังกัด</label><select class="form-control" id="subSchool"></select></div>
         <div class="form-group" id="subSubjectGroup">
           <label class="form-label"><i class="fa-solid fa-book"></i> รายวิชาที่มอบหมายให้สอน (เลือกได้หลายวิชา)</label>
           <div id="subAssignedSubjectsChecklist" class="subject-checkbox-grid" style="margin-bottom: 0.5rem;">
@@ -5757,6 +5759,7 @@
           <label class="k8-f"><span>เบอร์โทรศัพท์</span><input id="k8NfPhone" type="tel" inputmode="numeric" placeholder="ไม่บังคับ"></label>
           <label class="k8-f"><span>อีเมล</span><input id="k8NfEmail" type="email" placeholder="ไม่บังคับ"></label>
         </div>
+        <label class="k8-f" id="k8NfSchoolWrap" hidden><span>โรงเรียนต้นสังกัด</span><select id="k8NfSchool"></select><small>บัญชีนี้ดูได้เฉพาะนักเรียนจากโรงเรียนที่เลือก</small></label>
         <div class="k8-f" id="k8NfSubjWrap"><span>รายวิชาที่สอน</span><div class="k8-chipset" id="k8NfSubjects"></div><small>ไม่เลือก = เห็นทุกวิชา</small></div>
         <p class="k8-form-err" id="k8NfErr" role="alert" hidden></p>
         <div class="k8-form-actions"><button type="button" class="k8-btn-line" onclick="closeModal('k8NewStaffModal')">ยกเลิก</button><button type="submit" class="k8-btn-pri" id="k8NfSaveBtn">สร้างบัญชี</button></div>
@@ -5911,9 +5914,9 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=19.13"></script>
-  <script defer src="ui-v8.js?v=19.13"></script>
-  <script defer src="ai.js?v=19.13"></script>
+  <script defer src="app.js?v=19.14"></script>
+  <script defer src="ui-v8.js?v=19.14"></script>
+  <script defer src="ai.js?v=19.14"></script>
 <div class="k8-asum" id="k8Asum" hidden role="dialog" aria-modal="true" aria-labelledby="k8AsumT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="k8AsumClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8AsumT">สรุปการมาเรียน</h2><small id="k8AsumS">เลือกวิชา ชั้นปี และช่วงวันที่</small></div><button type="button" class="k8-asum-csv" onclick="k8AsumCsv()">⬇ CSV</button></header><div class="k8-asum-b" id="k8AsumB"></div></div></div>
 <div class="k8-asum k8-pf" id="k8Pf" hidden role="dialog" aria-modal="true" aria-labelledby="k8PfT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8PfT">กิจกรรม &amp; ผลงาน</h2><small id="k8PfS">แฟ้มสะสมผลงาน</small></div></header><div class="k8-asum-b" id="k8PfB"></div></div></div>
 <div class="k8-asum k8-gs2" id="k8Gs2" hidden role="dialog" aria-modal="true" aria-labelledby="k8Gs2T"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8Gs2T">สรุปเกรด</h2><small id="k8Gs2S"></small></div></header><div class="k8-asum-b" id="k8Gs2B"></div></div></div>

@@ -7000,6 +7000,12 @@ async function performStaffLogin({ username, password, btn, userEl, passEl, moda
     profile.role = 'SuperAdmin';
     profile.isSubAdmin = true;
     profile.limited = res.limited;
+    if (res.limited === 'school') {
+      // v19.14 · ครูโรงเรียนต้นสังกัด: ล้างแคชข้อมูลนักเรียนของบัญชีก่อนหน้าบนเครื่องนี้ แล้วรับเฉพาะข้อมูลโรงเรียนของตน
+      profile.school = res.school || '';
+      ['khalifah_prayer_history', 'khalifah_today_prayers', 'khalifah_attendance_logs', 'khalifah_hasanat_rows', 'khalifah_student_hasanat', 'khalifah_subject_grades_rows', 'khalifah_student_assignment_scores', 'khalifah_students', 'khalifah_all_students', 'khalifah_sub_admins', 'khalifah_subadmins', 'khalifah_pending_registrations', 'khalifah_student_act_logs'].forEach((k) => { try { localStorage.removeItem(k); } catch (e) {} });
+      try { allStudents = []; } catch (e) {}
+    }
   }
   const isSuper = profile.role === 'SuperAdmin';
 
@@ -7017,7 +7023,7 @@ async function performStaffLogin({ username, password, btn, userEl, passEl, moda
     updateAdminUIVisibility(true);
     (modalsToClose || ['authModal']).forEach(id => closeModal(id));
     switchView(isSuper ? 'admin' : 'teacher');
-    const roleWelcome = profile.limited === 'exec' ? 'ผู้บริหาร' : profile.limited === 'act' ? 'ฝ่ายกิจกรรม' : profile.limited === 'night' ? 'ครูเวรหอพักกลางคืน' : isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : (/INSPECTOR|ผู้ตรวจการ/i.test(String(profile.role)) ? 'ผู้ตรวจการ' : 'อาจารย์'));
+    const roleWelcome = profile.limited === 'school' ? 'ครูโรงเรียนต้นสังกัด' : profile.limited === 'exec' ? 'ผู้บริหาร' : profile.limited === 'act' ? 'ฝ่ายกิจกรรม' : profile.limited === 'night' ? 'ครูเวรหอพักกลางคืน' : isSuper ? 'แอดมิน' : (profile.role === 'EXECUTIVE' ? 'ผู้บริหาร' : (/INSPECTOR|ผู้ตรวจการ/i.test(String(profile.role)) ? 'ผู้ตรวจการ' : 'อาจารย์'));
     showToast(`ยินดีต้อนรับ${roleWelcome} ${profile.fullName || profile.username}`, 'success');
     if (res.securityWarning) {
       setTimeout(() => showToast('⚠️ ' + res.securityWarning, 'warning'), 1500);
@@ -8893,6 +8899,16 @@ function toggleSubAdminSubjectField() {
   const group = document.getElementById('subSubjectGroup');
   if (!roleSelect || !group) return;
   group.style.display = (roleSelect.value === 'TEACHER' || roleSelect.value === 'TeacherAdmin') ? 'block' : 'none';
+  const sg = document.getElementById('subSchoolGroup'); if (sg) sg.style.display = roleSelect.value === 'SCHOOLTEACHER' ? 'block' : 'none';
+}
+// v19.14 · ตัวเลือกโรงเรียนต้นสังกัด (จากรายชื่อนักเรียน)
+function fillSubSchoolSelect(cur) {
+  const sel = document.getElementById('subSchool'); if (!sel) return;
+  const cnt = {}; (allStudents || []).forEach((s) => { const n = String(s.schoolName || s.school || '').trim(); if (n) cnt[n] = (cnt[n] || 0) + 1; });
+  if (cur && !cnt[cur]) cnt[cur] = 0;
+  const esc2 = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  sel.innerHTML = '<option value="">— เลือกโรงเรียน —</option>' + Object.keys(cnt).sort((a, b) => a.localeCompare(b, 'th')).map((n) => '<option value="' + esc2(n) + '">' + esc2(n) + ' (' + cnt[n] + ' คน)</option>').join('');
+  sel.value = cur || '';
 }
 
 function toggleQuickSubAdminSubjectField() {
@@ -9063,6 +9079,7 @@ function openAddSubAdminModal() {
   if (document.getElementById('subRole')) document.getElementById('subRole').value = 'TEACHER';
 
   renderSubAdminModalSubjectsChecklist([]);
+  fillSubSchoolSelect('');
   toggleSubAdminSubjectField();
   openModal('addSubAdminModal');
 }
@@ -9095,13 +9112,14 @@ function openEditTeacherModal(username) {
     const ownerNow = !!currentAdmin && currentAdmin.role === 'SuperAdmin' && !currentAdmin.isSubAdmin;
     Array.from(sel.options).forEach((o) => { if (o.dataset.ownerOnly) { o.hidden = !ownerNow; o.disabled = !ownerNow; } });
     sel.value = r;
-    if (sel.value !== r) sel.value = /super/.test(l) ? 'SuperAdmin' : /nightduty|ครูเวร/.test(l) ? 'NIGHTDUTY' : /inspector|ผู้ตรวจการ/.test(l) ? 'INSPECTOR' : /executive|ผู้บริหาร/.test(l) ? 'EXECUTIVE' : /teacheradmin|homeroom|ประจำชั้น/.test(l) ? 'TeacherAdmin' : /activity|กิจกรรม/.test(l) ? 'ActivityAdmin' : /subadmin|admin|ผู้ช่วย/.test(l) ? 'SubAdmin' : 'TEACHER';
+    if (sel.value !== r) sel.value = /super/.test(l) ? 'SuperAdmin' : /schoolteacher|โรงเรียนต้นสังกัด/.test(l) ? 'SCHOOLTEACHER' : /nightduty|ครูเวร/.test(l) ? 'NIGHTDUTY' : /inspector|ผู้ตรวจการ/.test(l) ? 'INSPECTOR' : /executive|ผู้บริหาร/.test(l) ? 'EXECUTIVE' : /teacheradmin|homeroom|ประจำชั้น/.test(l) ? 'TeacherAdmin' : /activity|กิจกรรม/.test(l) ? 'ActivityAdmin' : /subadmin|admin|ผู้ช่วย/.test(l) ? 'SubAdmin' : 'TEACHER';
   }
 
   const assignedArr = Array.isArray(t.assignedSubjects)
     ? t.assignedSubjects
     : (t.assignedSubject ? [t.assignedSubject] : []);
   renderSubAdminModalSubjectsChecklist(assignedArr);
+  fillSubSchoolSelect(t.school || '');
   toggleSubAdminSubjectField();
   openModal('addSubAdminModal');
 }
@@ -9115,6 +9133,8 @@ function submitAddSubAdmin() {
   const email = (document.getElementById('subEmail')?.value || '').trim();
   const phone = normalizePhone(document.getElementById('subPhone')?.value || '');
   const role = document.getElementById('subRole')?.value || 'TEACHER';
+  const school = role === 'SCHOOLTEACHER' ? (document.getElementById('subSchool')?.value || '').trim() : '';
+  if (role === 'SCHOOLTEACHER' && !school) { showToast('กรุณาเลือกโรงเรียนต้นสังกัด', 'warning'); return; }
 
   const checkedNodes = document.querySelectorAll('input[name="subModalSubjChk"]:checked');
   const selectedSubjects = Array.from(checkedNodes).map(cb => cb.value);
@@ -9136,6 +9156,7 @@ function submitAddSubAdmin() {
     email: email,
     phone: phone,
     role: role,
+    school: school || undefined,
     assignedSubject: finalSubjects[0] || '',
     assignedSubjects: finalSubjects,
     status: 'Active',
@@ -9205,11 +9226,12 @@ function renderSubAdminsTable() {
     ActivityAdmin: { label: 'ฝ่ายกิจกรรม', bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' },
     INSPECTOR: { label: 'ผู้ตรวจการ', bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
     NIGHTDUTY: { label: 'ครูเวรหอพักกลางคืน', bg: '#eef2ff', color: '#3730a3', border: '#c7d2fe' },
+    SCHOOLTEACHER: { label: 'ครูโรงเรียนต้นสังกัด', bg: '#ecfeff', color: '#0e7490', border: '#a5f3fc' },
     SuperAdmin: { label: 'แอดมินสูงสุด', bg: '#0f172a', color: '#ffffff', border: '#0f172a' }
   };
   // ตำแหน่งที่เขียนต่างกัน (ตัวพิมพ์เล็ก/ไทย) ให้ตรงกับป้ายที่ถูกต้อง
   const roleKey = (r) => { const v = String(r || '').trim(); if (roleMap[v]) return v; const l = v.toLowerCase();
-    if (/nightduty|ครูเวร/.test(l)) return 'NIGHTDUTY'; if (/inspector|ผู้ตรวจการ/.test(l)) return 'INSPECTOR'; if (/executive|ผู้บริหาร/.test(l)) return 'EXECUTIVE'; if (/teacheradmin|homeroom|ประจำชั้น/.test(l)) return 'TeacherAdmin';
+    if (/schoolteacher|โรงเรียนต้นสังกัด/.test(l)) return 'SCHOOLTEACHER'; if (/nightduty|ครูเวร/.test(l)) return 'NIGHTDUTY'; if (/inspector|ผู้ตรวจการ/.test(l)) return 'INSPECTOR'; if (/executive|ผู้บริหาร/.test(l)) return 'EXECUTIVE'; if (/teacheradmin|homeroom|ประจำชั้น/.test(l)) return 'TeacherAdmin';
     if (/activity|กิจกรรม/.test(l)) return 'ActivityAdmin'; if (/super/.test(l)) return 'SuperAdmin'; if (/subadmin|admin|แอดมิน|ผู้ช่วย/.test(l)) return 'SubAdmin'; return 'TEACHER'; };
 
   tbody.innerHTML = subAdmins.map(a => {
@@ -9218,8 +9240,8 @@ function renderSubAdminsTable() {
       : (a.assignedSubject ? [a.assignedSubject] : []);
 
     const rk = roleKey(a.role);
-    const noSubj = ['EXECUTIVE', 'INSPECTOR', 'NIGHTDUTY', 'SubAdmin', 'ActivityAdmin', 'SuperAdmin'].indexOf(rk) !== -1;
-    const subjNames = noSubj ? ({ EXECUTIVE: 'ทั้งโรงเรียน', INSPECTOR: 'คะแนนพฤติกรรม', NIGHTDUTY: 'เวรหอพัก · พฤติกรรม · กิจกรรม', SubAdmin: 'ระบบแอดมิน', ActivityAdmin: 'กิจกรรม', SuperAdmin: 'ทั้งระบบ' }[rk]) : (assignedIds.length === 0 || assignedIds.length >= appSubjects.length)
+    const noSubj = ['EXECUTIVE', 'INSPECTOR', 'NIGHTDUTY', 'SCHOOLTEACHER', 'SubAdmin', 'ActivityAdmin', 'SuperAdmin'].indexOf(rk) !== -1;
+    const subjNames = noSubj ? ({ EXECUTIVE: 'ทั้งโรงเรียน', INSPECTOR: 'คะแนนพฤติกรรม', NIGHTDUTY: 'เวรหอพัก · พฤติกรรม · กิจกรรม', SCHOOLTEACHER: 'ดูข้อมูลโรงเรียนต้นสังกัด', SubAdmin: 'ระบบแอดมิน', ActivityAdmin: 'กิจกรรม', SuperAdmin: 'ทั้งระบบ' }[rk]) : (assignedIds.length === 0 || assignedIds.length >= appSubjects.length)
       ? 'ทุกวิชา / ทั้งโรงเรียน'
       : assignedIds.map(id => {
           const s = appSubjects.find(x => x.id === id);
@@ -12168,7 +12190,7 @@ async function syncAllDataFromCloud(showToastMsg = false) {
     }
 
     // 5. ซิงค์บันทึกเวลาละหมาด (Prayers)
-    if (Array.isArray(db.prayers) && db.prayers.length > 0) {
+    if (Array.isArray(db.prayers) && (db.prayers.length > 0 || db.scope === 'school')) { // v19.14 · บัญชีครูต้นสังกัด: แทนที่แคชเดิมเสมอ (ไม่ปนข้อมูลโรงเรียนอื่น)
       localStorage.setItem('khalifah_prayer_history', JSON.stringify(db.prayers));
       const todayStr = new Date().toLocaleDateString('sv-SE');
       todayPrayers = db.prayers.filter(p => p.date === todayStr);
@@ -12189,9 +12211,9 @@ async function syncAllDataFromCloud(showToastMsg = false) {
     }
 
     // 6. ซิงค์ผลบุญ (Hasanat)
-    if (Array.isArray(db.hasanat) && db.hasanat.length > 0) {
+    if (Array.isArray(db.hasanat) && (db.hasanat.length > 0 || db.scope === 'school')) {
       let allHasanat = {};
-      try {
+      if (db.scope !== 'school') try {
         allHasanat = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}');
       } catch (e) { allHasanat = {}; }
       db.hasanat.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))).forEach(item => {
