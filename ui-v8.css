@@ -6299,3 +6299,9 @@ html[data-theme="dark"] .k8-schd-x { background: #222b37; color: #e2e8f0; }
 html[data-theme="dark"] .k8-schd-sum span, html[data-theme="dark"] .k8-schd-t th { background: #181f26; border-color: #2a3442; color: #cbd5e1; }
 html[data-theme="dark"] .k8-schd-tw, html[data-theme="dark"] .k8-schd-list { border-color: #2a3442; }
 html[data-theme="dark"] .k8-schd-tg { background: #10151c; } html[data-theme="dark"] .k8-schd-tg button[aria-pressed="true"] { background: #222b37; color: #7dd3fc; }
+/* v19.12 · สถานะยกเว้นในประวัติการละหมาด */
+.k8-schd-c.is-per { background: #fce7f3; color: #be185d; } .k8-schd-c.is-lv { background: #dbeafe; color: #1d4ed8; }
+.k8-schd-c.is-na { background: transparent; color: #94a3b8; font-weight: 500; min-width: 0; }
+.k8-schd-c.is-off { background: transparent; color: #94a3b8; font-weight: 500; }
+.k8-schd-t tr.is-off td { background: #f8fafc; }
+html[data-theme="dark"] .k8-schd-t tr.is-off td { background: #161d27; }

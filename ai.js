@@ -85,6 +85,7 @@
     if (keys.indexOf('bh') !== -1 && stale('bh')) jobs.push(api('getBehaviorData').then((r) => { const c = readJSON('khalifah_behavior_cache', null); DATA.bh = r ? { logs: r.logs || [], term: r.term || '' } : { logs: (c && c.logs) || [], term: (c && c.term) || '' }; DATA.t.bh = Date.now(); }));
     if (keys.indexOf('tt') !== -1 && stale('tt')) jobs.push(api('getTimetable', {}, 30000).then((r) => { DATA.tt = r || { grades: {}, config: {} }; DATA.t.tt = Date.now(); }));
     if (keys.indexOf('lv') !== -1 && stale('lv')) jobs.push(api('getStudentLeaves').then((r) => { DATA.lv = (r && r.data) || []; DATA.t.lv = Date.now(); }));
+    if (keys.indexOf('pr') !== -1 && window.k8PrayExcReady) jobs.push(Promise.resolve(window.k8PrayExcReady()).catch(() => {}));
     if (keys.indexOf('pr') !== -1 && stale('pr')) jobs.push(api('getPrayers', {}, 60000).then((r) => { DATA.pr = (r && r.data) || null; DATA.t.pr = Date.now(); IDX = null; }));
     if (keys.indexOf('hq') !== -1 && from) { const k = from + '|' + to; if (!DATA.hq[k]) jobs.push(api('getHalaqahReport', { from, to }, 45000).then((r) => { DATA.hq[k] = (r && r.groups) || []; })); }
     await Promise.all(jobs);
@@ -112,11 +113,18 @@
     SLOTS.forEach((s) => { out.slot[s] = { on: 0, late: 0, ex: 0, miss: 0 }; out.streak[s] = { cur: 0, max: 0, end: '' }; });
     let wins = []; try { wins = PRAYER_TIME_WINDOWS; } catch (e) {}
     const now = new Date(); const cur = now.getHours() * 60 + now.getMinutes();
+    const CX = window.k8PrayCtx ? window.k8PrayCtx() : { today: t, cur };
     for (let d = a, i = 0; d <= end && i < 400; d = addD(d, 1), i++) {
-      const sl = d === t ? SLOTS.filter((s, x) => !wins[x] || cur >= wins[x].endMin) : SLOTS;
-      let done = 0, ex = 0;
-      sl.forEach((s) => { const v = R[k + '|' + d + '|' + s]; const c = v ? PK(v) : 'miss'; out[c]++; out.slot[s][c]++; if (c === 'on' || c === 'late') done++; if (c === 'ex') ex++; const z = out.streak[s]; if (c === 'miss') { z.cur++; if (z.cur > z.max) { z.max = z.cur; z.end = d; } } else if (c !== 'ex') z.cur = 0; });
-      out.days.push({ d, n: done, ex, of: sl.length });
+      if (new Date(d + 'T00:00:00').getDay() === 6) continue; // เสาร์ = วันหยุดประจำสัปดาห์ ไม่นับ
+      let done = 0, ex = 0, of = 0;
+      SLOTS.forEach((s, x) => {
+        const v = R[k + '|' + d + '|' + s]; let c = window.k8PrayCell ? window.k8PrayCell(st, d, x, v ? { status: v } : null, CX) : (v ? PK(v) : 'miss');
+        if (c === 'skip') return; if (c === 'per' || c === 'lv') c = 'ex'; of++;
+        out[c]++; out.slot[s][c]++; if (c === 'on' || c === 'late') done++; if (c === 'ex') ex++;
+        const z = out.streak[s]; if (c === 'miss') { z.cur++; if (z.cur > z.max) { z.max = z.cur; z.end = d; } } else if (c !== 'ex') z.cur = 0;
+      });
+      if (of) out.days.push({ d, n: done, ex, of });
+      continue;
     }
     // บันทึกที่อยู่นอกตารางช่องเวลา (ชื่อเวลาแปลก) ยังนับรวม
     out.den = out.on + out.late + out.miss; out.pct = pctOf(out.on + out.late, out.den);
