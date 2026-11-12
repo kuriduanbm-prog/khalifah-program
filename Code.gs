@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.99'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.01'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1717,7 +1717,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
       return periodAction_(action, data || {}, session);
     case 'getPeriodEpisodes':
-      return { success: true, data: periodList_().slice(-200).reverse() };
+      try { periodAutoClose_(); } catch (e) {}
+      return { success: true, data: periodList_().slice(-200).reverse(), maxDays: PERIOD_MAX_DAYS_ };
     case 'getMyEnrollments':
       if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
       return getMyEnrollments_(session.userId);
@@ -6969,6 +6970,7 @@ function prayerPenaltyRun_(nowArg) {
       return a < PM_END_[slot] && b > PM_START_[slot];
     });
   };
+  try { periodAutoClose_(); } catch (e) {}
   const periods = periodList_();
   const onPeriod = function (sid, ds) { return periods.some(function (x) { return nid(x.studentId) === sid && ds >= String(x.start || '') && ds <= String(x.end || x.status === 'active' && today || x.start || ''); }); };
   // รายการหักที่เคยสร้าง (รวมที่ยกเลิกแล้ว)
@@ -7847,10 +7849,11 @@ function periodAction_(action, data, session) {
   const today = periodYmd_(new Date());
   const lock = LockService.getScriptLock(); try { lock.waitLock(15000); } catch (e) {}
   try {
+    let autoNow = 0; try { autoNow = periodAutoClose_(); } catch (e) {}
     const list = periodList_();
     const mine = list.filter(function (x) { return isCodeMatch(x.studentId, sid); });
     const active = mine.filter(function (x) { return x.status === 'active'; })[0] || null;
-    if (action === 'getMyPeriod') return { success: true, active: active, history: mine.filter(function (x) { return x.status !== 'active'; }).slice(-5).reverse() };
+    if (action === 'getMyPeriod') { const last = mine.filter(function (x) { return x.status !== 'active'; }).slice(-5).reverse(); return { success: true, active: active, history: last, maxDays: PERIOD_MAX_DAYS_, autoEnded: (last[0] && last[0].autoEnded && last[0].end >= periodAddDays_(today, -3)) ? last[0] : null }; }
     if (action === 'periodStart') {
       if (active) return { success: false, code: 'ALREADY_ACTIVE', message: 'มีช่วงประจำเดือนที่ยังไม่สิ้นสุดอยู่แล้ว (เริ่ม ' + active.start + ')', active: active };
       const st = getStudentForStaff_(sid); const stu = st && st.student;
@@ -7873,29 +7876,9 @@ function periodAction_(action, data, session) {
     if (end < active.start) return { success: false, message: 'วันที่สิ้นสุดต้องไม่ก่อนวันเริ่ม (' + active.start + ')' };
     if (end > today) return { success: false, message: 'วันที่สิ้นสุดต้องไม่เกินวันนี้' };
     let resume = parseInt(data.resumeSlot, 10); if (!(resume >= 0 && resume <= 5)) resume = 0;
-    const ss = getSpreadsheet(); const sheet = ss.getSheetByName(SHEETS.PRAYERS);
-    const rows = sheet.getDataRange().getValues(); const have = {};
-    for (let i = 1; i < rows.length; i++) {
-      if (!isCodeMatch(rows[i][1], sid)) continue;
-      const st = String(rows[i][14] || ''); if (/ขาด/.test(st)) continue;
-      have[formatSheetDate(rows[i][6]) + '|' + formatPrayerTimeThai(rows[i][4])] = 1;
-    }
-    const out = []; let d = active.start, guard = 0; const stamp = new Date().toISOString();
-    const note = 'บันทึกอัตโนมัติ: ช่วงมีประจำเดือน ' + active.start + ' ถึง ' + end;
-    while (d <= end && guard++ < 40) {
-      const n = d < end ? 5 : resume;
-      for (let k = 0; k < n; k++) {
-        const slot = formatPrayerTimeThai(PERIOD_SLOTS_[k]);
-        if (have[d + '|' + slot]) continue;
-        out.push(['PRY-PER-' + Date.now() + '-' + out.length, formatAsText(sid), active.name, active.grade, slot, stamp, d, '-', '', '', 'อุซุร · บันทึกอัตโนมัติ', 0, 'ไม่ใช่', '', PERIOD_STATUS_, note]);
-      }
-      d = periodAddDays_(d, 1);
-    }
-    if (out.length) sheet.getRange(sheet.getLastRow() + 1, 1, out.length, out[0].length).setValues(out);
-    active.status = 'ended'; active.end = end; active.resumeSlot = resume; active.records = out.length; active.endedAt = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
-    periodSave_(list);
-    try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
-    return { success: true, ended: active, added: out.length, message: 'บันทึกอุซุรย้อนหลังให้แล้ว ' + out.length + ' เวลา' };
+    const capEnd = periodAddDays_(active.start, PERIOD_MAX_DAYS_ - 1); // v19.01 · นับได้ไม่เกิน 15 วัน
+    const out = periodFinish_(list, active, end > capEnd ? capEnd : end, end > capEnd ? 5 : resume, false);
+    return { success: true, ended: active, added: out, message: 'บันทึกอุซุรย้อนหลังให้แล้ว ' + out + ' เวลา' };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
@@ -7952,4 +7935,48 @@ function myPrayerReacts_(studentId) {
     out[r.logId] = { seen: !!r.seenAt, seenAt: r.seenAt, liked: !!r.likedAt, likedAt: r.likedAt, by: r.likedRole === 'teacher' ? 'teacher' : 'admin' };
   }
   return out;
+}
+
+
+// v19.01 · ประจำเดือนนับได้ไม่เกิน 15 วัน (วันเริ่ม = วันที่ 1) · เกินแล้วระบบสิ้นสุดให้เอง แม้นักเรียนไม่ได้กดสิ้นสุด
+const PERIOD_MAX_DAYS_ = 15;
+function periodFinish_(list, active, end, resume, auto) {
+    const ss = getSpreadsheet(); const sheet = ss.getSheetByName(SHEETS.PRAYERS);
+  const rows = sheet.getDataRange().getValues(); const have = {};
+  for (let i = 1; i < rows.length; i++) {
+    if (!isCodeMatch(rows[i][1], active.studentId)) continue;
+    const st = String(rows[i][14] || ''); if (/ขาด/.test(st)) continue;
+    have[formatSheetDate(rows[i][6]) + '|' + formatPrayerTimeThai(rows[i][4])] = 1;
+  }
+  const out = []; let d = active.start, guard = 0; const stamp = new Date().toISOString();
+  const note = 'บันทึกอัตโนมัติ: ช่วงมีประจำเดือน ' + active.start + ' ถึง ' + end + (auto ? ' (ครบ 15 วัน ระบบสิ้นสุดให้อัตโนมัติ)' : '');
+  while (d <= end && guard++ < 40) {
+    const n = d < end ? 5 : resume;
+    for (let k = 0; k < n; k++) {
+      const slot = formatPrayerTimeThai(PERIOD_SLOTS_[k]);
+      if (have[d + '|' + slot]) continue;
+      out.push(['PRY-PER-' + Date.now() + '-' + out.length, formatAsText(active.studentId), active.name, active.grade, slot, stamp, d, '-', '', '', 'อุซุร · บันทึกอัตโนมัติ', 0, 'ไม่ใช่', '', PERIOD_STATUS_, note]);
+    }
+    d = periodAddDays_(d, 1);
+  }
+  if (out.length) sheet.getRange(sheet.getLastRow() + 1, 1, out.length, out[0].length).setValues(out);
+  active.status = 'ended'; active.end = end; active.resumeSlot = resume; active.records = out.length; active.endedAt = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+  if (auto) active.autoEnded = true;
+  periodSave_(list);
+  try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
+  return out.length;
+}
+function periodAutoClose_() {
+  const today = periodYmd_(new Date());
+  const list = periodList_(); const done = [];
+  list.forEach(function (x) {
+    if (!x || x.status !== 'active' || !/^\d{4}-\d{2}-\d{2}$/.test(String(x.start || ''))) return;
+    const cap = periodAddDays_(x.start, PERIOD_MAX_DAYS_ - 1);
+    if (today <= cap) return;
+    periodFinish_(list, x, cap, 5, true); done.push(x);
+  });
+  done.forEach(function (x) {
+    try { sendNotification_({ title: 'ครบ 15 วันแล้ว · ระบบจะให้เช็คชื่อละหมาดตามปกติ', body: 'ช่วงมีประจำเดือนที่แจ้งไว้ตั้งแต่ ' + x.start + ' ครบ 15 วัน ระบบสิ้นสุดให้อัตโนมัติแล้ว (บันทึกอุซุรถึง ' + x.end + ') · ตั้งแต่วันนี้กรุณาเช็คชื่อละหมาดตามปกติ', audience: 'students', values: [x.studentId], priority: 'urgent' }, { userId: 'system', name: 'ระบบอัตโนมัติ' }); } catch (e) {}
+  });
+  return done.length;
 }

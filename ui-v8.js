@@ -3606,7 +3606,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.00';
+  const APP_VERSION = '19.01';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8014,7 +8014,9 @@ window.k8RegBirthChange = function (v) {
   let PER = null, perAt = 0;
   const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
   function loadPer() { if (Date.now() - perAt < 60000) return; perAt = Date.now(); try { gasApiCall('getPeriodEpisodes', {}, 20000).then((r) => { if (r && r.success) { PER = r.data || []; try { render(); } catch (e) {} } }).catch(() => {}); } catch (e) {} }
-  const perCovers = (sid, ds) => !!PER && PER.some((x) => x && nid(x.studentId) === nid(sid) && x.status !== 'cancelled' && ds >= String(x.start || '') && (x.status === 'active' || ds <= String(x.end || x.start || '')));
+  const perCap = (st) => { const d = new Date(String(st) + 'T00:00:00'); if (isNaN(d)) return ''; d.setDate(d.getDate() + 14); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }; // v19.01 · ไม่เกิน 15 วัน
+  const perOf = (sid, ds) => !PER ? null : PER.find((x) => x && nid(x.studentId) === nid(sid) && x.status !== 'cancelled' && ds >= String(x.start || '') && ds <= (x.status === 'active' ? perCap(x.start) : String(x.end || x.start || ''))) || null;
+  const perCovers = (sid, ds) => !!perOf(sid, ds);
   // v18.89 · ให้หน้าภาพรวมใช้ตรวจ "มีประจำเดือน (อุซุร)" ได้ · โหลดข้อมูลครั้งแรกแล้ววาดการ์ดภาพรวมใหม่
   window.k8PerOn = function (sid, ds) { if (!PER && !window.__k8PerReq) { window.__k8PerReq = 1; try { gasApiCall('getPeriodEpisodes', {}, 20000).then((r) => { if (r && r.success) { PER = r.data || []; perAt = Date.now(); try { window.renderAdminOverviewV8 && window.renderAdminOverviewV8(); } catch (e) {} } }).catch(() => {}); } catch (e) {} } return perCovers(sid, ds); };
   window.k8PerCovers = perCovers;
@@ -8058,6 +8060,15 @@ window.k8RegBirthChange = function (v) {
     // จำนวนต่อเวลา
     const per = slots.map((x) => rows.filter((r) => r.p[x.key]).length);
     const chip = (k, l, n) => '<button type="button" class="k8-pd-chip' + (!V.slot && V.f === k ? ' on' : '') + ' is-' + k + '" onclick="k8PdF(\'' + k + '\')">' + l + ' <b>' + n + '</b></button>';
+    // v19.01 · การ์ดนักเรียนที่มีประจำเดือน: แสดงวันที่แจ้งเริ่ม และนับวัน (ไม่เกิน 15 วัน)
+    const TMN = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const thd = (v) => { const m = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + ' ' + TMN[+m[2] - 1] : ''; };
+    const perTag = (sid) => {
+      const x = perOf(sid, viewD); if (!x) return '';
+      const n = Math.round((new Date(viewD + 'T00:00:00') - new Date(x.start + 'T00:00:00')) / 864e5) + 1;
+      const last = x.status === 'active' ? perCap(x.start) : x.end;
+      return '<em class="k8-pd-pertag" title="แจ้งเริ่ม ' + esc(x.start) + (x.status === 'active' ? ' · ยังไม่กดสิ้นสุด · ระบบสิ้นสุดให้เองหลัง ' + esc(last) : ' · สิ้นสุด ' + esc(x.end || '')) + '">🌸 เริ่ม ' + esc(thd(x.start)) + ' · วันที่ ' + n + '/15' + (x.status !== 'active' ? ' · สิ้นสุด ' + esc(thd(x.end)) : n >= 13 ? ' · ใกล้ครบ' : '') + '</em>';
+    };
     const card = (r) => {
       const s = r.s; const g = String(s.grade || '').match(/(\d)/);
       const av = s.avatarUrl ? (function () { try { return getDirectImageUrl(s.avatarUrl) || s.avatarUrl; } catch (e) { return s.avatarUrl; } })() : '';
@@ -8072,7 +8083,7 @@ window.k8RegBirthChange = function (v) {
       }).join('');
       return '<article class="k8-pd-card n' + r.n + '"><button type="button" class="k8-pd-who" onclick="k8PdWho(\'' + jsq(r.sid) + '\')" title="ดูข้อมูลนักเรียน · ประวัติละหมาด · ดูแอปในมุมมองนักเรียน">' +
         '<span class="k8-pd-av">' + (av ? '<img src="' + esc(av) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '<em>' + esc(String(s.fullName || '?').replace(/^(นางสาว|นาย|เด็กหญิง|เด็กชาย|ด\.ญ\.|ด\.ช\.)\s*/, '').charAt(0)) + '</em></span>' +
-        '<span class="k8-pd-nm"><b>' + esc(s.fullName || r.sid) + '</b><small>' + esc(r.sid) + (g ? ' · ม.' + g[1] : '') + '</small></span>' +
+        '<span class="k8-pd-nm"><b>' + esc(s.fullName || r.sid) + '</b><small>' + esc(r.sid) + (g ? ' · ม.' + g[1] : '') + '</small>' + perTag(r.sid) + '</span>' +
         '<span class="k8-pd-n">' + r.n + '<small>/5</small></span></button><div class="k8-pd-row' + (V.slot ? ' is-one' : '') + '">' + boxes + '</div></article>';
     };
     const fl = slotObj ? 'ยังไม่เช็คชื่อ ' + (slotObj.label || slotObj.key) : { all: 'นักเรียนทั้งหมด', zero: 'ยังไม่เช็คเลย', part: 'เช็คแล้วแต่ยังไม่ครบ', full: 'ครบ 5 เวลา', per: 'นักเรียนหญิงที่มีประจำเดือน (อุซุร)' }[V.f];
@@ -9463,13 +9474,24 @@ window.k8HfMiss = function (slot) {
   const S = { active: null, mode: false, endOpen: false, busy: false };
   try { const v = JSON.parse(localStorage.getItem(key()) || 'null'); if (v) S.active = v; } catch (e) {}
   const preview = () => !!(window.k8IsPreview && window.k8IsPreview());
-  window.k8PeriodActive = function () { return stu() && !adm() && girl() ? S.active : null; };
+  // v19.01 · นับได้ไม่เกิน 15 วัน: เกินแล้วถือว่าสิ้นสุด (ต้องเช็คชื่อละหมาดตามปกติ) แม้ยังไม่ได้กดสิ้นสุด
+  const MAXD = 15;
+  const dayNo = (a) => Math.round((new Date(ymd(new Date()) + 'T00:00:00') - new Date(a.start + 'T00:00:00')) / 864e5) + 1;
+  const capOf = (a) => { const d = new Date(a.start + 'T00:00:00'); d.setDate(d.getDate() + MAXD - 1); return ymd(d); };
+  const expired = (a) => !!a && dayNo(a) > MAXD;
+  window.k8PeriodActive = function () { return stu() && !adm() && girl() && S.active && !expired(S.active) ? S.active : null; };
   function store() { try { if (S.active) localStorage.setItem(key(), JSON.stringify(S.active)); else localStorage.removeItem(key()); } catch (e) {} }
   function repaint() { render(); try { window.renderHomeF && window.renderHomeF(); } catch (e) {} try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {} try { window.k8PrayerWarnCheck && window.k8PrayerWarnCheck(); } catch (e) {} }
   async function load() {
     if (!stu() || adm() || !girl() || preview()) { render(); return; }
     let r = null; try { r = await gasApiCall('getMyPeriod', {}, 20000); } catch (e) {}
-    if (r && r.success) { S.active = r.active || null; store(); }
+    if (r && r.success) {
+      const was = S.active;
+      S.active = r.active || null;
+      const ae = r.autoEnded || (was && expired(was) && !S.active ? { start: was.start, end: capOf(was) } : null);
+      if (ae) { try { const k = 'k8_per_auto_' + ae.start; if (!localStorage.getItem(k)) { localStorage.setItem(k, '1'); S.autoNote = ae; } } catch (e) { S.autoNote = ae; } }
+      store();
+    } else if (S.active && expired(S.active)) { S.autoNote = { start: S.active.start, end: capOf(S.active) }; }
     repaint();
   }
   // เวลาแรกที่กลับมาละหมาดได้ ถ้ากดสิ้นสุด "ตอนนี้" = เวลาที่ยังเปิดอยู่หรือเวลาถัดไป
@@ -9488,18 +9510,26 @@ window.k8HfMiss = function (slot) {
   function render() {
     const box = $('k8PerCard'); if (!box) return;
     const a = window.k8PeriodActive();
+    const ex = !a && stu() && !adm() && girl() && (S.autoNote || (S.active && expired(S.active) ? { start: S.active.start, end: capOf(S.active) } : null));
+    if (ex) {
+      box.hidden = false;
+      box.innerHTML = '<div class="k8-per-top"><span class="k8-per-ico" aria-hidden="true">🌸</span><div><b>ครบ 15 วันแล้ว · ระบบจะให้เช็คชื่อตามปกติแล้ว</b><small>แจ้งไว้ตั้งแต่ ' + thDate(ex.start) + ' · ระบบบันทึกอุซุรให้ถึง ' + thDate(ex.end) + '</small></div></div>' +
+        '<p class="k8-per-txt">แม้จะยังไม่ได้กด "สิ้นสุดประจำเดือน" ระบบสิ้นสุดให้อัตโนมัติแล้ว ตั้งแต่นี้กรุณาเช็คชื่อละหมาดทุกเวลาตามปกติ (ถ้ายังมีประจำเดือนอยู่ ให้แจ้งเริ่มใหม่อีกครั้ง)</p>' +
+        '<div class="k8-per-links"><button type="button" onclick="k8PerAutoOk()">รับทราบ</button></div>';
+      return;
+    }
     box.hidden = !a;
     if (!a) { box.innerHTML = ''; return; }
-    const days = Math.round((new Date(ymd(new Date()) + 'T00:00:00') - new Date(a.start + 'T00:00:00')) / 864e5) + 1;
+    const days = dayNo(a);
     const t = ymd(new Date()), rn = resumeNow();
-    let h = '<div class="k8-per-top"><span class="k8-per-ico" aria-hidden="true">🌸</span><div><b>กำลังมีประจำเดือน · วันที่ ' + days + '</b><small>เริ่ม ' + thDate(a.start) + ' · รอกดสิ้นสุด</small></div></div>' +
+    let h = '<div class="k8-per-top"><span class="k8-per-ico" aria-hidden="true">🌸</span><div><b>กำลังมีประจำเดือน · วันที่ ' + days + '/' + MAXD + '</b><small>เริ่ม ' + thDate(a.start) + ' · รอกดสิ้นสุด · ถ้าไม่กด ระบบสิ้นสุดให้เองหลัง ' + thDate(capOf(a)) + '</small></div></div>' +
       '<p class="k8-per-txt">ระหว่างนี้ไม่ต้องเช็คชื่อละหมาด เมื่อประจำเดือนหมด กด <b>สิ้นสุดประจำเดือน</b> แล้วระบบจะบันทึก "อุซุร" ให้ครบทุกเวลาย้อนหลังอัตโนมัติ</p>';
     if (!S.endOpen) {
       h += '<button type="button" class="k8-per-end" onclick="k8PerEndNow()"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'กำลังบันทึก…' : 'สิ้นสุดประจำเดือน (ตอนนี้)') + '</button>' +
         '<small class="k8-per-note">' + (rn < 5 ? 'เริ่มละหมาดตามปกติตั้งแต่' + SLOTS[rn] + 'วันนี้' : 'วันนี้บันทึกอุซุรครบทั้ง 5 เวลา · เริ่มละหมาดพรุ่งนี้') + '</small>' +
         '<div class="k8-per-links"><button type="button" onclick="k8PerEndPick(true)">ลืมกด? เลือกวันที่สิ้นสุดเอง</button><button type="button" class="is-mute" onclick="k8PerCancel()">ยกเลิกการแจ้ง</button></div>';
     } else {
-      h += '<div class="k8-per-pick"><label><span>ประจำเดือนหมดวันที่</span><input type="date" id="k8PerEndD" min="' + a.start + '" max="' + t + '" value="' + t + '" onchange="k8PerSum()"></label>' +
+      h += '<div class="k8-per-pick"><label><span>ประจำเดือนหมดวันที่</span><input type="date" id="k8PerEndD" min="' + a.start + '" max="' + (capOf(a) < t ? capOf(a) : t) + '" value="' + (capOf(a) < t ? capOf(a) : t) + '" onchange="k8PerSum()"></label>' +
         '<label><span>เริ่มละหมาดได้ตั้งแต่เวลา</span><select id="k8PerRes" onchange="k8PerSum()">' + SLOTS.map((x, i) => '<option value="' + i + '"' + (i === 0 ? ' selected' : '') + '>' + x + '</option>').join('') + '<option value="5">ยังไม่ได้ละหมาดทั้งวันนั้น (เริ่มวันถัดไป)</option></select></label>' +
         '<p class="k8-per-sum" id="k8PerSum"></p>' +
         '<div class="k8-per-btns"><button type="button" class="is-alt" onclick="k8PerEndPick(false)">ย้อนกลับ</button><button type="button" class="k8-per-end" onclick="k8PerEndPicked()"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'กำลังบันทึก…' : 'บันทึกวันที่สิ้นสุด') + '</button></div></div>';
@@ -9518,6 +9548,7 @@ window.k8HfMiss = function (slot) {
     setTimeout(() => { render(); const b = $('k8PerCard'); if (b && !b.hidden) b.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
   };
   window.k8PerEndPick = function (v) { S.endOpen = !!v; render(); };
+  window.k8PerAutoOk = function () { S.autoNote = null; if (S.active && expired(S.active)) S.active = null; store(); repaint(); };
   async function end(endDate, resume) {
     if (S.busy || !S.active) return;
     const n = countRecs(S.active.start, endDate, resume);
