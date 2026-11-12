@@ -76,9 +76,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=19.03">
-  <link rel="stylesheet" href="ui-v8.css?v=19.03">
-  <link rel="stylesheet" href="dark.css?v=19.03">
+  <link rel="stylesheet" href="style.css?v=19.04">
+  <link rel="stylesheet" href="ui-v8.css?v=19.04">
+  <link rel="stylesheet" href="dark.css?v=19.04">
 </head>
 <body class="auth-locked">
   <script>
@@ -2528,6 +2528,7 @@
             <label class="sr-only-k8" for="k8OvSearch">ค้นหา</label>
             <input type="search" id="k8OvSearch" name="k8-ov-q" autocomplete="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore readonly onfocus="this.removeAttribute('readonly')" class="k8-ov-search" placeholder="ค้นหานักเรียน / อาจารย์ / รหัส" onkeydown="if(event.key==='Enter'){k8OvSearchGo(this.value)}">
           </div>
+          <section class="k8-sc" id="k8OvSc" aria-label="ปุ่มลัด" hidden></section>
           <div class="k8-ov-kpis" id="k8OvKpis"></div>
           <div class="k8-ov-main">
           <section class="hf-card k8-ov-tl" aria-labelledby="k8OvTlTitle">
@@ -5902,8 +5903,8 @@
       <div class="k8-sheet-body" id="k8TierBody"></div>
     </div>
   </div>
-  <script defer src="app.js?v=19.03"></script>
-  <script defer src="ui-v8.js?v=19.03"></script>
+  <script defer src="app.js?v=19.04"></script>
+  <script defer src="ui-v8.js?v=19.04"></script>
 <div class="k8-asum" id="k8Asum" hidden role="dialog" aria-modal="true" aria-labelledby="k8AsumT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="k8AsumClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8AsumT">สรุปการมาเรียน</h2><small id="k8AsumS">เลือกวิชา ชั้นปี และช่วงวันที่</small></div><button type="button" class="k8-asum-csv" onclick="k8AsumCsv()">⬇ CSV</button></header><div class="k8-asum-b" id="k8AsumB"></div></div></div>
 <div class="k8-asum k8-pf" id="k8Pf" hidden role="dialog" aria-modal="true" aria-labelledby="k8PfT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8PfT">กิจกรรม &amp; ผลงาน</h2><small id="k8PfS">แฟ้มสะสมผลงาน</small></div></header><div class="k8-asum-b" id="k8PfB"></div></div></div>
 <div class="k8-asum k8-gs2" id="k8Gs2" hidden role="dialog" aria-modal="true" aria-labelledby="k8Gs2T"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8Gs2T">สรุปเกรด</h2><small id="k8Gs2S"></small></div></header><div class="k8-asum-b" id="k8Gs2B"></div></div></div>

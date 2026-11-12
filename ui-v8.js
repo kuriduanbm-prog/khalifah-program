@@ -3608,7 +3608,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.03';
+  const APP_VERSION = '19.04';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12251,3 +12251,119 @@ window.k8PdWho = function (sid) {
   if (typeof window.k8AsSelect === 'function') { try { window.k8AsSelect(id); return; } catch (e) {} }
   if (typeof adminSelectStudentForPrayerHistory === 'function') adminSelectStudentForPrayerHistory(sid);
 };
+
+/* ===== v19.04 · ปุ่มลัดหน้าภาพรวมแอดมิน (แบบ 1 · แถวไอคอน) ===== */
+(function () {
+  const KEY = 'k8_ov_sc_v1';
+  const MAX = 12, MIN = 4;
+  const P = (d) => '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  const POOL = [
+    { k: 'pray', l: 'ละหมาด', b: 'btnAdminTabPrayers', c: '#0f766e', g: '#ccfbf1', i: '<path d="M12 2c1.5 2 3 3.5 3 6a3 3 0 0 1-6 0c0-2.5 1.5-4 3-6z"/><path d="M5 21v-6a7 7 0 0 1 14 0v6"/><path d="M3 21h18"/>' },
+    { k: 'stu', l: 'นักเรียน', b: 'btnAdminTabStudents', c: '#4f46e5', g: '#e0e7ff', i: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
+    { k: 'tt', l: 'ตารางสอน', b: 'btnAdminTabTimetable', c: '#0369a1', g: '#e0f2fe', i: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M14 14h2M8 18h2"/>' },
+    { k: 'appr', l: 'อนุมัติคำขอ', b: 'btnAdminTabApprovals', c: '#c2410c', g: '#ffedd5', i: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>', n: pendingN },
+    { k: 'hq', l: 'หะละเกาะฮฺ', b: 'btnAdminTabHalaqah', c: '#7c3aed', g: '#ede9fe', i: '<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>' },
+    { k: 'bh', l: 'พฤติกรรม', b: 'btnAdminTabBehavior', c: '#be123c', g: '#ffe4e6', i: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
+    { k: 'act', l: 'กิจกรรม & QR', b: 'btnTabActivitiesAdmin', c: '#15803d', g: '#dcfce7', i: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>' },
+    { k: 'ntf', l: 'แจ้งเตือน', b: 'btnAdminTabNotif', c: '#b45309', g: '#fef3c7', i: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>' },
+    { k: 'roll', l: 'เช็คชื่อซุบฮิ', b: 'btnAdminTabPrayerRoll', c: '#0e7490', g: '#cffafe', i: '<path d="M12 3v2M5.6 5.6l1.4 1.4M3 12h2M19 12h2M17 7l1.4-1.4"/><path d="M8 16a4 4 0 0 1 8 0"/><path d="M2 20h20"/>' },
+    { k: 'asum', l: 'สรุปการมาเรียน', b: 'btnAdminTabAsum', c: '#1d4ed8', g: '#dbeafe', i: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>' },
+    { k: 'rank', l: 'อันดับละหมาด', b: 'btnAdminTabRank', c: '#a16207', g: '#fef9c3', i: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>' },
+    { k: 'has', l: 'ผลบุญ', b: 'btnAdminTabHasanat', c: '#047857', g: '#d1fae5', i: '<path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17l-6.1 3.4 1.5-6.8L2.2 9l6.9-.7z"/>' },
+    { k: 'tch', l: 'อาจารย์', b: 'btnAdminTabTeachers', c: '#334155', g: '#e2e8f0', i: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>' },
+    { k: 'subj', l: 'รายวิชา', b: 'btnAdminTabSubjects', c: '#6d28d9', g: '#ede9fe', i: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/>' },
+    { k: 'docs', l: 'เอกสารการเรียน', b: 'btnAdminTabDocs', c: '#0284c7', g: '#e0f2fe', i: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>' },
+    { k: 'cal', l: 'ปฏิทิน', b: 'btnTabCalendarAdmin', c: '#9d174d', g: '#fce7f3', i: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="16" r="2"/>' },
+    { k: 'pf', l: 'เกียรติบัตร', b: 'btnAdminTabPf', c: '#b45309', g: '#ffedd5', i: '<circle cx="12" cy="8" r="6"/><path d="M8.2 13.2L7 22l5-3 5 3-1.2-8.8"/>' },
+    { k: 'rep', l: 'ส่งออกรายงาน', b: 'btnAdminTabReports', c: '#475569', g: '#e2e8f0', i: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/>' },
+    { k: 'geo', l: 'พิกัดละหมาด', b: 'btnAdminTabGeo', c: '#0f766e', g: '#ccfbf1', i: '<path d="M12 22s7-6.3 7-12a7 7 0 0 0-14 0c0 5.7 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>' },
+    { k: 'prom', l: 'เลื่อนชั้น', b: 'btnAdminTabPromote', c: '#4338ca', g: '#e0e7ff', i: '<path d="M12 19V5M5 12l7-7 7 7"/>' }
+  ];
+  const DEF = ['pray', 'stu', 'tt', 'appr', 'hq', 'bh', 'act', 'ntf'];
+  const byK = {}; POOL.forEach((x) => { byK[x.k] = x; });
+  function pendingN() {
+    const v = document.querySelector('#k8OvKpis .k8-kpi.is-orange .k8-kpi-val');
+    const n = v ? parseInt(v.textContent, 10) : 0; return isNaN(n) ? 0 : n;
+  }
+  function allowed(x) {
+    const b = document.getElementById(x.b);
+    if (!b || b.hidden || b.dataset.k8lim || b.style.getPropertyValue('display') === 'none') return false;
+    const g = b.closest('[hidden]'); return !g;
+  }
+  function load() {
+    try { const a = JSON.parse(localStorage.getItem(KEY) || 'null'); if (Array.isArray(a) && a.length) return a.filter((k) => byK[k]); } catch (e) {}
+    return DEF.slice();
+  }
+  function save(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }
+  function host() {
+    let h = document.getElementById('k8OvSc');
+    if (!h) {
+      const k = document.getElementById('k8OvKpis'); if (!k) return null;
+      h = document.createElement('section'); h.id = 'k8OvSc'; h.className = 'k8-sc'; h.setAttribute('aria-label', 'ปุ่มลัด');
+      k.parentNode.insertBefore(h, k);
+    }
+    return h;
+  }
+  function paint() {
+    const h = host(); if (!h) return;
+    const list = load().map((k) => byK[k]).filter((x) => x && allowed(x));
+    if (!list.length) { h.hidden = true; return; }
+    h.hidden = false;
+    h.innerHTML = '<div class="k8-sc-h"><b>ปุ่มลัด</b><button type="button" class="k8-sc-edit" onclick="k8ScEdit()">' + P('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>').replace(/22/g, '15') + 'ปรับปุ่มลัด</button></div>' +
+      '<div class="k8-sc-grid" style="--n:' + (list.length <= 8 ? 8 : Math.ceil(list.length / 2)) + '">' + list.map((x) => {
+        const n = x.n ? x.n() : 0;
+        return '<button type="button" class="k8-sc-btn" onclick="k8ScGo(\'' + x.k + '\')" aria-label="' + x.l + (n ? ' (' + n + ' รายการรอ)' : '') + '">' +
+          '<span class="k8-sc-ic" style="--c:' + x.c + ';--g:' + x.g + '">' + P(x.i) + '</span><span class="k8-sc-l">' + x.l + '</span>' +
+          (n ? '<em class="k8-sc-n">' + (n > 99 ? '99+' : n) + '</em>' : '') + '</button>';
+      }).join('') + '</div>';
+  }
+  window.k8ScPaint = paint;
+  window.k8ScGo = function (k) { const x = byK[k]; const b = x && document.getElementById(x.b); if (b) b.click(); };
+
+  // ----- แผงปรับปุ่มลัด
+  let draft = null;
+  function sheet() {
+    let s = document.getElementById('k8ScSheet');
+    if (!s) {
+      s = document.createElement('div'); s.id = 'k8ScSheet'; s.className = 'k8-sc-ov'; s.hidden = true;
+      s.setAttribute('role', 'dialog'); s.setAttribute('aria-modal', 'true'); s.setAttribute('aria-labelledby', 'k8ScTtl');
+      s.addEventListener('click', (e) => { if (e.target === s) window.k8ScClose(); });
+      document.body.appendChild(s);
+    }
+    return s;
+  }
+  function paintSheet() {
+    const s = sheet(); const av = POOL.filter(allowed);
+    const sel = draft.filter((k) => byK[k] && allowed(byK[k]));
+    const rest = av.filter((x) => sel.indexOf(x.k) < 0);
+    const ic = (x) => '<span class="k8-sc-ic sm" style="--c:' + x.c + ';--g:' + x.g + '">' + P(x.i) + '</span>';
+    s.innerHTML = '<div class="k8-sc-box"><div class="k8-sc-bh"><div><h3 id="k8ScTtl">ปรับปุ่มลัด</h3><p>เลือกได้ ' + MIN + '–' + MAX + ' ปุ่ม · เรียงลำดับด้วยลูกศร</p></div><button type="button" class="k8-sc-x" onclick="k8ScClose()" aria-label="ปิด">×</button></div>' +
+      '<div class="k8-sc-sec">ปุ่มที่แสดง <small>' + sel.length + '/' + MAX + '</small></div><ol class="k8-sc-sel">' + sel.map((k, i) => {
+        const x = byK[k];
+        return '<li>' + ic(x) + '<span>' + x.l + '</span>' +
+          '<button type="button" onclick="k8ScMv(' + i + ',-1)" ' + (i ? '' : 'disabled') + ' aria-label="เลื่อนขึ้น">↑</button>' +
+          '<button type="button" onclick="k8ScMv(' + i + ',1)" ' + (i < sel.length - 1 ? '' : 'disabled') + ' aria-label="เลื่อนลง">↓</button>' +
+          '<button type="button" class="rm" onclick="k8ScRm(\'' + k + '\')" ' + (sel.length > MIN ? '' : 'disabled') + ' aria-label="เอาออก">✕</button></li>';
+      }).join('') + '</ol>' +
+      (rest.length ? '<div class="k8-sc-sec">เพิ่มปุ่ม</div><div class="k8-sc-pool">' + rest.map((x) =>
+        '<button type="button" onclick="k8ScAdd(\'' + x.k + '\')" ' + (sel.length >= MAX ? 'disabled' : '') + '>' + ic(x) + x.l + '<b>＋</b></button>').join('') + '</div>' : '') +
+      '<div class="k8-sc-ft"><button type="button" class="k8-sc-rs" onclick="k8ScReset()">คืนค่าเริ่มต้น</button><button type="button" class="k8-sc-ok" onclick="k8ScSave()">บันทึก</button></div></div>';
+    draft = sel.concat(draft.filter((k) => sel.indexOf(k) < 0 && byK[k] && !allowed(byK[k])));
+  }
+  window.k8ScEdit = function () { draft = load(); paintSheet(); const s = sheet(); s.hidden = false; document.addEventListener('keydown', esc); setTimeout(() => { const b = s.querySelector('.k8-sc-x'); if (b) b.focus(); }, 30); };
+  window.k8ScClose = function () { const s = document.getElementById('k8ScSheet'); if (s) s.hidden = true; document.removeEventListener('keydown', esc); const b = document.querySelector('#k8OvSc .k8-sc-edit'); if (b) b.focus(); };
+  function esc(e) { if (e.key === 'Escape') window.k8ScClose(); }
+  window.k8ScMv = function (i, d) { const vis = draft.filter((k) => allowed(byK[k])); const j = i + d; if (j < 0 || j >= vis.length) return; const t = vis[i]; vis[i] = vis[j]; vis[j] = t; draft = vis.concat(draft.filter((k) => vis.indexOf(k) < 0)); paintSheet(); };
+  window.k8ScRm = function (k) { draft = draft.filter((x) => x !== k); paintSheet(); };
+  window.k8ScAdd = function (k) { if (draft.indexOf(k) < 0) draft.push(k); paintSheet(); };
+  window.k8ScReset = function () { draft = DEF.slice(); paintSheet(); };
+  window.k8ScSave = function () { save(draft); window.k8ScClose(); paint(); };
+
+  const o = window.renderAdminOverviewV8;
+  if (typeof o === 'function') window.renderAdminOverviewV8 = function () { const r = o.apply(this, arguments); try { paint(); } catch (e) {} return r; };
+  // อัปเดตตัวเลขรออนุมัติเมื่อการ์ดสรุปเปลี่ยน
+  try {
+    const k = document.getElementById('k8OvKpis');
+    if (k && window.MutationObserver) new MutationObserver(() => { const h = document.getElementById('k8OvSc'); if (!h) return; const e = h.querySelector('[onclick="k8ScGo(\'appr\')"]'); if (!e) return; const n = pendingN(); const em = e.querySelector('.k8-sc-n'); if ((em ? em.textContent : '') !== (n ? String(n > 99 ? '99+' : n) : '')) paint(); }).observe(k, { childList: true, subtree: true, characterData: true });
+  } catch (e) {}
+})();
