@@ -3608,7 +3608,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.04';
+  const APP_VERSION = '19.05';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11256,7 +11256,7 @@ window.k8HfMiss = function (slot) {
     el.innerHTML = '<div class="hf-head"><h2 id="k8OvHqTitle">หะละเกาะฮฺ สัปดาห์นี้</h2><button type="button" class="k8-ov-more" onclick="k8HqOvOpen()">ดูสรุป ›</button></div>' +
       (!d ? '<p class="k8-li-empty" style="text-align:left">กำลังโหลด…</p>' :
         '<div class="k8-ovhq-top"><div class="k8-ovhq-big"><b class="' + (tp != null && tp < 100 ? 'is-low' : '') + '">' + (tp == null ? '–' : tp + '%') + '</b><small>มาเข้าร่วม · ' + G.length + ' กลุ่ม · เช็คแล้ว ' + held + '/' + plan + ' ครั้ง</small></div></div>' +
-        (low.length ? '<ul class="k8-ovhq-list">' + low.slice(0, 4).map((g) => { const p = pct(g.total); return '<li><span>' + esc(g.teacherName || g.name) + '<small>' + esc(g.name) + '</small></span><b>' + (p == null ? '–' : p + '%') + '</b></li>'; }).join('') + (low.length > 4 ? '<li class="k8-ovhq-more">และอีก ' + (low.length - 4) + ' กลุ่มที่ไม่ถึง 100%</li>' : '') + '</ul>' : (G.length ? '<p class="k8-ovhq-ok">✓ ทุกกลุ่มเข้าร่วมครบ 100%</p>' : '')) ) +
+        (low.length ? '<ul class="k8-ovhq-list">' + low.slice(0, 4).map((g) => { const p = pct(g.total); const lv = p == null ? '' : p < 60 ? 'is-bad' : p < 90 ? 'is-mid' : 'is-ok'; return '<li class="' + lv + '"><span>' + esc(g.teacherName || g.name) + '<small>' + esc(g.name) + '</small></span><i class="k8-ovhq-bar" aria-hidden="true"><i style="width:' + (p || 0) + '%"></i></i><b>' + (p == null ? '–' : p + '%') + '</b></li>'; }).join('') + (low.length > 4 ? '<li class="k8-ovhq-more">และอีก ' + (low.length - 4) + ' กลุ่มที่ไม่ถึง 100%</li>' : '') + '</ul>' : (G.length ? '<p class="k8-ovhq-ok">✓ ทุกกลุ่มเข้าร่วมครบ 100%</p>' : '')) ) +
       '<button type="button" class="k8-hq-rep k8-ovhq-btn" onclick="k8HqOvOpen()">' + ico + ' สรุปการเช็คชื่อตามผู้ดูแล · บันทึกเป็นไฟล์</button>';
   }
   window.k8HqOvPaint = async function () {

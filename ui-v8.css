@@ -5853,3 +5853,19 @@ html[data-theme="dark"] .k8-sc-sel li button { background: #16233a; border-color
 html[data-theme="dark"] .k8-sc-sel li button.rm { color: #fca5a5; }
 html[data-theme="dark"] .k8-sc-pool button { background: #111c2e; border-color: #334155; color: #e2e8f0; }
 html[data-theme="dark"] .k8-sc-pool button b { color: #7dd3fc; }
+
+/* v19.05 · ภาพรวม: คอลัมน์ซ้าย = คาบเรียน + หะละเกาะฮฺ */
+.k8-ov-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.k8-ov-col > .k8-ov-hq { margin-top: 0; }
+.k8-ovhq-list li span { flex: 1 1 auto; }
+.k8-ovhq-bar { flex: 0 0 34%; max-width: 220px; height: 8px; border-radius: 999px; background: #f1f5f9; overflow: hidden; display: block; }
+.k8-ovhq-bar > i { display: block; height: 100%; border-radius: inherit; background: #dc2626; }
+.k8-ovhq-list li b { min-width: 48px; text-align: right; }
+.k8-ovhq-list li.is-mid .k8-ovhq-bar > i { background: #f59e0b; }
+.k8-ovhq-list li.is-mid b { color: #b45309; }
+.k8-ovhq-list li.is-ok .k8-ovhq-bar > i { background: #16a34a; }
+.k8-ovhq-list li.is-ok b { color: #15803d; }
+@media (max-width: 760px) { .k8-ov-col { gap: 12px; } .k8-ovhq-bar { flex-basis: 28%; } }
+html[data-theme="dark"] .k8-ovhq-bar { background: #1e2d44; }
+html[data-theme="dark"] .k8-ovhq-list li.is-mid b { color: #fbbf24; }
+html[data-theme="dark"] .k8-ovhq-list li.is-ok b { color: #4ade80; }
