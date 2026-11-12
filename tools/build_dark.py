@@ -143,7 +143,7 @@ def process(css):
 def inline_rules():
     # สีที่เขียนแบบ inline ใน JS/HTML (style="...") → ใช้ attribute selector
     txt = ''
-    for f in ('ui-v8.js', 'app.js', 'index.html'):
+    for f in ('ui-v8.js', 'app.js', 'index.html', 'ai.js'):
         txt += open(os.path.join(ROOT, f), encoding='utf-8').read()
     rules = []; seen = set()
     for prop, fn, out in (('background', as_bg, 'background-color'), ('background-color', as_bg, 'background-color'), ('color', as_fg, 'color'), ('border-color', as_border, 'border-color')):

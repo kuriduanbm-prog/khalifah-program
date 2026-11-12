@@ -3608,7 +3608,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.06';
+  const APP_VERSION = '19.07';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9902,12 +9902,12 @@ window.k8HfMiss = function (slot) {
 (function () {
   const lim = () => { try { return (currentAdmin && currentAdmin.limited) || ''; } catch (e) { return ''; } };
   const ALLOW = {
-    exec: ['overview', 'approvals', 'students', 'schools', 'subadmins', 'timetable', 'subjects', 'prayers-monitor', 'prayer-rank', 'behavior', 'halaqah'],
+    exec: ['overview', 'approvals', 'students', 'schools', 'ai', 'subadmins', 'timetable', 'subjects', 'prayers-monitor', 'prayer-rank', 'behavior', 'halaqah'],
     act: ['activities-admin'],
     night: ['behavior', 'activities-admin']
   };
   const HOME = { exec: 'overview', act: 'activities-admin', night: 'behavior' };
-  const tabOf = (btn) => { const oc = String(btn.getAttribute('onclick') || ''); if (/k8HqOpen/.test(oc)) return 'halaqah'; if (/k8SchOpen/.test(oc)) return 'schools'; const m = oc.match(/switchAdminTab\('([^']+)'/); return m ? m[1] : ''; };
+  const tabOf = (btn) => { const oc = String(btn.getAttribute('onclick') || ''); if (/k8HqOpen/.test(oc)) return 'halaqah'; if (/k8SchOpen/.test(oc)) return 'schools'; if (/k8AiOpen/.test(oc)) return 'ai'; const m = oc.match(/switchAdminTab\('([^']+)'/); return m ? m[1] : ''; };
   const allowed = (t) => { const l = lim(); return !l || (ALLOW[l] || []).indexOf(t) !== -1; };
   window.k8LimitAllows = allowed;
   function nav() {
@@ -12258,6 +12258,7 @@ window.k8PdWho = function (sid) {
   const MAX = 12, MIN = 4;
   const P = (d) => '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
   const POOL = [
+    { k: 'ai', l: 'ถามข้อมูล AI', b: 'btnAdminTabAi', c: '#7c3aed', g: '#ede9fe', i: '<path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/>' },
     { k: 'pray', l: 'ละหมาด', b: 'btnAdminTabPrayers', c: '#0f766e', g: '#ccfbf1', i: '<path d="M12 2c1.5 2 3 3.5 3 6a3 3 0 0 1-6 0c0-2.5 1.5-4 3-6z"/><path d="M5 21v-6a7 7 0 0 1 14 0v6"/><path d="M3 21h18"/>' },
     { k: 'stu', l: 'นักเรียน', b: 'btnAdminTabStudents', c: '#4f46e5', g: '#e0e7ff', i: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
     { k: 'tt', l: 'ตารางสอน', b: 'btnAdminTabTimetable', c: '#0369a1', g: '#e0f2fe', i: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M14 14h2M8 18h2"/>' },
@@ -12280,7 +12281,7 @@ window.k8PdWho = function (sid) {
     { k: 'geo', l: 'พิกัดละหมาด', b: 'btnAdminTabGeo', c: '#0f766e', g: '#ccfbf1', i: '<path d="M12 22s7-6.3 7-12a7 7 0 0 0-14 0c0 5.7 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>' },
     { k: 'prom', l: 'เลื่อนชั้น', b: 'btnAdminTabPromote', c: '#4338ca', g: '#e0e7ff', i: '<path d="M12 19V5M5 12l7-7 7 7"/>' }
   ];
-  const DEF = ['pray', 'stu', 'tt', 'appr', 'hq', 'bh', 'act', 'ntf'];
+  const DEF = ['ai', 'pray', 'stu', 'tt', 'appr', 'hq', 'bh', 'act'];
   const byK = {}; POOL.forEach((x) => { byK[x.k] = x; });
   function pendingN() {
     const v = document.querySelector('#k8OvKpis .k8-kpi.is-orange .k8-kpi-val');
@@ -12594,140 +12595,6 @@ window.k8PdWho = function (sid) {
   async function waitData() { loadAtt(); loadBh(); const t0 = Date.now(); while ((!S.att || !S.bh) && Date.now() - t0 < 50000) await new Promise((r) => setTimeout(r, 250)); }
   const TONE_C = { 'is-ok': '#15803d', 'is-mid': '#b45309', 'is-bad': '#b91c1c' };
 
-  // Excel
-  async function toXlsx(D) {
-    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', () => window.XLSX && XLSX.utils && XLSX.utils.aoa_to_sheet && XLSX.write);
-    const wb = XLSX.utils.book_new();
-    const sum = [[D.title], ['โรงเรียน', D.name], ['ช่วงวันที่', D.range], ['ออกรายงาน', fmtNow()], [], ['หัวข้อ', 'ค่า', 'รายละเอียด']].concat(D.kpis.map((k) => [k.l, k.v, k.s || '']));
-    const ws0 = XLSX.utils.aoa_to_sheet(sum); ws0['!cols'] = [{ wch: 18 }, { wch: 40 }, { wch: 28 }]; ws0['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
-    XLSX.utils.book_append_sheet(wb, ws0, 'สรุป');
-    D.sections.forEach((sec) => {
-      const aoa = [[sec.title + ' · ' + D.name], ['ช่วงวันที่ ' + D.range], [], sec.cols.map((c) => c[0])].concat(sec.rows.map((r) => r.v.map((v) => v === '–' ? '' : v)));
-      if (sec.note) aoa.push([], [sec.note]);
-      const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = sec.cols.map((c, i) => ({ wch: i === 1 || c[2] === 'l' ? Math.max(14, Math.round(c[1] * 1.3)) : Math.max(7, Math.round(c[1] * 1.1)) }));
-      ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: sec.cols.length - 1 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: sec.cols.length - 1 } }];
-      ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 3, c: 0 }, e: { r: 3 + sec.rows.length, c: sec.cols.length - 1 } }) };
-      XLSX.utils.book_append_sheet(wb, ws, sec.title.slice(0, 28));
-    });
-    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    dl(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileBase(D) + '.xlsx');
-  }
-  // Word (.doc แบบ HTML เปิดได้ใน Word / Google Docs)
-  function toDoc(D) {
-    const td = (v, al, st) => '<td style="text-align:' + (al === 'l' ? 'left' : 'center') + ';' + (st || '') + '">' + esc(v) + '</td>';
-    let h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>' + esc(D.title) + '</title>' +
-      '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->' +
-      '<style>@page WordSection1{size:21cm 29.7cm;margin:1.6cm 1.5cm 1.6cm 1.5cm;mso-footer-margin:.8cm} div.WordSection1{page:WordSection1}' +
-      'body{font-family:"TH Sarabun New","IBM Plex Sans Thai",Tahoma,sans-serif;font-size:14pt;color:#0f172a}' +
-      'h1{font-size:20pt;color:#0c4a6e;margin:0}h2{font-size:16pt;color:#0c4a6e;margin:18pt 0 6pt;border-left:6pt solid #0369a1;padding-left:6pt}' +
-      'p.sub{color:#475569;margin:2pt 0 10pt}table{border-collapse:collapse;width:100%}' +
-      'table.t th{background:#0c4a6e;color:#fff;font-weight:bold;padding:4pt 5pt;border:1px solid #0c4a6e;font-size:13pt}' +
-      'table.t td{border:1px solid #cbd5e1;padding:3pt 5pt;font-size:13pt}table.t tr.z td{background:#f1f5f9}' +
-      'table.k td{border:1px solid #bae6fd;background:#f0f9ff;padding:6pt;text-align:center;width:25%}table.k b{font-size:20pt;display:block}' +
-      'p.note{color:#64748b;font-size:12pt;margin:4pt 0 0}</style></head><body><div class="WordSection1">';
-    h += '<h1>' + esc(D.title) + '</h1><p class="sub"><b>' + esc(D.name) + '</b> · ช่วงวันที่ ' + esc(D.range) + ' · ออกรายงาน ' + esc(fmtNow()) + '</p>';
-    h += '<table class="k"><tr>' + D.kpis.map((k) => '<td><span style="color:#475569">' + esc(k.l) + '</span><b style="color:' + (TONE_C[k.t] || '#0c4a6e') + '">' + esc(k.v) + '</b><span style="color:#64748b;font-size:12pt">' + esc(k.s || '') + '</span></td>').join('') + '</tr></table>';
-    D.sections.forEach((sec) => {
-      h += '<h2 style="border-left-color:' + sec.color + '">' + esc(sec.title) + '</h2><table class="t"><thead><tr>' + sec.cols.map((c) => '<th style="width:' + c[1] + '%">' + esc(c[0]) + '</th>').join('') + '</tr></thead><tbody>' +
-        (sec.rows.length ? sec.rows.map((r, i) => '<tr' + (i % 2 ? ' class="z"' : '') + '>' + r.v.map((v, j) => td(v, sec.cols[j][2], (r.bad && r.bad.indexOf(j) !== -1 ? 'color:#b91c1c;font-weight:bold;' : '') + (r.good && r.good.indexOf(j) !== -1 ? 'color:#15803d;font-weight:bold;' : '') + (r.low && j === 1 ? 'color:#b91c1c;' : ''))).join('') + '</tr>').join('') : '<tr><td colspan="' + sec.cols.length + '" style="text-align:center;color:#64748b">ไม่มีข้อมูล</td></tr>') +
-        '</tbody></table>' + (sec.note ? '<p class="note">' + esc(sec.note) + '</p>' : '');
-    });
-    h += '</div></body></html>';
-    dl(new Blob(['﻿' + h], { type: 'application/msword' }), fileBase(D) + '.doc');
-  }
-  // หน้ารายงาน A4 บน canvas (ใช้ทำ PDF และ JPG)
-  async function pages(D) {
-    const F = '"IBM Plex Sans Thai", Tahoma, sans-serif';
-    try { await Promise.all(['400', '500', '600', '700'].map((w) => document.fonts.load(w + ' 20px "IBM Plex Sans Thai"', 'กขค'))); } catch (e) {}
-    const W = 1240, H = 1754, M = 64, FOOT = 56; const out = [];
-    let c, x, y;
-    const font = (w, s) => { x.font = w + ' ' + s + 'px ' + F; };
-    const fit = (t, w) => { t = String(t == null ? '' : t); if (x.measureText(t).width <= w) return t; while (t.length > 1 && x.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
-    const rr = (X, Y, w, h, r, fill, stroke) => { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); if (fill) { x.fillStyle = fill; x.fill(); } if (stroke) { x.strokeStyle = stroke; x.lineWidth = 2; x.stroke(); } };
-    const newPage = (first) => {
-      c = document.createElement('canvas'); c.width = W; c.height = H; x = c.getContext('2d'); out.push(c);
-      x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); x.textBaseline = 'middle';
-      if (first) {
-        rr(M, M, W - 2 * M, 190, 22, '#0c4a6e');
-        x.fillStyle = '#bae6fd'; font('600', 22); x.fillText(D.title + ' · KHALIFAH', M + 34, M + 42);
-        x.fillStyle = '#fff'; font('700', 42); x.fillText(fit(D.name, W - 2 * M - 68), M + 34, M + 96);
-        x.fillStyle = '#e0f2fe'; font('400', 22); x.fillText('ช่วงวันที่ ' + D.range + '   ·   ออกรายงาน ' + fmtNow(), M + 34, M + 150);
-        y = M + 190 + 28;
-        const kw = (W - 2 * M - 3 * 18) / 4;
-        D.kpis.forEach((k, i) => {
-          const X = M + i * (kw + 18); rr(X, y, kw, 132, 18, '#f8fafc', '#e2e8f0');
-          x.fillStyle = '#475569'; font('500', 20); x.fillText(k.l, X + 22, y + 32);
-          x.fillStyle = TONE_C[k.t] || '#0c4a6e'; font('700', 44); x.fillText(k.v, X + 22, y + 76);
-          if (k.s) { x.fillStyle = '#64748b'; font('400', 18); x.fillText(fit(k.s, kw - 44), X + 22, y + 112); }
-        });
-        y += 132 + 20;
-      } else {
-        x.fillStyle = '#0c4a6e'; font('600', 20); x.fillText(fit(D.title + ' · ' + D.name, W - 2 * M - 260), M, M + 10);
-        x.fillStyle = '#64748b'; font('400', 18); x.textAlign = 'right'; x.fillText(D.range, W - M, M + 10); x.textAlign = 'left';
-        x.fillStyle = '#e2e8f0'; x.fillRect(M, M + 34, W - 2 * M, 2); y = M + 56;
-      }
-    };
-    const room = () => H - M - FOOT - y;
-    const TW = W - 2 * M, HH = 46, RH = 40;
-    const colX = (sec) => { const tot = sec.cols.reduce((a, cc) => a + cc[1], 0); let acc = M; return sec.cols.map((cc) => { const w = cc[1] / tot * TW; const o = { x: acc, w, al: cc[2], t: cc[0] }; acc += w; return o; }); };
-    const head = (sec, cont) => {
-      x.fillStyle = sec.color; x.fillRect(M, y + 6, 8, 34);
-      x.fillStyle = '#0f172a'; font('700', 28); x.fillText(sec.title + (cont ? ' (ต่อ)' : ''), M + 22, y + 24);
-      if (!cont) { x.fillStyle = '#64748b'; font('400', 18); x.textAlign = 'right'; x.fillText(sec.rows.length + ' รายการ', W - M, y + 24); x.textAlign = 'left'; }
-      y += 56;
-    };
-    const thead = (sec, X) => {
-      rr(M, y, TW, HH, 10, '#0c4a6e'); x.fillStyle = '#fff'; font('600', 18);
-      X.forEach((cl) => { x.textAlign = cl.al === 'l' ? 'left' : 'center'; x.fillText(fit(cl.t, cl.w - 16), cl.al === 'l' ? cl.x + 12 : cl.x + cl.w / 2, y + HH / 2); });
-      x.textAlign = 'left'; y += HH;
-    };
-    newPage(true);
-    D.sections.forEach((sec, si) => {
-      const X = colX(sec);
-      if (room() < 56 + HH + RH * 3) newPage(false); else if (si) y += 26;
-      head(sec, false); thead(sec, X);
-      if (!sec.rows.length) { x.fillStyle = '#64748b'; font('400', 20); x.textAlign = 'center'; x.fillText('ไม่มีข้อมูล', W / 2, y + 30); x.textAlign = 'left'; y += 60; }
-      sec.rows.forEach((r, i) => {
-        if (room() < RH) { newPage(false); head(sec, true); thead(sec, X); }
-        if (i % 2) { x.fillStyle = '#f8fafc'; x.fillRect(M, y, TW, RH); }
-        x.fillStyle = '#e2e8f0'; x.fillRect(M, y + RH - 1, TW, 1);
-        r.v.forEach((v, j) => {
-          const cl = X[j]; const bad = r.bad && r.bad.indexOf(j) !== -1, good = r.good && r.good.indexOf(j) !== -1;
-          x.fillStyle = bad ? '#b91c1c' : good ? '#15803d' : (r.low && j === 1) ? '#b91c1c' : j === 0 ? '#94a3b8' : '#0f172a';
-          font(bad || good || j === 1 ? '600' : '400', 19);
-          x.textAlign = cl.al === 'l' ? 'left' : 'center'; x.fillText(fit(v, cl.w - 16), cl.al === 'l' ? cl.x + 12 : cl.x + cl.w / 2, y + RH / 2);
-        });
-        x.textAlign = 'left'; y += RH;
-      });
-      if (sec.note) {
-        font('400', 17); x.fillStyle = '#64748b';
-        const words = sec.note.split(' · '); let line = '', lines = [];
-        words.forEach((w) => { const t = line ? line + ' · ' + w : w; if (x.measureText(t).width > TW) { lines.push(line); line = w; } else line = t; }); if (line) lines.push(line);
-        if (room() < 14 + lines.length * 26) newPage(false);
-        y += 14; lines.forEach((l) => { x.fillText(l, M, y + 12); y += 26; });
-      }
-    });
-    out.forEach((cv, i) => { const g = cv.getContext('2d'); g.textBaseline = 'middle'; g.font = '400 17px ' + F; g.fillStyle = '#94a3b8'; g.fillText('KHALIFAH · ' + D.name, M, H - M + 6); g.textAlign = 'right'; g.fillText('หน้า ' + (i + 1) + ' / ' + out.length, W - M, H - M + 6); g.textAlign = 'left'; });
-    return out;
-  }
-  const b64bytes = (u) => { const s = atob(u.split(',')[1]); const a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; };
-  async function toPdf(D) {
-    const P = await pages(D);
-    await loadScript('vendor/pdf-lib/pdf-lib.min.js', () => window.PDFLib);
-    const doc = await PDFLib.PDFDocument.create(); doc.setTitle(D.title + ' · ' + D.name); doc.setCreator('KHALIFAH');
-    for (const cv of P) { const img = await doc.embedJpg(b64bytes(cv.toDataURL('image/jpeg', 0.9))); const pg = doc.addPage([595.28, 841.89]); pg.drawImage(img, { x: 0, y: 0, width: 595.28, height: 841.89 }); }
-    dl(new Blob([await doc.save()], { type: 'application/pdf' }), fileBase(D) + '.pdf');
-  }
-  async function toJpg(D) {
-    const P = await pages(D); const gap = 24;
-    const W = P[0].width; let Ht = P.reduce((a, cv) => a + cv.height, 0) + gap * (P.length - 1);
-    const sc = Math.min(1, Math.sqrt(16e6 / (W * Ht)));
-    const c = document.createElement('canvas'); c.width = Math.round(W * sc); c.height = Math.round(Ht * sc); const x = c.getContext('2d');
-    x.fillStyle = '#e2e8f0'; x.fillRect(0, 0, c.width, c.height);
-    let y = 0; P.forEach((cv) => { x.drawImage(cv, 0, y * sc, cv.width * sc, cv.height * sc); y += cv.height + gap; });
-    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
-    dl(blob, fileBase(D) + '.jpg');
-  }
   let busy = false;
   window.k8SchExport = async function (fmt) {
     window.k8SchXm(false); if (busy) return; busy = true;
@@ -12736,7 +12603,7 @@ window.k8PdWho = function (sid) {
     try {
       if (!S.att || !S.bh) { toast('กำลังโหลดข้อมูลการมาเรียนและพฤติกรรม…'); await waitData(); }
       const D = report();
-      if (fmt === 'xlsx') await toXlsx(D); else if (fmt === 'doc') toDoc(D); else if (fmt === 'pdf') await toPdf(D); else await toJpg(D);
+      if (!window.k8Rep) throw new Error('load k8Rep'); await window.k8Rep.run(fmt, Object.assign({ sub: S.school ? 'นักเรียน ' + (D.kpis[0] && D.kpis[0].v) + ' คน' : '' }, D), fileBase(D));
       toast('บันทึกไฟล์ ' + lbl + ' แล้ว', 'success');
     } catch (e) { console.warn('k8SchExport', e); toast('สร้างไฟล์ ' + lbl + ' ไม่สำเร็จ' + (/load/.test(String(e && e.message)) ? ' (ต้องต่อเน็ต)' : ''), 'error'); }
     finally { busy = false; if (btn) { btn.disabled = false; if (btn.dataset.t) btn.innerHTML = btn.dataset.t; } }

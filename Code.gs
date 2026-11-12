@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.03'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.07'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1214,7 +1214,7 @@ const ACTION_ACCESS = {
   resetMyHasanat: 'student', submitTeacherEvaluation: 'student', getMyEvaluationStatus: 'student', getEvaluationTargets: 'student',
   getTeacherEvaluationSummary: 'staff',
   // คะแนนพฤติกรรม: ผู้ตรวจการ อาจารย์ และแอดมิน บันทึก/ยกเลิก (ยกเลิกได้เฉพาะรายการของตนเอง ยกเว้นแอดมิน) · แอดมินตั้งค่าหัวข้อ
-  addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student', reactPrayer: 'staff', getMyPrayerReacts: 'student',
+  addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student', reactPrayer: 'staff', getMyPrayerReacts: 'student', aiChat: 'admin', aiStatus: 'admin', aiTicket: 'admin', aiLog: 'admin',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
@@ -1254,7 +1254,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1477,6 +1477,16 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'getBehaviorData':
       return { success: true, photoMax: 4, codeVersion: CODE_VERSION, rules: getBehaviorRules_(), logs: getBehaviorLogs_(), term: currentTerm_(),
         students: (getAllStudents().data || []).map(function (x) { return { studentId: x.studentId, fullName: x.fullName, grade: x.grade, status: x.status }; }) };
+    case 'aiChat':
+      return aiChat_(data, session);
+    case 'aiStatus':
+      return aiStatus_(session);
+    case 'aiTicket':
+      return aiTicket_(session);
+    case 'aiLog':
+      if (!aiAllowed_(session)) return { success: false, code: 'FORBIDDEN' };
+      aiLog_(session, data && data.q, cleanVal((data && data.model) || 'vercel'), data && data.usage, !(data && data.fail));
+      return { success: true };
     case 'reactPrayer':
       return reactPrayer_(data, session);
     case 'getMyPrayerReacts':
@@ -7999,4 +8009,71 @@ function periodAutoClose_() {
     try { sendNotification_({ title: 'ครบ 15 วันแล้ว · ระบบจะให้เช็คชื่อละหมาดตามปกติ', body: 'ช่วงมีประจำเดือนที่แจ้งไว้ตั้งแต่ ' + x.start + ' ครบ 15 วัน ระบบสิ้นสุดให้อัตโนมัติแล้ว (บันทึกอุซุรถึง ' + x.end + ') · ตั้งแต่วันนี้กรุณาเช็คชื่อละหมาดตามปกติ', audience: 'students', values: [x.studentId], priority: 'urgent' }, { userId: 'system', name: 'ระบบอัตโนมัติ' }); } catch (e) {}
   });
   return done.length;
+}
+
+
+/* ===== v19.07 · ผู้ช่วย AI (Gemini) สำหรับแอดมิน =====
+ * แอปส่งบทสนทนา + รายการเครื่องมือมา · Code.gs แนบคีย์ (Script Property GEMINI_API_KEY) แล้วส่งต่อให้ Gemini
+ * ตัวเลขทั้งหมดคำนวณในแอปด้วยสูตรเดียวกับหน้าอื่น · Gemini ทำหน้าที่ตีความคำถามและเรียบเรียงคำตอบเท่านั้น
+ * ตั้งค่า: Script Properties → GEMINI_API_KEY (จำเป็น) · GEMINI_MODEL (ไม่บังคับ ค่าเริ่มต้น gemini-3.8-flash)
+ */
+const AI_DEFAULT_MODEL_ = 'gemini-3.8-flash';
+const AI_LOG_SHEET_ = 'บันทึกการถาม AI';
+function aiProps_() { const p = PropertiesService.getScriptProperties(); return { key: cleanVal(p.getProperty('GEMINI_API_KEY') || ''), model: cleanVal(p.getProperty('GEMINI_MODEL') || '') || AI_DEFAULT_MODEL_ }; }
+function aiAllowed_(session) { return !!session && session.role === 'admin' && (!session.limit || session.limit === 'exec'); }
+function aiStatus_(session) {
+  if (!aiAllowed_(session)) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินและผู้บริหาร' };
+  const c = aiProps_(); return { success: true, ready: !!c.key, model: c.model, direct: !!cleanVal(PropertiesService.getScriptProperties().getProperty('AI_SHARED_SECRET') || '') };
+}
+// v19.07 · บัตรผ่านสำหรับยิง Gemini ตรงจาก Vercel (/api/ai) · ลงลายเซ็น HMAC ด้วย AI_SHARED_SECRET (ค่าเดียวกับใน Vercel) · อายุ 30 นาที
+function aiTicket_(session) {
+  if (!aiAllowed_(session)) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินและผู้บริหาร' };
+  const secret = cleanVal(PropertiesService.getScriptProperties().getProperty('AI_SHARED_SECRET') || '');
+  if (!secret) return { success: false, code: 'NO_SECRET', message: 'ยังไม่ได้ตั้งค่า AI_SHARED_SECRET ใน Script Properties' };
+  const exp = Date.now() + 30 * 60 * 1000;
+  const b64u = function (bytes) { return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, ''); };
+  const p = b64u(Utilities.newBlob(JSON.stringify({ u: cleanVal(session.userId), r: session.role, l: session.limit || '', exp: exp })).getBytes());
+  const sig = b64u(Utilities.computeHmacSha256Signature(p, secret));
+  return { success: true, ticket: p + '.' + sig, exp: exp };
+}
+function aiLog_(session, q, model, usage, ok) {
+  try {
+    const ss = getSpreadsheet(); let sh = ss.getSheetByName(AI_LOG_SHEET_);
+    if (!sh) { sh = ss.insertSheet(AI_LOG_SHEET_); sh.appendRow(['เวลา', 'ผู้ถาม', 'บทบาท', 'คำถาม', 'รุ่น', 'โทเคนเข้า', 'โทเคนออก', 'ผล']); }
+    sh.appendRow([Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), cleanVal(session.name || session.userId), cleanVal(session.role) + (session.limit ? '/' + session.limit : ''), String(q || '').substring(0, 500), model,
+      (usage && usage.promptTokenCount) || '', (usage && usage.candidatesTokenCount) || '', ok ? 'สำเร็จ' : 'ผิดพลาด']);
+  } catch (e) {}
+}
+function aiChat_(data, session) {
+  if (!aiAllowed_(session)) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินและผู้บริหาร' };
+  const c = aiProps_();
+  if (!c.key) return { success: false, code: 'NO_KEY', message: 'ยังไม่ได้ตั้งค่า GEMINI_API_KEY ใน Script Properties' };
+  data = data || {};
+  const contents = Array.isArray(data.contents) ? data.contents : [];
+  if (!contents.length || contents.length > 60) return { success: false, message: 'บทสนทนาไม่ถูกต้อง' };
+  const body = { contents: contents };
+  if (data.system) body.systemInstruction = { parts: [{ text: String(data.system).substring(0, 12000) }] };
+  if (Array.isArray(data.tools) && data.tools.length) body.tools = [{ functionDeclarations: data.tools.slice(0, 20) }];
+  const payload = JSON.stringify(body);
+  if (payload.length > 400000) return { success: false, code: 'TOO_LARGE', message: 'ข้อมูลที่ส่งให้ AI ยาวเกินไป ลองแคบช่วงวันหรือถามทีละเรื่อง' };
+  // จำกัด 20 ครั้ง/นาที ต่อผู้ใช้
+  const cache = CacheService.getScriptCache(); const rk = 'ai_rl_' + cleanVal(session.userId) + '_' + Math.floor(Date.now() / 60000);
+  const n = Number(cache.get(rk) || 0); if (n >= 20) return { success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' };
+  cache.put(rk, String(n + 1), 120);
+  let res, code = 0, txt = '';
+  try {
+    res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(c.model) + ':generateContent', {
+      method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': c.key }, payload: payload, muteHttpExceptions: true
+    });
+    code = res.getResponseCode(); txt = res.getContentText();
+  } catch (e) { aiLog_(session, data.q, c.model, null, false); return { success: false, code: 'NETWORK', message: 'ติดต่อ Gemini ไม่ได้: ' + String(e && e.message || e).substring(0, 200) }; }
+  let j = null; try { j = JSON.parse(txt); } catch (e) {}
+  if (code !== 200 || !j) {
+    aiLog_(session, data.q, c.model, null, false);
+    const msg = (j && j.error && j.error.message) || ('HTTP ' + code);
+    return { success: false, code: code === 429 ? 'QUOTA' : (code === 400 || code === 403) ? 'BAD_KEY_OR_REQUEST' : 'AI_ERROR', status: code, message: String(msg).substring(0, 300) };
+  }
+  const cand = (j.candidates || [])[0] || {};
+  if (data.q) aiLog_(session, data.q, c.model, j.usageMetadata, true);
+  return { success: true, model: c.model, content: cand.content || { role: 'model', parts: [] }, finishReason: cand.finishReason || '', usage: j.usageMetadata || null };
 }
