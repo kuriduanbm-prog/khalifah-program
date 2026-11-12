@@ -3615,7 +3615,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.10';
+  const APP_VERSION = '19.11';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12411,6 +12411,7 @@ window.k8PdWho = function (sid) {
     const recs = {};
     [...readJSON('khalifah_prayer_history', []), ...tp].forEach((p) => { if (!p) return; const d = String(p.date || p.timestamp || '').slice(0, 10); if (!d || d < S.from || d > end) return; recs[norm(p.studentId) + '|' + d + '|' + slotKey(p.prayerTime || p.prayerName || '')] = p; });
     readJSON('khalifah_prayer_approvals', []).forEach((a) => { if (!a || !/approved|อนุมัติ/i.test(String(a.status || '')) || !a.date || a.date < S.from || a.date > end) return; const k = norm(a.studentId) + '|' + a.date + '|' + slotKey(a.prayerTime || a.prayerName || ''); if (!recs[k]) recs[k] = { status: 'ตรงเวลา' }; });
+    S.recs = recs; S.end = end;
     const by = {}; studs.forEach((s) => { by[norm(s.studentId)] = { on: 0, late: 0, ex: 0, exp: expFor(s) }; });
     Object.keys(recs).forEach((k) => {
       const x = by[k.split('|')[0]]; if (!x) return; const p = recs[k]; const st = String(p.status || '');
@@ -12498,32 +12499,90 @@ window.k8PdWho = function (sid) {
     let R = g.rows.slice();
     if (S.q) R = R.filter((r) => ((r.s.fullName || '') + ' ' + r.k).toLowerCase().indexOf(S.q.toLowerCase()) !== -1);
     const nm = (r) => '<td><button type="button" class="k8-sch-who" onclick="k8SchWho(\'' + esc(r.s.studentId) + '\')"><b>' + esc(r.s.fullName || r.k) + '</b><small>' + esc(shortG(r.s.grade)) + ' · ' + esc(r.s.studentId) + '</small></button></td>';
+    const cellBtn = (r, kind, n, tip, extra) => n ? '<button type="button" class="k8-sch-num" onclick="k8SchDet(\'' + esc(r.s.studentId) + '\', \'' + kind + '\')" title="' + tip + '" aria-label="' + esc((r.s.fullName || r.k) + ' · ' + tip + ' ' + n) + '">' + n + (extra || '') + '</button>' : String(n) + (extra || '');
     let head = [], body = [], csv = [];
     if (S.tab === 'pray') {
       R.sort((a, b) => ((a.p && a.p.pct != null) ? a.p.pct : 999) - ((b.p && b.p.pct != null) ? b.p.pct : 999) || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
       head = ['นักเรียน', 'ตรงเวลา', 'สาย', 'ลา/อุซุร', 'ขาด', 'ร้อยละ'];
-      body = R.map((r) => { const p = r.p || { on: 0, late: 0, ex: 0, miss: 0, pct: null }; return '<tr class="' + (p.pct != null && p.pct < 70 ? 'is-low' : '') + '">' + nm(r) + '<td>' + p.on + '</td><td>' + p.late + '</td><td>' + p.ex + '</td><td class="' + (p.miss ? 'is-ab' : '') + '">' + p.miss + '</td><td><b>' + pctTxt(p.pct) + '</b></td></tr>'; });
+      body = R.map((r) => { const p = r.p || { on: 0, late: 0, ex: 0, miss: 0, pct: null }; return '<tr class="' + (p.pct != null && p.pct < 70 ? 'is-low' : '') + '">' + nm(r) + '<td>' + p.on + '</td><td>' + p.late + '</td><td>' + p.ex + '</td><td class="' + (p.miss ? 'is-ab' : '') + '">' + cellBtn(r, 'pray', p.miss, 'ดูเวลาละหมาดที่ขาด') + '</td><td><b>' + pctTxt(p.pct) + '</b></td></tr>'; });
       csv = R.map((r) => { const p = r.p || { on: 0, late: 0, ex: 0, miss: 0, pct: '' }; return [r.s.fullName, r.s.studentId, shortG(r.s.grade), p.on, p.late, p.ex, p.miss, p.pct == null ? '' : p.pct]; });
     } else if (S.tab === 'att') {
       if (!S.att) { B.innerHTML = h + '<p class="k8-asum-empty">กำลังโหลดข้อมูลการมาเรียน…</p>'; return; }
       R.sort((a, b) => ((a.a && a.a.pct != null) ? a.a.pct : 999) - ((b.a && b.a.pct != null) ? b.a.pct : 999) || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
       head = ['นักเรียน', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'];
-      body = R.map((r) => { const a = r.a || { present: 0, late: 0, leave: 0, absent: 0, pct: null }; return '<tr class="' + (a.pct != null && a.pct < 80 ? 'is-low' : '') + '">' + nm(r) + '<td>' + a.present + '</td><td>' + a.late + '</td><td>' + a.leave + '</td><td class="' + (a.absent ? 'is-ab' : '') + '">' + a.absent + '</td><td><b>' + pctTxt(a.pct) + '</b></td></tr>'; });
+      body = R.map((r) => { const a = r.a || { present: 0, late: 0, leave: 0, absent: 0, pct: null }; return '<tr class="' + (a.pct != null && a.pct < 80 ? 'is-low' : '') + '">' + nm(r) + '<td>' + a.present + '</td><td>' + a.late + '</td><td>' + a.leave + '</td><td class="' + (a.absent ? 'is-ab' : '') + '">' + cellBtn(r, 'att', a.absent, 'ดูคาบที่ขาดเรียน') + '</td><td><b>' + pctTxt(a.pct) + '</b></td></tr>'; });
       csv = R.map((r) => { const a = r.a || { present: 0, late: 0, leave: 0, absent: 0, pct: '' }; return [r.s.fullName, r.s.studentId, shortG(r.s.grade), a.present, a.late, a.leave, a.absent, a.pct == null ? '' : a.pct]; });
     } else {
       if (!S.bh) { B.innerHTML = h + '<p class="k8-asum-empty">กำลังโหลดข้อมูลพฤติกรรม…</p>'; return; }
       R.sort((a, b) => a.score - b.score || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
       head = ['นักเรียน', 'คะแนนภาคเรียน', 'ถูกหัก (ช่วงนี้)', 'ได้เพิ่ม (ช่วงนี้)', 'รายการล่าสุด'];
-      body = R.map((r) => { const b = r.b; const last = b.items.slice().sort((x, y) => String(y.date).localeCompare(String(x.date)))[0]; return '<tr class="' + (r.score < 80 ? 'is-low' : '') + '">' + nm(r) + '<td><b>' + r.score + '</b></td><td class="' + (b.minus ? 'is-ab' : '') + '">' + b.minus + (b.minusPts ? ' <small>(' + b.minusPts + ')</small>' : '') + '</td><td>' + b.plus + '</td><td class="k8-sch-last">' + (last ? esc(dTh(last.date)) + ' · ' + esc(last.title || '') + ' <small>(' + (last.points > 0 ? '+' : '') + last.points + ')</small>' : '–') + '</td></tr>'; });
+      body = R.map((r) => { const b = r.b; const last = b.items.slice().sort((x, y) => String(y.date).localeCompare(String(x.date)))[0]; return '<tr class="' + (r.score < 80 ? 'is-low' : '') + '">' + nm(r) + '<td><b>' + r.score + '</b></td><td class="' + (b.minus ? 'is-ab' : '') + '">' + cellBtn(r, 'bh', b.minus, 'ดูรายการพฤติกรรม', b.minusPts ? ' <small>(' + b.minusPts + ')</small>' : '') + '</td><td>' + b.plus + '</td><td class="k8-sch-last">' + (last ? esc(dTh(last.date)) + ' · ' + esc(last.title || '') + ' <small>(' + (last.points > 0 ? '+' : '') + last.points + ')</small>' : '–') + '</td></tr>'; });
       csv = R.map((r) => [r.s.fullName, r.s.studentId, shortG(r.s.grade), r.score, r.b.minus, r.b.minusPts, r.b.plus]);
     }
     const csvHead = { pray: ['ชื่อ', 'รหัส', 'ชั้น', 'ตรงเวลา', 'สาย', 'ลา/อุซุร', 'ขาด', 'ร้อยละ'], att: ['ชื่อ', 'รหัส', 'ชั้น', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'], bh: ['ชื่อ', 'รหัส', 'ชั้น', 'คะแนนภาคเรียน', 'ถูกหัก(ครั้ง)', 'ถูกหัก(คะแนน)', 'ได้เพิ่ม(ครั้ง)'] }[S.tab];
     S.last = { kind: 'school', head: csvHead, rows: csv };
     h += '<input type="search" class="k8-asum-q" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(S.q) + '" oninput="k8SchQ(this)">' +
       (R.length ? '<div class="k8-asum-tw"><table class="k8-asum-t k8-sch-t"><thead><tr>' + head.map((x) => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + body.join('') + '</tbody></table></div>' : '<p class="k8-asum-empty">ไม่มีนักเรียน</p>') +
-      '<p class="k8-asum-note">' + { pray: 'แถวสีแดง = ละหมาดต่ำกว่า 70%', att: 'แถวสีแดง = มาเรียนต่ำกว่า 80%', bh: 'แถวสีแดง = คะแนนพฤติกรรมต่ำกว่า 80' }[S.tab] + ' · แตะชื่อเพื่อดูประวัตินักเรียน</p>';
+      '<p class="k8-asum-note">' + { pray: 'แถวสีแดง = ละหมาดต่ำกว่า 70% · แตะตัวเลขขาดเพื่อดูวันและเวลาที่ขาด', att: 'แถวสีแดง = มาเรียนต่ำกว่า 80% · แตะตัวเลขขาดเพื่อดูคาบที่ขาด', bh: 'แถวสีแดง = คะแนนพฤติกรรมต่ำกว่า 80 · แตะตัวเลขถูกหักเพื่อดูรายการ' }[S.tab] + ' · แตะชื่อเพื่อดูประวัตินักเรียน</p>';
     B.innerHTML = h;
   }
+  // ---------- v19.11 · รายละเอียดเมื่อแตะตัวเลข (ขาดละหมาด / ขาดเรียน / ถูกหักคะแนน)
+  const SLOTS5 = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+  const DOW = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const PKd = (st) => { st = String(st || ''); if (/ขาด|absent/i.test(st)) return 'miss'; if (/สาย|late/i.test(st)) return 'late'; if (/อุซุร|ประจำเดือน|ป่วย|^ลา|ลากิจ|ลาป่วย|excus|leave/i.test(st)) return 'ex'; return 'on'; };
+  const DL = { on: 'ตรงเวลา', late: 'สาย', ex: 'ลา/อุซุร', miss: 'ขาด', future: '' };
+  const DET = { sid: '', kind: '', only: true };
+  function toggle(a, b) { return '<div class="k8-schd-tg" role="group" aria-label="แสดง"><button type="button" aria-pressed="' + DET.only + '" onclick="k8SchDetOnly(true)">' + a + '</button><button type="button" aria-pressed="' + !DET.only + '" onclick="k8SchDetOnly(false)">' + b + '</button></div>'; }
+  function detPray(st) {
+    const k = norm(st.studentId); const R = S.recs || {}; const now = new Date(); const today = ymd(now); const end = S.end || S.to;
+    let wins = []; try { wins = PRAYER_TIME_WINDOWS; } catch (e) {} const cur = now.getHours() * 60 + now.getMinutes();
+    let a = S.from; const j = joinOf(st); if (j && j >= a) { const d = new Date(j + 'T00:00:00'); d.setDate(d.getDate() + 1); a = ymd(d); }
+    const days = []; const tot = { on: 0, late: 0, ex: 0, miss: 0 };
+    for (let d = new Date(end + 'T00:00:00'), i = 0; ymd(d) >= a && i < 400; d.setDate(d.getDate() - 1), i++) {
+      const ds = ymd(d); const row = { d: ds, dow: d.getDay(), c: [] };
+      SLOTS5.forEach((sl, x) => { if (ds === today && wins[x] && cur < wins[x].endMin) { row.c.push('future'); return; } const r = R[k + '|' + ds + '|' + sl]; const c = r ? PKd(r.status) : 'miss'; row.c.push(c); tot[c]++; });
+      row.miss = row.c.filter((c) => c === 'miss').length; days.push(row);
+    }
+    const shown = DET.only ? days.filter((r) => r.miss) : days;
+    return '<div class="k8-schd-sum"><span class="is-on">ตรงเวลา <b>' + tot.on + '</b></span><span class="is-late">สาย <b>' + tot.late + '</b></span><span class="is-ex">ลา/อุซุร <b>' + tot.ex + '</b></span><span class="is-miss">ขาด <b>' + tot.miss + '</b></span></div>' +
+      toggle('เฉพาะวันที่ขาด (' + days.filter((r) => r.miss).length + ')', 'ทุกวัน (' + days.length + ')') +
+      (shown.length ? '<div class="k8-schd-tw"><table class="k8-schd-t"><thead><tr><th>วันที่</th>' + SLOTS5.map((x) => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' +
+        shown.map((r) => '<tr><td><b>' + dTh(r.d) + '</b><small>' + DOW[r.dow] + (r.miss ? ' · ขาด ' + r.miss : '') + '</small></td>' + r.c.map((c) => '<td><span class="k8-schd-c is-' + c + '">' + (DL[c] || '·') + '</span></td>').join('') + '</tr>').join('') + '</tbody></table></div>' : '<p class="k8-asum-empty">ไม่มีเวลาที่ขาดในช่วงนี้</p>') +
+      '<p class="k8-asum-note">"ขาด" รวมเวลาที่ไม่ได้เช็คชื่อ · ไม่นับเวลาที่ยังไม่ถึงของวันนี้' + (j && j >= S.from ? ' · นับตั้งแต่วันถัดจากวันสมัคร (' + dTh(j) + ')' : '') + '</p>';
+  }
+  function detAtt(st) {
+    const k = norm(st.studentId); const L = (S.att || []).filter((r) => r && norm(r.studentId) === k && r.date >= S.from && r.date <= S.to).sort((x, y) => String(y.date).localeCompare(String(x.date)) || (Number(x.period) || 0) - (Number(y.period) || 0));
+    const tot = { present: 0, late: 0, leave: 0, absent: 0 }; L.forEach((r) => { tot[AK(r.status)]++; });
+    const shown = DET.only ? L.filter((r) => AK(r.status) === 'absent') : L;
+    const AL = { present: 'มา', late: 'สาย', leave: 'ลา', absent: 'ขาด' }; const AC = { present: 'on', late: 'late', leave: 'ex', absent: 'miss' };
+    return '<div class="k8-schd-sum"><span class="is-on">มา <b>' + tot.present + '</b></span><span class="is-late">สาย <b>' + tot.late + '</b></span><span class="is-ex">ลา <b>' + tot.leave + '</b></span><span class="is-miss">ขาด <b>' + tot.absent + '</b></span></div>' +
+      toggle('เฉพาะที่ขาด (' + tot.absent + ')', 'ทั้งหมด (' + L.length + ')') +
+      (shown.length ? '<div class="k8-schd-tw"><table class="k8-schd-t"><thead><tr><th>วันที่</th><th>คาบ</th><th>วิชา</th><th>ผู้เช็ค</th><th>สถานะ</th></tr></thead><tbody>' +
+        shown.map((r) => { const c = AK(r.status); return '<tr><td><b>' + dTh(r.date) + '</b><small>' + DOW[new Date(r.date + 'T00:00:00').getDay()] + '</small></td><td>' + esc(r.period || '–') + '</td><td class="k8-schd-l">' + esc(r.subjectName || r.subjectCode || 'เช็คชื่อรายวัน') + '</td><td class="k8-schd-l">' + esc(r.teacherName || r.checkedBy || r.by || '–') + '</td><td><span class="k8-schd-c is-' + AC[c] + '">' + AL[c] + '</span>' + (r.note ? '<small>' + esc(r.note) + '</small>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="k8-asum-empty">ไม่มีคาบที่ขาดในช่วงนี้</p>') +
+      '<p class="k8-asum-note">จากการเช็คชื่อรายคาบของอาจารย์ · ร้อยละมาเรียนไม่นับวันลา</p>';
+  }
+  function detBh(st) {
+    const k = norm(st.studentId); const L = ((S.bh && S.bh.logs) || []).filter((l) => l && l.status !== 'cancelled' && norm(l.studentId) === k && l.date >= S.from && l.date <= S.to).sort((x, y) => String(y.date).localeCompare(String(x.date)));
+    const shown = DET.only ? L.filter((l) => Number(l.points) < 0) : L;
+    const minus = L.filter((l) => Number(l.points) < 0), plus = L.filter((l) => Number(l.points) > 0);
+    return '<div class="k8-schd-sum"><span class="is-miss">ถูกหัก <b>' + minus.length + '</b> ครั้ง (' + minus.reduce((a, l) => a + Number(l.points), 0) + ')</span><span class="is-on">ได้เพิ่ม <b>' + plus.length + '</b> ครั้ง (+' + plus.reduce((a, l) => a + Number(l.points), 0) + ')</span></div>' +
+      toggle('เฉพาะที่ถูกหัก (' + minus.length + ')', 'ทั้งหมด (' + L.length + ')') +
+      (shown.length ? '<ul class="k8-schd-list">' + shown.map((l) => { const p = Number(l.points) || 0; return '<li><div><b>' + esc(l.title || l.ruleTitle || '-') + '</b><small>' + esc(dTh(l.date)) + (l.byName || l.by ? ' · บันทึกโดย ' + esc(l.byName || l.by) : '') + (l.note ? ' · ' + esc(l.note) : '') + '</small></div>' + (l.photoUrl ? '<a href="' + esc(l.photoUrl) + '" target="_blank" rel="noopener">รูปหลักฐาน</a>' : '') + '<em class="' + (p < 0 ? 'is-miss' : 'is-on') + '">' + (p > 0 ? '+' : '') + p + '</em></li>'; }).join('') + '</ul>' : '<p class="k8-asum-empty">ไม่มีรายการในช่วงนี้</p>');
+  }
+  function paintDet() {
+    let el = document.getElementById('k8SchD');
+    if (!el) { el = document.createElement('div'); el.id = 'k8SchD'; el.className = 'k8-schd'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'k8SchDT'); el.addEventListener('click', (e) => { if (e.target === el) window.k8SchDetClose(); }); document.body.appendChild(el); }
+    const st = students().find((x) => norm(x.studentId) === norm(DET.sid)); if (!st) return;
+    const T = { pray: 'ประวัติการละหมาด', att: 'ประวัติการมาเรียน', bh: 'รายการพฤติกรรม' }[DET.kind];
+    el.innerHTML = '<div class="k8-schd-box"><header><div><h3 id="k8SchDT">' + T + '</h3><p><b>' + esc(st.fullName || st.studentId) + '</b><span>' + esc(shortG(st.grade)) + ' · ' + esc(st.studentId) + ' · ' + esc(schoolOf(st)) + '</span><span>' + dTh(S.from) + (S.from !== S.to ? ' – ' + dTh(S.to) : '') + '</span></p></div><button type="button" class="k8-schd-x" onclick="k8SchDetClose()" aria-label="ปิด">×</button></header>' +
+      '<div class="k8-schd-b">' + (DET.kind === 'pray' ? detPray(st) : DET.kind === 'att' ? detAtt(st) : detBh(st)) + '</div>' +
+      '<footer><button type="button" class="k8-schd-who" onclick="k8SchDetClose();k8SchWho(\'' + esc(st.studentId) + '\')">เปิดประวัตินักเรียนทั้งหมด ›</button></footer></div>';
+    el.hidden = false;
+  }
+  function detKey(e) { if (e.key === 'Escape') window.k8SchDetClose(); }
+  window.k8SchDet = function (sid, kind) { DET.sid = sid; DET.kind = kind; DET.only = true; paintDet(); document.addEventListener('keydown', detKey); setTimeout(() => { const b = document.querySelector('#k8SchD .k8-schd-x'); if (b) b.focus(); }, 30); };
+  window.k8SchDetOnly = function (v) { DET.only = !!v; paintDet(); };
+  window.k8SchDetClose = function () { const el = document.getElementById('k8SchD'); if (el) el.hidden = true; document.removeEventListener('keydown', detKey); };
   async function loadAtt(force) {
     if (S.attLoading || (S.att && !force)) return; S.attLoading = true;
     let r = null; try { r = await gasApiCall('getAttendance', {}, 45000); } catch (e) {}
@@ -12545,7 +12604,7 @@ window.k8PdWho = function (sid) {
     el.hidden = false; document.documentElement.classList.add('k8-docs-open'); try { history.pushState({ k8sch: 1 }, ''); } catch (e) {}
     render(); loadAtt(); loadBh();
   };
-  window.k8SchClose = function () { const el = document.getElementById('k8Sch'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } };
+  window.k8SchClose = function () { try { window.k8SchDetClose(); } catch (e) {} const el = document.getElementById('k8Sch'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } };
   window.addEventListener('popstate', () => { const el = document.getElementById('k8Sch'); if (el && !el.hidden) window.k8SchClose(); });
   window.k8SchPre = function (k) { setPreset(k); render(); };
   window.k8SchSet = function (k, v) { S[k] = v; if (k === 'from' || k === 'to') { S.preset = ''; if (S.from > S.to) { const t = S.from; S.from = S.to; S.to = t; } } render(); };

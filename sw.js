@@ -1,5 +1,5 @@
 // KHALIFAH PROGRAM - Production PWA Service Worker (v7.7)
-const CACHE_NAME = 'khalifah-cache-v19.10';
+const CACHE_NAME = 'khalifah-cache-v19.11';
 const NAV_TIMEOUT_MS = 3000;
 
 // Critical local assets required for the app shell to function offline
@@ -8,13 +8,13 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
-  'style.css?v=19.10',
-  'ui-v8.css?v=19.10',
-  'dark.css?v=19.10',
-  'ui-v8.js?v=19.10',
-  'ai.js?v=19.10',
+  'style.css?v=19.11',
+  'ui-v8.css?v=19.11',
+  'dark.css?v=19.11',
+  'ui-v8.js?v=19.11',
+  'ai.js?v=19.11',
   'app.js',
-  'app.js?v=19.10',
+  'app.js?v=19.11',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',
@@ -32,7 +32,7 @@ const OPTIONAL_CDN_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
 ];
 
-// v19.10 · Vercel (cleanUrls) ตอบ /index.html ด้วยการ redirect ไปที่ /
+// v19.11 · Vercel (cleanUrls) ตอบ /index.html ด้วยการ redirect ไปที่ /
 // Safari/Chrome ไม่ยอมให้ service worker ส่ง response ที่ผ่าน redirect ให้หน้าเว็บ ("Response served by service worker has redirections")
 // จึงต้องเก็บ/ส่งเป็น response ใหม่ที่ไม่มีประวัติ redirect เสมอ
 async function cleanResponse(res) {
@@ -102,7 +102,7 @@ self.addEventListener('fetch', (event) => {
   // 1. NAVIGATION REQUESTS (Opening the PWA, refreshing, or clicking links)
   // Strategy: Network-First with Cache Fallback -> Guaranteed to never show "Site can't be reached"
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    // v19.10 · เน็ตอ่อน/ต่อ Wi-Fi แต่ไม่มีอินเทอร์เน็ต/แพ็กเกจหมด: คำขอค้างนานจนหน้าขาว
+    // v19.11 · เน็ตอ่อน/ต่อ Wi-Fi แต่ไม่มีอินเทอร์เน็ต/แพ็กเกจหมด: คำขอค้างนานจนหน้าขาว
     // รอเครือข่ายไม่เกิน 3 วินาที ถ้าไม่ตอบใช้หน้าแอปที่เก็บไว้ในเครื่องทันที (เครือข่ายยังโหลดต่อเบื้องหลังเพื่ออัปเดตแคช)
     const net = fetch(request).then(cleanResponse).then((networkResponse) => {
       if (networkResponse && networkResponse.status === 200) {
