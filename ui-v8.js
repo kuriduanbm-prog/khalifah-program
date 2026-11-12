@@ -1349,7 +1349,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       else present++;
     });
     const checked = present + late + leave + absent;
-    const attPct = checked ? Math.round((present + late) / checked * 100) : 0;
+    const attDen = present + late + absent; const attPct = attDen ? Math.round((present + late) / attDen * 100) : (checked ? 100 : 0); // v19.08 · ไม่นับวันลา
 
     // ละหมาดวันนี้ตามชั้น (นับคนที่ละหมาดอย่างน้อย 1 เวลาในช่วงปัจจุบัน → ใช้จำนวนเวลาที่ผ่านมาแล้ว)
     const hist = readJSON('khalifah_prayer_history', []);
@@ -2910,7 +2910,7 @@ window.k8RegBirthChange = function (v) {
     const bySub = {};
     recs.forEach((l) => { const key = l.subjectCode || ''; const g = bySub[key] || (bySub[key] = { name: subjName(key, l.subjectName), present: 0, late: 0, leave: 0, absent: 0 }); g[toKey(l.status)]++; });
     const subKeys = Object.keys(bySub).sort((a, b) => bySub[a].name.localeCompare(bySub[b].name, 'th'));
-    document.getElementById('k8AttSubjects').innerHTML = subKeys.length ? subKeys.map((k) => { const g = bySub[k]; const tot = g.present + g.late + g.leave + g.absent; const pct = tot ? Math.round((g.present + g.late) / tot * 100) : 0;
+    document.getElementById('k8AttSubjects').innerHTML = subKeys.length ? subKeys.map((k) => { const g = bySub[k]; const tot = g.present + g.late + g.absent; const pct = tot ? Math.round((g.present + g.late) / tot * 100) : 0;
       return '<div class="k8-att-sub"><div class="k8-att-sub-top"><b>' + esc(g.name) + '</b><span>มาเรียน ' + pct + '%</span></div><div class="k8-att-sub-c">' + K.map(([kk, l, ink, bg]) => g[kk] ? '<i style="background:' + bg + ';color:' + ink + '">' + l + ' ' + g[kk] + '</i>' : '').join('') + '</div></div>'; }).join('')
       : '<p class="k8-li-empty" style="text-align:left;padding:4px 0">ยังไม่มีการเช็คชื่อในช่วงนี้</p>';
     const shown = recs.filter((l) => st.filter === 'all' || toKey(l.status) === st.filter);
@@ -3608,7 +3608,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.07';
+  const APP_VERSION = '19.08';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10311,7 +10311,7 @@ window.k8HfMiss = function (slot) {
       (A.subj ? String(r.subjectCode) === String(A.subj) : (isAdm() || allowed.has(String(r.subjectCode)))) &&
       (A.grade === 'ALL' || String(r.grade || '').indexOf(A.grade) !== -1 || String(r.grade || '').replace(/\D/g, '') === A.grade));
   }
-  function stats(list) { const c = { present: 0, late: 0, leave: 0, absent: 0 }; list.forEach((r) => { c[KEY(r.status)]++; }); c.total = list.length; c.pct = c.total ? Math.round((c.present + c.late) / c.total * 100) : 0; return c; }
+  function stats(list) { const c = { present: 0, late: 0, leave: 0, absent: 0 }; list.forEach((r) => { c[KEY(r.status)]++; }); c.total = list.length; c.den = c.present + c.late + c.absent; c.pct = c.den ? Math.round((c.present + c.late) / c.den * 100) : (c.total ? 100 : 0); return c; }
   function render() {
     const B = document.getElementById('k8AsumB'); if (!B) return;
     const subs = subjects();
@@ -10930,7 +10930,7 @@ window.k8HfMiss = function (slot) {
     if (document.getElementById('k8HqRep')) return;
     document.body.insertAdjacentHTML('beforeend', '<div class="k8-asum k8-hqr" id="k8HqRep" hidden role="dialog" aria-modal="true" aria-labelledby="k8HqRepT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8HqRepT">สรุปการเช็คชื่อหะละเกาะฮฺ</h2><small id="k8HqRepS">ตามผู้ดูแลแต่ละกลุ่ม</small></div><div class="k8-hqr-acts"><button type="button" class="k8-asum-csv" onclick="k8HqRepImg()" title="บันทึกสรุปรวมทุกกลุ่มเป็นรูปภาพ">🖼 รูปภาพ</button><button type="button" class="k8-asum-csv" onclick="k8HqRepXlsx()" title="บันทึกเป็นไฟล์ Excel แยกแผ่นตามผู้ดูแล/กลุ่ม">⬇ Excel</button><button type="button" class="k8-asum-csv" onclick="k8HqRepCsv()" title="บันทึกเป็นไฟล์ CSV แยกตามผู้ดูแล/กลุ่ม">⬇ CSV</button></div></header><div class="k8-asum-b" id="k8HqRepB"></div></div></div>');
   }
-  const pct = (c) => { const n = c.present + c.late + c.leave + c.absent + c.none; return n ? Math.round((c.present + c.late) / n * 100) : null; };
+  const pct = (c) => { const n = c.present + c.late + c.absent + c.none; return n ? Math.round((c.present + c.late) / n * 100) : null; }; // v19.08 · ไม่นับวันลา
   // v18.63 · ครั้งที่จัด: นับวันที่ต้องจัดในช่วงที่เลือกตามลำดับ · สรุปของสัปดาห์นี้
   function weekStart() { const t = new Date(); return ymd(new Date(t.getFullYear(), t.getMonth(), t.getDate() - ((t.getDay() + 6) % 7))); }
   function weekInfo(g) {
@@ -12421,7 +12421,7 @@ window.k8PdWho = function (sid) {
   function attStats() {
     const by = {}; if (!S.att) return null;
     S.att.forEach((r) => { if (!r || !r.date || r.date < S.from || r.date > S.to) return; const k = norm(r.studentId); const x = by[k] || (by[k] = { present: 0, late: 0, leave: 0, absent: 0, n: 0 }); x[AK(r.status)]++; x.n++; });
-    Object.values(by).forEach((x) => { x.pct = x.n ? Math.round((x.present + x.late) / x.n * 100) : null; });
+    Object.values(by).forEach((x) => { const d = x.present + x.late + x.absent; x.pct = d ? Math.round((x.present + x.late) / d * 100) : null; });
     return by;
   }
   // ---------- พฤติกรรม (คะแนนภาคเรียน = 100 ± รายการ · และรายการในช่วงที่เลือก)
@@ -12476,7 +12476,7 @@ window.k8PdWho = function (sid) {
         '<div class="k8-sch-m ' + tone(g.scAvg, 90, 80) + '"><span>พฤติกรรม</span>' + (S.bh ? bar(g.scAvg, '') + '<b>' + (g.scAvg == null ? '–' : g.scAvg) + '</b>' : loadingTxt) + '</div>' +
         (S.bh && (g.minus || g.low) ? '<small class="k8-sch-note">ถูกหักคะแนน ' + g.minus + ' ครั้งในช่วงนี้' + (g.low ? ' · ต่ำกว่า 80 คะแนน ' + g.low + ' คน' : '') + '</small>' : '') +
         '</button>').join('') + '</div>';
-      h += '<p class="k8-asum-note">ละหมาด = (ตรงเวลา + สาย) ÷ เวลาที่ต้องละหมาด ไม่นับเวลาที่ลา/มีประจำเดือน · มาเรียน = (มา + สาย) ÷ ครั้งที่เช็คชื่อรายคาบ · พฤติกรรม = คะแนนเฉลี่ยของภาคเรียนนี้ (เริ่ม 100)</p>';
+      h += '<p class="k8-asum-note">ละหมาด = (ตรงเวลา + สาย) ÷ เวลาที่ต้องละหมาด ไม่นับเวลาที่ลา/มีประจำเดือน · มาเรียน = (มา + สาย) ÷ (มา + สาย + ขาด) ไม่นับวันลา · พฤติกรรม = คะแนนเฉลี่ยของภาคเรียนนี้ (เริ่ม 100)</p>';
       S.last = { kind: 'list', L };
       B.innerHTML = h; return;
     }
@@ -12562,7 +12562,7 @@ window.k8PdWho = function (sid) {
           cols: [['ที่', 5, 'c'], ['โรงเรียน', 33, 'l'], ['นักเรียน', 9, 'c'], ['ละหมาด %', 11, 'c'], ['มาเรียน %', 11, 'c'], ['พฤติกรรมเฉลี่ย', 12, 'c'], ['ถูกหัก (ครั้ง)', 10, 'c'], ['ต่ำกว่า 80 (คน)', 9, 'c']],
           rows: L.map((g, i) => ({ v: [i + 1, g.name, g.rows.length, g.pPct == null ? '–' : g.pPct, g.aPct == null ? '–' : g.aPct, g.scAvg == null ? '–' : g.scAvg, g.minus, g.low || 0],
             bad: [g.pPct != null && g.pPct < 70 ? 3 : -1, g.aPct != null && g.aPct < 80 ? 4 : -1, g.scAvg != null && g.scAvg < 80 ? 5 : -1, g.low ? 7 : -1] })),
-          note: 'ละหมาด = (ตรงเวลา + สาย) ÷ เวลาที่ต้องละหมาด ไม่นับลา/อุซุร · มาเรียน = (มา + สาย) ÷ ครั้งที่เช็คชื่อรายคาบ · พฤติกรรม = คะแนนเฉลี่ยภาคเรียน (เริ่ม 100) · ตัวเลขสีแดง = ต่ำกว่าเกณฑ์' }]
+          note: 'ละหมาด = (ตรงเวลา + สาย) ÷ เวลาที่ต้องละหมาด ไม่นับลา/อุซุร · มาเรียน = (มา + สาย) ÷ (มา + สาย + ขาด) ไม่นับวันลา · พฤติกรรม = คะแนนเฉลี่ยภาคเรียน (เริ่ม 100) · ตัวเลขสีแดง = ต่ำกว่าเกณฑ์' }]
       };
     }
     const g = M.G[S.school] || { name: S.school, rows: [], pOn: 0, pDen: 0, aN: 0, pPct: null, aPct: null, scAvg: null, minus: 0, low: 0 };
@@ -12576,7 +12576,7 @@ window.k8PdWho = function (sid) {
     const sections = [
       { key: 'pray', title: 'การละหมาด', color: '#0f766e', cols: stuCols.concat([['ตรงเวลา', 9, 'c'], ['สาย', 8, 'c'], ['ลา/อุซุร', 10, 'c'], ['ขาด', 8, 'c'], ['ร้อยละ', 9, 'c']]), rows: pr, note: 'ร้อยละ = (ตรงเวลา + สาย) ÷ เวลาที่ต้องละหมาด ไม่นับเวลาที่ลา/มีประจำเดือน · ชื่อสีแดง = ต่ำกว่า 70%' },
       { key: 'bh', title: 'พฤติกรรม', color: '#be123c', cols: stuCols.concat([['คะแนนภาคเรียน', 13, 'c'], ['ถูกหัก (ครั้ง)', 11, 'c'], ['ถูกหัก (คะแนน)', 12, 'c'], ['ได้เพิ่ม (ครั้ง)', 12, 'c']]), rows: bh, note: 'คะแนนภาคเรียนเริ่มที่ 100 · ถูกหัก/ได้เพิ่ม นับเฉพาะช่วงวันที่ที่เลือก · ชื่อสีแดง = ต่ำกว่า 80 คะแนน' },
-      { key: 'att', title: 'การมาเรียน', color: '#1d4ed8', cols: stuCols.concat([['มา', 9, 'c'], ['สาย', 8, 'c'], ['ลา', 8, 'c'], ['ขาด', 8, 'c'], ['ร้อยละ', 11, 'c']]), rows: at, note: 'นับจากการเช็คชื่อรายคาบ · ร้อยละ = (มา + สาย) ÷ ครั้งที่เช็คชื่อ · ชื่อสีแดง = ต่ำกว่า 80%' }
+      { key: 'att', title: 'การมาเรียน', color: '#1d4ed8', cols: stuCols.concat([['มา', 9, 'c'], ['สาย', 8, 'c'], ['ลา', 8, 'c'], ['ขาด', 8, 'c'], ['ร้อยละ', 11, 'c']]), rows: at, note: 'นับจากการเช็คชื่อรายคาบ · ร้อยละ = (มา + สาย) ÷ (มา + สาย + ขาด) ไม่นับวันลา · ชื่อสีแดง = ต่ำกว่า 80%' }
     ];
     if (items.length) sections.push({ key: 'bhlog', title: 'รายการพฤติกรรมในช่วงนี้', color: '#9f1239', cols: [['ที่', 5, 'c'], ['วันที่', 11, 'c'], ['ชื่อ - สกุล', 26, 'l'], ['ชั้น', 7, 'c'], ['หัวข้อ', 39, 'l'], ['คะแนน', 12, 'c']],
       rows: items.map((x, i) => { const p = Number(x.l.points) || 0; return { v: [i + 1, dTh(x.l.date), x.r.s.fullName || x.r.k, shortG(x.r.s.grade), x.l.title || x.l.ruleTitle || x.l.category || '-', (p > 0 ? '+' : '') + p], bad: [p < 0 ? 5 : -1], good: [p > 0 ? 5 : -1] }; }), note: '' });

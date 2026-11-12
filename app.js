@@ -5916,7 +5916,7 @@ function renderCurrentStudentProfile() {
   const myActs = activities.filter(a => a.checkedIn);
   const att = currentStudent.attendance || { present: 0, late: 0, leave: 0, absent: 0 };
   const totalDays = att.present + att.late + att.leave + att.absent;
-  const attRate = totalDays > 0 ? ((att.present / totalDays) * 100).toFixed(1) + '%' : '0%';
+  const attDen = att.present + att.late + att.absent; const attRate = attDen > 0 ? (((att.present + att.late) / attDen) * 100).toFixed(1) + '%' : (totalDays > 0 ? '100%' : '0%'); // v19.08 · ไม่นับวันลา
 
   if (statAtt) statAtt.innerText = attRate;
   if (statPry) statPry.innerText = `${Math.min(5, prayerSlotsRecorded.size)} / 5`;
