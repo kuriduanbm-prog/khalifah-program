@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.01'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.02'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3849,6 +3849,25 @@ function getTimetable_(session, isStudent, isAdmin) {
         if (mine.length) { const L = mine.map(function (m) { const e = Object.assign({}, m); if (e.o) { e.only = true; delete e.o; } delete e.x; return e; }); cells[k] = L.length === 1 ? L[0] : L; }
       });
       one[g] = { grade: g, cells: cells, updatedAt: grades[g].updatedAt };
+    }
+    // v19.02 · คาบของชั้นอื่นที่แอดมินเลือกนักเรียนคนนี้ไปเรียนร่วม → แสดงในตารางของนักเรียน
+    //           ถ้าคาบนั้นเรียนตลอดภาคเรียน ให้แทนวิชาทั้งชั้นของชั้นตัวเองในช่องเวลาเดียวกัน (ไปเรียนกับชั้นอื่น)
+    if (g) {
+      const meC = String(session.userId).replace(/\D/g, '').replace(/^0+/, '');
+      if (!one[g]) one[g] = { grade: g, cells: {}, updatedAt: '' };
+      const own = one[g].cells;
+      Object.keys(grades).forEach(function (og) {
+        if (og === g) return;
+        Object.keys(grades[og].cells || {}).forEach(function (k) {
+          const list = Array.isArray(grades[og].cells[k]) ? grades[og].cells[k] : [grades[og].cells[k]];
+          const hit = list.filter(function (e) { return e && e.o && e.o.indexOf(meC) !== -1 && !(e.x && e.x.indexOf(meC) !== -1); });
+          if (!hit.length) return;
+          const add = hit.map(function (m) { const e = Object.assign({}, m); delete e.o; delete e.x; e.only = true; e.xg = og; e.tn = (e.tn ? e.tn + ' · ' : '') + 'เรียนร่วมกับ ม.' + og; return e; });
+          let cur = own[k] ? (Array.isArray(own[k]) ? own[k] : [own[k]]) : [];
+          if (add.some(function (e) { return !e.from && !e.to; })) cur = cur.filter(function (e) { return e.only; });
+          const L = cur.concat(add); own[k] = L.length === 1 ? L[0] : L;
+        });
+      });
     }
     return { success: true, config: cfg, grade: g, grades: one, extras: myExtras, swaps: activeSwaps_().filter(function (x) { return x.grade === g; }) };
   }

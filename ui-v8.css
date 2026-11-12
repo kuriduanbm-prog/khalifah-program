@@ -5774,3 +5774,17 @@ html[data-theme="dark"] .k8-pd-chip.is-per b{color:#f9a8d4}
 /* v19.01 · ป้ายวันที่เริ่มมีประจำเดือนบนการ์ดติดตามละหมาด */
 .k8-pd-nm .k8-pd-pertag{align-self:flex-start;display:inline-block;margin-top:3px;font-style:normal;font-size:.72rem;font-weight:600;color:#be185d;background:#fdf2f8;border:1px solid #fbcfe8;border-radius:999px;padding:1px 8px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 html[data-theme="dark"] .k8-pd-nm .k8-pd-pertag{color:#f9a8d4;background:#3b0d24;border-color:#9d174d}
+
+/* v19.02 · เลือกผู้เรียนข้ามชั้นในตารางสอน */
+.k8-tt-stg{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+.k8-tt-stg button{font:inherit;font-size:.8rem;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:999px;padding:3px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.k8-tt-stg button small{color:#94a3b8;font-size:.72rem}
+.k8-tt-stg button i{font-style:normal;font-size:.7rem;font-weight:700;color:#fff;background:#0369a1;border-radius:999px;padding:0 6px}
+.k8-tt-stg button[aria-pressed="true"]{background:#0369a1;border-color:#0369a1;color:#fff}
+.k8-tt-stg button[aria-pressed="true"] small{color:#e0f2fe}
+.k8-tt-stg-hint{font-size:.74rem;color:#64748b;margin:0 0 6px}
+.k8-tt-xg{font-style:normal;font-size:.7rem;font-weight:700;color:#0369a1;background:#e0f2fe;border-radius:6px;padding:0 6px;margin-left:6px}
+html[data-theme="dark"] .k8-tt-stg button{background:#1e293b;border-color:#334155;color:#cbd5e1}
+html[data-theme="dark"] .k8-tt-stg button[aria-pressed="true"]{background:#0369a1;border-color:#0369a1;color:#fff}
+html[data-theme="dark"] .k8-tt-stg-hint{color:#94a3b8}
+html[data-theme="dark"] .k8-tt-xg{background:#0c2a3f;color:#7dd3fc}

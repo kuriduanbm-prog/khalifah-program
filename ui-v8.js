@@ -2647,6 +2647,8 @@ window.k8RegBirthChange = function (v) {
     const girl = (st) => !!(window.k8IsGirl && window.k8IsGirl(st));
     const fits = (st, c) => { const id = norm(st.studentId); if (c.o && c.o.length && c.o.map(norm).indexOf(id) === -1) return false; if (c.x && c.x.map(norm).indexOf(id) !== -1) return false; if (c.gx === 'm' && girl(st)) return false; if (c.gx === 'f' && !girl(st)) return false; return true; };
     const base = P.length ? inGrade.filter((st) => P.some((x) => fits(st, x.c))) : inGrade;
+    // v19.02 · นักเรียนชั้นอื่นที่แอดมินเลือกให้มาเรียนร่วมในคาบนี้
+    if (P.length) { const have = new Set(base.map((st) => norm(st.studentId))); P.forEach((x) => (x.c.o || []).forEach((id) => { const n = norm(id); if (have.has(n)) return; const st = all.find((y) => norm(y.studentId) === n); if (st && !(x.c.x && x.c.x.map(norm).indexOf(n) !== -1)) { have.add(n); base.push(st); } })); }
     const en = enrolledFor();
     // v18.09 · นักเรียนที่ลงทะเบียน (สแกน QR) จะถูกเพิ่มเฉพาะ: ชั้นเดียวกับคาบนี้ หรือชั้นของเขาไม่มีวิชานี้ในตารางเลย (เรียนซ้ำ/ข้ามชั้นจริง)
     //           เดิมเพิ่มทุกคนที่ลงทะเบียนวิชานี้ → วิชาเดียวกันที่สอนหลายชั้น (เช่น คณิต ม.4 และ ม.5) รายชื่อปนกัน
@@ -3606,7 +3608,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.01';
+  const APP_VERSION = '19.02';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6733,6 +6735,9 @@ window.k8RegBirthChange = function (v) {
   // ---------- แก้ไขคาบ: หลายกลุ่มต่อคาบ · แต่ละกลุ่มเลือกนักเรียนเฉพาะบางคนได้ ----------
   let G = [];
   const gradeStudents = () => { try { return (allStudents || []).filter((s) => { const m = String(s.grade || '').match(/([1-6])/); return m && m[1] === T.grade && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || '')); }); } catch (e) { return []; } };
+  // v19.02 · เลือกผู้เรียนข้ามชั้นได้ (เรียนร่วมกัน) · ชั้นนี้ขึ้นก่อน
+  const gnOfS = (st) => { const m = String(st.grade || '').match(/([1-6])/); return m ? m[1] : ''; };
+  const allActive = () => { try { return (allStudents || []).filter((s) => s && s.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))).slice().sort((a, b) => ((gnOfS(a) === T.grade ? '0' : '1') + gnOfS(a)).localeCompare((gnOfS(b) === T.grade ? '0' : '1') + gnOfS(b)) || String(a.fullName || '').localeCompare(String(b.fullName || ''), 'th')); } catch (e) { return []; } };
   // นักเรียนที่เกี่ยวกับตารางนี้ (ตารางชั้น = ทั้งชั้น · ตารางพิเศษ = นักเรียนที่เลือกไว้)
   const poolStudents = () => {
     if (String(T.grade).indexOf('x:') !== 0) return gradeStudents();
@@ -6799,7 +6804,8 @@ window.k8RegBirthChange = function (v) {
     return { warn, ok };
   }
   function renderG() {
-    const subs = subjects(); const stu = gradeStudents();
+    const subs = subjects(); const stu = String(T.grade).indexOf('x:') === 0 ? gradeStudents() : allActive();
+    const sg = T.stuG || T.grade; // ตัวกรองชั้นในรายชื่อ ('*' = ทุกชั้น)
     const q = (T.stuQ || '').toLowerCase();
     const isX = String(T.grade).indexOf('x:') === 0;
     const chk = checkG();
@@ -6822,7 +6828,9 @@ window.k8RegBirthChange = function (v) {
         (e.rng ? '<div class="k8-tt-dates"><label class="k8-nf-f"><span>ตั้งแต่วันที่</span><input type="date" class="k8TtFrom" value="' + esc(e.from || '') + '" onchange="k8TtGrpRe()"></label><span aria-hidden="true">→</span><label class="k8-nf-f"><span>ถึงวันที่</span><input type="date" class="k8TtTo" value="' + esc(e.to || '') + '" min="' + esc(e.from || '') + '" onchange="k8TtGrpRe()"></label></div><p class="k8-pw-hint">หลังวันสุดท้าย วิชานี้จะไม่ขึ้นในตารางของนักเรียนและอาจารย์ แต่ประวัติการเช็คชื่อที่บันทึกไว้ยังอยู่ครบ</p>' : '') +
         exBlock(e, i) +
         (e.aud === 'some' ? '<fieldset class="k8-tt-who"><legend>เลือกผู้เรียน (' + chosen.size + ' คน)</legend><div class="k8-tt-stu-tools"><input type="search" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(T.stuQ || '') + '" oninput="k8TtStuQ(this.value)"><button type="button" class="k8-bh-link" onclick="k8TtStuAll(' + i + ',1)">เลือกทั้งหมด</button><button type="button" class="k8-bh-link" onclick="k8TtStuAll(' + i + ',0)">ล้าง</button></div>' +
-          '<div class="k8-tt-stu">' + (stu.length ? stu.map((st) => { const id = nsid(st.studentId); const hide = q && (st.fullName + ' ' + st.studentId).toLowerCase().indexOf(q) === -1; return '<label' + (hide ? ' hidden' : '') + '><input type="checkbox" value="' + esc(id) + '"' + (chosen.has(id) ? ' checked' : '') + ' onchange="k8TtStuCount(' + i + ')"><span>' + esc(st.fullName || id) + ' <small>' + esc(st.studentId) + '</small></span></label>'; }).join('') : '<p class="k8-pw-hint">ไม่พบรายชื่อนักเรียน ม.' + esc(T.grade) + ' · ลองซิงค์ข้อมูลนักเรียนก่อน</p>') + '</div></fieldset>' : '') +
+          '<div class="k8-tt-stg" role="group" aria-label="ดึงรายชื่อจากชั้น">' + ['*'].concat(GR).map((g) => { const n = g === '*' ? stu.length : stu.filter((st) => gnOfS(st) === g).length; const c = g === '*' ? 0 : stu.filter((st) => gnOfS(st) === g && chosen.has(nsid(st.studentId))).length; return '<button type="button" aria-pressed="' + (sg === g) + '" onclick="k8TtStuG(' + i + ',\'' + g + '\')">' + (g === '*' ? 'ทุกชั้น' : 'ม.' + g + (g === T.grade ? ' (ชั้นนี้)' : '')) + ' <small>' + n + '</small>' + (c && g !== T.grade ? '<i>✓' + c + '</i>' : '') + '</button>'; }).join('') + '</div>' +
+          '<p class="k8-tt-stg-hint">เลือกนักเรียนจากชั้นอื่นมาเรียนร่วมได้ · นักเรียนที่เลือกจะเห็นคาบนี้ในตารางเรียนของตัวเอง และอยู่ในรายชื่อเช็คชื่อของคาบนี้</p>' +
+          '<div class="k8-tt-stu">' + (stu.length ? stu.map((st) => { const id = nsid(st.studentId); const g = gnOfS(st); const on = chosen.has(id); const hide = q ? (st.fullName + ' ' + st.studentId).toLowerCase().indexOf(q) === -1 : (!on && sg !== '*' && g !== sg); return '<label data-g="' + esc(g) + '"' + (hide ? ' hidden' : '') + '><input type="checkbox" value="' + esc(id) + '"' + (on ? ' checked' : '') + ' onchange="k8TtStuCount(' + i + ')"><span>' + esc(st.fullName || id) + ' <small>' + esc(st.studentId) + '</small>' + (g && g !== T.grade ? '<em class="k8-tt-xg">ม.' + esc(g) + '</em>' : '') + '</span></label>'; }).join('') : '<p class="k8-pw-hint">ไม่พบรายชื่อนักเรียน · ลองซิงค์ข้อมูลนักเรียนก่อน</p>') + '</div></fieldset>' : '') +
         '</section>';
     }).join('') +
       '<button type="button" class="k8-tt-gadd" onclick="k8TtGrpAdd()">＋ เพิ่มวิชาในคาบนี้</button>' +
@@ -6835,7 +6843,7 @@ window.k8RegBirthChange = function (v) {
   window.k8TtRng = function (i, on) { pullG(); if (G[i]) { G[i].rng = !!on; if (on && !G[i].from) G[i].from = todayS(); } T.openG = i; renderG(); };
   window.k8TtCell = function (k) {
     loadTeachers();
-    T.cell = k; T.stuQ = ''; const [d, p] = k.split('-').map(Number); const per = cfg().periods[p - 1] || {};
+    T.cell = k; T.stuQ = ''; T.stuG = ''; const [d, p] = k.split('-').map(Number); const per = cfg().periods[p - 1] || {};
     G = arr(T.draft[k]).map((e) => Object.assign({}, e, { o: (e.o || []).slice(), pick: !!(e.o && e.o.length), aud: e.o && e.o.length ? 'some' : (e.gx || 'all'), rng: !!(e.from || e.to), x: (e.x || []).slice(), xOpen: !!(e.x && e.x.length) }));
     if (!G.length) G = [{ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: false, aud: 'all' }];
     T.openG = G.length - 1;
@@ -6846,7 +6854,10 @@ window.k8RegBirthChange = function (v) {
   window.k8TtGrpRe = function () { pullG(); renderG(); };
   window.k8TtGrpAdd = function () { pullG(); const last = G[G.length - 1] || {}; G.push({ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: false, aud: last.aud === 'm' ? 'f' : last.aud === 'f' ? 'm' : 'all' }); T.openG = G.length - 1; renderG(); };
   window.k8TtGrpDel = function (i) { pullG(); G.splice(i, 1); if (!G.length) G = [{ s: '', sn: '', t: '', tn: '', r: '', o: [], pick: false, aud: 'all' }]; T.openG = Math.min(T.openG || 0, G.length - 1); renderG(); };
-  window.k8TtStuQ = function (v) { pullG(); T.stuQ = v; const q = v.toLowerCase(); document.querySelectorAll('#k8TtCellBody .k8-tt-stu:not(.k8-tt-xlist) label').forEach((l) => { l.hidden = !!q && l.textContent.toLowerCase().indexOf(q) === -1; }); };
+  // ค้นหา = ค้นทุกชั้น · ไม่ค้นหา = แสดงตามชั้นที่เลือก (คนที่ติ๊กไว้แสดงเสมอ)
+  const stuVis = () => { const q = (T.stuQ || '').toLowerCase(); const sg = T.stuG || T.grade; document.querySelectorAll('#k8TtCellBody .k8-tt-stu:not(.k8-tt-xlist) label').forEach((l) => { const on = (l.querySelector('input') || {}).checked; l.hidden = q ? l.textContent.toLowerCase().indexOf(q) === -1 : (!on && sg !== '*' && l.dataset.g !== sg); }); };
+  window.k8TtStuQ = function (v) { pullG(); T.stuQ = v; stuVis(); };
+  window.k8TtStuG = function (i, g) { pullG(); T.stuG = g; T.openG = i; renderG(); };
   window.k8TtStuAll = function (i, on) { const box = document.querySelectorAll('#k8TtCellBody .k8-tt-grp')[i]; if (!box) return; box.querySelectorAll('.k8-tt-stu:not(.k8-tt-xlist) label:not([hidden]) input').forEach((c) => { c.checked = !!on; }); k8TtStuCount(i); };
   window.k8TtStuCount = function (i) { const box = document.querySelectorAll('#k8TtCellBody .k8-tt-grp')[i]; if (!box) return; const n = box.querySelectorAll('.k8-tt-stu:not(.k8-tt-xlist) input:checked').length; const lg = box.querySelector('.k8-tt-who legend'); if (lg) lg.textContent = 'เลือกผู้เรียน (' + n + ' คน)'; };
   window.k8TtSubjCh = function () { window.k8TtGrpRe(); };
