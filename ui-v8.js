@@ -3608,7 +3608,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.05';
+  const APP_VERSION = '19.06';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9902,12 +9902,12 @@ window.k8HfMiss = function (slot) {
 (function () {
   const lim = () => { try { return (currentAdmin && currentAdmin.limited) || ''; } catch (e) { return ''; } };
   const ALLOW = {
-    exec: ['overview', 'approvals', 'students', 'subadmins', 'timetable', 'subjects', 'prayers-monitor', 'prayer-rank', 'behavior', 'halaqah'],
+    exec: ['overview', 'approvals', 'students', 'schools', 'subadmins', 'timetable', 'subjects', 'prayers-monitor', 'prayer-rank', 'behavior', 'halaqah'],
     act: ['activities-admin'],
     night: ['behavior', 'activities-admin']
   };
   const HOME = { exec: 'overview', act: 'activities-admin', night: 'behavior' };
-  const tabOf = (btn) => { const oc = String(btn.getAttribute('onclick') || ''); if (/k8HqOpen/.test(oc)) return 'halaqah'; const m = oc.match(/switchAdminTab\('([^']+)'/); return m ? m[1] : ''; };
+  const tabOf = (btn) => { const oc = String(btn.getAttribute('onclick') || ''); if (/k8HqOpen/.test(oc)) return 'halaqah'; if (/k8SchOpen/.test(oc)) return 'schools'; const m = oc.match(/switchAdminTab\('([^']+)'/); return m ? m[1] : ''; };
   const allowed = (t) => { const l = lim(); return !l || (ALLOW[l] || []).indexOf(t) !== -1; };
   window.k8LimitAllows = allowed;
   function nav() {
@@ -12267,6 +12267,7 @@ window.k8PdWho = function (sid) {
     { k: 'act', l: 'กิจกรรม & QR', b: 'btnTabActivitiesAdmin', c: '#15803d', g: '#dcfce7', i: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>' },
     { k: 'ntf', l: 'แจ้งเตือน', b: 'btnAdminTabNotif', c: '#b45309', g: '#fef3c7', i: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>' },
     { k: 'roll', l: 'เช็คชื่อซุบฮิ', b: 'btnAdminTabPrayerRoll', c: '#0e7490', g: '#cffafe', i: '<path d="M12 3v2M5.6 5.6l1.4 1.4M3 12h2M19 12h2M17 7l1.4-1.4"/><path d="M8 16a4 4 0 0 1 8 0"/><path d="M2 20h20"/>' },
+    { k: 'sch', l: 'รายโรงเรียน', b: 'btnAdminTabSch', c: '#0c4a6e', g: '#e0f2fe', i: '<path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M9 21v-5h6v5M12 9v2"/>' },
     { k: 'asum', l: 'สรุปการมาเรียน', b: 'btnAdminTabAsum', c: '#1d4ed8', g: '#dbeafe', i: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>' },
     { k: 'rank', l: 'อันดับละหมาด', b: 'btnAdminTabRank', c: '#a16207', g: '#fef9c3', i: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>' },
     { k: 'has', l: 'ผลบุญ', b: 'btnAdminTabHasanat', c: '#047857', g: '#d1fae5', i: '<path d="M12 2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17l-6.1 3.4 1.5-6.8L2.2 9l6.9-.7z"/>' },
@@ -12543,15 +12544,208 @@ window.k8PdWho = function (sid) {
   window.k8SchPick = function (name) { S.school = name || ''; S.q = ''; render(); const b = document.querySelector('#k8Sch .k8-asum-b'); if (b) b.scrollTop = 0; };
   window.k8SchWho = function (sid) { window.k8SchClose(); try { switchAdminTab('students', document.getElementById('btnAdminTabStudents')); } catch (e) {} setTimeout(() => { try { window.k8PdWho(sid); } catch (e) {} }, 120); };
   let qt = null; window.k8SchQ = function (el) { clearTimeout(qt); qt = setTimeout(() => { S.q = el.value; const pos = el.selectionStart; render(); const n = document.querySelector('#k8Sch .k8-asum-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 200); };
-  window.k8SchCsv = function () {
-    const X = S.last; if (!X) return;
-    let rows;
-    if (X.kind === 'list') rows = [['โรงเรียน', 'จำนวนนักเรียน', 'ละหมาด %', 'มาเรียน %', 'พฤติกรรมเฉลี่ย', 'ถูกหัก (ครั้ง)', 'ต่ำกว่า 80 คะแนน (คน)']].concat(X.L.map((g) => [g.name, g.rows.length, g.pPct ?? '', g.aPct ?? '', g.scAvg ?? '', g.minus, g.low]));
-    else rows = [X.head].concat(X.rows);
-    if (rows.length < 2) { try { showToast('ยังไม่มีข้อมูลให้ดาวน์โหลด', 'warning'); } catch (e) {} return; }
-    const csv = rows.map((r) => r.map((v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'สรุปรายโรงเรียน_' + (S.school ? S.school.replace(/[\\/:*?"<>|]/g, '') + '_' + { pray: 'ละหมาด', att: 'มาเรียน', bh: 'พฤติกรรม' }[S.tab] + '_' : '') + S.from + '_' + S.to + '.csv';
-    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  // ---------- ส่งออก: Excel · Word · PDF · JPG (รวมทุกหัวข้อของโรงเรียนที่เลือก หรือเปรียบเทียบทุกโรงเรียน)
+  const byGN = (a, b) => String(a.s.grade || '').localeCompare(String(b.s.grade || ''), 'th') || String(a.s.fullName || '').localeCompare(String(b.s.fullName || ''), 'th');
+  const fmtNow = () => { const d = new Date(); return d.getDate() + ' ' + MTH[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' น.'; };
+  function report() {
+    const M = model(); const range = dTh(S.from) + (S.from !== S.to ? ' – ' + dTh(S.to) : '');
+    if (!S.school) {
+      const L = Object.values(M.G).sort((a, b) => b.rows.length - a.rows.length || a.name.localeCompare(b.name, 'th'));
+      const tot = { n: M.rows.length };
+      return {
+        name: 'ทุกโรงเรียน', title: 'รายงานเปรียบเทียบรายโรงเรียน', range,
+        kpis: [{ l: 'โรงเรียน', v: String(L.length) }, { l: 'นักเรียนทั้งหมด', v: String(tot.n) },
+          { l: 'ละหมาดเฉลี่ย', v: (() => { let on = 0, den = 0; L.forEach((g) => { on += g.pOn; den += g.pDen; }); return den ? Math.round(on / den * 100) + '%' : '–'; })() },
+          { l: 'มาเรียนเฉลี่ย', v: (() => { let ok = 0, n = 0; L.forEach((g) => { ok += g.aOk; n += g.aN; }); return n ? Math.round(ok / n * 100) + '%' : '–'; })() }],
+        sections: [{ key: 'list', title: 'เปรียบเทียบรายโรงเรียน', color: '#0369a1',
+          cols: [['ที่', 5, 'c'], ['โรงเรียน', 33, 'l'], ['นักเรียน', 9, 'c'], ['ละหมาด %', 11, 'c'], ['มาเรียน %', 11, 'c'], ['พฤติกรรมเฉลี่ย', 12, 'c'], ['ถูกหัก (ครั้ง)', 10, 'c'], ['ต่ำกว่า 80 (คน)', 9, 'c']],
+          rows: L.map((g, i) => ({ v: [i + 1, g.name, g.rows.length, g.pPct == null ? '–' : g.pPct, g.aPct == null ? '–' : g.aPct, g.scAvg == null ? '–' : g.scAvg, g.minus, g.low || 0],
+            bad: [g.pPct != null && g.pPct < 70 ? 3 : -1, g.aPct != null && g.aPct < 80 ? 4 : -1, g.scAvg != null && g.scAvg < 80 ? 5 : -1, g.low ? 7 : -1] })),
+          note: 'ละหมาด = (ตรงเวลา + สาย) ÷ เวลาที่ต้องละหมาด ไม่นับลา/อุซุร · มาเรียน = (มา + สาย) ÷ ครั้งที่เช็คชื่อรายคาบ · พฤติกรรม = คะแนนเฉลี่ยภาคเรียน (เริ่ม 100) · ตัวเลขสีแดง = ต่ำกว่าเกณฑ์' }]
+      };
+    }
+    const g = M.G[S.school] || { name: S.school, rows: [], pOn: 0, pDen: 0, aN: 0, pPct: null, aPct: null, scAvg: null, minus: 0, low: 0 };
+    const R = g.rows.slice().sort(byGN);
+    const pr = R.map((r, i) => { const p = r.p || { on: 0, late: 0, ex: 0, miss: 0, pct: null }; return { v: [i + 1, r.s.fullName || r.k, shortG(r.s.grade), r.s.studentId, p.on, p.late, p.ex, p.miss, p.pct == null ? '–' : p.pct], low: p.pct != null && p.pct < 70, bad: [p.miss ? 7 : -1, p.pct != null && p.pct < 70 ? 8 : -1] }; });
+    const bh = R.map((r, i) => { const b = r.b || { minus: 0, minusPts: 0, plus: 0 }; return { v: [i + 1, r.s.fullName || r.k, shortG(r.s.grade), r.s.studentId, r.score == null ? '–' : r.score, b.minus, b.minusPts || 0, b.plus], low: r.score != null && r.score < 80, bad: [r.score != null && r.score < 80 ? 4 : -1, b.minus ? 5 : -1] }; });
+    const at = R.map((r, i) => { const a = r.a || { present: 0, late: 0, leave: 0, absent: 0, pct: null }; return { v: [i + 1, r.s.fullName || r.k, shortG(r.s.grade), r.s.studentId, a.present, a.late, a.leave, a.absent, a.pct == null ? '–' : a.pct], low: a.pct != null && a.pct < 80, bad: [a.absent ? 7 : -1, a.pct != null && a.pct < 80 ? 8 : -1] }; });
+    const items = []; R.forEach((r) => { ((r.b && r.b.items) || []).forEach((l) => items.push({ r, l })); });
+    items.sort((x, y) => String(x.l.date).localeCompare(String(y.l.date)) || byGN(x.r, y.r));
+    const stuCols = [['ที่', 5, 'c'], ['ชื่อ - สกุล', 31, 'l'], ['ชั้น', 7, 'c'], ['รหัส', 9, 'c']];
+    const sections = [
+      { key: 'pray', title: 'การละหมาด', color: '#0f766e', cols: stuCols.concat([['ตรงเวลา', 9, 'c'], ['สาย', 8, 'c'], ['ลา/อุซุร', 10, 'c'], ['ขาด', 8, 'c'], ['ร้อยละ', 9, 'c']]), rows: pr, note: 'ร้อยละ = (ตรงเวลา + สาย) ÷ เวลาที่ต้องละหมาด ไม่นับเวลาที่ลา/มีประจำเดือน · ชื่อสีแดง = ต่ำกว่า 70%' },
+      { key: 'bh', title: 'พฤติกรรม', color: '#be123c', cols: stuCols.concat([['คะแนนภาคเรียน', 13, 'c'], ['ถูกหัก (ครั้ง)', 11, 'c'], ['ถูกหัก (คะแนน)', 12, 'c'], ['ได้เพิ่ม (ครั้ง)', 12, 'c']]), rows: bh, note: 'คะแนนภาคเรียนเริ่มที่ 100 · ถูกหัก/ได้เพิ่ม นับเฉพาะช่วงวันที่ที่เลือก · ชื่อสีแดง = ต่ำกว่า 80 คะแนน' },
+      { key: 'att', title: 'การมาเรียน', color: '#1d4ed8', cols: stuCols.concat([['มา', 9, 'c'], ['สาย', 8, 'c'], ['ลา', 8, 'c'], ['ขาด', 8, 'c'], ['ร้อยละ', 11, 'c']]), rows: at, note: 'นับจากการเช็คชื่อรายคาบ · ร้อยละ = (มา + สาย) ÷ ครั้งที่เช็คชื่อ · ชื่อสีแดง = ต่ำกว่า 80%' }
+    ];
+    if (items.length) sections.push({ key: 'bhlog', title: 'รายการพฤติกรรมในช่วงนี้', color: '#9f1239', cols: [['ที่', 5, 'c'], ['วันที่', 11, 'c'], ['ชื่อ - สกุล', 26, 'l'], ['ชั้น', 7, 'c'], ['หัวข้อ', 39, 'l'], ['คะแนน', 12, 'c']],
+      rows: items.map((x, i) => { const p = Number(x.l.points) || 0; return { v: [i + 1, dTh(x.l.date), x.r.s.fullName || x.r.k, shortG(x.r.s.grade), x.l.title || x.l.ruleTitle || x.l.category || '-', (p > 0 ? '+' : '') + p], bad: [p < 0 ? 5 : -1], good: [p > 0 ? 5 : -1] }; }), note: '' });
+    return {
+      name: g.name, title: 'รายงานสรุปรายโรงเรียน', range,
+      kpis: [{ l: 'นักเรียน', v: String(R.length), s: 'คน' }, { l: 'ละหมาด', v: pctTxt(g.pPct), s: g.pOn + ' จาก ' + g.pDen + ' เวลา', t: tone(g.pPct, 90, 70) },
+        { l: 'มาเรียน', v: pctTxt(g.aPct), s: g.aN + ' ครั้งที่เช็คชื่อ', t: tone(g.aPct, 90, 80) }, { l: 'พฤติกรรมเฉลี่ย', v: g.scAvg == null ? '–' : String(g.scAvg), s: 'ถูกหัก ' + g.minus + ' ครั้ง', t: tone(g.scAvg, 90, 80) }],
+      sections
+    };
+  }
+  const safeName = (s) => String(s).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+  const fileBase = (D) => (S.school ? 'รายงานโรงเรียน_' : 'รายงานรายโรงเรียน_') + safeName(D.name) + '_' + S.from + (S.from !== S.to ? '_' + S.to : '');
+  function dl(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const loadScript = (src, test) => test() ? Promise.resolve() : new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('load ' + src)); document.head.appendChild(s); });
+  async function waitData() { loadAtt(); loadBh(); const t0 = Date.now(); while ((!S.att || !S.bh) && Date.now() - t0 < 50000) await new Promise((r) => setTimeout(r, 250)); }
+  const TONE_C = { 'is-ok': '#15803d', 'is-mid': '#b45309', 'is-bad': '#b91c1c' };
+
+  // Excel
+  async function toXlsx(D) {
+    await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', () => window.XLSX && XLSX.utils && XLSX.utils.aoa_to_sheet && XLSX.write);
+    const wb = XLSX.utils.book_new();
+    const sum = [[D.title], ['โรงเรียน', D.name], ['ช่วงวันที่', D.range], ['ออกรายงาน', fmtNow()], [], ['หัวข้อ', 'ค่า', 'รายละเอียด']].concat(D.kpis.map((k) => [k.l, k.v, k.s || '']));
+    const ws0 = XLSX.utils.aoa_to_sheet(sum); ws0['!cols'] = [{ wch: 18 }, { wch: 40 }, { wch: 28 }]; ws0['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
+    XLSX.utils.book_append_sheet(wb, ws0, 'สรุป');
+    D.sections.forEach((sec) => {
+      const aoa = [[sec.title + ' · ' + D.name], ['ช่วงวันที่ ' + D.range], [], sec.cols.map((c) => c[0])].concat(sec.rows.map((r) => r.v.map((v) => v === '–' ? '' : v)));
+      if (sec.note) aoa.push([], [sec.note]);
+      const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = sec.cols.map((c, i) => ({ wch: i === 1 || c[2] === 'l' ? Math.max(14, Math.round(c[1] * 1.3)) : Math.max(7, Math.round(c[1] * 1.1)) }));
+      ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: sec.cols.length - 1 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: sec.cols.length - 1 } }];
+      ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 3, c: 0 }, e: { r: 3 + sec.rows.length, c: sec.cols.length - 1 } }) };
+      XLSX.utils.book_append_sheet(wb, ws, sec.title.slice(0, 28));
+    });
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    dl(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileBase(D) + '.xlsx');
+  }
+  // Word (.doc แบบ HTML เปิดได้ใน Word / Google Docs)
+  function toDoc(D) {
+    const td = (v, al, st) => '<td style="text-align:' + (al === 'l' ? 'left' : 'center') + ';' + (st || '') + '">' + esc(v) + '</td>';
+    let h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>' + esc(D.title) + '</title>' +
+      '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->' +
+      '<style>@page WordSection1{size:21cm 29.7cm;margin:1.6cm 1.5cm 1.6cm 1.5cm;mso-footer-margin:.8cm} div.WordSection1{page:WordSection1}' +
+      'body{font-family:"TH Sarabun New","IBM Plex Sans Thai",Tahoma,sans-serif;font-size:14pt;color:#0f172a}' +
+      'h1{font-size:20pt;color:#0c4a6e;margin:0}h2{font-size:16pt;color:#0c4a6e;margin:18pt 0 6pt;border-left:6pt solid #0369a1;padding-left:6pt}' +
+      'p.sub{color:#475569;margin:2pt 0 10pt}table{border-collapse:collapse;width:100%}' +
+      'table.t th{background:#0c4a6e;color:#fff;font-weight:bold;padding:4pt 5pt;border:1px solid #0c4a6e;font-size:13pt}' +
+      'table.t td{border:1px solid #cbd5e1;padding:3pt 5pt;font-size:13pt}table.t tr.z td{background:#f1f5f9}' +
+      'table.k td{border:1px solid #bae6fd;background:#f0f9ff;padding:6pt;text-align:center;width:25%}table.k b{font-size:20pt;display:block}' +
+      'p.note{color:#64748b;font-size:12pt;margin:4pt 0 0}</style></head><body><div class="WordSection1">';
+    h += '<h1>' + esc(D.title) + '</h1><p class="sub"><b>' + esc(D.name) + '</b> · ช่วงวันที่ ' + esc(D.range) + ' · ออกรายงาน ' + esc(fmtNow()) + '</p>';
+    h += '<table class="k"><tr>' + D.kpis.map((k) => '<td><span style="color:#475569">' + esc(k.l) + '</span><b style="color:' + (TONE_C[k.t] || '#0c4a6e') + '">' + esc(k.v) + '</b><span style="color:#64748b;font-size:12pt">' + esc(k.s || '') + '</span></td>').join('') + '</tr></table>';
+    D.sections.forEach((sec) => {
+      h += '<h2 style="border-left-color:' + sec.color + '">' + esc(sec.title) + '</h2><table class="t"><thead><tr>' + sec.cols.map((c) => '<th style="width:' + c[1] + '%">' + esc(c[0]) + '</th>').join('') + '</tr></thead><tbody>' +
+        (sec.rows.length ? sec.rows.map((r, i) => '<tr' + (i % 2 ? ' class="z"' : '') + '>' + r.v.map((v, j) => td(v, sec.cols[j][2], (r.bad && r.bad.indexOf(j) !== -1 ? 'color:#b91c1c;font-weight:bold;' : '') + (r.good && r.good.indexOf(j) !== -1 ? 'color:#15803d;font-weight:bold;' : '') + (r.low && j === 1 ? 'color:#b91c1c;' : ''))).join('') + '</tr>').join('') : '<tr><td colspan="' + sec.cols.length + '" style="text-align:center;color:#64748b">ไม่มีข้อมูล</td></tr>') +
+        '</tbody></table>' + (sec.note ? '<p class="note">' + esc(sec.note) + '</p>' : '');
+    });
+    h += '</div></body></html>';
+    dl(new Blob(['﻿' + h], { type: 'application/msword' }), fileBase(D) + '.doc');
+  }
+  // หน้ารายงาน A4 บน canvas (ใช้ทำ PDF และ JPG)
+  async function pages(D) {
+    const F = '"IBM Plex Sans Thai", Tahoma, sans-serif';
+    try { await Promise.all(['400', '500', '600', '700'].map((w) => document.fonts.load(w + ' 20px "IBM Plex Sans Thai"', 'กขค'))); } catch (e) {}
+    const W = 1240, H = 1754, M = 64, FOOT = 56; const out = [];
+    let c, x, y;
+    const font = (w, s) => { x.font = w + ' ' + s + 'px ' + F; };
+    const fit = (t, w) => { t = String(t == null ? '' : t); if (x.measureText(t).width <= w) return t; while (t.length > 1 && x.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
+    const rr = (X, Y, w, h, r, fill, stroke) => { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); if (fill) { x.fillStyle = fill; x.fill(); } if (stroke) { x.strokeStyle = stroke; x.lineWidth = 2; x.stroke(); } };
+    const newPage = (first) => {
+      c = document.createElement('canvas'); c.width = W; c.height = H; x = c.getContext('2d'); out.push(c);
+      x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); x.textBaseline = 'middle';
+      if (first) {
+        rr(M, M, W - 2 * M, 190, 22, '#0c4a6e');
+        x.fillStyle = '#bae6fd'; font('600', 22); x.fillText(D.title + ' · KHALIFAH', M + 34, M + 42);
+        x.fillStyle = '#fff'; font('700', 42); x.fillText(fit(D.name, W - 2 * M - 68), M + 34, M + 96);
+        x.fillStyle = '#e0f2fe'; font('400', 22); x.fillText('ช่วงวันที่ ' + D.range + '   ·   ออกรายงาน ' + fmtNow(), M + 34, M + 150);
+        y = M + 190 + 28;
+        const kw = (W - 2 * M - 3 * 18) / 4;
+        D.kpis.forEach((k, i) => {
+          const X = M + i * (kw + 18); rr(X, y, kw, 132, 18, '#f8fafc', '#e2e8f0');
+          x.fillStyle = '#475569'; font('500', 20); x.fillText(k.l, X + 22, y + 32);
+          x.fillStyle = TONE_C[k.t] || '#0c4a6e'; font('700', 44); x.fillText(k.v, X + 22, y + 76);
+          if (k.s) { x.fillStyle = '#64748b'; font('400', 18); x.fillText(fit(k.s, kw - 44), X + 22, y + 112); }
+        });
+        y += 132 + 20;
+      } else {
+        x.fillStyle = '#0c4a6e'; font('600', 20); x.fillText(fit(D.title + ' · ' + D.name, W - 2 * M - 260), M, M + 10);
+        x.fillStyle = '#64748b'; font('400', 18); x.textAlign = 'right'; x.fillText(D.range, W - M, M + 10); x.textAlign = 'left';
+        x.fillStyle = '#e2e8f0'; x.fillRect(M, M + 34, W - 2 * M, 2); y = M + 56;
+      }
+    };
+    const room = () => H - M - FOOT - y;
+    const TW = W - 2 * M, HH = 46, RH = 40;
+    const colX = (sec) => { const tot = sec.cols.reduce((a, cc) => a + cc[1], 0); let acc = M; return sec.cols.map((cc) => { const w = cc[1] / tot * TW; const o = { x: acc, w, al: cc[2], t: cc[0] }; acc += w; return o; }); };
+    const head = (sec, cont) => {
+      x.fillStyle = sec.color; x.fillRect(M, y + 6, 8, 34);
+      x.fillStyle = '#0f172a'; font('700', 28); x.fillText(sec.title + (cont ? ' (ต่อ)' : ''), M + 22, y + 24);
+      if (!cont) { x.fillStyle = '#64748b'; font('400', 18); x.textAlign = 'right'; x.fillText(sec.rows.length + ' รายการ', W - M, y + 24); x.textAlign = 'left'; }
+      y += 56;
+    };
+    const thead = (sec, X) => {
+      rr(M, y, TW, HH, 10, '#0c4a6e'); x.fillStyle = '#fff'; font('600', 18);
+      X.forEach((cl) => { x.textAlign = cl.al === 'l' ? 'left' : 'center'; x.fillText(fit(cl.t, cl.w - 16), cl.al === 'l' ? cl.x + 12 : cl.x + cl.w / 2, y + HH / 2); });
+      x.textAlign = 'left'; y += HH;
+    };
+    newPage(true);
+    D.sections.forEach((sec, si) => {
+      const X = colX(sec);
+      if (room() < 56 + HH + RH * 3) newPage(false); else if (si) y += 26;
+      head(sec, false); thead(sec, X);
+      if (!sec.rows.length) { x.fillStyle = '#64748b'; font('400', 20); x.textAlign = 'center'; x.fillText('ไม่มีข้อมูล', W / 2, y + 30); x.textAlign = 'left'; y += 60; }
+      sec.rows.forEach((r, i) => {
+        if (room() < RH) { newPage(false); head(sec, true); thead(sec, X); }
+        if (i % 2) { x.fillStyle = '#f8fafc'; x.fillRect(M, y, TW, RH); }
+        x.fillStyle = '#e2e8f0'; x.fillRect(M, y + RH - 1, TW, 1);
+        r.v.forEach((v, j) => {
+          const cl = X[j]; const bad = r.bad && r.bad.indexOf(j) !== -1, good = r.good && r.good.indexOf(j) !== -1;
+          x.fillStyle = bad ? '#b91c1c' : good ? '#15803d' : (r.low && j === 1) ? '#b91c1c' : j === 0 ? '#94a3b8' : '#0f172a';
+          font(bad || good || j === 1 ? '600' : '400', 19);
+          x.textAlign = cl.al === 'l' ? 'left' : 'center'; x.fillText(fit(v, cl.w - 16), cl.al === 'l' ? cl.x + 12 : cl.x + cl.w / 2, y + RH / 2);
+        });
+        x.textAlign = 'left'; y += RH;
+      });
+      if (sec.note) {
+        font('400', 17); x.fillStyle = '#64748b';
+        const words = sec.note.split(' · '); let line = '', lines = [];
+        words.forEach((w) => { const t = line ? line + ' · ' + w : w; if (x.measureText(t).width > TW) { lines.push(line); line = w; } else line = t; }); if (line) lines.push(line);
+        if (room() < 14 + lines.length * 26) newPage(false);
+        y += 14; lines.forEach((l) => { x.fillText(l, M, y + 12); y += 26; });
+      }
+    });
+    out.forEach((cv, i) => { const g = cv.getContext('2d'); g.textBaseline = 'middle'; g.font = '400 17px ' + F; g.fillStyle = '#94a3b8'; g.fillText('KHALIFAH · ' + D.name, M, H - M + 6); g.textAlign = 'right'; g.fillText('หน้า ' + (i + 1) + ' / ' + out.length, W - M, H - M + 6); g.textAlign = 'left'; });
+    return out;
+  }
+  const b64bytes = (u) => { const s = atob(u.split(',')[1]); const a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; };
+  async function toPdf(D) {
+    const P = await pages(D);
+    await loadScript('vendor/pdf-lib/pdf-lib.min.js', () => window.PDFLib);
+    const doc = await PDFLib.PDFDocument.create(); doc.setTitle(D.title + ' · ' + D.name); doc.setCreator('KHALIFAH');
+    for (const cv of P) { const img = await doc.embedJpg(b64bytes(cv.toDataURL('image/jpeg', 0.9))); const pg = doc.addPage([595.28, 841.89]); pg.drawImage(img, { x: 0, y: 0, width: 595.28, height: 841.89 }); }
+    dl(new Blob([await doc.save()], { type: 'application/pdf' }), fileBase(D) + '.pdf');
+  }
+  async function toJpg(D) {
+    const P = await pages(D); const gap = 24;
+    const W = P[0].width; let Ht = P.reduce((a, cv) => a + cv.height, 0) + gap * (P.length - 1);
+    const sc = Math.min(1, Math.sqrt(16e6 / (W * Ht)));
+    const c = document.createElement('canvas'); c.width = Math.round(W * sc); c.height = Math.round(Ht * sc); const x = c.getContext('2d');
+    x.fillStyle = '#e2e8f0'; x.fillRect(0, 0, c.width, c.height);
+    let y = 0; P.forEach((cv) => { x.drawImage(cv, 0, y * sc, cv.width * sc, cv.height * sc); y += cv.height + gap; });
+    const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.9));
+    dl(blob, fileBase(D) + '.jpg');
+  }
+  let busy = false;
+  window.k8SchExport = async function (fmt) {
+    window.k8SchXm(false); if (busy) return; busy = true;
+    const lbl = { xlsx: 'Excel', doc: 'Word', pdf: 'PDF', jpg: 'รูปภาพ JPG' }[fmt];
+    const btn = document.getElementById('k8SchXBtn'); if (btn) { btn.disabled = true; btn.dataset.t = btn.innerHTML; btn.textContent = 'กำลังสร้างไฟล์…'; }
+    try {
+      if (!S.att || !S.bh) { toast('กำลังโหลดข้อมูลการมาเรียนและพฤติกรรม…'); await waitData(); }
+      const D = report();
+      if (fmt === 'xlsx') await toXlsx(D); else if (fmt === 'doc') toDoc(D); else if (fmt === 'pdf') await toPdf(D); else await toJpg(D);
+      toast('บันทึกไฟล์ ' + lbl + ' แล้ว', 'success');
+    } catch (e) { console.warn('k8SchExport', e); toast('สร้างไฟล์ ' + lbl + ' ไม่สำเร็จ' + (/load/.test(String(e && e.message)) ? ' (ต้องต่อเน็ต)' : ''), 'error'); }
+    finally { busy = false; if (btn) { btn.disabled = false; if (btn.dataset.t) btn.innerHTML = btn.dataset.t; } }
   };
+  window.k8SchXm = function (open) {
+    const m = document.getElementById('k8SchXm'); const b = document.getElementById('k8SchXBtn'); if (!m) return;
+    const on = open == null ? m.hidden : !!open; m.hidden = !on; if (b) b.setAttribute('aria-expanded', String(on));
+    const sub = document.getElementById('k8SchXmS'); if (sub) sub.textContent = S.school ? 'โรงเรียน' + S.school.replace(/^โรงเรียน/, '') + ' · ละหมาด · พฤติกรรม · การมาเรียน' : 'ตารางเปรียบเทียบทุกโรงเรียน';
+  };
+  document.addEventListener('click', (e) => { const m = document.getElementById('k8SchXm'); if (m && !m.hidden && !e.target.closest('#k8SchXm, #k8SchXBtn')) window.k8SchXm(false); });
+  window.k8SchCsv = function () { window.k8SchExport('xlsx'); };
 })();
