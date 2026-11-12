@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '18.93'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '18.99'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -2996,8 +2996,11 @@ function recordPrayer(data) {
   ]);
   const lastRow = sheet.getLastRow();
   sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
+  // v18.99 · รูปที่ถ่ายตอนไม่มีเน็ตแล้วส่งมาหลังระบบหักคะแนนไปแล้ว → คืนคะแนนทันที
+  let restored = 0;
+  if (!/ขาด/.test(String(statusThai || ''))) { try { restored = prayerMissRestore_(cleanSid, dateStr, prayerNameThai, 'พบบันทึกละหมาด (ส่งย้อนหลัง)'); } catch (e) {} }
 
-  return { success: true, message: 'บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef };
+  return { success: true, message: 'บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef, restored: restored };
 }
 
 // v18.74 · ตรวจเวลาเครื่องอัตโนมัติ: หาเวลาที่ถ่ายจริง แล้วแก้วันที่/เวลา/สถานะเองโดยไม่ต้องให้แอดมินตรวจ
@@ -6991,7 +6994,47 @@ function prayerPenaltyRun_(nowArg) {
     });
   });
   if (rows.length) bsh.getRange(bsh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
-  return { added: rows.length, from: from };
+  // v18.99 · ตรวจซ้ำรายการที่หักไปแล้ว: ถ้าภายหลังพบบันทึกละหมาด (ส่งย้อนหลัง/คำขอย้อนหลัง) ใบลา หรือการแจ้งประจำเดือน → คืนคะแนนอัตโนมัติ
+  let healed = 0;
+  try {
+    const byId = {}; studs.forEach(function (st) { byId[nid(st.studentId)] = st; });
+    const n0 = bsh.getLastRow();
+    if (n0 > 1) {
+      const vals = bsh.getRange(2, 1, n0 - 1, 15).getValues();
+      const fix = 'ระบบ: ' + Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+      vals.forEach(function (r, i) {
+        const m = String(r[0] || '').match(/^PM-(\d+)-(\d{4}-\d{2}-\d{2})-(\d)$/); if (!m || cleanVal(r[14]) === 'cancelled') return;
+        const sid = m[1], ds = m[2], si = +m[3]; if (dates.indexOf(ds) === -1) return;
+        const slot0 = PRAYER_SLOTS_[si]; if (!slot0) return;
+        const k = sid + '|' + ds + '|' + formatPrayerTimeThai(slot0);
+        const st = byId[sid]; const girl = st ? periodIsGirl_(st) : false;
+        let why = '';
+        if (have[k]) why = 'พบบันทึกละหมาด';
+        else if (onLeave(sid, ds, slot0)) why = 'มีใบลาที่อนุมัติ';
+        else if (girl && onPeriod(sid, ds)) why = 'แจ้งมีประจำเดือน';
+        if (!why) return;
+        bsh.getRange(i + 2, 15, 1, 2).setValues([['cancelled', fix + ' · คืนคะแนน: ' + why]]);
+        healed++;
+      });
+    }
+  } catch (e) {}
+  return { added: rows.length, healed: healed, from: from };
+}
+// คืนคะแนนรายการ "ไม่เช็คชื่อละหมาด" ของนักเรียน/วัน/เวลานั้น (ถ้ามี)
+function prayerMissRestore_(studentId, ds, prayerName, why) {
+  const sid = String(studentId || '').replace(/\D/g, '').replace(/^0+/, ''); if (!sid || !/^\d{4}-\d{2}-\d{2}$/.test(String(ds))) return 0;
+  const key = formatPrayerTimeThai(prayerName);
+  const si = PRAYER_SLOTS_.findIndex(function (x) { return formatPrayerTimeThai(x) === key; }); if (si < 0) return 0;
+  const id = 'PM-' + sid + '-' + ds + '-' + si;
+  const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR); if (!sh || sh.getLastRow() < 2) return 0;
+  const ids = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues();
+  for (let i = ids.length - 1; i >= 0; i--) {
+    if (String(ids[i][0]) !== id) continue;
+    if (cleanVal(sh.getRange(i + 2, 15).getValue()) === 'cancelled') return 0;
+    sh.getRange(i + 2, 15, 1, 2).setValues([['cancelled', 'ระบบ: ' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') + ' · คืนคะแนน: ' + (why || 'พบบันทึกละหมาด')]]);
+    return 1;
+  }
+  return 0;
 }
 function behaviorForStudent_(x) { const o = {}; Object.keys(x || {}).forEach(function (k) { if (k !== 'by' && k !== 'byName' && k !== 'cancelledBy') o[k] = x[k]; }); return o; }
 function getBehaviorLogs_() {
