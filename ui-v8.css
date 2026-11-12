@@ -6305,3 +6305,65 @@ html[data-theme="dark"] .k8-schd-tg { background: #10151c; } html[data-theme="da
 .k8-schd-c.is-off { background: transparent; color: #94a3b8; font-weight: 500; }
 .k8-schd-t tr.is-off td { background: #f8fafc; }
 html[data-theme="dark"] .k8-schd-t tr.is-off td { background: #161d27; }
+
+/* v19.13 · สรุปรายโรงเรียน: หน้าโรงเรียนแบบตารางเดียว */
+.k8-sv-kpi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.k8-sv-kpi > div { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; gap: 14px; }
+.k8-sv-kpi b { font-size: 30px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; color: #0c4a6e; }
+.k8-sv-kpi span { display: flex; flex-direction: column; font-size: 12.5px; color: #64748b; line-height: 1.45; min-width: 0; }
+.k8-sv-kpi em { font-style: normal; font-size: 13.5px; color: #334155; font-weight: 500; }
+.k8-sv-kpi b.is-ok, .k8-sv-v.is-ok, .k8-sv-mx b.is-ok { color: #15803d; } .k8-sv-kpi b.is-mid, .k8-sv-v.is-mid, .k8-sv-mx b.is-mid { color: #b45309; } .k8-sv-kpi b.is-bad, .k8-sv-v.is-bad, .k8-sv-mx b.is-bad { color: #b91c1c; }
+.k8-sv-tool { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.k8-sv-tool .k8-asum-q { flex: 1 1 260px; margin: 0; }
+.k8-sv-seg { display: inline-flex; background: #eef1f5; border-radius: 11px; padding: 3px; gap: 2px; }
+.k8-sv-seg button { border: 0; background: transparent; border-radius: 9px; padding: 7px 12px; font: inherit; font-size: 13px; color: #475569; cursor: pointer; white-space: nowrap; }
+.k8-sv-seg button[aria-pressed="true"] { background: #fff; color: #0c4a6e; font-weight: 600; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+.k8-sv-gsel { height: 40px; border-radius: 11px; border: 1px solid #e2e8f0; background: #fff; padding: 0 10px; font: inherit; font-size: 13.5px; color: #0f172a; }
+.k8-sv-tw { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; overflow: auto; }
+.k8-sv-t { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.k8-sv-t th { position: sticky; top: 0; z-index: 1; background: #f8fafc; text-align: left; font-size: 12.5px; font-weight: 600; color: #334155; padding: 10px 14px; border-bottom: 1px solid #e5e7eb; vertical-align: bottom; }
+.k8-sv-t th small { display: block; font-weight: 400; color: #64748b; font-size: 11.5px; line-height: 1.4; }
+.k8-sv-t th.c-nm { width: 24%; } .k8-sv-t th.c-p { width: 31%; }
+.k8-sv-t td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.k8-sv-t tbody tr:nth-child(even) td { background: #fcfcfd; }
+.k8-sv-t tr.lv-bad td:first-child { box-shadow: inset 3px 0 0 #ef4444; }
+.k8-sv-nm .k8-sch-who b { font-weight: 600; } .k8-sv-nm .k8-sch-who small { color: #64748b; font-size: 12px; }
+.k8-sv-mx { display: flex; align-items: center; gap: 10px; }
+.k8-sv-mx b { min-width: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.k8-sv-stk { display: inline-flex; flex: 0 1 180px; height: 12px; border-radius: 999px; overflow: hidden; background: #eef1f5; }
+.k8-sv-stk i { display: block; height: 100%; }
+.k8-sv-v { display: block; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.k8-sv-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 4px; font-size: 12px; color: #64748b; }
+.k8-sv-sub .k8-sch-num { min-width: 26px; min-height: 22px; padding: 0 6px; border-radius: 7px; font-size: 12.5px; }
+.k8-sv-zero { color: #334155; font-weight: 600; }
+.k8-sv-na { font-size: 12.5px; color: #94a3b8; }
+.k8-sv-chip { display: inline-flex; border-radius: 999px; padding: 3px 11px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.k8-sv-chip.is-bad { background: #fee2e2; color: #b91c1c; } .k8-sv-chip.is-mid { background: #fef3c7; color: #b45309; } .k8-sv-chip.is-ok { background: #dcfce7; color: #15803d; }
+.k8-sv-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 0; font-size: 12px; color: #64748b; }
+.k8-sv-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+@media (max-width: 900px) { .k8-sv-kpi { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) {
+  .k8-sv-kpi > div { padding: 12px; gap: 10px; flex-direction: column; align-items: flex-start; } .k8-sv-kpi b { font-size: 26px; }
+  .k8-sv-tool .k8-sv-seg { flex: 1; } .k8-sv-seg button { flex: 1; padding: 7px 6px; }
+  .k8-sv-tw { background: transparent; border: 0; overflow: visible; }
+  .k8-sv-t thead { display: none; }
+  .k8-sv-t, .k8-sv-t tbody { display: block; }
+  .k8-sv-t tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  .k8-sv-t tbody tr:nth-child(even) td { background: transparent; }
+  .k8-sv-t td { display: block; padding: 0; border: 0; }
+  .k8-sv-t td::before { content: attr(data-l); display: block; font-size: 11.5px; color: #94a3b8; margin-bottom: 2px; }
+  .k8-sv-t td.k8-sv-nm { grid-column: 1; } .k8-sv-t td.k8-sv-nm::before { display: none; }
+  .k8-sv-t td[data-l="สถานะ"] { grid-column: 2; grid-row: 1; justify-self: end; } .k8-sv-t td[data-l="สถานะ"]::before { display: none; }
+  .k8-sv-t td[data-l="ละหมาด"] { grid-column: 1 / 3; }
+  .k8-sv-t tr.lv-bad { box-shadow: inset 3px 0 0 #ef4444; } .k8-sv-t tr.lv-bad td:first-child { box-shadow: none; }
+}
+html[data-theme="dark"] .k8-sv-kpi > div, html[data-theme="dark"] .k8-sv-tw, html[data-theme="dark"] .k8-sv-gsel { background: #121212; border-color: #2a3442; }
+html[data-theme="dark"] .k8-sv-kpi em, html[data-theme="dark"] .k8-sv-zero { color: #cbd5e1; }
+html[data-theme="dark"] .k8-sv-kpi b { color: #7dd3fc; }
+html[data-theme="dark"] .k8-sv-t th { background: #181f26; border-color: #2a3442; color: #cbd5e1; }
+html[data-theme="dark"] .k8-sv-t td { border-color: #2a3442; }
+html[data-theme="dark"] .k8-sv-t tbody tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+html[data-theme="dark"] .k8-sv-stk { background: #222b37; }
+html[data-theme="dark"] .k8-sv-seg { background: #10151c; } html[data-theme="dark"] .k8-sv-seg button[aria-pressed="true"] { background: #222b37; color: #7dd3fc; }
+@media (max-width: 760px) { html[data-theme="dark"] .k8-sv-t tr { background: #121212; border-color: #2a3442; } html[data-theme="dark"] .k8-sv-tw { background: transparent; } }
+.k8-sv-tw > .k8-sv-t { width: 100% !important; max-width: none !important; min-width: 0 !important; }

@@ -3623,7 +3623,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.12';
+  const APP_VERSION = '19.13';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12502,42 +12502,48 @@ window.k8PdWho = function (sid) {
       S.last = { kind: 'list', L };
       B.innerHTML = h; return;
     }
-    const g = M.G[S.school] || { name: S.school, rows: [], pPct: null, aPct: null, scAvg: null, minus: 0 };
+    // v19.13 · หน้าโรงเรียนแบบตารางเดียวครบทุกด้าน (แบบ 3)
+    const g = M.G[S.school] || { name: S.school, rows: [], pOn: 0, pDen: 0, aOk: 0, aN: 0, pPct: null, aPct: null, scAvg: null, minus: 0, low: 0 };
+    const lvOf = (r) => { const p = r.p && r.p.pct, a = r.a && r.a.pct, sc = r.score; if ((p != null && p < 70) || (a != null && a < 70) || (sc != null && sc < 80)) return 'bad'; if ((p != null && p < 90) || (a != null && a < 85) || (sc != null && sc < 90)) return 'mid'; return 'ok'; };
+    const LVL = { bad: ['ต้องติดตาม', 0], mid: ['พอใช้', 1], ok: ['ดี', 2] };
+    const ready = !!(S.att && S.bh);
+    g.rows.forEach((r) => { r.lv = lvOf(r); });
+    const nBad = g.rows.filter((r) => r.lv === 'bad').length, nMid = g.rows.filter((r) => r.lv === 'mid').length;
+    let aOk = 0, aDen = 0; g.rows.forEach((r) => { if (r.a) { aOk += r.a.present + r.a.late; aDen += r.a.present + r.a.late + r.a.absent; } });
+    const aPct = aDen ? Math.round(aOk / aDen * 100) : null;
     h += '<button type="button" class="k8-sch-back" onclick="k8SchPick(\'\')">‹ ทุกโรงเรียน</button>';
-    h += '<section class="k8-asum-kpi k8-sch-kpi">' +
-      '<div class="is-big ' + tone(g.pPct, 90, 70) + '"><small>ละหมาด</small><b>' + pctTxt(g.pPct) + '</b><span>' + g.pOn + ' จาก ' + g.pDen + ' เวลา</span></div>' +
-      '<div class="is-big ' + tone(g.aPct, 90, 80) + '"><small>มาเรียน</small><b>' + (S.att ? pctTxt(g.aPct) : '…') + '</b><span>' + (S.att ? g.aN + ' ครั้งที่เช็คชื่อ' : 'กำลังโหลด') + '</span></div>' +
-      '<div class="is-big ' + tone(g.scAvg, 90, 80) + '"><small>พฤติกรรมเฉลี่ย</small><b>' + (S.bh ? (g.scAvg == null ? '–' : g.scAvg) : '…') + '</b><span>' + (S.bh ? 'ถูกหัก ' + g.minus + ' ครั้งในช่วงนี้' : 'กำลังโหลด') + '</span></div>' +
-      '<div><small>นักเรียน</small><b>' + g.rows.length + '</b></div></section>';
-    h += '<div class="k8-asum-tabs" role="tablist">' + [['pray', 'ละหมาด'], ['bh', 'พฤติกรรม'], ['att', 'การมาเรียน']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (S.tab === k) + '" onclick="k8SchSet(\'tab\', \'' + k + '\')">' + l + '</button>').join('') + '</div>';
+    h += '<section class="k8-sv-kpi">' +
+      '<div><b class="' + tone(g.pPct, 90, 70) + '">' + pctTxt(g.pPct) + '</b><span><em>ละหมาดครบ</em>' + g.pOn + ' จาก ' + g.pDen + ' เวลา</span></div>' +
+      '<div><b class="' + tone(aPct, 90, 80) + '">' + (S.att ? pctTxt(aPct) : '…') + '</b><span><em>มาเรียน</em>' + (S.att ? aOk + ' จาก ' + aDen + ' คาบ' : 'กำลังโหลด') + '</span></div>' +
+      '<div><b class="' + tone(g.scAvg, 90, 80) + '">' + (S.bh ? (g.scAvg == null ? '–' : g.scAvg) : '…') + '</b><span><em>พฤติกรรมเฉลี่ย</em>' + (S.bh ? 'เต็ม 100 · ช่วงนี้ถูกหัก ' + g.minus + ' ครั้ง' : 'กำลังโหลด') + '</span></div>' +
+      '<div><b class="' + (nBad ? 'is-bad' : 'is-ok') + '">' + (ready ? nBad : '…') + '</b><span><em>คนต้องติดตาม</em>จาก ' + g.rows.length + ' คน' + (ready && nMid ? ' · พอใช้ ' + nMid : '') + '</span></div></section>';
+    const grades = Array.from(new Set(g.rows.map((r) => shortG(r.s.grade)).filter(Boolean))).sort();
+    const SO = [['need', 'ต้องดูแลก่อน'], ['name', 'ชื่อ ก–ฮ'], ['grade', 'ชั้น']];
+    if (!S.ssort) S.ssort = 'need';
+    h += '<div class="k8-sv-tool"><input type="search" class="k8-asum-q" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(S.q) + '" oninput="k8SchQ(this)" aria-label="ค้นหานักเรียน">' +
+      '<div class="k8-sv-seg" role="group" aria-label="เรียงตาม">' + SO.map(([k, l]) => '<button type="button" aria-pressed="' + (S.ssort === k) + '" onclick="k8SchSet(\'ssort\', \'' + k + '\')">' + l + '</button>').join('') + '</div>' +
+      '<select class="k8-sv-gsel" aria-label="ชั้น" onchange="k8SchSet(\'sgrade\', this.value)"><option value="">ทุกชั้น</option>' + grades.map((x) => '<option' + (S.sgrade === x ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></div>';
     let R = g.rows.slice();
+    if (S.sgrade) R = R.filter((r) => shortG(r.s.grade) === S.sgrade);
     if (S.q) R = R.filter((r) => ((r.s.fullName || '') + ' ' + r.k).toLowerCase().indexOf(S.q.toLowerCase()) !== -1);
-    const nm = (r) => '<td><button type="button" class="k8-sch-who" onclick="k8SchWho(\'' + esc(r.s.studentId) + '\')"><b>' + esc(r.s.fullName || r.k) + '</b><small>' + esc(shortG(r.s.grade)) + ' · ' + esc(r.s.studentId) + '</small></button></td>';
-    const cellBtn = (r, kind, n, tip, extra) => n ? '<button type="button" class="k8-sch-num" onclick="k8SchDet(\'' + esc(r.s.studentId) + '\', \'' + kind + '\')" title="' + tip + '" aria-label="' + esc((r.s.fullName || r.k) + ' · ' + tip + ' ' + n) + '">' + n + (extra || '') + '</button>' : String(n) + (extra || '');
-    let head = [], body = [], csv = [];
-    if (S.tab === 'pray') {
-      R.sort((a, b) => ((a.p && a.p.pct != null) ? a.p.pct : 999) - ((b.p && b.p.pct != null) ? b.p.pct : 999) || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
-      head = ['นักเรียน', 'ตรงเวลา', 'สาย', 'ลา/อุซุร', 'ขาด', 'ร้อยละ'];
-      body = R.map((r) => { const p = r.p || { on: 0, late: 0, ex: 0, miss: 0, pct: null }; return '<tr class="' + (p.pct != null && p.pct < 70 ? 'is-low' : '') + '">' + nm(r) + '<td>' + p.on + '</td><td>' + p.late + '</td><td>' + p.ex + '</td><td class="' + (p.miss ? 'is-ab' : '') + '">' + cellBtn(r, 'pray', p.miss, 'ดูเวลาละหมาดที่ขาด') + '</td><td><b>' + pctTxt(p.pct) + '</b></td></tr>'; });
-      csv = R.map((r) => { const p = r.p || { on: 0, late: 0, ex: 0, miss: 0, pct: '' }; return [r.s.fullName, r.s.studentId, shortG(r.s.grade), p.on, p.late, p.ex, p.miss, p.pct == null ? '' : p.pct]; });
-    } else if (S.tab === 'att') {
-      if (!S.att) { B.innerHTML = h + '<p class="k8-asum-empty">กำลังโหลดข้อมูลการมาเรียน…</p>'; return; }
-      R.sort((a, b) => ((a.a && a.a.pct != null) ? a.a.pct : 999) - ((b.a && b.a.pct != null) ? b.a.pct : 999) || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
-      head = ['นักเรียน', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'];
-      body = R.map((r) => { const a = r.a || { present: 0, late: 0, leave: 0, absent: 0, pct: null }; return '<tr class="' + (a.pct != null && a.pct < 80 ? 'is-low' : '') + '">' + nm(r) + '<td>' + a.present + '</td><td>' + a.late + '</td><td>' + a.leave + '</td><td class="' + (a.absent ? 'is-ab' : '') + '">' + cellBtn(r, 'att', a.absent, 'ดูคาบที่ขาดเรียน') + '</td><td><b>' + pctTxt(a.pct) + '</b></td></tr>'; });
-      csv = R.map((r) => { const a = r.a || { present: 0, late: 0, leave: 0, absent: 0, pct: '' }; return [r.s.fullName, r.s.studentId, shortG(r.s.grade), a.present, a.late, a.leave, a.absent, a.pct == null ? '' : a.pct]; });
-    } else {
-      if (!S.bh) { B.innerHTML = h + '<p class="k8-asum-empty">กำลังโหลดข้อมูลพฤติกรรม…</p>'; return; }
-      R.sort((a, b) => a.score - b.score || String(a.s.fullName).localeCompare(String(b.s.fullName), 'th'));
-      head = ['นักเรียน', 'คะแนนภาคเรียน', 'ถูกหัก (ช่วงนี้)', 'ได้เพิ่ม (ช่วงนี้)', 'รายการล่าสุด'];
-      body = R.map((r) => { const b = r.b; const last = b.items.slice().sort((x, y) => String(y.date).localeCompare(String(x.date)))[0]; return '<tr class="' + (r.score < 80 ? 'is-low' : '') + '">' + nm(r) + '<td><b>' + r.score + '</b></td><td class="' + (b.minus ? 'is-ab' : '') + '">' + cellBtn(r, 'bh', b.minus, 'ดูรายการพฤติกรรม', b.minusPts ? ' <small>(' + b.minusPts + ')</small>' : '') + '</td><td>' + b.plus + '</td><td class="k8-sch-last">' + (last ? esc(dTh(last.date)) + ' · ' + esc(last.title || '') + ' <small>(' + (last.points > 0 ? '+' : '') + last.points + ')</small>' : '–') + '</td></tr>'; });
-      csv = R.map((r) => [r.s.fullName, r.s.studentId, shortG(r.s.grade), r.score, r.b.minus, r.b.minusPts, r.b.plus]);
-    }
-    const csvHead = { pray: ['ชื่อ', 'รหัส', 'ชั้น', 'ตรงเวลา', 'สาย', 'ลา/อุซุร', 'ขาด', 'ร้อยละ'], att: ['ชื่อ', 'รหัส', 'ชั้น', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'], bh: ['ชื่อ', 'รหัส', 'ชั้น', 'คะแนนภาคเรียน', 'ถูกหัก(ครั้ง)', 'ถูกหัก(คะแนน)', 'ได้เพิ่ม(ครั้ง)'] }[S.tab];
-    S.last = { kind: 'school', head: csvHead, rows: csv };
-    h += '<input type="search" class="k8-asum-q" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(S.q) + '" oninput="k8SchQ(this)">' +
-      (R.length ? '<div class="k8-asum-tw"><table class="k8-asum-t k8-sch-t"><thead><tr>' + head.map((x) => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + body.join('') + '</tbody></table></div>' : '<p class="k8-asum-empty">ไม่มีนักเรียน</p>') +
-      '<p class="k8-asum-note">' + { pray: 'แถวสีแดง = ละหมาดต่ำกว่า 70% · แตะตัวเลขขาดเพื่อดูวันและเวลาที่ขาด', att: 'แถวสีแดง = มาเรียนต่ำกว่า 80% · แตะตัวเลขขาดเพื่อดูคาบที่ขาด', bh: 'แถวสีแดง = คะแนนพฤติกรรมต่ำกว่า 80 · แตะตัวเลขถูกหักเพื่อดูรายการ' }[S.tab] + ' · แตะชื่อเพื่อดูประวัตินักเรียน</p>';
+    const byName = (a, b) => String(a.s.fullName || '').localeCompare(String(b.s.fullName || ''), 'th');
+    if (S.ssort === 'name') R.sort(byName);
+    else if (S.ssort === 'grade') R.sort((a, b) => String(a.s.grade || '').localeCompare(String(b.s.grade || ''), 'th') || byName(a, b));
+    else R.sort((a, b) => LVL[a.lv][1] - LVL[b.lv][1] || ((a.p && a.p.pct != null) ? a.p.pct : 999) - ((b.p && b.p.pct != null) ? b.p.pct : 999) || byName(a, b));
+    const num = (r, kind, n, tip) => n ? '<button type="button" class="k8-sch-num" onclick="k8SchDet(\'' + esc(r.s.studentId) + '\', \'' + kind + '\')" title="' + tip + '" aria-label="' + esc((r.s.fullName || r.k) + ' · ' + tip + ' ' + n) + '">' + n + '</button>' : '<span class="k8-sv-zero">0</span>';
+    const stk = (p) => { const t = (p.on + p.late + p.ex + p.miss) || 1; const sg = (v, c) => v ? '<i style="width:' + (v / t * 100).toFixed(1) + '%;background:' + c + '"></i>' : ''; return '<span class="k8-sv-stk" aria-hidden="true">' + sg(p.on, '#16a34a') + sg(p.late, '#f59e0b') + sg(p.ex, '#93c5fd') + sg(p.miss, '#ef4444') + '</span>'; };
+    const body = R.map((r) => {
+      const p = r.p || { on: 0, late: 0, ex: 0, miss: 0, pct: null }; const a = r.a; const b = r.b;
+      return '<tr class="lv-' + r.lv + '"><td class="k8-sv-nm" data-l="นักเรียน"><button type="button" class="k8-sch-who" onclick="k8SchWho(\'' + esc(r.s.studentId) + '\')"><b>' + esc(r.s.fullName || r.k) + '</b><small>' + esc(shortG(r.s.grade)) + ' · ' + esc(r.s.studentId) + '</small></button></td>' +
+        '<td data-l="ละหมาด"><div class="k8-sv-mx">' + stk(p) + '<b class="' + tone(p.pct, 90, 70) + '">' + pctTxt(p.pct) + '</b></div><small class="k8-sv-sub">ตรงเวลา ' + p.on + ' · สาย ' + p.late + ' · ลา ' + p.ex + ' · ขาด ' + num(r, 'pray', p.miss, 'ดูเวลาละหมาดที่ขาด') + '</small></td>' +
+        '<td data-l="มาเรียน">' + (a === undefined ? '<span class="k8-sch-ld">กำลังโหลด…</span>' : a ? '<b class="k8-sv-v ' + tone(a.pct, 90, 80) + '">' + (a.pct == null ? 'ลาทั้งหมด' : a.pct + '%') + '</b><small class="k8-sv-sub">ขาด ' + num(r, 'att', a.absent, 'ดูคาบที่ขาดเรียน') + ' · ลา ' + a.leave + (a.late ? ' · สาย ' + a.late : '') + '</small>' : '<span class="k8-sv-na">ยังไม่มีการเช็คชื่อ</span>') + '</td>' +
+        '<td data-l="พฤติกรรม">' + (b ? '<b class="k8-sv-v ' + tone(r.score, 90, 80) + '">' + r.score + '</b><small class="k8-sv-sub">ถูกหัก ' + num(r, 'bh', b.minus, 'ดูรายการพฤติกรรม') + (b.plus ? ' · ได้เพิ่ม ' + b.plus : '') + '</small>' : '<span class="k8-sch-ld">กำลังโหลด…</span>') + '</td>' +
+        '<td data-l="สถานะ">' + (ready ? '<span class="k8-sv-chip is-' + r.lv + '">' + LVL[r.lv][0] + '</span>' : '') + '</td></tr>';
+    });
+    S.last = { kind: 'school' };
+    h += (R.length ? '<div class="k8-sv-tw"><table class="k8-sv-t"><thead><tr><th class="c-nm">นักเรียน</th><th class="c-p">ละหมาด<small>% = ละหมาด ÷ เวลาที่ต้องละหมาด (ไม่นับลา/อุซุร/เสาร์)</small></th><th>มาเรียน<small>% = มา ÷ คาบที่ต้องเรียน (ไม่นับลา)</small></th><th>พฤติกรรม<small>คะแนนภาคเรียน เต็ม 100</small></th><th>สถานะ</th></tr></thead><tbody>' + body.join('') + '</tbody></table></div>' : '<p class="k8-asum-empty">ไม่มีนักเรียน</p>') +
+      '<p class="k8-sv-leg"><span><i style="background:#16a34a"></i>ตรงเวลา</span><span><i style="background:#f59e0b"></i>สาย</span><span><i style="background:#93c5fd"></i>ลา/อุซุร (ไม่นับ)</span><span><i style="background:#ef4444"></i>ขาด</span><span>· ตัวเลขสีแดงขีดเส้นใต้ = แตะเพื่อดูวันและเวลาที่ขาด · แตะชื่อเพื่อดูประวัตินักเรียน</span></p>' +
+      '<p class="k8-asum-note">สถานะ: <b>ต้องติดตาม</b> = ละหมาดหรือมาเรียนต่ำกว่า 70% หรือพฤติกรรมต่ำกว่า 80 · <b>พอใช้</b> = ละหมาดต่ำกว่า 90% หรือมาเรียนต่ำกว่า 85% หรือพฤติกรรมต่ำกว่า 90 · <b>ดี</b> = นอกจากนั้น · ไม่นับวันเสาร์ ช่วงมีประจำเดือน และลากลับบ้าน (อนุมัติแล้ว)</p>';
     B.innerHTML = h;
   }
   // ---------- v19.11 · รายละเอียดเมื่อแตะตัวเลข (ขาดละหมาด / ขาดเรียน / ถูกหักคะแนน)
@@ -12623,7 +12629,7 @@ window.k8PdWho = function (sid) {
   window.addEventListener('popstate', () => { const el = document.getElementById('k8Sch'); if (el && !el.hidden) window.k8SchClose(); });
   window.k8SchPre = function (k) { setPreset(k); render(); };
   window.k8SchSet = function (k, v) { S[k] = v; if (k === 'from' || k === 'to') { S.preset = ''; if (S.from > S.to) { const t = S.from; S.from = S.to; S.to = t; } } render(); };
-  window.k8SchPick = function (name) { S.school = name || ''; S.q = ''; render(); const b = document.querySelector('#k8Sch .k8-asum-b'); if (b) b.scrollTop = 0; };
+  window.k8SchPick = function (name) { S.school = name || ''; S.q = ''; S.sgrade = ''; render(); const b = document.querySelector('#k8Sch .k8-asum-b'); if (b) b.scrollTop = 0; };
   window.k8SchWho = function (sid) { window.k8SchClose(); try { switchAdminTab('students', document.getElementById('btnAdminTabStudents')); } catch (e) {} setTimeout(() => { try { window.k8PdWho(sid); } catch (e) {} }, 120); };
   let qt = null; window.k8SchQ = function (el) { clearTimeout(qt); qt = setTimeout(() => { S.q = el.value; const pos = el.selectionStart; render(); const n = document.querySelector('#k8Sch .k8-asum-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 200); };
   // ---------- ส่งออก: Excel · Word · PDF · JPG (รวมทุกหัวข้อของโรงเรียนที่เลือก หรือเปรียบเทียบทุกโรงเรียน)
