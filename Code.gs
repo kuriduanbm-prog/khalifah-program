@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.02'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.03'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3846,7 +3846,7 @@ function getTimetable_(session, isStudent, isAdmin) {
         const list = Array.isArray(grades[g].cells[k]) ? grades[g].cells[k] : [grades[g].cells[k]];
         const mine = list.filter(function (e) { return e && (!e.o || !e.o.length || e.o.indexOf(me) !== -1) && !(e.x && e.x.indexOf(me) !== -1) && (!e.gx || !myGx || e.gx === myGx); });
         // v17.84 · ส่งทุกวิชาที่ตรงกับนักเรียน (อาจมีหลายช่วงวันที่) · แอปเลือกตามวันที่เอง
-        if (mine.length) { const L = mine.map(function (m) { const e = Object.assign({}, m); if (e.o) { e.only = true; delete e.o; } delete e.x; return e; }); cells[k] = L.length === 1 ? L[0] : L; }
+        if (mine.length) { const L = mine.map(function (m) { const e = Object.assign({}, m); if (e.o) { e.only = true; delete e.o; } delete e.x; delete e.a; return e; }); cells[k] = L.length === 1 ? L[0] : L; }
       });
       one[g] = { grade: g, cells: cells, updatedAt: grades[g].updatedAt };
     }
@@ -3860,9 +3860,9 @@ function getTimetable_(session, isStudent, isAdmin) {
         if (og === g) return;
         Object.keys(grades[og].cells || {}).forEach(function (k) {
           const list = Array.isArray(grades[og].cells[k]) ? grades[og].cells[k] : [grades[og].cells[k]];
-          const hit = list.filter(function (e) { return e && e.o && e.o.indexOf(meC) !== -1 && !(e.x && e.x.indexOf(meC) !== -1); });
+          const hit = list.filter(function (e) { return e && ((e.o && e.o.indexOf(meC) !== -1) || (e.a && e.a.indexOf(meC) !== -1)) && !(e.x && e.x.indexOf(meC) !== -1); });
           if (!hit.length) return;
-          const add = hit.map(function (m) { const e = Object.assign({}, m); delete e.o; delete e.x; e.only = true; e.xg = og; e.tn = (e.tn ? e.tn + ' · ' : '') + 'เรียนร่วมกับ ม.' + og; return e; });
+          const add = hit.map(function (m) { const e = Object.assign({}, m); delete e.o; delete e.x; delete e.a; delete e.gx; e.only = true; e.xg = og; e.tn = (e.tn ? e.tn + ' · ' : '') + 'เรียนร่วมกับ ม.' + og; return e; });
           let cur = own[k] ? (Array.isArray(own[k]) ? own[k] : [own[k]]) : [];
           if (add.some(function (e) { return !e.from && !e.to; })) cur = cur.filter(function (e) { return e.only; });
           const L = cur.concat(add); own[k] = L.length === 1 ? L[0] : L;
@@ -3969,6 +3969,7 @@ function saveTimetable_(data, session) {
     const e = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
     if (o.length) e.o = o.filter(function (x, i) { return o.indexOf(x) === i; });
     const x = ttIds_(c.x); if (x.length) e.x = x; // x = นักเรียนที่ละเว้นวิชานี้
+    const ad = ttIds_(c.a); if (ad.length) e.a = ad; // v19.03 · a = นักเรียนจากชั้นอื่นที่มาเรียนร่วม
     ttCo_(c, e);
     // v17.84 · gx = เฉพาะเพศ (m/f) · from/to = ช่วงวันที่ใช้วิชานี้ (ว่าง = ตลอดภาคเรียน)
     const gx = cleanVal(c.gx); if (gx === 'm' || gx === 'f') e.gx = gx;
