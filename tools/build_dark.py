@@ -128,6 +128,8 @@ def process(css):
                 if inner: res.append(sel + ' {\n' + inner + '\n}')
             elif sel.startswith('@'):
                 pass
+            elif 'data-theme' in sel and '.k8ai' in sel:
+                pass  # กฎโหมดมืดที่เขียนเองของหน้าถามข้อมูล (ไม่ต้องแปลงซ้ำ)
             else:
                 decls = []
                 for d in body.split(';'):
