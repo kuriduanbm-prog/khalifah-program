@@ -3606,7 +3606,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.98';
+  const APP_VERSION = '19.00';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8046,8 +8046,8 @@ window.k8RegBirthChange = function (v) {
     loadPer(); const onPer = (st) => perCovers(cid(st.studentId), viewD); // v18.32 · มีประจำเดือน = อุซุร (ไม่ใช่ขาด)
     const missed = (st, k) => { if (viewD > todayS || onLv(st, k) || onPer(st)) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
     const missN = {}; rows.forEach((r) => { missN[r.sid] = slots.filter((x) => !r.p[x.key] && missed(r.s, x.key)).length; });
-    const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length };
-    let list = rows.filter((r) => V.f === 'all' || (V.f === 'full' ? r.n === 5 : V.f === 'part' ? r.n > 0 && r.n < 5 : r.n === 0));
+    const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length, per: rows.filter((r) => onPer(r.s)).length };
+    let list = rows.filter((r) => V.f === 'all' || (V.f === 'per' ? onPer(r.s) : V.f === 'full' ? r.n === 5 : V.f === 'part' ? r.n > 0 && r.n < 5 : r.n === 0));
     // v18.82 · กรองตามเวลาละหมาด: แตะการ์ดเวลา = ดูเฉพาะคนที่ยังไม่เช็คเวลานั้น (ไม่รวมคนลา/อุซุร)
     const slotObj = V.slot ? slots.find((x) => x.key === V.slot) : null;
     if (slotObj) list = rows.filter((r) => !r.p[slotObj.key] && !onLv(r.s, slotObj.key) && !onPer(r.s));
@@ -8075,12 +8075,12 @@ window.k8RegBirthChange = function (v) {
         '<span class="k8-pd-nm"><b>' + esc(s.fullName || r.sid) + '</b><small>' + esc(r.sid) + (g ? ' · ม.' + g[1] : '') + '</small></span>' +
         '<span class="k8-pd-n">' + r.n + '<small>/5</small></span></button><div class="k8-pd-row' + (V.slot ? ' is-one' : '') + '">' + boxes + '</div></article>';
     };
-    const fl = slotObj ? 'ยังไม่เช็คชื่อ ' + (slotObj.label || slotObj.key) : { all: 'นักเรียนทั้งหมด', zero: 'ยังไม่เช็คเลย', part: 'เช็คแล้วแต่ยังไม่ครบ', full: 'ครบ 5 เวลา' }[V.f];
+    const fl = slotObj ? 'ยังไม่เช็คชื่อ ' + (slotObj.label || slotObj.key) : { all: 'นักเรียนทั้งหมด', zero: 'ยังไม่เช็คเลย', part: 'เช็คแล้วแต่ยังไม่ครบ', full: 'ครบ 5 เวลา', per: 'นักเรียนหญิงที่มีประจำเดือน (อุซุร)' }[V.f];
     V.cnt = cnt; V.per = per; V.slots = slots; V.rows = rows.length;
     // v18.84 · สถิติต่อเวลา (ตรงเวลา/สาย) + สถานะเวลา (ผ่านแล้ว/ตอนนี้/ยังไม่ถึง) สำหรับแถบขั้นตอน 5 เวลา
     V.stat = slots.map((x) => { let ok = 0, late = 0, n = 0; rows.forEach((r) => { const rec = r.p[x.key]; if (!rec) return; n++; const k = kind(rec.status); if (k === 'late') late++; else ok++; }); const w = winOf(x.key); const st = viewD < todayS ? 'past' : viewD > todayS ? 'wait' : !w ? 'past' : nowM < w.startMin ? 'wait' : nowM <= w.endMin ? 'now' : 'past'; return { key: x.key, label: x.label || x.key, n, ok, late, st, time: w ? hm(w.startMin) + '–' + hm(Math.min(w.endMin, 1439)) : '' }; });
     el.innerHTML = (slotObj || V.f !== 'all' ? '' : '<!--') + '<div class="k8-pd-now"><span>กำลังแสดง: <b>' + esc(fl) + '</b> · ' + list.length + ' คน</span>' + (slotObj || V.f !== 'all' ? '<button type="button" onclick="k8PdClear()">✕ ดูทั้งหมด</button>' : '') + '</div>' + (slotObj || V.f !== 'all' ? '' : '-->') +
-      '<div class="k8-pd-top"><div class="k8-pd-chips">' + chip('all', 'ทั้งหมด', cnt.all) + chip('zero', 'ยังไม่เช็คเลย', cnt.zero) + chip('part', 'ยังไม่ครบ', cnt.part) + chip('full', 'ครบ 5', cnt.full) + '</div>' +
+      '<div class="k8-pd-top"><div class="k8-pd-chips">' + chip('all', 'ทั้งหมด', cnt.all) + chip('zero', 'ยังไม่เช็คเลย', cnt.zero) + chip('part', 'ยังไม่ครบ', cnt.part) + chip('full', 'ครบ 5', cnt.full) + chip('per', '🌸 มีประจำเดือน', cnt.per) + '</div>' +
       '<label class="k8-pd-sort"><span>เรียง</span><select onchange="k8PdS(this.value)"><option value="low"' + (V.sort === 'low' ? ' selected' : '') + '>เช็คน้อยก่อน</option><option value="high"' + (V.sort === 'high' ? ' selected' : '') + '>เช็คมากก่อน</option><option value="id"' + (V.sort === 'id' ? ' selected' : '') + '>รหัสนักเรียน</option></select></label></div>' +
       '<div class="k8-pd-per">' + slots.map((x, i) => '<span><small>' + esc(x.label) + '</small><b>' + per[i] + '</b><em>/' + rows.length + '</em></span>').join('') + '</div>' +
       '<div class="k8-pd-legend"><span class="is-ok">ตรงเวลา</span><span class="is-late">มาช้า</span><span class="is-ex">ลา/อุซุร</span><span class="is-miss">✕ หมดเวลา ไม่ได้เช็ค</span><span class="is-none">ยังไม่ถึงเวลา/ยังไม่เช็ค · แตะเพื่อบันทึกแทน</span></div>' +

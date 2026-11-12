@@ -2699,6 +2699,7 @@ html[data-theme="dark"] .k8-prr-stu { background-color: #0e2432 !important; bord
 html[data-theme="dark"] .k8-prr-stu.is-like { background-color: #2d1321 !important; border-color: #4f273e !important; color: #f075a8 !important; }
 html[data-theme="dark"] .k8-prr-pill { background-color: #0e2432 !important; color: #69c8fc !important; border: 1px solid #264555 !important; }
 html[data-theme="dark"] .k8-prr-pill.is-like { background-color: #2d1321 !important; border-color: #4f273e !important; }
+html[data-theme="dark"] .k8-pd-chip.is-per.on { background-color: #2d1321 !important; border-color: #582a43 !important; color: #ed78a7 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

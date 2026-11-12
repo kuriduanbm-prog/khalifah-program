@@ -5764,3 +5764,9 @@ html[data-theme="dark"] .k8-prr-note{color:#94a3b8}
 html[data-theme="dark"] .k8-prr-stu{background:#0c2a3f;border-color:#075985;color:#7dd3fc}
 html[data-theme="dark"] .k8-prr-stu.is-like,html[data-theme="dark"] .k8-prr-pill.is-like{background:#3b0d24;border-color:#9d174d;color:#f9a8d4}
 html[data-theme="dark"] .k8-prr-pill{background:#0c2a3f;border-color:#075985;color:#7dd3fc}
+
+/* v19.00 · ตัวกรองนักเรียนหญิงที่มีประจำเดือน */
+.k8-pd-chip.is-per b{color:#db2777}
+.k8-pd-chip.is-per.on{background:#fdf2f8;border-color:#f9a8d4;color:#9d174d}
+html[data-theme="dark"] .k8-pd-chip.is-per.on{background:#3b0d24;border-color:#9d174d;color:#f9a8d4}
+html[data-theme="dark"] .k8-pd-chip.is-per b{color:#f9a8d4}
