@@ -3606,7 +3606,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '18.97';
+  const APP_VERSION = '18.98';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8070,7 +8070,7 @@ window.k8RegBirthChange = function (v) {
         const k = kind(rec.status); const tm = String(rec.time || '').match(/(^|[^\d])(\d{1,2}):(\d{2})/); const t = tm ? tm[2].padStart(2, '0') + ':' + tm[3] : '✓';
         return '<button type="button" class="k8-pd-b is-' + k + '" onclick="openPrayerHistoryDetailModal(\'' + jsq(rec.id || rec.logId || '') + '\')" title="' + esc(x.label + ' · ' + (rec.status || '') + ' · ' + (rec.time || '')) + '"><small>' + esc(SHORT[x.key] || x.label) + '</small><i>' + (k === 'ex' ? 'ลา' : k === 'late' ? t : k === 'abs' ? '✕' : t) + '</i></button>';
       }).join('');
-      return '<article class="k8-pd-card n' + r.n + '"><button type="button" class="k8-pd-who" onclick="adminSelectStudentForPrayerHistory(\'' + jsq(r.sid) + '\')" title="ดูประวัติรายคน">' +
+      return '<article class="k8-pd-card n' + r.n + '"><button type="button" class="k8-pd-who" onclick="k8PdWho(\'' + jsq(r.sid) + '\')" title="ดูข้อมูลนักเรียน · ประวัติละหมาด · ดูแอปในมุมมองนักเรียน">' +
         '<span class="k8-pd-av">' + (av ? '<img src="' + esc(av) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '<em>' + esc(String(s.fullName || '?').replace(/^(นางสาว|นาย|เด็กหญิง|เด็กชาย|ด\.ญ\.|ด\.ช\.)\s*/, '').charAt(0)) + '</em></span>' +
         '<span class="k8-pd-nm"><b>' + esc(s.fullName || r.sid) + '</b><small>' + esc(r.sid) + (g ? ' · ม.' + g[1] : '') + '</small></span>' +
         '<span class="k8-pd-n">' + r.n + '<small>/5</small></span></button><div class="k8-pd-row' + (V.slot ? ' is-one' : '') + '">' + boxes + '</div></article>';
@@ -12186,3 +12186,11 @@ window.k8HfMiss = function (slot) {
     return out;
   };
 })();
+
+
+/* v18.98 · หน้าติดตามละหมาด: แตะชื่อนักเรียน → ป๊อปอัปข้อมูลนักเรียน (ประวัติละหมาด · ดูแอปในมุมมองนักเรียน) แบบเดียวกับหน้านักเรียน */
+window.k8PdWho = function (sid) {
+  let id = sid; try { id = cleanIdString(sid); } catch (e) {}
+  if (typeof window.k8AsSelect === 'function') { try { window.k8AsSelect(id); return; } catch (e) {} }
+  if (typeof adminSelectStudentForPrayerHistory === 'function') adminSelectStudentForPrayerHistory(sid);
+};
