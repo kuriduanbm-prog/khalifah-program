@@ -4662,6 +4662,8 @@ async function executePrayerCaptureStep2() {
     document.getElementById('prayerNoteInput').value = '';
   }
 
+  // v19.17 · วันศุกร์ ซุฮริ (ชาย) เกิน 12:35 น. → มาฟังคุฏบะห์สาย (แจ้งเตือน + สถานะมาสาย)
+  try { if (typeof window.k8JumuahAfter === 'function') window.k8JumuahAfter(prayerRecord, now); } catch (e) {}
   // บันทึกและซิงค์ข้อมูลขึ้น Google Sheets ทันทีแบบเรียลไทม์
   syncRecordToGoogleSheet('prayerCheckIn', prayerRecord);
 

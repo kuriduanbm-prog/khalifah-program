@@ -6563,3 +6563,30 @@ html[data-theme="dark"] .k8-sld-grp h3 span, html[data-theme="dark"] .k8-sld-cnt
 html[data-theme="dark"] .k8-sld-av { background: #0c4a6e; color: #e0f2fe; }
 html[data-theme="dark"] .k8-sld-pend { background: #422006; color: #fcd34d; }
 html[data-theme="dark"] .k8-sld-acts .is-no { background: #0f172a; border-color: #7f1d1d; color: #f87171; }
+
+/* ---------- v19.17 · วันศุกร์ ฟังคุฏบะห์ ---------- */
+.k8-jum { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; margin: 0 0 14px; border: 1px solid; font-size: 14px; line-height: 1.45; }
+.k8-jum[hidden] { display: none; }
+.k8-jum > svg { flex: none; }
+.k8-jum > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.k8-jum b { font-size: 15px; font-weight: 700; }
+.k8-jum span { font-size: 13.5px; }
+.k8-jum.is-info { background: #f0f9ff; border-color: #bae6fd; color: #0c4a6e; }
+.k8-jum.is-warn { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+.k8-jum.is-bad { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.k8-jum.is-ok { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+.k8-jum-dlg { max-width: 400px !important; text-align: center; padding: 28px 24px 22px !important; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.k8-jum-ico { width: 64px; height: 64px; border-radius: 50%; background: #fef2f2; color: #b91c1c; display: grid; place-items: center; }
+.k8-jum-ico svg { width: 32px; height: 32px; }
+.k8-jum-dlg h2 { margin: 4px 0 0; font-size: 20px; color: #991b1b; }
+.k8-jum-dlg p { margin: 0 0 8px; font-size: 15px; line-height: 1.6; color: #334155; }
+.k8-jum-dlg p strong { color: #b91c1c; }
+.k8-jum-dlg .k8-btn-pri { width: 100%; height: 48px; }
+html[data-theme="dark"] .k8-jum.is-info { background: #082f49; border-color: #0c4a6e; color: #bae6fd; }
+html[data-theme="dark"] .k8-jum.is-warn { background: #2a2010; border-color: #78350f; color: #fcd34d; }
+html[data-theme="dark"] .k8-jum.is-bad { background: #2a1215; border-color: #7f1d1d; color: #fca5a5; }
+html[data-theme="dark"] .k8-jum.is-ok { background: #052e16; border-color: #166534; color: #86efac; }
+html[data-theme="dark"] .k8-jum-ico { background: #2a1215; color: #f87171; }
+html[data-theme="dark"] .k8-jum-dlg h2 { color: #fca5a5; }
+html[data-theme="dark"] .k8-jum-dlg p { color: #cbd5e1; }
+html[data-theme="dark"] .k8-jum-dlg p strong { color: #f87171; }

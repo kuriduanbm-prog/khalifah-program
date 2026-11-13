@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.15'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.17'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3052,6 +3052,13 @@ function recordPrayer(data) {
     timeFlags += ' · ระบบใช้เวลาถ่ายจริง ' + tDate + ' ' + tTime.slice(0, 5) + (verdict ? ' → ' + (verdict === 'ขาด' ? 'ไม่นับ (นอกช่วงละหมาดนี้)' : 'นับเป็นมาสาย') : ' (ยังอยู่ในช่วงละหมาด นับตามปกติ)');
     dateStr = tDate; timeStr = tTime; timestamp = T.toISOString();
   }
+  // v19.17 · วันศุกร์ ละหมาดซุฮริ (นักเรียนชาย): ต้องเช็คไม่เกิน 12:35 น. เพื่อฟังคุฏบะห์ · เกินเวลา = มาสาย + หัก 2 คะแนน
+  let jum = null;
+  try { jum = jumuahLateOf_(cleanSid, dateStr, timeStr, prayerNameThai, statusThai); } catch (e) { jum = null; }
+  if (jum) {
+    if (/^ตรงเวลา/.test(statusThai)) statusThai = 'มาสาย';
+    timeFlags = (timeFlags ? timeFlags + ' · ' : '') + 'มาฟังคุฏบะห์สาย (เช็คเวลา ' + String(timeStr).slice(0, 5) + ' น. เกิน ' + jum.deadline + ' น.)';
+  }
   sheet.appendRow([
     logId,
     cleanSid,
@@ -3076,7 +3083,48 @@ function recordPrayer(data) {
   let restored = 0;
   if (!/ขาด/.test(String(statusThai || ''))) { try { restored = prayerMissRestore_(cleanSid, dateStr, prayerNameThai, 'พบบันทึกละหมาด (ส่งย้อนหลัง)'); } catch (e) {} }
 
-  return { success: true, message: 'บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef, restored: restored };
+  let jumPts = 0;
+  if (jum) { try { jumPts = jumuahPenalty_(jum, dateStr, timeStr); } catch (e) { jumPts = 0; } }
+  return { success: true, message: jum ? 'คุณมาฟังคุฏบะห์สายแล้ว' + (jumPts ? ' · ถูกหัก ' + jumPts + ' คะแนน' : '') : 'บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef, restored: restored,
+    jumuahLate: !!jum, jumuahDeadline: jum ? jum.deadline : undefined, penalty: jumPts || undefined };
+}
+
+// ---------- v19.17 · ละหมาดวันศุกร์ (ฟังคุฏบะห์) ----------
+const JUMUAH_DEADLINE_ = '12:35';
+const JUMUAH_LATE_POINTS_ = 2;
+function jumuahIsBoy_(st) {
+  if (!st) return false;
+  const g = normGender_(st.gender || st.sex || '');
+  if (g === 'ชาย') return true; if (g === 'หญิง') return false;
+  const pre = cleanVal(st.prefix || ''); if (genderFromPrefix_(pre)) return genderFromPrefix_(pre) === 'ชาย';
+  return /^(นาย|เด็กชาย|ด\.ช\.)/.test(cleanVal(st.fullName || st.name || ''));
+}
+/** คืน {st, deadline} เมื่อเป็นการเช็คซุฮริวันศุกร์ของนักเรียนชายที่เกินเวลา · อื่น ๆ คืน null */
+function jumuahLateOf_(sid, dateStr, timeStr, prayerThai, statusThai) {
+  if (!/ซุฮ|ดุฮ|dhuhr|zuhr/i.test(String(prayerThai || ''))) return null;
+  if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน/.test(String(statusThai || '').trim())) return null; // ระวัง: "ตรงเวลา" มีคำว่า "ลา"
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr || '')) || new Date(dateStr + 'T12:00:00+07:00').getUTCDay() !== 5) return null;
+  let dl = JUMUAH_DEADLINE_; try { const v = cleanVal((getSettings().data || {}).JumuahDeadline || ''); if (/^\d{1,2}:\d{2}$/.test(v)) dl = v; } catch (e) {}
+  const toM = function (t) { const m = String(t || '').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  const t = toM(timeStr), d = toM(dl); if (isNaN(t) || isNaN(d) || t <= d) return null;
+  const k = String(sid || '').replace(/\D/g, '').replace(/^0+/, '');
+  const st = (getAllStudents().data || []).filter(function (x) { return String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '') === k; })[0];
+  if (!st || !jumuahIsBoy_(st)) return null;
+  return { st: st, deadline: dl };
+}
+/** หักคะแนน 1 ครั้งต่อวันศุกร์ (เช็คซ้ำไม่หักซ้ำ) · คืนจำนวนคะแนนที่หัก (0 = เคยหักแล้ว) */
+function jumuahPenalty_(jum, dateStr, timeStr) {
+  const st = jum.st; const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR); if (!sh) return 0;
+  const id = 'FK-' + String(st.studentId).replace(/\D/g, '').replace(/^0+/, '') + '-' + dateStr;
+  const lock = LockService.getScriptLock(); try { lock.waitLock(15000); } catch (e) {}
+  try {
+    if (sh.getLastRow() > 1 && sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().some(function (r) { return String(r[0]) === id; })) return 0;
+    const stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    const row = [id, dateStr, stamp, currentTerm_(), st.studentId, st.fullName || '', st.grade || '', 'mosque', 'jumuah-late', 'มาฟังคุฏบะห์สาย (ละหมาดวันศุกร์)', -JUMUAH_LATE_POINTS_,
+      'หักอัตโนมัติ: เช็คละหมาดซุฮริวันศุกร์เวลา ' + String(timeStr).slice(0, 5) + ' น. เกินกำหนด ' + jum.deadline + ' น.', 'system', 'ระบบอัตโนมัติ', 'active', '', '', ''];
+    sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+    return JUMUAH_LATE_POINTS_;
+  } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
 // v18.74 · ตรวจเวลาเครื่องอัตโนมัติ: หาเวลาที่ถ่ายจริง แล้วแก้วันที่/เวลา/สถานะเองโดยไม่ต้องให้แอดมินตรวจ

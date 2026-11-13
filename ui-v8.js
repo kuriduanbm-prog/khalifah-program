@@ -3636,7 +3636,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.16';
+  const APP_VERSION = '19.17';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8256,7 +8256,10 @@ window.k8RegBirthChange = function (v) {
     const f = toMin(RULE.fajr), z = toMin(RULE.zuhr), a = toMin(RULE.asr), m = toMin(RULE.maghrib), b = bounds(t);
     // v17.29 · เข้าเวลาแล้วเช็คชื่อ = ตรงเวลาเสมอ (กันกรณีที่อื่นเข้าเวลาช้ากว่าเกณฑ์ตายตัว)
     const fx = (v, s) => isNaN(v) ? s + off : Math.max(v, s + off);
-    return { 'ซุบฮิ': fx(f, t.fajr), 'ซุฮริ': fx(z, t.dhuhr), 'อัศรฺ': fx(a, t.asr), 'มัฆริบ': fx(m, t.maghrib), 'อีชาอ์': b.iStart + off };
+    const out = { 'ซุบฮิ': fx(f, t.fajr), 'ซุฮริ': fx(z, t.dhuhr), 'อัศรฺ': fx(a, t.asr), 'มัฆริบ': fx(m, t.maghrib), 'อีชาอ์': b.iStart + off };
+    // v19.17 · วันศุกร์ นักเรียนชาย: ซุฮริต้องเช็คไม่เกิน 12:35 น. (ฟังคุฏบะห์)
+    try { if (window.k8JumuahMe && window.k8JumuahMe(date)) out['ซุฮริ'] = window.k8JUMUAH_MIN; } catch (e) {}
+    return out;
   }
   // ---- พิกัดของนักเรียน (บันทึกทุกครั้งที่กด "ตรวจพิกัด" ในหน้าเช็คละหมาด) ----
   const LOC_KEY = 'khalifah_prayer_loc', NEAR_KM = 3;
@@ -13056,5 +13059,60 @@ window.k8PdWho = function (sid) {
     };
     try { if (!window.k8Rep) throw new Error('k8Rep'); await window.k8Rep.run(fmt, D, 'การลานักเรียน_' + S.day + (S.g ? '_ม' + S.g : '')); toast('บันทึกไฟล์แล้ว', 'success'); }
     catch (e) { toast('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
+  };
+})();
+
+/* ---------- v19.17 · วันศุกร์ ละหมาดซุฮริ (นักเรียนชาย) ต้องเช็คไม่เกิน 12:35 น. · เกินเวลา = มาฟังคุฏบะห์สาย หัก 2 คะแนน ---------- */
+(function () {
+  window.k8JUMUAH_MIN = 12 * 60 + 35; const PTS = 2; const DL = '12:35';
+  const stu = () => { try { return (typeof currentAdmin !== 'undefined' && currentAdmin) ? null : (currentStudent || null); } catch (e) { return null; } };
+  const boy = (s) => { if (!s) return false; try { if (window.k8SexOf) return window.k8SexOf(s) === 'ชาย'; } catch (e) {} return /^(นาย|เด็กชาย)/.test(String(s.fullName || '')); };
+  window.k8JumuahMe = function (d) { const s = stu(); const x = d || new Date(); return !!s && x.getDay() === 5 && boy(s); };
+  const isDhuhr = (k) => /ซุฮ|ดุฮ|dhuhr|zuhr/i.test(String(k || ''));
+  const mins = (d) => d.getHours() * 60 + d.getMinutes();
+  function doneToday() {
+    const s = stu(); if (!s) return null; let L = []; try { L = todayPrayers || []; } catch (e) {}
+    const t = new Date(); const ymd = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+    return L.find((p) => { try { return isIdMatch(p.studentId, s.studentId) && isDhuhr(p.prayerName || p.prayerTime) && String(p.date || '').slice(0, 10) === ymd; } catch (e) { return false; } }) || null;
+  }
+  const ICO = { clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>', ok: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>' };
+  const svg = (k) => '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICO[k] + '</svg>';
+  function bar() {
+    const el = document.getElementById('k8JumBar'); if (!el) return;
+    const now = new Date(); const m = mins(now);
+    if (!window.k8JumuahMe(now) || m < 9 * 60 || m > 15 * 60) { el.hidden = true; return; }
+    const d = doneToday(); let cls, ic, h;
+    if (d) {
+      const late = /สาย/.test(String(d.status || '')) || (() => { const t = String(d.time || '').match(/(\d{1,2}):(\d{2})/); return t ? (+t[1]) * 60 + (+t[2]) > window.k8JUMUAH_MIN : false; })();
+      cls = late ? 'is-bad' : 'is-ok'; ic = late ? 'warn' : 'ok';
+      h = late ? '<b>มาฟังคุฏบะห์สาย</b><span>เช็คซุฮริเกิน ' + DL + ' น. · ถูกหัก ' + PTS + ' คะแนน</span>' : '<b>เช็คซุฮริวันศุกร์ทันเวลาแล้ว</b><span>ก่อน ' + DL + ' น. · ขอให้ตั้งใจฟังคุฏบะห์</span>';
+    } else if (m <= window.k8JUMUAH_MIN) {
+      const left = window.k8JUMUAH_MIN - m; cls = left <= 15 ? 'is-warn' : 'is-info'; ic = 'clock';
+      h = '<b>วันศุกร์ · เช็คละหมาดซุฮริก่อน ' + DL + ' น.</b><span>' + (m < 12 * 60 ? 'เพื่อฟังคุฏบะห์ · เกินเวลาถูกหัก ' + PTS + ' คะแนน' : 'เหลืออีก ' + left + ' นาที · เกินเวลาถูกหัก ' + PTS + ' คะแนน') + '</span>';
+    } else {
+      cls = 'is-bad'; ic = 'warn';
+      h = '<b>เลย ' + DL + ' น. แล้ว</b><span>เช็คซุฮริตอนนี้ นับเป็นมาฟังคุฏบะห์สาย · ถูกหัก ' + PTS + ' คะแนน</span>';
+    }
+    el.className = 'k8-jum ' + cls; el.innerHTML = svg(ic) + '<div>' + h + '</div>'; el.hidden = false;
+  }
+  window.k8JumuahBar = bar;
+  setInterval(bar, 30000); setTimeout(bar, 1200);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) bar(); });
+  // แจ้งเตือนทันทีหลังกดบันทึก (ระบบหลังบ้านเป็นผู้หักคะแนนจริง · หักครั้งเดียวต่อวันศุกร์)
+  window.k8JumuahAfter = function (rec, at) {
+    try {
+      const t = at || new Date(); if (!rec || !isDhuhr(rec.prayerName || rec.prayerTime) || !window.k8JumuahMe(t) || mins(t) <= window.k8JUMUAH_MIN) { bar(); return; }
+      rec.status = 'มาสาย';
+      let m = document.getElementById('k8JumModal');
+      if (!m) {
+        document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8JumModal" onclick="if(event.target===this)closeModal(\'k8JumModal\')"><div class="modal-dialog k8-jum-dlg" role="alertdialog" aria-modal="true" aria-labelledby="k8JumT" aria-describedby="k8JumD"><span class="k8-jum-ico" aria-hidden="true">' + svg('warn') + '</span><h2 id="k8JumT">คุณมาฟังคุฏบะห์สายแล้ว</h2><p id="k8JumD"></p><button type="button" class="k8-btn-pri" onclick="closeModal(\'k8JumModal\')">รับทราบ</button></div></div>');
+        m = document.getElementById('k8JumModal');
+      }
+      document.getElementById('k8JumD').innerHTML = 'วันศุกร์ต้องเช็คละหมาดซุฮริไม่เกิน <b>' + DL + ' น.</b><br>คุณเช็คเวลา <b>' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ' น.</b> · <strong>ถูกหัก ' + PTS + ' คะแนน</strong>';
+      openModal('k8JumModal');
+      try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch (e) {}
+      setTimeout(() => { const b = m.querySelector('button'); if (b) b.focus(); }, 80);
+      bar();
+    } catch (e) {}
   };
 })();
