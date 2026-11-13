@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.17'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.18'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -5360,6 +5360,19 @@ function hasanatBy_(sheet, row, by) {
   try { if (sheet.getMaxColumns() < 16) sheet.insertColumnsAfter(sheet.getMaxColumns(), 16 - sheet.getMaxColumns()); if (!cleanVal(sheet.getRange(1, 16).getValue())) sheet.getRange(1, 16).setValue('ผู้บันทึก'); sheet.getRange(row, 16).setValue(String(by).substring(0, 80)); } catch (e) {}
 }
 function recordHasanat(data, by) {
+  // v19.18 · ห่อเพื่อแจ้งแอดมินเมื่อดาวอัลกุรอานเพิ่มขึ้น
+  let prevStars = 0, sid = '';
+  try { sid = formatAsText(data && data.studentId); const pm = getLatestHasanatMapByStudent(getSpreadsheet()); prevStars = Number(((pm[sid] || {}).quran || {}).stars) || 0; } catch (e) {}
+  const r = recordHasanatCore_(data, by);
+  try {
+    if (r && r.success && sid && /นักเรียน/.test(String(by || ''))) {
+      const q = (data && data.quran) || {}; const stars = q.stars !== undefined ? q.stars : data.stars;
+      starQuranMaybe_(sid, prevStars, stars, q.juzCompleted !== undefined ? q.juzCompleted : data.juzCompleted, q.khatamCount !== undefined ? q.khatamCount : data.khatamCount, formatSheetDate(data.date) || Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd'));
+    }
+  } catch (e) {}
+  return r;
+}
+function recordHasanatCore_(data, by) {
   if (!data) return { success: false, message: 'ไม่มีข้อมูลผลบุญ' };
   ensureSchema();
   const ss = getSpreadsheet();
@@ -7106,8 +7119,84 @@ function prayerPenaltyMaybe_() {
     if (cache.get('pm_run')) return null;
     cache.put('pm_run', '1', 600);
     const lock = LockService.getScriptLock(); if (!lock.tryLock(100)) return null;
-    try { return prayerPenaltyRun_(); } finally { try { lock.releaseLock(); } catch (e) {} }
+    try { const r = prayerPenaltyRun_(); try { starWeekRun_(); } catch (e) {} return r; } finally { try { lock.releaseLock(); } catch (e) {} }
   } catch (e) { return null; }
+}
+
+// ---------- v19.18 · แจ้งเตือนแอดมินเมื่อนักเรียนได้ดาว ----------
+// แจ้งเตือนของระบบ (audience = admins · by = system-star) · id ไม่ซ้ำ = ไม่แจ้งซ้ำ
+function starNotify_(id, title, body, sids, now) {
+  const sh = getSpreadsheet().getSheetByName(SHEETS.NOTIFS); if (!sh) return false;
+  if (sh.getLastRow() > 1 && sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().some(function (r) { return String(r[0]) === id; })) return false;
+  const t = now || new Date();
+  const exp = Utilities.formatDate(new Date(t.getTime() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  sh.appendRow([id, Utilities.formatDate(t, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), title.substring(0, 120), body.substring(0, 2000), 'admins', (sids || []).slice(0, 400).join(','), 'normal', 'system-star', 'ระบบดาวนักเรียน', 'active', exp, 'bell', '']);
+  return true;
+}
+const TH_MON_ = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+function starDateTh_(ymd) { const p = String(ymd).split('-'); return (+p[2]) + ' ' + TH_MON_[(+p[1]) - 1] + ' ' + String((+p[0]) + 543).slice(2); }
+function starGradeShort_(g) { const m = String(g || '').match(/([1-6])/); return m ? 'ม.' + m[1] : cleanVal(g); }
+/** ดาวละหมาดตรงเวลาครบสัปดาห์ (อา.–ศ. · เสาร์หยุด) · กติกาเดียวกับหน้านักเรียน:
+ *  ทุกเวลาที่ต้องเช็คต้อง "ตรงเวลา" · ลาเรียนที่อนุมัติ = ข้ามวันนั้น · ป่วย/ลา/อุซุร/ประจำเดือน = ไม่นับว่าขาด · ซุบฮิชายที่ไม่มีบันทึก = ข้าม · ต้องตรงเวลาอย่างน้อย 10 ครั้ง
+ *  ทำงานครั้งเดียวต่อสัปดาห์ ตั้งแต่วันเสาร์ 05:00 น. */
+function starWeekRun_(nowArg) {
+  const now = nowArg || new Date();
+  const ymd = function (d) { return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd'); };
+  const dow = new Date(ymd(now) + 'T12:00:00+07:00').getUTCDay(); // อา.=0 … ส.=6
+  const hm = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm').split(':'); const curMin = (+hm[0]) * 60 + (+hm[1]);
+  let back = (dow + 2) % 7; if (back === 0) back = 7; if (dow === 6 && curMin < 300) back += 7;
+  const fri = ymd(new Date(now.getTime() - back * 864e5)), sun = ymd(new Date(now.getTime() - (back + 5) * 864e5));
+  if (getProp_('STAR_WEEK_DONE') >= fri) return { skipped: true, week: sun };
+  const days = []; for (let i = 0; i < 6; i++) days.push(ymd(new Date(new Date(sun + 'T12:00:00+07:00').getTime() + i * 864e5)));
+  const nid = function (v) { return String(v || '').replace(/\D/g, '').replace(/^0+/, ''); };
+  const studs = (getAllStudents().data || []).filter(function (x) { return x && x.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ|จำหน่าย|พักการเรียน/.test(String(x.status || '')) && (!/^\d{4}-\d{2}-\d{2}/.test(String(x.registeredAt || '')) || String(x.registeredAt).slice(0, 10) <= sun); });
+  const RANK = { ok: 3, ex: 2, late: 1, miss: 0 };
+  const kindOf = function (r) { const st = String(r[14] || '').trim(); if (/อนุมัติ/.test(st) || /^PRY-APPR/.test(String(r[0]))) return 'late'; if (/อุซุร|ประจำเดือน|ป่วย|^ลา/.test(st)) return 'ex'; if (/ขาด/.test(st)) return 'miss'; if (/สาย|ช้า/.test(st)) return 'late'; return 'ok'; };
+  const best = {};
+  const psh = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
+  if (psh) readPrayerRows_(psh).forEach(function (r) {
+    const ds = formatSheetDate(r[6]); if (ds < sun || ds > fri) return;
+    const k = nid(r[1]) + '|' + ds + '|' + formatPrayerTimeThai(r[4]); const kd = kindOf(r);
+    if (!best[k] || RANK[kd] > RANK[best[k]]) best[k] = kd;
+  });
+  const leaves = readStuLeaves_().filter(function (x) { return x && x.status === 'approved'; });
+  const onLeave = function (sid, ds) { return leaves.some(function (x) { return nid(x.sid) === sid && ds >= x.from && ds <= (x.to || x.from); }); };
+  const today = ymd(now); let periods = []; try { periods = periodList_(); } catch (e) {}
+  const onPeriod = function (sid, ds) { return periods.some(function (x) { return nid(x.studentId) === sid && ds >= String(x.start || '') && ds <= String(x.end || (x.status === 'active' && today) || x.start || ''); }); };
+  const win = [];
+  studs.forEach(function (st) {
+    const sid = nid(st.studentId); const girl = periodIsGirl_(st); let ok = true, counted = 0;
+    days.forEach(function (ds) {
+      if (!ok || onLeave(sid, ds)) return;
+      PRAYER_SLOTS_.forEach(function (slot0, si) {
+        if (!ok) return; const kd = best[sid + '|' + ds + '|' + formatPrayerTimeThai(slot0)];
+        if (kd === 'ok') counted++;
+        else if (kd === 'ex') return;
+        else if (kd) ok = false;
+        else if (si === 0 && !girl) return; // ซุบฮิชาย: แอดมินเช็คชื่อให้
+        else if (girl && onPeriod(sid, ds)) return;
+        else ok = false;
+      });
+    });
+    if (ok && counted >= 10) win.push(st);
+  });
+  if (win.length) {
+    win.sort(function (a, b) { return String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName)); });
+    const body = 'สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri) + ' · ละหมาดตรงเวลาครบทุกเวลา ' + win.length + ' คน\n' +
+      win.slice(0, 60).map(function (x, i) { return (i + 1) + '. ' + (x.fullName || x.studentId) + ' (' + starGradeShort_(x.grade) + (x.schoolName ? ' · ' + x.schoolName : '') + ')'; }).join('\n') + (win.length > 60 ? '\nและอีก ' + (win.length - 60) + ' คน' : '');
+    starNotify_('NTF-STAR-W-' + sun, 'นักเรียนได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + win.length + ' คน', body, win.map(function (x) { return x.studentId; }), now);
+  }
+  try { setProp_('STAR_WEEK_DONE', fri); } catch (e) {}
+  return { week: sun, winners: win.map(function (x) { return x.studentId; }) };
+}
+/** ดาวอัลกุรอาน: อ่านจบ 1 ยุซ = 1 ดาว → แจ้งแอดมินทันทีที่นักเรียนบันทึก */
+function starQuranMaybe_(sid, prevStars, stars, juz, khatam, dateStr) {
+  const a = Number(prevStars) || 0, b = Number(stars) || 0; if (b <= a) return false;
+  const st = (getAllStudents().data || []).filter(function (x) { return isCodeMatch(x.studentId, sid); })[0] || { studentId: sid, fullName: sid };
+  const who = (st.fullName || st.studentId) + ' (' + starGradeShort_(st.grade) + (st.schoolName ? ' · ' + st.schoolName : '') + ')';
+  const got = b - a;
+  return starNotify_('NTF-STAR-Q-' + String(sid).replace(/\D/g, '').replace(/^0+/, '') + '-' + b, 'นักเรียนได้ดาวอ่านอัลกุรอาน: ' + (st.fullName || st.studentId),
+    who + ' อ่านอัลกุรอานจบ ' + (got > 1 ? got + ' ยุซ' : '1 ยุซ') + (juz ? ' (ยุซที่ ' + juz + ')' : '') + ' · ดาวสะสม ' + b + ' ดวง' + (Number(khatam) > 0 ? ' · ค็อตม์ ' + khatam + ' ครั้ง' : '') + ' · บันทึกวันที่ ' + starDateTh_(dateStr), [st.studentId]);
 }
 function prayerPenaltyRun_(nowArg) {
   const now = nowArg || new Date();
@@ -7587,7 +7676,14 @@ function getMyNotifications_(session) {
   const reads = {};
   sheetRows_(SHEETS.NOTIF_READS, 4).forEach(function (r) { if (cleanVal(r[1]) === key) reads[cleanVal(r[0])] = { at: cleanVal(r[2]), hidden: cleanVal(r[3]) === '1' }; });
   const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
-  const list = readNotifs_().filter(function (n) { return n.status === 'active' && (!n.expires || n.expires >= today) && notifMatches_(n, session, g); })
+  let stIds = null; if (session.limit === 'school') { try { stIds = stSchoolIds_(stSchoolOf_(session.userId)); } catch (e) { stIds = {}; } }
+  const list = readNotifs_().filter(function (n) { return n.status === 'active' && (!n.expires || n.expires >= today) && notifMatches_(n, session, g) && !(stIds && n.by === 'system-star' && !String(n.audienceValue || '').split(',').some(function (v) { return stIds[hqKey_(v)]; })); })
+    .map(function (n) { // บัญชีครูโรงเรียนต้นสังกัด: รายชื่อดาวรายสัปดาห์เหลือเฉพาะนักเรียนของโรงเรียนตน
+      if (!stIds || n.by !== 'system-star' || !/^NTF-STAR-W-/.test(n.id)) return n;
+      const mine = (getAllStudents().data || []).filter(function (x) { return stIds[hqKey_(x.studentId)] && String(n.audienceValue || '').split(',').some(function (v) { return hqKey_(v) === hqKey_(x.studentId); }); });
+      const head = String(n.body || '').split('\n')[0].replace(/\d+ คน$/, mine.length + ' คน');
+      return Object.assign({}, n, { title: 'นักเรียนได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + mine.length + ' คน', body: head + '\n' + mine.map(function (x, i) { return (i + 1) + '. ' + (x.fullName || x.studentId) + ' (' + starGradeShort_(x.grade) + ')'; }).join('\n') });
+    })
     .map(function (n) { const rd = reads[n.id] || {}; return { id: n.id, createdAt: n.createdAt, title: n.title, body: n.body, priority: n.priority, byName: n.byName, mode: n.mode, place: n.place, expires: n.expires, read: !!rd.at, hidden: !!rd.hidden }; })
     .filter(function (n) { return !n.hidden; })
     .sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }).slice(0, 100);

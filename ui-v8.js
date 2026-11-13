@@ -3636,7 +3636,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.17';
+  const APP_VERSION = '19.18';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4590,7 +4590,7 @@ window.k8RegBirthChange = function (v) {
         try { localStorage.setItem('k8_notif_cache_' + (s ? 'S' + norm(s.studentId) : 'U' + (a.username || '')), JSON.stringify({ list: N.list, pending: N.pending, unread: N.unread })); } catch (e) {}
       }
     } catch (e) {}
-    N.loading = false; placeBell(); paintBadge(); maybePop(); osNotify();
+    N.loading = false; placeBell(); paintBadge(); maybePop(); osNotify(); try { starPop(); } catch (e) {}
     if (document.getElementById('k8NotifModal') && document.getElementById('k8NotifModal').classList.contains('open')) renderSheet();
   }
   function loadCache() {
@@ -4622,6 +4622,28 @@ window.k8RegBirthChange = function (v) {
     try { const reg = await navigator.serviceWorker.ready; reg.showNotification('เปิดการแจ้งเตือนแล้ว', { body: 'แจ้งเตือนใหม่จะเด้งเข้ามือถือขณะเปิดแอปหรือแอปทำงานอยู่เบื้องหลัง', icon: 'assets/icon-192.png', tag: 'k8n-test' }); } catch (e) {}
     toast('เปิดการแจ้งเตือนเข้ามือถือแล้ว', 'success'); renderSheet();
   };
+
+  // ---------- v19.18 · แอดมิน: การ์ดเด้งมุมจอเมื่อนักเรียนได้ดาว (ไม่บังงาน · ปิดเองได้) ----------
+  function starPop() {
+    if (!adm() || stu() || (window.k8IsPreview && window.k8IsPreview())) return;
+    let seen = []; try { seen = JSON.parse(localStorage.getItem('k8_star_pop') || '[]'); } catch (e) {}
+    const cut = Date.now() - 864e5;
+    const fresh = N.list.filter((n) => /^NTF-STAR-/.test(n.id) && !n.read && seen.indexOf(n.id) === -1 && (Date.parse(String(n.createdAt).replace(' ', 'T') + '+07:00') || 0) > cut);
+    if (!fresh.length) return;
+    try { localStorage.setItem('k8_star_pop', JSON.stringify(seen.concat(fresh.map((n) => n.id)).slice(-200))); } catch (e) {}
+    let box = document.getElementById('k8StarPop');
+    if (!box) { box = document.createElement('div'); box.id = 'k8StarPop'; box.className = 'k8-starpop'; box.setAttribute('role', 'status'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
+    const n = fresh[0]; const more = fresh.length - 1;
+    const first = String(n.body || '').split('\n'); const lines = first.slice(0, 4);
+    box.innerHTML = '<span class="k8-starpop-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>' +
+      '<div class="k8-starpop-t"><b>' + escH(n.title) + '</b><span>' + lines.map(escH).join('<br>') + (first.length > 4 ? '<br>…' : '') + '</span>' + (more > 0 ? '<small>และอีก ' + more + ' รายการ</small>' : '') +
+      '<div class="k8-starpop-a"><button type="button" class="k8-btn-pri" onclick="k8StarPopGo(\'' + escH(n.id) + '\')">ดูรายละเอียด</button><button type="button" class="k8-btn-line" onclick="k8StarPopX()">ปิด</button></div></div>';
+    box.hidden = false; box.classList.remove('is-out');
+    clearTimeout(box._t); box._t = setTimeout(() => window.k8StarPopX(), 20000);
+  }
+  const escH = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  window.k8StarPopX = function () { const b = document.getElementById('k8StarPop'); if (b) { b.classList.add('is-out'); setTimeout(() => { b.hidden = true; }, 220); } };
+  window.k8StarPopGo = function (id) { window.k8StarPopX(); try { window.k8NotifOpen(id); } catch (e) {} };
 
   // ---------- ป๊อปอัปเด้งเมื่อมีแจ้งเตือนใหม่ ----------
   function maybePop() {
