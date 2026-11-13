@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.18'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.19'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -7125,12 +7125,12 @@ function prayerPenaltyMaybe_() {
 
 // ---------- v19.18 · แจ้งเตือนแอดมินเมื่อนักเรียนได้ดาว ----------
 // แจ้งเตือนของระบบ (audience = admins · by = system-star) · id ไม่ซ้ำ = ไม่แจ้งซ้ำ
-function starNotify_(id, title, body, sids, now) {
+function starNotify_(id, title, body, sids, now, aud) {
   const sh = getSpreadsheet().getSheetByName(SHEETS.NOTIFS); if (!sh) return false;
   if (sh.getLastRow() > 1 && sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().some(function (r) { return String(r[0]) === id; })) return false;
   const t = now || new Date();
   const exp = Utilities.formatDate(new Date(t.getTime() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
-  sh.appendRow([id, Utilities.formatDate(t, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), title.substring(0, 120), body.substring(0, 2000), 'admins', (sids || []).slice(0, 400).join(','), 'normal', 'system-star', 'ระบบดาวนักเรียน', 'active', exp, 'bell', '']);
+  sh.appendRow([id, Utilities.formatDate(t, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'), title.substring(0, 120), body.substring(0, 2000), aud || 'admins', (sids || []).slice(0, 400).join(','), 'normal', 'system-star', 'ระบบดาวนักเรียน', 'active', exp, 'bell', '']);
   return true;
 }
 const TH_MON_ = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -7185,6 +7185,11 @@ function starWeekRun_(nowArg) {
     const body = 'สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri) + ' · ละหมาดตรงเวลาครบทุกเวลา ' + win.length + ' คน\n' +
       win.slice(0, 60).map(function (x, i) { return (i + 1) + '. ' + (x.fullName || x.studentId) + ' (' + starGradeShort_(x.grade) + (x.schoolName ? ' · ' + x.schoolName : '') + ')'; }).join('\n') + (win.length > 60 ? '\nและอีก ' + (win.length - 60) + ' คน' : '');
     starNotify_('NTF-STAR-W-' + sun, 'นักเรียนได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + win.length + ' คน', body, win.map(function (x) { return x.studentId; }), now);
+    // v19.19 · ข้อความชมเชยถึงนักเรียนแต่ละคน
+    win.forEach(function (x) {
+      try { starNotify_('NTF-STAR-WS-' + nid(x.studentId) + '-' + sun, 'ขอชื่นชม คุณได้ดาวละหมาดตรงเวลาครบสัปดาห์',
+        'มาชาอัลลอฮ์ สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri) + ' คุณละหมาดตรงเวลาครบทุกเวลา ขออัลลอฮ์ทรงตอบแทนความดีของคุณ รักษาความดีนี้ไว้ในสัปดาห์หน้านะ', [x.studentId], now, 'students'); } catch (e) {}
+    });
   }
   try { setProp_('STAR_WEEK_DONE', fri); } catch (e) {}
   return { week: sun, winners: win.map(function (x) { return x.studentId; }) };
@@ -7195,6 +7200,9 @@ function starQuranMaybe_(sid, prevStars, stars, juz, khatam, dateStr) {
   const st = (getAllStudents().data || []).filter(function (x) { return isCodeMatch(x.studentId, sid); })[0] || { studentId: sid, fullName: sid };
   const who = (st.fullName || st.studentId) + ' (' + starGradeShort_(st.grade) + (st.schoolName ? ' · ' + st.schoolName : '') + ')';
   const got = b - a;
+  // v19.19 · ข้อความชมเชยถึงนักเรียน
+  try { starNotify_('NTF-STAR-QS-' + String(sid).replace(/\D/g, '').replace(/^0+/, '') + '-' + b, 'ขอชื่นชม คุณได้ดาวอ่านอัลกุรอาน',
+    'มาชาอัลลอฮ์ คุณอ่านอัลกุรอานจบ' + (juz ? 'ยุซที่ ' + juz : (got > 1 ? ' ' + got + ' ยุซ' : ' 1 ยุซ')) + ' แล้ว · ดาวสะสม ' + b + ' ดวง ขออัลลอฮ์ทรงตอบแทน อ่านต่อไปจนถึงค็อตม์นะ', [st.studentId], null, 'students'); } catch (e) {}
   return starNotify_('NTF-STAR-Q-' + String(sid).replace(/\D/g, '').replace(/^0+/, '') + '-' + b, 'นักเรียนได้ดาวอ่านอัลกุรอาน: ' + (st.fullName || st.studentId),
     who + ' อ่านอัลกุรอานจบ ' + (got > 1 ? got + ' ยุซ' : '1 ยุซ') + (juz ? ' (ยุซที่ ' + juz + ')' : '') + ' · ดาวสะสม ' + b + ' ดวง' + (Number(khatam) > 0 ? ' · ค็อตม์ ' + khatam + ' ครั้ง' : '') + ' · บันทึกวันที่ ' + starDateTh_(dateStr), [st.studentId]);
 }
