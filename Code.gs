@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.14'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.15'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1734,7 +1734,7 @@ function dispatchAction_(action, req, data, session, ctx) {
       return requestStudentLeave_(data, session);
     case 'getMyStudentLeaves': {
       const me = slKey_(session.userId);
-      return { success: true, data: readStuLeaves_().filter(function (x) { return slKey_(x.sid) === me; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }).slice(0, 60) };
+      return { success: true, data: readStuLeaves_().filter(function (x) { return slKey_(x.sid) === me; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }).slice(0, 200) };
     }
     case 'cancelStudentLeave':
       return cancelStudentLeave_(pick('id'), session);
@@ -1945,7 +1945,7 @@ function getFullDatabaseForSession_(session) {
 
 function buildFullDatabaseRaw_() {
   ensureSchema();
-  __ROWS_MEMO = {};
+  __ROWS_MEMO = {}; __SL_MEMO = null;
   try {
     const teachers = (getTeachers().data || []).map(function (t) { return publicStaff_(t, true); });
     const admins = (getAdmins().data || []).map(function (t) { return publicStaff_(t, true); });
@@ -1974,7 +1974,7 @@ function buildFullDatabaseRaw_() {
       settings: publicSettings_(getSettings().data || {})
     };
   } finally {
-    __ROWS_MEMO = null;
+    __ROWS_MEMO = null; __SL_MEMO = null;
   }
 }
 
@@ -3348,11 +3348,38 @@ function setStudentDorm_(d) {
 }
 // v18.08 · นักเรียนแจ้งลาเรียน (วันเดียว/ช่วงวัน · ทั้งวัน/ช่วงเวลา) → แอดมินอนุมัติ → อาจารย์เห็นตอนเช็คชื่อ
 function slKey_(v) { return String(v == null ? '' : v).trim().replace(/^0+/, ''); }
-function readStuLeaves_() { let v = []; try { v = JSON.parse((getSettings().data || {}).StudentLeaves || '[]'); } catch (e) { v = []; } return Array.isArray(v) ? v : []; }
+// v19.15 · เก็บการลาในชีตของตัวเอง (เดิมเก็บใน Settings 1 เซลล์ จำกัด 50,000 ตัวอักษร ≈ 150 รายการ) · เก็บย้อนหลัง 400 วัน (นับรายภาคเรียนได้)
+const SL_SHEET_ = 'การลาของนักเรียน';
+const SL_HEAD_ = ['รหัสคำขอ', 'รหัสนักเรียน', 'ชื่อ', 'ชั้น', 'ตั้งแต่', 'ถึง', 'ทั้งวัน', 'เวลาเริ่ม', 'เวลาสิ้นสุด', 'ประเภท', 'อยู่ที่', 'สาเหตุ', 'สถานะ', 'ส่งเมื่อ', 'ผู้พิจารณา', 'พิจารณาเมื่อ', 'หมายเหตุ', 'ข้อมูล (JSON)'];
+let __SL_MEMO = null;
+function slSheet_() {
+  const ss = getSpreadsheet(); let sh = ss.getSheetByName(SL_SHEET_);
+  if (!sh) { sh = ss.insertSheet(SL_SHEET_); sh.getRange(1, 1, 1, SL_HEAD_.length).setValues([SL_HEAD_]); try { sh.setFrozenRows(1); } catch (e) {} }
+  return sh;
+}
+function readStuLeaves_() {
+  if (__SL_MEMO && __ROWS_MEMO) return __SL_MEMO.slice();
+  const sh = slSheet_(); const n = sh.getLastRow() - 1; let L = [];
+  if (n > 0) sh.getRange(2, SL_HEAD_.length, n, 1).getValues().forEach(function (r) { try { const o = JSON.parse(r[0]); if (o && o.id) L.push(o); } catch (e) {} });
+  else {
+    // ย้ายข้อมูลเดิมจาก Settings → ชีตใหม่ (ครั้งแรกครั้งเดียว)
+    let old = []; try { old = JSON.parse((getSettings().data || {}).StudentLeaves || '[]'); } catch (e) { old = []; }
+    if (Array.isArray(old) && old.length) { L = old.filter(function (x) { return x && x.id; }); slWrite_(L); try { saveSetting({ key: 'StudentLeaves', value: '[]', description: 'ย้ายไปชีต "' + SL_SHEET_ + '" แล้ว (v19.15)' }); } catch (e) {} }
+  }
+  __SL_MEMO = __ROWS_MEMO ? L.slice() : null;
+  return L;
+}
+function slWrite_(list) {
+  const sh = slSheet_(); const old = Math.max(0, sh.getLastRow() - 1);
+  const rows = list.map(function (x) { return [x.id, x.sid, x.name, x.grade, x.from, x.to, x.allDay ? 'ทั้งวัน' : '', x.tFrom || '', x.tTo || '', x.type, x.where || '', x.reason || '', x.status || '', x.createdAt || '', x.by || '', x.at || '', x.note || '', JSON.stringify(x)]; });
+  if (rows.length) sh.getRange(2, 1, rows.length, SL_HEAD_.length).setNumberFormat('@').setValues(rows);
+  if (old > rows.length) sh.deleteRows(2 + rows.length, old - rows.length);
+  __SL_MEMO = __ROWS_MEMO ? list.slice() : null;
+}
 function writeStuLeaves_(list) {
-  const cut = Utilities.formatDate(new Date(Date.now() - 120 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
-  list = list.filter(function (x) { return x && String(x.to) >= cut; }).slice(-800);
-  saveSetting({ key: 'StudentLeaves', value: JSON.stringify(list), description: 'คำขอลาเรียนของนักเรียน (JSON)' });
+  const cut = Utilities.formatDate(new Date(Date.now() - 400 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  list = list.filter(function (x) { return x && String(x.to) >= cut; }).slice(-6000);
+  slWrite_(list);
   return list;
 }
 const SL_TYPES_ = ['ป่วย', 'ลากิจ', 'กลับบ้าน', 'กิจกรรมนอกโรงเรียน', 'อื่น ๆ'];

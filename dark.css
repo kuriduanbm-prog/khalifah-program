@@ -2877,46 +2877,6 @@ html[data-theme="dark"] .k8-sv-leg { color: #a6b0bf !important; }
 @media (max-width: 760px) {
 html[data-theme="dark"] .k8-sv-t tr { background-color: #121212 !important; border: 1px solid #37393d !important; }
 }
-html[data-theme="dark"] .k8-sp-av { background-color: #122938 !important; color: #b7d1e0 !important; }
-html[data-theme="dark"] .k8-sp-bar { border-bottom: 1px solid #2d363f !important; }
-html[data-theme="dark"] .k8-sp-tabs button { color: #b6bcc3 !important; }
-html[data-theme="dark"] .k8-sp-pre button { border: 1px solid #393f46 !important; background-color: #121212 !important; color: #c1c7cf !important; }
-html[data-theme="dark"] .k8-sp-pre button[aria-pressed="true"] { background-color: #122938 !important; color: #b7d1e0 !important; }
-html[data-theme="dark"] .k8-sp-kpi { border: 1px solid #323941 !important; background-color: #121212 !important; }
-html[data-theme="dark"] .k8-sp-kpi span { color: #b6bcc3 !important; }
-html[data-theme="dark"] .k8-sp-kpi b { color: #d6dae5 !important; }
-html[data-theme="dark"] .k8-sp-kpi small { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-sp-kpi.is-ok b { color: #79eca4 !important; }
-html[data-theme="dark"] .k8-sp-kpi.is-mid b { color: #f8a96d !important; }
-html[data-theme="dark"] .k8-sp-kpi.is-bad b { color: #ed7878 !important; }
-html[data-theme="dark"] .k8-sp-kpi.is-bad { border-color: #522424 !important; background-color: #2f1111 !important; }
-html[data-theme="dark"] .k8-sp-alerts li { background-color: #342d0f !important; color: #f3a372 !important; }
-html[data-theme="dark"] .k8-sp-alerts li.lv3 { background-color: #2f1111 !important; color: #ea7b7b !important; }
-html[data-theme="dark"] .k8-sp-dl dt { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-sp-dl dd { color: #d6dae5 !important; }
-html[data-theme="dark"] .k8-sp-h { color: #b7d1e0 !important; }
-html[data-theme="dark"] .k8-sp-h small { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-sp-tw { border: 1px solid #323941 !important; }
-html[data-theme="dark"] .k8-sp-t th, html[data-theme="dark"] .k8-sp-t td { border-bottom: 1px solid #2d363f !important; }
-html[data-theme="dark"] .k8-sp-t thead th { background-color: #181f26 !important; color: #b6bcc3 !important; }
-html[data-theme="dark"] .k8-sp-t tbody th { color: #d6dae5 !important; }
-html[data-theme="dark"] .k8-sp-t tbody th small { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-sp-t td.is-bad { color: #ed7878 !important; }
-html[data-theme="dark"] .k8-sp-days li > span:last-child { color: #b6bcc3 !important; }
-html[data-theme="dark"] .k8-sp-days strong { color: #ed7878 !important; }
-html[data-theme="dark"] .k8-sp-dbar { background-color: #371212 !important; }
-html[data-theme="dark"] .k8-sp-list li { border: 1px solid #323941 !important; }
-html[data-theme="dark"] .k8-sp-list small { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-sp-list b.is-neg { color: #ed7878 !important; }
-html[data-theme="dark"] .k8-sp-list b.is-pos { color: #79eca4 !important; }
-html[data-theme="dark"] .k8-sp-pf li { border: 1px solid #323941 !important; }
-html[data-theme="dark"] .k8-sp-pf span { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-sp-pf em { color: #f8a96d !important; }
-html[data-theme="dark"] .k8-sp-pfi { background-color: #122938 !important; color: #b7d1e0 !important; }
-html[data-theme="dark"] .k8-sp-empty { color: #a6b0bf !important; }
-html[data-theme="dark"] .k8-sp-ro { border-top: 1px solid #2d363f !important; color: #b6bcc3 !important; }
-html[data-theme="dark"] .k8-ro-badge { background-color: #122938 !important; color: #b7d1e0 !important; }
-html[data-theme="dark"] .k8-ro-badge small { color: #6dc7f8 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }
