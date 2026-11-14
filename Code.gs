@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.20'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.21'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -4111,6 +4111,15 @@ function ttSyncHalaqah_(g, cells, prevCells, session) {
   });
   return out;
 }
+// v19.21 · วิชาต่อเนื่องหลายคาบ (sp จำนวนคาบ · si ลำดับในช่วง) + เวลาที่กำหนดเอง (tf–tt)
+function ttSpan_(c, e) {
+  const sp = parseInt(c.sp, 10), si = parseInt(c.si, 10);
+  if (sp >= 2 && sp <= 12) { e.sp = sp; e.si = (si >= 0 && si < sp) ? si : 0; }
+  const tf = cleanVal(c.tf), tt = cleanVal(c.tt);
+  const mins = function (t) { return /^\d{1,2}:\d{2}$/.test(t) ? (+t.split(':')[0]) * 60 + (+t.split(':')[1]) : NaN; };
+  if (mins(tf) >= 0 && mins(tt) > mins(tf) && mins(tt) < 1440) { e.tf = tf; e.tt = tt; }
+  return e;
+}
 function ttIds_(a) { const o = (Array.isArray(a) ? a : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean).slice(0, 300); return o.filter(function (x, i) { return o.indexOf(x) === i; }); }
 function ttCleanCells_(src) {
   const cells = {};
@@ -4121,7 +4130,7 @@ function ttCleanCells_(src) {
     const sn = cleanVal(c.subjectName || c.sn).slice(0, 80); if (!sn) return;
     cells[k] = { s: cleanVal(c.subjectId || c.s).slice(0, 40), sn: sn, t: cleanVal(c.teacher || c.t).slice(0, 60), tn: cleanVal(c.teacherName || c.tn).slice(0, 80), r: cleanVal(c.room || c.r).slice(0, 40) };
     const x = ttIds_(c.x); if (x.length) cells[k].x = x;
-    ttCo_(c, cells[k]);
+    ttCo_(c, cells[k]); ttSpan_(c, cells[k]);
   });
   return cells;
 }
@@ -4171,7 +4180,7 @@ function saveTimetable_(data, session) {
     if (o.length) e.o = o.filter(function (x, i) { return o.indexOf(x) === i; });
     const x = ttIds_(c.x); if (x.length) e.x = x; // x = นักเรียนที่ละเว้นวิชานี้
     const ad = ttIds_(c.a); if (ad.length) e.a = ad; // v19.03 · a = นักเรียนจากชั้นอื่นที่มาเรียนร่วม
-    ttCo_(c, e);
+    ttCo_(c, e); ttSpan_(c, e);
     // v17.84 · gx = เฉพาะเพศ (m/f) · from/to = ช่วงวันที่ใช้วิชานี้ (ว่าง = ตลอดภาคเรียน)
     const gx = cleanVal(c.gx); if (gx === 'm' || gx === 'f') e.gx = gx;
     const d1 = cleanVal(c.from), d2 = cleanVal(c.to);
