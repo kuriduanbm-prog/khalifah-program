@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.19'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.20'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1812,10 +1812,11 @@ function dispatchAction_(action, req, data, session, ctx) {
         if (!name) return { success: false, message: 'จุดที่ ' + (i + 1) + ': ตั้งชื่อจุดก่อน' };
         if (!isFinite(lat) || lat < -90 || lat > 90 || !isFinite(lng) || lng < -180 || lng > 180) return { success: false, message: '"' + name + '": ละติจูด/ลองจิจูดไม่ถูกต้อง' };
         if (!isFinite(r) || r < 5 || r > 2000) return { success: false, message: '"' + name + '": รัศมีต้องอยู่ระหว่าง 5–2000 เมตร' };
-        out.push({ name: name, lat: Math.round(lat * 1e7) / 1e7, lng: Math.round(lng * 1e7) / 1e7, radius: r, main: !!z.main });
+        out.push({ name: name, lat: Math.round(lat * 1e7) / 1e7, lng: Math.round(lng * 1e7) / 1e7, radius: r, main: !!z.main, kind: geoKind_(z) });
       }
       if (!out.length) return { success: false, message: 'ต้องมีอย่างน้อย 1 จุด' };
       if (!out.some(function (z) { return z.main; })) out[0].main = true;
+      if (!out.some(function (z) { return z.kind !== 'dorm'; })) return { success: false, message: 'ต้องมีจุดประเภท "มัสยิด" อย่างน้อย 1 จุด' };
       saveSetting({ key: 'GeoZones', value: JSON.stringify(out), description: 'จุดพิกัดเช็คชื่อละหมาด: ชื่อ ละติจูด ลองจิจูด รัศมี (JSON)' });
       return { success: true, zones: out, message: 'บันทึกจุดพิกัดแล้ว · นักเรียนจะใช้จุดใหม่ทันที' };
     }
@@ -3059,6 +3060,10 @@ function recordPrayer(data) {
     if (/^ตรงเวลา/.test(statusThai)) statusThai = 'มาสาย';
     timeFlags = (timeFlags ? timeFlags + ' · ' : '') + 'มาฟังคุฏบะห์สาย (เช็คเวลา ' + String(timeStr).slice(0, 5) + ' น. เกิน ' + jum.deadline + ' น.)';
   }
+  // v19.20 · นักเรียนชายละหมาดที่หอพัก (ไม่ไปมัสยิด) โดยไม่มีเหตุจำเป็น = หัก 1 คะแนน (ทั้งตรงเวลาและสาย)
+  let dorm = null;
+  try { dorm = dormPrayerOf_(cleanSid, dateStr, prayerNameThai, statusThai, lat, lng, data.locationName || ''); } catch (e) { dorm = null; }
+  if (dorm) timeFlags = (timeFlags ? timeFlags + ' · ' : '') + 'ละหมาดที่หอพัก (' + dorm.zone + ')';
   sheet.appendRow([
     logId,
     cleanSid,
@@ -3083,10 +3088,56 @@ function recordPrayer(data) {
   let restored = 0;
   if (!/ขาด/.test(String(statusThai || ''))) { try { restored = prayerMissRestore_(cleanSid, dateStr, prayerNameThai, 'พบบันทึกละหมาด (ส่งย้อนหลัง)'); } catch (e) {} }
 
-  let jumPts = 0;
+  let jumPts = 0, dormPts = 0;
   if (jum) { try { jumPts = jumuahPenalty_(jum, dateStr, timeStr); } catch (e) { jumPts = 0; } }
-  return { success: true, message: jum ? 'คุณมาฟังคุฏบะห์สายแล้ว' + (jumPts ? ' · ถูกหัก ' + jumPts + ' คะแนน' : '') : 'บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว', logId: logId, photoUrl: photoRef, restored: restored,
-    jumuahLate: !!jum, jumuahDeadline: jum ? jum.deadline : undefined, penalty: jumPts || undefined };
+  if (dorm) { try { dormPts = dormPrayerPenalty_(dorm, dateStr, timeStr, prayerNameThai, statusThai); } catch (e) { dormPts = 0; } }
+  const msg = [jum ? 'คุณมาฟังคุฏบะห์สายแล้ว' + (jumPts ? ' · ถูกหัก ' + jumPts + ' คะแนน' : '') : '', dorm ? 'ละหมาดที่หอพัก' + (dormPts ? ' · ถูกหัก ' + dormPts + ' คะแนน' : '') : ''].filter(Boolean).join(' · ');
+  return { success: true, message: msg || ('บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว'), logId: logId, photoUrl: photoRef, restored: restored,
+    jumuahLate: !!jum, jumuahDeadline: jum ? jum.deadline : undefined, penalty: (jumPts + dormPts) || undefined, dormPrayer: !!dorm, dormZone: dorm ? dorm.zone : undefined, dormPenalty: dormPts || undefined };
+}
+
+// ---------- v19.20 · ละหมาดที่หอพัก (นักเรียนชาย) ----------
+const DORM_PRAYER_POINTS_ = 1;
+/** ประเภทจุดพิกัด: 'dorm' (หอพัก) / 'mosque' (มัสยิด) · ไม่ระบุ = ดูจากชื่อ */
+function geoKind_(z) { const k = String((z && z.kind) || ''); if (k === 'dorm' || k === 'mosque') return k; return /หอ|dorm/i.test(String((z && z.name) || '')) ? 'dorm' : 'mosque'; }
+function geoZones_() { try { const z = JSON.parse((getSettings().data || {}).GeoZones || '[]'); return Array.isArray(z) ? z : []; } catch (e) { return []; } }
+function geoDist_(a1, o1, a2, o2) { const R = 6371000, t = Math.PI / 180; const da = (a2 - a1) * t, dn = (o2 - o1) * t; const h = Math.sin(da / 2) * Math.sin(da / 2) + Math.cos(a1 * t) * Math.cos(a2 * t) * Math.sin(dn / 2) * Math.sin(dn / 2); return 2 * R * Math.asin(Math.sqrt(h)); }
+/** คืน {st, zone} เมื่อเป็นนักเรียนชายที่เช็คละหมาดในเขตหอพัก (ไม่ใช่มัสยิด) และไม่มีเหตุจำเป็น · อื่น ๆ คืน null */
+function dormPrayerOf_(sid, dateStr, prayerThai, statusThai, lat, lng, locName) {
+  if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/.test(String(statusThai || '').trim())) return null;
+  const zs = geoZones_().map(function (z) { return Object.assign({}, z, { kind: geoKind_(z) }); });
+  const dorms = zs.filter(function (z) { return z.kind === 'dorm'; }); if (!dorms.length) return null;
+  let zone = null; const la = Number(lat), lo = Number(lng);
+  if (lat !== '' && lng !== '' && isFinite(la) && isFinite(lo) && (la || lo)) {
+    // ใกล้จุดไหนที่สุด (ในรัศมี) · ถ้าอยู่ในเขตมัสยิดด้วย ถือว่าอยู่มัสยิด
+    let best = null; zs.forEach(function (z) { const d = geoDist_(la, lo, Number(z.lat), Number(z.lng)); if (d <= Number(z.radius) + 15 && (!best || d - z.radius < best.d - best.z.radius)) best = { z: z, d: d }; });
+    if (best && best.z.kind === 'dorm' && !zs.some(function (z) { return z.kind !== 'dorm' && geoDist_(la, lo, Number(z.lat), Number(z.lng)) <= Number(z.radius) + 15; })) zone = best.z.name;
+  } else {
+    const nm = String(locName || ''); const hit = dorms.filter(function (z) { return nm && nm.indexOf(z.name) !== -1; })[0]; if (hit) zone = hit.name;
+  }
+  if (!zone) return null;
+  const k = String(sid || '').replace(/\D/g, '').replace(/^0+/, '');
+  const st = (getAllStudents().data || []).filter(function (x) { return String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '') === k; })[0];
+  if (!st || !jumuahIsBoy_(st)) return null;
+  // เหตุจำเป็น: ใบลาที่อนุมัติแบบ "อยู่หอพัก" (เช่น ป่วยพักที่หอ) ครอบคลุมวันนั้น
+  try { if (readStuLeaves_().some(function (x) { return x && x.status === 'approved' && slDorm_(x) && String(x.sid).replace(/\D/g, '').replace(/^0+/, '') === k && dateStr >= x.from && dateStr <= (x.to || x.from); })) return null; } catch (e) {}
+  return { st: st, zone: zone };
+}
+/** หัก 1 คะแนน · 1 ครั้งต่อเวลาละหมาดต่อวัน (เช็คซ้ำไม่หักซ้ำ) */
+function dormPrayerPenalty_(dm, dateStr, timeStr, prayerThai, statusThai) {
+  const st = dm.st; const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR); if (!sh) return 0;
+  let si = PRAYER_SLOTS_.map(function (x) { return formatPrayerTimeThai(x); }).indexOf(formatPrayerTimeThai(prayerThai)); if (si < 0) si = 9;
+  const id = 'DM-' + String(st.studentId).replace(/\D/g, '').replace(/^0+/, '') + '-' + dateStr + '-' + si;
+  const lock = LockService.getScriptLock(); try { lock.waitLock(15000); } catch (e) {}
+  try {
+    if (sh.getLastRow() > 1 && sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().some(function (r) { return String(r[0]) === id; })) return 0;
+    const stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    const slot = String(formatPrayerTimeThai(prayerThai)).split(' (')[0];
+    const row = [id, dateStr, stamp, currentTerm_(), st.studentId, st.fullName || '', st.grade || '', 'mosque', 'dorm-prayer', 'ละหมาดที่หอพัก (ไม่ไปมัสยิด)', -DORM_PRAYER_POINTS_,
+      'หักอัตโนมัติ: เช็คละหมาด' + slot + 'ที่ ' + dm.zone + ' เวลา ' + String(timeStr).slice(0, 5) + ' น. (' + String(statusThai || '').split(' (')[0] + ')', 'system', 'ระบบอัตโนมัติ', 'active', '', '', ''];
+    sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+    return DORM_PRAYER_POINTS_;
+  } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
 // ---------- v19.17 · ละหมาดวันศุกร์ (ฟังคุฏบะห์) ----------

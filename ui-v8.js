@@ -1582,7 +1582,11 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     let vl = null; try { vl = verifiedLocation; } catch (e) {}
     const lt = document.getElementById('k8PrLocTitle'), ld = document.getElementById('k8PrLocDesc');
     if (loc && lt && ld) {
-      if (vl && vl.isWithinZone) {
+      if (vl && vl.isWithinZone && window.k8IsDormPlace && window.k8IsDormPlace(vl.locationName) && window.k8JumuahMe && (() => { try { return currentStudent && (window.k8SexOf ? window.k8SexOf(currentStudent) === 'ชาย' : false); } catch (e) { return false; } })()) {
+        // v19.20 · นักเรียนชายอยู่ในเขตหอพัก
+        loc.dataset.state = 'warn'; lt.textContent = 'อยู่ในเขตหอพัก · ควรไปละหมาดที่มัสยิด';
+        ld.textContent = (vl.locationName || 'หอพัก') + ' · นักเรียนชายเช็คที่นี่ถูกหัก 1 คะแนน (ยกเว้นมีใบลาพักหอ)';
+      } else if (vl && vl.isWithinZone) {
         loc.dataset.state = 'in'; lt.textContent = 'อยู่ในพื้นที่ละหมาด';
         ld.textContent = (vl.locationName || 'มัสยิด') + (isFinite(vl.distanceMeters) ? ' · ห่าง ' + Math.round(vl.distanceMeters) + ' ม.' : '');
       } else if (vl) {
@@ -3636,7 +3640,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.19';
+  const APP_VERSION = '19.20';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5836,6 +5840,7 @@ window.k8RegBirthChange = function (v) {
       const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
       r = await resp.json();
     } catch (e) { return 'retry'; }
+    try { if (r && r.success !== false && (r.dormPenalty || r.dormPrayer)) window.dispatchEvent(new CustomEvent('k8-prayer-result', { detail: r })); } catch (e) {}
     if (!r || r.success !== false) return 'ok';
     if (r.code === 'AUTH_REQUIRED') return 'retry';
     if (noQueue) return 'drop';
@@ -7688,10 +7693,13 @@ window.k8RegBirthChange = function (v) {
     if (!Array.isArray(zones) || !zones.length || typeof GEOFENCE_TARGETS === 'undefined') return;
     const main = zones.find((z) => z.main) || zones[0];
     Object.keys(GEOFENCE_TARGETS).forEach((k) => { delete GEOFENCE_TARGETS[k]; });
-    GEOFENCE_TARGETS.MOSQUE = { name: main.name, lat: +main.lat, lng: +main.lng, radius: +main.radius };
-    zones.forEach((z, i) => { if (z !== main) GEOFENCE_TARGETS['ZONE_' + i] = { name: z.name, lat: +z.lat, lng: +z.lng, radius: +z.radius }; });
+    GEOFENCE_TARGETS.MOSQUE = { name: main.name, lat: +main.lat, lng: +main.lng, radius: +main.radius, kind: window.k8GeoKind(main) };
+    zones.forEach((z, i) => { if (z !== main) GEOFENCE_TARGETS['ZONE_' + i] = { name: z.name, lat: +z.lat, lng: +z.lng, radius: +z.radius, kind: window.k8GeoKind(z) }; });
   }
-  function current() { try { return Object.values(GEOFENCE_TARGETS).map((t, i) => ({ name: t.name, lat: t.lat, lng: t.lng, radius: t.radius, main: i === 0 })); } catch (e) { return []; } }
+  function current() { try { return Object.values(GEOFENCE_TARGETS).map((t, i) => ({ name: t.name, lat: t.lat, lng: t.lng, radius: t.radius, main: i === 0, kind: window.k8GeoKind(t) })); } catch (e) { return []; } }
+  // v19.20 · ประเภทจุด: มัสยิด / หอพัก (นักเรียนชายเช็คละหมาดในเขตหอพัก = หัก 1 คะแนน)
+  window.k8GeoKind = function (z) { const k = String((z && z.kind) || ''); if (k === 'dorm' || k === 'mosque') return k; return /หอ|dorm/i.test(String((z && z.name) || '')) ? 'dorm' : 'mosque'; };
+  window.k8IsDormPlace = function (name) { const n = String(name || ''); if (!n) return false; let L = []; try { L = Object.values(GEOFENCE_TARGETS); } catch (e) {} const z = L.find((t) => t && t.name && n.indexOf(t.name) !== -1); return !!z && window.k8GeoKind(z) === 'dorm'; };
   try { const c = JSON.parse(localStorage.getItem(CK) || 'null'); if (c) apply(c); } catch (e) {}
   async function refresh() {
     try { const r = await gasApiCall('getSettings', {}, 15000); const raw = r && r.success && r.data && r.data.GeoZones; if (raw) { const z = JSON.parse(raw); apply(z); localStorage.setItem(CK, JSON.stringify(z)); return z; } } catch (e) {}
@@ -7714,6 +7722,7 @@ window.k8RegBirthChange = function (v) {
       '<div class="k8-geo-mapwrap"><div class="k8-geo-map" id="k8GeoMap"><p class="k8-li-empty">กำลังโหลดแผนที่…</p></div><div class="k8-geo-hint" id="k8GeoHint"></div></div>' +
       '<div class="k8-geo-list">' + zs.map((z, i) => '<section class="k8-geo-card' + (i === G.sel ? ' is-sel' : '') + '" onclick="k8GeoSel(' + i + ',event)">' +
         '<div class="k8-geo-ch"><span class="k8-geo-no">' + (i + 1) + '</span><input type="text" class="k8-geo-name" value="' + esc(z.name) + '" placeholder="ชื่อจุด เช่น มัสยิดประจำโรงเรียน" maxlength="80" oninput="k8GeoSet(' + i + ',\'name\',this.value)">' + (z.main ? '<span class="k8-geo-main">จุดหลัก</span>' : '<button type="button" class="k8-geo-mk" onclick="k8GeoMain(' + i + ')">ตั้งเป็นจุดหลัก</button>') + '</div>' +
+        '<div class="k8-geo-kind" role="group" aria-label="ประเภทจุด"><span>ประเภท</span><button type="button" aria-pressed="' + (window.k8GeoKind(z) === 'mosque') + '" onclick="k8GeoSet(' + i + ',\'kind\',\'mosque\')">มัสยิด</button><button type="button" aria-pressed="' + (window.k8GeoKind(z) === 'dorm') + '" onclick="k8GeoSet(' + i + ',\'kind\',\'dorm\')">หอพัก</button>' + (window.k8GeoKind(z) === 'dorm' ? '<small>นักเรียนชายเช็คละหมาดในเขตนี้ถูกหัก 1 คะแนน</small>' : '') + '</div>' +
         '<div class="k8-geo-ll"><label><span>ละติจูด</span><input type="text" inputmode="decimal" value="' + esc(z.lat) + '" oninput="k8GeoSet(' + i + ',\'lat\',this.value)" onpaste="k8GeoPaste(' + i + ',event)"></label><label><span>ลองจิจูด</span><input type="text" inputmode="decimal" value="' + esc(z.lng) + '" oninput="k8GeoSet(' + i + ',\'lng\',this.value)"></label></div>' +
         '<label class="k8-geo-r"><span>รัศมี <b id="k8GeoR' + i + '">' + z.radius + '</b> เมตร</span><input type="range" min="5" max="300" step="1" value="' + Math.min(300, z.radius) + '" oninput="k8GeoSet(' + i + ',\'radius\',this.value)"><input type="number" min="5" max="2000" value="' + z.radius + '" class="k8-geo-rn" oninput="k8GeoSet(' + i + ',\'radius\',this.value)" aria-label="รัศมี (เมตร)"></label>' +
         '<div class="k8-geo-acts"><button type="button" onclick="k8GeoHere(' + i + ')">📍 ใช้ตำแหน่งปัจจุบันของฉัน</button><button type="button" onclick="k8GeoPasteAsk(' + i + ')">วางลิงก์ Google Maps</button><a href="https://www.google.com/maps?q=' + encodeURIComponent(z.lat + ',' + z.lng) + '" target="_blank" rel="noopener">เปิดใน Google Maps</a>' + (zs.length > 1 ? '<button type="button" class="is-del" onclick="k8GeoDel(' + i + ')">ลบจุดนี้</button>' : '') + '</div></section>').join('') + '</div>' +
@@ -7725,6 +7734,7 @@ window.k8RegBirthChange = function (v) {
   window.k8GeoSel = function (i, e) { if (e && e.target.closest('input,button,a')) { if (G.sel !== i) { G.sel = i; document.querySelectorAll('.k8-geo-card').forEach((c, j) => c.classList.toggle('is-sel', j === i)); drawMap(); } return; } G.sel = i; document.querySelectorAll('.k8-geo-card').forEach((c, j) => c.classList.toggle('is-sel', j === i)); drawMap('fit'); const mp = document.getElementById('k8GeoMap'); if (mp) mp.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   window.k8GeoSet = function (i, k, v) {
     const z = G.zones[i]; if (!z) return;
+    if (k === 'kind') { z.kind = v === 'dorm' ? 'dorm' : 'mosque'; G.sel = i; render(); dirty(); return; }
     if (k === 'name') z.name = v; else if (k === 'radius') { z.radius = Math.max(5, Math.min(2000, parseInt(v, 10) || 5)); const b = document.getElementById('k8GeoR' + i); if (b) b.textContent = z.radius; const card = document.querySelectorAll('.k8-geo-card')[i]; if (card) { card.querySelectorAll('input[type=range],.k8-geo-rn').forEach((x) => { if (x !== document.activeElement) x.value = z.radius; }); } }
     else { const p = parseLatLng(v); if (p && k === 'lat' && /,/.test(v)) { z.lat = p.lat; z.lng = p.lng; render(); dirty(); return; } z[k] = v.trim(); }
     G.sel = i; dirty(); drawMap(k === 'radius' ? 'fit' : (k === 'lat' || k === 'lng') ? true : false);
@@ -7742,7 +7752,7 @@ window.k8RegBirthChange = function (v) {
   window.k8GeoSave = async function () {
     for (const z of G.zones) { if (!String(z.name || '').trim()) { toast('ตั้งชื่อทุกจุดก่อนบันทึก', 'warning'); return; } if (!isFinite(+z.lat) || !isFinite(+z.lng)) { toast('"' + z.name + '": ละติจูด/ลองจิจูดไม่ถูกต้อง', 'warning'); return; } }
     G.saving = true; render();
-    let r = null; try { r = await gasApiCall('saveGeoZones', { data: { zones: G.zones.map((z) => ({ name: z.name, lat: +z.lat, lng: +z.lng, radius: +z.radius, main: !!z.main })) } }, 25000); } catch (e) {}
+    let r = null; try { r = await gasApiCall('saveGeoZones', { data: { zones: G.zones.map((z) => ({ name: z.name, lat: +z.lat, lng: +z.lng, radius: +z.radius, main: !!z.main, kind: window.k8GeoKind(z) })) } }, 25000); } catch (e) {}
     G.saving = false;
     if (!r || !r.success) { toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ · Deploy Code.gs ตัวล่าสุดก่อน', 'error'); render(); return; }
     G.zones = r.zones; G.dirty = false; apply(r.zones); try { localStorage.setItem(CK, JSON.stringify(r.zones)); } catch (e) {}
@@ -9996,7 +10006,7 @@ window.k8HfMiss = function (slot) {
       // ดูอย่างเดียว: ซ่อนทุกปุ่มที่เพิ่ม/แก้ไข/ลบ/ส่งข้อมูล
       const RO_SCHOOL = new RegExp(RO_EXEC.source + '|openAdminAdd|k8NewStaff|k8NsSave|k8Bh(Open|Add|Pick|Rule|Save|New)|k8PrMark|k8PrEdit|markPrayer|addPrayer|updatePrayer|k8Pdx|k8PdEdit|k8PdAdd|approve|Approve|reject|Reject|saveSetting|k8Ap|k8PreviewStudent|k8Gx');
       view.querySelectorAll('.admin-content-tab button, .admin-content-tab [onclick]').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (RO_SCHOOL.test(oc) && !b.dataset.k8ro) { b.dataset.k8ro = '1'; b.style.setProperty('display', 'none', 'important'); } });
-      document.querySelectorAll('.k8-pr-tools button').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (!/prayer-rank/.test(oc)) b.style.setProperty('display', 'none', 'important'); });
+      document.querySelectorAll('.k8-pr-tools button').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (!/prayer-rank|k8DmOpen/.test(oc)) b.style.setProperty('display', 'none', 'important'); });
       ['btnPrayerModeApprovals'].forEach((id) => { const b = document.getElementById(id); if (b) b.style.setProperty('display', 'none', 'important'); });
       document.querySelectorAll('#view-admin .k8-as-acts').forEach((box) => {
         box.querySelectorAll('button').forEach((b) => { if (!/k8AsPrayerHistory|k8SpOpen/.test(String(b.getAttribute('onclick') || ''))) b.style.setProperty('display', 'none', 'important'); });
@@ -10006,7 +10016,7 @@ window.k8HfMiss = function (slot) {
     if (l === 'exec') {
       view.querySelectorAll('.admin-content-tab:not(#admin-tab-timetable) button, .admin-content-tab:not(#admin-tab-timetable) [onclick]').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (RO_EXEC.test(oc) && !b.dataset.k8ro) { b.dataset.k8ro = '1'; b.style.setProperty('display', 'none', 'important'); } });
       document.querySelectorAll('#k8ApTabs [data-tab]').forEach((b) => { if (b.dataset.tab !== 'leaves') b.style.setProperty('display', 'none', 'important'); });
-      document.querySelectorAll('.k8-pr-tools button').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (!/prayer-rank/.test(oc)) b.style.setProperty('display', 'none', 'important'); });
+      document.querySelectorAll('.k8-pr-tools button').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (!/prayer-rank|k8DmOpen/.test(oc)) b.style.setProperty('display', 'none', 'important'); });
     }
     if (l === 'act') {
       const f = document.getElementById('newActTitle'); const box = f && f.closest('div[style*="border"]'); if (box) box.style.setProperty('display', 'none', 'important');
@@ -12341,6 +12351,7 @@ window.k8PdWho = function (sid) {
     { k: 'act', l: 'กิจกรรม & QR', b: 'btnTabActivitiesAdmin', c: '#15803d', g: '#dcfce7', i: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>' },
     { k: 'ntf', l: 'แจ้งเตือน', b: 'btnAdminTabNotif', c: '#b45309', g: '#fef3c7', i: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>' },
     { k: 'roll', l: 'เช็คชื่อซุบฮิ', b: 'btnAdminTabPrayerRoll', c: '#0e7490', g: '#cffafe', i: '<path d="M12 3v2M5.6 5.6l1.4 1.4M3 12h2M19 12h2M17 7l1.4-1.4"/><path d="M8 16a4 4 0 0 1 8 0"/><path d="M2 20h20"/>' },
+    { k: 'dm', l: 'ละหมาดหอพัก', b: 'k8DmBtn', c: '#b91c1c', g: '#fee2e2', i: '<path d="M3 21V10l9-6 9 6v11"/><path d="M9 21v-6h6v6"/>' },
     { k: 'lv', l: 'การลานักเรียน', b: 'btnAdminTabLeave', c: '#b45309', g: '#fef3c7', i: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15h6"/>' },
     { k: 'sch', l: 'รายโรงเรียน', b: 'btnAdminTabSch', c: '#0c4a6e', g: '#e0f2fe', i: '<path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M9 21v-5h6v5M12 9v2"/>' },
     { k: 'asum', l: 'สรุปการมาเรียน', b: 'btnAdminTabAsum', c: '#1d4ed8', g: '#dbeafe', i: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>' },
@@ -13137,4 +13148,104 @@ window.k8PdWho = function (sid) {
       bar();
     } catch (e) {}
   };
+})();
+
+/* ---------- v19.20 · นักเรียนชายละหมาดที่หอพัก (ไม่ไปมัสยิด) · รายงานแอดมิน วัน/สัปดาห์/เดือน + แจ้งนักเรียนเมื่อถูกหัก ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const p2 = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+  const D0 = (s) => new Date(String(s).slice(0, 10) + 'T00:00:00');
+  const add = (s, n) => { const d = D0(s); d.setDate(d.getDate() + n); return ymd(d); };
+  const nid = (v) => String(v == null ? '' : v).replace(/\D/g, '').replace(/^0+/, '');
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const MONF = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  const DS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const dS = (s) => { const d = D0(s); return DS[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]; };
+  const SLOTS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+  const gN = (g) => { const m = String(g || '').match(/([1-6])/); return m ? 'ม.' + m[1] : String(g || '-'); };
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const S = { mode: 'week', anchor: ymd(new Date()), logs: null, busy: false, open: {} };
+  function range() {
+    const a = S.anchor;
+    if (S.mode === 'day') return { from: a, to: a, label: (() => { const d = D0(a); return 'วัน' + ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'][d.getDay()] + 'ที่ ' + d.getDate() + ' ' + MONF[d.getMonth()] + ' ' + (d.getFullYear() + 543); })() };
+    if (S.mode === 'week') { const d = D0(a); const f = add(a, -((d.getDay() + 6) % 7)); const t = add(f, 6); return { from: f, to: t, label: 'สัปดาห์ ' + dS(f) + ' – ' + dS(t) + ' ' + String(D0(t).getFullYear() + 543).slice(2) }; }
+    const d = D0(a); const f = ymd(new Date(d.getFullYear(), d.getMonth(), 1)), t = ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+    return { from: f, to: t, label: MONF[d.getMonth()] + ' ' + (d.getFullYear() + 543) };
+  }
+  const slotOf = (l) => { const m = String(l.id || '').match(/-(\d)$/); if (m && SLOTS[+m[1]]) return SLOTS[+m[1]]; const s = SLOTS.find((x) => String(l.note || '').indexOf(x) !== -1); return s || '-'; };
+  const timeOf = (l) => { const m = String(l.note || '').match(/เวลา (\d{1,2}:\d{2})/); return m ? m[1] : ''; };
+  const zoneOf = (l) => { const m = String(l.note || '').match(/ที่ (.+?) เวลา/); return m ? m[1] : 'หอพัก'; };
+  async function load(force) {
+    if (S.busy || (S.logs && !force)) { paint(); return; }
+    S.busy = true; paint();
+    let r = null; try { r = await gasApiCall('getBehaviorData', {}, 30000); } catch (e) {}
+    S.busy = false;
+    if (r && r.success) S.logs = (r.logs || []).filter((l) => l.ruleId === 'dorm-prayer' && (l.status || 'active') === 'active');
+    else { if (!S.logs) S.logs = []; toast((r && r.message) || 'โหลดข้อมูลไม่สำเร็จ', 'error'); }
+    paint();
+  }
+  const stuOf = (sid) => { let L = []; try { L = allStudents || []; } catch (e) {} return L.find((s) => nid(s.studentId) === nid(sid)) || null; };
+  function rows() {
+    const R = range(); const L = (S.logs || []).filter((l) => l.date >= R.from && l.date <= R.to);
+    const by = {}; L.forEach((l) => { const k = nid(l.studentId); (by[k] = by[k] || { sid: l.studentId, name: l.studentName, grade: l.grade, list: [] }).list.push(l); });
+    const t = ymd(new Date()); const dd = D0(t); const wf = add(t, -((dd.getDay() + 6) % 7)); const mf = t.slice(0, 8) + '01';
+    return { R, L, people: Object.values(by).map((p) => { const s = stuOf(p.sid); const all = (S.logs || []).filter((l) => nid(l.studentId) === nid(p.sid));
+      return Object.assign(p, { name: (s && s.fullName) || p.name || p.sid, grade: (s && s.grade) || p.grade, n: p.list.length, wk: all.filter((l) => l.date >= wf && l.date <= add(wf, 6)).length, mo: all.filter((l) => l.date >= mf && l.date.slice(0, 7) === t.slice(0, 7)).length,
+        list: p.list.sort((a, b) => String(b.date + timeOf(b)).localeCompare(String(a.date + timeOf(a)))) }); }).sort((a, b) => b.n - a.n || String(a.grade).localeCompare(String(b.grade)) || String(a.name).localeCompare(String(b.name), 'th')) };
+  }
+  function shell() {
+    let m = document.getElementById('k8DmModal'); if (m) return m;
+    document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8DmModal" onclick="if(event.target===this)k8DmClose()"><div class="modal-dialog k8-sheet k8-dm" role="dialog" aria-modal="true" aria-labelledby="k8DmT">' +
+      '<header class="k8-sheet-head"><div><h2 id="k8DmT">นักเรียนชายละหมาดที่หอพัก</h2><span>ไม่ไปมัสยิด · ระบบหักครั้งละ 1 คะแนน</span></div><div class="k8-dm-hacts"><button type="button" class="k8-btn-line k8-dm-x" onclick="k8DmExport()" aria-label="ส่งออก Excel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>ส่งออก</span></button><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8DmClose()">✕</button></div></header>' +
+      '<div class="k8-dm-bar"><div class="k8-dm-seg" role="group" aria-label="ช่วงเวลา" id="k8DmSeg"></div><div class="k8-dm-nav"><button type="button" aria-label="ก่อนหน้า" onclick="k8DmShift(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><b id="k8DmRange"></b><button type="button" aria-label="ถัดไป" onclick="k8DmShift(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button></div></div>' +
+      '<div class="k8-sheet-body k8-dm-body" id="k8DmBody"></div></div></div>');
+    return document.getElementById('k8DmModal');
+  }
+  function paint() {
+    const B = document.getElementById('k8DmBody'); if (!B) return;
+    document.getElementById('k8DmSeg').innerHTML = [['day', 'วัน'], ['week', 'สัปดาห์'], ['month', 'เดือน']].map(([k, l]) => '<button type="button" aria-pressed="' + (S.mode === k) + '" onclick="k8DmMode(\'' + k + '\')">' + l + '</button>').join('');
+    if (!S.logs) { document.getElementById('k8DmRange').textContent = range().label; B.innerHTML = '<p class="k8-sp-empty">กำลังโหลดข้อมูล…</p>'; return; }
+    const { R, L, people } = rows(); document.getElementById('k8DmRange').textContent = R.label;
+    const bySlot = {}; L.forEach((l) => { const s = slotOf(l); bySlot[s] = (bySlot[s] || 0) + 1; }); const mx = Math.max(1, ...SLOTS.map((s) => bySlot[s] || 0));
+    let h = '<div class="k8-dm-kpis"><div class="k8-dm-kpi' + (L.length ? ' is-bad' : '') + '"><span>ละหมาดที่หอพัก</span><b>' + L.length + '<small> ครั้ง</small></b></div><div class="k8-dm-kpi"><span>นักเรียน</span><b>' + people.length + '<small> คน</small></b></div><div class="k8-dm-kpi"><span>คะแนนที่ถูกหัก</span><b>' + L.length + '<small> คะแนน</small></b></div></div>';
+    h += '<div class="k8-dm-slots" aria-label="แยกตามเวลาละหมาด">' + SLOTS.map((s) => '<div><span>' + s + '</span><i><em style="height:' + Math.round((bySlot[s] || 0) / mx * 100) + '%"></em></i><b>' + (bySlot[s] || 0) + '</b></div>').join('') + '</div>';
+    if (!people.length) h += '<div class="k8-sld-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><b>ไม่มีนักเรียนชายละหมาดที่หอพัก</b><small>' + esc(R.label) + '</small></div>';
+    else h += '<ul class="k8-dm-list">' + people.map((p, i) => { const k = nid(p.sid); const op = !!S.open[k];
+      return '<li class="' + (op ? 'is-open' : '') + '"><button type="button" class="k8-dm-row" aria-expanded="' + op + '" onclick="k8DmToggle(\'' + k + '\')"><span class="k8-dm-rk">' + (i + 1) + '</span><span class="k8-dm-who"><b>' + esc(p.name) + '</b><small>' + esc(gN(p.grade)) + ' · ' + esc(p.sid) + ' · สัปดาห์นี้ ' + p.wk + ' · เดือนนี้ ' + p.mo + '</small></span><span class="k8-dm-n"><b>' + p.n + '</b><small>ครั้ง</small></span><svg class="k8-dm-cv" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
+        (op ? '<ul class="k8-dm-det">' + p.list.map((l) => '<li><b>' + esc(dS(l.date)) + '</b><span>' + esc(slotOf(l)) + (timeOf(l) ? ' · ' + esc(timeOf(l)) + ' น.' : '') + '</span><small>' + esc(zoneOf(l)) + '</small><em>−1</em></li>').join('') + '</ul>' : '') + '</li>'; }).join('') + '</ul>';
+    h += '<p class="k8-sld-note">นับจากรายการที่ระบบหักอัตโนมัติ (ยังไม่ถูกยกเลิก) · ถ้ามีเหตุจำเป็น แอดมินยกเลิกรายการได้ที่หน้าคะแนนพฤติกรรม → ประวัติ · นักเรียนที่มีใบลาพักหอพักที่อนุมัติแล้วจะไม่ถูกหัก</p>';
+    B.innerHTML = h;
+  }
+  window.k8DmOpen = function () { shell(); openModal('k8DmModal'); paint(); load(true); setTimeout(() => { const b = document.querySelector('#k8DmModal .k8-sheet-x'); if (b) b.focus(); }, 60); };
+  window.k8DmClose = function () { try { closeModal('k8DmModal'); } catch (e) {} };
+  window.k8DmMode = function (k) { S.mode = k; S.anchor = ymd(new Date()); paint(); };
+  window.k8DmShift = function (n) { const d = D0(S.anchor); if (S.mode === 'day') d.setDate(d.getDate() + n); else if (S.mode === 'week') d.setDate(d.getDate() + 7 * n); else d.setMonth(d.getMonth() + n, 1); S.anchor = ymd(d); paint(); };
+  window.k8DmToggle = function (k) { S.open[k] = !S.open[k]; paint(); };
+  document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; const m = document.getElementById('k8DmModal'); if (m && (m.classList.contains('open') || m.classList.contains('active'))) window.k8DmClose(); });
+  window.k8DmExport = async function () {
+    if (!S.logs) return; const { R, L, people } = rows();
+    const D = { name: R.label, title: 'นักเรียนชายละหมาดที่หอพัก', range: R.label,
+      kpis: [{ l: 'ละหมาดที่หอพัก', v: String(L.length), s: 'ครั้ง' }, { l: 'นักเรียน', v: String(people.length), s: 'คน' }, { l: 'คะแนนที่ถูกหัก', v: String(L.length), s: 'คะแนน' }],
+      sections: [{ key: 'p', title: 'รายชื่อนักเรียน', color: '#b91c1c', cols: [['ที่', 5, 'c'], ['ชื่อ - สกุล', 30, 'l'], ['ชั้น', 7, 'c'], ['จำนวนครั้ง', 10, 'c'], ['สัปดาห์นี้', 10, 'c'], ['เดือนนี้', 10, 'c'], ['ครั้งล่าสุด', 28, 'l']],
+        rows: people.map((p, i) => ({ v: [i + 1, p.name, gN(p.grade), p.n, p.wk, p.mo, dS(p.list[0].date) + ' · ' + slotOf(p.list[0]) + (timeOf(p.list[0]) ? ' ' + timeOf(p.list[0]) + ' น.' : '')] })) },
+        { key: 'd', title: 'รายละเอียดทุกครั้ง', color: '#0369a1', cols: [['วันที่', 16, 'l'], ['ชื่อ - สกุล', 30, 'l'], ['ชั้น', 7, 'c'], ['เวลาละหมาด', 13, 'c'], ['เวลาเช็ค', 10, 'c'], ['สถานที่', 24, 'l']],
+          rows: L.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((l) => { const s = stuOf(l.studentId); return { v: [dS(l.date), (s && s.fullName) || l.studentName, gN((s && s.grade) || l.grade), slotOf(l), timeOf(l), zoneOf(l)] }; }) }] };
+    try { await window.k8Rep.run('xlsx', D, 'ละหมาดหอพัก_' + R.from + '_' + R.to); toast('บันทึกไฟล์แล้ว', 'success'); } catch (e) { toast('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
+  };
+
+  // ---------- ฝั่งนักเรียน: แจ้งเมื่อระบบหักคะแนน (ยืนยันจากเซิร์ฟเวอร์) ----------
+  window.addEventListener('k8-prayer-result', (e) => {
+    const r = e.detail || {}; if (!r.dormPenalty) return;
+    try {
+      let m = document.getElementById('k8DmAlert');
+      if (!m) {
+        document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8DmAlert" onclick="if(event.target===this)closeModal(\'k8DmAlert\')"><div class="modal-dialog k8-jum-dlg" role="alertdialog" aria-modal="true" aria-labelledby="k8DmAT" aria-describedby="k8DmAD"><span class="k8-jum-ico" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l9-6 9 6v11"/><path d="M9 21v-6h6v6"/></svg></span><h2 id="k8DmAT">คุณละหมาดที่หอพัก</h2><p id="k8DmAD"></p><button type="button" class="k8-btn-pri" onclick="closeModal(\'k8DmAlert\')">รับทราบ</button></div></div>');
+        m = document.getElementById('k8DmAlert');
+      }
+      document.getElementById('k8DmAD').innerHTML = 'นักเรียนชายต้องละหมาดที่มัสยิด หากไม่มีเหตุจำเป็น<br>เช็คที่ <b>' + esc(r.dormZone || 'หอพัก') + '</b> · <strong>ถูกหัก ' + r.dormPenalty + ' คะแนน</strong>';
+      const show = () => { if (document.querySelector('.modal-overlay.open:not(#k8DmAlert)')) { setTimeout(show, 1500); return; } openModal('k8DmAlert'); setTimeout(() => { const b = m.querySelector('button'); if (b) b.focus(); }, 80); };
+      show();
+    } catch (err) {}
+  });
 })();
