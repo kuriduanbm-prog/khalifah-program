@@ -6850,3 +6850,6 @@ html[data-theme="dark"] .k8-tt-cfm.is-warn .k8-tt-cfm-h, html[data-theme="dark"]
 html[data-theme="dark"] .k8-tt-cfm ul { color: #e2e8f0; }
 html[data-theme="dark"] .k8-tt-cfm p { color: #cbd5e1; }
 html[data-theme="dark"] .k8-tt-cfm li.is-chg b { color: #fbbf24; }
+.k8-aix-xname { margin: 0 0 10px; }
+.k8-aix-xname small { color: #64748b; font-size: 12px; }
+html[data-theme="dark"] .k8-aix-xname small { color: #94a3b8; }

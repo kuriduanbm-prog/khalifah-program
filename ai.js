@@ -1117,7 +1117,7 @@
     if (typeof window.k8TtAiImport !== 'function') { if (typeof toast === 'function') toast('โหลดหน้าใหม่แล้วลองอีกครั้ง', 'warning'); return; }
     await window.k8TtAiImport(S.ttImp.P, S.ttImp.url);
   };
-  document.addEventListener('k8-tt-imported', (ev) => { const d = ev.detail || {}; const log = $('k8AiLog'); if (!log || !d.grades || !d.grades.length || d.fail) return; const m = document.createElement('div'); m.className = 'k8ai-m is-a'; m.innerHTML = '<div class="k8ai-txt"><p>บันทึกตาราง ม.' + esc(d.grades.join(', ม.')) + ' แล้ว · นักเรียนและอาจารย์เห็นตารางใหม่ทันที · แก้รายช่องต่อได้ที่เมนู <b>ตารางสอน</b></p></div>'; log.appendChild(m); scrollTo(m); });
+  document.addEventListener('k8-tt-imported', (ev) => { const d = ev.detail || {}; const log = $('k8AiLog'); if (!log || !d.grades || !d.grades.length || d.fail) return; const m = document.createElement('div'); m.className = 'k8ai-m is-a'; m.innerHTML = '<div class="k8ai-txt"><p>บันทึกตาราง ' + esc(d.grades.map((g) => /^[1-6]$/.test(String(g)) ? 'ม.' + g : '"' + g + '"').join(', ')) + ' แล้ว · นักเรียนและอาจารย์เห็นตารางใหม่ทันที · แก้รายช่องต่อได้ที่เมนู <b>ตารางสอน</b></p></div>'; log.appendChild(m); scrollTo(m); });
   // ---------- ส่งออก
   function baseName(rep, D) { return (rep.kind === 'student' ? 'ข้อมูลนักเรียน_' : rep.kind === 'rank' ? 'อันดับ_' : rep.kind === 'compare' ? 'เปรียบเทียบ_' : 'สรุป_') + safeName(D.name) + '_' + rep.from + (rep.from !== rep.to ? '_' + rep.to : ''); }
   async function exportFmts(F, D, base, btn) {
