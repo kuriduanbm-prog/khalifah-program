@@ -3640,7 +3640,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.21';
+  const APP_VERSION = '19.22';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11664,7 +11664,36 @@ window.k8HfMiss = function (slot) {
     return APP.find((x) => nid(x.sid) === k && !(kind === 'pray' && /^หอพัก/.test(String(x.where || ''))) && date >= x.from && date <= x.to && (x.allDay || isNaN(a) || isNaN(b) || !(toMin(x.tTo) <= a || toMin(x.tFrom) >= b))) || null;
   };
   // ----- นักเรียน -----
-  const F = { from: '', to: '', range: false, allDay: true, tFrom: '08:00', tTo: '12:00', type: 'ป่วย', other: '', where: '', reason: '', busy: false };
+  const F = { from: '', to: '', range: false, allDay: true, tFrom: '08:00', tTo: '12:00', type: 'ป่วย', other: '', where: '', reason: '', busy: false, docs: [] };
+  // v19.22 · หลักฐานการลา (รูปภาพ) · ลาเกิน 7 วันต้องแนบ
+  const DOC_DAYS = 7, DOC_MAX = 4;
+  const fDays = () => F.range ? Math.round((new Date(F.to + 'T00:00:00') - new Date(F.from + 'T00:00:00')) / 864e5) + 1 : 1;
+  const ICAM = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h9"/><circle cx="9" cy="10" r="2"/><path d="m21 13-4-4-8 8M19 16v6M16 19h6"/></svg>';
+  function shrinkDoc(file) { return new Promise((res) => { if (!file || !/^image\//.test(file.type || '')) { res(''); return; } const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => { const M = 1800; let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, M / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k); const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h); res(c.toDataURL('image/jpeg', 0.8)); }; img.onerror = () => res(''); img.src = fr.result; }; fr.onerror = () => res(''); fr.readAsDataURL(file); }); }
+  function docsField() {
+    const need = fDays() > DOC_DAYS;
+    return '<div class="k8-nf-f k8-sldoc' + (need && !F.docs.length ? ' is-need' : '') + '" id="k8SlDocs"><span>แนบรูปหลักฐาน' + (need ? ' * <b class="k8-sldoc-req">จำเป็น · ลาเกิน ' + DOC_DAYS + ' วัน</b>' : ' (ไม่บังคับ)') + '</span>' +
+      '<small class="k8-sldoc-hint">' + (need ? 'แนบใบรับรองแพทย์ หรือเอกสารที่เกี่ยวกับการลา อย่างน้อย 1 รูป' : 'เช่น ใบรับรองแพทย์ หนังสือเชิญแข่งขัน · ลาเกิน ' + DOC_DAYS + ' วันต้องแนบ') + '</small>' +
+      '<div class="k8-sldoc-grid">' + F.docs.map((u, i) => '<figure><img src="' + u + '" alt="หลักฐานรูปที่ ' + (i + 1) + '"><button type="button" aria-label="ลบรูปที่ ' + (i + 1) + '" onclick="k8SlDocDel(' + i + ')">✕</button></figure>').join('') +
+      (F.docs.length < DOC_MAX ? '<label class="k8-sldoc-add">' + ICAM + '<span>' + (F.docs.length ? 'เพิ่มรูป' : 'ถ่ายรูป / เลือกรูป') + '</span><small>' + F.docs.length + '/' + DOC_MAX + '</small><input type="file" accept="image/*" multiple onchange="k8SlDocAdd(this)"></label>' : '') + '</div></div>';
+  }
+  window.k8SlDocAdd = async function (inp) {
+    const files = Array.from((inp && inp.files) || []).slice(0, DOC_MAX - F.docs.length); if (inp) inp.value = '';
+    for (const f of files) { const u = await shrinkDoc(f); if (u) F.docs.push(u); else toast('ไฟล์นี้ไม่ใช่รูปภาพ', 'warning'); }
+    const el = document.getElementById('k8SlDocs'); if (el) el.outerHTML = docsField();
+  };
+  window.k8SlDocDel = function (i) { F.docs.splice(i, 1); const el = document.getElementById('k8SlDocs'); if (el) el.outerHTML = docsField(); };
+  // แนบเพิ่มภายหลัง (คำขอที่ส่งแล้ว)
+  window.k8SlDocMore = async function (id, inp) {
+    const it = (MY || []).find((x) => x.id === id); const room = DOC_MAX - ((it && it.docs) || []).length;
+    const files = Array.from((inp && inp.files) || []).slice(0, Math.max(0, room)); if (inp) inp.value = ''; if (!files.length) return;
+    const photos = []; for (const f of files) { const u = await shrinkDoc(f); if (u) photos.push(u); }
+    if (!photos.length) { toast('ไฟล์นี้ไม่ใช่รูปภาพ', 'warning'); return; }
+    toast('กำลังอัปโหลด…', 'info');
+    let r = null; try { r = await gasApiCall('attachStudentLeaveDoc', { data: { id, photos } }, 60000); } catch (e) {}
+    if (r && r.success) { toast(r.message, 'success'); loadMine(); } else toast((r && r.message) || 'อัปโหลดไม่สำเร็จ', 'error');
+  };
+  window.k8LeaveDocsHtml = function (docs, cls) { const L = (docs || []).filter((u) => /^https?:\/\//.test(String(u))); if (!L.length) return ''; return '<div class="k8-sldoc-view ' + (cls || '') + '">' + L.map((u, i) => '<a href="' + esc(u) + '" target="_blank" rel="noopener" aria-label="เปิดหลักฐานรูปที่ ' + (i + 1) + '"><img src="' + esc(u) + '" alt="" loading="lazy" referrerpolicy="no-referrer"></a>').join('') + '<small>หลักฐาน ' + L.length + ' รูป</small></div>'; };
   let MY = null;
   const WHERES = [['หอพัก', '🛏️'], ['บ้าน', '🏠'], ['อื่น ๆ', '📍']];
   const whereKey = () => F.where;
@@ -11706,7 +11735,8 @@ window.k8HfMiss = function (slot) {
     return '<article class="k8-sl-req is-' + esc(x.status) + '" style="--tc:' + (TYC[x.type] || '#475569') + '"><div class="k8-sl-top"><b>' + icOf(x.type) + ' ' + esc(x.type) + '</b>' + pill(x.status) + '</div>' +
       '<small>' + esc(span(x)) + (x.where ? ' · อยู่' + esc(whereTxt(x.where)) : '') + (x.reason && x.reason !== x.type ? ' · ' + esc(x.reason) : '') + '</small>' +
       (x.by && x.status !== 'pending' ? '<small>' + (ST[x.status] || ST.pending)[0] + 'โดย ' + esc(x.by) + (x.note ? ' · ' + esc(x.note) : '') + '</small>' : '') +
-      track(x) + (open ? '<button type="button" class="k8-sl-cancel" onclick="k8SlCancel(\'' + esc(x.id) + '\')">ยกเลิกคำขอ</button>' : '') + '</article>';
+      window.k8LeaveDocsHtml(x.docs) +
+      track(x) + (open && (x.docs || []).length < DOC_MAX ? '<label class="k8-sldoc-more">' + ICAM + '<span>' + ((x.docs || []).length ? 'แนบหลักฐานเพิ่ม' : 'แนบรูปหลักฐาน') + '</span><input type="file" accept="image/*" multiple onchange="k8SlDocMore(\'' + esc(x.id) + '\', this)"></label>' : '') + (open ? '<button type="button" class="k8-sl-cancel" onclick="k8SlCancel(\'' + esc(x.id) + '\')">ยกเลิกคำขอ</button>' : '') + '</article>';
   }
   function renderStu() {
     const B = document.getElementById('k8SlB'); if (!B) return;
@@ -11721,7 +11751,8 @@ window.k8HfMiss = function (slot) {
         (whereKey() === 'อื่น ๆ' ? '<input type="text" id="k8SlWhereO" class="k8-sl-wo" maxlength="80" placeholder="ระบุสถานที่ เช่น โรงพยาบาล / บ้านญาติ" value="' + esc(F.other) + '" oninput="k8SlF(\'other\', this.value, 1)">' : '') +
         (whereKey() === 'หอพัก' ? '<small class="k8-sl-wnote">อยู่หอพัก: ยังต้องเช็คละหมาดและถ่ายรูปรายงานตามปกติ</small>' : '') + '</div>' +
       '<label class="k8-nf-f"><span>รายละเอียด' + (F.type === 'อื่น ๆ' ? ' *' : ' (ไม่บังคับ)') + '</span><textarea id="k8SlReason" rows="3" maxlength="300"' + (F.type === 'อื่น ๆ' ? ' required aria-required="true"' : '') + ' placeholder="' + (F.type === 'อื่น ๆ' ? 'เลือก “อื่น ๆ” กรุณาบอกว่าลาเพราะอะไร เช่น ไปงานแต่งญาติ / ทำบัตรประชาชน' : 'เช่น ไปหาหมอ มีไข้สูง / ไปแข่งฟุตบอลนักเรียน') + '" oninput="k8SlF(\'reason\', this.value, 1)">' + esc(F.reason) + '</textarea></label>' +
-      '<button type="button" class="k8-bh-go k8-term-save" ' + (F.busy ? 'disabled' : '') + ' onclick="k8SlSend()">' + (F.busy ? 'กำลังส่ง…' : 'ส่งใบลา') + '</button></section>';
+      docsField() +
+      '<button type="button" class="k8-bh-go k8-term-save" ' + (F.busy ? 'disabled' : '') + ' onclick="k8SlSend()">' + (F.busy ? (F.docs.length ? 'กำลังอัปโหลดหลักฐานและส่ง…' : 'กำลังส่ง…') : 'ส่งใบลา') + '</button></section>';
     if (MY && window.k8LeaveCounts) h += '<section class="k8-sl-cnt" aria-labelledby="k8SlCntT"><div class="k8-sl-mh"><h2 id="k8SlCntT">ฉันลาไปแล้ว</h2><small>นับเฉพาะใบลาที่อนุมัติ</small></div>' + window.k8LeaveCountsHtml(window.k8LeaveCounts(MY, null)) + '</section>';
     h += '<section class="k8-sl-mine"><div class="k8-sl-mh"><h2>คำขอของฉัน</h2>' + (MY && MY.length ? '<small>' + MY.length + ' รายการ</small>' : '') + '</div>' + (MY == null ? '<p class="k8-asum-empty">กำลังโหลด…</p>' : !MY.length ? '<p class="k8-asum-empty">ยังไม่เคยขอลา</p>' : MY.map(reqHtml).join('')) + '</section>';
     B.innerHTML = h;
@@ -11732,17 +11763,18 @@ window.k8HfMiss = function (slot) {
   async function loadMine() { let r = null; try { r = await gasApiCall('getMyStudentLeaves', {}, 20000); } catch (e) {} const had = JSON.stringify((MY || []).filter((x) => x.status === 'approved').map((x) => x.id)); MY = r && r.success ? r.data || [] : (MY || []); try { localStorage.setItem('k8_sl_mine', JSON.stringify(MY.filter((x) => x.status === 'approved').map((x) => ({ id: x.id, status: x.status, from: x.from, to: x.to, allDay: x.allDay, tFrom: x.tFrom, tTo: x.tTo })))); } catch (e) {} if (had !== JSON.stringify(MY.filter((x) => x.status === 'approved').map((x) => x.id))) { try { window.renderHomeF && window.renderHomeF(); } catch (e) {} } renderStu(); paintBadge(); }
   function paintBadge() { const e = document.getElementById('hfSlN'); if (!e || !MY) return; const n = MY.filter((x) => x.status === 'approved' && x.to >= ymd(new Date())).length; e.hidden = !n; e.textContent = n; }
   window.k8SlOpen = function () { const el = document.getElementById('k8Sl'); if (!el) return; el.hidden = false; document.documentElement.classList.add('k8-docs-open'); try { history.pushState({ k8sl: 1 }, ''); } catch (e) {} renderStu(); loadMine(); };
-  window.k8SlF = function (k, v, soft) { F[k] = v; if (k === 'type' && v === 'กลับบ้าน' && !F.where) F.where = 'บ้าน'; if (k === 'from' && (!F.range || F.to < v)) F.to = v; if (k === 'range' && !v) F.to = F.from; if (!soft) renderStu(); else paintSlip(); };
+  window.k8SlF = function (k, v, soft) { F[k] = v; if (k === 'type' && v === 'กลับบ้าน' && !F.where) F.where = 'บ้าน'; if (k === 'from' && (!F.range || F.to < v)) F.to = v; if (k === 'range' && !v) F.to = F.from; if (!soft) renderStu(); else { paintSlip(); const el = document.getElementById('k8SlDocs'); if (el && /^(from|to|range)$/.test(k)) el.outerHTML = docsField(); } };
   window.k8SlWhere = function (k) { F.where = k; if (k !== 'อื่น ๆ') F.other = ''; renderStu(); if (k === 'อื่น ๆ') setTimeout(() => { const o = document.getElementById('k8SlWhereO'); if (o) o.focus(); }, 30); };
   window.k8SlSend = async function () {
     if (!F.where) { toast('เลือกว่าตอนนี้อยู่ที่ไหน (หอพัก / บ้าน / ที่อื่น ๆ)', 'warning'); return; }
     if (F.where === 'อื่น ๆ' && !String(F.other || '').trim()) { toast('ระบุสถานที่ที่อยู่ตอนนี้ด้วย', 'warning'); const o = document.getElementById('k8SlWhereO'); if (o) o.focus(); return; }
     if (F.type === 'อื่น ๆ' && !F.reason.trim()) { toast('เลือก "อื่น ๆ" ต้องกรอกรายละเอียดด้วย', 'warning'); const o = document.getElementById('k8SlReason'); if (o) o.focus(); return; }
     if (!F.allDay && !(F.tTo > F.tFrom)) { toast('เวลาสิ้นสุดต้องหลังเวลาเริ่ม', 'warning'); return; }
+    if (fDays() > DOC_DAYS && !F.docs.length) { toast('ลาเกิน ' + DOC_DAYS + ' วัน ต้องแนบรูปหลักฐาน เช่น ใบรับรองแพทย์', 'warning'); const el = document.getElementById('k8SlDocs'); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('is-need'); } return; }
     F.busy = true; renderStu();
-    let r = null; try { r = await gasApiCall('requestStudentLeave', { data: { from: F.from, to: F.range ? F.to : F.from, allDay: F.allDay, tFrom: F.tFrom, tTo: F.tTo, type: F.type, where: F.where === 'อื่น ๆ' ? 'อื่น ๆ: ' + String(F.other || '').trim() : F.where, reason: F.reason.trim() || F.type } }, 30000); } catch (e) {}
+    let r = null; try { r = await gasApiCall('requestStudentLeave', { data: { from: F.from, to: F.range ? F.to : F.from, allDay: F.allDay, tFrom: F.tFrom, tTo: F.tTo, type: F.type, where: F.where === 'อื่น ๆ' ? 'อื่น ๆ: ' + String(F.other || '').trim() : F.where, reason: F.reason.trim() || F.type, photos: F.docs.slice() } }, F.docs.length ? 90000 : 30000); } catch (e) {}
     F.busy = false;
-    if (r && r.success) { toast(r.message, 'success'); F.where = ''; F.reason = ''; F.other = ''; await loadMine(); } else { toast((r && r.message) || 'ส่งไม่สำเร็จ', 'error'); renderStu(); }
+    if (r && r.success) { toast(r.message, 'success'); F.where = ''; F.reason = ''; F.other = ''; F.docs = []; await loadMine(); } else { toast((r && r.message) || 'ส่งไม่สำเร็จ', 'error'); renderStu(); }
   };
   window.k8SlCancel = async function (id) { if (!window.confirm('ยกเลิกคำขอลานี้?')) return; let r = null; try { r = await gasApiCall('cancelStudentLeave', { id }, 20000); } catch (e) {} if (r && r.success) { toast(r.message, 'success'); loadMine(); } else toast((r && r.message) || 'ไม่สำเร็จ', 'error'); };
   window.addEventListener('popstate', () => { if (history.state && history.state.k8sl) return; const el = document.getElementById('k8Sl'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } });
@@ -11761,7 +11793,7 @@ window.k8HfMiss = function (slot) {
     let h = '<button type="button" class="k8-sl-ah" aria-expanded="' + ADM.open + '" onclick="k8SlAdmT()"><span class="k8-sl-ai" aria-hidden="true">🗓</span><b>คำขอลาเรียน</b>' + (pend.length ? '<em class="k8-sl-an">' + pend.length + ' รออนุมัติ</em>' : '<small>ไม่มีคำขอค้าง</small>') + (now.length ? '<small>· กำลังลา/จะลา ' + now.length + ' คน</small>' : '') + '<span class="k8-sl-cv" aria-hidden="true">' + (ADM.open ? '▾' : '▸') + '</span></button>';
     if (ADM.open) {
       h += '<div class="k8-sl-ab"><div class="k8h-mini-seg">' + [['pending', 'รออนุมัติ ' + pend.length], ['now', 'อนุมัติแล้ว (ยังไม่สิ้นสุด) ' + now.length], ['hist', 'ประวัติ']].map(([k, l]) => '<button type="button" aria-pressed="' + (ADM.tab === k) + '" onclick="k8SlAdmTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
-        (L.length ? '<ul class="k8-sl-list">' + L.map((x) => '<li><div class="k8-sl-top"><b>' + esc(x.name) + ' <small>' + esc(String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(x.sid) + '</small></b>' + pill(x.status) + '</div><span class="k8-sl-when">' + esc(span(x)) + '</span><small>' + esc(x.type) + (x.where ? (/^หอพัก/.test(x.where) ? ' · <b class="k8-sl-dorm">อยู่หอพัก (ต้องเช็คละหมาด)</b>' : ' · อยู่' + esc(whereTxt(x.where))) : '') + (x.reason && x.reason !== x.type ? ' · ' + esc(x.reason) : '') + '</small>' + (x.by && x.status !== 'pending' ? '<small>' + (ST[x.status] || ST.pending)[0] + 'โดย ' + esc(x.by) + '</small>' : '') +
+        (L.length ? '<ul class="k8-sl-list">' + L.map((x) => '<li><div class="k8-sl-top"><b>' + esc(x.name) + ' <small>' + esc(String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(x.sid) + '</small></b>' + pill(x.status) + '</div><span class="k8-sl-when">' + esc(span(x)) + '</span><small>' + esc(x.type) + (x.where ? (/^หอพัก/.test(x.where) ? ' · <b class="k8-sl-dorm">อยู่หอพัก (ต้องเช็คละหมาด)</b>' : ' · อยู่' + esc(whereTxt(x.where))) : '') + (x.reason && x.reason !== x.type ? ' · ' + esc(x.reason) : '') + '</small>' + (x.by && x.status !== 'pending' ? '<small>' + (ST[x.status] || ST.pending)[0] + 'โดย ' + esc(x.by) + '</small>' : '') + window.k8LeaveDocsHtml(x.docs) +
           (x.status === 'pending' ? '<div class="k8-sl-acts"><button type="button" class="is-ok" onclick="k8SlAns(\'' + esc(x.id) + '\',\'approve\')">อนุมัติ</button><button type="button" class="is-no" onclick="k8SlAns(\'' + esc(x.id) + '\',\'reject\')">ไม่อนุมัติ</button></div>' : x.status === 'approved' && x.to >= t ? '<div class="k8-sl-acts"><button type="button" class="is-no" onclick="k8SlAns(\'' + esc(x.id) + '\',\'revoke\')">ยกเลิกการลา</button></div>' : '') + '</li>').join('') + '</ul>' : '<p class="k8-asum-empty">' + (ADM.tab === 'pending' ? 'ไม่มีคำขอรออนุมัติ' : 'ยังไม่มีรายการ') + '</p>') + '</div>';
     }
     box.innerHTML = h;
@@ -11792,7 +11824,7 @@ window.k8HfMiss = function (slot) {
     const q = (v) => "'" + esc(v) + "'";
     let h = '<div class="hf-head"><h2 id="k8OvSlT">คำขอลาเรียนรออนุมัติ' + (pend.length ? ' <span class="k8-ov-sl-n">' + pend.length + '</span>' : '') + '</h2><button type="button" class="k8-ov-more" onclick="k8SldOpen()">สรุปการลารายวัน ›</button></div>';
     if (pend.length) {
-      h += pend.slice(0, 4).map((x) => '<article class="k8-ov-sl-it" style="--c:' + (OVC[x.type] || '#475569') + '"><div class="k8-ov-sl-top"><span class="k8-ov-sl-av" aria-hidden="true">' + esc(firstCh(x.name)) + '</span><div><b>' + esc(x.name || x.sid) + ' · ' + esc(sg(x.grade)) + '</b><small>' + (OVI[x.type] || '') + ' ' + esc(x.type) + ' · ' + esc(span2(x)) + '</small></div></div>' + (x.reason && x.reason !== x.type ? '<p>“' + esc(x.reason) + '”</p>' : '') + '<div class="k8-ov-sl-act"><button type="button" class="is-no" onclick="k8SlAns(' + q(x.id) + ',\'reject\')">ไม่อนุมัติ</button><button type="button" class="is-ok" onclick="k8SlAns(' + q(x.id) + ',\'approve\')">✓ อนุมัติ</button></div></article>').join('');
+      h += pend.slice(0, 4).map((x) => '<article class="k8-ov-sl-it" style="--c:' + (OVC[x.type] || '#475569') + '"><div class="k8-ov-sl-top"><span class="k8-ov-sl-av" aria-hidden="true">' + esc(firstCh(x.name)) + '</span><div><b>' + esc(x.name || x.sid) + ' · ' + esc(sg(x.grade)) + '</b><small>' + (OVI[x.type] || '') + ' ' + esc(x.type) + ' · ' + esc(span2(x)) + '</small></div></div>' + (x.reason && x.reason !== x.type ? '<p>“' + esc(x.reason) + '”</p>' : '') + window.k8LeaveDocsHtml(x.docs, 'is-sm') + '<div class="k8-ov-sl-act"><button type="button" class="is-no" onclick="k8SlAns(' + q(x.id) + ',\'reject\')">ไม่อนุมัติ</button><button type="button" class="is-ok" onclick="k8SlAns(' + q(x.id) + ',\'approve\')">✓ อนุมัติ</button></div></article>').join('');
       if (pend.length > 4) h += '<button type="button" class="k8-ov-more" onclick="k8BellGo(\'sleaves\')">และอีก ' + (pend.length - 4) + ' คำขอ ›</button>';
     } else h += '<p class="k8-ov-sl-empty">✓ ไม่มีคำขอลาเรียนค้าง</p>';
     h += '<small class="k8-ov-sl-foot">' + (now.length ? 'วันนี้ลาอยู่ ' + now.length + ' คน · ' + now.slice(0, 2).map((x) => esc(String(x.name || '').split(' ')[0]) + ' (' + esc(sg(x.grade)) + ')').join(' · ') + (now.length > 2 ? ' · และอีก ' + (now.length - 2) : '') : 'วันนี้ไม่มีนักเรียนลา') + '</small>';
@@ -13101,7 +13133,7 @@ window.k8PdWho = function (sid) {
         h += '<section class="k8-sld-grp"><h3>' + (g === '?' ? 'ไม่ระบุชั้น' : 'มัธยมศึกษาปีที่ ' + g) + ' <span>' + groups[g].length + ' คน</span></h3><ul class="k8-sld-list">' + groups[g].map((r) => {
           const x = r.x; const c = window.k8LeaveCounts(S.list, x.sid, S.day);
           return '<li style="--c:' + (TYC[x.type] || '#475569') + '"><button type="button" class="k8-sld-who" onclick="k8SldWho(\'' + esc(x.sid) + '\')"><span class="k8-sld-av" aria-hidden="true">' + esc(String(r.name).replace(/^(นาย|นางสาว|นาง|เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.)\s*/, '').charAt(0) || '?') + '</span><span><b>' + esc(r.name) + '</b><small>ม.' + esc(r.g || '-') + ' · ' + esc(x.sid) + ((r.s && r.s.schoolName) ? ' · ' + esc(r.s.schoolName) : '') + '</small></span></button>' +
-            '<div class="k8-sld-why"><em class="k8-sld-type"><i></i>' + esc(x.type || 'ลา') + '</em>' + (x.status === 'pending' ? '<em class="k8-sld-pend">รออนุมัติ</em>' : '') + '<p>' + esc(x.reason && x.reason !== x.type ? x.reason : 'ไม่ได้ระบุรายละเอียด') + '</p><small>' + esc(spanTxt(x)) + ' · ' + esc(timeTxt(x)) + (x.where ? ' · อยู่' + esc(/^(หอพัก|บ้าน)/.test(x.where) ? x.where : ' ' + whereTxt(x.where)) : '') + '</small></div>' +
+            '<div class="k8-sld-why"><em class="k8-sld-type"><i></i>' + esc(x.type || 'ลา') + '</em>' + (x.status === 'pending' ? '<em class="k8-sld-pend">รออนุมัติ</em>' : '') + '<p>' + esc(x.reason && x.reason !== x.type ? x.reason : 'ไม่ได้ระบุรายละเอียด') + '</p><small>' + esc(spanTxt(x)) + ' · ' + esc(timeTxt(x)) + (x.where ? ' · อยู่' + esc(/^(หอพัก|บ้าน)/.test(x.where) ? x.where : ' ' + whereTxt(x.where)) : '') + '</small>' + (typeof window.k8LeaveDocsHtml === 'function' ? window.k8LeaveDocsHtml(x.docs, 'is-sm') : '') + '</div>' +
             '<div class="k8-sld-cnt" aria-label="จำนวนครั้งที่ลา"><span><small>สัปดาห์นี้</small><b>' + c.w.n + '</b></span><span><small>เดือนนี้</small><b>' + c.m.n + '</b></span><span><small>เทอมนี้</small><b>' + c.t.n + '</b></span></div>' +
             (x.status === 'pending' && canAns() ? '<div class="k8-sld-acts"><button type="button" class="is-ok" onclick="k8SldAns(\'' + esc(x.id) + '\',\'approve\')">อนุมัติ</button><button type="button" class="is-no" onclick="k8SldAns(\'' + esc(x.id) + '\',\'reject\')">ไม่อนุมัติ</button></div>' : '') + '</li>';
         }).join('') + '</ul></section>';

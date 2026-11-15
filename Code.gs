@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.21'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.22'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1285,7 +1285,7 @@ const ACTION_ACCESS = {
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
   saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff', deleteHalaqahDay: 'staff', skipHalaqahDay: 'staff',
-  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', requestStudentLeave: 'student', getMyStudentLeaves: 'student', cancelStudentLeave: 'student', getStudentLeaves: 'staff', respondStudentLeave: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', requestStudentLeave: 'student', attachStudentLeaveDoc: 'student', getMyStudentLeaves: 'student', cancelStudentLeave: 'student', getStudentLeaves: 'staff', respondStudentLeave: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
@@ -1738,6 +1738,9 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'cancelStudentLeave':
       return cancelStudentLeave_(pick('id'), session);
+    case 'attachStudentLeaveDoc':
+      if (!isStudent) return { success: false, message: 'สำหรับนักเรียนเท่านั้น' };
+      return attachStudentLeaveDoc_(data, session);
     case 'getStudentLeaves': {
       const L = readStuLeaves_();
       if (session.role === 'admin' && !session.limit) return { success: true, data: L.slice().sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); }) };
@@ -3493,21 +3496,50 @@ function requestStudentLeave_(d, session) {
   if (!allDay && (!/^\d{2}:\d{2}$/.test(tFrom) || !/^\d{2}:\d{2}$/.test(tTo) || tTo <= tFrom)) return { success: false, message: 'เลือกช่วงเวลาให้ถูกต้อง' };
   const type = SL_TYPES_.indexOf(cleanVal(d.type)) !== -1 ? cleanVal(d.type) : 'อื่น ๆ';
   const where = cleanVal(d.where).substring(0, 120), reason = cleanVal(d.reason).substring(0, 300);
-  if (!reason && type === 'อื่น ๆ') return { success: false, message: 'เลือก "อื่น ๆ" ต้องกรอกรายละเอียดด้วย' }; // v18.23 · รายละเอียดบังคับเฉพาะ "อื่น ๆ"
+  if (!reason && type === 'อื่น ๆ') return { success: false, message: 'เลือก "อื่น ๆ" ต้องกรอกรายละเอียดด้วย' };
+  // v19.22 · ลาเกิน 7 วัน ต้องแนบหลักฐาน (ใบรับรองแพทย์ / เอกสารอื่น) อย่างน้อย 1 รูป
+  const inDocs = slDocsIn_(d.photos);
+  if (slDays_(from, to) > SL_DOC_DAYS_ && !inDocs.length) return { success: false, field: 'docs', message: 'ลาเกิน ' + SL_DOC_DAYS_ + ' วัน ต้องแนบรูปหลักฐาน เช่น ใบรับรองแพทย์ หรือเอกสารประกอบการลา' }; // v18.23 · รายละเอียดบังคับเฉพาะ "อื่น ๆ"
   const sid = String(session.userId), g = studentGradeNum_(sid);
   let name = cleanVal(session.name || ''), grade = '';
   try { const rows = sheetRows_(SHEETS.STUDENTS, 4); for (let i = 0; i < rows.length; i++) if (slKey_(rows[i][0]) === slKey_(sid)) { name = cleanVal(rows[i][1]) || name; grade = cleanVal(rows[i][3]); break; } } catch (e) {}
   const item = { id: 'SL' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), sid: sid, name: name || sid, grade: grade || (g.grade ? 'ม.' + g.grade : ''), from: from, to: to, allDay: allDay, tFrom: tFrom, tTo: tTo, type: type, where: where, reason: reason, status: 'pending', createdAt: new Date().toISOString() };
+  if (inDocs.length) {
+    const urls = slDocsSave_(inDocs, sid, item.id);
+    if (!urls.length) return { success: false, field: 'docs', message: 'อัปโหลดรูปหลักฐานไม่สำเร็จ ลองใหม่อีกครั้ง' };
+    item.docs = urls;
+  }
   const r = leaveLock_(function () {
     const L = readStuLeaves_();
     if (L.some(function (x) { return slKey_(x.sid) === slKey_(sid) && (x.status === 'pending' || x.status === 'approved') && !(x.to < from || x.from > to) && (x.allDay || allDay || !(x.tTo <= tFrom || x.tFrom >= tTo)); })) return { success: false, message: 'มีคำขอลาในช่วงนี้อยู่แล้ว' };
     L.push(item); writeStuLeaves_(L); return { success: true };
   });
   if (!r.success) return r;
-  try { sendNotification_({ title: 'คำขอลาเรียน · ' + item.name, body: slTxt_(item) + ' · ' + type + (where ? ' · ไป ' + where : '') + (reason && reason !== type ? ' · ' + reason : '') + ' · อนุมัติได้ที่เมนู "นักเรียน"', audience: 'admins', values: [], expires: to }, { userId: sid, name: item.name }); } catch (e) {}
+  try { sendNotification_({ title: 'คำขอลาเรียน · ' + item.name, body: slTxt_(item) + ' · ' + type + (where ? ' · ไป ' + where : '') + (reason && reason !== type ? ' · ' + reason : '') + (item.docs ? ' · แนบหลักฐาน ' + item.docs.length + ' รูป' : '') + ' · อนุมัติได้ที่เมนู "นักเรียน"', audience: 'admins', values: [], expires: to }, { userId: sid, name: item.name }); } catch (e) {}
   return { success: true, item: item, message: 'ส่งคำขอลาแล้ว · รอแอดมินอนุมัติ' };
 }
 function slDorm_(x) { return /^หอพัก/.test(String((x && x.where) || '')); }
+// ---------- v19.22 · หลักฐานการลา (รูปภาพ) ----------
+const SL_DOC_DAYS_ = 7, SL_DOC_MAX_ = 4;
+function slDays_(a, b) { return Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 864e5) + 1; }
+function slDocsIn_(arr) { return (Array.isArray(arr) ? arr : []).map(function (p) { return String((p && p.data) || p || ''); }).filter(function (v) { return /^data:image\/(jpeg|png|webp);base64,/.test(v) && v.length < 2800000; }).slice(0, SL_DOC_MAX_); }
+function slDocsSave_(list, sid, id) { const out = []; list.forEach(function (v, i) { const u = savePhotoToDrive_(v, 'Khalifah_Leave_Documents', 'leave_' + slKey_(sid) + '_' + id + '_' + (i + 1)); if (/^https?:\/\//.test(u)) out.push(u); }); return out; }
+/** นักเรียนแนบหลักฐานเพิ่มภายหลัง (คำขอที่ยังรอหรืออนุมัติแล้ว) */
+function attachStudentLeaveDoc_(d, session) {
+  d = d || {}; const id = cleanVal(d.id); const inDocs = slDocsIn_(d.photos);
+  if (!inDocs.length) return { success: false, message: 'เลือกรูปหลักฐานก่อน' };
+  const cur = readStuLeaves_().filter(function (x) { return x.id === id; })[0];
+  if (!cur) return { success: false, message: 'ไม่พบคำขอนี้' };
+  if (slKey_(cur.sid) !== slKey_(session.userId)) return { success: false, code: 'FORBIDDEN', message: 'แนบได้เฉพาะคำขอของตัวเอง' };
+  if (cur.status !== 'pending' && cur.status !== 'approved') return { success: false, message: 'คำขอนี้ปิดไปแล้ว' };
+  if ((cur.docs || []).length + inDocs.length > SL_DOC_MAX_) return { success: false, message: 'แนบได้สูงสุด ' + SL_DOC_MAX_ + ' รูปต่อคำขอ' };
+  const urls = slDocsSave_(inDocs, session.userId, id); if (!urls.length) return { success: false, message: 'อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง' };
+  let it = null;
+  const r = leaveLock_(function () { const L = readStuLeaves_(); it = L.filter(function (x) { return x.id === id; })[0]; if (!it) return { success: false, message: 'ไม่พบคำขอนี้' }; it.docs = (it.docs || []).concat(urls).slice(0, SL_DOC_MAX_); writeStuLeaves_(L); return { success: true }; });
+  if (!r.success) return r;
+  try { sendNotification_({ title: 'แนบหลักฐานการลา · ' + it.name, body: slTxt_(it) + ' · ' + it.type + ' · แนบรูปเพิ่ม ' + urls.length + ' รูป', audience: 'admins', values: [], expires: it.to }, { userId: session.userId, name: it.name }); } catch (e) {}
+  return { success: true, item: it, message: 'แนบหลักฐานแล้ว' };
+}
 function slTxt_(x) { return (x.from === x.to ? leaveDateTh_(x.from) : leaveDateTh_(x.from) + ' ถึง ' + leaveDateTh_(x.to)) + (x.allDay ? ' (ทั้งวัน)' : ' เวลา ' + x.tFrom + '–' + x.tTo + ' น.'); }
 function cancelStudentLeave_(id, session) {
   id = cleanVal(id);
