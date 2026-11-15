@@ -6830,3 +6830,23 @@ html[data-theme="dark"] .k8-tt-term-err { color: #fca5a5; }
 @media (max-width: 480px) { .k8-tt-aiin-btn { width: 100%; justify-content: center; } }
 html[data-theme="dark"] .k8-tt-aiin-ic { background: #0c2536; color: #7dd3fc; }
 html[data-theme="dark"] .k8-tt-aiin-t p { color: #cbd5e1; }
+
+/* v19.25 · ยืนยันก่อนแทนที่ตาราง */
+.k8-tt-cfm { margin-top: 12px; padding: 14px; border-radius: 14px; border: 1px solid #bae6fd; background: #f0f9ff; }
+.k8-tt-cfm.is-warn { border-color: #fca5a5; background: #fef2f2; }
+.k8-tt-cfm-h { display: flex; align-items: center; gap: 8px; color: #0369a1; }
+.k8-tt-cfm.is-warn .k8-tt-cfm-h { color: #b91c1c; }
+.k8-tt-cfm-h b { font-size: 15.5px; }
+.k8-tt-cfm ul { margin: 10px 0 0; padding-left: 20px; color: #334155; font-size: 13.5px; line-height: 1.6; }
+.k8-tt-cfm li.is-lose b { color: #b91c1c; } .k8-tt-cfm li.is-chg b { color: #b45309; }
+.k8-tt-cfm p { margin: 10px 0 0; color: #475569; font-size: 12.5px; line-height: 1.55; }
+.k8-tt-cfm .k8-dr-btns { margin-top: 12px; }
+.k8-tt-cfm button.is-danger { background: #b91c1c !important; color: #fff !important; }
+.k8-tt-cfm button.is-danger:hover { background: #991b1b !important; }
+html[data-theme="dark"] .k8-tt-cfm { background: #0c2536; border-color: #075985; }
+html[data-theme="dark"] .k8-tt-cfm.is-warn { background: #2a1212; border-color: #7f1d1d; }
+html[data-theme="dark"] .k8-tt-cfm-h { color: #7dd3fc; }
+html[data-theme="dark"] .k8-tt-cfm.is-warn .k8-tt-cfm-h, html[data-theme="dark"] .k8-tt-cfm li.is-lose b { color: #fca5a5; }
+html[data-theme="dark"] .k8-tt-cfm ul { color: #e2e8f0; }
+html[data-theme="dark"] .k8-tt-cfm p { color: #cbd5e1; }
+html[data-theme="dark"] .k8-tt-cfm li.is-chg b { color: #fbbf24; }

@@ -3640,7 +3640,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.24';
+  const APP_VERSION = '19.25';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6696,7 +6696,21 @@ window.k8RegBirthChange = function (v) {
     XLNEW = A.newS.filter((n, i) => A.chk[i]);
     return res;
   }
-  window.k8TtXlSave = async function () {
+  // v19.25 · ถามยืนยันก่อนบันทึกทุกครั้ง (ตารางเดิมของชั้นนั้นจะถูกแทนที่)
+  window.k8TtXlSave = function () {
+    const go = document.getElementById('k8TtXlGo'); if (!go || (!XL && !AIX)) return;
+    const box = go.closest('.k8-dr-btns'); if (!box) return;
+    const gs = AIX && !XL ? [AIX.g] : Object.keys(XL).sort();
+    const items = gs.map((g) => { const n = Object.keys(gradeOf(g).cells || {}).length; return n ? '<li class="is-lose"><b>ตาราง ม.' + g + ' เดิม ' + n + ' คาบจะถูกลบ</b> และแทนที่ด้วย ' + (AIX && !XL ? AIX.recs.length : XL[g].n) + ' คาบจาก' + (AIX && !XL ? 'รูป' : 'ไฟล์') + '</li>' : '<li>ตาราง ม.' + g + ' ยังว่าง · จะลง ' + (AIX && !XL ? AIX.recs.length : XL[g].n) + ' คาบใหม่</li>'; });
+    if (AIX && !XL) { const c = cfg(); if (AIX.useT && (AIX.timesDiff || AIX.needMore)) items.push('<li class="is-chg"><b>เวลาคาบของทุกชั้นจะเปลี่ยน</b> เป็น ' + esc(AIX.newPeriods.map((x) => x.start + '–' + x.end).join(', ')) + '</li>'); const ad = AIX.addD ? AIX.days.filter((d) => c.days.indexOf(d) === -1) : []; if (ad.length) items.push('<li>เปิดวัน' + ad.map((d) => DAYN[d]).join(' / ') + 'เป็นวันเรียน</li>'); }
+    const lose = items.some((x) => x.indexOf('is-lose') !== -1);
+    T.cfmPrev = box.innerHTML;
+    box.outerHTML = '<div class="k8-tt-cfm' + (lose ? ' is-warn' : '') + '" role="alertdialog" aria-labelledby="k8TtCfmH"><div class="k8-tt-cfm-h"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><b id="k8TtCfmH">' + (lose ? 'ข้อมูลตารางเดิมจะหายไป ยืนยันไหม?' : 'ยืนยันบันทึกตาราง?') + '</b></div><ul>' + items.join('') + '</ul>' + (lose ? '<p>ถ้าอยากเก็บตารางเดิมไว้ดูย้อนหลัง ให้กด "กลับไปตรวจ" แล้วไปที่ <b>ขึ้นภาคเรียนใหม่</b> ก่อน (ระบบจะเก็บตารางเดิมไว้ในประวัติ)</p>' : '') +
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="k8TtCfmBack()">กลับไปตรวจ</button><button type="button" id="k8TtXlGo" class="' + (lose ? 'is-danger' : '') + '" onclick="k8TtXlSaveNow()">' + (lose ? 'ยืนยัน แทนที่ตารางเดิม' : 'ยืนยันบันทึก') + '</button></div></div>';
+    setTimeout(() => { const c = document.querySelector('.k8-tt-cfm'); if (c) { c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); const bk = c.querySelector('.is-alt'); if (bk) bk.focus(); } }, 30);
+  };
+  window.k8TtCfmBack = function () { const c = document.querySelector('.k8-tt-cfm'); if (c) c.outerHTML = '<div class="k8-dr-btns">' + (T.cfmPrev || '') + '</div>'; };
+  window.k8TtXlSaveNow = async function () {
     const b = document.getElementById('k8TtXlGo');
     const fromAi = !XL && !!AIX; if (fromAi) { XL = await aixSave(b); if (!XL) return; }
     if (!XL) return;
