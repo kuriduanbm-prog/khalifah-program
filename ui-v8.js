@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.40';
+  const APP_VERSION = '19.41';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -13888,9 +13888,9 @@ window.k8PdWho = function (sid) {
   };
 })();
 
-/* ============ v19.40 · นักเรียนลบบันทึกละหมาดของตัวเอง แล้วถ่ายใหม่ (ภายใน 30 นาทีหลังเช็ค) ============ */
+/* ============ v19.40 · นักเรียนลบบันทึกละหมาดของตัวเอง แล้วถ่ายใหม่ (v19.41: ภายใน 10 นาทีหลังเช็ค · วันละ 1 ครั้ง) ============ */
 (function () {
-  const MIN = 30;
+  const MIN = 10;
   const toast = (m, t) => { try { if (typeof showToast === 'function') showToast(m, t); } catch (e) {} };
   const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
   const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -13920,7 +13920,7 @@ window.k8PdWho = function (sid) {
     const b = box(); if (!b) return; REC = r; const e = eligible(r);
     if (!e.ok) { b.hidden = true; b.innerHTML = ''; return; }
     b.hidden = false;
-    b.innerHTML = '<p><b>รูปไม่ชัด หรือถ่ายผิด?</b> ลบรายการนี้แล้วเช็คใหม่ได้ภายใน ' + MIN + ' นาทีหลังเช็ค (เหลือ ' + e.left + ' นาที) · เวลาของรายการใหม่ = เวลาที่ถ่ายใหม่ ถ้าเลยช่วงตรงเวลาจะเป็น "สาย" · ลบได้วันละ 3 ครั้ง</p>' +
+    b.innerHTML = '<p><b>รูปไม่ชัด หรือถ่ายผิด?</b> ลบรายการนี้แล้วเช็คใหม่ได้ภายใน ' + MIN + ' นาทีหลังเช็ค (เหลือ ' + e.left + ' นาที) · เวลาของรายการใหม่ = เวลาที่ถ่ายใหม่ ถ้าเลยช่วงตรงเวลาจะเป็น "สาย" · <b>ลบได้วันละ 1 ครั้ง</b></p>' +
       '<button type="button" class="k8-pd-del-btn" onclick="k8PrayerSelfDel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>ลบรายการนี้ แล้วถ่ายใหม่</button>';
   };
   window.k8PrayerSelfDel = async function () {

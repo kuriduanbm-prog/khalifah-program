@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.40'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.41'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3229,9 +3229,9 @@ function prayerWinOf_(name) {
   return null;
 }
 /** v19.40 · นักเรียนลบบันทึกละหมาดของตัวเอง (ถ่ายรูปไม่พอใจ → ลบแล้วเช็คใหม่)
- * เงื่อนไข: ของตัวเอง · วันนี้ · ภายใน 30 นาทีหลังเช็ค · ไม่ใช่รายการที่แอดมินเพิ่ม/แก้ · ลบได้วันละไม่เกิน 3 ครั้ง
+ * เงื่อนไข: ของตัวเอง · วันนี้ · ภายใน 10 นาทีหลังเช็ค · ไม่ใช่รายการที่แอดมินเพิ่ม/แก้ · ลบได้วันละ 1 ครั้ง
  * เช็คใหม่ใช้เวลาตอนถ่ายใหม่ (ถ้าเลยเวลาตรงเวลา = สาย) · ถ้าไม่มีบันทึกอื่นของเวลานั้นเหลือ ลบรายการหักอัตโนมัติที่เกิดจากบันทึกนี้ (ละหมาดหอพัก/คุฏบะห์สาย) */
-const PRAYER_SELF_DEL_MIN_ = 30, PRAYER_SELF_DEL_MAX_ = 3;
+const PRAYER_SELF_DEL_MIN_ = 10, PRAYER_SELF_DEL_MAX_ = 1;
 function deleteMyPrayer_(d, session) {
   const logId = cleanVal((d || {}).logId); const me = cleanVal(session.studentId || session.userId);
   if (!logId) return { success: false, message: 'ไม่พบรหัสรายการ' };
