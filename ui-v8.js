@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.38';
+  const APP_VERSION = '19.39';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4181,12 +4181,13 @@ window.k8RegBirthChange = function (v) {
     try { const r = await api('getMyBehavior'); if (r && r.success) { if (r.term) serverTerm = r.term; mine = { logs: r.logs || [], term: r.term, sid: curSid(), appeals: r.appeals || [] }; try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} } } catch (e) {}
     paintMine();
   }
-  const MINE_NOTE = '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย · ถ้าถูกหักโดยมีเหตุจำเป็น กด "แจ้งหมายเหตุ" ที่รายการนั้น เมื่อแอดมินอนุมัติจะได้คะแนนคืน</p>';
+  const MINE_NOTE = '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>';
   function paintMineModal() {
     const m = document.getElementById('k8BhModal'); if (!m) return;
     const t = (mine && mine.term) || term();
     const logs = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
-    AP_MODE = false; let h = ''; // v19.38 · ปิดปุ่มแจ้งหมายเหตุฝั่งนักเรียน (ตามที่แอดมินขอ) try { h = detailHtml(myScore() == null ? 100 : myScore(), logs); } finally { AP_MODE = false; }
+    // v19.38 · ปิดปุ่มแจ้งหมายเหตุฝั่งนักเรียน (แสดงเฉพาะรายการที่ถูกหัก/ได้เพิ่ม)
+    AP_MODE = false; let h = ''; try { h = detailHtml(myScore() == null ? 100 : myScore(), logs); } finally { AP_MODE = false; }
     document.getElementById('k8BhModalBody').innerHTML = h + MINE_NOTE;
     if (AP_OPEN) setTimeout(() => { const x = document.getElementById('k8BapT'); if (x) x.focus(); }, 30);
   }
