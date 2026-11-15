@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.33';
+  const APP_VERSION = '19.34';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -13590,6 +13590,7 @@ window.k8PdWho = function (sid) {
 /* ============ v19.33 · ประวัติดาวนักเรียน (แอดมินดูง่าย · เก็บถาวร) ============ */
 (function () {
   const S = { list: null, busy: false, per: 'term', type: 'all', g: '', q: '', open: {} };
+  const toast = (m, t) => { try { if (typeof showToast === 'function') showToast(m, t); } catch (e) {} };
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
   const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -13620,7 +13621,7 @@ window.k8PdWho = function (sid) {
   function shell() {
     let m = document.getElementById('k8StarModal'); if (m) return m;
     document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8StarModal" onclick="if(event.target===this)k8StarClose()"><div class="modal-dialog k8-sheet k8-star" role="dialog" aria-modal="true" aria-labelledby="k8StarT">' +
-      '<header class="k8-sheet-head"><div class="k8-star-hd"><span class="k8-star-hico" aria-hidden="true">' + STAR.replace('16', '22').replace('16', '22') + '</span><div><h2 id="k8StarT">ดาวนักเรียน</h2><span>ประวัติการได้ดาวทั้งหมด · ละหมาดตรงเวลาครบสัปดาห์ และอ่านอัลกุรอานจบยุซ</span></div></div><div class="k8-star-hacts"><button type="button" class="k8-btn-line k8-star-xl" onclick="k8StarExport()" aria-label="ส่งออก Excel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Excel</span></button><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8StarClose()">✕</button></div></header>' +
+      '<header class="k8-sheet-head"><div class="k8-star-hd"><span class="k8-star-hico" aria-hidden="true">' + STAR.replace('16', '22').replace('16', '22') + '</span><div><h2 id="k8StarT">ดาวนักเรียน</h2><span>ประวัติการได้ดาวทั้งหมด · ละหมาดตรงเวลาครบสัปดาห์ และอ่านอัลกุรอานจบยุซ</span></div></div><div class="k8-star-hacts"><button type="button" class="k8-btn-line k8-star-xl" onclick="k8StarExport(\'jpg\')" aria-label="บันทึกเป็นรูปภาพ"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg><span>รูปภาพ</span></button><button type="button" class="k8-btn-line k8-star-xl" onclick="k8StarExport(\'xlsx\')" aria-label="ส่งออก Excel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Excel</span></button><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8StarClose()">✕</button></div></header>' +
       '<div class="k8-star-bar"><div class="k8-star-seg" role="group" aria-label="ช่วงเวลา" id="k8StarPer"></div><div class="k8-star-seg" role="group" aria-label="ประเภทดาว" id="k8StarType"></div><div class="k8-star-f"><select id="k8StarG" aria-label="ชั้นเรียน" onchange="k8StarSet(\'g\',this.value)"></select><input type="search" id="k8StarQ" placeholder="ค้นหาชื่อหรือรหัส" aria-label="ค้นหานักเรียน" oninput="k8StarSet(\'q\',this.value,1)"></div></div>' +
       '<div class="k8-sheet-body k8-star-body" id="k8StarBody"></div></div></div>');
     return document.getElementById('k8StarModal');
@@ -13663,14 +13664,16 @@ window.k8PdWho = function (sid) {
   window.k8StarTog = function (k) { S.open[k] = S.open[k] === false; paint(true); };
   window.k8StarWho = function (sid) { if (window.k8SpOpen) { try { window.k8SpOpen(sid); return; } catch (e) {} } };
   document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; const m = document.getElementById('k8StarModal'); if (m && (m.classList.contains('open') || m.classList.contains('active'))) window.k8StarClose(); });
-  window.k8StarExport = async function () {
+  window.k8StarExport = async function (fmt) {
+    fmt = fmt === 'jpg' ? 'jpg' : 'xlsx';
     if (!S.list) return; const { R, L, people } = rows();
-    const D = { name: R.label, title: 'ประวัติดาวนักเรียน', range: R.label,
+    if (!L.length) { toast('ช่วงนี้ยังไม่มีนักเรียนได้ดาว', 'warning'); return; }
+    const D = { name: R.label.replace(/\s*\(.*\)$/, '') + (S.type !== 'all' ? ' · ' + TN[S.type] : '') + (S.g ? ' · ม.' + S.g : ''), title: 'ประวัติดาวนักเรียน', range: S.per === 'all' ? 'ทั้งหมดที่บันทึกไว้' : dS(R.from) + ' – ' + dS(R.to),
       kpis: [{ l: 'ดาวทั้งหมด', v: String(L.reduce((a, x) => a + (x.stars || 1), 0)), s: 'ดวง' }, { l: 'นักเรียนที่ได้ดาว', v: String(people.length), s: 'คน' }, { l: 'ละหมาดครบสัปดาห์', v: String(L.filter((x) => x.type === 'prayer').length), s: 'ดาว' }, { l: 'อัลกุรอานจบยุซ', v: String(L.filter((x) => x.type === 'quran').length), s: 'ดาว' }],
       sections: [{ key: 'p', title: 'สรุปรายนักเรียน', color: '#b45309', cols: [['อันดับ', 6, 'c'], ['ชื่อ - สกุล', 30, 'l'], ['ชั้น', 7, 'c'], ['โรงเรียน', 26, 'l'], ['ดาวรวม', 8, 'c'], ['ละหมาด', 8, 'c'], ['อัลกุรอาน', 9, 'c'], ['ได้ดาวล่าสุด', 14, 'l']],
         rows: people.map((p, i) => ({ v: [i + 1, p.name, gN(p.grade), p.school || '-', p.n, p.pr, p.qu, dS(p.last)] })) },
         { key: 'h', title: 'ประวัติการได้ดาวทุกครั้ง', color: '#0369a1', cols: [['วันที่ได้ดาว', 14, 'l'], ['ประเภท', 22, 'l'], ['ชื่อ - สกุล', 30, 'l'], ['ชั้น', 7, 'c'], ['รายละเอียด', 34, 'l']],
           rows: L.map((x) => ({ v: [dS(x.date), TN[x.type], x.name, gN(x.grade), x.detail] })) }] };
-    try { if (!window.k8Rep) throw new Error('k8Rep'); await window.k8Rep.run('xlsx', D, 'ประวัติดาวนักเรียน_' + (S.per === 'all' ? 'ทั้งหมด' : R.from + '_' + R.to)); toast('บันทึกไฟล์แล้ว', 'success'); } catch (e) { toast('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
+    try { if (!window.k8Rep) throw new Error('k8Rep'); if (fmt === 'jpg') { D.sections[1].rows = D.sections[1].rows.slice(0, 120); if (L.length > 120) D.sections[1].note = 'แสดง 120 รายการล่าสุด · ดูทั้งหมดในไฟล์ Excel'; } toast(fmt === 'jpg' ? 'กำลังสร้างรูปภาพ…' : 'กำลังสร้างไฟล์ Excel…', 'info'); await window.k8Rep.run(fmt, D, 'ประวัติดาวนักเรียน_' + (S.per === 'all' ? 'ทั้งหมด' : R.from + '_' + R.to)); toast('บันทึกไฟล์แล้ว', 'success'); } catch (e) { toast('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
   };
 })();
