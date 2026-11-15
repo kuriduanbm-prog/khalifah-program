@@ -3,7 +3,7 @@
 //   GEMINI_API_KEY      คีย์จาก Google AI Studio (จำเป็น)
 //   AI_SHARED_SECRET    ข้อความลับยาว ๆ ค่าเดียวกับ Script Property AI_SHARED_SECRET ใน Apps Script (จำเป็น)
 //   GEMINI_MODEL        ไม่บังคับ (ค่าเริ่มต้น gemini-3.8-flash)
-//   GEMINI_FALLBACK_MODELS ไม่บังคับ · รุ่นสำรองเมื่อรุ่นหลักมีคนใช้เยอะ คั่นด้วย , (ค่าเริ่มต้น gemini-flash-latest,gemini-2.5-flash)
+//   GEMINI_FALLBACK_MODELS ไม่บังคับ · รุ่นสำรองเมื่อรุ่นหลักมีคนใช้เยอะ คั่นด้วย , (ค่าเริ่มต้น gemini-flash-latest,gemini-2.5-flash,gemini-flash-lite-latest,gemini-2.5-flash-lite)
 // แอปขอ "บัตรผ่าน" จาก Code.gs ครั้งเดียว (ยืนยันว่าเป็นแอดมิน · อายุ 30 นาที) แล้วส่งคำถามมาที่นี่โดยตรง
 const crypto = require('crypto');
 
@@ -15,6 +15,7 @@ function fastThinking(model) {
   const m = String(model || '').toLowerCase();
   if (/gemini-3/.test(m)) return { thinkingLevel: 'low' };
   if (/2\.5-flash/.test(m)) return { thinkingBudget: 0 };
+  if (/-latest$/.test(m)) return { thinkingLevel: 'low' }; // ชื่อแฝง (ถ้ารุ่นจริงไม่รองรับ จะส่งใหม่แบบเดิม)
   if (/2\.5-pro/.test(m)) return { thinkingBudget: 128 };
   return null;
 }
@@ -60,7 +61,7 @@ module.exports = async (req, res) => {
   if (n > 30) return res.status(200).json({ success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' });
   const t0 = Date.now(); const LIMIT = 54000; let to = null;
   // v19.30 · Gemini คนใช้เยอะ (503/500/429 ชั่วคราว) → รอแล้วลองใหม่ 1 ครั้ง แล้วสลับไปรุ่นสำรอง
-  const FALL = String(process.env.GEMINI_FALLBACK_MODELS || 'gemini-flash-latest,gemini-2.5-flash').split(',').map((x) => x.trim()).filter((x) => x && x !== MODEL);
+  const FALL = String(process.env.GEMINI_FALLBACK_MODELS || 'gemini-flash-latest,gemini-2.5-flash,gemini-flash-lite-latest,gemini-2.5-flash-lite').split(',').map((x) => x.trim()).filter((x) => x && x !== MODEL);
   // v19.31 · แต่ละรอบมีเวลาของตัวเอง: รุ่นหลักช้า/ค้าง → ตัดแล้วไปรุ่นสำรองที่เร็วกว่า (ไม่ใช้เวลาทั้งหมดไปกับรุ่นเดียว)
   //          งานรูปภาพ: รุ่นหลักได้ 22 วินาที แล้วสลับไป gemini-2.5-flash (ปิดการคิด · อ่านตารางเร็ว)
   const plan = hasImg ? [MODEL].concat(FALL.indexOf('gemini-2.5-flash') !== -1 ? ['gemini-2.5-flash'].concat(FALL.filter((x) => x !== 'gemini-2.5-flash')) : FALL) : [MODEL, MODEL].concat(FALL);

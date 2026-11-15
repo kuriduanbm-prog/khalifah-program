@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.30'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.32'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -8562,7 +8562,7 @@ function aiChat_(data, session) {
   cache.put(rk, String(n + 1), 120);
   let res, code = 0, txt = '';
   // v19.29 · ลดการ "คิด" ของโมเดลให้ตอบเร็วขึ้น · v19.30 · Gemini คนใช้เยอะ (503) → รอแล้วลองใหม่ แล้วสลับรุ่นสำรอง
-  const thinkOf = function (m) { m = String(m || '').toLowerCase(); return data.deep ? null : /gemini-3/.test(m) ? { thinkingLevel: 'low' } : /2\.5-flash/.test(m) ? { thinkingBudget: 0 } : /2\.5-pro/.test(m) ? { thinkingBudget: 128 } : null; };
+  const thinkOf = function (m) { m = String(m || '').toLowerCase(); return data.deep ? null : /gemini-3/.test(m) ? { thinkingLevel: 'low' } : /2\.5-flash/.test(m) ? { thinkingBudget: 0 } : /2\.5-pro/.test(m) ? { thinkingBudget: 128 } : /-latest$/.test(m) ? { thinkingLevel: 'low' } : null; };
   const fetchG = function (m, pl) { return UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + ':generateContent', { method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': c.key }, payload: pl, muteHttpExceptions: true }); };
   const callM = function (m) {
     const tc = thinkOf(m); let r;
@@ -8571,7 +8571,7 @@ function aiChat_(data, session) {
     return { code: r.getResponseCode(), txt: r.getContentText() };
   };
   const isBusy = function (st, msg) { return st === 503 || st === 500 || st === 502 || st === 504 || /high demand|overloaded/i.test(msg); };
-  const fall = String(PropertiesService.getScriptProperties().getProperty('GEMINI_FALLBACK_MODELS') || 'gemini-flash-latest,gemini-2.5-flash').split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x && x !== c.model; });
+  const fall = String(PropertiesService.getScriptProperties().getProperty('GEMINI_FALLBACK_MODELS') || 'gemini-flash-latest,gemini-2.5-flash,gemini-flash-lite-latest,gemini-2.5-flash-lite').split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x && x !== c.model; });
   const plan = [c.model, c.model].concat(fall); const t0 = Date.now(); let used = c.model; let j = null;
   try {
     for (let i = 0; i < plan.length; i++) {

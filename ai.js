@@ -1085,12 +1085,18 @@
       days.map((d) => '<tr><th>' + TTD[d] + '</th>' + sl.map((s, i) => { const c = (P.cells || []).find((x) => +x.day === d && +x.slot === i); return '<td>' + (c ? esc(c.subject || '') : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div>';
   }
   // ใช้ร่วมกัน: หน้า AI และหน้าตารางสอนของแอดมิน · คืน { ok, P, url } หรือ { ok:false, code, message }
-  async function readTimetableImage(url) {
+  async function readTimetableImage(url, onWait) {
     if (S.ready == null) await checkReady();
     if (!S.ready) return { ok: false, code: 'NO_AI', message: 'การอ่านรูปต้องใช้ Gemini · ยังไม่ได้ตั้งค่า GEMINI_API_KEY' };
     const req = { contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: url.split(',')[1] } }, { text: TT_PROMPT }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0 } };
     let r = await aiCall(req, 'อ่านรูปตารางสอน');
-    if (r && !r.success && r.code === 'BUSY') { await new Promise((ok) => setTimeout(ok, 4000)); r = await aiCall(req, ''); } // v19.30 · คนใช้เยอะ → ลองใหม่อีกครั้ง
+    // v19.32 · Gemini ไม่ว่าง (ทุกรุ่น) → รอแล้วลองใหม่อัตโนมัติ 3 รอบ (10 / 20 / 30 วินาที) พร้อมนับถอยหลัง
+    const WAITS = [10, 20, 30];
+    for (let k = 0; k < WAITS.length && r && !r.success && r.code === 'BUSY'; k++) {
+      for (let sec = WAITS[k]; sec > 0; sec--) { if (onWait) onWait('Gemini มีผู้ใช้หนาแน่น · ลองใหม่อัตโนมัติใน ' + sec + ' วินาที (รอบ ' + (k + 2) + '/' + (WAITS.length + 1) + ')'); await new Promise((ok) => setTimeout(ok, 1000)); }
+      if (onWait) onWait('กำลังลองใหม่ (รอบ ' + (k + 2) + '/' + (WAITS.length + 1) + ')…');
+      r = await aiCall(req, '');
+    }
     if (!r || !r.success) { try { console.warn('k8 timetable image AI', r); } catch (e) {} return { ok: false, code: (r && r.code) || 'AI', message: (r && r.message) || 'AI error', via: S.route === 'vercel' ? 'Vercel' : 'Apps Script' }; }
     if (S.route === 'vercel') gasApiCall('aiLog', { data: { q: 'อ่านรูปตารางสอน', model: S.model + ' (vercel)', usage: r.usage || {} } }, 20000).catch(() => {});
     const raw = ((r.content && r.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
@@ -1098,10 +1104,10 @@
     if (!P || !Array.isArray(P.cells) || !P.cells.length) { try { console.warn('k8 timetable image parse', r.finishReason, raw.slice(0, 500)); } catch (e) {} return { ok: false, code: 'PARSE', message: r.finishReason === 'MAX_TOKENS' ? 'คำตอบของ AI ยาวเกินจนถูกตัด · ลองครอปรูปให้เหลือเฉพาะตาราง' : r.finishReason === 'SAFETY' || r.finishReason === 'RECITATION' ? 'AI ปฏิเสธการอ่านรูปนี้ (' + r.finishReason + ')' : 'อ่านตารางจากรูปนี้ไม่ได้ · ลองรูปที่ชัดขึ้น ให้เห็นหัวตาราง (วัน/เวลา) ครบ' + (r.finishReason && r.finishReason !== 'STOP' ? ' (' + r.finishReason + ')' : '') }; }
     return { ok: true, P, url };
   }
-  window.k8AiReadTimetable = async function (file) {
+  window.k8AiReadTimetable = async function (file, onWait) {
     if (!file || !/^image\//.test(file.type || '')) return { ok: false, code: 'TYPE', message: 'เลือกไฟล์รูปภาพ (JPG/PNG)' };
     const url = await ttShrink(file); if (!url) return { ok: false, code: 'TYPE', message: 'อ่านไฟล์รูปไม่ได้' };
-    try { return await readTimetableImage(url); } catch (e) { return { ok: false, code: 'NETWORK', message: String(e && e.message || e) }; }
+    try { return await readTimetableImage(url, onWait); } catch (e) { return { ok: false, code: 'NETWORK', message: String(e && e.message || e) }; }
   };
   window.k8AiTtImg = async function (inp) {
     const f = inp && inp.files && inp.files[0]; if (inp) inp.value = ''; if (!f) return;
@@ -1113,7 +1119,7 @@
     const ctx = { reps: [], html: [] }; let text = '', note = '';
     try {
       if (!url) throw new Error('อ่านไฟล์รูปไม่ได้');
-      const R = await readTimetableImage(url);
+      const tsp = a.querySelector('.k8ai-typing span'); const R = await readTimetableImage(url, (t) => { if (tsp) tsp.textContent = t; });
       if (!R.ok && R.code === 'NO_AI') { text = 'การอ่านรูปต้องใช้ Gemini · ตอนนี้ยังไม่ได้ตั้งค่า GEMINI_API_KEY จึงอ่านรูปไม่ได้ · ใช้ปุ่ม **นำเข้าไฟล์ Excel** ในหน้าตารางสอนแทนได้'; }
       else if (!R.ok && R.code === 'PARSE') text = R.message + ' แล้วแนบใหม่';
       else if (!R.ok) text = 'อ่านรูปไม่สำเร็จ: ' + window.k8AiErrText(R);
