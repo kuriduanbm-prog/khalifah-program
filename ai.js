@@ -1071,6 +1071,23 @@
     return '<div class="k8ai-ttwrap"><table class="k8ai-tt"><thead><tr><th>วัน</th>' + sl.map((s) => '<th>' + esc(s.start || '') + '–' + esc(s.end || '') + '</th>').join('') + '</tr></thead><tbody>' +
       days.map((d) => '<tr><th>' + TTD[d] + '</th>' + sl.map((s, i) => { const c = (P.cells || []).find((x) => +x.day === d && +x.slot === i); return '<td>' + (c ? esc(c.subject || '') : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div>';
   }
+  // ใช้ร่วมกัน: หน้า AI และหน้าตารางสอนของแอดมิน · คืน { ok, P, url } หรือ { ok:false, code, message }
+  async function readTimetableImage(url) {
+    if (S.ready == null) await checkReady();
+    if (!S.ready) return { ok: false, code: 'NO_AI', message: 'การอ่านรูปต้องใช้ Gemini · ยังไม่ได้ตั้งค่า GEMINI_API_KEY' };
+    const r = await aiCall({ contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: url.split(',')[1] } }, { text: TT_PROMPT }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 } }, 'อ่านรูปตารางสอน');
+    if (!r || !r.success) return { ok: false, code: (r && r.code) || 'AI', message: (r && r.message) || 'AI error' };
+    if (S.route === 'vercel') gasApiCall('aiLog', { data: { q: 'อ่านรูปตารางสอน', model: S.model + ' (vercel)', usage: r.usage || {} } }, 20000).catch(() => {});
+    const raw = ((r.content && r.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
+    const P = ttParse(raw);
+    if (!P || !Array.isArray(P.cells) || !P.cells.length) return { ok: false, code: 'PARSE', message: 'อ่านตารางจากรูปนี้ไม่ได้ · ลองรูปที่ชัดขึ้น ให้เห็นหัวตาราง (วัน/เวลา) ครบ' };
+    return { ok: true, P, url };
+  }
+  window.k8AiReadTimetable = async function (file) {
+    if (!file || !/^image\//.test(file.type || '')) return { ok: false, code: 'TYPE', message: 'เลือกไฟล์รูปภาพ (JPG/PNG)' };
+    const url = await ttShrink(file); if (!url) return { ok: false, code: 'TYPE', message: 'อ่านไฟล์รูปไม่ได้' };
+    try { return await readTimetableImage(url); } catch (e) { return { ok: false, code: 'NETWORK', message: String(e && e.message || e) }; }
+  };
   window.k8AiTtImg = async function (inp) {
     const f = inp && inp.files && inp.files[0]; if (inp) inp.value = ''; if (!f) return;
     if (!/^image\//.test(f.type || '')) { if (typeof toast === 'function') toast('เลือกไฟล์รูปภาพ (JPG/PNG)', 'warning'); return; }
@@ -1081,16 +1098,12 @@
     const ctx = { reps: [], html: [] }; let text = '', note = '';
     try {
       if (!url) throw new Error('อ่านไฟล์รูปไม่ได้');
-      if (S.ready == null) await checkReady();
-      if (!S.ready) { text = 'การอ่านรูปต้องใช้ Gemini · ตอนนี้ยังไม่ได้ตั้งค่า GEMINI_API_KEY จึงอ่านรูปไม่ได้ · ใช้ปุ่ม **นำเข้าไฟล์ Excel** ในหน้าตารางสอนแทนได้'; }
+      const R = await readTimetableImage(url);
+      if (!R.ok && R.code === 'NO_AI') { text = 'การอ่านรูปต้องใช้ Gemini · ตอนนี้ยังไม่ได้ตั้งค่า GEMINI_API_KEY จึงอ่านรูปไม่ได้ · ใช้ปุ่ม **นำเข้าไฟล์ Excel** ในหน้าตารางสอนแทนได้'; }
+      else if (!R.ok && R.code === 'PARSE') text = R.message + ' แล้วแนบใหม่';
+      else if (!R.ok) throw new Error(R.message);
       else {
-        const r = await aiCall({ contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: url.split(',')[1] } }, { text: TT_PROMPT }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 } }, 'อ่านรูปตารางสอน');
-        if (!r || !r.success) throw new Error((r && r.message) || 'AI error');
-        if (S.route === 'vercel') gasApiCall('aiLog', { data: { q: 'อ่านรูปตารางสอน', model: S.model + ' (vercel)', usage: r.usage || {} } }, 20000).catch(() => {});
-        const raw = ((r.content && r.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
-        const P = ttParse(raw);
-        if (!P || !Array.isArray(P.cells) || !P.cells.length) text = 'อ่านตารางจากรูปนี้ไม่ได้ · ลองรูปที่ชัดขึ้น ให้เห็นหัวตาราง (วัน/เวลา) ครบ แล้วแนบใหม่';
-        else {
+        const P = R.P; {
           S.ttImp = { P, url };
           text = 'อ่านตาราง' + (P.grade ? ' **ม.' + esc(String(P.grade)) + '**' : '') + ' ได้ **' + P.cells.length + ' คาบ** · ' + (P.slots || []).length + ' ช่วงเวลา' + (P.notes ? '\n\nหมายเหตุจาก AI: ' + String(P.notes).slice(0, 300) : '') + '\n\nกดปุ่มด้านล่างเพื่อตรวจทีละช่องและเลือกชั้น ก่อนบันทึกลงตารางสอน';
           ctx.html.push(ttMini(P) + '<div class="k8ai-ttact"><button type="button" class="k8ai-ttgo" onclick="k8AiTtOpen()">' + SV(ICN.tt, 18) + 'ตรวจและบันทึกลงตารางสอน</button></div>');

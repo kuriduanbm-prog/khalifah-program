@@ -6813,3 +6813,20 @@ html[data-theme="dark"] .k8-tt-term-sel { background: #0f172a; border-color: #33
 html[data-theme="dark"] .k8-tt-term-note { background: #0f172a; color: #cbd5e1; }
 html[data-theme="dark"] .k8-tt-term-note svg { color: #7dd3fc; }
 html[data-theme="dark"] .k8-tt-term-err { color: #fca5a5; }
+
+/* v19.24 · นำเข้าตารางจากรูปด้วย AI (หน้าตารางสอนแอดมิน) */
+.k8-bh-card.k8-tt-aiin { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 14px; border-left: 4px solid #0369a1; }
+.k8-tt-aiin-t { flex: 1; min-width: 220px; display: flex; gap: 12px; align-items: flex-start; }
+.k8-tt-aiin-t .k8-bh-h { margin: 0; }
+.k8-tt-aiin-t p { margin: 4px 0 0; color: #475569; font-size: 13px; line-height: 1.55; }
+.k8-tt-aiin-ic { flex: none; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: #e0f2fe; color: #0369a1; }
+.k8-tt-aiin-btn { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px; background: #0369a1; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.k8-tt-aiin-btn:hover { background: #0c4a6e; }
+.k8-tt-aiin-btn.is-busy { background: #64748b; cursor: progress; }
+.k8-tt-aiin-btn input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.k8-tt-aiin-btn:focus-within { outline: 2px solid #0369a1; outline-offset: 2px; }
+.k8-tt-aiin-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: k8ttspin .8s linear infinite; }
+@keyframes k8ttspin { to { transform: rotate(360deg); } }
+@media (max-width: 480px) { .k8-tt-aiin-btn { width: 100%; justify-content: center; } }
+html[data-theme="dark"] .k8-tt-aiin-ic { background: #0c2536; color: #7dd3fc; }
+html[data-theme="dark"] .k8-tt-aiin-t p { color: #cbd5e1; }
