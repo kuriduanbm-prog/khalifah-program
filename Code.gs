@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.37'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.40'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1810,6 +1810,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
+    case 'deleteMyPrayer': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return deleteMyPrayer_(data, session);
     case 'getTeacherScores': return getTeacherScores_();
     case 'getBehaviorAppeals': return getBehaviorAppeals_();
     case 'decideBehaviorAppeal': return decideBehaviorAppeal_(data, session);
@@ -3227,6 +3228,48 @@ function prayerWinOf_(name) {
   if (/อิชา|อีชา|isha/.test(s)) return [1170, 1439];
   return null;
 }
+/** v19.40 · นักเรียนลบบันทึกละหมาดของตัวเอง (ถ่ายรูปไม่พอใจ → ลบแล้วเช็คใหม่)
+ * เงื่อนไข: ของตัวเอง · วันนี้ · ภายใน 30 นาทีหลังเช็ค · ไม่ใช่รายการที่แอดมินเพิ่ม/แก้ · ลบได้วันละไม่เกิน 3 ครั้ง
+ * เช็คใหม่ใช้เวลาตอนถ่ายใหม่ (ถ้าเลยเวลาตรงเวลา = สาย) · ถ้าไม่มีบันทึกอื่นของเวลานั้นเหลือ ลบรายการหักอัตโนมัติที่เกิดจากบันทึกนี้ (ละหมาดหอพัก/คุฏบะห์สาย) */
+const PRAYER_SELF_DEL_MIN_ = 30, PRAYER_SELF_DEL_MAX_ = 3;
+function deleteMyPrayer_(d, session) {
+  const logId = cleanVal((d || {}).logId); const me = cleanVal(session.studentId || session.userId);
+  if (!logId) return { success: false, message: 'ไม่พบรหัสรายการ' };
+  const sheet = getSpreadsheet().getSheetByName(SHEETS.PRAYERS); if (!sheet || sheet.getLastRow() < 2) return { success: false, code: 'NOT_FOUND', message: 'ไม่พบรายการนี้ในระบบ (อาจยังส่งไม่ถึง รอสักครู่แล้วลองใหม่)' };
+  const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  const key = 'pdel:' + me.replace(/\D/g, '') + ':' + today; const cache = CacheService.getScriptCache();
+  const used = +(cache.get(key) || 0); if (used >= PRAYER_SELF_DEL_MAX_) return { success: false, message: 'วันนี้ลบไปแล้ว ' + PRAYER_SELF_DEL_MAX_ + ' ครั้ง · ถ้าต้องแก้ไขเพิ่ม แจ้งอาจารย์/แอดมิน' };
+  const lock = LockService.getScriptLock(); try { lock.waitLock(15000); } catch (e) {}
+  try {
+    const n = sheet.getLastRow() - 1; const rows = sheet.getRange(2, 1, n, 16).getValues();
+    let i = -1; for (let k = n - 1; k >= 0; k--) if (cleanVal(rows[k][0]) === logId) { i = k; break; }
+    if (i < 0) return { success: false, code: 'NOT_FOUND', message: 'ไม่พบรายการนี้ในระบบ (อาจยังส่งไม่ถึง รอสักครู่แล้วลองใหม่)' };
+    const r = rows[i];
+    if (!isCodeMatch(cleanVal(r[1]), me)) return { success: false, code: 'FORBIDDEN', message: 'ลบได้เฉพาะบันทึกของตัวเอง' };
+    const ds = formatSheetDate(r[6]); if (ds !== today) return { success: false, message: 'ลบได้เฉพาะบันทึกของวันนี้' };
+    if (/เพิ่มโดย|แก้ไขโดย|บันทึกโดยแอดมิน/.test(String(r[15] || '') + ' ' + String(r[10] || ''))) return { success: false, message: 'รายการนี้แอดมิน/อาจารย์เป็นผู้บันทึก ลบเองไม่ได้' };
+    const tm = String(r[7] instanceof Date ? Utilities.formatDate(r[7], 'Asia/Bangkok', 'HH:mm:ss') : r[7] || '').slice(0, 8);
+    const at = new Date(ds + 'T' + (/^\d{2}:\d{2}/.test(tm) ? tm.padEnd(8, ':00').slice(0, 8) : '00:00:00') + '+07:00').getTime();
+    const ago = (Date.now() - at) / 60000;
+    if (!(ago <= PRAYER_SELF_DEL_MIN_)) return { success: false, code: 'EXPIRED', message: 'เลย ' + PRAYER_SELF_DEL_MIN_ + ' นาทีหลังเช็คแล้ว ลบเองไม่ได้ · ถ้าจำเป็น แจ้งอาจารย์/แอดมิน' };
+    const pt = formatPrayerTimeThai(r[4]); const photo = String(r[13] || '');
+    sheet.deleteRow(i + 2);
+    cache.put(key, String(used + 1), 6 * 3600);
+    // รายการหักอัตโนมัติที่เกิดจากบันทึกนี้ (ถ้าไม่มีบันทึกอื่นของเวลาเดียวกันเหลือ)
+    let undone = 0;
+    const other = rows.some(function (x, k) { return k !== i && isCodeMatch(cleanVal(x[1]), me) && formatSheetDate(x[6]) === ds && formatPrayerTimeThai(x[4]) === pt; });
+    if (!other) {
+      const sid = String(cleanVal(r[1])).replace(/\D/g, '').replace(/^0+/, '');
+      let si = PRAYER_SLOTS_.map(function (x) { return formatPrayerTimeThai(x); }).indexOf(pt); if (si < 0) si = 9;
+      const ids = ['DM-' + sid + '-' + ds + '-' + si]; if (/ซุฮ|ดุฮ/.test(pt)) ids.push('FK-' + sid + '-' + ds);
+      const bh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);
+      if (bh && bh.getLastRow() > 1) { const col = bh.getRange(2, 1, bh.getLastRow() - 1, 1).getValues(); for (let k = col.length - 1; k >= 0; k--) if (ids.indexOf(String(col[k][0])) !== -1) { bh.deleteRow(k + 2); undone++; } }
+    }
+    try { const m = photo.match(/\/d\/([A-Za-z0-9_-]{20,})/); if (m) DriveApp.getFileById(m[1]).setTrashed(true); } catch (e) {}
+    return { success: true, message: 'ลบบันทึกละหมาด' + String(pt).split(' (')[0] + 'แล้ว · เช็คใหม่ได้เลย', prayerTime: pt, undone: undone, left: PRAYER_SELF_DEL_MAX_ - used - 1 };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
 function deletePrayerRecord(data) {
   ensureSchema();
   const ss = getSpreadsheet();

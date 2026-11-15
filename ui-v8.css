@@ -7005,3 +7005,13 @@ html[data-theme="dark"] .k8-bap-bt b { color: #e2e8f0; } html[data-theme="dark"]
 .k8-ov-xhide:focus-visible { outline: 3px solid rgba(3,105,161,.35); outline-offset: 2px; }
 .k8-tt-xhide { margin: 4px 0 12px; }
 html[data-theme="dark"] .k8-ov-xhide { color: #64748b; } html[data-theme="dark"] .k8-ov-xhide:hover { color: #cbd5e1; background: #1e293b; border-color: #334155; }
+
+/* v19.40 · ลบบันทึกละหมาดแล้วถ่ายใหม่ (นักเรียน) */
+.k8-pd-del { margin-top: 12px; padding: 12px; border-radius: 14px; border: 1px solid #fecaca; background: #fef2f2; }
+.k8-pd-del p { margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: #7f1d1d; }
+.k8-pd-del p b { color: #991b1b; }
+.k8-pd-del-btn { width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; background: #b91c1c; color: #fff; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+.k8-pd-del-btn:hover { background: #991b1b; } .k8-pd-del-btn:disabled { opacity: .7; cursor: progress; }
+.k8-pd-del-btn:focus-visible { outline: 3px solid rgba(185,28,28,.35); outline-offset: 2px; }
+html[data-theme="dark"] .k8-pd-del { background: #2a1212; border-color: #7f1d1d; }
+html[data-theme="dark"] .k8-pd-del p { color: #fecaca; } html[data-theme="dark"] .k8-pd-del p b { color: #fca5a5; }

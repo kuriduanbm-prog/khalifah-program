@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.39';
+  const APP_VERSION = '19.40';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -13885,5 +13885,59 @@ window.k8PdWho = function (sid) {
     if (!r || !r.success) { toast((r && r.message) || 'ไม่สำเร็จ', 'error'); return; }
     toast(r.message, 'success'); await load(true);
     if (ok) { try { window.k8BhReload && window.k8BhReload(); } catch (e) {} }
+  };
+})();
+
+/* ============ v19.40 · นักเรียนลบบันทึกละหมาดของตัวเอง แล้วถ่ายใหม่ (ภายใน 30 นาทีหลังเช็ค) ============ */
+(function () {
+  const MIN = 30;
+  const toast = (m, t) => { try { if (typeof showToast === 'function') showToast(m, t); } catch (e) {} };
+  const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  let REC = null;
+  function atOf(r) {
+    const ts = Date.parse(r.timestamp || ''); if (!isNaN(ts)) return ts;
+    const t = String(r.time || '').match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/); if (!r.date || !t) return NaN;
+    return new Date(r.date + 'T' + t[1].padStart(2, '0') + ':' + t[2] + ':' + (t[3] || '00')).getTime();
+  }
+  function eligible(r) {
+    let st = null; try { st = currentStudent; } catch (e) {}
+    if (!st || !r) return { ok: false };
+    if (nid(r.studentId) !== nid(st.studentId)) return { ok: false };
+    if (/เพิ่มโดย|แก้ไขโดย|บันทึกโดยแอดมิน/.test(String(r.note || '') + ' ' + String(r.locationName || ''))) return { ok: false };
+    const at = atOf(r); if (isNaN(at)) return { ok: false };
+    if (ymd(new Date(at)) !== ymd(new Date())) return { ok: false };
+    const left = MIN - (Date.now() - at) / 60000; if (left <= 0) return { ok: false, expired: true };
+    return { ok: true, left: Math.max(1, Math.floor(left)) };
+  }
+  function box() {
+    let b = document.getElementById('k8PdDel'); if (b) return b;
+    const row = document.getElementById('modalPrayerNoteRow'); if (!row || !row.parentElement) return null;
+    row.parentElement.insertAdjacentHTML('beforeend', '<div id="k8PdDel" class="k8-pd-del" hidden></div>');
+    return document.getElementById('k8PdDel');
+  }
+  window.k8PrayerDelHook = function (r) {
+    const b = box(); if (!b) return; REC = r; const e = eligible(r);
+    if (!e.ok) { b.hidden = true; b.innerHTML = ''; return; }
+    b.hidden = false;
+    b.innerHTML = '<p><b>รูปไม่ชัด หรือถ่ายผิด?</b> ลบรายการนี้แล้วเช็คใหม่ได้ภายใน ' + MIN + ' นาทีหลังเช็ค (เหลือ ' + e.left + ' นาที) · เวลาของรายการใหม่ = เวลาที่ถ่ายใหม่ ถ้าเลยช่วงตรงเวลาจะเป็น "สาย" · ลบได้วันละ 3 ครั้ง</p>' +
+      '<button type="button" class="k8-pd-del-btn" onclick="k8PrayerSelfDel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>ลบรายการนี้ แล้วถ่ายใหม่</button>';
+  };
+  window.k8PrayerSelfDel = async function () {
+    const r = REC; if (!r) return; const e = eligible(r);
+    if (!e.ok) { toast('เลย ' + MIN + ' นาทีหลังเช็คแล้ว ลบเองไม่ได้', 'warning'); return; }
+    const id = r.logId || r.id;
+    try { const P = (window.k8OutboxPendingRecords && window.k8OutboxPendingRecords(['recordPrayer'])) || []; if (P.some((x) => x && (x.logId === id || x.id === id))) { toast('รายการนี้ยังส่งไม่ถึงระบบ · รอส่งเสร็จ (ต่อเน็ต) แล้วค่อยลบ', 'warning'); return; } } catch (er) {}
+    const nm = String(r.prayerName || r.prayerTime || '').split(' (')[0];
+    if (!confirm('ลบบันทึกละหมาด' + nm + ' รายการนี้?\nลบแล้วกดเช็คละหมาด' + nm + 'ใหม่ได้เลย (เวลาใหม่ = เวลาที่ถ่ายใหม่)')) return;
+    const btn = document.querySelector('.k8-pd-del-btn'); if (btn) { btn.disabled = true; btn.lastChild.textContent = 'กำลังลบ…'; }
+    let res = null; try { res = await gasApiCall('deleteMyPrayer', { data: { logId: id } }, 25000); } catch (er) {}
+    if (!res || !res.success) { toast((res && res.message) || 'ลบไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); if (btn) { btn.disabled = false; btn.lastChild.textContent = 'ลบรายการนี้ แล้วถ่ายใหม่'; } return; }
+    const same = (p) => p && ((p.logId && p.logId === id) || (p.id && p.id === id));
+    try { todayPrayers = (todayPrayers || []).filter((p) => !same(p)); localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers)); } catch (er) {}
+    try { const h = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]').filter((p) => !same(p)); localStorage.setItem('khalifah_prayer_history', JSON.stringify(h)); } catch (er) {}
+    ['refreshPrayerChipsStatus', 'renderTodayPrayerTable', 'renderDashboardCharts', 'renderCurrentStudentProfile', 'renderPrayerHistory'].forEach((f) => { try { if (typeof window[f] === 'function') window[f](); } catch (er) {} });
+    try { closeModal('prayerDetailModal'); } catch (er) {}
+    toast(res.message + (res.undone ? ' · ยกเลิกการหักคะแนนที่เกิดจากรายการนี้แล้ว' : ''), 'success');
   };
 })();

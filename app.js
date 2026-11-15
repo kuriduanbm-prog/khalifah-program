@@ -377,6 +377,7 @@ function openPrayerHistoryDetailModal(logId) {
     if (pPhotoWrap) pPhotoWrap.style.display = 'none';
   }
 
+  try { if (typeof window.k8PrayerDelHook === 'function') window.k8PrayerDelHook(record); } catch (e) {} // v19.40 · ปุ่มลบแล้วถ่ายใหม่ (นักเรียน)
   openModal('prayerDetailModal');
 }
 
