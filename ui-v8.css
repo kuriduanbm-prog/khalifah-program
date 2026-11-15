@@ -6998,3 +6998,10 @@ html[data-theme="dark"] .k8-bap-btns button.is-alt { background: #1e293b; color:
 html[data-theme="dark"] .k8-bap-banner { background: #111827; border-color: #334155; color: #cbd5e1; } html[data-theme="dark"] .k8-bap-banner.is-on { background: #2a1d05; border-color: #78350f; }
 html[data-theme="dark"] .k8-bap-bico { background: #0c2536; color: #7dd3fc; } html[data-theme="dark"] .k8-bap-banner.is-on .k8-bap-bico { background: #3a2a05; color: #fbbf24; }
 html[data-theme="dark"] .k8-bap-bt b { color: #e2e8f0; } html[data-theme="dark"] .k8-bap-bt small { color: #94a3b8; }
+
+/* v19.37 · ซ่อนตารางพิเศษจากคาบเรียนวันนี้ */
+.k8-ov-xhide { flex: none; width: 32px; height: 32px; margin-left: -4px; border-radius: 9px; border: 1px solid transparent; background: none; color: #94a3b8; display: grid; place-items: center; cursor: pointer; }
+.k8-ov-xhide:hover { color: #475569; background: #f1f5f9; border-color: #e2e8f0; }
+.k8-ov-xhide:focus-visible { outline: 3px solid rgba(3,105,161,.35); outline-offset: 2px; }
+.k8-tt-xhide { margin: 4px 0 12px; }
+html[data-theme="dark"] .k8-ov-xhide { color: #64748b; } html[data-theme="dark"] .k8-ov-xhide:hover { color: #cbd5e1; background: #1e293b; border-color: #334155; }

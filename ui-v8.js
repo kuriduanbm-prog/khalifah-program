@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.36';
+  const APP_VERSION = '19.37';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6779,7 +6779,7 @@ window.k8RegBirthChange = function (v) {
         renderXP(); return;
       }
       const x = xOf(xk) || {}; if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก…'; }
-      let r = null; try { r = await gasApiCall('saveTimetableExtra', { data: { id: x.id, name: x.name, students: x.students || [], cells } }, 30000); } catch (e) {}
+      let r = null; try { r = await gasApiCall('saveTimetableExtra', { data: { id: x.id, name: x.name, students: x.students || [], hideAdmin: !!x.hideAdmin, cells } }, 30000); } catch (e) {}
       AIX = null;
       if (!r || !r.success) { toast((r && r.message) || 'บันทึกไม่สำเร็จ', 'error'); if (b) { b.disabled = false; b.textContent = 'ยืนยัน'; } return; }
       T.data.extras = extrasOf().filter((e) => e.id !== r.extra.id).concat([r.extra]); try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
@@ -6887,7 +6887,7 @@ window.k8RegBirthChange = function (v) {
 
   // ---------- แอดมิน: จัดตาราง ----------
   function adminRoot() { return document.getElementById('k8TtAdmin'); }
-  function startDraft(g) { T.grade = g; const src = gradeOf(g); T.draft = JSON.parse(JSON.stringify((src.cells) || {})); T.dirty = false; T.xmeta = String(g).indexOf('x:') === 0 ? { id: src.id || '', name: src.name || '', students: (src.students || []).slice() } : null; }
+  function startDraft(g) { T.grade = g; const src = gradeOf(g); T.draft = JSON.parse(JSON.stringify((src.cells) || {})); T.dirty = false; T.xmeta = String(g).indexOf('x:') === 0 ? { id: src.id || '', name: src.name || '', students: (src.students || []).slice(), hideAdmin: !!src.hideAdmin } : null; }
   // v17.47 · รายชื่ออาจารย์: ใช้ข้อมูลในเครื่องทันที แล้วดึงจากระบบเบื้องหลัง (ไม่ต้องรอตอนกดช่องตาราง)
   function localTeachers() { try { return (subAdmins || []).filter((t) => t && t.username).map((t) => ({ u: t.username, n: t.fullName || t.username })); } catch (e) { return []; } }
   let tFetch = null;
@@ -7038,6 +7038,7 @@ window.k8RegBirthChange = function (v) {
     const list = allStu().filter((st) => { const m = String(st.grade || '').match(/([1-6])/); return !fg || (m && m[1] === fg); });
     document.getElementById('k8TtCellBody').innerHTML =
       '<label class="k8-nf-f"><span>ชื่อตาราง</span><input type="text" id="k8TtXName" maxlength="60" placeholder="เช่น ภาษาจีน (วิชาเลือก) · ซ่อมเสริมคณิต" value="' + esc(XP.name) + '" oninput="k8TtXName()"></label>' +
+      '<label class="k8-tt-sw k8-tt-xhide"><input type="checkbox"' + (XP.hide ? ' checked' : '') + ' onchange="k8TtXHide(this.checked)"><span><b>ไม่แสดงใน "คาบเรียนวันนี้" หน้าภาพรวมแอดมิน</b><small>เหมาะกับตารางรายบุคคล หรือตารางที่ไม่ต้องติดตามการเช็คชื่อ · อาจารย์และนักเรียนยังเห็นตารางตามปกติ</small></span></label>' +
       '<fieldset class="k8-tt-who"><legend>นักเรียนในตารางนี้ <b id="k8TtXN">' + XP.sel.size + '</b> คน (เลือกข้ามชั้นได้)</legend>' +
       '<div class="k8-tt-seg">' + [''].concat(GR).map((g) => '<button type="button" aria-pressed="' + (fg === g) + '" onclick="k8TtXG(\'' + g + '\')">' + (g ? 'ม.' + g : 'ทุกชั้น') + '</button>').join('') + '</div>' +
       '<div class="k8-tt-stu-tools"><input type="search" placeholder="ค้นหาชื่อหรือรหัส" value="' + esc(XP.q || '') + '" oninput="k8TtXQ(this.value)"><button type="button" class="k8-bh-link" onclick="k8TtXAll(1)">เลือกที่แสดงทั้งหมด</button><button type="button" class="k8-bh-link" onclick="k8TtXAll(0)">ล้าง</button></div>' +
@@ -7045,7 +7046,7 @@ window.k8RegBirthChange = function (v) {
       '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ยกเลิก</button><span class="k8-tt-autosave is-ok" id="k8TtXSt" role="status" aria-live="polite">' + (XP.isNew ? 'ตั้งชื่อและเลือกนักเรียน ระบบจะบันทึกให้เอง' : '✓ บันทึกอัตโนมัติเมื่อแก้ไข') + '</span><button type="button" id="k8TtXGo" onclick="k8TtXOk()">' + (XP.isNew ? 'สร้างตาราง' : 'เสร็จ') + '</button></div>';
   }
   function openXP(isNew) {
-    T.cell = null; XP = { isNew, name: isNew ? '' : (T.xmeta.name || ''), sel: new Set(isNew ? [] : (T.xmeta.students || []).map(nsid)), q: '', g: '' };
+    T.cell = null; XP = { isNew, name: isNew ? '' : (T.xmeta.name || ''), sel: new Set(isNew ? [] : (T.xmeta.students || []).map(nsid)), q: '', g: '', hide: !isNew && !!T.xmeta.hideAdmin };
     document.getElementById('k8TtCellTitle').textContent = isNew ? 'สร้างตารางพิเศษ' : 'ชื่อตาราง & รายชื่อนักเรียน';
     document.getElementById('k8TtCellSub').textContent = 'ตารางแยกสำหรับวิชาที่เรียนเฉพาะบางคน';
     renderXP(); openModal('k8TtCellModal');
@@ -7061,14 +7062,15 @@ window.k8RegBirthChange = function (v) {
     const name = ((document.getElementById('k8TtXName') || {}).value || XP.name || '').trim(); XP.name = name;
     if (!name) { if (!silent) toast('ตั้งชื่อตารางก่อน', 'warning'); else xpStatus('ตั้งชื่อตารางก่อน แล้วระบบจะบันทึกให้เอง', 'wait'); return false; }
     if (!XP.sel.size) { if (!silent) toast('เลือกนักเรียนอย่างน้อย 1 คน', 'warning'); else xpStatus('เลือกนักเรียนอย่างน้อย 1 คน แล้วระบบจะบันทึกให้เอง', 'wait'); return false; }
-    if (XP.isNew) { T.newX = { key: 'x:new', id: '', name, students: [...XP.sel], cells: XP.cells || {} }; startDraft('x:new'); XP.isNew = false; }
-    else { T.xmeta.name = name; T.xmeta.students = [...XP.sel]; }
+    if (XP.isNew) { T.newX = { key: 'x:new', id: '', name, students: [...XP.sel], cells: XP.cells || {}, hideAdmin: !!XP.hide }; startDraft('x:new'); XP.isNew = false; }
+    else { T.xmeta.name = name; T.xmeta.students = [...XP.sel]; T.xmeta.hideAdmin = !!XP.hide; }
     T.dirty = true; xpStatus('กำลังบันทึก…', 'saving');
     Promise.resolve(autoSave()).then(() => { xpStatus(T.saveSt === 'err' ? 'บันทึกไม่สำเร็จ · ลองอีกครั้ง' : '✓ บันทึกอัตโนมัติแล้ว · ' + XP.sel.size + ' คน', T.saveSt === 'err' ? 'err' : 'ok'); const b = document.getElementById('k8TtXGo'); if (b) b.textContent = 'เสร็จ'; });
     return true;
   }
   const xpAuto = () => { clearTimeout(xpT); xpStatus('กำลังจะบันทึก…', 'saving'); xpT = setTimeout(() => applyXP(true), 700); };
   window.k8TtXName = xpAuto;
+  window.k8TtXHide = function (v) { XP.name = (document.getElementById('k8TtXName') || {}).value || XP.name; XP.hide = !!v; xpAuto(); };
   window.k8TtXT = function (c) { if (c.checked) XP.sel.add(c.value); else XP.sel.delete(c.value); document.getElementById('k8TtXN').textContent = XP.sel.size; xpAuto(); };
   window.k8TtXAll = function (on) { document.querySelectorAll('#k8TtCellBody .k8-tt-stu label:not([hidden]) input').forEach((c) => { c.checked = !!on; if (on) XP.sel.add(c.value); else XP.sel.delete(c.value); }); document.getElementById('k8TtXN').textContent = XP.sel.size; xpAuto(); };
   window.k8TtXOk = function () {
@@ -7303,7 +7305,7 @@ window.k8RegBirthChange = function (v) {
     T.saving = true; T.again = false; T.w = (T.w || 0) + 1; paintSave('saving');
     const g = T.grade, isX = String(g).indexOf('x:') === 0, snap = JSON.stringify(T.draft || {}), xm = isX ? Object.assign({}, T.xmeta) : null;
     let r = null;
-    try { r = isX ? await gasApiCall('saveTimetableExtra', { data: { id: xm.id, name: xm.name, students: xm.students, cells: JSON.parse(snap) } }, 30000) : await gasApiCall('saveTimetable', { data: { grade: g, cells: JSON.parse(snap) } }, 30000); } catch (e) { r = null; }
+    try { r = isX ? await gasApiCall('saveTimetableExtra', { data: { id: xm.id, name: xm.name, students: xm.students, hideAdmin: !!xm.hideAdmin, cells: JSON.parse(snap) } }, 30000) : await gasApiCall('saveTimetable', { data: { grade: g, cells: JSON.parse(snap) } }, 30000); } catch (e) { r = null; }
     T.saving = false;
     if (!r || !r.success) { paintSave('err'); toast((r && (r.message || r.error)) || 'บันทึกตารางไม่สำเร็จ · ตรวจอินเทอร์เน็ตแล้วกด "ลองใหม่"', 'error'); return; }
     if (isX && r.extra) {
@@ -7328,7 +7330,7 @@ window.k8RegBirthChange = function (v) {
     T.w = (T.w || 0) + 1;
     const b = document.getElementById('k8TtSaveBtn'); if (b) { b.disabled = true; b.textContent = 'กำลังบันทึก…'; }
     const isX = String(T.grade).indexOf('x:') === 0;
-    let r = null; try { r = isX ? await gasApiCall('saveTimetableExtra', { data: { id: T.xmeta.id, name: T.xmeta.name, students: T.xmeta.students, cells: T.draft } }, 25000) : await gasApiCall('saveTimetable', { data: { grade: T.grade, cells: T.draft } }, 25000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง' }; }
+    let r = null; try { r = isX ? await gasApiCall('saveTimetableExtra', { data: { id: T.xmeta.id, name: T.xmeta.name, students: T.xmeta.students, hideAdmin: !!T.xmeta.hideAdmin, cells: T.draft } }, 25000) : await gasApiCall('saveTimetable', { data: { grade: T.grade, cells: T.draft } }, 25000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง' }; }
     if (!r || !r.success) { toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); if (b) { b.disabled = false; b.textContent = 'บันทึก'; } return; }
     if (isX) {
       const x = r.extra; T.data.extras = extrasOf().filter((e) => e.id !== x.id).concat([x]); T.newX = null; T.dirty = false; startDraft('x:' + x.id);
@@ -11209,7 +11211,7 @@ window.k8HfMiss = function (slot) {
     const lvs = (A.lv || []).filter((l) => l && l.status === 'approved' && l.date === ds);
     const sources = [];
     ['1', '2', '3', '4', '5', '6'].forEach((g) => { const gg = (tt.grades || {})[g]; if (gg) sources.push({ key: g, label: 'ม.' + g, cells: gg.cells || {}, g }); });
-    (tt.extras || []).forEach((x) => { if (x && x.cells) sources.push({ key: 'x:' + x.id, label: x.name || 'ตารางพิเศษ', cells: x.cells, g: '' }); });
+    (tt.extras || []).forEach((x) => { if (x && x.cells && !x.hideAdmin) sources.push({ key: 'x:' + x.id, label: x.name || 'ตารางพิเศษ', cells: x.cells, g: '' }); }); // v19.37 · ตารางที่ตั้งซ่อนไว้ ไม่แสดงในภาพรวมแอดมิน
     periods.forEach((pp, i) => {
       const p = i + 1;
       sources.forEach((src) => {
@@ -11227,7 +11229,7 @@ window.k8HfMiss = function (slot) {
           else if (isToday && nm < s0) st = 'wait';
           else if (isToday && nm < e0) st = 'now';
           else st = 'miss';
-          rows.push({ p, time: (pp.start || '') + '–' + (pp.end || ''), grade: src.label, code: e.s || '', g: src.g, sn: e.sn || e.s, tn: e.tn || e.t || 'ยังไม่ระบุผู้สอน', gx: e.gx, swapped: !!e.swapped, st, c, n: recs.length, lv });
+          rows.push({ p, time: (pp.start || '') + '–' + (pp.end || ''), grade: src.label, xk: src.g ? '' : src.key, code: e.s || '', g: src.g, sn: e.sn || e.s, tn: e.tn || e.t || 'ยังไม่ระบุผู้สอน', gx: e.gx, swapped: !!e.swapped, st, c, n: recs.length, lv });
         });
       });
     });
@@ -11269,9 +11271,18 @@ window.k8HfMiss = function (slot) {
     const STL = { done: ['เช็คแล้ว', 'is-done'], miss: ['ยังไม่เช็ค', 'is-miss'], now: ['กำลังเรียน', 'is-now'], wait: ['ยังไม่ถึงเวลา', 'is-wait'], leave: ['งดสอน', 'is-leave'] };
     const byP = {}; m.rows.forEach((r) => { (byP[r.p] = byP[r.p] || []).push(r); });
     box.innerHTML = lead + '<ol class="k8-ov-tlist">' + Object.keys(byP).sort((a, b) => a - b).map((p) => { const L = byP[p]; const top = L.some((r) => r.st === 'now') ? 'now' : L.some((r) => r.st === 'miss') ? 'miss' : L.every((r) => r.st === 'done') ? 'done' : L[0].st;
-      return '<li class="is-' + top + '"><span class="k8-ov-tt">' + esc(L[0].time.split('–')[0]) + '</span><span class="k8-ov-dot" aria-hidden="true"></span><div class="k8-ov-tc">' + L.map((r) => { const s2 = STL[r.st] || STL.wait; return '<div class="k8-ov-tr' + (r.st === 'now' ? ' is-cur' : '') + '"><div><b>คาบ ' + r.p + ' · ' + esc(r.sn) + ' · ' + esc(r.grade) + (r.gx ? ' (' + (r.gx === 'm' ? 'ชาย' : 'หญิง') + ')' : '') + '</b><small>' + esc(r.tn) + (r.swapped ? ' · ⇄ สลับคาบ' : '') + ' · ' + esc(r.time) + '</small></div><span class="k8-ov-pill ' + s2[1] + '">' + s2[0] + (r.st === 'done' ? ' ' + (r.c.present + r.c.late) + '/' + r.n : '') + '</span></div>'; }).join('') + '</div></li>'; }).join('') + '</ol>';
+      return '<li class="is-' + top + '"><span class="k8-ov-tt">' + esc(L[0].time.split('–')[0]) + '</span><span class="k8-ov-dot" aria-hidden="true"></span><div class="k8-ov-tc">' + L.map((r) => { const s2 = STL[r.st] || STL.wait; return '<div class="k8-ov-tr' + (r.st === 'now' ? ' is-cur' : '') + '"><div><b>คาบ ' + r.p + ' · ' + esc(r.sn) + ' · ' + esc(r.grade) + (r.gx ? ' (' + (r.gx === 'm' ? 'ชาย' : 'หญิง') + ')' : '') + '</b><small>' + esc(r.tn) + (r.swapped ? ' · ⇄ สลับคาบ' : '') + ' · ' + esc(r.time) + '</small></div><span class="k8-ov-pill ' + s2[1] + '">' + s2[0] + (r.st === 'done' ? ' ' + (r.c.present + r.c.late) + '/' + r.n : '') + '</span>' + (r.xk ? '<button type="button" class="k8-ov-xhide" title="ไม่แสดงตารางพิเศษนี้ในหน้าภาพรวม" aria-label="ซ่อนตาราง ' + esc(r.grade) + ' จากหน้าภาพรวม" onclick="k8OvXHide(\'' + esc(r.xk) + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M14.1 14.1a3 3 0 1 1-4.2-4.2M2 2l20 20"/></svg></button>' : '') + '</div>'; }).join('') + '</div></li>'; }).join('') + '</ol>';
   }
   window.k8OvTlPaint = paintTl;
+  // v19.37 · ซ่อนตารางพิเศษ (เช่น ตารางรายบุคคล) ออกจาก "คาบเรียนวันนี้"
+  window.k8OvXHide = async function (key) {
+    const x = ((A.tt && A.tt.extras) || []).find((e) => 'x:' + e.id === key); if (!x) return;
+    if (!confirm('ไม่แสดงตารางพิเศษ "' + (x.name || '') + '" ในคาบเรียนวันนี้ของหน้าภาพรวม?\nอาจารย์และนักเรียนยังเห็นตารางตามปกติ · เปิดกลับได้ที่ ตารางสอน → ตารางพิเศษ → ชื่อตาราง & รายชื่อนักเรียน')) return;
+    x.hideAdmin = true; paintTl(); try { paintKpi(); } catch (e) {}
+    let r = null; try { r = await gasApiCall('saveTimetableExtra', { data: { id: x.id, name: x.name, students: x.students || [], hideAdmin: true, cells: x.cells || {} } }, 30000); } catch (e) {}
+    if (r && r.success) { if (typeof showToast === 'function') showToast('ซ่อน "' + x.name + '" จากหน้าภาพรวมแล้ว', 'success'); }
+    else { x.hideAdmin = false; paintTl(); if (typeof showToast === 'function') showToast((r && r.message) || 'บันทึกไม่สำเร็จ', 'error'); }
+  };
   const o = window.renderAdminOverviewV8;
   if (typeof o === 'function') window.renderAdminOverviewV8 = function () { const r = o.apply(this, arguments); try { paintKpi(); paintTl(); load(false); } catch (e) {} return r; };
   // ---------- หน้ารายการวิชาวันนี้ ----------

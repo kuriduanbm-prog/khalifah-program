@@ -128,7 +128,7 @@ def process(css):
                 if inner: res.append(sel + ' {\n' + inner + '\n}')
             elif sel.startswith('@'):
                 pass
-            elif any(k in sel for k in ('.k8-sp', '.k8-sld', '.k8-sl-cnt', '.k8-ro-badge', '.k8-jum', '.k8-starpop', '.k8-dm', '.k8-geo-kind', 'data-state="warn"', '.k8-tt-dur', '.k8-tt-span', '.k8-aix', '.k8-tt-term', '.k8-tt-th', '.k8-tt-aiin', '.k8-tt-cfm', '.k8-star', '.k8-ts', '.k8-bap')):
+            elif any(k in sel for k in ('.k8-sp', '.k8-sld', '.k8-sl-cnt', '.k8-ro-badge', '.k8-jum', '.k8-starpop', '.k8-dm', '.k8-geo-kind', 'data-state="warn"', '.k8-tt-dur', '.k8-tt-span', '.k8-aix', '.k8-tt-term', '.k8-tt-th', '.k8-tt-aiin', '.k8-tt-cfm', '.k8-star', '.k8-ts', '.k8-bap', '.k8-ov-xhide')):
                 pass  # v19.14–19.15 · มีกฎโหมดมืดเขียนเองครบแล้ว (ไม่แปลงอัตโนมัติ เพื่อไม่ทับด้วย !important)
             elif 'data-theme' in sel and any(k in sel for k in ('.k8ai', '.k8-schd', '.k8-sch-num', '.k8-sv-', '.k8-sp', '.k8-ro-badge', '.k8-f select', '.k8-sld', '.k8-sl-cnt')):
                 pass  # กฎโหมดมืดที่เขียนเองของหน้าถามข้อมูล (ไม่ต้องแปลงซ้ำ)

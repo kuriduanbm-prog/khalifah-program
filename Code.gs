@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.36'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.37'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -4197,7 +4197,7 @@ function saveTimetableExtra_(data, session) {
   let id = cleanVal(data.id).replace(/[^A-Za-z0-9_-]/g, '');
   if (!id || ids.indexOf(id) === -1) { id = 'X' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); ids.push(id); }
   if (ids.length > 30) return { success: false, message: 'มีตารางพิเศษได้สูงสุด 30 ตาราง' };
-  const value = { id: id, name: name, students: uniq, cells: ttCleanCells_(data.cells), updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'), by: (session && (session.name || session.userId)) || '' };
+  const value = { id: id, name: name, students: uniq, hideAdmin: !!data.hideAdmin, cells: ttCleanCells_(data.cells), updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'), by: (session && (session.name || session.userId)) || '' };
   const json = JSON.stringify(value);
   if (json.length > 45000) return { success: false, message: 'ตารางยาวเกินไป' };
   saveSetting({ key: 'TimetableX_' + id, value: json, description: 'ตารางพิเศษ: ' + name + ' (JSON)' });
