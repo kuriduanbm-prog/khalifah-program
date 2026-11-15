@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.37';
+  const APP_VERSION = '19.38';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4186,7 +4186,7 @@ window.k8RegBirthChange = function (v) {
     const m = document.getElementById('k8BhModal'); if (!m) return;
     const t = (mine && mine.term) || term();
     const logs = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
-    AP_MODE = true; let h = ''; try { h = detailHtml(myScore() == null ? 100 : myScore(), logs); } finally { AP_MODE = false; }
+    AP_MODE = false; let h = ''; // v19.38 · ปิดปุ่มแจ้งหมายเหตุฝั่งนักเรียน (ตามที่แอดมินขอ) try { h = detailHtml(myScore() == null ? 100 : myScore(), logs); } finally { AP_MODE = false; }
     document.getElementById('k8BhModalBody').innerHTML = h + MINE_NOTE;
     if (AP_OPEN) setTimeout(() => { const x = document.getElementById('k8BapT'); if (x) x.focus(); }, 30);
   }
@@ -13856,6 +13856,7 @@ window.k8PdWho = function (sid) {
   window.k8BapBanner = function () {
     setTimeout(() => load(false), 0);
     const n = pend().length;
+    if (!n) return '<span class="k8-bap-banner" hidden></span>'; // v19.38 · แสดงเฉพาะเมื่อยังมีคำชี้แจงค้างพิจารณา
     return '<button type="button" class="k8-bap-banner' + (n ? ' is-on' : '') + '" onclick="k8BapAdmOpen()"><span class="k8-bap-bico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg></span><span class="k8-bap-bt"><b>คำชี้แจงจากนักเรียน</b><small>' + (S.list ? (n ? 'รอพิจารณา ' + n + ' รายการ · นักเรียนแจ้งหมายเหตุเมื่อถูกหักคะแนน' : 'ไม่มีคำชี้แจงรอพิจารณา') : 'กำลังโหลด…') + '</small></span>' + (n ? '<em>' + n + '</em>' : '') + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>';
   };
   function paintBanner() { document.querySelectorAll('.k8-bap-banner').forEach((b) => { b.outerHTML = window.k8BapBanner(); }); }
