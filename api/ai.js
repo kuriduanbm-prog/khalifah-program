@@ -58,41 +58,50 @@ module.exports = async (req, res) => {
   const mk = String(who.u) + ':' + Math.floor(Date.now() / 60000); const n = (RL.get(mk) || 0) + 1; RL.set(mk, n);
   if (RL.size > 500) { for (const k of RL.keys()) { if (!k.endsWith(':' + Math.floor(Date.now() / 60000))) RL.delete(k); } }
   if (n > 30) return res.status(200).json({ success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' });
-  const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 55000); const t0 = Date.now();
+  const t0 = Date.now(); const LIMIT = 54000; let to = null;
   // v19.30 · Gemini คนใช้เยอะ (503/500/429 ชั่วคราว) → รอแล้วลองใหม่ 1 ครั้ง แล้วสลับไปรุ่นสำรอง
   const FALL = String(process.env.GEMINI_FALLBACK_MODELS || 'gemini-flash-latest,gemini-2.5-flash').split(',').map((x) => x.trim()).filter((x) => x && x !== MODEL);
-  const plan = [MODEL, MODEL].concat(FALL);
+  // v19.31 · แต่ละรอบมีเวลาของตัวเอง: รุ่นหลักช้า/ค้าง → ตัดแล้วไปรุ่นสำรองที่เร็วกว่า (ไม่ใช้เวลาทั้งหมดไปกับรุ่นเดียว)
+  //          งานรูปภาพ: รุ่นหลักได้ 22 วินาที แล้วสลับไป gemini-2.5-flash (ปิดการคิด · อ่านตารางเร็ว)
+  const plan = hasImg ? [MODEL].concat(FALL.indexOf('gemini-2.5-flash') !== -1 ? ['gemini-2.5-flash'].concat(FALL.filter((x) => x !== 'gemini-2.5-flash')) : FALL) : [MODEL, MODEL].concat(FALL);
+  const capOf = (i) => (i === 0 ? (hasImg ? 22000 : 30000) : 26000);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const call = async (model) => {
+  const call = async (model, cap) => {
+    const ac = new AbortController(); to = setTimeout(() => ac.abort(), cap);
     const tc = body.deep ? null : fastThinking(model);
     const send = (pl) => fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': KEY }, body: pl, signal: ac.signal });
     let r = await send(tc ? JSON.stringify(Object.assign({}, g, { generationConfig: Object.assign({}, g.generationConfig || {}, { thinkingConfig: tc }) })) : payload);
     let txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) {}
     if (tc && r.status === 400 && /think/i.test(String((j && j.error && j.error.message) || txt))) { r = await send(payload); txt = await r.text(); j = null; try { j = JSON.parse(txt); } catch (e) {} }
+    clearTimeout(to);
     return { r, j, txt };
   };
   const busy = (st, msg) => st === 503 || st === 500 || st === 502 || st === 504 || (st === 429 && /overload|high demand|try again later|resource.?exhausted.*(?:temporar|later)/i.test(msg)) || /high demand|overloaded/i.test(msg);
   try {
     let last = null, used = MODEL;
     for (let i = 0; i < plan.length; i++) {
-      if (i && Date.now() - t0 > 38000) break;
-      if (i === 1) await sleep(1500);
+      const left = LIMIT - (Date.now() - t0); if (i && left < 8000) break;
+      if (i === 1 && plan[1] === MODEL) { if (last && last.timeout) continue; await sleep(1500); } // ค้าง = ไม่ลองรุ่นเดิมซ้ำ
       used = plan[i];
-      const { r, j } = await call(used);
+      let out;
+      try { out = await call(used, Math.min(capOf(i), LIMIT - (Date.now() - t0))); }
+      catch (e) { clearTimeout(to); if (e && e.name === 'AbortError') { last = { st: 0, msg: 'TIMEOUT', timeout: true }; continue; } throw e; }
+      const { r, j } = out;
       if (r.ok && j) {
         const cand = (j.candidates || [])[0] || {};
         return res.status(200).json({ success: true, via: 'vercel', model: used, fallback: used !== MODEL, content: cand.content || { role: 'model', parts: [] }, finishReason: cand.finishReason || '', usage: j.usageMetadata || null });
       }
       const msg = String((j && j.error && j.error.message) || ('HTTP ' + r.status));
       last = { st: r.status, msg };
-      if (!busy(r.status, msg)) { if (i >= 2 && r.status === 404) continue; break; } // รุ่นสำรองไม่มี → ลองรุ่นถัดไป
+      if (!busy(r.status, msg)) { if (used !== MODEL && r.status === 404) continue; break; } // รุ่นสำรองไม่มี → ลองรุ่นถัดไป
     }
     const st = last ? last.st : 0, msg = last ? last.msg : 'AI error';
+    if (last && last.timeout) return res.status(200).json({ success: false, code: 'TIMEOUT', model: used, message: 'Gemini ตอบช้าเกินไปทุกรุ่นที่ลอง (' + plan.slice(0, 3).join(', ') + ')' });
     const code = busy(st, msg) ? 'BUSY' : st === 429 ? 'QUOTA' : (st === 400 || st === 403) ? 'BAD_KEY_OR_REQUEST' : 'AI_ERROR';
     return res.status(200).json({ success: false, code, status: st, model: used, message: msg.slice(0, 300) });
   } catch (e) {
     return res.status(200).json({ success: false, code: e && e.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK', message: 'ติดต่อ Gemini ไม่ได้: ' + String((e && e.message) || e).slice(0, 200) });
-  } finally { clearTimeout(to); }
+  } finally { if (to) clearTimeout(to); }
 };
 module.exports.verifyTicket = verifyTicket;
 module.exports.fastThinking = fastThinking;

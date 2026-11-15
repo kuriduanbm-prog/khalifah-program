@@ -1109,7 +1109,7 @@
     if (S.busy) return; S.busy = true; $('k8AiGo').disabled = true;
     const url = await ttShrink(f);
     const a = bubble('นำเข้าตารางสอนจากรูป'); const u = a.previousElementSibling; if (u && url) u.insertAdjacentHTML('beforeend', '<img class="k8ai-uimg" src="' + url + '" alt="รูปตารางสอนที่แนบ">');
-    a.querySelector('.k8ai-typing span').textContent = 'กำลังอ่านรูปตารางสอน…';
+    a.querySelector('.k8ai-typing span').textContent = 'กำลังอ่านรูปตารางสอน… (ปกติ 10–40 วินาที)';
     const ctx = { reps: [], html: [] }; let text = '', note = '';
     try {
       if (!url) throw new Error('อ่านไฟล์รูปไม่ได้');
