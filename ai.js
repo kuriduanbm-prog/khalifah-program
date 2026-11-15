@@ -1062,7 +1062,17 @@
     'กติกา: grade = เลขชั้นมัธยม (เช่น "ชั้นมัธยมศึกษาปีที่ 4" หรือ ม.4 = 4) · slots = เฉพาะคอลัมน์ที่เป็นคาบเรียน เรียงตามเวลา ไม่รวมคอลัมน์พัก/พักเที่ยง/พักเย็น/หัวคอลัมน์วัน · เวลา 08.00 ให้เขียน 08:00 · ' +
     'day: อาทิตย์=0 จันทร์=1 อังคาร=2 พุธ=3 พฤหัสบดี=4 ศุกร์=5 เสาร์=6 · ช่องว่างไม่ต้องใส่ · ช่องที่ผสานคร่อมหลายคาบ ให้ใส่ซ้ำทุกคาบที่คร่อม · ' +
     'ชื่อวิชาให้สะกดตามรูปทุกตัวอักษร (ภาษาไทย/อังกฤษตามรูป) ถ้าวิชาขึ้นบรรทัดใหม่ในช่องเดียวกันให้รวมเป็นชื่อเดียวคั่นด้วยเว้นวรรค · ห้ามเดา ถ้าอ่านไม่ออกให้ระบุใน notes';
-  function ttShrink(file) { return new Promise((res) => { const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => { const M = 2000; let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, M / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k); const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h); res(c.toDataURL('image/jpeg', 0.88)); }; img.onerror = () => res(''); img.src = fr.result; }; fr.onerror = () => res(''); fr.readAsDataURL(file); }); }
+  function ttShrink(file) {
+    return new Promise((res) => { const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => {
+      const enc = (M, q) => { let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, M / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k); const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h); return c.toDataURL('image/jpeg', q); };
+      // v19.27 · ย่อจนข้อมูลไม่เกิน ~380KB (ส่งเร็ว ไม่ติดขนาดสูงสุดของ Vercel/Apps Script) แต่ยังอ่านตัวหนังสือได้
+      const tries = [[1800, 0.85], [1600, 0.8], [1400, 0.75], [1200, 0.72], [1000, 0.7]]; let u = '';
+      for (const [M, q] of tries) { u = enc(M, q); if (u.length < 380000) break; }
+      res(u);
+    }; img.onerror = () => res(''); img.src = fr.result; }; fr.onerror = () => res(''); fr.readAsDataURL(file); });
+  }
+  const AIERR = { NO_KEY: 'ยังไม่ได้ตั้งค่า GEMINI_API_KEY', TICKET: 'ขอบัตรผ่าน AI ไม่ได้ · ตรวจว่า Deploy Code.gs ล่าสุด และ AI_SHARED_SECRET ใน Vercel ตรงกับใน Script Properties', TOO_LARGE: 'รูปใหญ่เกินไป · ถ้าเพิ่งอัปเดต ให้ Deploy Code.gs ตัวล่าสุด หรือครอปรูปให้เหลือเฉพาะตาราง', QUOTA: 'โควตา Gemini หมดชั่วคราว · รอสักครู่แล้วลองใหม่', RATE: 'ส่งถี่เกินไป · รอ 1 นาทีแล้วลองใหม่', TIMEOUT: 'AI ใช้เวลาอ่านนานเกินไป · ลองครอปรูปให้เหลือเฉพาะตาราง แล้วลองใหม่', NETWORK: 'เชื่อมต่อ AI ไม่ได้ · ตรวจอินเทอร์เน็ตแล้วลองใหม่', BAD_KEY_OR_REQUEST: 'Gemini ไม่รับคำขอ (คีย์ไม่ถูกต้อง หรือรุ่นโมเดลไม่รองรับรูปภาพ)', FORBIDDEN: 'เฉพาะแอดมินและผู้บริหาร' };
+  window.k8AiErrText = (R) => { if (!R) return 'ไม่ทราบสาเหตุ'; const c = String(R.code || ''); const base = AIERR[c] || (/^HTTP_/.test(c) ? 'เซิร์ฟเวอร์ AI ตอบผิดพลาด (' + c.replace('HTTP_', 'HTTP ') + ')' : ''); const m = String(R.message || '').slice(0, 220); return (base ? base + (m && c !== 'NO_KEY' && c !== 'TOO_LARGE' && c !== 'TICKET' ? ' · ' + m : '') : m || 'ไม่ทราบสาเหตุ') + (c ? ' [' + c + (R.via ? ' · ' + R.via : '') + ']' : ''); };
   function ttParse(txt) { let j = null; const t = String(txt || '').replace(/^```(?:json)?\s*|\s*```$/g, ''); try { j = JSON.parse(t); } catch (e) { const m = t.match(/\{[\s\S]*\}/); if (m) { try { j = JSON.parse(m[0]); } catch (e2) {} } } return j && typeof j === 'object' ? j : null; }
   const TTD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
   function ttMini(P) {
@@ -1075,12 +1085,12 @@
   async function readTimetableImage(url) {
     if (S.ready == null) await checkReady();
     if (!S.ready) return { ok: false, code: 'NO_AI', message: 'การอ่านรูปต้องใช้ Gemini · ยังไม่ได้ตั้งค่า GEMINI_API_KEY' };
-    const r = await aiCall({ contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: url.split(',')[1] } }, { text: TT_PROMPT }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 } }, 'อ่านรูปตารางสอน');
-    if (!r || !r.success) return { ok: false, code: (r && r.code) || 'AI', message: (r && r.message) || 'AI error' };
+    const r = await aiCall({ contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: url.split(',')[1] } }, { text: TT_PROMPT }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0 } }, 'อ่านรูปตารางสอน');
+    if (!r || !r.success) { try { console.warn('k8 timetable image AI', r); } catch (e) {} return { ok: false, code: (r && r.code) || 'AI', message: (r && r.message) || 'AI error', via: S.route === 'vercel' ? 'Vercel' : 'Apps Script' }; }
     if (S.route === 'vercel') gasApiCall('aiLog', { data: { q: 'อ่านรูปตารางสอน', model: S.model + ' (vercel)', usage: r.usage || {} } }, 20000).catch(() => {});
     const raw = ((r.content && r.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
     const P = ttParse(raw);
-    if (!P || !Array.isArray(P.cells) || !P.cells.length) return { ok: false, code: 'PARSE', message: 'อ่านตารางจากรูปนี้ไม่ได้ · ลองรูปที่ชัดขึ้น ให้เห็นหัวตาราง (วัน/เวลา) ครบ' };
+    if (!P || !Array.isArray(P.cells) || !P.cells.length) { try { console.warn('k8 timetable image parse', r.finishReason, raw.slice(0, 500)); } catch (e) {} return { ok: false, code: 'PARSE', message: r.finishReason === 'MAX_TOKENS' ? 'คำตอบของ AI ยาวเกินจนถูกตัด · ลองครอปรูปให้เหลือเฉพาะตาราง' : r.finishReason === 'SAFETY' || r.finishReason === 'RECITATION' ? 'AI ปฏิเสธการอ่านรูปนี้ (' + r.finishReason + ')' : 'อ่านตารางจากรูปนี้ไม่ได้ · ลองรูปที่ชัดขึ้น ให้เห็นหัวตาราง (วัน/เวลา) ครบ' + (r.finishReason && r.finishReason !== 'STOP' ? ' (' + r.finishReason + ')' : '') }; }
     return { ok: true, P, url };
   }
   window.k8AiReadTimetable = async function (file) {
@@ -1101,7 +1111,7 @@
       const R = await readTimetableImage(url);
       if (!R.ok && R.code === 'NO_AI') { text = 'การอ่านรูปต้องใช้ Gemini · ตอนนี้ยังไม่ได้ตั้งค่า GEMINI_API_KEY จึงอ่านรูปไม่ได้ · ใช้ปุ่ม **นำเข้าไฟล์ Excel** ในหน้าตารางสอนแทนได้'; }
       else if (!R.ok && R.code === 'PARSE') text = R.message + ' แล้วแนบใหม่';
-      else if (!R.ok) throw new Error(R.message);
+      else if (!R.ok) text = 'อ่านรูปไม่สำเร็จ: ' + window.k8AiErrText(R);
       else {
         const P = R.P; {
           S.ttImp = { P, url };

@@ -6853,3 +6853,5 @@ html[data-theme="dark"] .k8-tt-cfm li.is-chg b { color: #fbbf24; }
 .k8-aix-xname { margin: 0 0 10px; }
 .k8-aix-xname small { color: #64748b; font-size: 12px; }
 html[data-theme="dark"] .k8-aix-xname small { color: #94a3b8; }
+.k8-tt-aiin-err { flex-basis: 100%; margin: 0; padding: 10px 12px; border-radius: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 13px; line-height: 1.55; word-break: break-word; }
+html[data-theme="dark"] .k8-tt-aiin-err { background: #2a1212; border-color: #7f1d1d; color: #fca5a5; }
