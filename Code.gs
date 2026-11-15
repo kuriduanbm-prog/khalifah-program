@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.35'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.36'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', getTeacherScores: 'admin', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1300,7 +1300,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTeacherScores', 'getMyTeacherScore', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTeacherScores', 'getMyTeacherScore', 'getBehaviorAppeals', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1544,7 +1544,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       const me = ownStudentId_(session, ctx, pick('studentId'));
       if (!me) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
       // v18.86 · นักเรียนไม่ต้องรู้ว่าใครประเมิน → ตัดชื่อผู้บันทึก/ผู้ยกเลิกออกตั้งแต่ฝั่งเซิร์ฟเวอร์
-      return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }).map(behaviorForStudent_) };
+      let aps = []; try { aps = apRead_().filter(function (x) { return isCodeMatch(x.sid, me); }).map(apForStudent_); } catch (e) {} // v19.36
+      return { success: true, term: currentTerm_(), rules: getBehaviorRules_(), logs: getBehaviorLogs_().filter(function (x) { return isCodeMatch(x.studentId, me); }).map(behaviorForStudent_), appeals: aps };
     }
     case 'getHalaqahSessions': {
       const L = halaqahSessions_(isStudent ? studentGradeNum_(session.userId).grade : '', !isStudent, isStudent ? session.userId : '');
@@ -1810,6 +1811,9 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
     case 'getTeacherScores': return getTeacherScores_();
+    case 'getBehaviorAppeals': return getBehaviorAppeals_();
+    case 'decideBehaviorAppeal': return decideBehaviorAppeal_(data, session);
+    case 'requestBehaviorAppeal': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return requestBehaviorAppeal_(data, session);
     case 'decideTeacherExcuse': return decideTeacherExcuse_(data, session);
     case 'getMyTeacherScore': return getMyTeacherScore_(session);
     case 'requestTeacherExcuse': return requestTeacherExcuse_(data, session);
@@ -7830,6 +7834,58 @@ function addBehaviorLogs_(data, session) {
   return { success: true, photoMax: 4, photosSaved: urls.length, added: rows.length, missing: missing, skipped: skipped, points: rule.points, logs: rows.map(function (r) { return { id: r[0], date: r[1], time: r[2], term: r[3], studentId: r[4], studentName: r[5], grade: r[6], cat: r[7], ruleId: r[8], title: r[9], points: r[10], note: r[11], by: r[12], byName: r[13], status: 'active', photoUrl: r[16], photoSource: r[17] }; }),
     message: (rule.points < 0 ? 'หัก ' + Math.abs(rule.points) : 'เพิ่ม ' + rule.points) + ' คะแนน · ' + rows.length + ' คน' };
 }
+/* ===================== v19.36 · นักเรียนแจ้งหมายเหตุ/เหตุจำเป็น เมื่อถูกหักคะแนนพฤติกรรม =====================
+ * ชีต "คำชี้แจงคะแนนพฤติกรรม" (1 แถว/คำชี้แจง · JSON คอลัมน์สุดท้าย) · แอดมินอนุมัติ = ยกเลิกรายการหัก (คืนคะแนน) */
+const AP_SHEET_ = 'คำชี้แจงคะแนนพฤติกรรม';
+const AP_HEAD_ = ['รหัส', 'รหัสรายการหัก', 'รหัสนักเรียน', 'ชื่อ - สกุล', 'ชั้น', 'วันที่ถูกหัก', 'หัวข้อ', 'คะแนน', 'หมายเหตุที่แจ้ง', 'สถานะ', 'ผู้พิจารณา', 'หมายเหตุแอดมิน', 'แจ้งเมื่อ', 'JSON'];
+const AP_ST_ = { pending: 'รอพิจารณา', approved: 'อนุมัติ (คืนคะแนน)', rejected: 'ไม่อนุมัติ' };
+function apSheet_() {
+  const ss = getSpreadsheet(); let sh = ss.getSheetByName(AP_SHEET_);
+  if (!sh) { sh = ss.insertSheet(AP_SHEET_); sh.getRange(1, 1, 1, AP_HEAD_.length).setValues([AP_HEAD_]); try { sh.setFrozenRows(1); } catch (e) {} }
+  return sh;
+}
+function apRead_() { const sh = apSheet_(); const n = sh.getLastRow() - 1; const L = []; if (n > 0) sh.getRange(2, AP_HEAD_.length, n, 1).getValues().forEach(function (r) { try { const o = JSON.parse(r[0]); if (o && o.id) L.push(o); } catch (e) {} }); return L; }
+function apWrite_(list) {
+  const sh = apSheet_(); const old = Math.max(0, sh.getLastRow() - 1);
+  const rows = list.map(function (x) { return [x.id, x.logId, x.sid, x.name, x.grade, x.date, x.title, x.points, x.reason, AP_ST_[x.status] || x.status, x.by || '', x.note || '', x.at || '', JSON.stringify(x)]; });
+  if (rows.length) sh.getRange(2, 1, rows.length, AP_HEAD_.length).setNumberFormat('@').setValues(rows);
+  if (old > rows.length) sh.deleteRows(2 + rows.length, old - rows.length);
+}
+function apForStudent_(x) { return { id: x.id, logId: x.logId, reason: x.reason, status: x.status, note: x.note || '', at: x.at, decidedAt: x.decidedAt || '' }; }
+function requestBehaviorAppeal_(d, session) {
+  d = d || {}; const logId = cleanVal(d.logId); const reason = cleanVal(d.reason).substring(0, 300);
+  if (reason.length < 5) return { success: false, message: 'กรุณาเขียนหมายเหตุ/เหตุจำเป็นให้ชัดเจน (อย่างน้อย 5 ตัวอักษร)' };
+  const log = getBehaviorLogs_().find(function (x) { return x.id === logId; });
+  if (!log || !isCodeMatch(log.studentId, session.userId)) return { success: false, code: 'FORBIDDEN', message: 'ไม่พบรายการนี้' };
+  if (log.status === 'cancelled') return { success: false, message: 'รายการนี้ถูกยกเลิก/คืนคะแนนแล้ว' };
+  if (!(log.points < 0)) return { success: false, message: 'แจ้งได้เฉพาะรายการที่ถูกหักคะแนน' };
+  if (log.term && log.term !== currentTerm_()) return { success: false, message: 'รายการนี้อยู่ในภาคเรียนที่ผ่านมาแล้ว' };
+  const list = apRead_();
+  if (list.some(function (x) { return x.logId === logId && x.status === 'pending'; })) return { success: false, message: 'แจ้งไปแล้ว รอแอดมินพิจารณา' };
+  if (list.filter(function (x) { return x.logId === logId; }).length >= 2) return { success: false, message: 'แจ้งรายการนี้ครบ 2 ครั้งแล้ว ติดต่อแอดมินโดยตรง' };
+  const at = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+  const it = { id: 'AP-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), logId: logId, sid: log.studentId, name: log.studentName, grade: log.grade, date: log.date, title: log.title, points: log.points, cat: log.cat, reason: reason, status: 'pending', at: at };
+  list.push(it); apWrite_(list.slice(-2000));
+  try { getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(['NTF-AP-' + it.id, at + ':00', 'นักเรียนแจ้งหมายเหตุคะแนนพฤติกรรม · ' + (log.studentName || log.studentId), (log.studentName || '') + ' (' + starGradeShort_(log.grade) + ')\nถูกหัก ' + Math.abs(log.points) + ' คะแนน: ' + log.title + ' (' + log.date + ')\nหมายเหตุ: ' + reason + '\nพิจารณาได้ที่หน้า คะแนนพฤติกรรม → คำชี้แจงจากนักเรียน', 'admins', '', 'normal', 'system-ap', 'ระบบคะแนนพฤติกรรม', 'active', Utilities.formatDate(new Date(Date.now() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'), 'bell', '']); } catch (e) {}
+  return { success: true, message: 'ส่งหมายเหตุแล้ว · รอแอดมินพิจารณา', appeal: apForStudent_(it) };
+}
+function getBehaviorAppeals_() {
+  const logs = {}; getBehaviorLogs_().forEach(function (l) { logs[l.id] = l; });
+  const L = apRead_().map(function (x) { const l = logs[x.logId]; return Object.assign({}, x, { logStatus: l ? l.status : 'missing', by0: l ? (l.byName || l.by) : '', note0: l ? l.note : '', photoUrl: l ? l.photoUrl : '' }); });
+  return { success: true, list: L.sort(function (a, b) { return (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(b.at).localeCompare(String(a.at)); }).slice(0, 400) };
+}
+function decideBehaviorAppeal_(d, session) {
+  d = d || {}; const ok = !!d.approve; const note = cleanVal(d.note || '').substring(0, 200); const by = cleanVal(session.name || session.userId);
+  const list = apRead_(); const it = list.find(function (x) { return x.id === cleanVal(d.id); });
+  if (!it) return { success: false, message: 'ไม่พบคำชี้แจงนี้' };
+  if (it.status !== 'pending') return { success: false, message: 'คำชี้แจงนี้พิจารณาไปแล้ว' };
+  if (ok) { const r = cancelBehaviorLog_(it.logId, { userId: session.userId, name: by + ' (อนุมัติคำชี้แจง)' }, true); if (!r.success) return r; }
+  it.status = ok ? 'approved' : 'rejected'; it.by = by; it.note = note; it.decidedAt = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+  apWrite_(list);
+  try { getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(['NTF-APD-' + it.id, it.decidedAt + ':00', ok ? 'อนุมัติหมายเหตุแล้ว · ได้คืน ' + Math.abs(it.points) + ' คะแนน' : 'ไม่อนุมัติหมายเหตุคะแนนพฤติกรรม', it.title + ' (' + it.date + ')' + (note ? '\nหมายเหตุจากแอดมิน: ' + note : ''), 'students', String(it.sid), 'normal', 'system-ap', 'ระบบคะแนนพฤติกรรม', 'active', Utilities.formatDate(new Date(Date.now() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'), 'bell', '']); } catch (e) {}
+  return { success: true, message: ok ? 'อนุมัติแล้ว · คืน ' + Math.abs(it.points) + ' คะแนนให้นักเรียน' : 'ไม่อนุมัติ · ยังหักคะแนนตามเดิม' };
+}
+
 function cancelBehaviorLog_(logId, session, isAdmin) {
   const id = cleanVal(logId);
   const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);

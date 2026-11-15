@@ -2158,7 +2158,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         const s = ns(l.status);
         const photo = l.photoUrl ? '<button type="button" class="k8-ap-photo" onclick="viewPhotoInNewTab(\'' + js(l.photoUrl) + '\')" aria-label="ดูภาพหลักฐาน"><img src="' + esc(l.photoUrl) + '" alt="ภาพหลักฐาน" loading="lazy"></button>' : '<div class="k8-ap-photo is-empty">ไม่มีภาพ</div>';
         return '<article class="k8-ap-card k8-ap-late' + (SEL.has(l.id) ? ' is-sel' : '') + '"><label class="k8-ap-chk" title="เลือก"><input type="checkbox" ' + (SEL.has(l.id) ? 'checked' : '') + ' onchange="k8ApSel(\'' + js(l.id) + '\', this.checked)" aria-label="เลือกคำขอของ ' + esc(l.studentName || l.studentId) + '"></label>' + photo + '<div class="k8-ap-lb"><b>' + esc(l.studentName || l.studentId) + (l.grade ? ' · ' + esc(String(l.grade).replace('มัธยมศึกษาปีที่ ', 'ม.')) : '') + '</b>' +
-          '<span class="k8-ap-meta">' + esc(l.prayerSlot || '-') + ' · ' + esc(l.date || '-') + '</span>' + (l.photoUrl ? (function () { const ps = String(l.photoSource || ''); const cam = /camera|กล้อง/.test(ps); const gal = /gallery|แนบ/.test(ps); return '<span class="k8-ap-src ' + (cam ? 'is-cam' : gal ? 'is-gal' : '') + '">' + (cam ? '📷 ถ่ายจากกล้อง' : gal ? '🖼️ แนบจากเครื่อง' : 'รูปแนบ (ไม่ทราบที่มา)') + '</span>'; })() : '') + '<span class="k8-ap-why">เหตุผล: ' + esc([l.reasonPreset, l.reasonDetail].filter(Boolean).join(' · ') || '-') + '</span>' +
+          '<span class="k8-ap-meta">' + esc(l.prayerSlot || '-') + ' · ' + esc(l.date || '-') + '</span>' + (l.photoUrl ? (function () { const ps = String(l.photoSource || ''); const cam = /camera|กล้อง/.test(ps); const gal = /gallery|แนบ/.test(ps); return '<span class="k8-ap-src ' + (cam ? 'is-cam' : gal ? 'is-gal' : '') + '">' + (cam ? '📷 ถ่ายจากกล้อง' : gal ? '🖼️ แนบจากเครื่อง' : 'รูปแนบ (ไม่ทราบที่มา)') + '</span>'; })() : '') + '<span class="k8-bap-why">เหตุผล: ' + esc([l.reasonPreset, l.reasonDetail].filter(Boolean).join(' · ') || '-') + '</span>' +
           (s === 'pending'
             ? '<div class="k8-ap-acts2"><button type="button" class="is-ok" onclick="adminApprovePrayerRequest(\'' + js(l.id) + '\')">อนุมัติ</button><button type="button" class="is-no" onclick="adminRejectPrayerRequest(\'' + js(l.id) + '\')">ไม่อนุมัติ</button></div>'
             : '<span class="k8-ap-done" style="color:' + (s === 'approved' ? '#15803d' : '#b91c1c') + '">' + (s === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ') + (l.approvedBy || l.rejectedBy ? ' โดย ' + esc(l.approvedBy || l.rejectedBy) : '') + '</span>') +
@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.35';
+  const APP_VERSION = '19.36';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -3883,6 +3883,7 @@ window.k8RegBirthChange = function (v) {
   const GR = ['ALL', 'มัธยมศึกษาปีที่ 1', 'มัธยมศึกษาปีที่ 2', 'มัธยมศึกษาปีที่ 3', 'มัธยมศึกษาปีที่ 4', 'มัธยมศึกษาปีที่ 5', 'มัธยมศึกษาปีที่ 6'];
   const gradeSelect = (val, key) => '<select onchange="k8BhSet(\'' + key + '\', this.value)" aria-label="ระดับชั้น">' + GR.map((g) => '<option value="' + g + '"' + (g === val ? ' selected' : '') + '>' + (g === 'ALL' ? 'ทุกชั้น' : shortG(g)) + '</option>').join('') + '</select>';
 
+  window.k8BhReload = function () { return load(true).then(() => { try { render(); } catch (e) {} }); }; // v19.36
   async function load(force) {
     if (B.loading || (B.loaded && !force)) return;
     B.loading = true;
@@ -3913,6 +3914,7 @@ window.k8RegBirthChange = function (v) {
       const tabs = roS && admin ? [['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ']] : admin ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ']].concat(me() && me().limited ? [] : [['rules', 'ตั้งค่าหัวข้อ']]) : teach ? [['record', 'บันทึก'], ['scores', 'คะแนนนักเรียน'], ['history', 'ประวัติ']] : null;
       if ((!admin || (me() && me().limited)) && B.tab === 'rules') B.tab = roS ? 'scores' : 'record';
       let html = tabs ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
+      if (admin && !(me() && me().limited) && window.k8BapBanner) html += window.k8BapBanner(); // v19.36
       if (B.oldBackend && B.loaded) html += '<div class="k8-tt-warn" role="alert"><b>Code.gs ที่ใช้งานอยู่ยังเป็นรุ่นเก่า · รูปหลักฐานเก็บได้แค่ 1 รูป</b><span>แอดมิน: วาง Code.gs ตัวล่าสุด แล้วไปที่ Deploy → Manage deployments → กดไอคอนดินสอของ deployment เดิม → Version: New version → Deploy (ห้ามกด New deployment เพราะจะได้ลิงก์ใหม่ที่แอปไม่ได้ใช้)</span></div>';
       if (!B.loaded && B.loading) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
       else html += B.tab === 'record' ? recordHtml() : B.tab === 'scores' ? scoresHtml() : B.tab === 'history' ? historyHtml(admin) : rulesHtml();
@@ -4023,6 +4025,18 @@ window.k8RegBirthChange = function (v) {
     document.getElementById('k8BhModalBody').innerHTML = detailHtml(sc, logs, !!me()) + (me() ? '<button type="button" class="k8-bh-go" onclick="k8BhRecordFor(\'' + js(k) + '\')">บันทึกพฤติกรรมให้คนนี้</button>' : '');
     openModal('k8BhModal');
   }
+  // v19.36 · นักเรียนแจ้งหมายเหตุ/เหตุจำเป็นเมื่อถูกหักคะแนน (แอดมินอนุมัติ = คืนคะแนน)
+  let AP_MODE = false, AP_OPEN = '';
+  const AP_ICO = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  function apBlock(l) {
+    if (!AP_MODE || !(l.points < 0)) return '';
+    const L = ((mine && mine.appeals) || []).filter((a) => a.logId === l.id); const a = L[L.length - 1];
+    let h = '';
+    if (a) h += '<span class="k8-bap-st is-' + a.status + '">' + (a.status === 'pending' ? 'ส่งหมายเหตุแล้ว · รอแอดมินพิจารณา' : a.status === 'approved' ? 'อนุมัติแล้ว · คืนคะแนน' : 'ไม่อนุมัติ') + '</span><small class="k8-bap-why">หมายเหตุของฉัน: ' + esc(a.reason) + (a.note ? '<br>แอดมิน: ' + esc(a.note) : '') + '</small>';
+    const can = l.status !== 'cancelled' && (!a || (a.status === 'rejected' && L.length < 2));
+    if (can) h += AP_OPEN === l.id ? '<span class="k8-bap-form"><textarea id="k8BapT" rows="2" maxlength="300" placeholder="เขียนหมายเหตุ/เหตุจำเป็น เช่น วันนั้นป่วยอยู่ห้องพยาบาล · ได้รับอนุญาตจากอาจารย์ … แล้ว"></textarea><span class="k8-bap-btns"><button type="button" class="is-alt" onclick="k8BhAp(\'\')">ยกเลิก</button><button type="button" onclick="k8BhApSend(\'' + js(l.id) + '\')">ส่งให้แอดมิน</button></span></span>' : '<button type="button" class="k8-bap-btn" onclick="k8BhAp(\'' + js(l.id) + '\')">' + AP_ICO + (a ? 'แจ้งหมายเหตุอีกครั้ง' : 'แจ้งหมายเหตุ / เหตุจำเป็น') + '</button>';
+    return h ? '<span class="k8-bap">' + h + '</span>' : '';
+  }
   function detailHtml(sc, logs, staff) {
     const lv = level(sc); const act = logs.filter((l) => l.status !== 'cancelled');
     const minus = act.filter((l) => l.points < 0).reduce((a, l) => a + l.points, 0), plus = act.filter((l) => l.points > 0).reduce((a, l) => a + l.points, 0);
@@ -4032,7 +4046,7 @@ window.k8RegBirthChange = function (v) {
         (staff && (l.byName || l.by) ? '<small class="k8-bh-by">ประเมินโดย <b>' + esc(l.byName || l.by) + '</b></small>' : '') +
         /* v18.86 · นักเรียนเห็นรูปหลักฐานด้วย (แต่ไม่เห็นชื่อผู้ประเมิน) */
         (l.photoUrl ? (() => { const U = String(l.photoUrl).split(/\s*\n\s*/).filter(Boolean).slice(0, 4); return '<span class="k8-bh-dphs" aria-label="รูปหลักฐาน ' + U.length + ' รูป">' + U.map((u, i) => '<button type="button" class="k8-bh-hph" onclick="openPhotoViewerModal(\'' + js(u) + '\',\'รูปหลักฐาน ' + (i + 1) + '/' + U.length + '\')"><img src="' + esc(u) + '" alt="รูปหลักฐานที่ ' + (i + 1) + '" loading="lazy"></button>').join('') + '</span>'; })() : '') +
-        '</span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีบันทึกในภาคเรียนนี้ · รักษาคะแนนเต็มไว้นะ</li>') + '</ul>';
+        apBlock(l) + '</span><span class="k8-bh-pts ' + (l.points > 0 ? 'is-plus' : 'is-minus') + '">' + (l.points > 0 ? '+' : '') + l.points + '</span></li>'; }).join('') : '<li class="k8-bh-empty">ยังไม่มีบันทึกในภาคเรียนนี้ · รักษาคะแนนเต็มไว้นะ</li>') + '</ul>';
   }
 
   // ---------- actions ----------
@@ -4164,19 +4178,37 @@ window.k8RegBirthChange = function (v) {
     let st = null; try { st = currentStudent; } catch (e) {}
     if (!st || (!force && Date.now() - mineAt < 15000)) { paintMine(); return; }
     mineAt = Date.now();
-    try { const r = await api('getMyBehavior'); if (r && r.success) { if (r.term) serverTerm = r.term; mine = { logs: r.logs || [], term: r.term, sid: curSid() }; try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} } } catch (e) {}
+    try { const r = await api('getMyBehavior'); if (r && r.success) { if (r.term) serverTerm = r.term; mine = { logs: r.logs || [], term: r.term, sid: curSid(), appeals: r.appeals || [] }; try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} } } catch (e) {}
     paintMine();
+  }
+  const MINE_NOTE = '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย · ถ้าถูกหักโดยมีเหตุจำเป็น กด "แจ้งหมายเหตุ" ที่รายการนั้น เมื่อแอดมินอนุมัติจะได้คะแนนคืน</p>';
+  function paintMineModal() {
+    const m = document.getElementById('k8BhModal'); if (!m) return;
+    const t = (mine && mine.term) || term();
+    const logs = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
+    AP_MODE = true; let h = ''; try { h = detailHtml(myScore() == null ? 100 : myScore(), logs); } finally { AP_MODE = false; }
+    document.getElementById('k8BhModalBody').innerHTML = h + MINE_NOTE;
+    if (AP_OPEN) setTimeout(() => { const x = document.getElementById('k8BapT'); if (x) x.focus(); }, 30);
   }
   window.k8BehOpenMine = function () {
     let st = null; try { st = currentStudent; } catch (e) {}
-    const t = (mine && mine.term) || term();
-    const logs = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date)));
+    AP_OPEN = '';
     document.getElementById('k8BhModalTitle').textContent = 'คะแนนพฤติกรรมของฉัน';
     document.getElementById('k8BhModalSub').textContent = window.k8Term().label + ' · เริ่มต้น 100 คะแนน';
-    document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore() == null ? 100 : myScore(), logs) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>';
-    openModal('k8BhModal');
-    if (st) loadMine(true).then(() => { if (document.getElementById('k8BhModal').classList.contains('open')) { const t2 = (mine && mine.term) || term(); const l2 = ((mine && mine.logs) || []).filter((l) => !l.term || l.term === t2).sort((x, y) => String(y.time || y.date).localeCompare(String(x.time || x.date))); document.getElementById('k8BhModalBody').innerHTML = detailHtml(myScore() == null ? 100 : myScore(), l2) + '<p class="k8-bh-intro">คะแนนจะถูกหักเมื่อแต่งกายผิดระเบียบ ไม่รักษาความสะอาดหอพัก/ห้องน้ำ หรือประพฤติไม่เหมาะสม และได้เพิ่มเมื่อทำความดี มีวินัย</p>'; } });
+    paintMineModal(); openModal('k8BhModal');
+    if (st) loadMine(true).then(() => { if (document.getElementById('k8BhModal').classList.contains('open') && document.getElementById('k8BhModalTitle').textContent === 'คะแนนพฤติกรรมของฉัน') paintMineModal(); });
   };
+  window.k8BhAp = function (id) { AP_OPEN = id; paintMineModal(); };
+  window.k8BhApSend = async function (logId) {
+    const t = document.getElementById('k8BapT'); const reason = String((t && t.value) || '').trim();
+    if (reason.length < 5) { toast('เขียนหมายเหตุให้ชัดเจน (อย่างน้อย 5 ตัวอักษร)', 'warning'); if (t) t.focus(); return; }
+    let r = null; try { r = await api('requestBehaviorAppeal', { data: { logId, reason } }); } catch (e) { r = { success: false, message: e.message }; }
+    if (!r || !r.success) { toast((r && (r.message || r.error)) || 'ส่งไม่สำเร็จ', 'error'); return; }
+    toast(r.message, 'success'); AP_OPEN = '';
+    if (mine) { mine.appeals = (mine.appeals || []).concat([r.appeal]); try { localStorage.setItem('khalifah_behavior_me', JSON.stringify(mine)); } catch (e) {} }
+    paintMineModal(); loadMine(true).then(paintMineModal);
+  };
+
 
   // ---------- บัญชีผู้ตรวจการ: ล็อกไว้ที่หน้าผู้ตรวจการเท่านั้น ----------
   function paintHead() {
@@ -13792,5 +13824,53 @@ window.k8PdWho = function (sid) {
       sections: [{ key: 't', title: 'คะแนนอาจารย์รายบุคคล', color: '#0369a1', cols: [['ที่', 5, 'c'], ['ชื่อ - สกุล', 30, 'l'], ['คะแนน', 9, 'c'], ['ระดับ', 16, 'c'], ['ไม่ได้เช็ค (คาบ)', 12, 'c'], ['ยกเว้น', 8, 'c'], ['สอน/สัปดาห์', 11, 'c']], rows: d.teachers.map((x, i) => ({ v: [i + 1, x.name, x.score, lvOf(x.score)[0], x.miss, x.excused, x.perWeek] })) },
         { key: 'h', title: 'ประวัติการหักคะแนน', color: '#b91c1c', cols: [['วันที่', 14, 'l'], ['อาจารย์', 26, 'l'], ['คาบ', 6, 'c'], ['วิชา', 22, 'l'], ['ชั้น', 12, 'l'], ['ผล', 18, 'l'], ['เหตุผล', 30, 'l']], rows: (fmt === 'jpg' ? d.rows.slice(0, 100) : d.rows).map((x) => ({ v: [dS(x.date), x.name, x.p, x.sn, x.gl, x.status === 'excused' ? 'ไม่หัก (อนุมัติ)' : x.ex === 'pending' ? 'รอพิจารณา' : 'หัก ' + Math.abs(x.points), x.reason || '-'] })) }] };
     try { toast(fmt === 'jpg' ? 'กำลังสร้างรูปภาพ…' : 'กำลังสร้างไฟล์ Excel…', 'info'); await window.k8Rep.run(fmt, D, 'คะแนนอาจารย์_' + String(d.term).replace('/', '-')); toast('บันทึกไฟล์แล้ว', 'success'); } catch (e) { toast('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
+  };
+})();
+
+/* ============ v19.36 · แอดมิน: คำชี้แจงจากนักเรียน (ถูกหักคะแนนพฤติกรรม) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { if (typeof showToast === 'function') showToast(m, t); } catch (e) {} };
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const dS = (s) => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); };
+  const gN = (g) => { const m = String(g || '').match(/([1-6])/); return m ? 'ม.' + m[1] : (g || ''); };
+  const S = { list: null, at: 0, busy: false, tab: 'pend' };
+  async function load(force) {
+    if (S.busy || (!force && S.list && Date.now() - S.at < 120000)) return;
+    S.busy = true; let r = null; try { r = await gasApiCall('getBehaviorAppeals', {}, 25000); } catch (e) {} S.busy = false;
+    if (r && r.success) { S.list = r.list || []; S.at = Date.now(); }
+    paintBanner(); paint();
+  }
+  const pend = () => (S.list || []).filter((x) => x.status === 'pending');
+  window.k8BapBanner = function () {
+    setTimeout(() => load(false), 0);
+    const n = pend().length;
+    return '<button type="button" class="k8-bap-banner' + (n ? ' is-on' : '') + '" onclick="k8BapAdmOpen()"><span class="k8-bap-bico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg></span><span class="k8-bap-bt"><b>คำชี้แจงจากนักเรียน</b><small>' + (S.list ? (n ? 'รอพิจารณา ' + n + ' รายการ · นักเรียนแจ้งหมายเหตุเมื่อถูกหักคะแนน' : 'ไม่มีคำชี้แจงรอพิจารณา') : 'กำลังโหลด…') + '</small></span>' + (n ? '<em>' + n + '</em>' : '') + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>';
+  };
+  function paintBanner() { document.querySelectorAll('.k8-bap-banner').forEach((b) => { b.outerHTML = window.k8BapBanner(); }); }
+  function shell() {
+    let m = document.getElementById('k8BapAdm'); if (m) return m;
+    document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8BapAdm" onclick="if(event.target===this)closeModal(\'k8BapAdm\')"><div class="modal-dialog k8-sheet k8-ts" role="dialog" aria-modal="true" aria-labelledby="k8BapAdmT"><header class="k8-sheet-head"><div><h2 id="k8BapAdmT">คำชี้แจงจากนักเรียน</h2><span>นักเรียนแจ้งหมายเหตุ/เหตุจำเป็นเมื่อถูกหักคะแนนพฤติกรรม · อนุมัติ = คืนคะแนน</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal(\'k8BapAdm\')">✕</button></header><div class="k8-star-bar"><div class="k8-star-seg" role="tablist" id="k8BapTabs"></div></div><div class="k8-sheet-body" id="k8BapBody"></div></div></div>');
+    return document.getElementById('k8BapAdm');
+  }
+  function paint() {
+    const B = document.getElementById('k8BapBody'); if (!B) return;
+    const P = pend(); const done = (S.list || []).filter((x) => x.status !== 'pending');
+    document.getElementById('k8BapTabs').innerHTML = [['pend', 'รอพิจารณา' + (P.length ? ' (' + P.length + ')' : '')], ['done', 'พิจารณาแล้ว']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (S.tab === k) + '" aria-pressed="' + (S.tab === k) + '" onclick="k8BapTab(\'' + k + '\')">' + l + '</button>').join('');
+    if (!S.list) { B.innerHTML = '<p class="k8-sp-empty">' + (S.busy ? 'กำลังโหลด…' : 'โหลดไม่สำเร็จ · Deploy Code.gs ล่าสุดก่อน') + '</p>'; return; }
+    const L = S.tab === 'pend' ? P : done;
+    if (!L.length) { B.innerHTML = '<div class="k8-sld-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><b>' + (S.tab === 'pend' ? 'ไม่มีคำชี้แจงรอพิจารณา' : 'ยังไม่มีรายการที่พิจารณาแล้ว') + '</b></div>'; return; }
+    B.innerHTML = '<ul class="k8-ts-list">' + L.map((x) => '<li><div class="k8-ts-row"><div class="k8-ts-when"><b>' + esc(dS(x.date)) + '</b><small>หัก ' + Math.abs(x.points) + ' คะแนน</small></div><div class="k8-ts-what"><b>' + esc(x.name) + ' · ' + esc(gN(x.grade)) + '</b><small>' + esc(x.title) + (x.by0 ? ' · บันทึกโดย ' + esc(x.by0) : '') + '</small><small class="k8-ts-why">หมายเหตุนักเรียน: ' + esc(x.reason) + '</small>' + (x.note ? '<small>แอดมิน: ' + esc(x.note) + '</small>' : '') + '<small>แจ้งเมื่อ ' + esc(x.at) + '</small></div>' +
+      (x.status === 'pending' ? '<em class="k8-ts-pill is-wait">รอพิจารณา</em>' : x.status === 'approved' ? '<em class="k8-ts-pill is-ok">อนุมัติ · คืนคะแนน</em>' : '<em class="k8-ts-pill is-no">ไม่อนุมัติ</em>') + '</div>' +
+      (x.status === 'pending' ? '<div class="k8-ts-acts"><button type="button" class="is-no" onclick="k8BapDecide(\'' + esc(x.id) + '\',false)">ไม่อนุมัติ (ยังหักคะแนน)</button><button type="button" class="is-ok" onclick="k8BapDecide(\'' + esc(x.id) + '\',true)">อนุมัติ (คืน ' + Math.abs(x.points) + ' คะแนน)</button></div>' : '') + '</li>').join('') + '</ul>';
+  }
+  window.k8BapAdmOpen = function () { shell(); paint(); openModal('k8BapAdm'); load(true); };
+  window.k8BapTab = function (k) { S.tab = k; paint(); };
+  window.k8BapDecide = async function (id, ok) {
+    const note = ok ? '' : (prompt('เหตุผลที่ไม่อนุมัติ (นักเรียนจะเห็นข้อความนี้ · ไม่บังคับ)') || '');
+    let r = null; try { r = await gasApiCall('decideBehaviorAppeal', { data: { id, approve: !!ok, note } }, 25000); } catch (e) {}
+    if (!r || !r.success) { toast((r && r.message) || 'ไม่สำเร็จ', 'error'); return; }
+    toast(r.message, 'success'); await load(true);
+    if (ok) { try { window.k8BhReload && window.k8BhReload(); } catch (e) {} }
   };
 })();
