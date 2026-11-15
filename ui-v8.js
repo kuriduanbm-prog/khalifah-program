@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.34';
+  const APP_VERSION = '19.35';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -13675,5 +13675,122 @@ window.k8PdWho = function (sid) {
         { key: 'h', title: 'ประวัติการได้ดาวทุกครั้ง', color: '#0369a1', cols: [['วันที่ได้ดาว', 14, 'l'], ['ประเภท', 22, 'l'], ['ชื่อ - สกุล', 30, 'l'], ['ชั้น', 7, 'c'], ['รายละเอียด', 34, 'l']],
           rows: L.map((x) => ({ v: [dS(x.date), TN[x.type], x.name, gN(x.grade), x.detail] })) }] };
     try { if (!window.k8Rep) throw new Error('k8Rep'); if (fmt === 'jpg') { D.sections[1].rows = D.sections[1].rows.slice(0, 120); if (L.length > 120) D.sections[1].note = 'แสดง 120 รายการล่าสุด · ดูทั้งหมดในไฟล์ Excel'; } toast(fmt === 'jpg' ? 'กำลังสร้างรูปภาพ…' : 'กำลังสร้างไฟล์ Excel…', 'info'); await window.k8Rep.run(fmt, D, 'ประวัติดาวนักเรียน_' + (S.per === 'all' ? 'ทั้งหมด' : R.from + '_' + R.to)); toast('บันทึกไฟล์แล้ว', 'success'); } catch (e) { toast('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
+  };
+})();
+
+/* ============ v19.35 · คะแนนอาจารย์ 100 คะแนน (ไม่เช็คชื่อคาบที่สอน −2 · แจ้งเหตุจำเป็นให้แอดมินอนุมัติ) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { if (typeof showToast === 'function') showToast(m, t); } catch (e) {} };
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const DAY = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  const dS = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : DAY[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); };
+  const lvOf = (s) => s >= 95 ? ['ดีเยี่ยม', '#15803d', '#dcfce7'] : s >= 85 ? ['ดี', '#0369a1', '#e0f2fe'] : s >= 70 ? ['ควรปรับปรุง', '#b45309', '#fef3c7'] : ['ต้องปรับปรุงด่วน', '#b91c1c', '#fee2e2'];
+  const stPill = (x) => x.status === 'excused' ? '<em class="k8-ts-pill is-ok">ไม่หัก · อนุมัติแล้ว</em>' : x.ex === 'pending' ? '<em class="k8-ts-pill is-wait">รอแอดมินพิจารณา</em>' : x.ex === 'rejected' ? '<em class="k8-ts-pill is-no">ไม่อนุมัติ · หัก ' + Math.abs(x.points) + '</em>' : '<em class="k8-ts-pill is-no">หัก ' + Math.abs(x.points) + ' คะแนน</em>';
+  const ICO = { pen: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>', chev: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>' };
+  const M = { data: null, at: 0, busy: false, open: '' };
+  function isStaffView() { try { return !!currentAdmin && !currentStudent; } catch (e) { return false; } }
+  async function loadMine(force) {
+    if (M.busy || (!force && M.data && Date.now() - M.at < 300000)) return M.data;
+    M.busy = true; let r = null; try { r = await gasApiCall('getMyTeacherScore', {}, 25000); } catch (e) {} M.busy = false;
+    if (r && r.success) { M.data = r; M.at = Date.now(); } return M.data;
+  }
+  function cardHtml() {
+    const d = M.data; if (!d) return '<span class="hf-beh-box k8-ts-box"><b>…</b><small>/ 100</small></span><span class="hf-beh-txt"><span class="hf-beh-top"><b>คะแนนอาจารย์</b></span><span>กำลังโหลดคะแนน</span><span class="hf-beh-term">ภาคเรียนนี้</span></span>' + ICO.chev;
+    const lv = lvOf(d.score); const act = d.rows.filter((x) => x.status === 'active'); const pend = d.rows.filter((x) => x.ex === 'pending').length;
+    return '<span class="hf-beh-box k8-ts-box" style="--c:' + lv[1] + '"><b>' + d.score + '</b><small>/ 100</small></span><span class="hf-beh-txt"><span class="hf-beh-top"><b>คะแนนอาจารย์</b><span class="hf-beh-lv" style="color:' + lv[1] + ';background:' + lv[2] + '">' + lv[0] + '</span></span><span>' + (act.length ? 'ไม่ได้เช็คชื่อ ' + act.length + ' คาบ · หัก ' + act.reduce((a, x) => a + Math.abs(x.points), 0) + ' คะแนน' : 'ยังไม่ถูกหักคะแนน · เช็คชื่อครบทุกคาบ') + (pend ? ' · รอพิจารณา ' + pend : '') + '</span><span class="hf-beh-term">ภาคเรียน ' + esc(d.term) + ' · ไม่เช็คชื่อคาบที่สอน หักคาบละ ' + d.per + '</span></span>' + ICO.chev;
+  }
+  function placeCard() {
+    if (!isStaffView()) return;
+    const hero = document.getElementById('k8ThHero'); if (!hero) return;
+    let c = document.getElementById('k8TsCard');
+    if (!c) { hero.insertAdjacentHTML('afterend', '<button type="button" class="hf-card hf-pad hf-beh k8-ts-card" id="k8TsCard" onclick="k8TsOpenMine()" aria-label="คะแนนอาจารย์"></button>'); c = document.getElementById('k8TsCard'); }
+    else if (c.previousElementSibling !== hero) hero.after(c);
+    c.innerHTML = cardHtml();
+    if (M.data) c.setAttribute('aria-label', 'คะแนนอาจารย์ ' + M.data.score + ' จาก 100');
+  }
+  async function refreshCard(force) { placeCard(); const had = M.data; await loadMine(force); if (M.data !== had || force) placeCard(); }
+  setInterval(() => { const ov = document.getElementById('teacher-tab-overview'); if (ov && ov.offsetParent && document.getElementById('k8ThHero')) { if (!document.getElementById('k8TsCard')) refreshCard(false); else if (!M.data || Date.now() - M.at > 300000) refreshCard(false); } }, 1500);
+  // ---------- อาจารย์: รายละเอียด + แจ้งเหตุจำเป็น ----------
+  function shellMine() {
+    let m = document.getElementById('k8TsMine'); if (m) return m;
+    document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8TsMine" onclick="if(event.target===this)closeModal(\'k8TsMine\')"><div class="modal-dialog k8-sheet k8-ts" role="dialog" aria-modal="true" aria-labelledby="k8TsMineT"><header class="k8-sheet-head"><div><h2 id="k8TsMineT">คะแนนอาจารย์</h2><span id="k8TsMineSub">ภาคเรียนนี้</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal(\'k8TsMine\')">✕</button></header><div class="k8-sheet-body" id="k8TsMineBody"></div></div></div>');
+    return document.getElementById('k8TsMine');
+  }
+  function paintMine() {
+    const B = document.getElementById('k8TsMineBody'); if (!B) return; const d = M.data;
+    if (!d) { B.innerHTML = '<p class="k8-sp-empty">' + (M.busy ? 'กำลังโหลด…' : 'โหลดคะแนนไม่สำเร็จ · ถ้าเพิ่งอัปเดตระบบ ให้แอดมิน Deploy Code.gs ล่าสุด') + '</p>'; return; }
+    document.getElementById('k8TsMineSub').textContent = 'ภาคเรียน ' + d.term + ' · เริ่มนับ ' + dS(d.termStart);
+    const lv = lvOf(d.score);
+    let h = '<div class="k8-ts-hero"><span class="k8-ts-big" style="--c:' + lv[1] + '"><b>' + d.score + '</b><small>/ 100</small></span><div><b class="k8-ts-lv" style="color:' + lv[1] + ';background:' + lv[2] + '">' + lv[0] + '</b><p>ระบบหัก <b>' + d.per + ' คะแนน</b> ต่อคาบที่สอนตามตารางแต่ไม่ได้เช็คชื่อ (ตรวจหลังจบวัน · เช็คย้อนหลังได้ถึงเที่ยงคืนของวันนั้น) · ลาสอนที่อนุมัติแล้วไม่ถูกหัก · ถ้ามีเหตุจำเป็น กด "แจ้งเหตุจำเป็น" เมื่อแอดมินอนุมัติจะได้คะแนนคืน</p></div></div>';
+    if (!d.rows.length) h += '<div class="k8-sld-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><b>ยังไม่ถูกหักคะแนนในภาคเรียนนี้</b><small>เช็คชื่อครบทุกคาบ ขอบคุณครับ/ค่ะ</small></div>';
+    else h += '<ul class="k8-ts-list">' + d.rows.map((x) => { const canEx = x.status === 'active' && x.ex !== 'pending'; const op = M.open === x.id;
+      return '<li><div class="k8-ts-row"><div class="k8-ts-when"><b>' + esc(dS(x.date)) + '</b><small>คาบ ' + x.p + ' · ' + esc(x.time || '') + '</small></div><div class="k8-ts-what"><b>' + esc(x.sn) + ' · ' + esc(x.gl) + '</b>' + (x.reason ? '<small>เหตุผล: ' + esc(x.reason) + '</small>' : '') + (x.note ? '<small>แอดมิน: ' + esc(x.note) + '</small>' : '') + '</div>' + stPill(x) + '</div>' +
+        (canEx ? (op ? '<div class="k8-ts-ex"><label class="k8-nf-f"><span>เหตุจำเป็น</span><textarea id="k8TsExT" rows="2" maxlength="300" placeholder="เช่น ไปราชการ · ป่วยกะทันหัน · ระบบเน็ตล่ม (แนบรายละเอียดให้ชัดเจน)"></textarea></label><div class="k8-dr-btns"><button type="button" class="is-alt" onclick="k8TsEx(\'\')">ยกเลิก</button><button type="button" onclick="k8TsExSend(\'' + esc(x.id) + '\')">ส่งให้แอดมิน</button></div></div>' : '<button type="button" class="k8-ts-exbtn" onclick="k8TsEx(\'' + esc(x.id) + '\')">' + ICO.pen + 'แจ้งเหตุจำเป็น</button>') : '') + '</li>'; }).join('') + '</ul>';
+    B.innerHTML = h;
+    if (M.open) setTimeout(() => { const t = document.getElementById('k8TsExT'); if (t) t.focus(); }, 30);
+  }
+  window.k8TsOpenMine = async function () { shellMine(); M.open = ''; paintMine(); openModal('k8TsMine'); await loadMine(true); paintMine(); placeCard(); };
+  window.k8TsEx = function (id) { M.open = id; paintMine(); };
+  window.k8TsExSend = async function (id) {
+    const t = document.getElementById('k8TsExT'); const reason = String((t && t.value) || '').trim();
+    if (reason.length < 5) { toast('เขียนเหตุจำเป็นให้ชัดเจน (อย่างน้อย 5 ตัวอักษร)', 'warning'); if (t) t.focus(); return; }
+    let r = null; try { r = await gasApiCall('requestTeacherExcuse', { data: { id, reason } }, 25000); } catch (e) {}
+    if (!r || !r.success) { toast((r && r.message) || 'ส่งไม่สำเร็จ', 'error'); return; }
+    toast(r.message, 'success'); M.open = ''; await loadMine(true); paintMine(); placeCard();
+  };
+
+  // ---------- แอดมิน: คะแนนอาจารย์ทั้งหมด + พิจารณาเหตุจำเป็น ----------
+  const A = { data: null, busy: false, tab: 'pend', who: '' };
+  function shellAdm() {
+    let m = document.getElementById('k8TsAdm'); if (m) return m;
+    document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8TsAdm" onclick="if(event.target===this)closeModal(\'k8TsAdm\')"><div class="modal-dialog k8-sheet k8-ts k8-ts-a" role="dialog" aria-modal="true" aria-labelledby="k8TsAdmT"><header class="k8-sheet-head"><div><h2 id="k8TsAdmT">คะแนนอาจารย์</h2><span id="k8TsAdmSub">ไม่เช็คชื่อคาบที่สอน หักคาบละ 2 คะแนน</span></div><div class="k8-star-hacts"><button type="button" class="k8-btn-line k8-star-xl" onclick="k8TsExport(\'jpg\')" aria-label="บันทึกเป็นรูปภาพ"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg><span>รูปภาพ</span></button><button type="button" class="k8-btn-line k8-star-xl" onclick="k8TsExport(\'xlsx\')" aria-label="ส่งออก Excel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Excel</span></button><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="closeModal(\'k8TsAdm\')">✕</button></div></header><div class="k8-star-bar"><div class="k8-star-seg" role="tablist" id="k8TsTabs"></div></div><div class="k8-sheet-body" id="k8TsAdmBody"></div></div></div>');
+    return document.getElementById('k8TsAdm');
+  }
+  function paintAdm() {
+    const B = document.getElementById('k8TsAdmBody'); if (!B) return; const d = A.data;
+    const pend = d ? d.rows.filter((x) => x.ex === 'pending') : [];
+    document.getElementById('k8TsTabs').innerHTML = [['pend', 'รอพิจารณา' + (pend.length ? ' (' + pend.length + ')' : '')], ['all', 'อาจารย์ทั้งหมด'], ['hist', 'ประวัติการหัก']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (A.tab === k) + '" aria-pressed="' + (A.tab === k) + '" onclick="k8TsTab(\'' + k + '\')">' + l + '</button>').join('');
+    if (!d) { B.innerHTML = '<p class="k8-sp-empty">' + (A.busy ? 'กำลังโหลด…' : 'โหลดข้อมูลไม่สำเร็จ · Deploy Code.gs ล่าสุดก่อน') + '</p>'; return; }
+    document.getElementById('k8TsAdmSub').textContent = 'ภาคเรียน ' + d.term + ' · ไม่เช็คชื่อคาบที่สอน หักคาบละ ' + d.per + ' คะแนน' + (d.startFrom ? ' · เริ่มตรวจ ' + dS(d.startFrom) : '');
+    const T = d.teachers; const avg = T.length ? Math.round(T.reduce((a, x) => a + x.score, 0) / T.length) : 100;
+    let h = '<div class="k8-star-kpis"><div class="k8-star-kpi is-main"><span>คะแนนเฉลี่ย</span><b>' + avg + '<small> / 100</small></b></div><div class="k8-star-kpi"><span>อาจารย์ที่ถูกหัก</span><b>' + T.filter((x) => x.miss).length + '<small> / ' + T.length + ' คน</small></b></div><div class="k8-star-kpi"><span>คาบที่ไม่ได้เช็คชื่อ</span><b>' + d.rows.filter((x) => x.status === 'active').length + '<small> คาบ</small></b></div><div class="k8-star-kpi' + (pend.length ? ' is-warn' : '') + '"><span>รอพิจารณา</span><b>' + pend.length + '<small> รายการ</small></b></div></div>';
+    const row = (x, acts) => '<li><div class="k8-ts-row"><div class="k8-ts-when"><b>' + esc(dS(x.date)) + '</b><small>คาบ ' + x.p + ' · ' + esc(x.time || '') + '</small></div><div class="k8-ts-what"><b>' + esc(x.name) + '</b><small>' + esc(x.sn) + ' · ' + esc(x.gl) + '</small>' + (x.reason ? '<small class="k8-ts-why">เหตุผล: ' + esc(x.reason) + '</small>' : '') + '</div>' + stPill(x) + '</div>' + (acts ? '<div class="k8-ts-acts">' + acts + '</div>' : '') + '</li>';
+    if (A.tab === 'pend') {
+      h += pend.length ? '<ul class="k8-ts-list">' + pend.map((x) => row(x, '<button type="button" class="is-no" onclick="k8TsDecide(\'' + esc(x.id) + '\',false)">ไม่อนุมัติ (หักคะแนน)</button><button type="button" class="is-ok" onclick="k8TsDecide(\'' + esc(x.id) + '\',true)">อนุมัติ (ไม่หัก)</button>')).join('') + '</ul>' : '<div class="k8-sld-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><b>ไม่มีคำชี้แจงรอพิจารณา</b></div>';
+    } else if (A.tab === 'all') {
+      h += T.length ? '<ul class="k8-ts-tlist">' + T.map((x) => { const lv = lvOf(x.score); return '<li><button type="button" onclick="k8TsWho(\'' + esc(x.user) + '\')"><span class="k8-ts-sc" style="--c:' + lv[1] + '"><b>' + x.score + '</b></span><span class="k8-ts-tn"><b>' + esc(x.name) + '</b><small>สอน ' + x.perWeek + ' คาบ/สัปดาห์ · ไม่ได้เช็ค ' + x.miss + ' คาบ' + (x.excused ? ' · ยกเว้น ' + x.excused : '') + (x.pending ? ' · รอพิจารณา ' + x.pending : '') + '</small></span><span class="k8-ts-bar"><i style="width:' + Math.max(0, x.score) + '%;background:' + lv[1] + '"></i></span><em style="color:' + lv[1] + ';background:' + lv[2] + '">' + lv[0] + '</em></button></li>'; }).join('') + '</ul>' : '<p class="k8-sp-empty">ยังไม่มีอาจารย์ในตารางสอน</p>';
+    } else {
+      const L = d.rows.filter((x) => !A.who || x.user === A.who);
+      h += '<div class="k8-ts-tools"><select aria-label="เลือกอาจารย์" onchange="k8TsWho(this.value)"><option value="">อาจารย์ทุกคน</option>' + T.map((x) => '<option value="' + esc(x.user) + '"' + (A.who === x.user ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select><span class="k8-ts-bulk"><input type="date" id="k8TsDay" aria-label="วันที่จะยกเว้นทั้งวัน"><button type="button" class="k8-btn-line" onclick="k8TsDay()">ยกเว้นทั้งวัน (วันหยุด/สอบ)</button></span></div>';
+      h += L.length ? '<ul class="k8-ts-list">' + L.map((x) => row(x, x.status === 'active' ? '<button type="button" class="is-ok" onclick="k8TsDecide(\'' + esc(x.id) + '\',true)">ยกเว้น (คืนคะแนน)</button>' : x.status === 'excused' ? '<button type="button" class="is-no" onclick="k8TsDecide(\'' + esc(x.id) + '\',false)">หักคะแนนกลับ</button>' : '')).join('') + '</ul>' : '<p class="k8-sp-empty">ไม่มีรายการ</p>';
+    }
+    h += '<p class="k8-sld-note">ตรวจทุกวันหลังจบวัน (ประมาณ 00:00 น. เป็นต้นไป) จากตารางสอน: คาบที่ไม่มีการเช็คชื่อของวิชานั้นในคาบนั้นเลย = หัก ' + d.per + ' คะแนน · ไม่นับ: ลาสอนที่อนุมัติแล้ว · วันที่มีการสลับคาบ · คาบหะละเกาะฮฺ · วันเสาร์/วันที่ไม่ใช่วันเรียน · ประวัติเก็บในชีต "คะแนนอาจารย์"</p>';
+    B.innerHTML = h;
+  }
+  async function loadAdm() { A.busy = true; paintAdm(); let r = null; try { r = await gasApiCall('getTeacherScores', {}, 30000); } catch (e) {} A.busy = false; if (r && r.success) A.data = r; else toast((r && r.message) || 'โหลดไม่สำเร็จ', 'error'); paintAdm(); }
+  window.k8TsAdmOpen = function () { shellAdm(); paintAdm(); openModal('k8TsAdm'); loadAdm(); };
+  window.k8TsTab = function (k) { A.tab = k; paintAdm(); };
+  window.k8TsWho = function (u) { A.who = u || ''; A.tab = 'hist'; paintAdm(); };
+  window.k8TsDecide = async function (id, ok) {
+    let note = ''; if (!ok) { note = prompt('เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)') || ''; }
+    let r = null; try { r = await gasApiCall('decideTeacherExcuse', { data: { id, approve: !!ok, note } }, 25000); } catch (e) {}
+    if (!r || !r.success) { toast((r && r.message) || 'ไม่สำเร็จ', 'error'); return; }
+    toast(r.message, 'success'); loadAdm();
+  };
+  window.k8TsDay = async function () {
+    const v = (document.getElementById('k8TsDay') || {}).value; if (!v) { toast('เลือกวันที่ก่อน', 'warning'); return; }
+    if (!confirm('ยกเว้นการหักคะแนนของอาจารย์ทุกคนในวันที่ ' + dS(v) + ' ?\n(เช่น วันหยุด กิจกรรม หรือสอบ)')) return;
+    let r = null; try { r = await gasApiCall('decideTeacherExcuse', { data: { date: v, approve: true, note: 'แอดมินยกเว้นทั้งวัน' } }, 25000); } catch (e) {}
+    if (!r || !r.success) { toast((r && r.message) || 'ไม่สำเร็จ', 'error'); return; }
+    toast(r.message, 'success'); loadAdm();
+  };
+  window.k8TsExport = async function (fmt) {
+    const d = A.data; if (!d) return;
+    const D = { name: 'ภาคเรียน ' + d.term, title: 'คะแนนอาจารย์', range: 'ตั้งแต่ ' + dS(d.termStart),
+      kpis: [{ l: 'คะแนนเฉลี่ย', v: String(d.teachers.length ? Math.round(d.teachers.reduce((a, x) => a + x.score, 0) / d.teachers.length) : 100), s: '/ 100' }, { l: 'อาจารย์ที่ถูกหัก', v: String(d.teachers.filter((x) => x.miss).length), s: 'คน' }, { l: 'คาบที่ไม่ได้เช็คชื่อ', v: String(d.rows.filter((x) => x.status === 'active').length), s: 'คาบ' }],
+      sections: [{ key: 't', title: 'คะแนนอาจารย์รายบุคคล', color: '#0369a1', cols: [['ที่', 5, 'c'], ['ชื่อ - สกุล', 30, 'l'], ['คะแนน', 9, 'c'], ['ระดับ', 16, 'c'], ['ไม่ได้เช็ค (คาบ)', 12, 'c'], ['ยกเว้น', 8, 'c'], ['สอน/สัปดาห์', 11, 'c']], rows: d.teachers.map((x, i) => ({ v: [i + 1, x.name, x.score, lvOf(x.score)[0], x.miss, x.excused, x.perWeek] })) },
+        { key: 'h', title: 'ประวัติการหักคะแนน', color: '#b91c1c', cols: [['วันที่', 14, 'l'], ['อาจารย์', 26, 'l'], ['คาบ', 6, 'c'], ['วิชา', 22, 'l'], ['ชั้น', 12, 'l'], ['ผล', 18, 'l'], ['เหตุผล', 30, 'l']], rows: (fmt === 'jpg' ? d.rows.slice(0, 100) : d.rows).map((x) => ({ v: [dS(x.date), x.name, x.p, x.sn, x.gl, x.status === 'excused' ? 'ไม่หัก (อนุมัติ)' : x.ex === 'pending' ? 'รอพิจารณา' : 'หัก ' + Math.abs(x.points), x.reason || '-'] })) }] };
+    try { toast(fmt === 'jpg' ? 'กำลังสร้างรูปภาพ…' : 'กำลังสร้างไฟล์ Excel…', 'info'); await window.k8Rep.run(fmt, D, 'คะแนนอาจารย์_' + String(d.term).replace('/', '-')); toast('บันทึกไฟล์แล้ว', 'success'); } catch (e) { toast('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
   };
 })();

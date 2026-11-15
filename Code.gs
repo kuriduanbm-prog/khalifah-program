@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.33'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.35'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', getTeacherScores: 'admin', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1300,7 +1300,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTeacherScores', 'getMyTeacherScore', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1809,6 +1809,10 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
+    case 'getTeacherScores': return getTeacherScores_();
+    case 'decideTeacherExcuse': return decideTeacherExcuse_(data, session);
+    case 'getMyTeacherScore': return getMyTeacherScore_(session);
+    case 'requestTeacherExcuse': return requestTeacherExcuse_(data, session);
     case 'getTimetableArchive': return getTimetableArchive_(data);
     case 'setTimetableTerm': return setTimetableTerm_(data, session);
     case 'startTimetableTerm': return startTimetableTerm_(data, session);
@@ -7360,13 +7364,157 @@ function saveBehaviorRules_(rules) {
  * - ไม่หักซ้ำ (รหัสบันทึก PM-<รหัส>-<วันที่>-<เวลา>) · ถ้าแอดมินยกเลิกรายการแล้วจะไม่หักซ้ำ */
 const PM_END_ = { 'ซุบฮิ': 6 * 60 + 25, 'ซุฮริ': 15 * 60 + 15, 'อัศรฺ': 18 * 60 + 5, 'มัฆริบ': 19 * 60 + 25, 'อีชาอ์': 24 * 60 };
 const PM_START_ = { 'ซุบฮิ': 4 * 60 + 45, 'ซุฮริ': 12 * 60 + 10, 'อัศรฺ': 15 * 60 + 20, 'มัฆริบ': 18 * 60 + 10, 'อีชาอ์': 19 * 60 + 30 };
+/* ===================== v19.35 · คะแนนอาจารย์ (100 คะแนน/ภาคเรียน) =====================
+ * ไม่เช็คชื่อในคาบที่สอนตามตาราง → หัก 2 คะแนนอัตโนมัติ (ตรวจหลังวันนั้นผ่านไปแล้ว · เช็คย้อนหลังได้ถึงเที่ยงคืนของวันนั้น)
+ * ยกเว้น: ลาสอนที่อนุมัติแล้ว · มีการสลับคาบในวันนั้น · คาบหะละเกาะฮฺ · วันที่ไม่ใช่วันเรียน
+ * อาจารย์แจ้งเหตุจำเป็นได้ → แอดมินอนุมัติ = คืนคะแนน (ไม่ถูกหัก) */
+const TS_SHEET_ = 'คะแนนอาจารย์';
+const TS_HEAD_ = ['รหัสรายการ', 'วันที่', 'ผู้สอน', 'ชื่อผู้สอน', 'รายการ', 'คะแนน', 'วิชา', 'ชั้น/ตาราง', 'คาบ', 'เวลา', 'สถานะ', 'เหตุจำเป็นที่แจ้ง', 'ผลการพิจารณา', 'ผู้พิจารณา', 'บันทึกเมื่อ', 'JSON'];
+const TS_BASE_ = 100, TS_MISS_PTS_ = 2;
+function tsSheet_() {
+  const ss = getSpreadsheet(); let sh = ss.getSheetByName(TS_SHEET_);
+  if (!sh) { sh = ss.insertSheet(TS_SHEET_); sh.getRange(1, 1, 1, TS_HEAD_.length).setValues([TS_HEAD_]); try { sh.setFrozenRows(1); } catch (e) {} }
+  return sh;
+}
+function tsRead_() {
+  const sh = tsSheet_(); const n = sh.getLastRow() - 1; const L = [];
+  if (n > 0) sh.getRange(2, TS_HEAD_.length, n, 1).getValues().forEach(function (r) { try { const o = JSON.parse(r[0]); if (o && o.id) L.push(o); } catch (e) {} });
+  return L;
+}
+const TS_ST_ = { active: 'หักคะแนน', excused: 'ไม่หัก (อนุมัติเหตุจำเป็น)' }, TS_EX_ = { none: '', pending: 'รอพิจารณา', approved: 'อนุมัติ', rejected: 'ไม่อนุมัติ' };
+function tsWrite_(list) {
+  const sh = tsSheet_(); const old = Math.max(0, sh.getLastRow() - 1);
+  const rows = list.map(function (x) { return [x.id, x.date, x.user, x.name, x.kind === 'miss' ? 'ไม่เช็คชื่อคาบที่สอน' : (x.title || 'ปรับคะแนน'), x.status === 'excused' ? 0 : x.points, x.sn || '', x.gl || '', x.p || '', x.time || '', TS_ST_[x.status] || x.status, x.reason || '', TS_EX_[x.ex || 'none'] || '', x.by || '', x.at || '', JSON.stringify(x)]; });
+  if (rows.length) sh.getRange(2, 1, rows.length, TS_HEAD_.length).setNumberFormat('@').setValues(rows);
+  if (old > rows.length) sh.deleteRows(2 + rows.length, old - rows.length);
+}
+function tsTermStart_() {
+  const t = String(currentTerm_()).split('/'); const term = +t[0], y = (+t[1]) - 543;
+  return term === 1 ? y + '-05-01' : term === 2 ? y + '-11-01' : (y + 1) + '-03-01';
+}
+const TS_HQ_RE_ = /halaq|หะละเกาะ|ฮะละเกาะ|หะลาเกาะ|ฮาละเกาะ|ฮาลาเกาะ/i;
+/** คาบที่ต้องเช็คชื่อของทุกคนในวัน ds → { username: [slot] } */
+function tsSlotsOn_(ds, st, cfg) {
+  const dow = new Date(ds + 'T12:00:00Z').getUTCDay(); const out = {};
+  if ((cfg.days || []).indexOf(dow) === -1) return out;
+  const scan = function (cells, g, gl) {
+    Object.keys(cells || {}).forEach(function (k) {
+      const m = k.match(/^(\d)-(\d+)$/); if (!m || +m[1] !== dow) return;
+      const p = +m[2]; const per = (cfg.periods || [])[p - 1]; if (!per) return;
+      (Array.isArray(cells[k]) ? cells[k] : [cells[k]]).forEach(function (e) {
+        if (!e || !e.sn || TS_HQ_RE_.test(e.sn + ' ' + (e.s || ''))) return;
+        if (+e.si > 0) return; // คาบต่อเนื่อง (เช็คครั้งเดียวที่คาบแรก)
+        if ((e.from && ds < e.from) || (e.to && ds > e.to)) return;
+        const users = [e.t].concat(Array.isArray(e.ts) ? e.ts : []).map(function (u) { return String(u || '').toLowerCase(); }).filter(Boolean);
+        users.filter(function (u, i) { return users.indexOf(u) === i; }).forEach(function (u) {
+          (out[u] = out[u] || []).push({ g: g, gl: gl, p: p, sp: +e.sp > 1 ? +e.sp : 1, s: cleanVal(e.s || ''), sn: cleanVal(e.sn), time: (e.tf && e.tt ? e.tf + '–' + e.tt : per.start + '–' + per.end), tn: cleanVal(e.tn || '') });
+        });
+      });
+    });
+  };
+  ['1', '2', '3', '4', '5', '6'].forEach(function (g) { let v = null; try { v = JSON.parse(st['Timetable_M' + g] || 'null'); } catch (e) {} if (v && v.cells) scan(v.cells, g, 'ม.' + g); });
+  let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
+  ids.forEach(function (id) { let x = null; try { x = JSON.parse(st['TimetableX_' + id] || 'null'); } catch (e) {} if (x && x.cells) scan(x.cells, 'x:' + id, cleanVal(x.name || 'ตารางพิเศษ')); });
+  return out;
+}
+function tsRun_(nowArg) {
+  const now = nowArg || new Date(); const ymd = function (d) { return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd'); };
+  const today = ymd(now); const yest = ymd(new Date(now.getTime() - 864e5));
+  let from = getProp_('TS_MISS_FROM');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) { from = ymd(new Date(now.getTime() + 864e5)); try { setProp_('TS_MISS_FROM', from); } catch (e) {} return { added: 0, start: from }; } // เริ่มนับวันถัดไปหลังเปิดใช้
+  const done = getProp_('TS_DONE_UPTO') || '';
+  const dates = []; for (let i = 7; i >= 1; i--) { const d = ymd(new Date(now.getTime() - i * 864e5)); if (d >= from && d > done && d < today && dates.indexOf(d) === -1) dates.push(d); }
+  if (!dates.length) return { added: 0 };
+  const st = (getSettings().data) || {}; const cfg = ttConfig_(st);
+  // การเช็คชื่อที่มีอยู่
+  const have = {}; const ash = getSpreadsheet().getSheetByName(SHEETS.ATTENDANCE);
+  if (ash && ash.getLastRow() > 1) ash.getRange(2, 1, ash.getLastRow() - 1, Math.min(12, Math.max(10, ash.getLastColumn()))).getValues().forEach(function (r) {
+    const ds = formatSheetDate(r[4]); if (dates.indexOf(ds) === -1) return; const per = cleanVal(r[11] || ''); const code = cleanVal(r[8] || ''), nm = cleanVal(r[9] || '');
+    if (code) have[ds + '|' + per + '|c:' + code] = 1; if (nm) have[ds + '|' + per + '|n:' + nm] = 1;
+  });
+  const checked = function (ds, sl) { for (let q = sl.p; q < sl.p + sl.sp; q++) { if ((sl.s && have[ds + '|' + q + '|c:' + sl.s]) || have[ds + '|' + q + '|n:' + sl.sn]) return true; } return (sl.s && have[ds + '||c:' + sl.s]) || have[ds + '||n:' + sl.sn]; };
+  const leaves = readLeaves_().filter(function (x) { return x && x.status === 'approved'; });
+  const onLeave = function (u, ds, p) { return leaves.some(function (x) { return String(x.teacherId || '').toLowerCase() === u && x.date === ds && (x.allDay || !(x.slots || []).length || (x.slots || []).some(function (s) { return +s.p === +p; })); }); };
+  const swaps = readSwaps_().filter(function (x) { return x && x.status === 'approved'; });
+  const swapped = function (u, ds) { return swaps.some(function (x) { return (String(x.tA || '').toLowerCase() === u || String(x.tB || '').toLowerCase() === u) && ds >= String(x.from || '') && ds <= String(x.to || x.from || ''); }); };
+  const names = {}; try { (getTeachers().data || []).concat(getAdmins().data || []).forEach(function (t) { if (t && t.username) names[String(t.username).toLowerCase()] = t.fullName || t.username; }); } catch (e) {}
+  const list = tsRead_(); const ids = {}; list.forEach(function (x) { ids[x.id] = 1; });
+  const at = Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm'); const added = []; const per = {};
+  dates.forEach(function (ds) {
+    if (isHolidayAt_(ds, '12:00')) return;
+    const S = tsSlotsOn_(ds, st, cfg);
+    Object.keys(S).forEach(function (u) {
+      if (swapped(u, ds)) return;
+      S[u].forEach(function (sl) {
+        const id = 'TM-' + u + '-' + ds + '-' + sl.g + '-' + sl.p; if (ids[id]) return;
+        if (onLeave(u, ds, sl.p) || checked(ds, sl)) return;
+        const it = { id: id, kind: 'miss', date: ds, user: u, name: names[u] || sl.tn || u, points: -TS_MISS_PTS_, s: sl.s, sn: sl.sn, g: sl.g, gl: sl.gl, p: sl.p, time: sl.time, status: 'active', ex: 'none', reason: '', by: '', at: at };
+        list.push(it); ids[id] = 1; added.push(it); (per[u] = per[u] || []).push(it);
+      });
+    });
+  });
+  if (added.length) tsWrite_(list);
+  try { setProp_('TS_DONE_UPTO', dates[dates.length - 1]); } catch (e) {}
+  // แจ้งอาจารย์ที่ถูกหัก (กระดิ่ง)
+  Object.keys(per).forEach(function (u) {
+    const L = per[u]; const lines = L.slice(0, 6).map(function (x) { return '• ' + leaveDateTh_(x.date) + ' คาบ ' + x.p + ' ' + x.sn + ' ' + x.gl + ' (' + x.time + ')'; }).join('\n');
+    try { getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(['NTF-TS-' + u + '-' + L[0].date + '-' + L.length, at + ':00', 'ถูกหัก ' + (L.length * TS_MISS_PTS_) + ' คะแนน · ไม่ได้เช็คชื่อ ' + L.length + ' คาบ', lines + (L.length > 6 ? '\nและอีก ' + (L.length - 6) + ' คาบ' : '') + '\nถ้ามีเหตุจำเป็น กด "แจ้งเหตุจำเป็น" ที่การ์ดคะแนนอาจารย์ในหน้าภาพรวม เมื่อแอดมินอนุมัติจะได้คะแนนคืน', 'users', u, 'normal', 'system-ts', 'ระบบคะแนนอาจารย์', 'active', Utilities.formatDate(new Date(now.getTime() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'), 'bell', '']); } catch (e) {}
+  });
+  return { added: added.length, dates: dates };
+}
+function tsScore_(rows) { return TS_BASE_ + rows.reduce(function (a, x) { return a + (x.status === 'excused' ? 0 : Number(x.points) || 0); }, 0); }
+function getMyTeacherScore_(session) {
+  const u = String(session.userId || '').toLowerCase(); const from = tsTermStart_();
+  const rows = tsRead_().filter(function (x) { return x.user === u && x.date >= from; }).sort(function (a, b) { return String(b.date + b.p).localeCompare(String(a.date + a.p)); });
+  return { success: true, base: TS_BASE_, per: TS_MISS_PTS_, score: tsScore_(rows), term: currentTerm_(), termStart: from, startFrom: getProp_('TS_MISS_FROM') || '', rows: rows };
+}
+function requestTeacherExcuse_(d, session) {
+  d = d || {}; const id = cleanVal(d.id); const reason = cleanVal(d.reason).substring(0, 300); const u = String(session.userId || '').toLowerCase();
+  if (reason.length < 5) return { success: false, message: 'กรุณาเขียนเหตุจำเป็นให้ชัดเจน (อย่างน้อย 5 ตัวอักษร)' };
+  const list = tsRead_(); const it = list.find(function (x) { return x.id === id; });
+  if (!it || it.user !== u) return { success: false, code: 'FORBIDDEN', message: 'ไม่พบรายการนี้' };
+  if (it.status === 'excused') return { success: false, message: 'รายการนี้ไม่ถูกหักแล้ว' };
+  if (it.ex === 'pending') return { success: false, message: 'แจ้งไปแล้ว รอแอดมินพิจารณา' };
+  it.ex = 'pending'; it.reason = reason; it.exAt = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+  tsWrite_(list);
+  try { getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(['NTF-TSX-' + id + '-' + Date.now(), it.exAt + ':00', 'อาจารย์แจ้งเหตุจำเป็น (ไม่ได้เช็คชื่อ) · ' + it.name, leaveDateTh_(it.date) + ' คาบ ' + it.p + ' ' + it.sn + ' ' + it.gl + '\nเหตุผล: ' + reason + '\nพิจารณาได้ที่เมนู "คะแนนอาจารย์"', 'admins', '', 'normal', 'system-ts', 'ระบบคะแนนอาจารย์', 'active', Utilities.formatDate(new Date(Date.now() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'), 'bell', '']); } catch (e) {}
+  return { success: true, message: 'ส่งเหตุจำเป็นแล้ว · รอแอดมินพิจารณา', item: it };
+}
+function getTeacherScores_() {
+  const from = tsTermStart_(); const rows = tsRead_().filter(function (x) { return x.date >= from; });
+  const st = (getSettings().data) || {}; const people = {};
+  try { (getTeachers().data || []).concat(getAdmins().data || []).forEach(function (t) { if (t && t.username) people[String(t.username).toLowerCase()] = { user: String(t.username).toLowerCase(), name: t.fullName || t.username }; }); } catch (e) {}
+  const teach = {}; try { const cfg = ttConfig_(st); [0, 1, 2, 3, 4, 5, 6].forEach(function (dw) { const ds = Utilities.formatDate(new Date(Date.now() + ((dw - new Date().getDay() + 7) % 7) * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'); const S = tsSlotsOn_(ds, st, cfg); Object.keys(S).forEach(function (u) { teach[u] = (teach[u] || 0) + S[u].length; }); }); } catch (e) {}
+  const users = Object.keys(teach).concat(rows.map(function (x) { return x.user; })).filter(function (u, i, a) { return a.indexOf(u) === i; });
+  const list = users.map(function (u) { const R = rows.filter(function (x) { return x.user === u; }); const p = people[u] || { user: u, name: (R[0] && R[0].name) || u };
+    return { user: u, name: p.name, perWeek: teach[u] || 0, score: tsScore_(R), miss: R.filter(function (x) { return x.status === 'active'; }).length, excused: R.filter(function (x) { return x.status === 'excused'; }).length, pending: R.filter(function (x) { return x.ex === 'pending'; }).length }; })
+    .sort(function (a, b) { return a.score - b.score || String(a.name).localeCompare(String(b.name)); });
+  return { success: true, base: TS_BASE_, per: TS_MISS_PTS_, term: currentTerm_(), termStart: from, startFrom: getProp_('TS_MISS_FROM') || '', teachers: list, rows: rows.sort(function (a, b) { return String(b.date + b.p).localeCompare(String(a.date + a.p)); }) };
+}
+/** แอดมิน: อนุมัติ (ไม่หัก/คืนคะแนน) หรือไม่อนุมัติเหตุจำเป็น · date = ยกเว้นทั้งวัน (เช่น วันหยุด/สอบ) */
+function decideTeacherExcuse_(d, session) {
+  d = d || {}; const ok = !!d.approve; const note = cleanVal(d.note || '').substring(0, 160); const by = cleanVal(session.name || session.userId);
+  const list = tsRead_(); let hit = [];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleanVal(d.date))) hit = list.filter(function (x) { return x.date === cleanVal(d.date) && x.status === 'active'; });
+  else { const it = list.find(function (x) { return x.id === cleanVal(d.id); }); if (!it) return { success: false, message: 'ไม่พบรายการนี้' }; hit = [it]; }
+  if (!hit.length) return { success: false, message: 'ไม่มีรายการที่ต้องพิจารณา' };
+  const at = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+  hit.forEach(function (it) { if (ok) { it.status = 'excused'; it.ex = 'approved'; } else { it.status = 'active'; it.ex = it.ex === 'none' ? 'none' : 'rejected'; } it.by = by; it.decidedAt = at; if (note) it.note = note; if (d.date && ok && !it.reason) it.reason = note || 'แอดมินยกเว้นทั้งวัน'; });
+  tsWrite_(list);
+  const byUser = {}; hit.forEach(function (it) { (byUser[it.user] = byUser[it.user] || []).push(it); });
+  Object.keys(byUser).forEach(function (u) { const L = byUser[u];
+    try { getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(['NTF-TSD-' + u + '-' + Date.now(), at + ':00', ok ? 'อนุมัติเหตุจำเป็นแล้ว · คืน ' + (L.length * TS_MISS_PTS_) + ' คะแนน' : 'ไม่อนุมัติเหตุจำเป็น', L.slice(0, 6).map(function (x) { return '• ' + leaveDateTh_(x.date) + ' คาบ ' + x.p + ' ' + x.sn + ' ' + x.gl; }).join('\n') + (note ? '\nหมายเหตุ: ' + note : '') + '\nโดย ' + by, 'users', u, 'normal', 'system-ts', 'ระบบคะแนนอาจารย์', 'active', Utilities.formatDate(new Date(Date.now() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'), 'bell', '']); } catch (e) {}
+  });
+  return { success: true, message: (ok ? 'อนุมัติแล้ว · ไม่หักคะแนน ' : 'ไม่อนุมัติ · ยังหักคะแนน ') + hit.length + ' รายการ', changed: hit.length };
+}
+
 function prayerPenaltyMaybe_() {
   try {
     const cache = CacheService.getScriptCache();
     if (cache.get('pm_run')) return null;
     cache.put('pm_run', '1', 600);
     const lock = LockService.getScriptLock(); if (!lock.tryLock(100)) return null;
-    try { const r = prayerPenaltyRun_(); try { starWeekRun_(); } catch (e) {} return r; } finally { try { lock.releaseLock(); } catch (e) {} }
+    try { const r = prayerPenaltyRun_(); try { starWeekRun_(); } catch (e) {} try { tsRun_(); } catch (e) {} return r; } finally { try { lock.releaseLock(); } catch (e) {} }
   } catch (e) { return null; }
 }
 
