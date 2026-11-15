@@ -9,6 +9,14 @@ const crypto = require('crypto');
 const RL = new Map(); // จำกัดความถี่ต่อผู้ใช้ (ต่ออินสแตนซ์)
 const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
+// v19.29 · ให้ตอบเร็วขึ้น: ลดการ "คิด" ของโมเดล (Gemini 3 = thinkingLevel low · 2.5 Flash = ปิด · 2.5 Pro = ขั้นต่ำ)
+function fastThinking(model) {
+  const m = String(model || '').toLowerCase();
+  if (/gemini-3/.test(m)) return { thinkingLevel: 'low' };
+  if (/2\.5-flash/.test(m)) return { thinkingBudget: 0 };
+  if (/2\.5-pro/.test(m)) return { thinkingBudget: 128 };
+  return null;
+}
 function verifyTicket(t, secret) {
   if (typeof t !== 'string' || t.length > 2000 || t.indexOf('.') < 1) return null;
   const [p, sig] = t.split('.');
@@ -50,11 +58,15 @@ module.exports = async (req, res) => {
   if (RL.size > 500) { for (const k of RL.keys()) { if (!k.endsWith(':' + Math.floor(Date.now() / 60000))) RL.delete(k); } }
   if (n > 30) return res.status(200).json({ success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' });
   const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 55000);
+  const tc = body.deep ? null : fastThinking(MODEL);
+  const send = (pl) => fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(MODEL) + ':generateContent', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': KEY }, body: pl, signal: ac.signal
+  });
   try {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(MODEL) + ':generateContent', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': KEY }, body: payload, signal: ac.signal
-    });
-    const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) {}
+    let r = await send(tc ? JSON.stringify(Object.assign({}, g, { generationConfig: Object.assign({}, g.generationConfig || {}, { thinkingConfig: tc }) })) : payload);
+    let txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) {}
+    // รุ่นที่ไม่รองรับการตั้งค่าการคิด → ส่งใหม่แบบเดิม
+    if (tc && r.status === 400 && /think/i.test(String((j && j.error && j.error.message) || txt))) { r = await send(payload); txt = await r.text(); j = null; try { j = JSON.parse(txt); } catch (e) {} }
     if (!r.ok || !j) {
       const msg = (j && j.error && j.error.message) || ('HTTP ' + r.status);
       return res.status(200).json({ success: false, code: r.status === 429 ? 'QUOTA' : (r.status === 400 || r.status === 403) ? 'BAD_KEY_OR_REQUEST' : 'AI_ERROR', status: r.status, message: String(msg).slice(0, 300) });
@@ -66,3 +78,4 @@ module.exports = async (req, res) => {
   } finally { clearTimeout(to); }
 };
 module.exports.verifyTicket = verifyTicket;
+module.exports.fastThinking = fastThinking;

@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.23'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.29'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -8561,11 +8561,13 @@ function aiChat_(data, session) {
   const n = Number(cache.get(rk) || 0); if (n >= 20) return { success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' };
   cache.put(rk, String(n + 1), 120);
   let res, code = 0, txt = '';
+  // v19.29 · ลดการ "คิด" ของโมเดลให้ตอบเร็วขึ้น (ถ้ารุ่นไม่รองรับ ส่งใหม่แบบเดิม)
+  const ml = String(c.model || '').toLowerCase();
+  const tc = data.deep ? null : /gemini-3/.test(ml) ? { thinkingLevel: 'low' } : /2\.5-flash/.test(ml) ? { thinkingBudget: 0 } : /2\.5-pro/.test(ml) ? { thinkingBudget: 128 } : null;
+  const fetchG = function (pl) { return UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(c.model) + ':generateContent', { method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': c.key }, payload: pl, muteHttpExceptions: true }); };
   try {
-    res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(c.model) + ':generateContent', {
-      method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': c.key }, payload: payload, muteHttpExceptions: true
-    });
-    code = res.getResponseCode(); txt = res.getContentText();
+    if (tc) { const b2 = JSON.parse(payload); b2.generationConfig = Object.assign({}, b2.generationConfig || {}, { thinkingConfig: tc }); res = fetchG(JSON.stringify(b2)); code = res.getResponseCode(); txt = res.getContentText(); if (code === 400 && /think/i.test(txt)) { res = fetchG(payload); code = res.getResponseCode(); txt = res.getContentText(); } }
+    else { res = fetchG(payload); code = res.getResponseCode(); txt = res.getContentText(); }
   } catch (e) { aiLog_(session, data.q, c.model, null, false); return { success: false, code: 'NETWORK', message: 'ติดต่อ Gemini ไม่ได้: ' + String(e && e.message || e).substring(0, 200) }; }
   let j = null; try { j = JSON.parse(txt); } catch (e) {}
   if (code !== 200 || !j) {

@@ -78,16 +78,20 @@
   const DATA = { att: null, bh: null, tt: null, lv: null, pr: null, hq: {}, t: {} };
   const FRESH = 5 * 60 * 1000;
   async function api(action, data, ms) { try { const r = await gasApiCall(action, data || {}, ms || 45000); return r && r.success !== false ? r : null; } catch (e) { return null; } }
+  // v19.29 · กันโหลดซ้ำ: ถ้าข้อมูลชุดเดียวกันกำลังโหลดอยู่ (เช่น เปิดหน้าแล้วถามทันที) ให้รอชุดเดิม ไม่ยิงใหม่
+  const INFL = {};
+  const once = (k, f) => INFL[k] || (INFL[k] = Promise.resolve().then(f).finally(() => { delete INFL[k]; }));
   async function need(keys, from, to) {
     const jobs = [];
-    const stale = (k) => !DATA[k] || Date.now() - (DATA.t[k] || 0) > FRESH;
-    if (keys.indexOf('att') !== -1 && stale('att')) jobs.push(api('getAttendance').then((r) => { DATA.att = (r && r.data) || readJSON('khalifah_attendance_logs', []); DATA.t.att = Date.now(); }));
-    if (keys.indexOf('bh') !== -1 && stale('bh')) jobs.push(api('getBehaviorData').then((r) => { const c = readJSON('khalifah_behavior_cache', null); DATA.bh = r ? { logs: r.logs || [], term: r.term || '' } : { logs: (c && c.logs) || [], term: (c && c.term) || '' }; DATA.t.bh = Date.now(); }));
-    if (keys.indexOf('tt') !== -1 && stale('tt')) jobs.push(api('getTimetable', {}, 30000).then((r) => { DATA.tt = r || { grades: {}, config: {} }; DATA.t.tt = Date.now(); }));
-    if (keys.indexOf('lv') !== -1 && stale('lv')) jobs.push(api('getStudentLeaves').then((r) => { DATA.lv = (r && r.data) || []; DATA.t.lv = Date.now(); }));
+    const stale0 = (k) => !DATA[k] || Date.now() - (DATA.t[k] || 0) > FRESH;
+    const stale = (k) => { if (INFL[k]) { jobs.push(INFL[k]); return false; } return stale0(k); };
+    if (keys.indexOf('att') !== -1 && stale('att')) jobs.push(once('att', () => api('getAttendance').then((r) => { DATA.att = (r && r.data) || readJSON('khalifah_attendance_logs', []); DATA.t.att = Date.now(); })));
+    if (keys.indexOf('bh') !== -1 && stale('bh')) jobs.push(once('bh', () => api('getBehaviorData').then((r) => { const c = readJSON('khalifah_behavior_cache', null); DATA.bh = r ? { logs: r.logs || [], term: r.term || '' } : { logs: (c && c.logs) || [], term: (c && c.term) || '' }; DATA.t.bh = Date.now(); })));
+    if (keys.indexOf('tt') !== -1 && stale('tt')) jobs.push(once('tt', () => api('getTimetable', {}, 30000).then((r) => { DATA.tt = r || { grades: {}, config: {} }; DATA.t.tt = Date.now(); })));
+    if (keys.indexOf('lv') !== -1 && stale('lv')) jobs.push(once('lv', () => api('getStudentLeaves').then((r) => { DATA.lv = (r && r.data) || []; DATA.t.lv = Date.now(); })));
     if (keys.indexOf('pr') !== -1 && window.k8PrayExcReady) jobs.push(Promise.resolve(window.k8PrayExcReady()).catch(() => {}));
-    if (keys.indexOf('pr') !== -1 && stale('pr')) jobs.push(api('getPrayers', {}, 60000).then((r) => { DATA.pr = (r && r.data) || null; DATA.t.pr = Date.now(); IDX = null; }));
-    if (keys.indexOf('hq') !== -1 && from) { const k = from + '|' + to; if (!DATA.hq[k]) jobs.push(api('getHalaqahReport', { from, to }, 45000).then((r) => { DATA.hq[k] = (r && r.groups) || []; })); }
+    if (keys.indexOf('pr') !== -1 && stale('pr')) jobs.push(once('pr', () => api('getPrayers', {}, 60000).then((r) => { DATA.pr = (r && r.data) || null; DATA.t.pr = Date.now(); IDX = null; })));
+    if (keys.indexOf('hq') !== -1 && from) { const k = from + '|' + to; if (!DATA.hq[k]) jobs.push(once('hq:' + k, () => api('getHalaqahReport', { from, to }, 45000).then((r) => { DATA.hq[k] = (r && r.groups) || []; }))); }
     await Promise.all(jobs);
   }
   function students() { let L = []; try { L = allStudents || []; } catch (e) {} return L.filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ|จำหน่าย/.test(String(s.status || ''))); }
@@ -172,8 +176,7 @@
   // ================= รายงาน =================
   async function studentReport(sid, from, to, opt) {
     const st = studentById(sid); if (!st) return { error: 'ไม่พบนักเรียนรหัส ' + sid };
-    await need(['att', 'bh', 'tt', 'lv', 'pr', 'hq'], from, to);
-    const pr = prevRange(from, to); await need(['hq'], pr.from, pr.to);
+    const pr = prevRange(from, to); await Promise.all([need(['att', 'bh', 'tt', 'lv', 'pr', 'hq'], from, to), need(['hq'], pr.from, pr.to)]);
     const P = prayerOf(st, from, to), A = attOf(st, from, to), B = bhOf(st, from, to), H = hqOf(st, from, to);
     const pP = prayerOf(st, pr.from, pr.to), pA = attOf(st, pr.from, pr.to), pB = bhOf(st, pr.from, pr.to), pH = hqOf(st, pr.from, pr.to);
     const prev = { from: pr.from, to: pr.to, p: pP.pct, a: pA.pct, minus: pB.minus, h: pH.pct };
@@ -228,7 +231,7 @@
     const F = normF(f); const L = filterStudents(F);
     if ((f && (f.school || (f.schools && f.schools.length))) && !L.length) return { error: 'ไม่พบนักเรียนของ "' + fTitle(F) + '"', schools: schools().map((x) => x.name) };
     const pr = prevRange(from, to);
-    await need(['att', 'bh', 'pr', 'hq'], from, to); await need(['hq'], pr.from, pr.to);
+    await Promise.all([need(['att', 'bh', 'pr', 'hq'], from, to), need(['hq'], pr.from, pr.to)]);
     const rows = L.map((st) => ({ st, P: prayerOf(st, from, to), A: attOf(st, from, to), B: bhOf(st, from, to), H: hqOf(st, from, to) }));
     const agg = { n: rows.length, pOn: 0, pDen: 0, aOk: 0, aN: 0, sc: 0, minus: 0, low: 0, hOk: 0, hN: 0, slot: {}, byG: {}, dist: { hi: 0, mid: 0, lo: 0, na: 0 }, abs: 0, late: 0 };
     SLOTS.forEach((s) => { agg.slot[s] = { ok: 0, den: 0 }; });
@@ -808,7 +811,7 @@
       const calls = (content.parts || []).filter((p) => p.functionCall);
       if (!calls.length) return (content.parts || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('\n').trim();
       const resp = [];
-      for (const p of calls) { const fc = p.functionCall; setStatus('กำลังดึงข้อมูล: ' + ({ find_students: 'ค้นหานักเรียน', list_schools: 'รายชื่อโรงเรียน', student_report: 'ข้อมูลนักเรียน', group_report: 'สรุปกลุ่ม', rank_students: 'จัดอันดับ', compare_groups: 'เปรียบเทียบ' }[fc.name] || fc.name) + '…'); let out; try { out = await runTool(fc.name, fc.args, ctx); } catch (e) { out = { error: String(e && e.message || e) }; } const fr = { name: fc.name, response: { result: out } }; if (fc.id) fr.id = fc.id; resp.push({ functionResponse: fr }); }
+      await Promise.all(calls.map(async (p, ci) => { const fc = p.functionCall; setStatus('กำลังดึงข้อมูล: ' + ({ find_students: 'ค้นหานักเรียน', list_schools: 'รายชื่อโรงเรียน', student_report: 'ข้อมูลนักเรียน', group_report: 'สรุปกลุ่ม', rank_students: 'จัดอันดับ', compare_groups: 'เปรียบเทียบ' }[fc.name] || fc.name) + '…'); let out; try { out = await runTool(fc.name, fc.args, ctx); } catch (e) { out = { error: String(e && e.message || e) }; } const fr = { name: fc.name, response: { result: out } }; if (fc.id) fr.id = fc.id; resp[ci] = { functionResponse: fr }; }));
       S.hist.push({ role: 'user', parts: resp });
     }
     return 'ขออภัย คำถามนี้ซับซ้อนเกินไป ลองถามให้เจาะจงขึ้นอีกนิด';
