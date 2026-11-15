@@ -898,7 +898,7 @@
   }
   const $ = (id) => document.getElementById(id);
   const SV = (d, w) => '<svg width="' + (w || 18) + '" height="' + (w || 18) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
-  const ICN = { back: '<path d="M15 18l-6-6 6-6"/>', l: '<path d="M15 18l-6-6 6-6"/>', r: '<path d="M9 18l6-6-6-6"/>', filt: '<path d="M4 5h16l-6 8v5l-4 2v-7z"/>', hist: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>', send: '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>', mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/>', x: '<path d="M18 6 6 18M6 6l12 12"/>', search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', plus: '<path d="M12 5v14M5 12h14"/>', spark: '<path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/>' };
+  const ICN = { back: '<path d="M15 18l-6-6 6-6"/>', l: '<path d="M15 18l-6-6 6-6"/>', r: '<path d="M9 18l6-6-6-6"/>', filt: '<path d="M4 5h16l-6 8v5l-4 2v-7z"/>', hist: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>', send: '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>', mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/>', x: '<path d="M18 6 6 18M6 6l12 12"/>', search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', plus: '<path d="M12 5v14M5 12h14"/>', spark: '<path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/>', img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>', tt: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 13h3M13 13h3M8 17h3"/>' };
   function ensureDom() {
     if ($('k8Ai')) return;
     const el = document.createElement('div'); el.className = 'k8-asum k8ai'; el.id = 'k8Ai'; el.hidden = true; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'k8AiT');
@@ -908,7 +908,7 @@
       '<button type="button" class="k8ai-tb" onclick="k8AiDrawer(\'pins\')" aria-controls="k8AiDw">' + SV(ICN.hist) + '<span>ประวัติ</span></button><button type="button" class="k8ai-tb" onclick="k8AiReset()">' + SV(ICN.plus) + '<span>เริ่มใหม่</span></button></header>' +
       '<div class="k8ai-body"><aside class="k8ai-side" id="k8AiSide" aria-label="ตัวกรองข้อมูล"></aside><div class="k8ai-scrim" onclick="k8AiPanel(false)"></div>' +
       '<main class="k8ai-main"><div class="k8ai-scope" id="k8AiScope"></div><div class="k8ai-log" id="k8AiLog" aria-live="polite"></div><div class="k8ai-bk" id="k8AiBk" hidden></div>' +
-      '<form class="k8ai-comp" onsubmit="event.preventDefault();k8AiSend()"><button type="button" class="k8ai-mic" id="k8AiMic" onclick="k8AiMic()" aria-label="พูดถามด้วยเสียง" hidden>' + SV(ICN.mic, 20) + '</button><textarea id="k8AiQ" rows="1" placeholder="ถามได้เลย เช่น ใครน่าเป็นห่วงที่สุด" aria-label="คำถาม" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!event.isComposing){event.preventDefault();k8AiSend()}" oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,140)+\'px\'"></textarea><button type="submit" id="k8AiGo" aria-label="ส่งคำถาม">' + SV(ICN.send, 20) + '</button></form></main></div>' +
+      '<form class="k8ai-comp" onsubmit="event.preventDefault();k8AiSend()"><label class="k8ai-att" title="แนบรูปตารางสอน ให้ AI ลงตารางให้">' + SV(ICN.img, 20) + '<input type="file" accept="image/*" aria-label="แนบรูปตารางสอน ให้ AI ลงตารางให้" onchange="k8AiTtImg(this)"></label><button type="button" class="k8ai-mic" id="k8AiMic" onclick="k8AiMic()" aria-label="พูดถามด้วยเสียง" hidden>' + SV(ICN.mic, 20) + '</button><textarea id="k8AiQ" rows="1" placeholder="ถามได้เลย เช่น ใครน่าเป็นห่วงที่สุด" aria-label="คำถาม" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!event.isComposing){event.preventDefault();k8AiSend()}" oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,140)+\'px\'"></textarea><button type="submit" id="k8AiGo" aria-label="ส่งคำถาม">' + SV(ICN.send, 20) + '</button></form></main></div>' +
       '<div class="k8ai-dw" id="k8AiDw" hidden role="dialog" aria-label="ประวัติและรายงานที่ปักหมุด"></div></div>';
     document.body.appendChild(el);
     window.addEventListener('popstate', () => { const e = $('k8Ai'); if (e && !e.hidden) { e.hidden = true; document.documentElement.classList.remove('k8-docs-open'); stopMic(); } });
@@ -993,6 +993,7 @@
     const pins = lsGet(LS_P).slice(0, 4);
     return '<div class="k8ai-hi"><span class="k8ai-hii">' + SV(ICN.spark, 22) + '</span><b>ถามข้อมูลนักเรียนได้เลย</b><p>เลือกโรงเรียน ชั้นปี นักเรียน และช่วงเวลาที่แถบตัวกรอง แล้วกด <b>สรุปตามตัวกรอง</b> หรือพิมพ์ถามเป็นภาษาไทย ระบบจะสรุปละหมาด การมาเรียน พฤติกรรม หะละเกาะฮฺ เทียบกับช่วงก่อน พร้อมกราฟและสัญญาณเตือน แล้วบันทึกเป็น Excel / Word / PDF / JPG ได้</p>' +
       (pins.length ? '<h4>รายงานที่ปักหมุด</h4><div class="k8ai-sug">' + pins.map((p, i) => '<button type="button" class="is-pin" onclick="k8AiRunPin(' + i + ')">' + esc(p.title) + '</button>').join('') + '</div>' : '') +
+      '<label class="k8ai-ttcard">' + SV(ICN.tt, 22) + '<span><b>นำเข้าตารางสอนจากรูป</b><small>ถ่ายรูปหรือแคปตารางสอน (เช่น จาก Excel) แล้ว AI จะอ่านวัน เวลา วิชา ให้ตรวจก่อนบันทึก</small></span><input type="file" accept="image/*" aria-label="เลือกรูปตารางสอน" onchange="k8AiTtImg(this)"></label>' +
       '<h4>ลองถาม</h4><div class="k8ai-sug">' + sug.map((x) => '<button type="button" onclick="k8AiAsk(' + esc(JSON.stringify(x)) + ')">' + esc(x) + '</button>').join('') + '</div></div>';
   }
   function scrollTo(el) { requestAnimationFrame(() => { if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }); }
@@ -1054,6 +1055,56 @@
     } catch (e) { console.warn('k8AiAct', e); text = 'เกิดข้อผิดพลาด: ' + (e && e.message || e); }
     finish(a, text, '', ctx);
   };
+
+  // ---------- v19.23 · อ่านรูปตารางสอน → ลงตารางของชั้น
+  const TT_PROMPT = 'รูปนี้คือตารางเรียน/ตารางสอนของโรงเรียนในไทย อ่านแล้วตอบเป็น JSON อย่างเดียว ตามรูปแบบนี้\n' +
+    '{"grade": 1-6 หรือ null, "title": "หัวตาราง", "slots": [{"start":"HH:MM","end":"HH:MM"}], "cells": [{"day":0-6,"slot":ลำดับใน slots เริ่ม 0,"subject":"ชื่อวิชา","teacher":"ชื่อผู้สอนถ้ามี","room":"ห้องถ้ามี"}], "notes": "สิ่งที่อ่านไม่ชัด"}\n' +
+    'กติกา: grade = เลขชั้นมัธยม (เช่น "ชั้นมัธยมศึกษาปีที่ 4" หรือ ม.4 = 4) · slots = เฉพาะคอลัมน์ที่เป็นคาบเรียน เรียงตามเวลา ไม่รวมคอลัมน์พัก/พักเที่ยง/พักเย็น/หัวคอลัมน์วัน · เวลา 08.00 ให้เขียน 08:00 · ' +
+    'day: อาทิตย์=0 จันทร์=1 อังคาร=2 พุธ=3 พฤหัสบดี=4 ศุกร์=5 เสาร์=6 · ช่องว่างไม่ต้องใส่ · ช่องที่ผสานคร่อมหลายคาบ ให้ใส่ซ้ำทุกคาบที่คร่อม · ' +
+    'ชื่อวิชาให้สะกดตามรูปทุกตัวอักษร (ภาษาไทย/อังกฤษตามรูป) ถ้าวิชาขึ้นบรรทัดใหม่ในช่องเดียวกันให้รวมเป็นชื่อเดียวคั่นด้วยเว้นวรรค · ห้ามเดา ถ้าอ่านไม่ออกให้ระบุใน notes';
+  function ttShrink(file) { return new Promise((res) => { const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => { const M = 2000; let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, M / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k); const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h); res(c.toDataURL('image/jpeg', 0.88)); }; img.onerror = () => res(''); img.src = fr.result; }; fr.onerror = () => res(''); fr.readAsDataURL(file); }); }
+  function ttParse(txt) { let j = null; const t = String(txt || '').replace(/^```(?:json)?\s*|\s*```$/g, ''); try { j = JSON.parse(t); } catch (e) { const m = t.match(/\{[\s\S]*\}/); if (m) { try { j = JSON.parse(m[0]); } catch (e2) {} } } return j && typeof j === 'object' ? j : null; }
+  const TTD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  function ttMini(P) {
+    const days = Array.from(new Set((P.cells || []).map((c) => +c.day).filter((d) => d >= 0 && d <= 6))).sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+    const sl = P.slots || [];
+    return '<div class="k8ai-ttwrap"><table class="k8ai-tt"><thead><tr><th>วัน</th>' + sl.map((s) => '<th>' + esc(s.start || '') + '–' + esc(s.end || '') + '</th>').join('') + '</tr></thead><tbody>' +
+      days.map((d) => '<tr><th>' + TTD[d] + '</th>' + sl.map((s, i) => { const c = (P.cells || []).find((x) => +x.day === d && +x.slot === i); return '<td>' + (c ? esc(c.subject || '') : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div>';
+  }
+  window.k8AiTtImg = async function (inp) {
+    const f = inp && inp.files && inp.files[0]; if (inp) inp.value = ''; if (!f) return;
+    if (!/^image\//.test(f.type || '')) { if (typeof toast === 'function') toast('เลือกไฟล์รูปภาพ (JPG/PNG)', 'warning'); return; }
+    if (S.busy) return; S.busy = true; $('k8AiGo').disabled = true;
+    const url = await ttShrink(f);
+    const a = bubble('นำเข้าตารางสอนจากรูป'); const u = a.previousElementSibling; if (u && url) u.insertAdjacentHTML('beforeend', '<img class="k8ai-uimg" src="' + url + '" alt="รูปตารางสอนที่แนบ">');
+    a.querySelector('.k8ai-typing span').textContent = 'กำลังอ่านรูปตารางสอน…';
+    const ctx = { reps: [], html: [] }; let text = '', note = '';
+    try {
+      if (!url) throw new Error('อ่านไฟล์รูปไม่ได้');
+      if (S.ready == null) await checkReady();
+      if (!S.ready) { text = 'การอ่านรูปต้องใช้ Gemini · ตอนนี้ยังไม่ได้ตั้งค่า GEMINI_API_KEY จึงอ่านรูปไม่ได้ · ใช้ปุ่ม **นำเข้าไฟล์ Excel** ในหน้าตารางสอนแทนได้'; }
+      else {
+        const r = await aiCall({ contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: url.split(',')[1] } }, { text: TT_PROMPT }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 } }, 'อ่านรูปตารางสอน');
+        if (!r || !r.success) throw new Error((r && r.message) || 'AI error');
+        if (S.route === 'vercel') gasApiCall('aiLog', { data: { q: 'อ่านรูปตารางสอน', model: S.model + ' (vercel)', usage: r.usage || {} } }, 20000).catch(() => {});
+        const raw = ((r.content && r.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');
+        const P = ttParse(raw);
+        if (!P || !Array.isArray(P.cells) || !P.cells.length) text = 'อ่านตารางจากรูปนี้ไม่ได้ · ลองรูปที่ชัดขึ้น ให้เห็นหัวตาราง (วัน/เวลา) ครบ แล้วแนบใหม่';
+        else {
+          S.ttImp = { P, url };
+          text = 'อ่านตาราง' + (P.grade ? ' **ม.' + esc(String(P.grade)) + '**' : '') + ' ได้ **' + P.cells.length + ' คาบ** · ' + (P.slots || []).length + ' ช่วงเวลา' + (P.notes ? '\n\nหมายเหตุจาก AI: ' + String(P.notes).slice(0, 300) : '') + '\n\nกดปุ่มด้านล่างเพื่อตรวจทีละช่องและเลือกชั้น ก่อนบันทึกลงตารางสอน';
+          ctx.html.push(ttMini(P) + '<div class="k8ai-ttact"><button type="button" class="k8ai-ttgo" onclick="k8AiTtOpen()">' + SV(ICN.tt, 18) + 'ตรวจและบันทึกลงตารางสอน</button></div>');
+        }
+      }
+    } catch (e) { text = 'อ่านรูปไม่สำเร็จ: ' + (e && e.message || e); }
+    finish(a, text, note, ctx);
+  };
+  window.k8AiTtOpen = async function () {
+    if (!S.ttImp) return;
+    if (typeof window.k8TtAiImport !== 'function') { if (typeof toast === 'function') toast('โหลดหน้าใหม่แล้วลองอีกครั้ง', 'warning'); return; }
+    await window.k8TtAiImport(S.ttImp.P, S.ttImp.url);
+  };
+  document.addEventListener('k8-tt-imported', (ev) => { const d = ev.detail || {}; const log = $('k8AiLog'); if (!log || !d.grades || !d.grades.length || d.fail) return; const m = document.createElement('div'); m.className = 'k8ai-m is-a'; m.innerHTML = '<div class="k8ai-txt"><p>บันทึกตาราง ม.' + esc(d.grades.join(', ม.')) + ' แล้ว · นักเรียนและอาจารย์เห็นตารางใหม่ทันที · แก้รายช่องต่อได้ที่เมนู <b>ตารางสอน</b></p></div>'; log.appendChild(m); scrollTo(m); });
   // ---------- ส่งออก
   function baseName(rep, D) { return (rep.kind === 'student' ? 'ข้อมูลนักเรียน_' : rep.kind === 'rank' ? 'อันดับ_' : rep.kind === 'compare' ? 'เปรียบเทียบ_' : 'สรุป_') + safeName(D.name) + '_' + rep.from + (rep.from !== rep.to ? '_' + rep.to : ''); }
   async function exportFmts(F, D, base, btn) {

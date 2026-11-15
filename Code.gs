@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.22'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.23'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -991,7 +991,7 @@ const PASSWORD_ONLY_ROLE_VALUES = ['superadmin', 'subadmin', 'admin', 'ผู้
 function limitOfRole_(v) { const r = cleanVal(v).toLowerCase(); if (r === 'executive' || r === 'ผู้บริหาร') return 'exec'; if (r === 'activityadmin' || r === 'activity' || r === 'ฝ่ายกิจกรรม') return 'act'; if (r === 'nightduty' || r === 'ครูเวรหอพักกลางคืน' || r === 'ครูเวรหอพัก') return 'night'; if (r === 'schoolteacher' || r === 'ครูโรงเรียนต้นสังกัด') return 'school'; return ''; }
 const LIMIT_COMMON_ACTIONS_ = ['whoami', 'getMyNotifications', 'markNotificationRead', 'hideNotification', 'updateSubAdminPhoto', 'getFullDatabase', 'getSettings', 'getCalendarEvents', 'getPolicy'];
 // ผู้บริหาร: ดูได้ทุกอย่าง (อ่านอย่างเดียว) · แก้ได้เฉพาะตารางสอน และอนุมัติลาสอน
-const LIMIT_EXEC_WRITES_ = ['saveTimetable', 'saveTimetableExtra', 'deleteTimetableExtra', 'saveTimetableConfig', 'approveTeacherLeave'];
+const LIMIT_EXEC_WRITES_ = ['saveTimetable', 'saveTimetableExtra', 'deleteTimetableExtra', 'saveTimetableConfig', 'setTimetableTerm', 'startTimetableTerm', 'restoreTimetableArchive', 'deleteTimetableArchive', 'approveTeacherLeave'];
 // ฝ่ายกิจกรรม: ดูกิจกรรม + สแกน/เช็คชื่อเข้ากิจกรรม (เพิ่ม/ลบกิจกรรมไม่ได้)
 const LIMIT_ACT_ACTIONS_ = ['getActivities', 'getActivityLogs', 'activityCheckIn', 'checkInActivity', 'getAllStudents'];
 // v17.79 · ครูเวรหอพักกลางคืน: สร้าง/ลบกิจกรรม + เปิด QR/เช็คชื่อ · บันทึกคะแนนพฤติกรรม (แก้หัวข้อไม่ได้)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1300,7 +1300,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1802,8 +1802,17 @@ function dispatchAction_(action, req, data, session, ctx) {
       return addPrayerForStudent_(data, session);
     case 'savePrayerWindows':
       return savePrayerWindows_(data.windows);
-    case 'getTimetable':
-      return getTimetable_(session, isStudent, ctx.isAdmin || (session && session.limit === 'exec'));
+    case 'getTimetable': {
+      const ttr = getTimetable_(session, isStudent, ctx.isAdmin || (session && session.limit === 'exec'));
+      if (ttr && ttr.success) { try { ttr.term = ttTerm_((getSettings().data) || {}); } catch (e) {} }
+      return ttr;
+    }
+    case 'getTimetableTerms': return getTimetableTerms_();
+    case 'getTimetableArchive': return getTimetableArchive_(data);
+    case 'setTimetableTerm': return setTimetableTerm_(data, session);
+    case 'startTimetableTerm': return startTimetableTerm_(data, session);
+    case 'restoreTimetableArchive': return restoreTimetableArchive_(data, session);
+    case 'deleteTimetableArchive': return deleteTimetableArchive_(data);
     case 'getMySubjects':
       return getMySubjects_(isStudent ? session.userId : (data.studentId || ''));
     case 'saveGeoZones': {
@@ -4265,6 +4274,151 @@ function saveTimetableConfig_(data) {
   const value = { periods: periods, days: days, showStudents: data.showStudents !== undefined ? !!data.showStudents : cur.showStudents, showTeachers: data.showTeachers !== undefined ? !!data.showTeachers : cur.showTeachers, updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') };
   saveSetting({ key: 'TimetableConfig', value: JSON.stringify(value), description: 'ตั้งค่าตารางสอน: คาบ วันเรียน การมองเห็น (JSON)' });
   return { success: true, config: value, message: 'บันทึกการตั้งค่าตารางสอนแล้ว' };
+}
+
+/* ===================== v19.23 · ภาคเรียน / ปีการศึกษา ของตารางสอน =====================
+ * TimetableTerm (Settings) = ภาคเรียนปัจจุบัน { year: พ.ศ., term: 1|2|3 (3 = ภาคฤดูร้อน) }
+ * ตารางของภาคเรียนเก่าเก็บในชีต "ตารางสอนย้อนหลัง" (1 แถวต่อ 1 ส่วน: cfg / M1–M6 / X:<id>) · ดูย้อนหลัง ดึงกลับมาใช้ หรือลบได้ */
+const TTA_SHEET_ = 'ตารางสอนย้อนหลัง';
+const TTA_HEAD_ = ['ภาคเรียน', 'ส่วน', 'ข้อมูล (JSON)', 'บันทึกเมื่อ', 'โดย'];
+function ttaSheet_() {
+  const ss = getSpreadsheet(); let sh = ss.getSheetByName(TTA_SHEET_);
+  if (!sh) { sh = ss.insertSheet(TTA_SHEET_); sh.getRange(1, 1, 1, TTA_HEAD_.length).setValues([TTA_HEAD_]); try { sh.setFrozenRows(1); } catch (e) {} }
+  return sh;
+}
+function ttTermDefault_(now) {
+  const d = now || new Date();
+  const y = +Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy'), m = +Utilities.formatDate(d, 'Asia/Bangkok', 'MM');
+  if (m >= 5 && m <= 10) return { year: y + 543, term: 1 };
+  if (m >= 11) return { year: y + 543, term: 2 };
+  return { year: y + 542, term: 2 };
+}
+function ttTerm_(st) {
+  let t = null; try { t = JSON.parse((st || {}).TimetableTerm || 'null'); } catch (e) {}
+  if (t && +t.year >= 2400 && [1, 2, 3].indexOf(+t.term) !== -1) return { year: +t.year, term: +t.term, startedAt: t.startedAt || '', set: true, label: ttTermLabel_(t) };
+  const d = ttTermDefault_(); d.set = false; d.label = ttTermLabel_(d); return d;
+}
+function ttTermKey_(t) { return (+t.year) + '-' + (+t.term); }
+function ttTermLabel_(t) { return (+t.term === 3 ? 'ภาคฤดูร้อน' : 'ภาคเรียนที่ ' + (+t.term)) + '/' + (+t.year); }
+function ttTermIn_(d) {
+  const year = parseInt(d && d.year, 10), term = parseInt(d && d.term, 10);
+  if (!(year >= 2500 && year <= 2700)) return null;
+  if ([1, 2, 3].indexOf(term) === -1) return null;
+  return { year: year, term: term };
+}
+function ttSnap_(st) {
+  const snap = { config: null, grades: {}, extras: [] };
+  try { snap.config = JSON.parse(st.TimetableConfig || 'null'); } catch (e) {}
+  ['1', '2', '3', '4', '5', '6'].forEach(function (g) { let v = null; try { v = JSON.parse(st['Timetable_M' + g] || 'null'); } catch (e) {} if (v && v.cells && Object.keys(v.cells).length) snap.grades[g] = v; });
+  let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
+  ids.forEach(function (id) { let v = null; try { v = JSON.parse(st['TimetableX_' + id] || 'null'); } catch (e) {} if (v && v.id) snap.extras.push(v); });
+  return snap;
+}
+function ttSnapEmpty_(s) { return !Object.keys(s.grades).length && !s.extras.length; }
+function ttaRows_() {
+  const sh = ttaSheet_(); const n = sh.getLastRow() - 1;
+  return n > 0 ? sh.getRange(2, 1, n, TTA_HEAD_.length).getValues() : [];
+}
+function ttaDelete_(key) {
+  const sh = ttaSheet_(); const rows = ttaRows_();
+  for (let i = rows.length - 1; i >= 0; i--) if (String(rows[i][0]) === key) sh.deleteRow(i + 2);
+}
+function ttaWrite_(key, snap, by) {
+  ttaDelete_(key);
+  const at = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+  const out = [[key, 'cfg', JSON.stringify(snap.config || {}), at, by]];
+  Object.keys(snap.grades).forEach(function (g) { out.push([key, 'M' + g, JSON.stringify(snap.grades[g]), at, by]); });
+  snap.extras.forEach(function (x) { out.push([key, 'X:' + x.id, JSON.stringify(x), at, by]); });
+  const sh = ttaSheet_(); const r0 = sh.getLastRow() + 1;
+  sh.getRange(r0, 1, out.length, TTA_HEAD_.length).setNumberFormat('@').setValues(out);
+}
+function ttaRead_(key) {
+  const snap = { config: null, grades: {}, extras: [], savedAt: '', by: '' }; let hit = false;
+  ttaRows_().forEach(function (r) {
+    if (String(r[0]) !== key) return; hit = true; let v = null; try { v = JSON.parse(r[2]); } catch (e) {}
+    const part = String(r[1]); snap.savedAt = String(r[3] || ''); snap.by = String(r[4] || '');
+    if (part === 'cfg') snap.config = v; else if (/^M[1-6]$/.test(part) && v) snap.grades[part.slice(1)] = v; else if (part.indexOf('X:') === 0 && v) snap.extras.push(v);
+  });
+  return hit ? snap : null;
+}
+function ttaList_() {
+  const m = {};
+  ttaRows_().forEach(function (r) {
+    const key = String(r[0]); const k = key.match(/^(\d{4})-([123])$/); if (!k) return;
+    const o = m[key] || (m[key] = { key: key, year: +k[1], term: +k[2], label: ttTermLabel_({ year: +k[1], term: +k[2] }), savedAt: String(r[3] || ''), by: String(r[4] || ''), grades: {}, extras: 0, periods: 0 });
+    const part = String(r[1]);
+    if (/^M[1-6]$/.test(part)) { let n = 0; try { n = Object.keys((JSON.parse(r[2]) || {}).cells || {}).length; } catch (e) {} o.grades[part.slice(1)] = n; }
+    else if (part.indexOf('X:') === 0) o.extras++;
+  });
+  return Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return b.year - a.year || b.term - a.term; });
+}
+/** เขียน snapshot ลงตารางปัจจุบัน (แทนที่ทุกชั้น + ตารางพิเศษ) · keepCfg = ไม่แตะเวลาคาบ/วันเรียน */
+function ttApplySnap_(snap, keepCfg) {
+  const st = (getSettings().data) || {};
+  ['1', '2', '3', '4', '5', '6'].forEach(function (g) {
+    const v = snap.grades[g];
+    if (v) saveSetting({ key: 'Timetable_M' + g, value: JSON.stringify(v), description: 'ตารางสอน ม.' + g + ' (JSON)' });
+    else if (st['Timetable_M' + g]) saveSetting({ key: 'Timetable_M' + g, value: '', description: 'ตารางสอน ม.' + g + ' (JSON)' });
+  });
+  let ids = []; try { ids = JSON.parse(st.TimetableExtras || '[]') || []; } catch (e) {}
+  const nids = snap.extras.map(function (x) { return x.id; });
+  ids.forEach(function (id) { if (nids.indexOf(id) === -1) saveSetting({ key: 'TimetableX_' + id, value: '', description: 'ลบแล้ว' }); });
+  snap.extras.forEach(function (x) { saveSetting({ key: 'TimetableX_' + x.id, value: JSON.stringify(x), description: 'ตารางพิเศษ: ' + (x.name || '') + ' (JSON)' }); });
+  saveSetting({ key: 'TimetableExtras', value: JSON.stringify(nids), description: 'รายการตารางพิเศษ (JSON)' });
+  if (!keepCfg && snap.config && Array.isArray(snap.config.periods) && snap.config.periods.length) {
+    const cur = ttConfig_(st);
+    const c = { periods: snap.config.periods.slice(0, TT_MAX_PERIODS), days: Array.isArray(snap.config.days) && snap.config.days.length ? snap.config.days : cur.days, showStudents: cur.showStudents, showTeachers: cur.showTeachers, updatedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') };
+    saveSetting({ key: 'TimetableConfig', value: JSON.stringify(c), description: 'ตั้งค่าตารางสอน: คาบ วันเรียน การมองเห็น (JSON)' });
+  }
+}
+function getTimetableTerms_() {
+  const st = (getSettings().data) || {};
+  const term = ttTerm_(st); const snap = ttSnap_(st);
+  return { success: true, term: term, current: { grades: Object.keys(snap.grades).reduce(function (o, g) { o[g] = Object.keys(snap.grades[g].cells || {}).length; return o; }, {}), extras: snap.extras.length }, archives: ttaList_() };
+}
+function setTimetableTerm_(data, session) {
+  const t = ttTermIn_(data); if (!t) return { success: false, message: 'ปีการศึกษา (พ.ศ.) หรือภาคเรียนไม่ถูกต้อง' };
+  const st = (getSettings().data) || {}; const cur = ttTerm_(st);
+  const v = { year: t.year, term: t.term, startedAt: cur.set ? cur.startedAt : Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd'), by: (session && (session.name || session.userId)) || '' };
+  saveSetting({ key: 'TimetableTerm', value: JSON.stringify(v), description: 'ภาคเรียนปัจจุบันของตารางสอน (JSON)' });
+  return Object.assign(getTimetableTerms_(), { message: 'ตั้งเป็น ' + ttTermLabel_(t) + ' แล้ว' });
+}
+/** ขึ้นภาคเรียนใหม่: เก็บตารางปัจจุบันเข้าประวัติ แล้วเริ่มภาคเรียนใหม่ · mode = copy (คัดลอกเดิม) | empty (ว่าง) | restore (ดึงจากประวัติ from) */
+function startTimetableTerm_(data, session) {
+  data = data || {};
+  const t = ttTermIn_(data); if (!t) return { success: false, message: 'ปีการศึกษา (พ.ศ.) หรือภาคเรียนไม่ถูกต้อง' };
+  const mode = ['copy', 'empty', 'restore'].indexOf(data.mode) !== -1 ? data.mode : 'copy';
+  const st = (getSettings().data) || {}; const cur = ttTerm_(st);
+  if (ttTermKey_(t) === ttTermKey_(cur)) return { success: false, message: 'ตอนนี้เป็น ' + ttTermLabel_(t) + ' อยู่แล้ว · เลือกภาคเรียนอื่น' };
+  let src = null;
+  if (mode === 'restore') { const fk = cleanVal(data.from); src = /^\d{4}-[123]$/.test(fk) ? ttaRead_(fk) : null; if (!src) return { success: false, message: 'ไม่พบตารางของภาคเรียนที่เลือก' }; }
+  const by = (session && (session.name || session.userId)) || '';
+  const snap = ttSnap_(st);
+  if (!ttSnapEmpty_(snap)) ttaWrite_(ttTermKey_(cur), snap, by);
+  if (mode === 'empty') ttApplySnap_({ grades: {}, extras: [] }, true);
+  else if (mode === 'restore') ttApplySnap_(src, false);
+  saveSetting({ key: 'TimetableTerm', value: JSON.stringify({ year: t.year, term: t.term, startedAt: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd'), by: by }), description: 'ภาคเรียนปัจจุบันของตารางสอน (JSON)' });
+  return Object.assign(getTimetableTerms_(), { message: 'เริ่ม ' + ttTermLabel_(t) + ' แล้ว' + (ttSnapEmpty_(snap) ? '' : ' · เก็บตาราง ' + cur.label + ' ไว้ในประวัติ') + (mode === 'empty' ? ' · ตารางว่าง พร้อมลงใหม่' : mode === 'restore' ? ' · ใช้ตารางจาก ' + ttTermLabel_({ year: +data.from.split('-')[0], term: +data.from.split('-')[1] }) : ' · คัดลอกตารางเดิมมาให้แก้ต่อ') });
+}
+/** ดึงตารางจากประวัติมาใช้ในภาคเรียนปัจจุบัน (ตารางปัจจุบันถูกเก็บเข้าประวัติก่อน ถ้าเป็นภาคเดียวกัน = สลับกัน) */
+function restoreTimetableArchive_(data, session) {
+  const key = cleanVal((data || {}).key); const src = /^\d{4}-[123]$/.test(key) ? ttaRead_(key) : null;
+  if (!src) return { success: false, message: 'ไม่พบตารางของภาคเรียนนี้' };
+  const st = (getSettings().data) || {}; const cur = ttTerm_(st); const snap = ttSnap_(st);
+  if (!ttSnapEmpty_(snap)) ttaWrite_(ttTermKey_(cur), snap, (session && (session.name || session.userId)) || '');
+  else if (ttTermKey_(cur) === key) ttaDelete_(key);
+  ttApplySnap_(src, false);
+  return Object.assign(getTimetableTerms_(), { message: 'ใช้ตารางจาก ' + ttTermLabel_({ year: +key.split('-')[0], term: +key.split('-')[1] }) + ' แล้ว' + (ttSnapEmpty_(snap) ? '' : ' · ตารางเดิมเก็บไว้ในประวัติ ' + cur.label) });
+}
+function getTimetableArchive_(data) {
+  const key = cleanVal((data || {}).key); const s = /^\d{4}-[123]$/.test(key) ? ttaRead_(key) : null;
+  if (!s) return { success: false, message: 'ไม่พบตารางของภาคเรียนนี้' };
+  return { success: true, key: key, label: ttTermLabel_({ year: +key.split('-')[0], term: +key.split('-')[1] }), config: ttConfig_({ TimetableConfig: JSON.stringify(s.config || {}) }), grades: s.grades, extras: s.extras, savedAt: s.savedAt, by: s.by };
+}
+function deleteTimetableArchive_(data) {
+  const key = cleanVal((data || {}).key); if (!/^\d{4}-[123]$/.test(key) || !ttaRead_(key)) return { success: false, message: 'ไม่พบตารางของภาคเรียนนี้' };
+  ttaDelete_(key);
+  return Object.assign(getTimetableTerms_(), { message: 'ลบตาราง ' + ttTermLabel_({ year: +key.split('-')[0], term: +key.split('-')[1] }) + ' ออกจากประวัติแล้ว' });
 }
 
 function getPrayers(studentId, date) {
@@ -8397,8 +8551,11 @@ function aiChat_(data, session) {
   const body = { contents: contents };
   if (data.system) body.systemInstruction = { parts: [{ text: String(data.system).substring(0, 12000) }] };
   if (Array.isArray(data.tools) && data.tools.length) body.tools = [{ functionDeclarations: data.tools.slice(0, 20) }];
+  const gc = data.generationConfig && typeof data.generationConfig === 'object' ? data.generationConfig : null; // v19.23
+  if (gc) { const o = {}; if (gc.responseMimeType === 'application/json') o.responseMimeType = 'application/json'; if (typeof gc.temperature === 'number') o.temperature = Math.max(0, Math.min(1, gc.temperature)); if (typeof gc.maxOutputTokens === 'number') o.maxOutputTokens = Math.max(256, Math.min(16384, gc.maxOutputTokens | 0)); if (Object.keys(o).length) body.generationConfig = o; }
+  const hasImg = contents.some(function (c) { return c && Array.isArray(c.parts) && c.parts.some(function (p) { return p && p.inlineData; }); });
   const payload = JSON.stringify(body);
-  if (payload.length > 400000) return { success: false, code: 'TOO_LARGE', message: 'ข้อมูลที่ส่งให้ AI ยาวเกินไป ลองแคบช่วงวันหรือถามทีละเรื่อง' };
+  if (payload.length > (hasImg ? 3500000 : 400000)) return { success: false, code: 'TOO_LARGE', message: 'ข้อมูลที่ส่งให้ AI ยาวเกินไป ลองแคบช่วงวันหรือถามทีละเรื่อง' };
   // จำกัด 20 ครั้ง/นาที ต่อผู้ใช้
   const cache = CacheService.getScriptCache(); const rk = 'ai_rl_' + cleanVal(session.userId) + '_' + Math.floor(Date.now() / 60000);
   const n = Number(cache.get(rk) || 0); if (n >= 20) return { success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' };

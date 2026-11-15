@@ -40,8 +40,12 @@ module.exports = async (req, res) => {
   const g = { contents };
   if (body.system) g.systemInstruction = { parts: [{ text: String(body.system).slice(0, 12000) }] };
   if (Array.isArray(body.tools) && body.tools.length) g.tools = [{ functionDeclarations: body.tools.slice(0, 20) }];
+  // v19.23 · ตั้งค่าการตอบ (เช่น ขอผลเป็น JSON) + รองรับรูปภาพ (inlineData) สำหรับอ่านรูปตารางสอน
+  const gc = body.generationConfig && typeof body.generationConfig === 'object' ? body.generationConfig : null;
+  if (gc) { const o = {}; if (gc.responseMimeType === 'application/json') o.responseMimeType = 'application/json'; if (typeof gc.temperature === 'number') o.temperature = Math.max(0, Math.min(1, gc.temperature)); if (typeof gc.maxOutputTokens === 'number') o.maxOutputTokens = Math.max(256, Math.min(16384, gc.maxOutputTokens | 0)); if (Object.keys(o).length) g.generationConfig = o; }
+  const hasImg = contents.some((c) => c && Array.isArray(c.parts) && c.parts.some((p) => p && p.inlineData));
   const payload = JSON.stringify(g);
-  if (payload.length > 400000) return res.status(200).json({ success: false, code: 'TOO_LARGE', message: 'ข้อมูลที่ส่งให้ AI ยาวเกินไป ลองแคบช่วงวันหรือถามทีละเรื่อง' });
+  if (payload.length > (hasImg ? 3500000 : 400000)) return res.status(200).json({ success: false, code: 'TOO_LARGE', message: 'ข้อมูลที่ส่งให้ AI ยาวเกินไป ลองแคบช่วงวันหรือถามทีละเรื่อง' });
   const mk = String(who.u) + ':' + Math.floor(Date.now() / 60000); const n = (RL.get(mk) || 0) + 1; RL.set(mk, n);
   if (RL.size > 500) { for (const k of RL.keys()) { if (!k.endsWith(':' + Math.floor(Date.now() / 60000))) RL.delete(k); } }
   if (n > 30) return res.status(200).json({ success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' });

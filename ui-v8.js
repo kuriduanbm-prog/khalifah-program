@@ -3640,7 +3640,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.22';
+  const APP_VERSION = '19.23';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6349,7 +6349,7 @@ window.k8RegBirthChange = function (v) {
     const staff = r !== 'student';
     const grade = staff ? T.grade : (T.vg || T.data.grade);
     const mine = staff && T.who === 'mine';
-    if (sub) sub.textContent = mine ? 'เฉพาะคาบที่ฉันสอน · ทุกชั้นและตารางพิเศษ' : (grade ? lbl(grade) : 'ยังไม่ระบุชั้นเรียน');
+    if (sub) sub.textContent = (mine ? 'เฉพาะคาบที่ฉันสอน · ทุกชั้นและตารางพิเศษ' : (grade ? lbl(grade) : 'ยังไม่ระบุชั้นเรียน')) + (T.data.term && T.data.term.set ? ' · ' + termLbl(T.data.term) : '');
     let h = '';
     if (staff) h += '<div class="k8-tt-seg" role="tablist"><button type="button" role="tab" aria-selected="' + mine + '" onclick="k8TtWho(\'mine\')">ของฉัน</button>' + allKeys().map((g) => '<button type="button" role="tab" aria-selected="' + (!mine && T.grade === g) + '" onclick="k8TtWho(\'' + g + '\')"' + (String(g).indexOf('x:') === 0 ? ' class="is-x"' : '') + '>' + esc(lbl(g)) + '</button>').join('') + '</div>';
     else if (extrasOf().length) h += '<div class="k8-tt-seg" role="tablist" aria-label="ตารางของฉัน">' + [T.data.grade].concat(extrasOf().map((x) => 'x:' + x.id)).map((g) => '<button type="button" role="tab" aria-selected="' + (grade === g) + '" onclick="k8TtVg(\'' + g + '\')"' + (String(g).indexOf('x:') === 0 ? ' class="is-x"' : '') + '>' + esc(String(g).indexOf('x:') === 0 ? lbl(g) : 'ตารางชั้น ' + lbl(g)) + '</button>').join('') + '</div>';
@@ -6571,13 +6571,13 @@ window.k8RegBirthChange = function (v) {
     const gs = Object.keys(res).sort();
     if (!gs.length && skipped.length) { toast('ไฟล์ยังไม่ได้กรอกวิชาเลย · กรอกช่องสีเหลืองแล้วนำเข้าอีกครั้ง', 'warning'); return; }
     if (!gs.length) { toast('ไม่พบแผ่นงาน ม.1–ม.6 ในไฟล์ · ใช้ไฟล์จากปุ่ม "ดาวน์โหลดเทมเพลต"', 'error'); return; }
-    XL = res; XLNEW = Object.keys(newS);
+    XL = res; XLNEW = Object.keys(newS); AIX = null;
     const loc = (L) => esc(L.slice(0, 3).join(' · ') + (L.length > 3 ? ' และอีก ' + (L.length - 3) + ' คาบ' : ''));
     const newHtml = (XLNEW.length ? '<section class="k8-tt-xl-new"><h3>วิชาใหม่ที่ยังไม่มีในระบบ (' + XLNEW.length + ')</h3><p>ติ๊ก = เพิ่มเป็นวิชาใหม่ในระบบ (ใช้กรอกเกรด/เช็คชื่อได้) · ไม่ติ๊ก = ใช้เป็นชื่อในตารางอย่างเดียว เช่น โฮมรูม กิจกรรม</p>' +
       XLNEW.map((n, i) => '<label class="k8-tt-xl-chk"><input type="checkbox" data-i="' + i + '"' + (/โฮมรูม|กิจกรรม|พัก|ประชุม|ชุมนุม|แนะแนว|homeroom/i.test(n) ? '' : ' checked') + '><span><b>' + esc(n) + '</b><small>' + loc(newS[n]) + '</small></span></label>').join('') + '</section>' : '') +
       (Object.keys(newT).length ? '<section class="k8-tt-xl-new is-t"><h3>อาจารย์ที่ยังไม่มีในระบบ (' + Object.keys(newT).length + ')</h3><p>จะบันทึกเป็น <b>อาจารย์พิเศษ</b> · นักเรียนเห็นชื่อในตาราง แต่ไม่ขึ้นในตารางสอนของใคร · ถ้าเป็นอาจารย์ประจำ ให้เพิ่มบัญชีในเมนู "บุคลากร" ก่อน แล้วนำเข้าอีกครั้ง</p><ul>' +
       Object.keys(newT).map((n) => '<li><b>' + esc(n) + '</b><small>' + loc(newT[n]) + '</small></li>').join('') + '</ul></section>' : '');
-    document.getElementById('k8TtCellTitle').textContent = 'ตรวจก่อนนำเข้า';
+    T.cell = null; document.getElementById('k8TtCellTitle').textContent = 'ตรวจก่อนนำเข้า';
     document.getElementById('k8TtCellSub').textContent = file.name;
     document.getElementById('k8TtCellBody').innerHTML =
       '<ul class="k8-tt-xl-sum">' + gs.map((g) => '<li><b>ม.' + g + '</b><span>' + (res[g].n + ' คาบ') + '</span><small>เดิม ' + Object.keys(gradeOf(g).cells || {}).length + ' คาบ</small></li>').join('') + '</ul>' +
@@ -6587,10 +6587,111 @@ window.k8RegBirthChange = function (v) {
     openModal('k8TtCellModal');
   };
   let XLNEW = [];
+  // v19.23 · นำเข้าตารางสอนจากรูป (AI อ่านรูป → ตรวจ → บันทึก) · P = { grade, days, slots:[{start,end}], cells:[{day,slot,subject,teacher,room}] }
+  let AIX = null;
+  const hm = (t) => { const m = String(t || '').replace(/\./g, ':').match(/(\d{1,2})\s*:\s*(\d{2})/); return m && +m[1] < 24 && +m[2] < 60 ? String(+m[1]).padStart(2, '0') + ':' + m[2] : ''; };
+  function aixRender() {
+    const A = AIX; const c = cfg(); const g = A.g;
+    const useT = A.useT, addD = A.addD;
+    const per = useT ? A.newPeriods : c.periods;
+    const days = (addD ? Array.from(new Set(c.days.concat(A.days))) : c.days).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+    const grid = '<div class="k8-tt-gridwrap k8-aix-grid"><table class="k8-tt-grid is-tt2"><thead><tr><th scope="col">วัน</th>' + A.slots.map((s, i) => '<th scope="col">คาบ ' + (i + 1) + '<small>' + esc(s.start) + '–' + esc(s.end) + '</small>' + (!useT && per[i] && (per[i].start !== s.start || per[i].end !== s.end) ? '<em class="k8-aix-tf">เวลาเฉพาะวิชา</em>' : '') + '</th>').join('') + '</tr></thead><tbody>' +
+      A.days.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((d) => '<tr' + (days.indexOf(d) === -1 ? ' class="is-skip"' : '') + '><th scope="row">' + DAYS[d] + '</th>' + A.slots.map((s, i) => { const x = A.recs.find((r) => r.d === d && r.i === i); return '<td>' + (x ? '<span class="k8-tt-band" style="--sc:' + subjColor(x.sn) + '"><b>' + esc(x.sn) + '</b>' + (x.tn ? '<i class="k8-tt-tg">' + esc(x.tn) + '</i>' : '') + (x.r ? '<i class="k8-tt-tg">' + esc(x.r) + '</i>' : '') + '</span>' : '<span class="k8-aix-empty">–</span>') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div>';
+    const old = Object.keys(gradeOf(g).cells || {}).length;
+    const cfgBox = (A.timesDiff || A.needMore ? '<label class="k8-tt-sw k8-aix-opt"><input type="checkbox"' + (useT ? ' checked' : '') + (A.needMore || !A.canT ? ' disabled' : '') + ' onchange="k8TtAixOpt(\'useT\',this.checked)"><span><b>ใช้เวลาคาบตามรูปเป็นเวลาคาบหลักของระบบ</b><small>' + (A.needMore ? 'จำเป็น · รูปมี ' + A.slots.length + ' คาบ แต่ระบบตั้งไว้ ' + c.periods.length + ' คาบ · ' : !A.canT ? 'ใช้ไม่ได้ เพราะจะทำให้คาบที่มีอยู่หายไป · ' : '') + 'มีผลกับตารางทุกชั้น · ' + A.newPeriods.map((p) => p.start + '–' + p.end).join(', ') + (useT ? '' : ' · ถ้าไม่เลือก ระบบจะลงเวลาตามรูปเป็น "เวลาเฉพาะวิชา" ในแต่ละช่อง') + '</small></span></label>' : '') +
+      (A.days.some((d) => c.days.indexOf(d) === -1) ? '<label class="k8-tt-sw k8-aix-opt"><input type="checkbox"' + (addD ? ' checked' : '') + ' onchange="k8TtAixOpt(\'addD\',this.checked)"><span><b>เปิดวัน' + A.days.filter((d) => c.days.indexOf(d) === -1).map((d) => DAYN[d]).join(' / ') + 'เป็นวันเรียน</b><small>ในรูปมีวันนี้ แต่ระบบยังไม่ได้เปิดเป็นวันเรียน · ถ้าไม่เลือก จะข้ามวิชาของวันนี้</small></span></label>' : '');
+    const newHtml = A.newS.length ? '<section class="k8-tt-xl-new"><h3>วิชาใหม่ที่ยังไม่มีในระบบ (' + A.newS.length + ')</h3><p>ติ๊ก = เพิ่มเป็นวิชาใหม่ในระบบ (ใช้กรอกเกรด/เช็คชื่อได้) · ไม่ติ๊ก = ใช้เป็นชื่อในตารางอย่างเดียว เช่น Halaqah กิจกรรม</p>' +
+      A.newS.map((n, i) => '<label class="k8-tt-xl-chk"><input type="checkbox" data-i="' + i + '"' + (A.chk[i] ? ' checked' : '') + ' onchange="k8TtAixChk(' + i + ',this.checked)"><span><b>' + esc(n) + '</b></span></label>').join('') + '</section>' : '';
+    document.getElementById('k8TtCellTitle').textContent = 'ตรวจตารางที่ AI อ่านจากรูป';
+    document.getElementById('k8TtCellSub').textContent = A.recs.length + ' คาบ · ตรวจชื่อวิชาให้ถูกก่อนบันทึก';
+    document.getElementById('k8TtCellBody').innerHTML =
+      '<div class="k8-aix-head">' + (A.img ? '<a href="' + A.img + '" target="_blank" rel="noopener" class="k8-aix-src"><img src="' + A.img + '" alt="รูปตารางที่แนบ"></a>' : '') + '<label class="k8-nf-f"><span>บันทึกลงตารางชั้น</span><select onchange="k8TtAixOpt(\'g\',this.value)">' + GR.map((x) => '<option value="' + x + '"' + (x === g ? ' selected' : '') + '>มัธยมศึกษาปีที่ ' + x + ' (เดิม ' + Object.keys(gradeOf(x).cells || {}).length + ' คาบ)</option>').join('') + '</select></label></div>' +
+      grid + cfgBox +
+      (A.warn.length ? '<details class="k8-tt-xl-warn" open><summary>ข้อควรตรวจ ' + A.warn.length + ' รายการ</summary><ul>' + A.warn.map((w) => '<li>' + esc(w) + '</li>').join('') + '</ul></details>' : '') + newHtml +
+      '<p class="k8-pw-hint">AI อาจอ่านผิดได้ ตรวจกับรูปก่อนกดบันทึก · บันทึกแล้วตาราง ม.' + g + (old ? ' เดิม ' + old + ' คาบจะถูกแทนที่' : '') + ' · แก้รายช่องต่อได้ในหน้าตารางสอน</p>' +
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ยกเลิก</button><button type="button" id="k8TtXlGo" onclick="k8TtXlSave()">บันทึกตาราง ม.' + g + '</button></div>';
+  }
+  window.k8TtAixOpt = function (k, v) { if (!AIX) return; AIX[k] = v; aixRender(); };
+  window.k8TtAixChk = function (i, v) { if (AIX) AIX.chk[i] = v; };
+  window.k8TtAiImport = async function (P, img) {
+    if (!P || typeof P !== 'object') return false;
+    if (!T.data || T.data.offline) await load(true);
+    await loadTeachers();
+    const c = cfg(); const subs = subjects().filter((s) => s && s.name); const tops = teacherOptions();
+    const norm = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const loose = (v) => norm(v).replace(/[\s.\-_()]/g, '');
+    const findSub = (n) => subs.find((s) => norm(s.name) === norm(n)) || subs.find((s) => loose(s.name) === loose(n)) || subs.find((s) => s.code && loose(s.code) === loose(n));
+    const strip = (v) => norm(v).replace(/^(อ\.|อาจารย์|ครู|ustaz|อุสตาซ|อุสตาซะห์)\s*/i, '');
+    const findT = (n) => tops.find((t) => norm(t.label) === norm(n) || norm(t.n) === norm(n)) || tops.find((t) => strip(t.n) === strip(n));
+    const warn = [];
+    let slots = (Array.isArray(P.slots) ? P.slots : []).map((s, i) => ({ start: hm(s && s.start), end: hm(s && s.end), i0: i })).filter((s) => s.start && s.end && toMin(s.end) > toMin(s.start));
+    slots.sort((a, b) => toMin(a.start) - toMin(b.start));
+    if (!slots.length) { toast('AI อ่านเวลาคาบจากรูปไม่ได้ · ลองถ่ายให้เห็นหัวตารางชัด ๆ', 'error'); return false; }
+    if (slots.length > MAXP) { warn.push('รูปมี ' + slots.length + ' ช่วงเวลา ระบบรองรับวันละ ' + MAXP + ' คาบ · ใช้ ' + MAXP + ' ช่วงแรก'); slots = slots.slice(0, MAXP); }
+    for (let i = 1; i < slots.length; i++) if (toMin(slots[i].start) < toMin(slots[i - 1].end)) { warn.push('เวลาคาบ ' + slots[i].start + ' ทับกับคาบก่อนหน้า · ตรวจเวลาในรูป'); }
+    const idx = {}; slots.forEach((s, i) => { idx[s.i0] = i; });
+    const recs = []; const newS = []; const newT = {};
+    (Array.isArray(P.cells) ? P.cells : []).forEach((x) => {
+      if (!x) return; const d = typeof x.day === 'number' ? x.day : dayOf(x.day); const i = idx[+x.slot]; const sn0 = String(x.subject || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+      if (!sn0 || /^[-–—]+$/.test(sn0)) return;
+      if (!(d >= 0 && d <= 6) || i === undefined) { warn.push('ข้าม "' + sn0 + '" · อ่านวันหรือคาบไม่ได้'); return; }
+      if (recs.some((r) => r.d === d && r.i === i)) { warn.push('วัน' + DAYN[d] + ' คาบ ' + (i + 1) + ' มีมากกว่า 1 วิชา · ใช้วิชาแรก'); return; }
+      const so = findSub(sn0); const sn = so ? so.name : sn0;
+      const tName = String(x.teacher || '').trim().slice(0, 80); const to = tName ? findT(tName) : null;
+      if (!so && newS.indexOf(sn) === -1) newS.push(sn);
+      if (tName && !to) newT[tName] = 1;
+      recs.push({ d, i, s: so ? so.id : '', sn, t: to ? to.u : '', tn: to ? to.n : tName, r: String(x.room || '').trim().slice(0, 40) });
+    });
+    if (!recs.length) { toast('AI ไม่พบวิชาในรูป · ลองรูปที่ชัดขึ้น', 'error'); return false; }
+    if (Object.keys(newT).length) warn.push('อาจารย์ที่ยังไม่มีบัญชี จะบันทึกเป็นชื่ออาจารย์พิเศษ: ' + Object.keys(newT).join(', '));
+    const days = Array.from(new Set(recs.map((r) => r.d)));
+    const per = c.periods;
+    const timesDiff = slots.some((s, i) => !per[i] || Math.abs(toMin(per[i].start) - toMin(s.start)) > 0 || Math.abs(toMin(per[i].end) - toMin(s.end)) > 0);
+    const needMore = slots.length > per.length;
+    // คาบหลักใหม่ = เวลาจากรูป + คาบเดิมที่เหลือ (ต้องไม่ทำให้คาบเดิมหาย)
+    let newPeriods = slots.map((s) => ({ start: s.start, end: s.end })); let canT = true;
+    const g = /^[1-6]$/.test(String(P.grade)) ? String(P.grade) : (String(T.grade).match(/^[1-6]$/) ? String(T.grade) : '1');
+    for (let i = slots.length; i < per.length; i++) { if (toMin(per[i].start) >= toMin(newPeriods[newPeriods.length - 1].end)) newPeriods.push({ start: per[i].start, end: per[i].end }); else break; }
+    // คาบเดิมที่ต่อท้ายไม่ได้ จะถูกตัด → ทำได้เฉพาะเมื่อไม่มีชั้นอื่น/ตารางพิเศษใช้คาบนั้นอยู่
+    const dropFrom = newPeriods.length;
+    if (dropFrom < per.length) canT = !allKeys().filter((k) => k !== g).some((k) => Object.keys(gradeOf(k).cells || {}).some((ck) => +ck.split('-')[1] > dropFrom));
+    const others = allKeys().filter((x) => x !== g).some((x) => Object.keys(gradeOf(x).cells || {}).length);
+    if (!/^[1-6]$/.test(String(P.grade))) warn.push('AI ไม่พบชื่อชั้นในรูป · เลือกชั้นให้ถูกก่อนบันทึก');
+    AIX = { g, img: img || '', slots, recs, days, newS, chk: newS.map((n) => !/halaq|หะละเกาะ|ฮะลาเกาะ|โฮมรูม|กิจกรรม|พัก|ประชุม|ชุมนุม|แนะแนว|สอวน|homeroom/i.test(n)), warn, timesDiff, needMore, canT: canT || needMore, newPeriods, useT: needMore || (canT && timesDiff && !others), addD: true };
+    XL = null; T.cell = null; aixRender(); openModal('k8TtCellModal'); setTimeout(() => { const sb = document.getElementById('k8TtCellSub'); if (sb && AIX) sb.textContent = AIX.recs.length + ' คาบ · ตรวจชื่อวิชาให้ถูกก่อนบันทึก'; }, 50);
+    return true;
+  };
+  async function aixSave(b) {
+    const A = AIX; const c = cfg();
+    const patch = {};
+    if (A.useT && (A.timesDiff || A.needMore)) { patch.periods = A.newPeriods; patch.map = A.newPeriods.map((p, i) => (i < c.periods.length ? i + 1 : 0)); }
+    const addDays = A.addD ? A.days.filter((d) => c.days.indexOf(d) === -1) : [];
+    if (addDays.length) patch.days = c.days.concat(addDays);
+    if (Object.keys(patch).length) {
+      if (b) { b.disabled = true; b.textContent = 'กำลังปรับเวลาคาบ/วันเรียน…'; }
+      let r = null; try { r = await gasApiCall('saveTimetableConfig', { data: patch }, 25000); } catch (e) {}
+      if (!r || !r.success) { toast((r && r.message) || 'ปรับเวลาคาบไม่สำเร็จ', 'error'); if (b) { b.disabled = false; b.textContent = 'บันทึกตาราง ม.' + A.g; } return null; }
+      T.data.config = r.config;
+    }
+    const c2 = cfg(); const per = c2.periods; const old = gradeOf(A.g).cells || {}; const cells = {};
+    A.recs.forEach((x) => {
+      if (c2.days.indexOf(x.d) === -1) return;
+      const s = A.slots[x.i]; const k = x.d + '-' + (x.i + 1);
+      const e = { s: x.s, sn: x.sn, t: x.t, tn: x.tn, r: x.r };
+      if (!per[x.i] || per[x.i].start !== s.start || per[x.i].end !== s.end) { e.tf = s.start; e.tt = s.end; }
+      const prev = arr(old[k])[0]; if (prev && prev.sn === e.sn) { if (prev.o && prev.o.length) e.o = prev.o; if (prev.x && prev.x.length) e.x = prev.x; }
+      cells[k] = e.o ? [e] : e;
+    });
+    const res = {}; res[A.g] = { cells, n: Object.keys(cells).length };
+    XLNEW = A.newS.filter((n, i) => A.chk[i]);
+    return res;
+  }
   window.k8TtXlSave = async function () {
-    if (!XL) return; const b = document.getElementById('k8TtXlGo');
+    const b = document.getElementById('k8TtXlGo');
+    const fromAi = !XL && !!AIX; if (fromAi) { XL = await aixSave(b); if (!XL) return; }
+    if (!XL) return;
     // วิชาใหม่ที่ติ๊กไว้ → เพิ่มเข้ารายวิชาของระบบ แล้วผูกรหัสวิชาให้คาบนั้น
-    const add = Array.from(document.querySelectorAll('.k8-tt-xl-chk input:checked')).map((c) => XLNEW[+c.dataset.i]).filter(Boolean);
+    const add = fromAi ? XLNEW.slice() : Array.from(document.querySelectorAll('.k8-tt-xl-chk input:checked')).map((c) => XLNEW[+c.dataset.i]).filter(Boolean);
     if (add.length) {
       try {
         loadAppSubjects(); const map = {};
@@ -6610,7 +6711,7 @@ window.k8RegBirthChange = function (v) {
       if (r && r.success) { T.data.grades = T.data.grades || {}; T.data.grades[g] = r.timetable; } else fail.push('ม.' + g + ((r && r.message) ? ' (' + r.message + ')' : ''));
     }
     try { localStorage.setItem(CACHE, JSON.stringify(T.data)); } catch (e) {}
-    XL = null; closeModal('k8TtCellModal'); T.dirty = false; startDraft(String(T.grade).indexOf('x:') === 0 ? '1' : (T.grade || '1')); renderAdmin();
+    XL = null; AIX = null; closeModal('k8TtCellModal'); T.dirty = false; startDraft(fromAi ? gs[0] : (String(T.grade).indexOf('x:') === 0 ? '1' : (T.grade || '1'))); renderAdmin(); document.dispatchEvent(new CustomEvent('k8-tt-imported', { detail: { grades: gs, fail: fail.length } }));
     if (fail.length) toast('บันทึกไม่สำเร็จ: ' + fail.join(', '), 'error'); else toast('นำเข้าตารางเรียนเรียบร้อย ' + gs.length + ' ชั้น' + (add.length ? ' · เพิ่มวิชาใหม่ ' + add.length + ' วิชา' : ''), 'success');
   };
   // ---------- บันทึกตารางเป็นรูปภาพ A4 แนวนอน ----------
@@ -6710,7 +6811,7 @@ window.k8RegBirthChange = function (v) {
   let tFetch = null;
   function loadTeachers() {
     if (!T.teachers || !T.teachers.length) T.teachers = localTeachers();
-    if (!tFetch) tFetch = gasApiCall('getTeachers', {}, 20000).then((r) => { if (r && r.success) { const l = (r.data || []).filter((t) => t && t.username).map((t) => ({ u: t.username, n: t.fullName || t.username })); if (l.length) T.teachers = l; const m = document.getElementById('k8TtCellModal'); if (m && m.classList.contains('open')) { try { pullG(); renderG(); } catch (e) {} } } }).catch(() => { tFetch = null; });
+    if (!tFetch) tFetch = gasApiCall('getTeachers', {}, 20000).then((r) => { if (r && r.success) { const l = (r.data || []).filter((t) => t && t.username).map((t) => ({ u: t.username, n: t.fullName || t.username })); if (l.length) T.teachers = l; const m = document.getElementById('k8TtCellModal'); if (m && m.classList.contains('open') && T.cell) { try { pullG(); renderG(); } catch (e) {} } } }).catch(() => { tFetch = null; });
     return T.teachers && T.teachers.length ? Promise.resolve() : tFetch;
   }
   function renderAdmin() {
@@ -6723,7 +6824,7 @@ window.k8RegBirthChange = function (v) {
       : T.err === 'offline' ? '<div class="k8-tt-warn" role="alert"><b>เชื่อมต่อระบบไม่ได้</b><span>ตรวจสอบอินเทอร์เน็ต แล้วกด <button type="button" class="k8-bh-link" onclick="k8TtReload()">โหลดใหม่</button></span></div>' : '';
     const cnt = (g) => Object.keys(gradeOf(g).cells || {}).length;
     const isX = String(T.grade).indexOf('x:') === 0; const xm = isX ? (T.xmeta || {}) : {};
-    el.innerHTML = warn +
+    el.innerHTML = warn + termCard() +
       '<details class="k8-bh-card k8-tt-vis"' + (T.visOpen ? ' open' : '') + ' ontoggle="window.k8TtVisOpen=this.open"><summary><b>การมองเห็น & วันเรียน</b><small>' + [c.showStudents ? 'นักเรียนเห็น' : 'นักเรียนไม่เห็น', c.showTeachers ? 'อาจารย์เห็น' : 'อาจารย์ไม่เห็น', c.days.length + ' วัน/สัปดาห์', c.periods.length + ' คาบ'].join(' · ') + '</small></summary><div class="k8-tt-vis-b">' +
       '<label class="k8-tt-sw"><input type="checkbox" ' + (c.showStudents ? 'checked' : '') + ' onchange="k8TtVis(\'showStudents\',this.checked)"><span><b>นักเรียนเห็นตารางเรียน</b><small>นักเรียนเห็นเฉพาะชั้นของตัวเอง</small></span></label>' +
       '<label class="k8-tt-sw"><input type="checkbox" ' + (c.showTeachers ? 'checked' : '') + ' onchange="k8TtVis(\'showTeachers\',this.checked)"><span><b>อาจารย์เห็นตารางสอน</b><small>อาจารย์เห็นคาบที่ตัวเองสอน และตารางทุกชั้น</small></span></label>' +
@@ -6741,6 +6842,111 @@ window.k8RegBirthChange = function (v) {
   }
   window.k8TtReload = function () { T.err = ''; T.at = 0; const el = adminRoot(); if (el) el.innerHTML = '<p class="k8-li-empty">กำลังโหลดตาราง…</p>'; load(true).then(() => { if (!T.dirty) startDraft(T.grade || '1'); renderAdmin(); }); };
   window.k8TtGrade = function (g) { if (T.dirty && !T.saving && !confirm('ตาราง ' + lbl(T.grade) + ' ยังไม่ได้บันทึก ต้องการเปลี่ยนโดยไม่บันทึกใช่ไหม?')) return; if (T.newX && g !== T.newX.key) T.newX = null; startDraft(g); renderAdmin(); };
+  // ---------- v19.23 · ภาคเรียน / ปีการศึกษา ----------
+  const TICO = { cal: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>', next: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>', hist: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>' };
+  function termLbl(t) { return t ? (+t.term === 3 ? 'ภาคฤดูร้อน' : 'ภาคเรียนที่ ' + (+t.term)) + '/' + (+t.year) : ''; }
+  const termNext = (t) => +t.term === 1 ? { year: +t.year, term: 2 } : { year: +t.year + 1, term: 1 };
+  window.k8TtTermLabel = () => termLbl(T.data && T.data.term);
+  function termCard() {
+    const t = T.data && T.data.term; if (!t) return '';
+    return '<section class="k8-bh-card k8-tt-term"><span class="k8-tt-term-ic">' + TICO.cal + '</span><div class="k8-tt-term-t"><small>ภาคเรียนปัจจุบันของตาราง</small><b>' + esc(termLbl(t)) + '</b>' + (t.set ? (t.startedAt ? '<span>เริ่มใช้ ' + esc(t.startedAt) + '</span>' : '') : '<span class="is-guess">ระบบคาดจากวันที่ · กดขึ้นภาคเรียนใหม่หรือตั้งค่าให้ตรง</span>') + '</div>' +
+      '<div class="k8-tt-term-b"><button type="button" class="k8-tt-term-go" onclick="k8TtTermNew()">' + TICO.next + 'ขึ้นภาคเรียนใหม่</button><button type="button" class="k8-tt-term-h" onclick="k8TtTermHist()">' + TICO.hist + 'ตารางภาคเรียนก่อน ๆ</button></div></section>';
+  }
+  let TM = null;
+  async function termInfo() { let r = null; try { r = await gasApiCall('getTimetableTerms', {}, 25000); } catch (e) {} if (!r || !r.success) { toast((r && /Unknown action/i.test(String(r.error || r.message || '')) ? 'กรุณา Deploy Code.gs ตัวล่าสุดก่อน' : (r && r.message) || 'โหลดข้อมูลภาคเรียนไม่ได้'), 'error'); return null; } return r; }
+  const curSum = (c) => { const g = Object.keys((c && c.grades) || {}).sort(); return g.length || (c && c.extras) ? g.map((x) => 'ม.' + x + ' ' + c.grades[x] + ' คาบ').join(' · ') + (c.extras ? (g.length ? ' · ' : '') + 'ตารางพิเศษ ' + c.extras + ' ตาราง' : '') : 'ยังไม่มีตาราง'; };
+  function renderTM() {
+    const cur = TM.info.term; const arch = TM.info.archives || []; const same = +TM.year === +cur.year && +TM.term === +cur.term;
+    const nl = termLbl({ year: TM.year, term: TM.term });
+    document.getElementById('k8TtCellTitle').textContent = 'ขึ้นภาคเรียนใหม่';
+    document.getElementById('k8TtCellSub').textContent = 'ตอนนี้ ' + termLbl(cur);
+    document.getElementById('k8TtCellBody').innerHTML =
+      '<div class="k8-tt-term-f"><label class="k8-nf-f"><span>ปีการศึกษา (พ.ศ.)</span><input type="number" inputmode="numeric" min="2500" max="2700" value="' + esc(TM.year) + '" oninput="k8TtTmSet(\'year\',this.value,1)"></label>' +
+      '<div class="k8-nf-f"><span>ภาคเรียน</span><div class="k8-tt-seg" role="radiogroup" aria-label="ภาคเรียน">' + [[1, 'ภาค 1'], [2, 'ภาค 2'], [3, 'ฤดูร้อน']].map(([v, l]) => '<button type="button" role="radio" aria-checked="' + (+TM.term === v) + '" aria-pressed="' + (+TM.term === v) + '" onclick="k8TtTmSet(\'term\',' + v + ')">' + l + '</button>').join('') + '</div></div></div>' +
+      '<fieldset class="k8-tt-term-m"><legend>ตารางของ ' + esc(nl) + '</legend>' +
+      [['copy', 'คัดลอกตารางเดิมมาแก้ต่อ', 'เหมาะเมื่อวิชาส่วนใหญ่เหมือนเดิม แก้เฉพาะช่องที่เปลี่ยน'], ['empty', 'เริ่มจากตารางว่าง', 'ลงตารางใหม่ทั้งหมด (นำเข้าจาก Excel หรือรูปด้วย AI ได้)'], ['restore', 'ใช้ตารางจากภาคเรียนก่อน ๆ', arch.length ? 'เช่น ภาค 1 ปีนี้ ใช้ตารางภาค 1 ของปีที่แล้ว' : 'ยังไม่มีตารางในประวัติ']].map(([v, l, d]) => '<label class="k8-tt-term-opt' + (v === 'restore' && !arch.length ? ' is-off' : '') + '"><input type="radio" name="k8TtTmMode" value="' + v + '"' + (TM.mode === v ? ' checked' : '') + (v === 'restore' && !arch.length ? ' disabled' : '') + ' onchange="k8TtTmSet(\'mode\',this.value)"><span><b>' + l + '</b><small>' + d + '</small></span></label>').join('') +
+      (TM.mode === 'restore' && arch.length ? '<select class="k8-tt-term-sel" aria-label="เลือกภาคเรียนที่จะใช้ตาราง" onchange="k8TtTmSet(\'from\',this.value,1)">' + arch.map((a) => '<option value="' + esc(a.key) + '"' + (TM.from === a.key ? ' selected' : '') + '>' + esc(a.label) + ' · ' + esc(curSum(a)) + '</option>').join('') + '</select>' : '') + '</fieldset>' +
+      '<p class="k8-tt-term-note">' + TICO.hist + '<span>ตาราง <b>' + esc(termLbl(cur)) + '</b> (' + esc(curSum(TM.info.current)) + ') จะถูกเก็บไว้ในประวัติ ดูย้อนหลังหรือดึงกลับมาใช้ได้ · เวลาคาบและวันเรียนคงเดิม' + (TM.mode === 'restore' ? ' (ยกเว้นใช้ตารางจากภาคเรียนก่อน ๆ จะใช้เวลาคาบของภาคนั้น)' : '') + '</span></p>' +
+      (same ? '<p class="k8-tt-term-err" role="alert">ภาคเรียนนี้คือภาคเรียนปัจจุบันอยู่แล้ว</p>' : '') +
+      '<button type="button" class="k8-bh-link k8-tt-term-fix" onclick="k8TtTmFix()">แค่แก้ชื่อภาคเรียนปัจจุบันเป็น ' + esc(nl) + ' (ไม่เก็บประวัติ ไม่แตะตาราง)</button>' +
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ยกเลิก</button><button type="button" id="k8TtTmGo" onclick="k8TtTmGo()"' + (same || !(+TM.year >= 2500 && +TM.year <= 2700) ? ' disabled' : '') + '>เริ่ม ' + esc(nl) + '</button></div>';
+  }
+  window.k8TtTermNew = async function () {
+    if (T.dirty && !confirm('ตารางที่กำลังแก้ยังไม่ได้บันทึก ต้องการไปต่อใช่ไหม?')) return;
+    const info = await termInfo(); if (!info) return;
+    const n = termNext(info.term); const arch = info.archives || [];
+    TM = { info, year: n.year, term: n.term, mode: 'copy', from: (arch.find((a) => a.term === n.term) || arch[0] || {}).key || '' };
+    T.cell = null; renderTM(); openModal('k8TtCellModal');
+  };
+  window.k8TtTmSet = function (k, v, soft) {
+    if (!TM) return; TM[k] = k === 'year' || k === 'term' ? +v : v;
+    if (k === 'term' && TM.mode === 'restore') { const a = (TM.info.archives || []).find((x) => x.term === +v); if (a) TM.from = a.key; }
+    if (soft && k === 'year') { const b = document.getElementById('k8TtTmGo'); const same = +TM.year === +TM.info.term.year && +TM.term === +TM.info.term.term; if (b) { b.disabled = same || !(+TM.year >= 2500 && +TM.year <= 2700); b.textContent = 'เริ่ม ' + termLbl(TM); } return; }
+    if (!soft) renderTM();
+  };
+  async function termDone(r, btn, old) {
+    if (!r || !r.success) { toast((r && r.message) || 'ไม่สำเร็จ', 'error'); if (btn) { btn.disabled = false; btn.textContent = old; } return; }
+    toast(r.message, 'success'); closeModal('k8TtCellModal'); T.w = (T.w || 0) + 1; T.at = 0; T.dirty = false;
+    await load(true); startDraft(String(T.grade).indexOf('x:') === 0 ? '1' : (T.grade || '1')); renderAdmin();
+  }
+  window.k8TtTmGo = async function () {
+    if (!TM) return; const b = document.getElementById('k8TtTmGo'); const old = b ? b.textContent : '';
+    const nl = termLbl(TM);
+    if (TM.mode === 'empty' && !confirm('เริ่ม ' + nl + ' ด้วยตารางว่าง?\nตารางปัจจุบันทุกชั้นจะถูกย้ายไปเก็บในประวัติ (ดึงกลับมาได้)')) return;
+    if (b) { b.disabled = true; b.textContent = 'กำลังเก็บตารางเดิมและเริ่มภาคเรียนใหม่…'; }
+    let r = null; try { r = await gasApiCall('startTimetableTerm', { data: { year: TM.year, term: TM.term, mode: TM.mode, from: TM.from } }, 60000); } catch (e) {}
+    termDone(r, b, old);
+  };
+  window.k8TtTmFix = async function () {
+    if (!TM) return; const nl = termLbl(TM);
+    if (!confirm('เปลี่ยนชื่อภาคเรียนปัจจุบันเป็น ' + nl + '?\nตารางไม่เปลี่ยน และไม่เก็บประวัติ')) return;
+    let r = null; try { r = await gasApiCall('setTimetableTerm', { data: { year: TM.year, term: TM.term } }, 30000); } catch (e) {}
+    termDone(r, null, '');
+  };
+  // ประวัติ
+  let TH = null;
+  function renderTH() {
+    const arch = TH.info.archives || [];
+    document.getElementById('k8TtCellTitle').textContent = 'ตารางภาคเรียนก่อน ๆ';
+    document.getElementById('k8TtCellSub').textContent = 'ตอนนี้ ' + termLbl(TH.info.term) + ' · เก็บไว้ ' + arch.length + ' ภาคเรียน';
+    if (TH.view) {
+      const V = TH.view; const c = V.config || { periods: [], days: [] }; const keys = Object.keys(V.grades || {}).sort().concat((V.extras || []).map((x) => 'x:' + x.id));
+      const g = TH.vg && keys.indexOf(TH.vg) !== -1 ? TH.vg : keys[0];
+      const src = !g ? { cells: {} } : String(g).indexOf('x:') === 0 ? (V.extras || []).find((x) => 'x:' + x.id === g) : V.grades[g];
+      const cells = (src && src.cells) || {};
+      document.getElementById('k8TtCellBody').innerHTML = '<button type="button" class="k8-bh-link" onclick="k8TtThView(\'\')">‹ กลับไปรายการ</button><h3 class="k8-tt-th-h">' + esc(V.label) + '</h3>' +
+        (keys.length ? '<div class="k8-tt-seg k8-tt-grades" role="tablist">' + keys.map((k) => '<button type="button" role="tab" aria-selected="' + (k === g) + '" onclick="k8TtThG(\'' + esc(k) + '\')">' + esc(String(k).indexOf('x:') === 0 ? ((V.extras || []).find((x) => 'x:' + x.id === k) || {}).name || 'ตารางพิเศษ' : 'ม.' + k) + '</button>').join('') + '</div>' +
+          '<div class="k8-tt-gridwrap"><table class="k8-tt-grid is-tt2"><thead><tr><th scope="col">วัน</th>' + c.periods.map((p, i) => '<th scope="col">คาบ ' + (i + 1) + '<small>' + esc(p.start) + '–' + esc(p.end) + '</small></th>').join('') + '</tr></thead><tbody>' +
+          c.days.map((d) => '<tr><th scope="row">' + DAYS[d] + '</th>' + c.periods.map((p, i) => { const L = arr(cells[d + '-' + (i + 1)]); return '<td>' + L.map((x) => '<span class="k8-tt-band" style="--sc:' + subjColor(x.sn) + '"><b>' + esc(x.sn) + '</b>' + (x.tn ? '<i class="k8-tt-tg">' + esc(x.tn) + '</i>' : '') + '</span>').join('') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div>' : '<p class="k8-li-empty">ภาคเรียนนี้ไม่มีตาราง</p>') +
+        '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="k8TtThView(\'\')">กลับ</button><button type="button" onclick="k8TtThUse(\'' + esc(V.key) + '\')">ใช้ตารางนี้ในภาคเรียนปัจจุบัน</button></div>';
+      return;
+    }
+    document.getElementById('k8TtCellBody').innerHTML = (arch.length ? '<ul class="k8-tt-th">' + arch.map((a) => '<li><div><b>' + esc(a.label) + '</b><small>' + esc(curSum(a)) + '</small><small>เก็บเมื่อ ' + esc(a.savedAt) + (a.by ? ' · ' + esc(a.by) : '') + '</small></div><div class="k8-tt-th-b"><button type="button" onclick="k8TtThView(\'' + esc(a.key) + '\')">ดูตาราง</button><button type="button" onclick="k8TtThUse(\'' + esc(a.key) + '\')">ใช้ตารางนี้</button><button type="button" class="is-del" aria-label="ลบ ' + esc(a.label) + '" onclick="k8TtThDel(\'' + esc(a.key) + '\')">ลบ</button></div></li>').join('') + '</ul>'
+      : '<p class="k8-li-empty">ยังไม่มีตารางภาคเรียนก่อน ๆ · เมื่อกด "ขึ้นภาคเรียนใหม่" ตารางของภาคเรียนปัจจุบันจะถูกเก็บไว้ที่นี่</p>') +
+      '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ปิด</button></div>';
+  }
+  window.k8TtTermHist = async function () { const info = await termInfo(); if (!info) return; TH = { info, view: null }; T.cell = null; renderTH(); openModal('k8TtCellModal'); };
+  window.k8TtThG = function (g) { if (TH) { TH.vg = g; renderTH(); } };
+  window.k8TtThView = async function (key) {
+    if (!TH) return; if (!key) { TH.view = null; renderTH(); return; }
+    let r = null; try { r = await gasApiCall('getTimetableArchive', { data: { key } }, 30000); } catch (e) {}
+    if (!r || !r.success) { toast((r && r.message) || 'โหลดไม่ได้', 'error'); return; }
+    TH.view = r; TH.vg = ''; renderTH();
+  };
+  window.k8TtThUse = async function (key) {
+    const a = ((TH && TH.info.archives) || []).find((x) => x.key === key); const lb = a ? a.label : key;
+    if (T.dirty && !confirm('ตารางที่กำลังแก้ยังไม่ได้บันทึก จะถูกแทนที่')) return;
+    if (!confirm('ใช้ตาราง ' + lb + ' แทนตารางปัจจุบัน (' + termLbl(TH.info.term) + ')?\nตารางปัจจุบันจะถูกเก็บไว้ในประวัติก่อน ดึงกลับมาได้')) return;
+    let r = null; try { r = await gasApiCall('restoreTimetableArchive', { data: { key } }, 60000); } catch (e) {}
+    termDone(r, null, '');
+  };
+  window.k8TtThDel = async function (key) {
+    const a = ((TH && TH.info.archives) || []).find((x) => x.key === key); const lb = a ? a.label : key;
+    if (!confirm('ลบตาราง ' + lb + ' ออกจากประวัติถาวร?\nลบแล้วกู้คืนไม่ได้')) return;
+    let r = null; try { r = await gasApiCall('deleteTimetableArchive', { data: { key } }, 30000); } catch (e) {}
+    if (!r || !r.success) { toast((r && r.message) || 'ลบไม่สำเร็จ', 'error'); return; }
+    toast(r.message, 'success'); TH.info = r; TH.view = null; renderTH();
+  };
   // ---------- ตารางพิเศษ: ตั้งชื่อ + เลือกนักเรียน (ข้ามชั้นได้) ----------
   let XP = null;
   const allStu = () => { try { return (allStudents || []).filter((st) => !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(st.status || ''))); } catch (e) { return []; } };
@@ -6756,7 +6962,7 @@ window.k8RegBirthChange = function (v) {
       '<div class="k8-dr-btns"><button type="button" class="is-alt" onclick="closeModal(\'k8TtCellModal\')">ยกเลิก</button><span class="k8-tt-autosave is-ok" id="k8TtXSt" role="status" aria-live="polite">' + (XP.isNew ? 'ตั้งชื่อและเลือกนักเรียน ระบบจะบันทึกให้เอง' : '✓ บันทึกอัตโนมัติเมื่อแก้ไข') + '</span><button type="button" id="k8TtXGo" onclick="k8TtXOk()">' + (XP.isNew ? 'สร้างตาราง' : 'เสร็จ') + '</button></div>';
   }
   function openXP(isNew) {
-    XP = { isNew, name: isNew ? '' : (T.xmeta.name || ''), sel: new Set(isNew ? [] : (T.xmeta.students || []).map(nsid)), q: '', g: '' };
+    T.cell = null; XP = { isNew, name: isNew ? '' : (T.xmeta.name || ''), sel: new Set(isNew ? [] : (T.xmeta.students || []).map(nsid)), q: '', g: '' };
     document.getElementById('k8TtCellTitle').textContent = isNew ? 'สร้างตารางพิเศษ' : 'ชื่อตาราง & รายชื่อนักเรียน';
     document.getElementById('k8TtCellSub').textContent = 'ตารางแยกสำหรับวิชาที่เรียนเฉพาะบางคน';
     renderXP(); openModal('k8TtCellModal');
