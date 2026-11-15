@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.32';
+  const APP_VERSION = '19.33';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4644,7 +4644,7 @@ window.k8RegBirthChange = function (v) {
     const first = String(n.body || '').split('\n'); const lines = first.slice(0, 4);
     box.innerHTML = '<span class="k8-starpop-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>' +
       '<div class="k8-starpop-t"><b>' + escH(n.title) + '</b><span>' + lines.map(escH).join('<br>') + (first.length > 4 ? '<br>…' : '') + '</span>' + (more > 0 ? '<small>และอีก ' + more + ' รายการ</small>' : '') +
-      '<div class="k8-starpop-a"><button type="button" class="k8-btn-pri" onclick="k8StarPopGo(\'' + escH(n.id) + '\')">ดูรายละเอียด</button><button type="button" class="k8-btn-line" onclick="k8StarPopX()">ปิด</button></div></div>';
+      '<div class="k8-starpop-a"><button type="button" class="k8-btn-pri" onclick="k8StarPopX();k8StarOpen()">ดูประวัติดาว</button><button type="button" class="k8-btn-line" onclick="k8StarPopGo(\'' + escH(n.id) + '\')">ข้อความเต็ม</button><button type="button" class="k8-btn-line" onclick="k8StarPopX()">ปิด</button></div></div>';
     box.hidden = false; box.classList.remove('is-out');
     clearTimeout(box._t); box._t = setTimeout(() => window.k8StarPopX(), 20000);
   }
@@ -13585,4 +13585,92 @@ window.k8PdWho = function (sid) {
       show();
     } catch (err) {}
   });
+})();
+
+/* ============ v19.33 · ประวัติดาวนักเรียน (แอดมินดูง่าย · เก็บถาวร) ============ */
+(function () {
+  const S = { list: null, busy: false, per: 'term', type: 'all', g: '', q: '', open: {} };
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const DAY = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+  const dS = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); };
+  const dL = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : 'วัน' + DAY[d.getDay()] + 'ที่ ' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + (d.getFullYear() + 543); };
+  const gN = (g) => { const m = String(g || '').match(/([1-6])/); return m ? 'ม.' + m[1] : (g || '-'); };
+  const STAR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.8l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 16.8l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>';
+  const ICO = { prayer: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l9-6 9 6v11"/><path d="M9 21v-6h6v6"/></svg>', quran: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>' };
+  const TN = { prayer: 'ละหมาดตรงเวลาครบสัปดาห์', quran: 'อ่านอัลกุรอานจบยุซ' };
+  function range() {
+    const t = new Date(); const ts = ymd(t);
+    if (S.per === 'week') { const d = new Date(t); d.setDate(d.getDate() - d.getDay()); return { from: ymd(d), to: ts, label: 'สัปดาห์นี้ (' + dS(ymd(d)) + ' – ' + dS(ts) + ')' }; }
+    if (S.per === 'month') { const f = ts.slice(0, 8) + '01'; return { from: f, to: ts, label: 'เดือน' + MON[t.getMonth()] + ' ' + (t.getFullYear() + 543) }; }
+    if (S.per === 'term') { const f = (window.k8TermStart && window.k8TermStart()) || ts.slice(0, 4) + '-05-01'; return { from: f, to: ts, label: 'เทอมนี้ (ตั้งแต่ ' + dS(f) + ')' }; }
+    return { from: '0000', to: '9999', label: 'ทั้งหมดที่บันทึกไว้' };
+  }
+  const stuOf = (sid) => { let L = []; try { L = allStudents || []; } catch (e) {} return L.find((s) => nid(s.studentId) === nid(sid)) || null; };
+  function rows() {
+    const R = range(); const q = S.q.trim().toLowerCase();
+    const L = (S.list || []).map((x) => { const s = stuOf(x.sid); return Object.assign({}, x, { name: (s && s.fullName) || x.name, grade: (s && s.grade) || x.grade, school: (s && s.schoolName) || x.school }); })
+      .filter((x) => x.date >= R.from && x.date <= R.to && (S.type === 'all' || x.type === S.type) && (!S.g || gN(x.grade) === 'ม.' + S.g) && (!q || (x.name + ' ' + x.sid).toLowerCase().indexOf(q) !== -1));
+    const by = {}; L.forEach((x) => { const k = nid(x.sid); const p = by[k] || (by[k] = { sid: x.sid, name: x.name, grade: x.grade, school: x.school, n: 0, pr: 0, qu: 0, last: '' }); p.n += x.stars || 1; if (x.type === 'quran') p.qu += x.stars || 1; else p.pr += x.stars || 1; if (x.date > p.last) p.last = x.date; });
+    const people = Object.values(by).sort((a, b) => b.n - a.n || String(b.last).localeCompare(String(a.last)) || String(a.name).localeCompare(String(b.name), 'th'));
+    return { R, L, people };
+  }
+  function shell() {
+    let m = document.getElementById('k8StarModal'); if (m) return m;
+    document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8StarModal" onclick="if(event.target===this)k8StarClose()"><div class="modal-dialog k8-sheet k8-star" role="dialog" aria-modal="true" aria-labelledby="k8StarT">' +
+      '<header class="k8-sheet-head"><div class="k8-star-hd"><span class="k8-star-hico" aria-hidden="true">' + STAR.replace('16', '22').replace('16', '22') + '</span><div><h2 id="k8StarT">ดาวนักเรียน</h2><span>ประวัติการได้ดาวทั้งหมด · ละหมาดตรงเวลาครบสัปดาห์ และอ่านอัลกุรอานจบยุซ</span></div></div><div class="k8-star-hacts"><button type="button" class="k8-btn-line k8-star-xl" onclick="k8StarExport()" aria-label="ส่งออก Excel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Excel</span></button><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8StarClose()">✕</button></div></header>' +
+      '<div class="k8-star-bar"><div class="k8-star-seg" role="group" aria-label="ช่วงเวลา" id="k8StarPer"></div><div class="k8-star-seg" role="group" aria-label="ประเภทดาว" id="k8StarType"></div><div class="k8-star-f"><select id="k8StarG" aria-label="ชั้นเรียน" onchange="k8StarSet(\'g\',this.value)"></select><input type="search" id="k8StarQ" placeholder="ค้นหาชื่อหรือรหัส" aria-label="ค้นหานักเรียน" oninput="k8StarSet(\'q\',this.value,1)"></div></div>' +
+      '<div class="k8-sheet-body k8-star-body" id="k8StarBody"></div></div></div>');
+    return document.getElementById('k8StarModal');
+  }
+  function paint(soft) {
+    const B = document.getElementById('k8StarBody'); if (!B) return;
+    if (!soft) {
+      document.getElementById('k8StarPer').innerHTML = [['week', 'สัปดาห์นี้'], ['month', 'เดือนนี้'], ['term', 'เทอมนี้'], ['all', 'ทั้งหมด']].map(([k, l]) => '<button type="button" aria-pressed="' + (S.per === k) + '" onclick="k8StarSet(\'per\',\'' + k + '\')">' + l + '</button>').join('');
+      document.getElementById('k8StarType').innerHTML = [['all', 'ทุกประเภท'], ['prayer', 'ละหมาด'], ['quran', 'อัลกุรอาน']].map(([k, l]) => '<button type="button" aria-pressed="' + (S.type === k) + '" onclick="k8StarSet(\'type\',\'' + k + '\')">' + l + '</button>').join('');
+      document.getElementById('k8StarG').innerHTML = '<option value="">ทุกชั้น</option>' + ['1', '2', '3', '4', '5', '6'].map((g) => '<option value="' + g + '"' + (S.g === g ? ' selected' : '') + '>ม.' + g + '</option>').join('');
+    }
+    if (!S.list) { B.innerHTML = '<p class="k8-sp-empty">' + (S.busy ? 'กำลังโหลดประวัติดาว…' : 'โหลดข้อมูลไม่สำเร็จ') + '</p>'; return; }
+    const { R, L, people } = rows();
+    const nPr = L.filter((x) => x.type === 'prayer').reduce((a, x) => a + (x.stars || 1), 0), nQu = L.filter((x) => x.type === 'quran').reduce((a, x) => a + (x.stars || 1), 0);
+    let h = '<p class="k8-star-range">' + esc(R.label) + '</p><div class="k8-star-kpis"><div class="k8-star-kpi is-main"><span>ดาวทั้งหมด</span><b>' + (nPr + nQu) + '<small> ดวง</small></b></div><div class="k8-star-kpi"><span>นักเรียนที่ได้ดาว</span><b>' + people.length + '<small> คน</small></b></div><div class="k8-star-kpi is-pr"><span>' + ICO.prayer + 'ละหมาดครบสัปดาห์</span><b>' + nPr + '</b></div><div class="k8-star-kpi is-qu"><span>' + ICO.quran + 'อัลกุรอานจบยุซ</span><b>' + nQu + '</b></div></div>';
+    if (!L.length) { B.innerHTML = h + '<div class="k8-sld-empty"><span class="k8-star-eico" aria-hidden="true">' + STAR + '</span><b>ยังไม่มีนักเรียนได้ดาวในช่วงนี้</b><small>ดาวละหมาดสรุปทุกวันเสาร์ 05:00 น. · ดาวอัลกุรอานขึ้นทันทีที่นักเรียนบันทึกจบยุซ</small></div>'; return; }
+    h += '<section class="k8-star-sec"><h3>นักเรียนที่ได้ดาวมากที่สุด</h3><ol class="k8-star-top">' + people.slice(0, 10).map((p, i) => '<li><span class="k8-star-rk' + (i < 3 ? ' is-' + (i + 1) : '') + '">' + (i + 1) + '</span><button type="button" class="k8-star-who" onclick="k8StarWho(\'' + esc(p.sid) + '\')"><b>' + esc(p.name) + '</b><small>' + esc(gN(p.grade)) + ' · ' + esc(p.sid) + (p.school ? ' · ' + esc(p.school) : '') + '</small></button><span class="k8-star-mix">' + (p.pr ? '<em class="is-pr" title="ละหมาดครบสัปดาห์">' + ICO.prayer + p.pr + '</em>' : '') + (p.qu ? '<em class="is-qu" title="อัลกุรอานจบยุซ">' + ICO.quran + p.qu + '</em>' : '') + '</span><span class="k8-star-n">' + STAR + '<b>' + p.n + '</b></span></li>').join('') + '</ol>' + (people.length > 10 ? '<p class="k8-star-more">และอีก ' + (people.length - 10) + ' คน · ดูทั้งหมดในไฟล์ Excel</p>' : '') + '</section>';
+    // ประวัติ: แยกตามวันที่ได้ดาว · ละหมาดรวมเป็นกลุ่มต่อสัปดาห์
+    const days = {}; L.forEach((x) => { (days[x.date] = days[x.date] || []).push(x); });
+    h += '<section class="k8-star-sec"><h3>ประวัติการได้ดาว <small>' + L.length + ' รายการ</small></h3><div class="k8-star-tl">' + Object.keys(days).sort().reverse().map((d) => {
+      const it = days[d]; const pr = it.filter((x) => x.type === 'prayer'), qu = it.filter((x) => x.type === 'quran'); const k = 'd' + d; const op = S.open[k] !== false;
+      return '<div class="k8-star-day"><button type="button" class="k8-star-dh" aria-expanded="' + op + '" onclick="k8StarTog(\'' + k + '\')"><b>' + esc(dL(d)) + '</b><span>' + (pr.length ? '<em class="is-pr">' + ICO.prayer + pr.length + ' คน</em>' : '') + (qu.length ? '<em class="is-qu">' + ICO.quran + qu.length + ' ดาว</em>' : '') + '</span><svg class="k8-star-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>' +
+        (op ? (pr.length ? '<div class="k8-star-grp is-pr"><p>' + ICO.prayer + '<b>ละหมาดตรงเวลาครบสัปดาห์</b> · ' + esc(pr[0].detail) + '</p><ul>' + pr.sort((a, b) => String(a.grade).localeCompare(String(b.grade)) || String(a.name).localeCompare(String(b.name), 'th')).map((x) => '<li><button type="button" onclick="k8StarWho(\'' + esc(x.sid) + '\')">' + esc(x.name) + '</button><small>' + esc(gN(x.grade)) + '</small></li>').join('') + '</ul></div>' : '') +
+          (qu.length ? '<div class="k8-star-grp is-qu"><p>' + ICO.quran + '<b>อ่านอัลกุรอานจบยุซ</b></p><ul class="is-rows">' + qu.map((x) => '<li><button type="button" onclick="k8StarWho(\'' + esc(x.sid) + '\')">' + esc(x.name) + '</button><small>' + esc(gN(x.grade)) + ' · ' + esc(x.detail) + '</small></li>').join('') + '</ul></div>' : '') : '') + '</div>';
+    }).join('') + '</div></section>';
+    h += '<p class="k8-sld-note">ประวัติเก็บถาวรในชีต "ประวัติดาว" ของระบบ (ไม่หายเหมือนแจ้งเตือนในกระดิ่ง) · ดาวละหมาด: ทุกเวลาที่ต้องเช็คต้องตรงเวลา อาทิตย์–ศุกร์ · ดาวอัลกุรอาน: อ่านจบ 1 ยุซ = 1 ดาว</p>';
+    B.innerHTML = h;
+  }
+  async function load(force) {
+    if (S.busy || (S.list && !force)) return; S.busy = true; paint(true);
+    let r = null; try { r = await gasApiCall('getStarHistory', {}, 30000); } catch (e) {}
+    S.busy = false;
+    if (r && r.success) S.list = r.list || [];
+    else { toast((r && /Unknown action/i.test(String(r.error || r.message || ''))) ? 'กรุณา Deploy Code.gs ตัวล่าสุดก่อน' : ((r && r.message) || 'โหลดประวัติดาวไม่สำเร็จ'), 'error'); }
+    paint();
+  }
+  window.k8StarOpen = function () { try { window.k8StarPopX && window.k8StarPopX(); } catch (e) {} shell(); openModal('k8StarModal'); paint(); load(true); setTimeout(() => { const b = document.querySelector('#k8StarModal .k8-sheet-x'); if (b) b.focus(); }, 60); };
+  window.k8StarClose = function () { try { closeModal('k8StarModal'); } catch (e) {} };
+  window.k8StarSet = function (k, v, soft) { S[k] = v; paint(!!soft); };
+  window.k8StarTog = function (k) { S.open[k] = S.open[k] === false; paint(true); };
+  window.k8StarWho = function (sid) { if (window.k8SpOpen) { try { window.k8SpOpen(sid); return; } catch (e) {} } };
+  document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; const m = document.getElementById('k8StarModal'); if (m && (m.classList.contains('open') || m.classList.contains('active'))) window.k8StarClose(); });
+  window.k8StarExport = async function () {
+    if (!S.list) return; const { R, L, people } = rows();
+    const D = { name: R.label, title: 'ประวัติดาวนักเรียน', range: R.label,
+      kpis: [{ l: 'ดาวทั้งหมด', v: String(L.reduce((a, x) => a + (x.stars || 1), 0)), s: 'ดวง' }, { l: 'นักเรียนที่ได้ดาว', v: String(people.length), s: 'คน' }, { l: 'ละหมาดครบสัปดาห์', v: String(L.filter((x) => x.type === 'prayer').length), s: 'ดาว' }, { l: 'อัลกุรอานจบยุซ', v: String(L.filter((x) => x.type === 'quran').length), s: 'ดาว' }],
+      sections: [{ key: 'p', title: 'สรุปรายนักเรียน', color: '#b45309', cols: [['อันดับ', 6, 'c'], ['ชื่อ - สกุล', 30, 'l'], ['ชั้น', 7, 'c'], ['โรงเรียน', 26, 'l'], ['ดาวรวม', 8, 'c'], ['ละหมาด', 8, 'c'], ['อัลกุรอาน', 9, 'c'], ['ได้ดาวล่าสุด', 14, 'l']],
+        rows: people.map((p, i) => ({ v: [i + 1, p.name, gN(p.grade), p.school || '-', p.n, p.pr, p.qu, dS(p.last)] })) },
+        { key: 'h', title: 'ประวัติการได้ดาวทุกครั้ง', color: '#0369a1', cols: [['วันที่ได้ดาว', 14, 'l'], ['ประเภท', 22, 'l'], ['ชื่อ - สกุล', 30, 'l'], ['ชั้น', 7, 'c'], ['รายละเอียด', 34, 'l']],
+          rows: L.map((x) => ({ v: [dS(x.date), TN[x.type], x.name, gN(x.grade), x.detail] })) }] };
+    try { if (!window.k8Rep) throw new Error('k8Rep'); await window.k8Rep.run('xlsx', D, 'ประวัติดาวนักเรียน_' + (S.per === 'all' ? 'ทั้งหมด' : R.from + '_' + R.to)); toast('บันทึกไฟล์แล้ว', 'success'); } catch (e) { toast('ส่งออกไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); }
+  };
 })();

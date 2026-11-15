@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.32'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.33'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1300,7 +1300,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1808,6 +1808,7 @@ function dispatchAction_(action, req, data, session, ctx) {
       return ttr;
     }
     case 'getTimetableTerms': return getTimetableTerms_();
+    case 'getStarHistory': return getStarHistory_(data);
     case 'getTimetableArchive': return getTimetableArchive_(data);
     case 'setTimetableTerm': return setTimetableTerm_(data, session);
     case 'startTimetableTerm': return startTimetableTerm_(data, session);
@@ -7371,6 +7372,55 @@ function prayerPenaltyMaybe_() {
 
 // ---------- v19.18 · แจ้งเตือนแอดมินเมื่อนักเรียนได้ดาว ----------
 // แจ้งเตือนของระบบ (audience = admins · by = system-star) · id ไม่ซ้ำ = ไม่แจ้งซ้ำ
+/* ===================== v19.33 · ประวัติดาวนักเรียน =====================
+ * ชีต "ประวัติดาว": 1 แถว = นักเรียน 1 คนได้ดาว 1 ครั้ง (ละหมาดตรงเวลาครบสัปดาห์ / อ่านอัลกุรอานจบยุซ) · เก็บถาวร ไม่หายเหมือนกระดิ่ง */
+const STAR_SHEET_ = 'ประวัติดาว';
+const STAR_HEAD_ = ['รหัสรายการ', 'วันที่ได้ดาว', 'ประเภท', 'รหัสนักเรียน', 'ชื่อ - สกุล', 'ชั้น', 'โรงเรียน', 'รายละเอียด', 'ดาว', 'ช่วงเริ่ม', 'ช่วงจบ', 'บันทึกเมื่อ'];
+function starSheet_() {
+  const ss = getSpreadsheet(); let sh = ss.getSheetByName(STAR_SHEET_);
+  if (!sh) { sh = ss.insertSheet(STAR_SHEET_); sh.getRange(1, 1, 1, STAR_HEAD_.length).setValues([STAR_HEAD_]); try { sh.setFrozenRows(1); } catch (e) {} }
+  return sh;
+}
+function starLogIds_(sh) { const n = sh.getLastRow() - 1; return n > 0 ? sh.getRange(2, 1, n, 1).getValues().map(function (r) { return String(r[0]); }) : []; }
+/** rows: [{id, date, type:'prayer'|'quran', sid, name, grade, school, detail, stars, from, to}] · ซ้ำ id = ข้าม */
+function starLog_(rows) {
+  if (!rows || !rows.length) return 0;
+  const sh = starSheet_(); const have = {}; starLogIds_(sh).forEach(function (x) { have[x] = 1; });
+  const at = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+  const out = rows.filter(function (r) { if (!r || !r.id || have[r.id]) return false; have[r.id] = 1; return true; }).map(function (r) {
+    return [r.id, r.date || '', r.type === 'quran' ? 'อ่านอัลกุรอานจบยุซ' : 'ละหมาดตรงเวลาครบสัปดาห์', String(r.sid || ''), r.name || '', r.grade || '', r.school || '', r.detail || '', Number(r.stars) || 1, r.from || '', r.to || '', at];
+  });
+  if (out.length) sh.getRange(sh.getLastRow() + 1, 1, out.length, STAR_HEAD_.length).setNumberFormat('@').setValues(out);
+  return out.length;
+}
+/** ดึงดาวที่เคยแจ้งเตือนไว้ก่อนมีชีตประวัติ (จากข้อความชมเชยถึงนักเรียน) · ทำครั้งเดียว */
+function starBackfill_() {
+  if (getProp_('STAR_LOG_BACKFILL') === '1') return 0;
+  const sh = getSpreadsheet().getSheetByName(SHEETS.NOTIFS); const rows = [];
+  if (sh && sh.getLastRow() > 1) {
+    const studs = getAllStudents().data || []; const nid = function (v) { return String(v || '').replace(/\D/g, '').replace(/^0+/, ''); };
+    const stOf = function (sid) { return studs.filter(function (x) { return nid(x.studentId) === sid; })[0] || null; };
+    sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues().forEach(function (r) {
+      const id = String(r[0]); let m = id.match(/^NTF-STAR-WS-(\d+)-(\d{4}-\d{2}-\d{2})$/); const at = String(r[1] || '').slice(0, 10);
+      if (m) { const st = stOf(m[1]) || {}; const fri = Utilities.formatDate(new Date(new Date(m[2] + 'T12:00:00+07:00').getTime() + 5 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+        rows.push({ id: 'W-' + m[2] + '-' + m[1], date: at || fri, type: 'prayer', sid: st.studentId || m[1], name: st.fullName || m[1], grade: st.grade || '', school: st.schoolName || '', detail: 'สัปดาห์ ' + starDateTh_(m[2]) + ' – ' + starDateTh_(fri), stars: 1, from: m[2], to: fri }); return; }
+      m = id.match(/^NTF-STAR-QS-(\d+)-(\d+)$/);
+      if (m) { const st = stOf(m[1]) || {}; const jz = String(r[3] || '').match(/ยุซที่\s*(\d+)/);
+        rows.push({ id: 'Q-' + m[1] + '-' + m[2], date: at, type: 'quran', sid: st.studentId || m[1], name: st.fullName || m[1], grade: st.grade || '', school: st.schoolName || '', detail: (jz ? 'จบยุซที่ ' + jz[1] : 'อ่านจบ 1 ยุซ') + ' · ดาวสะสม ' + m[2] + ' ดวง', stars: 1, from: at, to: at }); }
+    });
+  }
+  const n = starLog_(rows); try { setProp_('STAR_LOG_BACKFILL', '1'); } catch (e) {}
+  return n;
+}
+function getStarHistory_(data) {
+  try { starBackfill_(); } catch (e) {}
+  const sh = starSheet_(); const n = sh.getLastRow() - 1;
+  const list = n > 0 ? sh.getRange(2, 1, n, STAR_HEAD_.length).getValues().map(function (r) {
+    return { id: String(r[0]), date: formatSheetDate(r[1]) || String(r[1]).slice(0, 10), type: /อัลกุรอาน/.test(String(r[2])) ? 'quran' : 'prayer', sid: String(r[3]), name: String(r[4]), grade: String(r[5]), school: String(r[6]), detail: String(r[7]), stars: Number(r[8]) || 1, from: formatSheetDate(r[9]) || String(r[9]), to: formatSheetDate(r[10]) || String(r[10]) };
+  }).filter(function (x) { return x.id; }) : [];
+  return { success: true, list: list.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || String(a.name).localeCompare(String(b.name)); }) };
+}
+
 function starNotify_(id, title, body, sids, now, aud) {
   const sh = getSpreadsheet().getSheetByName(SHEETS.NOTIFS); if (!sh) return false;
   if (sh.getLastRow() > 1 && sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().some(function (r) { return String(r[0]) === id; })) return false;
@@ -7431,6 +7481,7 @@ function starWeekRun_(nowArg) {
     const body = 'สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri) + ' · ละหมาดตรงเวลาครบทุกเวลา ' + win.length + ' คน\n' +
       win.slice(0, 60).map(function (x, i) { return (i + 1) + '. ' + (x.fullName || x.studentId) + ' (' + starGradeShort_(x.grade) + (x.schoolName ? ' · ' + x.schoolName : '') + ')'; }).join('\n') + (win.length > 60 ? '\nและอีก ' + (win.length - 60) + ' คน' : '');
     starNotify_('NTF-STAR-W-' + sun, 'นักเรียนได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + win.length + ' คน', body, win.map(function (x) { return x.studentId; }), now);
+    try { starLog_(win.map(function (x) { return { id: 'W-' + sun + '-' + nid(x.studentId), date: ymd(now), type: 'prayer', sid: x.studentId, name: x.fullName || x.studentId, grade: x.grade || '', school: x.schoolName || '', detail: 'สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri), stars: 1, from: sun, to: fri }; })); } catch (e) {} // v19.33 · บันทึกประวัติ
     // v19.19 · ข้อความชมเชยถึงนักเรียนแต่ละคน
     win.forEach(function (x) {
       try { starNotify_('NTF-STAR-WS-' + nid(x.studentId) + '-' + sun, 'ขอชื่นชม คุณได้ดาวละหมาดตรงเวลาครบสัปดาห์',
@@ -7446,6 +7497,9 @@ function starQuranMaybe_(sid, prevStars, stars, juz, khatam, dateStr) {
   const st = (getAllStudents().data || []).filter(function (x) { return isCodeMatch(x.studentId, sid); })[0] || { studentId: sid, fullName: sid };
   const who = (st.fullName || st.studentId) + ' (' + starGradeShort_(st.grade) + (st.schoolName ? ' · ' + st.schoolName : '') + ')';
   const got = b - a;
+  try { const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd'); const k = String(sid).replace(/\D/g, '').replace(/^0+/, ''); const rows = [];
+    for (let s0 = a + 1; s0 <= b; s0++) rows.push({ id: 'Q-' + k + '-' + s0, date: dateStr || today, type: 'quran', sid: st.studentId, name: st.fullName || st.studentId, grade: st.grade || '', school: st.schoolName || '', detail: (juz && s0 === b ? 'จบยุซที่ ' + juz : 'อ่านจบ 1 ยุซ') + ' · ดาวสะสม ' + s0 + ' ดวง', stars: 1, from: dateStr || today, to: dateStr || today });
+    starLog_(rows); } catch (e) {} // v19.33 · บันทึกประวัติ
   // v19.19 · ข้อความชมเชยถึงนักเรียน
   try { starNotify_('NTF-STAR-QS-' + String(sid).replace(/\D/g, '').replace(/^0+/, '') + '-' + b, 'ขอชื่นชม คุณได้ดาวอ่านอัลกุรอาน',
     'มาชาอัลลอฮ์ คุณอ่านอัลกุรอานจบ' + (juz ? 'ยุซที่ ' + juz : (got > 1 ? ' ' + got + ' ยุซ' : ' 1 ยุซ')) + ' แล้ว · ดาวสะสม ' + b + ' ดวง ขออัลลอฮ์ทรงตอบแทน อ่านต่อไปจนถึงค็อตม์นะ', [st.studentId], null, 'students'); } catch (e) {}
