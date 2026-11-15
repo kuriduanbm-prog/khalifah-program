@@ -1042,7 +1042,7 @@
       if (S.ready == null) await checkReady();
       if (S.ready) {
         try { text = await askGemini(q, ctx); if (S.route === 'vercel') gasApiCall('aiLog', { data: { q, model: S.model + ' (vercel)', usage: { promptTokenCount: ctx.usage.in, candidatesTokenCount: ctx.usage.out } } }, 20000).catch(() => {}); }
-        catch (e) { note = e.code === 'NO_KEY' ? '' : 'Gemini ตอบไม่ได้ (' + (e.message || e.code || 'error') + ') · ใช้การค้นหาในเครื่องแทน'; if (e.code === 'NO_KEY') { S.ready = false; paintStatus(); } ctx.reps = []; text = await askLocal(q, ctx); }
+        catch (e) { note = e.code === 'NO_KEY' ? '' : 'Gemini ตอบไม่ได้ (' + (e.code === 'BUSY' ? 'มีผู้ใช้งานหนาแน่นชั่วคราว' : (e.message || e.code || 'error')) + ') · ใช้การค้นหาในเครื่องแทน'; if (e.code === 'NO_KEY') { S.ready = false; paintStatus(); } ctx.reps = []; text = await askLocal(q, ctx); }
       } else text = await askLocal(q, ctx);
     } catch (e) { console.warn('k8Ai', e); text = 'เกิดข้อผิดพลาด: ' + (e && e.message || e); }
     finish(a, text, note, ctx);
@@ -1074,8 +1074,8 @@
       res(u);
     }; img.onerror = () => res(''); img.src = fr.result; }; fr.onerror = () => res(''); fr.readAsDataURL(file); });
   }
-  const AIERR = { NO_KEY: 'ยังไม่ได้ตั้งค่า GEMINI_API_KEY', TICKET: 'ขอบัตรผ่าน AI ไม่ได้ · ตรวจว่า Deploy Code.gs ล่าสุด และ AI_SHARED_SECRET ใน Vercel ตรงกับใน Script Properties', TOO_LARGE: 'รูปใหญ่เกินไป · ถ้าเพิ่งอัปเดต ให้ Deploy Code.gs ตัวล่าสุด หรือครอปรูปให้เหลือเฉพาะตาราง', QUOTA: 'โควตา Gemini หมดชั่วคราว · รอสักครู่แล้วลองใหม่', RATE: 'ส่งถี่เกินไป · รอ 1 นาทีแล้วลองใหม่', TIMEOUT: 'AI ใช้เวลาอ่านนานเกินไป · ลองครอปรูปให้เหลือเฉพาะตาราง แล้วลองใหม่', NETWORK: 'เชื่อมต่อ AI ไม่ได้ · ตรวจอินเทอร์เน็ตแล้วลองใหม่', BAD_KEY_OR_REQUEST: 'Gemini ไม่รับคำขอ (คีย์ไม่ถูกต้อง หรือรุ่นโมเดลไม่รองรับรูปภาพ)', FORBIDDEN: 'เฉพาะแอดมินและผู้บริหาร' };
-  window.k8AiErrText = (R) => { if (!R) return 'ไม่ทราบสาเหตุ'; const c = String(R.code || ''); const base = AIERR[c] || (/^HTTP_/.test(c) ? 'เซิร์ฟเวอร์ AI ตอบผิดพลาด (' + c.replace('HTTP_', 'HTTP ') + ')' : ''); const m = String(R.message || '').slice(0, 220); return (base ? base + (m && c !== 'NO_KEY' && c !== 'TOO_LARGE' && c !== 'TICKET' ? ' · ' + m : '') : m || 'ไม่ทราบสาเหตุ') + (c ? ' [' + c + (R.via ? ' · ' + R.via : '') + ']' : ''); };
+  const AIERR = { BUSY: 'ตอนนี้ Gemini มีผู้ใช้งานทั่วโลกหนาแน่นชั่วคราว · ระบบลองใหม่และสลับรุ่นสำรองให้แล้วแต่ยังไม่ว่าง · รอ 1–2 นาทีแล้วลองอีกครั้ง', AI_ERROR: 'Gemini ตอบผิดพลาด', NO_KEY: 'ยังไม่ได้ตั้งค่า GEMINI_API_KEY', TICKET: 'ขอบัตรผ่าน AI ไม่ได้ · ตรวจว่า Deploy Code.gs ล่าสุด และ AI_SHARED_SECRET ใน Vercel ตรงกับใน Script Properties', TOO_LARGE: 'รูปใหญ่เกินไป · ถ้าเพิ่งอัปเดต ให้ Deploy Code.gs ตัวล่าสุด หรือครอปรูปให้เหลือเฉพาะตาราง', QUOTA: 'โควตา Gemini หมดชั่วคราว · รอสักครู่แล้วลองใหม่', RATE: 'ส่งถี่เกินไป · รอ 1 นาทีแล้วลองใหม่', TIMEOUT: 'AI ใช้เวลาอ่านนานเกินไป · ลองครอปรูปให้เหลือเฉพาะตาราง แล้วลองใหม่', NETWORK: 'เชื่อมต่อ AI ไม่ได้ · ตรวจอินเทอร์เน็ตแล้วลองใหม่', BAD_KEY_OR_REQUEST: 'Gemini ไม่รับคำขอ (คีย์ไม่ถูกต้อง หรือรุ่นโมเดลไม่รองรับรูปภาพ)', FORBIDDEN: 'เฉพาะแอดมินและผู้บริหาร' };
+  window.k8AiErrText = (R) => { if (!R) return 'ไม่ทราบสาเหตุ'; const c = String(R.code || ''); const base = AIERR[c] || (/^HTTP_/.test(c) ? 'เซิร์ฟเวอร์ AI ตอบผิดพลาด (' + c.replace('HTTP_', 'HTTP ') + ')' : ''); const m = String(R.message || '').slice(0, 220); return (base ? base + (m && c !== 'NO_KEY' && c !== 'TOO_LARGE' && c !== 'TICKET' && c !== 'BUSY' ? ' · ' + m : '') : m || 'ไม่ทราบสาเหตุ') + (c ? ' [' + c + (R.via ? ' · ' + R.via : '') + ']' : ''); };
   function ttParse(txt) { let j = null; const t = String(txt || '').replace(/^```(?:json)?\s*|\s*```$/g, ''); try { j = JSON.parse(t); } catch (e) { const m = t.match(/\{[\s\S]*\}/); if (m) { try { j = JSON.parse(m[0]); } catch (e2) {} } } return j && typeof j === 'object' ? j : null; }
   const TTD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
   function ttMini(P) {
@@ -1088,7 +1088,9 @@
   async function readTimetableImage(url) {
     if (S.ready == null) await checkReady();
     if (!S.ready) return { ok: false, code: 'NO_AI', message: 'การอ่านรูปต้องใช้ Gemini · ยังไม่ได้ตั้งค่า GEMINI_API_KEY' };
-    const r = await aiCall({ contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: url.split(',')[1] } }, { text: TT_PROMPT }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0 } }, 'อ่านรูปตารางสอน');
+    const req = { contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/jpeg', data: url.split(',')[1] } }, { text: TT_PROMPT }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0 } };
+    let r = await aiCall(req, 'อ่านรูปตารางสอน');
+    if (r && !r.success && r.code === 'BUSY') { await new Promise((ok) => setTimeout(ok, 4000)); r = await aiCall(req, ''); } // v19.30 · คนใช้เยอะ → ลองใหม่อีกครั้ง
     if (!r || !r.success) { try { console.warn('k8 timetable image AI', r); } catch (e) {} return { ok: false, code: (r && r.code) || 'AI', message: (r && r.message) || 'AI error', via: S.route === 'vercel' ? 'Vercel' : 'Apps Script' }; }
     if (S.route === 'vercel') gasApiCall('aiLog', { data: { q: 'อ่านรูปตารางสอน', model: S.model + ' (vercel)', usage: r.usage || {} } }, 20000).catch(() => {});
     const raw = ((r.content && r.content.parts) || []).filter((p) => p.text && !p.thought).map((p) => p.text).join('');

@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.29'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.30'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -8561,21 +8561,33 @@ function aiChat_(data, session) {
   const n = Number(cache.get(rk) || 0); if (n >= 20) return { success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' };
   cache.put(rk, String(n + 1), 120);
   let res, code = 0, txt = '';
-  // v19.29 · ลดการ "คิด" ของโมเดลให้ตอบเร็วขึ้น (ถ้ารุ่นไม่รองรับ ส่งใหม่แบบเดิม)
-  const ml = String(c.model || '').toLowerCase();
-  const tc = data.deep ? null : /gemini-3/.test(ml) ? { thinkingLevel: 'low' } : /2\.5-flash/.test(ml) ? { thinkingBudget: 0 } : /2\.5-pro/.test(ml) ? { thinkingBudget: 128 } : null;
-  const fetchG = function (pl) { return UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(c.model) + ':generateContent', { method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': c.key }, payload: pl, muteHttpExceptions: true }); };
+  // v19.29 · ลดการ "คิด" ของโมเดลให้ตอบเร็วขึ้น · v19.30 · Gemini คนใช้เยอะ (503) → รอแล้วลองใหม่ แล้วสลับรุ่นสำรอง
+  const thinkOf = function (m) { m = String(m || '').toLowerCase(); return data.deep ? null : /gemini-3/.test(m) ? { thinkingLevel: 'low' } : /2\.5-flash/.test(m) ? { thinkingBudget: 0 } : /2\.5-pro/.test(m) ? { thinkingBudget: 128 } : null; };
+  const fetchG = function (m, pl) { return UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + ':generateContent', { method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': c.key }, payload: pl, muteHttpExceptions: true }); };
+  const callM = function (m) {
+    const tc = thinkOf(m); let r;
+    if (tc) { const b2 = JSON.parse(payload); b2.generationConfig = Object.assign({}, b2.generationConfig || {}, { thinkingConfig: tc }); r = fetchG(m, JSON.stringify(b2)); if (r.getResponseCode() === 400 && /think/i.test(r.getContentText())) r = fetchG(m, payload); }
+    else r = fetchG(m, payload);
+    return { code: r.getResponseCode(), txt: r.getContentText() };
+  };
+  const isBusy = function (st, msg) { return st === 503 || st === 500 || st === 502 || st === 504 || /high demand|overloaded/i.test(msg); };
+  const fall = String(PropertiesService.getScriptProperties().getProperty('GEMINI_FALLBACK_MODELS') || 'gemini-flash-latest,gemini-2.5-flash').split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x && x !== c.model; });
+  const plan = [c.model, c.model].concat(fall); const t0 = Date.now(); let used = c.model; let j = null;
   try {
-    if (tc) { const b2 = JSON.parse(payload); b2.generationConfig = Object.assign({}, b2.generationConfig || {}, { thinkingConfig: tc }); res = fetchG(JSON.stringify(b2)); code = res.getResponseCode(); txt = res.getContentText(); if (code === 400 && /think/i.test(txt)) { res = fetchG(payload); code = res.getResponseCode(); txt = res.getContentText(); } }
-    else { res = fetchG(payload); code = res.getResponseCode(); txt = res.getContentText(); }
+    for (let i = 0; i < plan.length; i++) {
+      if (i && Date.now() - t0 > 60000) break;
+      if (i === 1) Utilities.sleep(1500);
+      used = plan[i]; const o = callM(used); code = o.code; txt = o.txt; j = null; try { j = JSON.parse(txt); } catch (e) {}
+      if (code === 200 && j) break;
+      const m0 = String((j && j.error && j.error.message) || ''); if (!isBusy(code, m0)) { if (i >= 2 && code === 404) continue; break; }
+    }
   } catch (e) { aiLog_(session, data.q, c.model, null, false); return { success: false, code: 'NETWORK', message: 'ติดต่อ Gemini ไม่ได้: ' + String(e && e.message || e).substring(0, 200) }; }
-  let j = null; try { j = JSON.parse(txt); } catch (e) {}
   if (code !== 200 || !j) {
-    aiLog_(session, data.q, c.model, null, false);
+    aiLog_(session, data.q, used, null, false);
     const msg = (j && j.error && j.error.message) || ('HTTP ' + code);
-    return { success: false, code: code === 429 ? 'QUOTA' : (code === 400 || code === 403) ? 'BAD_KEY_OR_REQUEST' : 'AI_ERROR', status: code, message: String(msg).substring(0, 300) };
+    return { success: false, code: isBusy(code, String(msg)) ? 'BUSY' : code === 429 ? 'QUOTA' : (code === 400 || code === 403) ? 'BAD_KEY_OR_REQUEST' : 'AI_ERROR', status: code, model: used, message: String(msg).substring(0, 300) };
   }
   const cand = (j.candidates || [])[0] || {};
-  if (data.q) aiLog_(session, data.q, c.model, j.usageMetadata, true);
-  return { success: true, model: c.model, content: cand.content || { role: 'model', parts: [] }, finishReason: cand.finishReason || '', usage: j.usageMetadata || null };
+  if (data.q) aiLog_(session, data.q, used, j.usageMetadata, true);
+  return { success: true, model: used, fallback: used !== c.model, content: cand.content || { role: 'model', parts: [] }, finishReason: cand.finishReason || '', usage: j.usageMetadata || null };
 }

@@ -3,6 +3,7 @@
 //   GEMINI_API_KEY      คีย์จาก Google AI Studio (จำเป็น)
 //   AI_SHARED_SECRET    ข้อความลับยาว ๆ ค่าเดียวกับ Script Property AI_SHARED_SECRET ใน Apps Script (จำเป็น)
 //   GEMINI_MODEL        ไม่บังคับ (ค่าเริ่มต้น gemini-3.8-flash)
+//   GEMINI_FALLBACK_MODELS ไม่บังคับ · รุ่นสำรองเมื่อรุ่นหลักมีคนใช้เยอะ คั่นด้วย , (ค่าเริ่มต้น gemini-flash-latest,gemini-2.5-flash)
 // แอปขอ "บัตรผ่าน" จาก Code.gs ครั้งเดียว (ยืนยันว่าเป็นแอดมิน · อายุ 30 นาที) แล้วส่งคำถามมาที่นี่โดยตรง
 const crypto = require('crypto');
 
@@ -57,22 +58,38 @@ module.exports = async (req, res) => {
   const mk = String(who.u) + ':' + Math.floor(Date.now() / 60000); const n = (RL.get(mk) || 0) + 1; RL.set(mk, n);
   if (RL.size > 500) { for (const k of RL.keys()) { if (!k.endsWith(':' + Math.floor(Date.now() / 60000))) RL.delete(k); } }
   if (n > 30) return res.status(200).json({ success: false, code: 'RATE', message: 'ถามถี่เกินไป รอสักครู่แล้วลองใหม่' });
-  const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 55000);
-  const tc = body.deep ? null : fastThinking(MODEL);
-  const send = (pl) => fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(MODEL) + ':generateContent', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': KEY }, body: pl, signal: ac.signal
-  });
-  try {
+  const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 55000); const t0 = Date.now();
+  // v19.30 · Gemini คนใช้เยอะ (503/500/429 ชั่วคราว) → รอแล้วลองใหม่ 1 ครั้ง แล้วสลับไปรุ่นสำรอง
+  const FALL = String(process.env.GEMINI_FALLBACK_MODELS || 'gemini-flash-latest,gemini-2.5-flash').split(',').map((x) => x.trim()).filter((x) => x && x !== MODEL);
+  const plan = [MODEL, MODEL].concat(FALL);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const call = async (model) => {
+    const tc = body.deep ? null : fastThinking(model);
+    const send = (pl) => fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': KEY }, body: pl, signal: ac.signal });
     let r = await send(tc ? JSON.stringify(Object.assign({}, g, { generationConfig: Object.assign({}, g.generationConfig || {}, { thinkingConfig: tc }) })) : payload);
     let txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) {}
-    // รุ่นที่ไม่รองรับการตั้งค่าการคิด → ส่งใหม่แบบเดิม
     if (tc && r.status === 400 && /think/i.test(String((j && j.error && j.error.message) || txt))) { r = await send(payload); txt = await r.text(); j = null; try { j = JSON.parse(txt); } catch (e) {} }
-    if (!r.ok || !j) {
-      const msg = (j && j.error && j.error.message) || ('HTTP ' + r.status);
-      return res.status(200).json({ success: false, code: r.status === 429 ? 'QUOTA' : (r.status === 400 || r.status === 403) ? 'BAD_KEY_OR_REQUEST' : 'AI_ERROR', status: r.status, message: String(msg).slice(0, 300) });
+    return { r, j, txt };
+  };
+  const busy = (st, msg) => st === 503 || st === 500 || st === 502 || st === 504 || (st === 429 && /overload|high demand|try again later|resource.?exhausted.*(?:temporar|later)/i.test(msg)) || /high demand|overloaded/i.test(msg);
+  try {
+    let last = null, used = MODEL;
+    for (let i = 0; i < plan.length; i++) {
+      if (i && Date.now() - t0 > 38000) break;
+      if (i === 1) await sleep(1500);
+      used = plan[i];
+      const { r, j } = await call(used);
+      if (r.ok && j) {
+        const cand = (j.candidates || [])[0] || {};
+        return res.status(200).json({ success: true, via: 'vercel', model: used, fallback: used !== MODEL, content: cand.content || { role: 'model', parts: [] }, finishReason: cand.finishReason || '', usage: j.usageMetadata || null });
+      }
+      const msg = String((j && j.error && j.error.message) || ('HTTP ' + r.status));
+      last = { st: r.status, msg };
+      if (!busy(r.status, msg)) { if (i >= 2 && r.status === 404) continue; break; } // รุ่นสำรองไม่มี → ลองรุ่นถัดไป
     }
-    const cand = (j.candidates || [])[0] || {};
-    return res.status(200).json({ success: true, via: 'vercel', model: MODEL, content: cand.content || { role: 'model', parts: [] }, finishReason: cand.finishReason || '', usage: j.usageMetadata || null });
+    const st = last ? last.st : 0, msg = last ? last.msg : 'AI error';
+    const code = busy(st, msg) ? 'BUSY' : st === 429 ? 'QUOTA' : (st === 400 || st === 403) ? 'BAD_KEY_OR_REQUEST' : 'AI_ERROR';
+    return res.status(200).json({ success: false, code, status: st, model: used, message: msg.slice(0, 300) });
   } catch (e) {
     return res.status(200).json({ success: false, code: e && e.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK', message: 'ติดต่อ Gemini ไม่ได้: ' + String((e && e.message) || e).slice(0, 200) });
   } finally { clearTimeout(to); }
