@@ -7015,3 +7015,21 @@ html[data-theme="dark"] .k8-ov-xhide { color: #64748b; } html[data-theme="dark"]
 .k8-pd-del-btn:focus-visible { outline: 3px solid rgba(185,28,28,.35); outline-offset: 2px; }
 html[data-theme="dark"] .k8-pd-del { background: #2a1212; border-color: #7f1d1d; }
 html[data-theme="dark"] .k8-pd-del p { color: #fecaca; } html[data-theme="dark"] .k8-pd-del p b { color: #fca5a5; }
+
+/* v19.42 · บันทึกละหมาดที่ยังไม่ถึงระบบ */
+.k8-ps-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 9000; width: min(560px, calc(100vw - 24px)); display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 14px; border-radius: 16px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; box-shadow: 0 12px 30px rgba(15,23,42,.18); }
+.k8-ps-bar > svg { flex: none; }
+.k8-ps-bar > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.k8-ps-bar b { font-size: 14px; } .k8-ps-bar small { font-size: 12.5px; color: #7c2d12; line-height: 1.5; }
+.k8-ps-bar button { flex: none; min-height: 40px; padding: 0 14px; border: 0; border-radius: 11px; background: #c2410c; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.k8-ps-bar button.k8-ps-x { min-height: 36px; width: 36px; padding: 0; background: transparent; color: #9a3412; }
+.k8-ps-bar button:focus-visible, .k8-ps-info button:focus-visible { outline: 3px solid rgba(194,65,12,.35); outline-offset: 2px; }
+.k8-ps-info { margin: 0 0 .6rem; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.55; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.k8-ps-info.is-ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.k8-ps-info.is-wait { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.k8-ps-info.is-no { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; }
+.k8-ps-info button { margin-left: auto; min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: #c2410c; color: #fff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+html[data-theme="dark"] .k8-ps-bar { background: #2a1607; border-color: #9a3412; color: #fdba74; } html[data-theme="dark"] .k8-ps-bar small { color: #fed7aa; } html[data-theme="dark"] .k8-ps-bar button.k8-ps-x { color: #fdba74; }
+html[data-theme="dark"] .k8-ps-info.is-ok { background: #052e1a; border-color: #166534; color: #86efac; }
+html[data-theme="dark"] .k8-ps-info.is-wait { background: #2a1d05; border-color: #78350f; color: #fcd34d; }
+html[data-theme="dark"] .k8-ps-info.is-no { background: #2a1607; border-color: #9a3412; color: #fdba74; }

@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.41'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.42'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1300,7 +1300,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTeacherScores', 'getMyTeacherScore', 'getBehaviorAppeals', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTeacherScores', 'getMyTeacherScore', 'checkMyPrayers', 'getBehaviorAppeals', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1810,6 +1810,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
+    case 'checkMyPrayers': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return checkMyPrayers_(data, session);
     case 'deleteMyPrayer': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return deleteMyPrayer_(data, session);
     case 'getTeacherScores': return getTeacherScores_();
     case 'getBehaviorAppeals': return getBehaviorAppeals_();
@@ -3228,6 +3229,19 @@ function prayerWinOf_(name) {
   if (/อิชา|อีชา|isha/.test(s)) return [1170, 1439];
   return null;
 }
+/** v19.42 · นักเรียนตรวจว่าบันทึกละหมาดในเครื่องถึงระบบแล้วหรือยัง (ย้อนหลัง 7 วัน) */
+function checkMyPrayers_(d, session) {
+  const me = cleanVal(session.studentId || session.userId); const want = ((d || {}).logIds || []).map(function (x) { return cleanVal(x); }).filter(Boolean).slice(0, 80);
+  if (!want.length) return { success: true, found: [], missing: [] };
+  const sh = getSpreadsheet().getSheetByName(SHEETS.PRAYERS); const have = {};
+  if (sh && sh.getLastRow() > 1) {
+    const from = Utilities.formatDate(new Date(Date.now() - 8 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+    const n = sh.getLastRow() - 1; const start = Math.max(0, n - 6000);
+    sh.getRange(2 + start, 1, n - start, 7).getValues().forEach(function (r) { if (formatSheetDate(r[6]) >= from && isCodeMatch(cleanVal(r[1]), me)) have[cleanVal(r[0])] = 1; });
+  }
+  return { success: true, found: want.filter(function (x) { return have[x]; }), missing: want.filter(function (x) { return !have[x]; }), me: me };
+}
+
 /** v19.40 · นักเรียนลบบันทึกละหมาดของตัวเอง (ถ่ายรูปไม่พอใจ → ลบแล้วเช็คใหม่)
  * เงื่อนไข: ของตัวเอง · วันนี้ · ภายใน 10 นาทีหลังเช็ค · ไม่ใช่รายการที่แอดมินเพิ่ม/แก้ · ลบได้วันละ 1 ครั้ง
  * เช็คใหม่ใช้เวลาตอนถ่ายใหม่ (ถ้าเลยเวลาตรงเวลา = สาย) · ถ้าไม่มีบันทึกอื่นของเวลานั้นเหลือ ลบรายการหักอัตโนมัติที่เกิดจากบันทึกนี้ (ละหมาดหอพัก/คุฏบะห์สาย) */

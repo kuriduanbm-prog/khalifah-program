@@ -3643,7 +3643,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.41';
+  const APP_VERSION = '19.42';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5852,10 +5852,12 @@ window.k8RegBirthChange = function (v) {
     try { if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then((r) => r.sync && r.sync.register('k8-outbox')).catch(() => {}); } catch (e) {}
   }
 
-  window.k8OutboxSend = async function (action, data) {
+  window.k8OutboxSend = async function (action, data, opt) {
     const d = slim(action, data);
     const id = String(d.logId || d.id || (action + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
-    const item = { id, action, url: gasUrl(), body: JSON.stringify({ action, data: d, token: tok() }), createdAt: Date.now(), tries: 0, pg: PG, perf: performance.now() };
+    // v19.42 · ส่งอีกครั้ง (รายการเดิมที่ไม่ถึงระบบ): อายุรายการ = นับจากเวลาที่ถ่ายจริง ระบบจึงใช้เวลาเดิม (ติดป้าย "ส่งย้อนหลัง")
+    const age0 = opt && opt.origTs > 0 ? Math.max(0, Date.now() - opt.origTs) : 0;
+    const item = { id, action, url: gasUrl(), body: JSON.stringify({ action, data: d, token: tok() }), createdAt: Date.now(), tries: 0, pg: PG, perf: performance.now() - age0 };
     const m = metaGet().filter((x) => x.id !== id); m.push({ id, action, rec: data, at: item.createdAt }); metaSet(m);
     try { await put(item); } catch (e) { /* IndexedDB ใช้ไม่ได้ (โหมดส่วนตัวบางรุ่น): ส่งตรง */ return sendOne(item, true); }
     askBgSync();
@@ -5881,7 +5883,7 @@ window.k8RegBirthChange = function (v) {
     if (r.code === 'AUTH_REQUIRED') return 'retry';
     if (noQueue) return 'drop';
     item.tries = (item.tries || 0) + 1;
-    if (item.tries >= 5 || r.code === 'FORBIDDEN' || r.code === 'VALIDATION') return 'drop';
+    if (item.tries >= 5 || r.code === 'FORBIDDEN' || r.code === 'VALIDATION') { try { const b0 = JSON.parse(item.body || '{}'); const lid = b0.data && (b0.data.logId || b0.data.id); if (lid) { const D = JSON.parse(localStorage.getItem('khalifah_outbox_dropped') || '{}'); D[lid] = { code: r.code || '', message: String(r.message || r.error || '').slice(0, 200), at: Date.now() }; localStorage.setItem('khalifah_outbox_dropped', JSON.stringify(D)); } } catch (e) {} return 'drop'; } // v19.42 · จำเหตุผลที่ระบบไม่รับ
     try { await put(item); } catch (e) {}
     return 'retry';
   }
@@ -13940,4 +13942,85 @@ window.k8PdWho = function (sid) {
     try { closeModal('prayerDetailModal'); } catch (er) {}
     toast(res.message + (res.undone ? ' · ยกเลิกการหักคะแนนที่เกิดจากรายการนี้แล้ว' : ''), 'success');
   };
+})();
+
+/* ============ v19.42 · ตรวจว่าบันทึกละหมาดในเครื่องนักเรียน "ถึงระบบ" แล้วหรือยัง + ส่งอีกครั้ง ============ */
+(function () {
+  const toast = (m, t) => { try { if (typeof showToast === 'function') showToast(m, t); } catch (e) {} };
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+  const readJ = (k) => { try { const v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+  const S = { missing: {}, found: {}, at: 0, busy: false, me: '' };
+  const me = () => { try { return currentStudent || null; } catch (e) { return null; } };
+  const lid = (p) => p && (p.logId || p.id);
+  function locals() {
+    const st = me(); if (!st) return [];
+    const from = Date.now() - 7 * 864e5; const seen = {}; const out = [];
+    let tp = []; try { tp = todayPrayers || []; } catch (e) {}
+    tp.concat(readJ('khalifah_today_prayers'), readJ('khalifah_prayer_history')).forEach((p) => {
+      const id = lid(p); if (!id || seen[id] || nid(p.studentId) !== nid(st.studentId)) return; seen[id] = 1;
+      if (/เพิ่มโดย|บันทึกโดยแอดมิน/.test(String(p.note || '') + String(p.locationName || ''))) return;
+      const at = Date.parse(p.timestamp || '') || Date.parse((p.date || '') + 'T12:00:00'); if (!(at >= from) || Date.now() - at < 3 * 60000) return;
+      if (/^(ขาด|ลา)/.test(String(p.status || ''))) return;
+      out.push(p);
+    });
+    return out;
+  }
+  function pending() { try { return ((window.k8OutboxPendingRecords && window.k8OutboxPendingRecords(['recordPrayer'])) || []).map(lid); } catch (e) { return []; } }
+  async function check(force) {
+    if (S.busy || (!force && Date.now() - S.at < 600000)) return; const st = me(); if (!st || navigator.onLine === false) return;
+    const P = pending(); const L = locals().filter((p) => P.indexOf(lid(p)) === -1 && !S.found[lid(p)]); if (!L.length) { S.at = Date.now(); paintBar(); return; }
+    S.busy = true; let r = null; try { r = await gasApiCall('checkMyPrayers', { data: { logIds: L.map(lid) } }, 25000); } catch (e) {} S.busy = false;
+    if (!r || !r.success) return; S.at = Date.now(); S.me = r.me || '';
+    (r.found || []).forEach((id) => { S.found[id] = 1; delete S.missing[id]; });
+    (r.missing || []).forEach((id) => { S.missing[id] = 1; });
+    paintBar();
+  }
+  window.k8PrayerSyncCheck = check;
+  const missList = () => locals().filter((p) => S.missing[lid(p)] && pending().indexOf(lid(p)) === -1);
+  function reasonOf(id) { try { const D = JSON.parse(localStorage.getItem('khalifah_outbox_dropped') || '{}'); return D[id] || null; } catch (e) { return null; } }
+  function paintBar() {
+    let b = document.getElementById('k8PsBar'); const L = missList();
+    if (!L.length || !me()) { if (b) b.remove(); return; }
+    if (!b) { document.body.insertAdjacentHTML('beforeend', '<div id="k8PsBar" class="k8-ps-bar" role="status" aria-live="polite"></div>'); b = document.getElementById('k8PsBar'); }
+    const idMis = S.me && me() && nid(S.me) !== nid(me().studentId);
+    b.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><div><b>มีบันทึกละหมาด ' + L.length + ' รายการที่ยังไม่ถึงระบบ</b><small>' + (idMis ? 'บัญชีที่เข้าระบบไม่ตรงกับเครื่องนี้ · ออกจากระบบแล้วเข้าใหม่ด้วยรหัสของตัวเอง แล้วกดส่งอีกครั้ง' : esc(L.slice(0, 3).map((p) => String(p.prayerName || p.prayerTime || '').split(' (')[0] + ' ' + String(p.date || '').slice(5)).join(' · ')) + ' · กดส่งอีกครั้ง (รูปเดิม เวลาเดิม)') + '</small></div><button type="button" onclick="k8PrayerResendAll()">ส่งอีกครั้ง</button><button type="button" class="k8-ps-x" aria-label="ซ่อน" onclick="this.parentElement.remove()">✕</button>';
+  }
+  async function resend(p) {
+    const D = JSON.parse(localStorage.getItem('khalifah_outbox_dropped') || '{}'); delete D[lid(p)]; try { localStorage.setItem('khalifah_outbox_dropped', JSON.stringify(D)); } catch (e) {}
+    try { const ts = Date.parse(p.timestamp || ''); if (window.k8OutboxSend) await window.k8OutboxSend('recordPrayer', p, { origTs: isNaN(ts) ? 0 : ts }); else await syncRecordToGoogleSheet('recordPrayer', p); return true; } catch (e) { return false; }
+  }
+  window.k8PrayerResendAll = async function () {
+    const L = missList(); if (!L.length) return;
+    toast('กำลังส่ง ' + L.length + ' รายการ…', 'info');
+    for (const p of L) await resend(p);
+    setTimeout(async () => { L.forEach((p) => { delete S.missing[lid(p)]; }); await check(true); const left = missList().length; toast(left ? 'ยังส่งไม่ถึง ' + left + ' รายการ · ดูเหตุผลในรายละเอียดของรายการนั้น หรือแจ้งอาจารย์/แอดมิน' : 'ส่งถึงระบบครบแล้ว', left ? 'warning' : 'success'); }, 6000);
+  };
+  // ในหน้ารายละเอียด: บอกสถานะว่าถึงระบบหรือยัง
+  const prevHook = window.k8PrayerDelHook;
+  window.k8PrayerDelHook = function (r) {
+    try { if (prevHook) prevHook(r); } catch (e) {}
+    const row = document.getElementById('modalPrayerNoteRow'); if (!row || !row.parentElement) return;
+    let b = document.getElementById('k8PsInfo'); if (!b) { row.insertAdjacentHTML('afterend', '<div id="k8PsInfo" class="k8-ps-info" hidden></div>'); b = document.getElementById('k8PsInfo'); }
+    const st = me(); const id = lid(r);
+    if (!st || !r || nid(r.studentId) !== nid(st.studentId) || !id) { b.hidden = true; return; }
+    const paint = () => {
+      const P = pending(); const why = reasonOf(id);
+      if (P.indexOf(id) !== -1) { b.hidden = false; b.className = 'k8-ps-info is-wait'; b.innerHTML = '<b>กำลังรอส่ง</b> · ยังไม่ถึงระบบ จะส่งให้อัตโนมัติเมื่อมีอินเทอร์เน็ต'; return; }
+      if (S.found[id]) { b.hidden = false; b.className = 'k8-ps-info is-ok'; b.innerHTML = '<b>✓ ถึงระบบแล้ว</b> · อาจารย์และแอดมินเห็นรายการนี้'; return; }
+      if (S.missing[id]) { b.hidden = false; b.className = 'k8-ps-info is-no'; b.innerHTML = '<b>ยังไม่ถึงระบบ</b>' + (why ? ' · ระบบไม่รับเพราะ: ' + esc(why.message || why.code) : '') + '<button type="button" onclick="k8PrayerResendOne(\'' + esc(id) + '\')">ส่งอีกครั้ง</button>'; return; }
+      b.hidden = true;
+    };
+    paint();
+    if (!S.found[id]) { S.at = 0; check(true).then(paint); }
+  };
+  window.k8PrayerResendOne = async function (id) {
+    const p = locals().find((x) => lid(x) === id) || (todayPrayers || []).find((x) => lid(x) === id); if (!p) return;
+    const ok = await resend(p); toast(ok ? 'ส่งอีกครั้งแล้ว · กำลังตรวจ…' : 'ส่งไม่สำเร็จ', ok ? 'info' : 'error');
+    setTimeout(async () => { delete S.missing[id]; await check(true); try { window.k8PrayerDelHook(p); } catch (e) {} if (S.found[id]) toast('ถึงระบบแล้ว', 'success'); }, 5000);
+  };
+  // ตรวจอัตโนมัติ: หลังเข้าสู่ระบบ / ทุก 10 นาที / เมื่อกลับมาออนไลน์
+  setTimeout(() => check(true), 8000);
+  setInterval(() => check(false), 60000);
+  window.addEventListener('online', () => setTimeout(() => check(true), 5000));
 })();
