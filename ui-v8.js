@@ -2072,6 +2072,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       '<div class="k8-as-acts"><button type="button" class="k8-btn-pri" onclick="k8SpOpen(\'' + esc(id) + '\')">ดูข้อมูลทั้งหมด</button><button type="button" class="k8-btn-line" onclick="openAdminEditStudentModal(\'' + esc(id) + '\')">แก้ไขข้อมูล</button>' +
       '<button type="button" class="k8-btn-line" onclick="openStudentQuickStatusModal(\'' + esc(id) + '\')">ปรับสถานะ</button>' +
       '<button type="button" class="k8-btn-line" onclick="k8AsPrayerHistory(\'' + esc(id) + '\')">ดูประวัติละหมาด</button>' +
+      (typeof window.k8BrOpen === 'function' ? '<button type="button" class="k8-btn-line" onclick="k8BrOpen(\'' + esc(id) + '\')">คืนคะแนนพฤติกรรม</button>' : '') +
       '<button type="button" class="k8-btn-line is-danger" onclick="deleteStudent(\'' + esc(id) + '\')">ลบนักเรียน</button></div>' +
       '<button type="button" class="k8-as-preview" hidden onclick="k8PreviewStudent(\'' + esc(id) + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>ดูแอปในมุมมองของนักเรียนคนนี้</button>';
   }
@@ -3643,7 +3644,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.43';
+  const APP_VERSION = '19.44';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
