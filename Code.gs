@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.42'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.43'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1521,6 +1521,9 @@ function dispatchAction_(action, req, data, session, ctx) {
       return saveGradeCriteria(data);
     case 'addBehaviorLogs':
       return addBehaviorLogs_(data, session);
+    case 'cancelBehaviorRange':
+      if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' };
+      return cancelBehaviorRange_(data, session);
     case 'cancelBehaviorLog':
       return cancelBehaviorLog_(pick('logId'), session, ctx.isAdmin);
     case 'getBehaviorData':
@@ -7882,7 +7885,7 @@ function addBehaviorLogs_(data, session) {
     const st = info[sid.replace(/^0+/, '')];
     if (!st) { missing.push(sid); return; }
     if (rule.cat === 'reading') { const gm = String(st.grade).match(/([1-6])/); const girl = /หญิง|^f/i.test(st.gender) || (!/ชาย|^m/i.test(st.gender) && /^\s*(นางสาว|น\.ส\.|นาง|เด็กหญิง|ด\.ญ\.)/.test(st.name)); if (girl || !gm || READING_GRADES_.indexOf(gm[1]) === -1) { skipped.push(st.name || sid); return; } }
-    rows.push(['BHV-' + Date.now() + '-' + i, date, now, term, st.id, st.name, st.grade, rule.cat, rule.id, rule.title, rule.points, note, session.userId, session.name || session.userId, 'active', '', photoUrl, photoSource]);
+    rows.push(['BHV-' + Date.now() + '-' + i + Math.random().toString(36).slice(2, 5), date, now, term, st.id, st.name, st.grade, rule.cat, rule.id, rule.title, rule.points, note, session.userId, session.name || session.userId, 'active', '', photoUrl, photoSource]);
   });
   if (!rows.length) return { success: false, message: skipped.length ? 'หมวดการอ่านหนังสือใช้กับนักเรียนชาย ม.4–ม.6 เท่านั้น' : 'ไม่พบรหัสนักเรียนที่เลือก' };
   const lock = LockService.getScriptLock();
@@ -7941,6 +7944,28 @@ function decideBehaviorAppeal_(d, session) {
   apWrite_(list);
   try { getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(['NTF-APD-' + it.id, it.decidedAt + ':00', ok ? 'อนุมัติหมายเหตุแล้ว · ได้คืน ' + Math.abs(it.points) + ' คะแนน' : 'ไม่อนุมัติหมายเหตุคะแนนพฤติกรรม', it.title + ' (' + it.date + ')' + (note ? '\nหมายเหตุจากแอดมิน: ' + note : ''), 'students', String(it.sid), 'normal', 'system-ap', 'ระบบคะแนนพฤติกรรม', 'active', Utilities.formatDate(new Date(Date.now() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'), 'bell', '']); } catch (e) {}
   return { success: true, message: ok ? 'อนุมัติแล้ว · คืน ' + Math.abs(it.points) + ' คะแนนให้นักเรียน' : 'ไม่อนุมัติ · ยังหักคะแนนตามเดิม' };
+}
+
+/** v19.43 · แอดมิน: ยกเลิกการหักคะแนนพฤติกรรมของนักเรียน 1 คน ตามช่วงวันที่ (คืนคะแนน) · preview = ดูรายการก่อน ไม่แก้ */
+function cancelBehaviorRange_(d, session) {
+  d = d || {}; const sid = cleanVal(d.studentId); const from = formatSheetDate(d.from), to = formatSheetDate(d.to);
+  if (!sid || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) return { success: false, message: 'ระบุนักเรียนและช่วงวันที่ให้ถูกต้อง' };
+  const reason = cleanVal(d.reason || '').substring(0, 120);
+  const only = Array.isArray(d.logIds) ? d.logIds.map(function (x) { return cleanVal(x); }) : null; // v19.43 · เลือกเฉพาะบางรายการได้
+  const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR); if (!sh || sh.getLastRow() < 2) return { success: true, items: [], count: 0, points: 0 };
+  const lock = d.preview ? null : LockService.getScriptLock(); if (lock) { try { lock.waitLock(15000); } catch (e) {} }
+  try {
+    const vals = sh.getRange(2, 1, sh.getLastRow() - 1, HEADERS.BEHAVIOR.length).getValues(); const items = []; let pts = 0;
+    const by = (session.name || session.userId) + ' · ' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') + (reason ? ' · ' + reason : '');
+    for (let i = 0; i < vals.length; i++) {
+      const r = vals[i]; const ds = formatSheetDate(r[1]);
+      if (ds < from || ds > to || !isCodeMatch(r[4], sid) || cleanVal(r[14]) === 'cancelled' || !(Number(r[10]) < 0)) continue;
+      if (only && only.indexOf(cleanVal(r[0])) === -1) continue;
+      items.push({ logId: cleanVal(r[0]), date: ds, title: cleanVal(r[9]), points: Number(r[10]), note: cleanVal(r[11]).substring(0, 100), rule: cleanVal(r[8]), auto: /^หักอัตโนมัติ/.test(cleanVal(r[11])) || /^system/i.test(cleanVal(r[12])) || /^(prayer|dorm-prayer|jumuah-late|miss)/.test(cleanVal(r[8])), by: cleanVal(r[13] || r[12]) }); pts += Number(r[10]);
+      if (!d.preview) sh.getRange(i + 2, 15, 1, 2).setValues([['cancelled', by]]);
+    }
+    return { success: true, preview: !!d.preview, items: items, count: items.length, points: pts, message: d.preview ? '' : 'ยกเลิกการหัก ' + items.length + ' รายการ · คืน ' + Math.abs(pts) + ' คะแนนแล้ว' };
+  } finally { if (lock) try { lock.releaseLock(); } catch (e) {} }
 }
 
 function cancelBehaviorLog_(logId, session, isAdmin) {
