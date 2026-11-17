@@ -3644,7 +3644,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.48';
+  const APP_VERSION = '19.49';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12136,7 +12136,7 @@ window.k8HfMiss = function (slot) {
     toast(action === 'approve' ? 'อนุมัติแล้ว' : action === 'reject' ? 'ไม่อนุมัติแล้ว' : 'ยกเลิกการลาแล้ว', 'success');
     let r = null; try { r = await gasApiCall('respondStudentLeave', { data: { id, action, note } }, 20000); } catch (e) {}
     if (it) delete it._busy;
-    if (r && r.success) { loadApproved(true); }
+    if (r && r.success) { loadApproved(true); document.dispatchEvent(new CustomEvent('k8-sl-changed')); }
     else { if (it) { it.status = prev; try { paintOv(); paintAdmin(); } catch (e) {} } toast(((r && r.message) || 'บันทึกไม่สำเร็จ') + ' · คืนสถานะเดิมแล้ว ลองอีกครั้ง', 'error'); }
   };
   // v18.37 · ภาพรวมแอดมิน: การ์ด "คำขอลาเรียนรออนุมัติ" (แบบ LV1) · อนุมัติ/ไม่อนุมัติได้ทันที
@@ -13410,14 +13410,21 @@ window.k8PdWho = function (sid) {
   const me = () => { try { return currentAdmin || null; } catch (e) { return null; } };
   const canAns = () => { const a = me(); return !!a && String(a.role || '') === 'SuperAdmin' && !a.limited; };
   const stuOf = (sid) => { let L = []; try { L = allStudents || []; } catch (e) {} return L.find((s) => nid(s.studentId) === nid(sid)) || null; };
+  // v19.49 · เปิดแล้วแสดงทันทีจากข้อมูลล่าสุดในเครื่อง แล้วอัปเดตเบื้องหลัง (ไม่ต้องรอ 1–3 วินาที)
+  const SLD_CACHE = 'khalifah_sld_cache';
+  try { const c = JSON.parse(localStorage.getItem(SLD_CACHE) || 'null'); if (c && Array.isArray(c.list) && Date.now() - c.at < 3 * 864e5) { S.list = c.list; S.at = 0; } } catch (e) {}
   async function load(force) {
     if (S.busy || (!force && S.list && Date.now() - S.at < 30000)) return;
-    S.busy = true; paint();
+    S.busy = true; if (!S.list) paint();
     let r = null; try { r = await gasApiCall('getStudentLeaves', {}, 25000); } catch (e) {}
-    S.busy = false; if (r && r.success) { S.list = r.data || []; S.at = Date.now(); } else if (!S.list) S.list = [];
-    if (!(r && r.success)) toast((r && r.message) || 'โหลดข้อมูลการลาไม่สำเร็จ', 'error');
+    S.busy = false; if (r && r.success) { S.list = r.data || []; S.at = Date.now(); try { localStorage.setItem(SLD_CACHE, JSON.stringify({ at: Date.now(), list: S.list })); } catch (e) {} } else if (!S.list) S.list = [];
+    if (!(r && r.success) && document.getElementById('k8SldModal') && document.getElementById('k8SldModal').classList.contains('open')) toast((r && r.message) || 'โหลดข้อมูลการลาไม่สำเร็จ', 'error');
     paint();
   }
+  document.addEventListener('k8-sl-changed', () => { S.at = 0; });
+  window.k8SldPrefetch = function () { try { if (currentAdmin && !currentStudent) load(false); } catch (e) {} };
+  setTimeout(() => window.k8SldPrefetch(), 6000);
+  setInterval(() => { const m = document.getElementById('k8SldModal'); if (!m || !m.classList.contains('open')) window.k8SldPrefetch(); }, 5 * 60000);
   const onDay = (x, d) => String(x.from) <= d && String(x.to || x.from) >= d;
   const okSt = (x) => S.st === 'all' ? (x.status === 'approved' || x.status === 'pending' || !x.status) : S.st === 'pending' ? x.status === 'pending' : live(x);
   function shell() {
@@ -13476,7 +13483,7 @@ window.k8PdWho = function (sid) {
     B.innerHTML = h;
   }
   window.k8SldOpen = function (day) {
-    if (day) S.day = day; shell(); openModal('k8SldModal'); paint(); load(true);
+    if (day) S.day = day; shell(); openModal('k8SldModal'); paint(); load(!S.at || Date.now() - S.at > 15000);
     setTimeout(() => { const b = document.querySelector('#k8SldModal .k8-sheet-x'); if (b) b.focus(); }, 60);
   };
   window.k8SldClose = function () { try { closeModal('k8SldModal'); } catch (e) {} };
