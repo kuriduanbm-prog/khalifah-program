@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.43'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.45'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3549,9 +3549,17 @@ function readStuLeaves_() {
   __SL_MEMO = __ROWS_MEMO ? L.slice() : null;
   return L;
 }
+function slRow_(x) { return [x.id, x.sid, x.name, x.grade, x.from, x.to, x.allDay ? 'ทั้งวัน' : '', x.tFrom || '', x.tTo || '', x.type, x.where || '', x.reason || '', x.status || '', x.createdAt || '', x.by || '', x.at || '', x.note || '', JSON.stringify(x)]; }
+/** v19.45 · เขียนเฉพาะแถวเดียว (เร็วกว่าเขียนทั้งชีต) · ถ้าตำแหน่งไม่ตรง ใช้แบบเขียนทั้งหมด */
+function slWriteOne_(list, idx) {
+  const sh = slSheet_(); const it = list[idx];
+  if (!it || idx + 2 > sh.getLastRow() || cleanVal(sh.getRange(idx + 2, 1).getValue()) !== it.id) { writeStuLeaves_(list); return; }
+  sh.getRange(idx + 2, 1, 1, SL_HEAD_.length).setNumberFormat('@').setValues([slRow_(it)]);
+  __SL_MEMO = __ROWS_MEMO ? list.slice() : null;
+}
 function slWrite_(list) {
   const sh = slSheet_(); const old = Math.max(0, sh.getLastRow() - 1);
-  const rows = list.map(function (x) { return [x.id, x.sid, x.name, x.grade, x.from, x.to, x.allDay ? 'ทั้งวัน' : '', x.tFrom || '', x.tTo || '', x.type, x.where || '', x.reason || '', x.status || '', x.createdAt || '', x.by || '', x.at || '', x.note || '', JSON.stringify(x)]; });
+  const rows = list.map(slRow_);
   if (rows.length) sh.getRange(2, 1, rows.length, SL_HEAD_.length).setNumberFormat('@').setValues(rows);
   if (old > rows.length) sh.deleteRows(2 + rows.length, old - rows.length);
   __SL_MEMO = __ROWS_MEMO ? list.slice() : null;
@@ -3637,12 +3645,12 @@ function respondStudentLeave_(d, session) {
   if (['approve', 'reject', 'revoke'].indexOf(act) === -1) return { success: false, message: 'คำสั่งไม่ถูกต้อง' }; // v18.23
   let it = null;
   const r = leaveLock_(function () {
-    const L = readStuLeaves_(); it = L.filter(function (x) { return x.id === id; })[0];
+    const L = readStuLeaves_(); const ix = L.findIndex(function (x) { return x.id === id; }); it = L[ix];
     if (!it) return { success: false, message: 'ไม่พบคำขอนี้' };
     if (act === 'revoke') { if (it.status !== 'approved') return { success: false, message: 'ยกเลิกได้เฉพาะคำขอที่อนุมัติแล้ว' }; it.status = 'cancelled'; }
     else { if (it.status !== 'pending') return { success: false, message: 'คำขอนี้พิจารณาไปแล้ว' }; it.status = act === 'approve' ? 'approved' : 'rejected'; }
     it.by = cleanVal(session.name || session.userId); it.at = new Date().toISOString(); it.note = cleanVal(d.note || '').substring(0, 200);
-    writeStuLeaves_(L); return { success: true };
+    slWriteOne_(L, ix); return { success: true };
   });
   if (!r.success) return r;
   const msg = it.status === 'approved' ? 'อนุมัติการลาแล้ว' : it.status === 'rejected' ? 'ไม่อนุมัติการลา' : 'ยกเลิกการลาแล้ว';

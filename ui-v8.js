@@ -3644,7 +3644,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.44';
+  const APP_VERSION = '19.45';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12108,8 +12108,14 @@ window.k8HfMiss = function (slot) {
     let note = '';
     if (action === 'reject') { const v = window.prompt('เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)', ''); if (v === null) return; note = v; } // v18.23 · กดยกเลิก = ไม่ทำอะไร
     if (action === 'revoke' && !window.confirm('ยกเลิกการลาที่อนุมัติไปแล้ว?')) return;
+    // v19.45 · ตอบสนองทันที: เปลี่ยนสถานะบนหน้าจอก่อน แล้วค่อยส่งไปเซิร์ฟเวอร์ (ถ้าไม่สำเร็จ คืนค่าเดิม)
+    const it = ADM.list.find((x) => x.id === id); const prev = it ? it.status : null;
+    if (it && action !== 'revoke') { it.status = action === 'approve' ? 'approved' : 'rejected'; it._busy = true; try { paintOv(); paintAdmin(); } catch (e) {} }
+    toast(action === 'approve' ? 'อนุมัติแล้ว' : action === 'reject' ? 'ไม่อนุมัติแล้ว' : 'ยกเลิกการลาแล้ว', 'success');
     let r = null; try { r = await gasApiCall('respondStudentLeave', { data: { id, action, note } }, 20000); } catch (e) {}
-    if (r && r.success) { toast(r.message, 'success'); const it = ADM.list.find((x) => x.id === id); if (it && action !== 'revoke') { it.status = action === 'approve' ? 'approved' : 'rejected'; paintOv(); paintAdmin(); } loadApproved(true); } else { toast((r && r.message) || 'ไม่สำเร็จ', 'error'); loadApproved(true); }
+    if (it) delete it._busy;
+    if (r && r.success) { loadApproved(true); }
+    else { if (it) { it.status = prev; try { paintOv(); paintAdmin(); } catch (e) {} } toast(((r && r.message) || 'บันทึกไม่สำเร็จ') + ' · คืนสถานะเดิมแล้ว ลองอีกครั้ง', 'error'); }
   };
   // v18.37 · ภาพรวมแอดมิน: การ์ด "คำขอลาเรียนรออนุมัติ" (แบบ LV1) · อนุมัติ/ไม่อนุมัติได้ทันที
   const OVC = { 'ป่วย': '#dc2626', 'ลากิจ': '#0369a1', 'กลับบ้าน': '#d97706', 'กิจกรรมนอกโรงเรียน': '#7c3aed', 'อื่น ๆ': '#475569' };
