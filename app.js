@@ -336,7 +336,8 @@ function openPrayerHistoryDetailModal(logId) {
     const repeatBadge = (record.isRepeat || record.attemptCount > 1)
       ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 9999px; margin-left: 0.35rem; font-weight: 600;"><i class="fa-solid fa-rotate-right"></i> บันทึกซ้ำ (ครั้งที่ ${record.attemptCount || 2})</span>`
       : '';
-    pBadge.innerHTML = `<span class="status-badge ${statusClass}">${status}</span>${repeatBadge}`;
+    const wpz = typeof window.k8WrongPlace === 'function' ? window.k8WrongPlace(record) : ''; // v19.55 · หญิงเช็คซุฮริ/อัศรีนอกมัสยิด
+    pBadge.innerHTML = wpz ? `<span class="status-badge status-wrong">ผิดสถานที่ · ${String(wpz).replace(/[<>&]/g, '')}</span>${repeatBadge}` : `<span class="status-badge ${statusClass}">${status}</span>${repeatBadge}`;
   }
 
   if (pDate) pDate.innerText = dateStr;
@@ -1765,6 +1766,8 @@ function renderPrayerHistory(filterDate = null) {
     if (status.includes('อุซุร') || status.includes('ประจำเดือน')) statusClass = 'status-excused';
     if (status.includes('ป่วย') || status.includes('มีอุปสรรค')) statusClass = 'status-late';
 
+    const wpz = typeof window.k8WrongPlace === 'function' ? window.k8WrongPlace(p) : ''; // v19.55
+    if (wpz) statusClass = 'status-wrong';
     const repeatBadge = (p.isRepeat || p.attemptCount > 1)
       ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 600;"><i class="fa-solid fa-rotate-right"></i> บันทึกซ้ำ (ครั้งที่ ${p.attemptCount || 2})</span>`
       : '';
@@ -1781,7 +1784,7 @@ function renderPrayerHistory(filterDate = null) {
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
               <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-dark);">เวลา: ${p.prayerName || p.prayerTime}</span>
-              <span class="status-badge ${statusClass}">${status}</span>
+              <span class="status-badge ${statusClass}">${wpz ? 'ผิดสถานที่ · ' + String(wpz).replace(/[<>&]/g, '') : status}</span>
               ${repeatBadge}
               ${typeof window.k8PrReactPill === 'function' ? window.k8PrReactPill(cardId) : ''}
             </div>
@@ -4594,7 +4597,8 @@ async function executePrayerCaptureStep2() {
   const locSelect = document.getElementById('prayerLocationSelect');
   const noteInput = document.getElementById('prayerNoteInput');
   const prayerStatus = statusSelect ? statusSelect.value : (typeof window.k8PrayerStatusNow === 'function' ? window.k8PrayerStatusNow(selectedPrayerTime) : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)');
-  const prayerNote = noteInput ? noteInput.value.trim() : '';
+  let prayerNote = noteInput ? noteInput.value.trim() : '';
+  try { const wpz = typeof window.k8WrongPlaceNow === 'function' ? window.k8WrongPlaceNow() : ''; if (wpz) { prayerNote = window.k8WrongPlaceNote(wpz) + (prayerNote ? ' · ' + prayerNote : ''); setTimeout(() => { try { showToast('บันทึกแล้ว แต่ผิดสถานที่: ซุฮริ/อัศรี นักเรียนหญิงต้องเช็คที่มัสยิดอัลฮารอมัยน์', 'warning'); } catch (e) {} }, 1200); } } catch (e) {} // v19.55
   const chosenLoc = locSelect ? locSelect.value : (verifiedLocation ? verifiedLocation.locationName : 'พิกัด GPS');
   let accurateLocName = chosenLoc;
   if (verifiedLocation && verifiedLocation.isWithinZone) {
@@ -4757,6 +4761,7 @@ function updateCameraOverlayText() {
   }
   const now = new Date();
   overlayDateTime.innerText = `วัน-เวลา: ${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`;
+  try { if (typeof window.k8WrongPlaceOverlay === 'function') window.k8WrongPlaceOverlay(); } catch (e) {}
 }
 
 /**
@@ -4839,7 +4844,8 @@ function captureAndRecordPrayer() {
   const statusSelect = document.getElementById('prayerStatusSelect');
   const noteInput = document.getElementById('prayerNoteInput');
   const prayerStatus = statusSelect ? statusSelect.value : (typeof window.k8PrayerStatusNow === 'function' ? window.k8PrayerStatusNow(selectedPrayerTime) : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)');
-  const prayerNote = noteInput ? noteInput.value.trim() : '';
+  let prayerNote = noteInput ? noteInput.value.trim() : '';
+  try { const wpz = typeof window.k8WrongPlaceNow === 'function' ? window.k8WrongPlaceNow() : ''; if (wpz) { prayerNote = window.k8WrongPlaceNote(wpz) + (prayerNote ? ' · ' + prayerNote : ''); setTimeout(() => { try { showToast('บันทึกแล้ว แต่ผิดสถานที่: ซุฮริ/อัศรี นักเรียนหญิงต้องเช็คที่มัสยิดอัลฮารอมัยน์', 'warning'); } catch (e) {} }, 1200); } } catch (e) {} // v19.55
 
   // สร้าง Object ข้อมูลการบันทึก
   const prayerRecord = {
@@ -13160,6 +13166,7 @@ function renderAdminPrayerDailyTable() {
         pillClass = 'excused';
         icon = 'fa-bed';
       }
+      if (typeof window.k8WrongPlace === 'function' && window.k8WrongPlace(rec)) { pillClass = 'wrong'; icon = 'fa-triangle-exclamation'; } // v19.55
 
       const timeText = rec.time ? rec.time.slice(0, 5) : 'เช็คแล้ว';
       const logId = rec.id || rec.logId || '';
@@ -13332,6 +13339,7 @@ function renderAdminStudentPrayerHistory() {
     let statusClass = 'status-ontime';
     if (st.includes('สาย')) statusClass = 'status-late';
     else if (st.includes('อุซุร')) statusClass = 'status-excused';
+    if (typeof window.k8WrongPlace === 'function' && window.k8WrongPlace(p)) statusClass = 'status-wrong'; // v19.55
 
     const cleanLoc = p.locationName || (p.latitude ? 'พิกัด GPS ตรวจสอบแล้ว' : '-');
 

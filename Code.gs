@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.52'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.55'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3116,6 +3116,7 @@ function recordPrayer(data) {
   let dorm = null;
   try { dorm = dormPrayerOf_(cleanSid, dateStr, prayerNameThai, statusThai, lat, lng, data.locationName || ''); } catch (e) { dorm = null; }
   if (dorm) timeFlags = (timeFlags ? timeFlags + ' · ' : '') + 'ละหมาดที่หอพัก (' + dorm.zone + ')';
+  let wpZone = ''; try { wpZone = wrongPlaceOf_(cleanSid, dateStr, prayerNameThai, statusThai, lat, lng); } catch (e) {}
   {
     const unlock = lockEnter_(20000);
     try {
@@ -3135,6 +3136,7 @@ function recordPrayer(data) {
         withinZoneThai,
         photoRef,
         statusThai,
+        (wpZone && !/ผิดสถานที่/.test(String(data.note || '')) ? '⚠ ผิดสถานที่: นักเรียนหญิงต้องเช็คละหมาดซุฮริ/อัศรีที่มัสยิด (เช็คที่ ' + wpZone + ')' + (timeFlags || data.note ? ' · ' : '') : '') +
         (timeFlags ? '⚠ ' + timeFlags + (data.note ? ' · ' : '') : '') + (data.note || '')
       ], { keyCol: 1, verifyCol: 2, text: [2] });
       try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
@@ -3276,6 +3278,28 @@ function dormPrayerPenalty_(dm, dateStr, timeStr, prayerThai, statusThai) {
     sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
     return DORM_PRAYER_POINTS_;
   } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/** v19.55 · นักเรียนหญิง: ซุฮริ/อัศรี ต้องเช็คที่มัสยิดอัลฮารอมัยน์เท่านั้น (ตั้งแต่ 18 พ.ย. 2569)
+ *  คืนชื่อจุดที่เช็ค ถ้าอยู่ในเขตจุดอื่นที่ไม่ใช่มัสยิดฮารอมัยน์ (เช่น หอพัก) · นอกทุกเขต = ไม่ตัดสินที่นี่ */
+const GIRL_MOSQUE_FROM_ = '2026-11-18';
+function wrongPlaceOf_(sid, dateStr, prayerThai, statusThai, lat, lng) {
+  let from = GIRL_MOSQUE_FROM_; try { from = PropertiesService.getScriptProperties().getProperty('GIRL_MOSQUE_FROM') || from; } catch (e) {}
+  if (String(dateStr) < from) return '';
+  if (!/ซุฮ|ดุฮ|อัศ|อัส|อาศ/.test(String(prayerThai || ''))) return '';
+  if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/.test(String(statusThai || '').trim())) return '';
+  const la = Number(lat), lo = Number(lng);
+  if (lat === '' || lng === '' || lat == null || lng == null || !isFinite(la) || !isFinite(lo) || (!la && !lo)) return '';
+  const zs = geoZones_(); if (!zs.length) return '';
+  let best = null; zs.forEach(function (z) { const d = geoDist_(la, lo, Number(z.lat), Number(z.lng)); if (d <= Number(z.radius) + 15 && (!best || d < best.d)) best = { z: z, d: d }; });
+  if (!best) return '';
+  const main = zs.filter(function (z) { return z.main; })[0] || zs[0];
+  if (/ฮารอมัยน์|ฮะรอมัยน์|ฮารอมัย|haramain/i.test(String(best.z.name || '')) || best.z === main) return '';
+  const k = String(sid || '').replace(/\D/g, '').replace(/^0+/, '');
+  const st = (getAllStudents().data || []).filter(function (x) { return String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '') === k; })[0];
+  if (!st) return '';
+  let g = normGender_(st.gender || st.sex || ''); if (!g) g = genderFromPrefix_(cleanVal(st.prefix || '')); if (!g && /^(นางสาว|นาง|เด็กหญิง|ด\.ญ\.)/.test(cleanVal(st.fullName || ''))) g = 'หญิง';
+  return g === 'หญิง' ? String(best.z.name || 'นอกมัสยิด') : '';
 }
 
 // ---------- v19.17 · ละหมาดวันศุกร์ (ฟังคุฏบะห์) ----------

@@ -7210,3 +7210,13 @@ html[data-theme="dark"] .k8-dz.is-pen { background: #2a0f12 !important; border-c
 html[data-theme="dark"] .k8-dz.is-warn { background: #2a1d05 !important; border-color: #78350f !important; color: #fde68a !important; }
 html[data-theme="dark"] .k8-dz.is-dorm { background: #1e1638 !important; border-color: #4c1d95 !important; color: #ddd6fe !important; }
 html[data-theme="dark"] .k8-dz.is-mosque { background: #0b2235 !important; border-color: #075985 !important; color: #bae6fd !important; }
+
+/* v19.55 · นักเรียนหญิงเช็คซุฮริ/อัศรีนอกมัสยิด */
+.status-badge.status-wrong { background: #ffedd5 !important; color: #9a3412 !important; border: 1px solid #fdba74 !important; }
+.prayer-status-pill.wrong { background: #ffedd5 !important; color: #9a3412 !important; border: 1px solid #fdba74 !important; }
+.k8-wp-warn { margin: 0 0 8px; padding: 10px 12px; border-radius: 14px; background: #fff7ed; border: 1.5px solid #fb923c; color: #7c2d12; display: grid; gap: 2px; font-size: 13px; line-height: 1.45; text-align: left; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.k8-wp-warn[hidden] { display: none; }
+.k8-wp-warn b { font-size: 14px; color: #9a3412; }
+html[data-theme="dark"] .status-badge.status-wrong, html[data-theme="dark"] .prayer-status-pill.wrong { background: #431407 !important; color: #fed7aa !important; border-color: #9a3412 !important; }
+html[data-theme="dark"] .k8-wp-warn { background: #431407 !important; border-color: #ea580c !important; color: #fed7aa !important; }
+html[data-theme="dark"] .k8-wp-warn b { color: #fdba74 !important; }

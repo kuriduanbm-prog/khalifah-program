@@ -3646,7 +3646,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.54';
+  const APP_VERSION = '19.55';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14358,7 +14358,7 @@ window.k8PdWho = function (sid) {
     const nm = String(r.locationName || ''); if (!nm) return null;
     return Z.filter((z) => z.name && nm.indexOf(z.name) !== -1).sort((a, b) => String(b.name).length - String(a.name).length)[0] || null;
   }
-  function stuOf(sid) { let L = []; try { L = allStudents || []; } catch (e) {} return L.find((x) => nid(x.studentId) === nid(sid)) || null; }
+  function stuOf(sid) { try { if (currentStudent && nid(currentStudent.studentId) === nid(sid)) return currentStudent; } catch (e) {} let L = []; try { L = allStudents || []; } catch (e) {} return L.find((x) => nid(x.studentId) === nid(sid)) || null; }
   function isBoy(st) {
     if (!st) return null; const g = String(st.gender || st.sex || '').trim();
     if (/^(ชาย|m|male)$/i.test(g)) return true; if (/^(หญิง|f|female)$/i.test(g)) return false;
@@ -14391,7 +14391,13 @@ window.k8PdWho = function (sid) {
     }
     const s = stuOf(r.studentId); const boy = isBoy(s);
     if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/.test(st.trim())) { put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · สถานะนี้ไม่หักคะแนน')); return; }
-    if (boy === false) { put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · นักเรียนหญิงละหมาดที่หอพักได้ ไม่หักคะแนน')); return; }
+    if (boy === false) {
+      const wp = window.k8WrongPlace ? window.k8WrongPlace(r) : '';
+      if (wp) put(chip('is-warn', '<b>ผิดสถานที่ · เช็คที่ ' + esc(z.name) + '</b><small>นักเรียนหญิงต้องเช็คละหมาดซุฮริและอัศรีที่มัสยิดอัลฮารอมัยน์</small>'));
+      else put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · นักเรียนหญิงไม่ถูกหักคะแนนละหมาดที่หอพัก'));
+      return;
+    }
+    if (boy === null && !isAdm()) return;
     if (boy === null && isAdm()) { put(chip('is-warn', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · ยังไม่ได้ระบุเพศของนักเรียนคนนี้ ระบบจึงไม่หักคะแนน<small>ระบุเพศในข้อมูลนักเรียนก่อน แล้วใช้รายงาน "ละหมาดที่หอพัก" หักย้อนหลัง</small>')); return; }
     if (!isStaff()) { put(chip('is-pen', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · นักเรียนชายละหมาดที่หอพัก (ไม่ไปมัสยิด) ถูกหัก 1 คะแนน')); return; }
     put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · กำลังตรวจการหักคะแนน…'));
@@ -14403,6 +14409,56 @@ window.k8PdWho = function (sid) {
       else if (h) put(chip('is-dorm', '<b>เช็คที่หอพัก · เคยหักแล้วแต่ยกเลิก</b><small>' + esc(z.name) + '</small>'));
       else put(chip('is-warn', '<b>เช็คที่หอพัก · ยังไม่ถูกหัก</b><small>' + esc(z.name) + (isAdm() ? ' · หักย้อนหลังได้จากรายงาน "ละหมาดที่หอพัก"' : '') + '</small>' + (isAdm() && window.k8DmOpen ? '<button type="button" onclick="try{closeModal(\'prayerDetailModal\')}catch(e){};k8DmOpen()">เปิดรายงานหอพัก</button>' : '')));
     });
+  };
+})();
+
+/* ---------- v19.55 · นักเรียนหญิง: ซุฮริ/อัศรี ต้องเช็คที่มัสยิดอัลฮารอมัยน์ · เช็คที่หอพัก/จุดอื่น = เตือน + ไม่เป็นสีเขียว ---------- */
+(function () {
+  const FROM = '2026-11-18';
+  const nid = (v) => String(v == null ? '' : v).replace(/\D/g, '').replace(/^0+/, '');
+  const dist = (a1, o1, a2, o2) => { const R = 6371000, t = Math.PI / 180; const da = (a2 - a1) * t, dn = (o2 - o1) * t; const h = Math.sin(da / 2) ** 2 + Math.cos(a1 * t) * Math.cos(a2 * t) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+  const pad = (n) => String(n).padStart(2, '0');
+  const today = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  const SLOT = /ซุฮ|ดุฮ|อัศ|อัส|อาศ/;
+  const EXC = /^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/;
+  function zones() { try { return Object.values(GEOFENCE_TARGETS || {}); } catch (e) { return []; } }
+  function haram(z) { let main = null; try { main = GEOFENCE_TARGETS.MOSQUE; } catch (e) {} return z === main || /ฮารอมัยน์|ฮะรอมัยน์|ฮารอมัย|haramain/i.test(String(z.name || '')); }
+  function zoneAt(lat, lng) {
+    const la = Number(lat), lo = Number(lng); if (lat === '' || lat == null || !isFinite(la) || !isFinite(lo) || (!la && !lo)) return null;
+    let best = null; zones().forEach((z) => { const d = dist(la, lo, +z.lat, +z.lng); if (d <= +z.radius + 15 && (!best || d < best.d)) best = { z, d }; }); return best ? best.z : null;
+  }
+  function stu(sid) { try { if (currentStudent && nid(currentStudent.studentId) === nid(sid)) return currentStudent; } catch (e) {} let L = []; try { L = allStudents || []; } catch (e) {} return L.find((x) => nid(x.studentId) === nid(sid)) || null; }
+  function girl(st) {
+    if (!st) return false; const g = String(st.gender || st.sex || '').trim();
+    if (/^(หญิง|f|female|ญ)$/i.test(g)) return true; if (/^(ชาย|m|male|ช)$/i.test(g)) return false;
+    return /^(นางสาว|นาง|เด็กหญิง|ด\.ญ\.)/.test(String(st.prefix || '') + String(st.fullName || ''));
+  }
+  function why(sid, date, slot, status, lat, lng) {
+    if (String(date || '').slice(0, 10) < FROM || !SLOT.test(String(slot || '')) || EXC.test(String(status || '').trim())) return '';
+    if (!girl(stu(sid))) return '';
+    const z = zoneAt(lat, lng); if (!z || haram(z)) return '';
+    return String(z.name || 'นอกมัสยิด');
+  }
+  // บันทึกที่มีอยู่แล้ว → ชื่อจุดที่ผิด หรือ ''
+  window.k8WrongPlace = function (p) {
+    if (!p) return '';
+    const n = String(p.note || ''); const m = n.match(/ผิดสถานที่[^()]*\(เช็คที่ ([^)]+)\)/); if (m) return m[1];
+    if (/ผิดสถานที่/.test(n)) return 'นอกมัสยิด';
+    return why(p.studentId, p.date || String(p.timestamp || '').slice(0, 10), p.prayerName || p.prayerTime, p.status, p.latitude != null ? p.latitude : p.lat, p.longitude != null ? p.longitude : p.lng);
+  };
+  // ระหว่างเช็ค (ยังไม่บันทึก)
+  window.k8WrongPlaceNow = function () {
+    try { if (!currentStudent || !verifiedLocation) return ''; return why(currentStudent.studentId, today(), selectedPrayerTime, '', verifiedLocation.lat, verifiedLocation.lng); } catch (e) { return ''; }
+  };
+  window.k8WrongPlaceNote = (z) => '⚠ ผิดสถานที่: นักเรียนหญิงต้องเช็คละหมาดซุฮริ/อัศรีที่มัสยิด (เช็คที่ ' + z + ')';
+  let lastWarn = '';
+  window.k8WrongPlaceOverlay = function () {
+    const box = document.getElementById('k8WpWarn'); if (!box) return;
+    const z = window.k8WrongPlaceNow();
+    if (!z) { box.hidden = true; lastWarn = ''; return; }
+    box.hidden = false;
+    box.innerHTML = '<b>ผิดสถานที่ · ตอนนี้อยู่ที่ ' + String(z).replace(/[<>&]/g, '') + '</b><span>นักเรียนหญิงต้องเช็คละหมาดซุฮริและอัศรีที่มัสยิดอัลฮารอมัยน์ ถ้าบันทึกตรงนี้ รายการจะขึ้นว่า "ผิดสถานที่"</span>';
+    if (lastWarn !== z) { lastWarn = z; try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); } catch (e) {} try { showToast('ผิดสถานที่: ซุฮริ/อัศรี นักเรียนหญิงต้องเช็คที่มัสยิดอัลฮารอมัยน์', 'warning'); } catch (e) {} }
   };
 })();
 
