@@ -3646,7 +3646,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.51';
+  const APP_VERSION = '19.52';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14262,5 +14262,75 @@ window.k8PdWho = function (sid) {
   if (!hook()) document.addEventListener('DOMContentLoaded', hook);
   // อัปเดตเมื่อข้อมูลการลาเปลี่ยน
   document.addEventListener('k8-sl-changed', () => setTimeout(paint, 800));
+})();
+
+/* ---------- v19.52 · ตรวจและแก้รายการที่ระบบบันทึกผิดคน (เช็คพร้อมกันหลายคน → รหัสไปทับแถวของอีกคน) ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const dTh = (s) => { const d = new Date(String(s).slice(0, 10) + 'T00:00:00'); return isNaN(d) ? (s || '-') : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + (d.getFullYear() + 543); };
+  const M = { items: null, total: 0, sel: {}, busy: false, at: 0, old: false };
+  const isAdm = () => { try { const a = currentAdmin; return !!a && !currentStudent && !a.limited && (a.role === 'SuperAdmin' || /admin/i.test(String(a.role || ''))); } catch (e) { return false; } };
+  async function scan() {
+    if (M.busy) return; M.busy = true; paint();
+    let r = null; try { r = await gasApiCall('scanOwnerMismatch', {}, 60000); } catch (e) { r = { success: false, message: String(e && e.message || e) }; }
+    M.busy = false;
+    if (r && r.success) { M.items = r.items || []; M.total = r.total || M.items.length; M.sel = {}; M.items.forEach((x) => { M.sel[x.id] = true; }); M.at = Date.now(); M.old = false; }
+    else if (r && /Unknown action/i.test(String(r.error || r.message || ''))) M.old = true;
+    else if (document.getElementById('k8OmModal')) toast((r && (r.message || r.error)) || 'ตรวจไม่สำเร็จ', 'error');
+    paint(); banner();
+  }
+  function banner() {
+    const ov = document.getElementById('admin-tab-overview'); if (!ov) return;
+    let b = document.getElementById('k8OmBanner');
+    const n = M.items ? M.items.length : 0;
+    if (!isAdm() || !n) { if (b) b.hidden = true; return; }
+    if (!b) { const k = document.getElementById('k8OvKpis'); if (!k) return; k.insertAdjacentHTML('beforebegin', '<div class="k8-om-banner" id="k8OmBanner" role="alert"></div>'); b = document.getElementById('k8OmBanner'); }
+    b.hidden = false;
+    b.innerHTML = '<span class="k8-om-ico" aria-hidden="true">!</span><span class="k8-om-t"><b>พบ ' + n + ' รายการที่ระบบบันทึกผิดคน</b><small>รูป/การเช็คของนักเรียนคนหนึ่งไปอยู่ในประวัติของอีกคน (เกิดตอนหลายคนเช็คพร้อมกัน) · ตรวจแล้วกดแก้ได้ทันที</small></span><button type="button" onclick="k8OmOpen()">ตรวจและแก้</button>';
+  }
+  function paint() {
+    const m = document.getElementById('k8OmModal'); if (!m) return;
+    const body = m.querySelector('.k8-om-body');
+    if (M.old) { body.innerHTML = '<p class="k8-om-note is-warn">ระบบหลังบ้านยังเป็นเวอร์ชันเก่า · กรุณา Deploy Code.gs เวอร์ชันล่าสุด (19.52) ก่อน แล้วกดตรวจอีกครั้ง</p>'; return; }
+    if (M.busy && !M.items) { body.innerHTML = '<p class="k8-om-note">กำลังตรวจข้อมูลละหมาด การมาเรียน และผลบุญทั้งหมด…</p>'; return; }
+    const L = M.items || [];
+    if (!L.length) { body.innerHTML = '<p class="k8-om-note is-ok">ไม่พบรายการที่บันทึกผิดคน' + (M.at ? ' · ตรวจเมื่อ ' + new Date(M.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.' : '') + '</p>'; return; }
+    const nSel = L.filter((x) => M.sel[x.id] && !x.fixed).length;
+    body.innerHTML = '<p class="k8-om-note">ระบบตรวจจากชื่อที่บันทึกพร้อมรูป (ชื่อของผู้ถ่ายจริง) เทียบกับรหัสนักเรียนในรายการ · กดแก้แล้วรายการจะย้ายกลับไปเป็นของเจ้าของจริง และคืนคะแนนที่ถูกหักเพราะ "ไม่มีบันทึก"</p>' +
+      '<div class="k8-om-tools"><span>พบ ' + M.total + ' รายการ · เลือก ' + nSel + '</span><button type="button" onclick="k8OmAll(true)">เลือกทั้งหมด</button><button type="button" onclick="k8OmAll(false)">ไม่เลือก</button></div>' +
+      '<ul class="k8-om-list">' + L.map((x) => '<li class="' + (x.fixed ? 'is-fixed' : '') + '"><label><input type="checkbox"' + (M.sel[x.id] && !x.fixed ? ' checked' : '') + (x.fixed ? ' disabled' : '') + ' onchange="k8OmSel(\'' + esc(x.id) + '\',this.checked)">' +
+        '<span class="k8-om-i"><b>' + esc(x.label) + ' · ' + esc(dTh(x.date)) + '</b><small>' + esc(x.what) + '</small>' +
+        '<span class="k8-om-mv"><em class="is-from">อยู่ในประวัติของ: ' + esc(x.wrongName) + ' (' + esc(x.wrongId) + ')</em><em class="is-to">เจ้าของจริง: ' + esc(x.trueName) + ' (' + esc(x.trueId) + ')</em></span>' + (x.fixed ? '<i>แก้แล้ว</i>' : '') + '</span></label></li>').join('') + '</ul>';
+    const f = m.querySelector('.k8-om-go'); if (f) { f.disabled = !nSel || M.busy; f.textContent = M.busy ? 'กำลังแก้ไข…' : 'แก้ไขที่เลือก (' + nSel + ')'; }
+  }
+  window.k8OmSel = function (id, on) { M.sel[id] = !!on; paint(); };
+  window.k8OmAll = function (on) { (M.items || []).forEach((x) => { M.sel[x.id] = !!on; }); paint(); };
+  window.k8OmOpen = function () {
+    let m = document.getElementById('k8OmModal');
+    if (!m) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-om-modal" id="k8OmModal" role="dialog" aria-modal="true" aria-labelledby="k8OmT" hidden><div class="k8-om-box"><header><h3 id="k8OmT">ตรวจรายการที่บันทึกผิดคน</h3><button type="button" class="k8-om-x" onclick="k8OmClose()" aria-label="ปิด">✕</button></header><div class="k8-om-body"></div><footer><button type="button" class="k8-om-re" onclick="k8OmScan()">ตรวจอีกครั้ง</button><button type="button" class="k8-om-go" onclick="k8OmFix()">แก้ไขที่เลือก</button></footer></div></div>');
+      m = document.getElementById('k8OmModal');
+      m.addEventListener('click', (e) => { if (e.target === m) window.k8OmClose(); });
+    }
+    m.hidden = false; paint(); if (!M.items || Date.now() - M.at > 60000) scan();
+    setTimeout(() => { const x = m.querySelector('.k8-om-x'); if (x) x.focus(); }, 30);
+  };
+  window.k8OmClose = function () { const m = document.getElementById('k8OmModal'); if (m) m.hidden = true; };
+  window.k8OmScan = scan;
+  window.k8OmFix = async function () {
+    const ids = (M.items || []).filter((x) => M.sel[x.id] && !x.fixed).map((x) => x.id); if (!ids.length || M.busy) return;
+    if (!confirm('ย้าย ' + ids.length + ' รายการกลับไปเป็นของเจ้าของจริง?')) return;
+    M.busy = true; paint();
+    let r = null; try { r = await gasApiCall('fixOwnerMismatch', { data: { ids } }, 90000); } catch (e) { r = { success: false, message: String(e && e.message || e) }; }
+    M.busy = false;
+    if (r && r.success) { toast(r.message || 'แก้ไขแล้ว', 'success'); M.items = (r.items || []).filter((x) => !x.fixed); M.total = M.items.length; M.sel = {}; M.items.forEach((x) => { M.sel[x.id] = true; }); M.at = Date.now(); try { if (typeof syncAllDataFromCloud === 'function') syncAllDataFromCloud(false); } catch (e) {} }
+    else toast((r && (r.message || r.error)) || 'แก้ไขไม่สำเร็จ', 'error');
+    paint(); banner();
+  };
+  // ตรวจอัตโนมัติหลังแอดมินเข้าสู่ระบบ (ทุก 6 ชั่วโมง) → ถ้าพบจะขึ้นแถบเตือนในหน้าภาพรวม
+  (function pre(n) { setTimeout(() => { if (isAdm()) { let last = 0; try { last = +localStorage.getItem('khalifah_om_at') || 0; } catch (e) {} if (Date.now() - last > 6 * 3600e3 || n === 0) { try { localStorage.setItem('khalifah_om_at', String(Date.now())); } catch (e) {} scan(); } } else if (n < 10) pre(n + 1); }, 9000); })(0);
+  const f = window.renderAdminOverviewV8; if (typeof f === 'function') { const g = function () { const r = f.apply(this, arguments); try { banner(); } catch (e) {} return r; }; Object.keys(f).forEach((k) => { g[k] = f[k]; }); window.renderAdminOverviewV8 = g; }
 })();
 

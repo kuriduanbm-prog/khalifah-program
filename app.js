@@ -4601,7 +4601,7 @@ async function executePrayerCaptureStep2() {
     accurateLocName = verifiedLocation.locationName;
   }
 
-  const logId = 'PRY-' + Date.now();
+  const logId = 'PRY-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6); // v19.52 · กันรหัสชนกันเมื่อหลายคนเช็คพร้อมกัน
   const mapUrl = `https://www.google.com/maps?q=${verifiedLocation.lat},${verifiedLocation.lng}`;
   const targetKey = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(selectedPrayerTime) : selectedPrayerTime;
 
@@ -4843,7 +4843,7 @@ function captureAndRecordPrayer() {
 
   // สร้าง Object ข้อมูลการบันทึก
   const prayerRecord = {
-    logId: 'PRY-' + Date.now(),
+    logId: 'PRY-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
     studentId: currentStudent.studentId,
     studentName: currentStudent.fullName,
     grade: currentStudent.grade,
@@ -12199,7 +12199,8 @@ async function syncAllDataFromCloud(showToastMsg = false) {
       todayPrayers = db.prayers.filter(p => p.date === todayStr);
       // รายการที่ถ่ายแล้วแต่ยังส่งไม่ถึงระบบ (อยู่ในคิว) ต้องไม่หายไปจากหน้าจอ
       try {
-        const pend = (typeof window.k8OutboxPendingRecords === 'function') ? window.k8OutboxPendingRecords(['prayerCheckIn', 'recordPrayer']) : [];
+        let pend = (typeof window.k8OutboxPendingRecords === 'function') ? window.k8OutboxPendingRecords(['prayerCheckIn', 'recordPrayer']) : [];
+        if (currentStudent) pend = pend.filter(r => r && isIdMatch(r.studentId, currentStudent.studentId)); // v19.52 · ไม่ปนรายการค้างส่งของนักเรียนคนอื่นที่เคยใช้เครื่องนี้
         if (pend.length) {
           const have = new Set(db.prayers.map(p => String(p.logId || p.id || '')));
           const add = pend.filter(r => !have.has(String(r.logId || r.id || '')));

@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.46'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.52'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', scanOwnerMismatch: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1814,6 +1814,8 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
     case 'scanDormPrayers': return scanDormPrayers_(data);
+    case 'scanOwnerMismatch': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return ownerMismatch_(data, false, session);
+    case 'fixOwnerMismatch': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return ownerMismatch_(data, true, session);
     case 'checkMyPrayers': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return checkMyPrayers_(data, session);
     case 'deleteMyPrayer': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return deleteMyPrayer_(data, session);
     case 'getTeacherScores': return getTeacherScores_();
@@ -2203,6 +2205,32 @@ function normalizeBirthDate(val) {
 /**
  * ตรวจสอบความตรงกันของรหัส (Student ID, Code) โดยรองรับเลข 0 นำหน้า
  */
+/** v19.52 · เพิ่มแถวแบบปลอดภัยเมื่อหลายคนบันทึกพร้อมกัน
+ * ปัญหาเดิม: appendRow แล้วใช้ getLastRow() ไปแก้ช่องรหัส → ถ้ามีอีกคนเพิ่มแถวแทรกในจังหวะเดียวกัน
+ * getLastRow() จะชี้ไปที่แถวของอีกคน แล้วเขียนรหัสนักเรียนทับ (รูป/ข้อมูลของ B กลายเป็นของ A)
+ * แก้: หาแถวของตัวเองจากรหัสรายการ (และรหัสนักเรียน) แล้วค่อยตั้งรูปแบบข้อความเฉพาะแถวนั้น */
+function sameKey_(a, b) {
+  const x = cleanVal(a), y = cleanVal(b); if (!x || !y) return false; if (x === y) return true;
+  return /^\d+$/.test(x) && /^\d+$/.test(y) && x.replace(/^0+/, '') === y.replace(/^0+/, '');
+}
+function appendRowFind_(sheet, row, opt) {
+  opt = opt || {};
+  sheet.appendRow(row);
+  const kc = opt.keyCol || 1, vc = opt.verifyCol || 0;
+  const key = row[kc - 1], vv = vc ? row[vc - 1] : '';
+  const last = sheet.getLastRow(); const n = Math.min(Math.max(last - 1, 0), 400);
+  let r = -1;
+  if (n && cleanVal(key)) {
+    const w = Math.max(kc, vc);
+    const vals = sheet.getRange(last - n + 1, 1, n, w).getValues();
+    for (let i = n - 1; i >= 0; i--) { if (sameKey_(vals[i][kc - 1], key) && (!vc || sameKey_(vals[i][vc - 1], vv))) { r = last - n + 1 + i; break; } }
+  }
+  if (r > 0) (opt.text || []).forEach(function (c) { try { sheet.getRange(r, c).setNumberFormat('@').setValue(row[c - 1] == null ? '' : row[c - 1]); } catch (e) {} });
+  return r;
+}
+/** ล็อกแบบซ้อนได้: ถ้าผู้เรียกถือล็อกอยู่แล้ว จะไม่ปล่อยล็อกของผู้เรียก */
+function lockEnter_(ms) { const l = LockService.getScriptLock(); let own = false; try { if (!l.hasLock()) { l.waitLock(ms || 20000); own = true; } } catch (e) {} return function () { if (own) { try { l.releaseLock(); } catch (e) {} } }; }
+
 function isCodeMatch(c1, c2) {
   const s1 = cleanVal(c1).toLowerCase();
   const s2 = cleanVal(c2).toLowerCase();
@@ -2484,7 +2512,7 @@ function registerStudentCore_(data) {
   const statusDate = data.statusEffectiveDate || data.statusDate || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
   const statusNote = cleanVal(data.statusNote || 'ลงทะเบียนนักเรียนใหม่');
 
-  sheet.appendRow([
+  const regRow = appendRowFind_(sheet, [
     cleanSid,
     data.fullName || '',
     data.schoolName || '',
@@ -2501,14 +2529,8 @@ function registerStudentCore_(data) {
     approvalStatusVal,
     statusDate,
     statusNote
-  ]);
-
-  // ตั้งค่า NumberFormat เป็น Plain Text เพื่อรักษาเลข 0 นำหน้าแน่นอน 100%
-  const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow, 1).setNumberFormat('@').setValue(cleanSid);
-  sheet.getRange(lastRow, 5).setNumberFormat('@').setValue(cleanBD);
-  sheet.getRange(lastRow, 6).setNumberFormat('@').setValue(cleanPh);
-  sheet.getRange(lastRow, 15).setNumberFormat('@').setValue(statusDate);
+  ], { keyCol: 1, verifyCol: 2, text: [1, 5, 6, 15] });
+  const lastRow = regRow;
 
   if (statusThai !== 'รอผู้สมัครกรอกรหัส OTP') {
     logStudentStatusChange(cleanSid, data.fullName || '', data.grade || '', 'ลงทะเบียนใหม่', statusThai, statusDate, statusNote, data.adminUser || 'ระบบลงทะเบียน');
@@ -2831,9 +2853,7 @@ function syncStudentGradesArrayToSheet(studentId, studentName, gradeLevel, grade
       sheetGrades.getRange(foundRow, 1, 1, 9).setValues([rowData]);
       sheetGrades.getRange(foundRow, 1).setNumberFormat('@').setValue(cleanSid);
     } else {
-      sheetGrades.appendRow(rowData);
-      const lastRow = sheetGrades.getLastRow();
-      sheetGrades.getRange(lastRow, 1).setNumberFormat('@').setValue(cleanSid);
+      appendRowFind_(sheetGrades, rowData, { keyCol: 1, text: [1] });
     }
   });
 }
@@ -2976,7 +2996,7 @@ function recordPrayer(data) {
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.PRAYERS);
 
-  const logId = cleanVal(data.logId || data.id || ('PRY-' + new Date().getTime()));
+  let logId = cleanVal(data.logId || data.id || ('PRY-' + new Date().getTime() + '-' + Math.floor(Math.random() * 1e4)));
   let timestamp = data.timestamp || new Date().toISOString();
   const now = new Date();
   let dateStr = formatSheetDate(data.date) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
@@ -2989,11 +3009,16 @@ function recordPrayer(data) {
 
   // ตรวจสอบเฉพาะกรณีรหัส logId ซ้ำเดิมเป๊ะๆ เพื่อป้องกัน packet ซ้ำจากเน็ตกระตุก
   // แต่หากเป็นการกดบันทึกซ้ำครั้งใหม่ (logId ใหม่) จะบันทึกเป็นประวัติการเช็คชื่อซ้ำตามที่ผู้ใช้ต้องการ
-  const existingRows = sheet.getDataRange().getValues();
-  for (let i = 1; i < existingRows.length; i++) {
-    const rLogId = cleanVal(existingRows[i][0]);
-    if (logId && rLogId === logId) {
-      return { success: true, deduplicated: true, message: 'ข้อมูลการละหมาดรหัสนี้มีอยู่ในฐานข้อมูลแล้ว', logId: rLogId };
+  // v19.52 · ซ้ำจริง = รหัสรายการเดียวกัน "และ" นักเรียนคนเดียวกัน · ถ้ารหัสชนกับของนักเรียนคนอื่น ให้ตั้งรหัสใหม่ (เดิมรายการของคนที่สองหายไปเงียบๆ)
+  {
+    const n0 = sheet.getLastRow() - 1;
+    const ex = n0 > 0 ? sheet.getRange(2, 1, n0, 2).getValues() : [];
+    for (let i = ex.length - 1; i >= 0; i--) {
+      if (logId && cleanVal(ex[i][0]) === logId) {
+        if (!cleanSid || sameKey_(ex[i][1], cleanSid)) return { success: true, deduplicated: true, message: 'ข้อมูลการละหมาดรหัสนี้มีอยู่ในฐานข้อมูลแล้ว', logId: logId };
+        logId = logId + '-' + String(cleanSid).replace(/\D/g, '').replace(/^0+/, '');
+        break;
+      }
     }
   }
 
@@ -3091,26 +3116,30 @@ function recordPrayer(data) {
   let dorm = null;
   try { dorm = dormPrayerOf_(cleanSid, dateStr, prayerNameThai, statusThai, lat, lng, data.locationName || ''); } catch (e) { dorm = null; }
   if (dorm) timeFlags = (timeFlags ? timeFlags + ' · ' : '') + 'ละหมาดที่หอพัก (' + dorm.zone + ')';
-  sheet.appendRow([
-    logId,
-    cleanSid,
-    data.studentName || '',
-    data.grade || '',
-    prayerNameThai,
-    timestamp,
-    dateStr,
-    timeStr,
-    lat,
-    lng,
-    locationDisplay,
-    data.distanceMeters || 0,
-    withinZoneThai,
-    photoRef,
-    statusThai,
-    (timeFlags ? '⚠ ' + timeFlags + (data.note ? ' · ' : '') : '') + (data.note || '')
-  ]);
-  const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
+  {
+    const unlock = lockEnter_(20000);
+    try {
+      appendRowFind_(sheet, [
+        logId,
+        cleanSid,
+        data.studentName || '',
+        data.grade || '',
+        prayerNameThai,
+        timestamp,
+        dateStr,
+        timeStr,
+        lat,
+        lng,
+        locationDisplay,
+        data.distanceMeters || 0,
+        withinZoneThai,
+        photoRef,
+        statusThai,
+        (timeFlags ? '⚠ ' + timeFlags + (data.note ? ' · ' : '') : '') + (data.note || '')
+      ], { keyCol: 1, verifyCol: 2, text: [2] });
+      try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
+    } finally { unlock(); }
+  }
   // v18.99 · รูปที่ถ่ายตอนไม่มีเน็ตแล้วส่งมาหลังระบบหักคะแนนไปแล้ว → คืนคะแนนทันที
   let restored = 0;
   if (!/ขาด/.test(String(statusThai || ''))) { try { restored = prayerMissRestore_(cleanSid, dateStr, prayerNameThai, 'พบบันทึกละหมาด (ส่งย้อนหลัง)'); } catch (e) {} }
@@ -3121,6 +3150,59 @@ function recordPrayer(data) {
   const msg = [jum ? 'คุณมาฟังคุฏบะห์สายแล้ว' + (jumPts ? ' · ถูกหัก ' + jumPts + ' คะแนน' : '') : '', dorm ? 'ละหมาดที่หอพัก' + (dormPts ? ' · ถูกหัก ' + dormPts + ' คะแนน' : '') : ''].filter(Boolean).join(' · ');
   return { success: true, message: msg || ('บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว'), logId: logId, photoUrl: photoRef, restored: restored,
     jumuahLate: !!jum, jumuahDeadline: jum ? jum.deadline : undefined, penalty: (jumPts + dormPts) || undefined, dormPrayer: !!dorm, dormZone: dorm ? dorm.zone : undefined, dormPenalty: dormPts || undefined };
+}
+
+/* ===================== v19.52 · ตรวจและแก้รายการที่ถูกบันทึกผิดคน =====================
+ * สาเหตุ (แก้แล้วใน v19.52): เมื่อนักเรียนหลายคนเช็คพร้อมกัน ระบบเดิมเขียนรหัสนักเรียนทับลงแถวของอีกคน
+ * ทำให้รูป/ข้อมูลของนักเรียน B ไปอยู่ในประวัติของนักเรียน A (และ B ไม่มีบันทึกของตัวเอง)
+ * วิธีตรวจ: ชื่อนักเรียนที่บันทึกในแถว (ชื่อจากเครื่องของผู้ถ่ายจริง) ตรงกับนักเรียน "อีกคน" เพียงคนเดียว และไม่ตรงกับเจ้าของรหัสในแถว */
+function ownerMismatch_(d, apply, session) {
+  d = d || {};
+  const norm = function (n) { return String(splitNamePrefix_(n).name || '').replace(/\s+/g, ''); };
+  const nid = function (v) { return String(cleanVal(v)).replace(/\D/g, '').replace(/^0+/, ''); };
+  const byId = {}, byName = {}, idText = {};
+  (getAllStudents().data || []).forEach(function (st) {
+    const k = nid(st.studentId); if (!k) return; const nm = norm(st.fullName);
+    byId[k] = { name: nm, full: cleanVal(st.fullName), grade: cleanVal(st.grade) }; idText[k] = cleanVal(st.studentId);
+    if (nm) (byName[nm] = byName[nm] || []).push(k);
+  });
+  const SPEC = [
+    { key: 'prayer', sheet: SHEETS.PRAYERS, label: 'บันทึกละหมาด', idc: 2, namec: 3, gradec: 4, datec: 7, what: function (r) { return formatPrayerTimeThai(r[4]) + ' · ' + formatSheetTime(r[7]).slice(0, 5) + ' น.' + (cleanVal(r[13]) ? ' · มีรูป' : ''); } },
+    { key: 'att', sheet: SHEETS.ATTENDANCE, label: 'บันทึกการมาเรียน', idc: 2, namec: 3, gradec: 4, datec: 5, what: function (r) { return cleanVal(r[6]) + (cleanVal(r[9]) ? ' · ' + cleanVal(r[9]) : '') + (cleanVal(r[11]) ? ' · คาบ ' + cleanVal(r[11]) : ''); } },
+    { key: 'hasanat', sheet: SHEETS.HASANAT, label: 'บันทึกผลบุญ', idc: 2, namec: 3, gradec: 4, datec: 5, what: function () { return 'ผลบุญ'; } }
+  ];
+  const want = Array.isArray(d.ids) ? d.ids.map(function (x) { return cleanVal(x); }) : null;
+  const ss = getSpreadsheet(); const items = []; let fixed = 0, restored = 0;
+  const unlock = apply ? lockEnter_(25000) : function () {};
+  try {
+    SPEC.forEach(function (sp) {
+      const sh = ss.getSheetByName(sp.sheet); if (!sh || sh.getLastRow() < 2) return;
+      const n = sh.getLastRow() - 1; const w = Math.max(sh.getLastColumn(), sp.namec);
+      const rows = sh.getRange(2, 1, n, Math.min(w, 16)).getValues();
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i]; const lid = cleanVal(r[0]); const cur = nid(r[sp.idc - 1]); const nm = norm(r[sp.namec - 1]);
+        if (!lid || !cur || !nm || !byId[cur] || !byId[cur].name || byId[cur].name === nm) continue;
+        const c = byName[nm] || []; if (c.length !== 1 || c[0] === cur) continue;
+        const uid = sp.key + ':' + lid + ':' + cur;
+        const it = { id: uid, kind: sp.key, label: sp.label, row: i + 2, logId: lid, date: formatSheetDate(r[sp.datec - 1]), what: sp.what(r),
+          wrongId: idText[cur] || cur, wrongName: byId[cur].full, trueId: idText[c[0]] || c[0], trueName: byId[c[0]].full, trueGrade: byId[c[0]].grade };
+        if (apply && (!want || want.indexOf(uid) !== -1)) {
+          // ตรวจซ้ำก่อนเขียน (กันแถวเลื่อน)
+          const chk = sh.getRange(i + 2, 1, 1, sp.namec).getValues()[0];
+          if (cleanVal(chk[0]) === lid && nid(chk[sp.idc - 1]) === cur && norm(chk[sp.namec - 1]) === nm) {
+            sh.getRange(i + 2, sp.idc).setNumberFormat('@').setValue(it.trueId);
+            it.fixed = true; fixed++;
+            if (sp.key === 'prayer' && !/ขาด/.test(String(r[14] || ''))) { try { restored += prayerMissRestore_(it.trueId, it.date, r[4], 'แก้รายการที่ระบบบันทึกผิดคน') || 0; } catch (e) {} }
+          }
+        }
+        items.push(it);
+      }
+    });
+    if (apply && fixed) { try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {} }
+  } finally { unlock(); }
+  items.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+  return { success: true, items: items.slice(0, 500), total: items.length, fixed: fixed, restored: restored,
+    message: apply ? ('แก้ไขแล้ว ' + fixed + ' รายการ' + (restored ? ' · คืนคะแนนที่ถูกหักผิด ' + restored + ' รายการ' : '')) : ('พบ ' + items.length + ' รายการที่น่าจะบันทึกผิดคน') };
 }
 
 // ---------- v19.20 · ละหมาดที่หอพัก (นักเรียนชาย) ----------
@@ -3329,6 +3411,8 @@ function deletePrayerRecord(data) {
   const targetDate = formatSheetDate(data.date || '');
   const targetPrayer = formatPrayerTimeThai(data.prayerTime || data.prayerName || '');
 
+  const unlock = lockEnter_(20000);
+  try {
   const rows = sheet.getDataRange().getValues();
   for (let i = rows.length - 1; i >= 1; i--) {
     const rLogId = cleanVal(rows[i][0]);
@@ -3343,10 +3427,12 @@ function deletePrayerRecord(data) {
 
     if (matchById || matchByTs || matchByDatePt) {
       sheet.deleteRow(i + 1);
+      try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
       return { success: true, message: 'ลบบันทึกเวลาละหมาดเรียบร้อยแล้ว' };
     }
   }
   return { success: false, message: 'ไม่พบรายการละหมาดที่ต้องการลบ' };
+  } finally { unlock(); }
 }
 
 /** แก้ไขบันทึกละหมาด (เวลาละหมาด วันที่ เวลา สถานะ หมายเหตุ) พร้อมบันทึกว่าใครแก้ไข */
@@ -4569,13 +4655,13 @@ function recordAttendance(data) {
   ensureSchema();
   const ss = getSpreadsheet();
   const sheet = ss.getSheetByName(SHEETS.ATTENDANCE);
-  const logId = cleanVal(data.logId || ('ATT-' + new Date().getTime()));
+  const logId = cleanVal(data.logId || ('ATT-' + new Date().getTime() + '-' + Math.floor(Math.random() * 1e4)));
   const now = new Date();
   const dateStr = formatSheetDate(data.date) || Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
   const timeStr = formatSheetTime(data.time) || Utilities.formatDate(now, "Asia/Bangkok", "HH:mm:ss");
   const cleanSid = formatAsText(data.studentId);
 
-  sheet.appendRow([
+  appendRowFind_(sheet, [
     logId,
     cleanSid,
     data.studentName || '',
@@ -4584,9 +4670,7 @@ function recordAttendance(data) {
     timeStr,
     formatAttendanceStatusThai(data.status || 'มา'),
     data.note || ''
-  ]);
-  const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
+  ], { keyCol: 1, verifyCol: 2, text: [2] });
 
   return { success: true, message: 'บันทึกการมาเรียนสำเร็จ', logId: logId };
 }
@@ -4903,7 +4987,7 @@ function checkInActivity(data) {
     }
 
     // สแกนใหม่: เพิ่มแถวลงชีตทันทีแบบ Plain Text
-    sheetLogs.appendRow([
+    appendRowFind_(sheetLogs, [
       logId,
       targetActId || '-',
       activityFoundTitle || targetActTitle || 'กิจกรรมทั่วไป',
@@ -4913,14 +4997,7 @@ function checkInActivity(data) {
       dateStr,
       timeStr,
       timestamp
-    ]);
-
-    const newRowIdx = sheetLogs.getLastRow();
-    sheetLogs.getRange(newRowIdx, 1).setNumberFormat('@');
-    sheetLogs.getRange(newRowIdx, 2).setNumberFormat('@');
-    sheetLogs.getRange(newRowIdx, 4).setNumberFormat('@');
-    sheetLogs.getRange(newRowIdx, 7).setNumberFormat('@');
-    sheetLogs.getRange(newRowIdx, 8).setNumberFormat('@');
+    ], { keyCol: 1, verifyCol: 4, text: [1, 2, 4, 7, 8] });
     totalForThisAct++;
 
     // อัปเดตจำนวนผู้เข้าร่วมในตารางกิจกรรม
@@ -5194,9 +5271,9 @@ function addSubAdmin(data) {
   if (rowNum > 0) {
     sheet.getRange(rowNum, 1, 1, 10).setValues([rowData]);
   } else {
-    sheet.appendRow(rowData);
-    rowNum = sheet.getLastRow();
+    rowNum = appendRowFind_(sheet, rowData, { keyCol: 2 });
   }
+  if (rowNum < 1) return { success: false, message: 'บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง' };
   sheet.getRange(rowNum, 2).setNumberFormat('@').setValue(cleanUser);
   sheet.getRange(rowNum, 3).setNumberFormat('@').setValue(storedPass);
   sheet.getRange(rowNum, 6).setNumberFormat('@').setValue(phone);
@@ -5353,7 +5430,7 @@ function logStudentStatusChange(studentId, studentName, grade, oldStatus, newSta
     const dateStr = effectiveDate ? formatSheetDate(effectiveDate) : Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
     const recordedAt = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
 
-    sheet.appendRow([
+    appendRowFind_(sheet, [
       logId,
       cleanVal(studentId),
       cleanVal(studentName),
@@ -5364,11 +5441,7 @@ function logStudentStatusChange(studentId, studentName, grade, oldStatus, newSta
       cleanVal(note || '-'),
       cleanVal(adminUser || 'Admin/ระบบ'),
       recordedAt
-    ]);
-
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanVal(studentId));
-    sheet.getRange(lastRow, 7).setNumberFormat('@').setValue(dateStr);
+    ], { keyCol: 1, verifyCol: 2, text: [2, 7] });
     return { success: true, logId: logId };
   } catch (err) {
     Logger.log('logStudentStatusChange error: ' + err.message);
@@ -5804,8 +5877,8 @@ function recordHasanatCore_(data, by) {
     }
   }
 
-  const logId = 'HAS-' + new Date().getTime();
-  sheet.appendRow([
+  const logId = 'HAS-' + new Date().getTime() + '-' + Math.floor(Math.random() * 1e4);
+  const lastRow = appendRowFind_(sheet, [
     logId,
     cleanSid,
     data.studentName || '',
@@ -5821,10 +5894,8 @@ function recordHasanatCore_(data, by) {
     totalRakaat || 0,
     sunnahDetailsStr,
     timestamp
-  ]);
-  const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
-  hasanatBy_(sheet, lastRow, by);
+  ], { keyCol: 1, verifyCol: 2, text: [2] });
+  if (lastRow > 0) hasanatBy_(sheet, lastRow, by);
 
   return { 
     success: true, 
@@ -6095,10 +6166,7 @@ function registerPendingUser(data, byStaff) {
     sheet.getRange(updatedRow, 3).setNumberFormat('@').setValue(userId);
     sheet.getRange(updatedRow, 7).setNumberFormat('@').setValue(otpCode);
   } else {
-    sheet.appendRow(rowValues);
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow, 3).setNumberFormat('@').setValue(userId);
-    sheet.getRange(lastRow, 7).setNumberFormat('@').setValue(otpCode);
+    appendRowFind_(sheet, rowValues, { keyCol: 1, verifyCol: 3, text: [3, 7] });
   }
 
   const out = {
@@ -6474,8 +6542,8 @@ function saveDailyAttendance(data) {
         sName, sGrade, dateStr, timeStr, statusThai, teacherNote, subjCode, subjName, checkedBy, period
       ]]);
     } else {
-      const logId = 'ATT-' + new Date().getTime() + '-' + count;
-      sheet.appendRow([
+      const logId = 'ATT-' + new Date().getTime() + '-' + count + '-' + Math.floor(Math.random() * 1e4);
+      appendRowFind_(sheet, [
         logId,
         cleanSid,
         sName,
@@ -6488,9 +6556,7 @@ function saveDailyAttendance(data) {
         subjName,
         checkedBy,
         period
-      ]);
-      const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow, 2).setNumberFormat('@').setValue(cleanSid);
+      ], { keyCol: 1, verifyCol: 2, text: [2] });
     }
 
     // อัปเดตสถิติมาเรียน JSON ในแผ่นงาน รายชื่อนักเรียน
@@ -6680,7 +6746,7 @@ function saveCalendarEvent(data) {
   }
 
   try {
-    const eventId = cleanVal(data.id || data.eventId || ('CAL-' + new Date().getTime()));
+    const eventId = cleanVal(data.id || data.eventId || ('CAL-' + new Date().getTime() + '-' + Math.floor(Math.random() * 1e4)));
     const title = cleanVal(data.title || 'กิจกรรมปฏิทิน');
     const startDate = formatSheetDate(data.startDate || data.date) || Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
     const endDate = formatSheetDate(data.endDate || data.date) || startDate;
@@ -6722,7 +6788,7 @@ function saveCalendarEvent(data) {
     }
 
     if (!updated) {
-      sheet.appendRow([
+      appendRowFind_(sheet, [
         eventId,
         title,
         startDate,
@@ -6735,13 +6801,7 @@ function saveCalendarEvent(data) {
         description,
         createdBy,
         updatedAt
-      ]);
-      const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow, 1).setNumberFormat('@');
-      sheet.getRange(lastRow, 3).setNumberFormat('@');
-      sheet.getRange(lastRow, 4).setNumberFormat('@');
-      sheet.getRange(lastRow, 5).setNumberFormat('@');
-      sheet.getRange(lastRow, 6).setNumberFormat('@');
+      ], { keyCol: 1, text: [1, 3, 4, 5, 6] });
     }
 
     SpreadsheetApp.flush();
@@ -6906,7 +6966,7 @@ function savePrayerLateRequest(data) {
   }
 
   try {
-    const id = cleanVal(data.id || ('PREQ-' + Date.now()));
+    const id = cleanVal(data.id || ('PREQ-' + Date.now() + '-' + Math.floor(Math.random() * 1e4)));
     const studentId = cleanVal(data.studentId || '');
     const studentName = cleanVal(data.studentName || '');
     const grade = cleanVal(data.grade || '');
@@ -6938,15 +6998,10 @@ function savePrayerLateRequest(data) {
     }
 
     if (!updated) {
-      sheet.appendRow([
+      appendRowFind_(sheet, [
         id, studentId, studentName, grade, parentPhone, prayerSlot, date,
         reasonPreset, reasonDetail, photoUrl, status, submittedAt, approvedBy, approvedAt, adminNote, photoSource
-      ]);
-      const lastRow = sheet.getLastRow();
-      sheet.getRange(lastRow, 1).setNumberFormat('@');
-      sheet.getRange(lastRow, 2).setNumberFormat('@');
-      sheet.getRange(lastRow, 5).setNumberFormat('@');
-      sheet.getRange(lastRow, 7).setNumberFormat('@');
+      ], { keyCol: 1, verifyCol: 2, text: [1, 2, 5, 7] });
     }
 
     return { success: true, message: 'บันทึกคำขออนุมัติเรียบร้อย', id: id, photoUrl: /^https?:/.test(photoUrl) ? photoUrl : '', photoSource: photoSource };
@@ -8822,7 +8877,7 @@ function reactPrayer_(data, session) {
     if (kind === 'unlike') { row[4] = ''; row[5] = ''; row[6] = ''; }
     if (row.join('|') !== before) {
       if (idx > 0) sh.getRange(idx + 1, 1, 1, 7).setValues([row]);
-      else { sh.appendRow(row); sh.getRange(sh.getLastRow(), 1, 1, 2).setNumberFormat('@'); sh.getRange(sh.getLastRow(), 1, 1, 2).setValues([[row[0], row[1]]]); }
+      else appendRowFind_(sh, row, { keyCol: 1, verifyCol: 2, text: [1, 2] });
     }
     return { success: true, react: prayerReactRow_(row) };
   } finally { try { lock.releaseLock(); } catch (e) {} }
@@ -8864,7 +8919,7 @@ function periodFinish_(list, active, end, resume, auto) {
     }
     d = periodAddDays_(d, 1);
   }
-  if (out.length) sheet.getRange(sheet.getLastRow() + 1, 1, out.length, out[0].length).setValues(out);
+  if (out.length) { const unlock = lockEnter_(20000); try { sheet.getRange(sheet.getLastRow() + 1, 1, out.length, out[0].length).setValues(out); SpreadsheetApp.flush(); } finally { unlock(); } }
   active.status = 'ended'; active.end = end; active.resumeSlot = resume; active.records = out.length; active.endedAt = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
   if (auto) active.autoEnded = true;
   periodSave_(list);
