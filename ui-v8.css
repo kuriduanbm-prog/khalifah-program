@@ -7089,3 +7089,52 @@ html[data-theme="dark"] .k8-hqd-delbtn { background: transparent; border-color: 
 html[data-theme="dark"] .k8-tt-xhide { background: #0f172a; border-color: #075985; color: #7dd3fc; }
 html[data-theme="dark"] .k8-tt-xhide:hover { background: #0c2536; }
 html[data-theme="dark"] .k8-tt-xhide.is-on { background: #2a1d05; border-color: #78350f; color: #fcd34d; }
+
+/* v19.51 · นักเรียนที่ต้องติดตาม */
+.k8-wl { margin-top: 16px; padding: 16px 20px !important; }
+.k8-wl .hf-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.k8-wl h2 { margin: 0; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; color: #0f172a; }
+.k8-wl h2 svg { color: #b45309; }
+.k8-wl-seg { display: inline-flex; background: #f1f5f9; border-radius: 10px; padding: 3px; gap: 2px; }
+.k8-wl-seg button { border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #475569; padding: 5px 10px; border-radius: 8px; cursor: pointer; min-height: 30px; }
+.k8-wl-seg button[aria-pressed="true"] { background: #fff; color: #0c4a6e; box-shadow: 0 1px 2px rgba(15,23,42,.12); }
+.k8-wl-sub { margin: 6px 0 10px; font-size: 13px; color: #475569; }
+.k8-wl-sub b { color: #0f172a; }
+.k8-wl-sub b.is-high { color: #b91c1c; }
+.k8-wl-ok { margin: 4px 0 0; padding: 12px; border-radius: 12px; background: #f0fdf4; color: #15803d; font-size: 14px; text-align: center; }
+.k8-wl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.k8-wl-chips button { --c: #0c4a6e; --bg: #f0f9ff; border: 1px solid #e2e8f0; background: #fff; color: #334155; font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; cursor: pointer; min-height: 32px; }
+.k8-wl-chips button b { color: var(--c); margin-left: 2px; }
+.k8-wl-chips button[aria-pressed="true"] { background: var(--bg); border-color: var(--c); color: var(--c); font-weight: 600; }
+.k8-wl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.k8-wl-list li > button { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "lv who go" "tags tags tags"; align-items: center; gap: 6px 10px; text-align: left; border: 1px solid #e2e8f0; border-left: 4px solid #f59e0b; background: #fff; border-radius: 12px; padding: 10px 12px; font: inherit; cursor: pointer; color: inherit; }
+.k8-wl-list li.is-high > button { border-left-color: #dc2626; }
+.k8-wl-list li > button:hover { background: #f8fafc; }
+.k8-wl-lv { grid-area: lv; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; white-space: nowrap; }
+.k8-wl-list li.is-high .k8-wl-lv { background: #fee2e2; color: #b91c1c; }
+.k8-wl-who { grid-area: who; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.k8-wl-who b { font-size: 14px; font-weight: 600; color: #0f172a; }
+.k8-wl-who small { font-size: 12px; color: #64748b; }
+.k8-wl-go { grid-area: go; color: #94a3b8; font-size: 18px; }
+.k8-wl-tags { grid-area: tags; display: flex; flex-wrap: wrap; gap: 4px; }
+.k8-wl-tags em { font-style: normal; font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 8px; color: var(--c); background: var(--bg); }
+.k8-wl-more { width: 100%; margin-top: 8px; border: 1px dashed #cbd5e1; background: none; border-radius: 10px; padding: 8px; font: inherit; font-size: 13px; color: #0369a1; font-weight: 600; cursor: pointer; }
+.k8-wl-foot { margin: 10px 0 0; font-size: 11.5px; color: #64748b; line-height: 1.5; }
+.k8-wl button:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+html[data-theme="dark"] .k8-wl h2, html[data-theme="dark"] .k8-wl-who b, html[data-theme="dark"] .k8-wl-sub b { color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-wl-sub, html[data-theme="dark"] .k8-wl-foot, html[data-theme="dark"] .k8-wl-who small { color: #94a3b8 !important; }
+html[data-theme="dark"] .k8-wl-sub b.is-high { color: #fca5a5 !important; }
+html[data-theme="dark"] .k8-wl-seg { background: #1e293b !important; }
+html[data-theme="dark"] .k8-wl-seg button { color: #94a3b8 !important; }
+html[data-theme="dark"] .k8-wl-seg button[aria-pressed="true"] { background: #334155 !important; color: #e0f2fe !important; }
+html[data-theme="dark"] .k8-wl-chips button { background: #0f172a !important; border-color: #334155 !important; color: #cbd5e1 !important; }
+html[data-theme="dark"] .k8-wl-chips button b { color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-wl-chips button[aria-pressed="true"] { background: #1e3a5f !important; border-color: #7dd3fc !important; color: #e0f2fe !important; }
+html[data-theme="dark"] .k8-wl-list li > button { background: #0f172a !important; border-color: #334155 !important; border-left-color: #f59e0b !important; }
+html[data-theme="dark"] .k8-wl-list li.is-high > button { border-left-color: #f87171 !important; }
+html[data-theme="dark"] .k8-wl-list li > button:hover { background: #1e293b !important; }
+html[data-theme="dark"] .k8-wl-lv { background: #422006 !important; color: #fcd34d !important; }
+html[data-theme="dark"] .k8-wl-list li.is-high .k8-wl-lv { background: #450a0a !important; color: #fca5a5 !important; }
+html[data-theme="dark"] .k8-wl-tags em { background: #1e293b !important; color: #e2e8f0 !important; border: 1px solid #334155; }
+html[data-theme="dark"] .k8-wl-ok { background: #052e16 !important; color: #86efac !important; }
+html[data-theme="dark"] .k8-wl-more { border-color: #475569 !important; color: #7dd3fc !important; }

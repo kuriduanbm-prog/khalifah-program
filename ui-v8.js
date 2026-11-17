@@ -3413,6 +3413,8 @@ window.k8RegBirthChange = function (v) {
   window.k8TierQ = function (el) { const id = el.id, pos = el.selectionStart; T.q = el.value; T.limit = 50; clearTimeout(qT); qT = setTimeout(() => { render(); const n = document.getElementById(id); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 200); };
   window.k8TierOpen = function () { T.view = 'rank'; render(); openModal('k8TierModal'); };
   window.k8RankRender = render;
+  // v19.51 · ให้การ์ด "นักเรียนที่ต้องติดตาม" ใช้กติกานับละหมาดเดียวกับหน้าอันดับ
+  window.k8PrayStats = function (days) { const sv = [T.days, T.grade]; T.days = days; T.grade = 'ALL'; try { const r = compute(); return [].concat(r.tiers.s, r.tiers.late, r.tiers.miss, r.tiers.note, r.tiers.mid); } catch (e) { return []; } finally { T.days = sv[0]; T.grade = sv[1]; } };
   let excAsked = 0; const _r0 = render; render = function () { const r = _r0.apply(this, arguments); if (window.k8PrayExcReady && Date.now() - excAsked > 120000) { excAsked = Date.now(); Promise.resolve(window.k8PrayExcReady()).then(() => { try { _r0(); } catch (e) {} }); } return r; }; window.k8RankRender = render;
   if (typeof window.switchAdminTab === 'function') {
     const sat = window.switchAdminTab;
@@ -3644,7 +3646,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.50';
+  const APP_VERSION = '19.51';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14147,3 +14149,118 @@ window.k8PdWho = function (sid) {
     try { if (window.k8SpOpen) window.k8SpOpen(R.sid); } catch (e) {}
   };
 })();
+
+/* ---------- v19.51 · ภาพรวมแอดมิน: นักเรียนที่ต้องติดตาม (ขาดเรียน/สาย · ขาดละหมาด/สาย · ถูกหักคะแนนบ่อย · ลาบ่อย) ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const nid = (v) => String(v == null ? '' : v).replace(/\D/g, '').replace(/^0+/, '');
+  const shortG = (g) => String(g || '').replace('มัธยมศึกษาปีที่ ', 'ม.');
+  const readJSON = (k, f) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? f : v; } catch (e) { return f; } };
+  const AK = (st) => { st = String(st || ''); if (/สาย|late/i.test(st)) return 'late'; if (/ขาด|absent/i.test(st)) return 'absent'; if (/^ลา|ลากิจ|ลาป่วย|leave|excus/i.test(st)) return 'leave'; return 'present'; };
+  const W = { days: 14, f: 'all', limit: 8, att: null, bh: null, at: 0, busy: false };
+  try { const d = +localStorage.getItem('khalifah_wl_days'); if ([7, 14, 30].indexOf(d) !== -1) W.days = d; } catch (e) {}
+  const KIND = {
+    abs: ['ขาดเรียนบ่อย', '#b91c1c', '#fef2f2'],
+    clate: ['มาเรียนสายบ่อย', '#b45309', '#fffbeb'],
+    pmiss: ['ขาดละหมาดบ่อย', '#be123c', '#fff1f2'],
+    plate: ['ละหมาดสายบ่อย', '#c2410c', '#fff7ed'],
+    bh: ['ถูกหักคะแนนบ่อย', '#6d28d9', '#f5f3ff'],
+    bscore: ['คะแนนพฤติกรรมต่ำ', '#7e22ce', '#faf5ff'],
+    leave: ['ลาบ่อย', '#1d4ed8', '#eff6ff']
+  };
+  const isAdm = () => { try { return !!currentAdmin && !currentStudent; } catch (e) { return false; } };
+  const studs = () => { let L = []; try { L = allStudents || []; } catch (e) {} return L.filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || ''))); };
+
+  async function load(force) {
+    if (W.busy || (!force && W.at && Date.now() - W.at < 5 * 60000)) return;
+    W.busy = true; if (!W.att) paint();
+    const [a, b] = await Promise.all([
+      gasApiCall('getAttendance', {}, 45000).catch(() => null),
+      gasApiCall('getBehaviorData', {}, 45000).catch(() => null)
+    ]);
+    W.att = (a && a.success && a.data) || W.att || readJSON('khalifah_attendance_logs', []);
+    if (b && b.success) W.bh = { logs: b.logs || [], term: b.term || '' };
+    else if (!W.bh) { const c = readJSON('khalifah_behavior_cache', null); W.bh = { logs: (c && c.logs) || [], term: (c && c.term) || '' }; }
+    W.busy = false; W.at = Date.now(); paint();
+  }
+
+  function compute() {
+    const N = W.days, k = N / 14; const to = ymd(new Date()); const fd = new Date(); fd.setDate(fd.getDate() - (N - 1)); const from = ymd(fd);
+    const thr = { abs: Math.max(2, Math.round(3 * k)), clate: Math.max(3, Math.round(4 * k)), bh: Math.max(2, Math.round(3 * k)), leave: Math.max(2, Math.round(3 * k)) };
+    const by = {}; studs().forEach((s) => { by[nid(s.studentId)] = { s, abs: 0, clate: 0, pmiss: 0, plate: 0, pexp: 0, bh: 0, bpts: 0, bscore: 100, leave: 0, why: [] }; });
+    (W.att || []).forEach((r) => { if (!r || r.date < from || r.date > to) return; const x = by[nid(r.studentId)]; if (!x) return; const c = AK(r.status); if (c === 'absent') x.abs++; else if (c === 'late') x.clate++; });
+    const pr = window.k8PrayStats ? window.k8PrayStats(N) : [];
+    pr.forEach((p) => { const x = p && p.s && by[nid(p.s.studentId)]; if (!x || p.isNew) return; x.pmiss = p.miss || 0; x.plate = p.late || 0; x.pexp = p.exp || 0; x.pdone = (p.on || 0) + (p.late || 0); });
+    const term = (W.bh && W.bh.term) || '';
+    ((W.bh && W.bh.logs) || []).forEach((l) => {
+      if (!l || l.status === 'cancelled') return; const x = by[nid(l.studentId)]; if (!x) return; const pts = Number(l.points) || 0;
+      if (!term || !l.term || l.term === term) x.bscore += pts;
+      const auto = /^หักอัตโนมัติ/.test(String(l.note || '')) || /^system/i.test(String(l.by || ''));
+      if (pts < 0 && !auto && l.date >= from && l.date <= to) { x.bh++; x.bpts += pts; if (l.title && x.why.indexOf(l.title) === -1) x.why.push(l.title); }
+    });
+    readJSON('khalifah_sld_cache', { list: [] }).list.forEach((v) => { if (!v || /reject|ไม่อนุ|cancel|ยกเลิก/i.test(String(v.status || ''))) return; if (String(v.to || v.from) < from || String(v.from) > to) return; const x = by[nid(v.studentId)]; if (x) x.leave++; });
+    const out = [];
+    Object.values(by).forEach((x) => {
+      const t = [];
+      if (x.abs >= thr.abs) t.push(['abs', 'ขาดเรียน ' + x.abs + ' คาบ', x.abs >= thr.abs * 2 ? 3 : 2]);
+      if (x.clate >= thr.clate) t.push(['clate', 'สาย ' + x.clate + ' คาบ', 1]);
+      if (x.pexp && x.pmiss >= 3 && x.pmiss / x.pexp >= 0.3) t.push(['pmiss', 'ขาดละหมาด ' + x.pmiss + '/' + x.pexp + ' เวลา', x.pmiss / x.pexp >= 0.5 ? 3 : 2]);
+      if (x.plate >= 3 && x.pdone && x.plate / x.pdone >= 0.3) t.push(['plate', 'ละหมาดสาย ' + x.plate + ' ครั้ง', 1]);
+      if (x.bh >= thr.bh) t.push(['bh', 'ถูกหัก ' + x.bh + ' ครั้ง (' + x.bpts + ')', x.bh >= thr.bh * 2 ? 3 : 2]);
+      if (x.bscore < 70) t.push(['bscore', 'คะแนนพฤติกรรม ' + x.bscore, x.bscore < 50 ? 3 : 2]);
+      if (x.leave >= thr.leave) t.push(['leave', 'ลา ' + x.leave + ' ครั้ง', 1]);
+      if (!t.length) return;
+      const w = t.reduce((a, b) => a + b[2], 0);
+      x.tags = t; x.w = w; x.high = w >= 4 || t.some((z) => z[2] >= 3); out.push(x);
+    });
+    out.sort((a, b) => (b.high - a.high) || b.w - a.w || String(a.s.fullName || '').localeCompare(String(b.s.fullName || ''), 'th'));
+    return { out, from, to };
+  }
+
+  const ICO = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+  function paint() {
+    let el = document.getElementById('k8OvWatch');
+    const ov = document.getElementById('admin-tab-overview');
+    if (!ov || !isAdm()) { if (el) el.hidden = true; return; }
+    if (!el) { const col = ov.querySelector('.k8-ov-col'); if (!col) return; col.insertAdjacentHTML('beforeend', '<section class="hf-card k8-wl" id="k8OvWatch" aria-labelledby="k8WlT"></section>'); el = document.getElementById('k8OvWatch'); }
+    el.hidden = false;
+    const seg = '<div class="k8-wl-seg" role="group" aria-label="ช่วงเวลา">' + [7, 14, 30].map((n) => '<button type="button" aria-pressed="' + (W.days === n) + '" onclick="k8WlSet(\'days\',' + n + ')">' + n + ' วัน</button>').join('') + '</div>';
+    let h = '<div class="hf-head"><h2 id="k8WlT">' + ICO + ' นักเรียนที่ต้องติดตาม</h2>' + seg + '</div>';
+    if (!W.att && W.busy) { el.innerHTML = h + '<p class="k8-li-empty" style="text-align:left">กำลังรวบรวมข้อมูลการมาเรียน ละหมาด และพฤติกรรม…</p>'; return; }
+    const { out } = compute();
+    const cnt = { all: out.length }; Object.keys(KIND).forEach((k) => { cnt[k] = out.filter((x) => x.tags.some((t) => t[0] === k)).length; });
+    const nHigh = out.filter((x) => x.high).length;
+    h += '<p class="k8-wl-sub">ย้อนหลัง ' + W.days + ' วัน · พบ <b>' + out.length + '</b> คน' + (nHigh ? ' · ต้องดูแลใกล้ชิด <b class="is-high">' + nHigh + '</b> คน' : '') + (W.busy ? ' · กำลังอัปเดต…' : '') + '</p>';
+    if (!out.length) { el.innerHTML = h + '<p class="k8-wl-ok">ไม่มีนักเรียนที่ต้องติดตามในช่วงนี้</p>'; return; }
+    if (W.f !== 'all' && !cnt[W.f]) W.f = 'all';
+    h += '<div class="k8-wl-chips" role="group" aria-label="กรองตามเรื่อง"><button type="button" aria-pressed="' + (W.f === 'all') + '" onclick="k8WlSet(\'f\',\'all\')">ทั้งหมด <b>' + cnt.all + '</b></button>' +
+      Object.keys(KIND).filter((k) => cnt[k]).map((k) => '<button type="button" style="--c:' + KIND[k][1] + ';--bg:' + KIND[k][2] + '" aria-pressed="' + (W.f === k) + '" onclick="k8WlSet(\'f\',\'' + k + '\')">' + KIND[k][0] + ' <b>' + cnt[k] + '</b></button>').join('') + '</div>';
+    const list = out.filter((x) => W.f === 'all' || x.tags.some((t) => t[0] === W.f));
+    const shown = list.slice(0, W.limit);
+    h += '<ul class="k8-wl-list">' + shown.map((x) => '<li class="' + (x.high ? 'is-high' : 'is-mid') + '"><button type="button" onclick="k8WlOpen(\'' + esc(x.s.studentId) + '\')" aria-label="ดูประวัติ ' + esc(x.s.fullName) + '">' +
+      '<span class="k8-wl-lv">' + (x.high ? 'ดูแลใกล้ชิด' : 'เฝ้าระวัง') + '</span>' +
+      '<span class="k8-wl-who"><b>' + esc(x.s.fullName || x.s.studentId) + '</b><small>' + esc(shortG(x.s.grade)) + ' · ' + esc(x.s.studentId) + '</small></span>' +
+      '<span class="k8-wl-tags">' + x.tags.map((t) => '<em style="--c:' + KIND[t[0]][1] + ';--bg:' + KIND[t[0]][2] + '"' + (t[0] === 'bh' && x.why.length ? ' title="' + esc(x.why.slice(0, 4).join(' · ')) + '"' : '') + '>' + esc(t[1]) + '</em>').join('') + '</span>' +
+      '<span class="k8-wl-go" aria-hidden="true">›</span></button></li>').join('') + '</ul>';
+    if (list.length > shown.length) h += '<button type="button" class="k8-wl-more" onclick="k8WlSet(\'limit\',' + (W.limit + 20) + ')">แสดงเพิ่ม (' + (list.length - shown.length) + ' คน)</button>';
+    h += '<p class="k8-wl-foot">เกณฑ์ ' + W.days + ' วัน: ขาดเรียน ≥ ' + Math.max(2, Math.round(3 * W.days / 14)) + ' คาบ · ขาดละหมาด ≥ 30% · สายบ่อย · ถูกหักคะแนน (ไม่นับที่ระบบหักอัตโนมัติ) · คะแนนพฤติกรรมภาคเรียนนี้ต่ำกว่า 70 · แตะชื่อเพื่อดูประวัติ</p>';
+    el.innerHTML = h;
+  }
+  window.k8WlSet = function (k, v) { W[k] = v; if (k !== 'limit') W.limit = 8; if (k === 'days') { try { localStorage.setItem('khalifah_wl_days', String(v)); } catch (e) {} } paint(); };
+  window.k8WlOpen = function (sid) {
+    if (typeof window.k8SchWho === 'function') { try { window.k8SchWho(sid); return; } catch (e) {} }
+    try { switchAdminTab('students', document.getElementById('btnAdminTabStudents')); } catch (e) {}
+    setTimeout(() => { try { window.k8PdWho(sid); } catch (e) {} }, 120);
+  };
+  window.k8WlPaint = function (force) { paint(); load(!!force); };
+  const hook = () => {
+    const f = window.renderAdminOverviewV8; if (typeof f !== 'function' || f.__wl) return false;
+    const g = function () { const r = f.apply(this, arguments); try { paint(); load(false); } catch (e) {} return r; }; g.__wl = 1; window.renderAdminOverviewV8 = g; return true;
+  };
+  if (!hook()) document.addEventListener('DOMContentLoaded', hook);
+  // อัปเดตเมื่อข้อมูลการลาเปลี่ยน
+  document.addEventListener('k8-sl-changed', () => setTimeout(paint, 800));
+})();
+
