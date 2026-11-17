@@ -3646,7 +3646,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.52';
+  const APP_VERSION = '19.53';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8143,7 +8143,10 @@ window.k8RegBirthChange = function (v) {
     let L; try { L = await leaflet(); } catch (e) { box.innerHTML = '<p class="k8-li-empty">โหลดแผนที่ไม่ได้ · กรอกพิกัดหรือใช้ปุ่ม "ใช้ตำแหน่งปัจจุบันของฉัน" ได้ตามปกติ</p>'; return; }
     if (!G.map || G.map.getContainer() !== box) {
       box.innerHTML = ''; const z0 = G.zones[G.sel] || G.zones[0];
-      G.map = L.map(box, { zoomControl: true }).setView([+z0.lat, +z0.lng], 18);
+      // v19.53 · ไม่ให้แผนที่ "กิน" การเลื่อนหน้า: ล้อเมาส์เลื่อนหน้าได้ปกติ (กด Ctrl/⌘ + ล้อ เพื่อซูม) · มือถือใช้นิ้วเดียวเลื่อนหน้า, สองนิ้วซูม, แตะเพื่อวางจุด
+      const touch = (L.Browser && (L.Browser.mobile || L.Browser.touch)) && matchMedia('(pointer: coarse)').matches;
+      G.map = L.map(box, { zoomControl: true, scrollWheelZoom: false, dragging: !touch, tap: false }).setView([+z0.lat, +z0.lng], 18);
+      box.addEventListener('wheel', (e) => { if (!(e.ctrlKey || e.metaKey) || !G.map) return; e.preventDefault(); if (e.deltaY < 0) G.map.zoomIn(); else G.map.zoomOut(); }, { passive: false });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, maxNativeZoom: 19, attribution: '© OpenStreetMap' }).addTo(G.map);
       G.map.on('click', (e) => setPoint(G.sel, e.latlng.lat, e.latlng.lng));
     }
@@ -8169,7 +8172,7 @@ window.k8RegBirthChange = function (v) {
       }
     });
     const z = G.zones[G.sel];
-    const hint = document.getElementById('k8GeoHint'); if (hint && z) hint.innerHTML = '<b>จุดที่ ' + (G.sel + 1) + (z.name ? ' · ' + esc(z.name) : '') + '</b> · แตะบนแผนที่เพื่อวางจุด หรือลากหมุด · วงสีฟ้าคือรัศมี ' + z.radius + ' ม.';
+    const hint = document.getElementById('k8GeoHint'); if (hint && z) hint.innerHTML = '<b>จุดที่ ' + (G.sel + 1) + (z.name ? ' · ' + esc(z.name) : '') + '</b> · แตะบนแผนที่เพื่อวางจุด หรือลากหมุด · วงสีฟ้าคือรัศมี ' + z.radius + ' ม. · ซูมด้วยปุ่ม +/− (หรือ Ctrl + ล้อเมาส์)';
     if (z && fly === 'fit' && selCircle) G.map.fitBounds(selCircle.getBounds(), { padding: [30, 30], maxZoom: 19 });
     else if (z && fly) G.map.setView([+z.lat, +z.lng], Math.max(G.map.getZoom(), 17));
     setTimeout(() => G.map && G.map.invalidateSize(), 50);

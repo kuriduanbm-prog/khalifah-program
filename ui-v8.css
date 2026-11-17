@@ -5354,8 +5354,9 @@ html[data-theme="dark"] .k8-hr, html[data-theme="dark"] .k8-hr::after { backgrou
 .hf-stars.hf-stars-badge b { background: none; padding: 0; margin: 0; font: 700 12px 'IBM Plex Sans Thai', sans-serif; color: #fff; }
 .hf-stars.hf-stars-badge svg { display: block; flex: none; }
 /* v18.60 · คู่มือเปิดสิทธิ์ตำแหน่ง */
-.k8-geo { position: fixed; inset: 0; z-index: 99990; background: rgba(15,23,42,.55); display: flex; align-items: flex-end; justify-content: center; padding: 12px; font-family: 'IBM Plex Sans Thai', sans-serif; }
-@media (min-width: 640px) { .k8-geo { align-items: center; } }
+/* v19.53 · จำกัดเฉพาะหน้าต่างคู่มือ (เดิม .k8-geo ชนกับหน้าตั้งพิกัดของแอดมิน → หน้าถูกตรึงเต็มจอ เลื่อนไม่ได้) */
+#k8GeoHelp.k8-geo { position: fixed; inset: 0; z-index: 99990; background: rgba(15,23,42,.55); display: flex; align-items: flex-end; justify-content: center; padding: 12px; font-family: 'IBM Plex Sans Thai', sans-serif; }
+@media (min-width: 640px) { #k8GeoHelp.k8-geo { align-items: center; } }
 .k8-geo-c { background: #fff; color: #0f172a; border-radius: 20px; padding: 20px 18px 16px; width: min(440px, 100%); max-height: calc(100dvh - 24px); overflow: auto; box-shadow: 0 20px 50px rgba(15,23,42,.3); }
 .k8-geo-ic { width: 52px; height: 52px; border-radius: 16px; background: #fef2f2; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 10px; }
 .k8-geo-c h3 { margin: 0 0 6px; font-size: 18px; color: #0c4a6e; } .k8-geo-c p { margin: 0 0 10px; font-size: 13.5px; color: #475569; line-height: 1.6; }
@@ -7191,3 +7192,6 @@ html[data-theme="dark"] .k8-om-list label { border-color: #334155 !important; }
 html[data-theme="dark"] .k8-om-re, html[data-theme="dark"] .k8-om-tools button { background: #1e293b !important; border-color: #475569 !important; color: #7dd3fc !important; }
 html[data-theme="dark"] .k8-om-mv .is-from { background: #450a0a !important; color: #fca5a5 !important; }
 html[data-theme="dark"] .k8-om-mv .is-to { background: #052e16 !important; color: #86efac !important; }
+
+/* v19.53 · หน้าจุดเช็คละหมาด: แผนที่ไม่บังจนเลื่อนหน้าไม่ได้ */
+.k8-geo-map { height: min(38vh, 340px); }
