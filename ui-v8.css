@@ -2678,6 +2678,7 @@ html[data-theme="dark"] .k8-ov-kpis .k8-kpi.is-orange .k8-kpi-val { color: #fdba
 .k8-pr-sum .is-absent { background: #fee2e2; color: #b91c1c; }
 .k8-pr-sum .is-none { background: #f1f5f9; color: #475569; }
 .k8-pr-all { min-height: 48px; border: 1px dashed #86efac; border-radius: 14px; background: #f0fdf4; color: #15803d; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.k8-pr-syncing { margin: 0; font-size: 13px; color: #0c4a6e; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 6px 10px; }
 .k8-pr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .k8-pr-list li { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 16px; background: #fff; border: 1px solid #e2e8f0; border-left-width: 5px; }
 .k8-pr-list li.is-ontime { border-left-color: #16a34a; }

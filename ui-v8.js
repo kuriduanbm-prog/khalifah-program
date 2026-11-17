@@ -3644,7 +3644,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.49';
+  const APP_VERSION = '19.50';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -7728,15 +7728,25 @@ window.k8RegBirthChange = function (v) {
   const dirtyN = () => Object.keys(R.edits).filter((k) => R.edits[k] !== (R.saved[k] || '')).length;
   const root = () => document.getElementById('k8PrAdmin');
 
-  async function load() {
-    R.loading = true; R.err = ''; render();
-    try {
-      const r = await gasApiCall('getPrayerRoll', { date: R.date, slot: ROLL_SLOT }, 25000);
-      if (!r || !r.success) throw new Error((r && (r.message || r.error)) || 'โหลดไม่สำเร็จ');
-      R.saved = {}; Object.keys(r.marks || {}).forEach((k) => { R.saved[k] = r.marks[k].status; });
-    } catch (e) { R.err = /Unknown action|ไม่รู้จัก/i.test(String(e.message)) ? 'old' : 'net'; }
-    R.loading = false; render();
+  // v19.50 · แสดงรายชื่อทันที (รายชื่อมีในเครื่องอยู่แล้ว) · สถานะใช้ค่าล่าสุดที่จำไว้ระหว่างรอโหลด
+  const RC = (d) => 'khalifah_roll_' + d;
+  async function fetchRoll(date) {
+    const r = await gasApiCall('getPrayerRoll', { date: date, slot: ROLL_SLOT }, 25000);
+    if (!r || !r.success) throw new Error((r && (r.message || r.error)) || 'โหลดไม่สำเร็จ');
+    const m = {}; Object.keys(r.marks || {}).forEach((k) => { m[k] = r.marks[k].status; });
+    try { localStorage.setItem(RC(date), JSON.stringify({ at: Date.now(), m })); } catch (e) {}
+    return m;
   }
+  async function load() {
+    const date = R.date; R.loading = true; R.err = ''; R.cached = false;
+    try { const c = JSON.parse(localStorage.getItem(RC(date)) || 'null'); if (c && c.m) { R.saved = c.m; R.cached = true; } else R.saved = {}; } catch (e) { R.saved = {}; }
+    render();
+    try { const m = await fetchRoll(date); if (date !== R.date) return; R.saved = m; }
+    catch (e) { if (date !== R.date) return; R.err = /Unknown action|ไม่รู้จัก/i.test(String(e.message)) ? 'old' : 'net'; }
+    R.loading = false; R.cached = false; render();
+  }
+  // โหลดรอไว้สำหรับแอดมิน (เปิดหน้ามาจะเห็นสถานะล่าสุดทันที)
+  (function pre(n) { setTimeout(() => { let ok = false; try { ok = !!currentAdmin && !currentStudent; } catch (e) {} if (ok) { fetchRoll(ymd(new Date())).catch(() => {}); try { Object.keys(localStorage).forEach((k) => { if (k.indexOf('khalifah_roll_') === 0 && k < RC(ymd(new Date(Date.now() - 14 * 864e5)))) localStorage.removeItem(k); }); } catch (e) {} } else if (n < 8) pre(n + 1); }, 7000); })(0);
 
   function render() {
     const el = root(); if (!el) return;
@@ -7759,8 +7769,9 @@ window.k8RegBirthChange = function (v) {
     else if (R.err === 'net') h += '<div class="k8-tt-warn" role="alert"><b>โหลดข้อมูลการเช็คไม่ได้</b><span>ตรวจสอบอินเทอร์เน็ต แล้วกด <button type="button" class="k8-bh-link" onclick="k8PrReload()">โหลดใหม่</button></span></div>';
     h += '<section class="k8-pr-sum" aria-label="สรุป">' +
       '<span class="is-ontime"><b>' + cnt.ontime + '</b>ตรงเวลา</span><span class="is-late"><b>' + cnt.late + '</b>มาช้า</span><span class="is-leave"><b>' + cnt.leave + '</b>ลา</span><span class="is-absent"><b>' + cnt.absent + '</b>ไม่มา</span><span class="is-none"><b>' + cnt.none + '</b>ยังไม่เช็ค</span></section>';
-    if (cnt.none) h += '<button type="button" class="k8-pr-all" onclick="k8PrAll()">✓ คนที่ยังไม่เช็ค ' + cnt.none + ' คน · มาตรงเวลาทั้งหมด</button>';
-    h += R.loading ? '<p class="k8-li-empty">กำลังโหลด…</p>' : (shown.length ? '<ul class="k8-pr-list">' + shown.map((s) => {
+    if (R.loading) h += '<p class="k8-pr-syncing" role="status">' + (R.cached ? 'กำลังอัปเดตสถานะล่าสุด…' : 'กำลังโหลดสถานะการเช็ค… (เลือกสถานะได้เลย)') + '</p>';
+    if (cnt.none && !(R.loading && !R.cached)) h += '<button type="button" class="k8-pr-all" onclick="k8PrAll()">✓ คนที่ยังไม่เช็ค ' + cnt.none + ' คน · มาตรงเวลาทั้งหมด</button>';
+    h += (shown.length ? '<ul class="k8-pr-list">' + shown.map((s) => {
       const k = nid(s.studentId); const v = cur(k); const ch = R.edits[k] !== undefined && R.edits[k] !== (R.saved[k] || '');
       return '<li class="' + (v ? 'is-' + v : '') + (ch ? ' is-changed' : '') + '"><span class="k8-pr-who"><b>' + esc(s.fullName || k) + '</b><small>ม.' + esc(gnum(s.grade) || '-') + ' · ' + esc(s.studentId) + '</small></span><span class="k8-pr-seg" role="group" aria-label="สถานะของ ' + esc(s.fullName || k) + '">' +
         ST.map(([sv, sl]) => '<button type="button" class="is-' + sv + '" aria-pressed="' + (v === sv) + '" onclick="k8PrMark(\'' + k + '\',\'' + sv + '\')">' + sl + '</button>').join('') + '</span></li>';
@@ -7786,6 +7797,7 @@ window.k8RegBirthChange = function (v) {
     R.saving = false;
     if (!r || !r.success) { toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); render(); return; }
     Object.keys(marks).forEach((k) => { if (marks[k]) R.saved[k] = marks[k]; else delete R.saved[k]; });
+    try { localStorage.setItem(RC(R.date), JSON.stringify({ at: Date.now(), m: R.saved })); } catch (e) {}
     R.edits = {};
     // อัปเดตประวัติในเครื่อง ให้หน้าละหมาด/กราฟของแอดมินเห็นทันที
     try {
