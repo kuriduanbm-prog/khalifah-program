@@ -7079,3 +7079,12 @@ html[data-theme="dark"] .k8-dm-det em.is-pend { background: #3b1d08 !important; 
 .k8-hqd-del:focus-visible, .k8-hqd-delbtn:focus-visible { outline: 3px solid rgba(185,28,28,.35); outline-offset: 2px; }
 html[data-theme="dark"] .k8-hqd-tl .k8-hqd-del { color: #fca5a5; } html[data-theme="dark"] .k8-hqd-tl .k8-hqd-del:hover { background: #2a1212 !important; }
 html[data-theme="dark"] .k8-hqd-delbtn { background: transparent; border-color: #7f1d1d; color: #fca5a5; } html[data-theme="dark"] .k8-hqd-delbtn:hover { background: #2a1212; }
+
+/* v19.48 · ซ่อน/แสดงตารางพิเศษในหน้าภาพรวมแอดมิน */
+.k8-tt-xhide { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid #bae6fd; background: #fff; color: #0369a1; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.k8-tt-xhide:hover { background: #f0f9ff; }
+.k8-tt-xhide.is-on { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+.k8-tt-xhide:focus-visible { outline: 3px solid rgba(3,105,161,.35); outline-offset: 2px; }
+html[data-theme="dark"] .k8-tt-xhide { background: #0f172a; border-color: #075985; color: #7dd3fc; }
+html[data-theme="dark"] .k8-tt-xhide:hover { background: #0c2536; }
+html[data-theme="dark"] .k8-tt-xhide.is-on { background: #2a1d05; border-color: #78350f; color: #fcd34d; }
