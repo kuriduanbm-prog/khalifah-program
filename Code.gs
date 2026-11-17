@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.45'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.46'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1813,6 +1813,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
+    case 'scanDormPrayers': return scanDormPrayers_(data);
     case 'checkMyPrayers': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return checkMyPrayers_(data, session);
     case 'deleteMyPrayer': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return deleteMyPrayer_(data, session);
     case 'getTeacherScores': return getTeacherScores_();
@@ -3129,25 +3130,54 @@ function geoKind_(z) { const k = String((z && z.kind) || ''); if (k === 'dorm' |
 function geoZones_() { try { const z = JSON.parse((getSettings().data || {}).GeoZones || '[]'); return Array.isArray(z) ? z : []; } catch (e) { return []; } }
 function geoDist_(a1, o1, a2, o2) { const R = 6371000, t = Math.PI / 180; const da = (a2 - a1) * t, dn = (o2 - o1) * t; const h = Math.sin(da / 2) * Math.sin(da / 2) + Math.cos(a1 * t) * Math.cos(a2 * t) * Math.sin(dn / 2) * Math.sin(dn / 2); return 2 * R * Math.asin(Math.sqrt(h)); }
 /** คืน {st, zone} เมื่อเป็นนักเรียนชายที่เช็คละหมาดในเขตหอพัก (ไม่ใช่มัสยิด) และไม่มีเหตุจำเป็น · อื่น ๆ คืน null */
-function dormPrayerOf_(sid, dateStr, prayerThai, statusThai, lat, lng, locName) {
-  if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/.test(String(statusThai || '').trim())) return null;
+function dormCtx_() {
   const zs = geoZones_().map(function (z) { return Object.assign({}, z, { kind: geoKind_(z) }); });
-  const dorms = zs.filter(function (z) { return z.kind === 'dorm'; }); if (!dorms.length) return null;
+  const st = {}; (getAllStudents().data || []).forEach(function (x) { st[String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '')] = x; });
+  let lv = []; try { lv = readStuLeaves_().filter(function (x) { return x && x.status === 'approved' && slDorm_(x); }); } catch (e) {}
+  return { zs: zs, dorms: zs.filter(function (z) { return z.kind === 'dorm'; }), st: st, lv: lv };
+}
+/** v19.46 · ใช้จุดที่ "ใกล้ศูนย์กลางที่สุด" ในบรรดาเขตที่ครอบคลุมตำแหน่งนั้น (ตรงกับที่แอปแสดงชื่อสถานที่)
+ *  เดิม: ถ้าอยู่ในรัศมีมัสยิดด้วย ถือว่ามัสยิดเสมอ → หอพักที่อยู่ในรัศมีมัสยิด (รัศมีกว้าง) ไม่เคยถูกนับ */
+function dormPrayerOf_(sid, dateStr, prayerThai, statusThai, lat, lng, locName, ctx) {
+  if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/.test(String(statusThai || '').trim())) return null;
+  const C = ctx || dormCtx_(); if (!C.dorms.length) return null;
   let zone = null; const la = Number(lat), lo = Number(lng);
-  if (lat !== '' && lng !== '' && isFinite(la) && isFinite(lo) && (la || lo)) {
-    // ใกล้จุดไหนที่สุด (ในรัศมี) · ถ้าอยู่ในเขตมัสยิดด้วย ถือว่าอยู่มัสยิด
-    let best = null; zs.forEach(function (z) { const d = geoDist_(la, lo, Number(z.lat), Number(z.lng)); if (d <= Number(z.radius) + 15 && (!best || d - z.radius < best.d - best.z.radius)) best = { z: z, d: d }; });
-    if (best && best.z.kind === 'dorm' && !zs.some(function (z) { return z.kind !== 'dorm' && geoDist_(la, lo, Number(z.lat), Number(z.lng)) <= Number(z.radius) + 15; })) zone = best.z.name;
+  if (lat !== '' && lng !== '' && lat != null && lng != null && isFinite(la) && isFinite(lo) && (la || lo)) {
+    let best = null; C.zs.forEach(function (z) { const d = geoDist_(la, lo, Number(z.lat), Number(z.lng)); if (d <= Number(z.radius) + 15 && (!best || d < best.d)) best = { z: z, d: d }; });
+    if (best && best.z.kind === 'dorm') zone = best.z.name;
   } else {
-    const nm = String(locName || ''); const hit = dorms.filter(function (z) { return nm && nm.indexOf(z.name) !== -1; })[0]; if (hit) zone = hit.name;
+    const nm = String(locName || ''); const hit = C.dorms.filter(function (z) { return nm && nm.indexOf(z.name) !== -1; })[0]; if (hit) zone = hit.name;
   }
   if (!zone) return null;
   const k = String(sid || '').replace(/\D/g, '').replace(/^0+/, '');
-  const st = (getAllStudents().data || []).filter(function (x) { return String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '') === k; })[0];
+  const st = C.st[k];
   if (!st || !jumuahIsBoy_(st)) return null;
-  // เหตุจำเป็น: ใบลาที่อนุมัติแบบ "อยู่หอพัก" (เช่น ป่วยพักที่หอ) ครอบคลุมวันนั้น
-  try { if (readStuLeaves_().some(function (x) { return x && x.status === 'approved' && slDorm_(x) && String(x.sid).replace(/\D/g, '').replace(/^0+/, '') === k && dateStr >= x.from && dateStr <= (x.to || x.from); })) return null; } catch (e) {}
+  if (C.lv.some(function (x) { return String(x.sid).replace(/\D/g, '').replace(/^0+/, '') === k && dateStr >= x.from && dateStr <= (x.to || x.from); })) return null; // ใบลาอยู่หอพักที่อนุมัติแล้ว
   return { st: st, zone: zone };
+}
+/** v19.46 · แอดมิน: สแกนบันทึกละหมาดตามช่วงวันที่ หาการละหมาดที่หอพัก (รวมรายการที่ยังไม่ถูกหัก) · apply = หักคะแนนรายการที่ยังไม่ถูกหัก */
+function scanDormPrayers_(d) {
+  d = d || {}; const from = formatSheetDate(d.from), to = formatSheetDate(d.to);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) return { success: false, message: 'ช่วงวันที่ไม่ถูกต้อง' };
+  const sh = getSpreadsheet().getSheetByName(SHEETS.PRAYERS); const C = dormCtx_(); const items = [];
+  if (!C.dorms.length) return { success: true, items: [], noDorm: true, message: 'ยังไม่มีพิกัดประเภท "หอพัก" ในเมนูพิกัดละหมาด' };
+  const pen = {}; const bh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);
+  if (bh && bh.getLastRow() > 1) bh.getRange(2, 1, bh.getLastRow() - 1, 15).getValues().forEach(function (r) { if (/^DM-/.test(String(r[0]))) pen[String(r[0])] = cleanVal(r[14]) === 'cancelled' ? 'cancelled' : 'active'; });
+  const slotI = function (p) { const i = PRAYER_SLOTS_.map(function (x) { return formatPrayerTimeThai(x); }).indexOf(formatPrayerTimeThai(p)); return i < 0 ? 9 : i; };
+  const seen = {};
+  if (sh && sh.getLastRow() > 1) {
+    const n = sh.getLastRow() - 1; const start = Math.max(0, n - 30000);
+    sh.getRange(2 + start, 1, n - start, 16).getValues().forEach(function (r) {
+      const ds = formatSheetDate(r[6]); if (ds < from || ds > to) return;
+      const dm = dormPrayerOf_(cleanVal(r[1]), ds, r[4], cleanVal(r[14]), r[8], r[9], cleanVal(r[10]), C); if (!dm) return;
+      const id = 'DM-' + String(dm.st.studentId).replace(/\D/g, '').replace(/^0+/, '') + '-' + ds + '-' + slotI(r[4]); if (seen[id]) return; seen[id] = 1;
+      const tm = String(r[7] instanceof Date ? Utilities.formatDate(r[7], 'Asia/Bangkok', 'HH:mm:ss') : r[7]).slice(0, 8);
+      items.push({ id: id, logId: cleanVal(r[0]), sid: String(dm.st.studentId), name: dm.st.fullName, grade: dm.st.grade, date: ds, time: tm, prayer: formatPrayerTimeThai(r[4]), status: cleanVal(r[14]), zone: dm.zone, penalized: pen[id] === 'active', cancelled: pen[id] === 'cancelled' });
+    });
+  }
+  let applied = 0;
+  if (d.apply) items.forEach(function (x) { if (x.penalized || x.cancelled) return; const dm = { st: C.st[String(x.sid).replace(/\D/g, '').replace(/^0+/, '')], zone: x.zone }; if (!dm.st) return; try { if (dormPrayerPenalty_(dm, x.date, x.time, x.prayer, x.status)) { x.penalized = true; applied++; } } catch (e) {} });
+  return { success: true, items: items, applied: applied, zones: C.dorms.map(function (z) { return z.name; }) };
 }
 /** หัก 1 คะแนน · 1 ครั้งต่อเวลาละหมาดต่อวัน (เช็คซ้ำไม่หักซ้ำ) */
 function dormPrayerPenalty_(dm, dateStr, timeStr, prayerThai, statusThai) {

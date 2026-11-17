@@ -7057,3 +7057,13 @@ html[data-theme="dark"] .k8-br-list { background: #111827; border-color: #334155
 html[data-theme="dark"] .k8-br-d, html[data-theme="dark"] .k8-br-t small { color: #94a3b8; } html[data-theme="dark"] .k8-br-t b { color: #e2e8f0; }
 html[data-theme="dark"] .k8-br-list em { background: #0c2536; color: #7dd3fc; } html[data-theme="dark"] .k8-br-list em.is-man { background: #3a2a05; color: #fcd34d; }
 html[data-theme="dark"] .k8-br-list strong { color: #fca5a5; }
+
+/* v19.46 · ตรวจการละหมาดที่หอพักจากบันทึกจริง */
+.k8-dm-scan { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: #f8fafc; color: #475569; font-size: 13px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.k8-dm-scan.is-warn { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; }
+.k8-dm-scan span { flex: 1; min-width: 200px; }
+.k8-dm-scan button { min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: #c2410c; color: #fff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.k8-dm-det em.is-pend { background: #ffedd5 !important; color: #9a3412 !important; font-size: 11.5px; }
+html[data-theme="dark"] .k8-dm-scan { background: #0f172a; color: #cbd5e1; }
+html[data-theme="dark"] .k8-dm-scan.is-warn { background: #2a1607; border-color: #9a3412; color: #fdba74; }
+html[data-theme="dark"] .k8-dm-det em.is-pend { background: #3b1d08 !important; color: #fdba74 !important; }

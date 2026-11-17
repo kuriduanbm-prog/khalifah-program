@@ -3644,7 +3644,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.45';
+  const APP_VERSION = '19.46';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -13579,6 +13579,9 @@ window.k8PdWho = function (sid) {
   const stuOf = (sid) => { let L = []; try { L = allStudents || []; } catch (e) {} return L.find((s) => nid(s.studentId) === nid(sid)) || null; };
   function rows() {
     const R = range(); const L = (S.logs || []).filter((l) => l.date >= R.from && l.date <= R.to);
+    // v19.46 · รวมการละหมาดที่หอพักจากบันทึกละหมาดจริง (ที่ระบบยังไม่ได้หัก)
+    const SC = (S.scan || {})[R.from + '|' + R.to]; const have = {}; L.forEach((l) => { have[l.id] = 1; });
+    if (SC && SC.items) SC.items.filter((x) => !x.penalized && !x.cancelled && !have[x.id]).forEach((x) => L.push({ id: x.id, date: x.date, studentId: x.sid, studentName: x.name, grade: x.grade, note: 'ละหมาด' + String(x.prayer).split(' (')[0] + 'ที่ ' + x.zone + ' เวลา ' + String(x.time).slice(0, 5) + ' น.', pending: true }));
     const by = {}; L.forEach((l) => { const k = nid(l.studentId); (by[k] = by[k] || { sid: l.studentId, name: l.studentName, grade: l.grade, list: [] }).list.push(l); });
     const t = ymd(new Date()); const dd = D0(t); const wf = add(t, -((dd.getDay() + 6) % 7)); const mf = t.slice(0, 8) + '01';
     return { R, L, people: Object.values(by).map((p) => { const s = stuOf(p.sid); const all = (S.logs || []).filter((l) => nid(l.studentId) === nid(p.sid));
@@ -13599,16 +13602,33 @@ window.k8PdWho = function (sid) {
     if (!S.logs) { document.getElementById('k8DmRange').textContent = range().label; B.innerHTML = '<p class="k8-sp-empty">กำลังโหลดข้อมูล…</p>'; return; }
     const { R, L, people } = rows(); document.getElementById('k8DmRange').textContent = R.label;
     const bySlot = {}; L.forEach((l) => { const s = slotOf(l); bySlot[s] = (bySlot[s] || 0) + 1; }); const mx = Math.max(1, ...SLOTS.map((s) => bySlot[s] || 0));
-    let h = '<div class="k8-dm-kpis"><div class="k8-dm-kpi' + (L.length ? ' is-bad' : '') + '"><span>ละหมาดที่หอพัก</span><b>' + L.length + '<small> ครั้ง</small></b></div><div class="k8-dm-kpi"><span>นักเรียน</span><b>' + people.length + '<small> คน</small></b></div><div class="k8-dm-kpi"><span>คะแนนที่ถูกหัก</span><b>' + L.length + '<small> คะแนน</small></b></div></div>';
+    let h = '<div class="k8-dm-kpis"><div class="k8-dm-kpi' + (L.length ? ' is-bad' : '') + '"><span>ละหมาดที่หอพัก</span><b>' + L.length + '<small> ครั้ง</small></b></div><div class="k8-dm-kpi"><span>นักเรียน</span><b>' + people.length + '<small> คน</small></b></div><div class="k8-dm-kpi"><span>คะแนนที่ถูกหัก</span><b>' + L.filter((l) => !l.pending).length + '<small> คะแนน</small></b></div></div>';
     h += '<div class="k8-dm-slots" aria-label="แยกตามเวลาละหมาด">' + SLOTS.map((s) => '<div><span>' + s + '</span><i><em style="height:' + Math.round((bySlot[s] || 0) / mx * 100) + '%"></em></i><b>' + (bySlot[s] || 0) + '</b></div>').join('') + '</div>';
     if (!people.length) h += '<div class="k8-sld-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><b>ไม่มีนักเรียนชายละหมาดที่หอพัก</b><small>' + esc(R.label) + '</small></div>';
     else h += '<ul class="k8-dm-list">' + people.map((p, i) => { const k = nid(p.sid); const op = !!S.open[k];
       return '<li class="' + (op ? 'is-open' : '') + '"><button type="button" class="k8-dm-row" aria-expanded="' + op + '" onclick="k8DmToggle(\'' + k + '\')"><span class="k8-dm-rk">' + (i + 1) + '</span><span class="k8-dm-who"><b>' + esc(p.name) + '</b><small>' + esc(gN(p.grade)) + ' · ' + esc(p.sid) + ' · สัปดาห์นี้ ' + p.wk + ' · เดือนนี้ ' + p.mo + '</small></span><span class="k8-dm-n"><b>' + p.n + '</b><small>ครั้ง</small></span><svg class="k8-dm-cv" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
-        (op ? '<ul class="k8-dm-det">' + p.list.map((l) => '<li><b>' + esc(dS(l.date)) + '</b><span>' + esc(slotOf(l)) + (timeOf(l) ? ' · ' + esc(timeOf(l)) + ' น.' : '') + '</span><small>' + esc(zoneOf(l)) + '</small><em>−1</em></li>').join('') + '</ul>' : '') + '</li>'; }).join('') + '</ul>';
+        (op ? '<ul class="k8-dm-det">' + p.list.map((l) => '<li><b>' + esc(dS(l.date)) + '</b><span>' + esc(slotOf(l)) + (timeOf(l) ? ' · ' + esc(timeOf(l)) + ' น.' : '') + '</span><small>' + esc(zoneOf(l)) + '</small>' + (l.pending ? '<em class="is-pend">ยังไม่ถูกหัก</em>' : '<em>−1</em>') + '</li>').join('') + '</ul>' : '') + '</li>'; }).join('') + '</ul>';
+    { const SC = (S.scan || {})[R.from + '|' + R.to]; const np = L.filter((l) => l.pending).length;
+      if (!SC) { h += '<p class="k8-dm-scan">กำลังตรวจบันทึกละหมาดจริงในช่วงนี้…</p>'; dmScan(R); }
+      else if (SC.noDorm) h += '<p class="k8-dm-scan is-warn">ยังไม่มีพิกัดประเภท "หอพัก" · ไปที่เมนูพิกัดละหมาด แล้วตั้งประเภทของจุดหอพักเป็น "หอพัก"</p>';
+      else if (np) h += '<div class="k8-dm-scan is-warn"><span>พบ <b>' + np + ' ครั้ง</b> ที่เช็คละหมาดที่หอพักแต่ระบบยังไม่ได้หักคะแนน (เช่น ก่อนเริ่มใช้กติกา หรือก่อนแก้การตรวจพิกัด)</span><button type="button" onclick="k8DmApply()">หักคะแนน ' + np + ' รายการ</button></div>'; }
     h += '<p class="k8-sld-note">นับจากรายการที่ระบบหักอัตโนมัติ (ยังไม่ถูกยกเลิก) · ถ้ามีเหตุจำเป็น แอดมินยกเลิกรายการได้ที่หน้าคะแนนพฤติกรรม → ประวัติ · นักเรียนที่มีใบลาพักหอพักที่อนุมัติแล้วจะไม่ถูกหัก</p>';
     B.innerHTML = h;
   }
-  window.k8DmOpen = function () { shell(); openModal('k8DmModal'); paint(); load(true); setTimeout(() => { const b = document.querySelector('#k8DmModal .k8-sheet-x'); if (b) b.focus(); }, 60); };
+  async function dmScan(R, apply) {
+    const k = R.from + '|' + R.to; S.scan = S.scan || {}; if (S.scanBusy === k && !apply) return; S.scanBusy = k;
+    let r = null; try { r = await gasApiCall('scanDormPrayers', { data: { from: R.from, to: R.to, apply: !!apply } }, 60000); } catch (e) {}
+    S.scanBusy = '';
+    S.scan[k] = r && r.success ? r : { items: [], err: true };
+    if (apply && r && r.success) { toast('หักคะแนนแล้ว ' + (r.applied || 0) + ' รายการ', 'success'); S.logs = null; await load(true); return; }
+    paint();
+  }
+  window.k8DmApply = async function () {
+    const R = range(); const SC = (S.scan || {})[R.from + '|' + R.to]; const n = SC ? SC.items.filter((x) => !x.penalized && !x.cancelled).length : 0; if (!n) return;
+    if (!confirm('หักคะแนน 1 คะแนนต่อครั้ง สำหรับการละหมาดที่หอพัก ' + n + ' ครั้ง ในช่วง ' + R.label + ' ?\n(รายการที่แอดมินเคยยกเลิกแล้วจะไม่ถูกหักซ้ำ)')) return;
+    await dmScan(R, true);
+  };
+  window.k8DmOpen = function () { shell(); openModal('k8DmModal'); S.scan = {}; paint(); load(true); setTimeout(() => { const b = document.querySelector('#k8DmModal .k8-sheet-x'); if (b) b.focus(); }, 60); };
   window.k8DmClose = function () { try { closeModal('k8DmModal'); } catch (e) {} };
   window.k8DmMode = function (k) { S.mode = k; S.anchor = ymd(new Date()); paint(); };
   window.k8DmShift = function (n) { const d = D0(S.anchor); if (S.mode === 'day') d.setDate(d.getDate() + n); else if (S.mode === 'week') d.setDate(d.getDate() + 7 * n); else d.setMonth(d.getMonth() + n, 1); S.anchor = ymd(d); paint(); };
