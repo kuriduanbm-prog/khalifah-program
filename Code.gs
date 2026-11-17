@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.55'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.56'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', scanOwnerMismatch: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1814,6 +1814,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
     case 'scanDormPrayers': return scanDormPrayers_(data);
+    case 'girlPlacePenalty': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return girlPlacePenaltyByLog_(data);
     case 'scanOwnerMismatch': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return ownerMismatch_(data, false, session);
     case 'fixOwnerMismatch': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return ownerMismatch_(data, true, session);
     case 'checkMyPrayers': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return checkMyPrayers_(data, session);
@@ -3136,7 +3137,7 @@ function recordPrayer(data) {
         withinZoneThai,
         photoRef,
         statusThai,
-        (wpZone && !/ผิดสถานที่/.test(String(data.note || '')) ? '⚠ ผิดสถานที่: นักเรียนหญิงต้องเช็คละหมาดซุฮริ/อัศรีที่มัสยิด (เช็คที่ ' + wpZone + ')' + (timeFlags || data.note ? ' · ' : '') : '') +
+        (wpZone && !/ผิดสถานที่/.test(String(data.note || '')) ? '⚠ ผิดสถานที่: นักเรียนหญิงต้องเช็คละหมาดซุฮริ/อัศรีที่มัสยิด · จุดที่เช็ค: ' + wpZone + (timeFlags || data.note ? ' · ' : '') : '') +
         (timeFlags ? '⚠ ' + timeFlags + (data.note ? ' · ' : '') : '') + (data.note || '')
       ], { keyCol: 1, verifyCol: 2, text: [2] });
       try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
@@ -3146,12 +3147,16 @@ function recordPrayer(data) {
   let restored = 0;
   if (!/ขาด/.test(String(statusThai || ''))) { try { restored = prayerMissRestore_(cleanSid, dateStr, prayerNameThai, 'พบบันทึกละหมาด (ส่งย้อนหลัง)'); } catch (e) {} }
 
-  let jumPts = 0, dormPts = 0;
+  let jumPts = 0, dormPts = 0, wpPts = 0;
   if (jum) { try { jumPts = jumuahPenalty_(jum, dateStr, timeStr); } catch (e) { jumPts = 0; } }
+  const wpReason = !!wpZone && GIRL_REASON_RE_.test(String(data.note || ''));
+  if (wpZone && !wpReason) { try { wpPts = girlPlacePenalty_(cleanSid, wpZone, dateStr, timeStr, prayerNameThai).pts || 0; } catch (e) { wpPts = 0; } }
   if (dorm) { try { dormPts = dormPrayerPenalty_(dorm, dateStr, timeStr, prayerNameThai, statusThai); } catch (e) { dormPts = 0; } }
   const msg = [jum ? 'คุณมาฟังคุฏบะห์สายแล้ว' + (jumPts ? ' · ถูกหัก ' + jumPts + ' คะแนน' : '') : '', dorm ? 'ละหมาดที่หอพัก' + (dormPts ? ' · ถูกหัก ' + dormPts + ' คะแนน' : '') : ''].filter(Boolean).join(' · ');
-  return { success: true, message: msg || ('บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว'), logId: logId, photoUrl: photoRef, restored: restored,
-    jumuahLate: !!jum, jumuahDeadline: jum ? jum.deadline : undefined, penalty: (jumPts + dormPts) || undefined, dormPrayer: !!dorm, dormZone: dorm ? dorm.zone : undefined, dormPenalty: dormPts || undefined };
+  const msg2 = wpZone ? ('ผิดสถานที่ (ซุฮริ/อัศรี ต้องเช็คที่มัสยิดอัลฮารอมัยน์)' + (wpPts ? ' · ถูกหัก ' + wpPts + ' คะแนน' : wpReason ? ' · แจ้งเหตุจำเป็นแล้ว รอแอดมินพิจารณา' : '')) : '';
+  return { success: true, message: [msg, msg2].filter(Boolean).join(' · ') || ('บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว'), logId: logId, photoUrl: photoRef, restored: restored,
+    wrongPlace: wpZone || undefined, wrongPlacePenalty: wpPts || undefined, wrongPlaceReason: wpReason || undefined,
+    jumuahLate: !!jum, jumuahDeadline: jum ? jum.deadline : undefined, penalty: (jumPts + dormPts + wpPts) || undefined, dormPrayer: !!dorm, dormZone: dorm ? dorm.zone : undefined, dormPenalty: dormPts || undefined };
 }
 
 /* ===================== v19.52 · ตรวจและแก้รายการที่ถูกบันทึกผิดคน =====================
@@ -3302,6 +3307,43 @@ function wrongPlaceOf_(sid, dateStr, prayerThai, statusThai, lat, lng) {
   return g === 'หญิง' ? String(best.z.name || 'นอกมัสยิด') : '';
 }
 
+const GIRL_MOSQUE_POINTS_ = 2;
+const GIRL_REASON_RE_ = /เหตุจำเป็น\s*:\s*\S/;
+/** v19.56 · หัก 2 คะแนน: นักเรียนหญิงเช็คซุฮริ/อัศรีนอกมัสยิดอัลฮารอมัยน์ โดยไม่แจ้งเหตุจำเป็น (กันหักซ้ำด้วยรหัส WP-) */
+function girlPlacePenalty_(sid, zone, dateStr, timeStr, prayerThai) {
+  const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR); if (!sh) return { pts: 0 };
+  const k = String(sid || '').replace(/\D/g, '').replace(/^0+/, '');
+  const st = (getAllStudents().data || []).filter(function (x) { return String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '') === k; })[0];
+  if (!st) return { pts: 0 };
+  let si = PRAYER_SLOTS_.map(function (x) { return formatPrayerTimeThai(x); }).indexOf(formatPrayerTimeThai(prayerThai)); if (si < 0) si = 9;
+  const id = 'WP-' + k + '-' + dateStr + '-' + si;
+  const unlock = lockEnter_(15000);
+  try {
+    if (sh.getLastRow() > 1) { const ids = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues(); for (let i = 0; i < ids.length; i++) if (String(ids[i][0]) === id) return { pts: 0, id: id, dup: true }; }
+    const stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    const slot = String(formatPrayerTimeThai(prayerThai)).split(' (')[0];
+    appendRowFind_(sh, [id, dateStr, stamp, currentTerm_(), st.studentId, st.fullName || '', st.grade || '', 'mosque', 'girl-mosque', 'ละหมาดซุฮริ/อัศรีนอกมัสยิด (นักเรียนหญิง)', -GIRL_MOSQUE_POINTS_,
+      'หักอัตโนมัติ: เช็คละหมาด' + slot + 'ที่ ' + zone + ' เวลา ' + String(timeStr || '').slice(0, 5) + ' น. · นักเรียนหญิงต้องเช็คซุฮริ/อัศรีที่มัสยิดอัลฮารอมัยน์', 'system', 'ระบบอัตโนมัติ', 'active', '', '', ''], { keyCol: 1 });
+    return { pts: GIRL_MOSQUE_POINTS_, id: id };
+  } finally { unlock(); }
+}
+/** แอดมิน: หักคะแนนรายการที่นักเรียนแจ้งเหตุจำเป็นไว้ แต่แอดมินไม่ยอมรับ */
+function girlPlacePenaltyByLog_(d) {
+  const lid = cleanVal((d || {}).logId); if (!lid) return { success: false, message: 'ไม่พบรายการ' };
+  const sh = getSpreadsheet().getSheetByName(SHEETS.PRAYERS); const n = sh.getLastRow() - 1; if (n < 1) return { success: false, message: 'ไม่พบรายการ' };
+  const rows = sh.getRange(2, 1, n, 16).getValues();
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const r = rows[i]; if (cleanVal(r[0]) !== lid) continue;
+    const ds = formatSheetDate(r[6]); let zone = '';
+    const m = String(r[15] || '').match(/จุดที่เช็ค:\s*([^·\[]+)/); if (m) zone = m[1].trim();
+    if (!zone) zone = wrongPlaceOf_(r[1], ds, r[4], r[14], r[8], r[9]);
+    if (!zone) return { success: false, message: 'รายการนี้ไม่ได้เช็คผิดสถานที่' };
+    const res = girlPlacePenalty_(r[1], zone, ds, formatSheetTime(r[7]), r[4]);
+    return { success: true, id: res.id, points: res.pts, message: res.dup ? 'รายการนี้ถูกหักไปแล้ว' : 'หัก ' + res.pts + ' คะแนนแล้ว' };
+  }
+  return { success: false, message: 'ไม่พบรายการ' };
+}
+
 // ---------- v19.17 · ละหมาดวันศุกร์ (ฟังคุฏบะห์) ----------
 const JUMUAH_DEADLINE_ = '12:35';
 const JUMUAH_LATE_POINTS_ = 2;
@@ -3414,7 +3456,7 @@ function deleteMyPrayer_(d, session) {
     if (!other) {
       const sid = String(cleanVal(r[1])).replace(/\D/g, '').replace(/^0+/, '');
       let si = PRAYER_SLOTS_.map(function (x) { return formatPrayerTimeThai(x); }).indexOf(pt); if (si < 0) si = 9;
-      const ids = ['DM-' + sid + '-' + ds + '-' + si]; if (/ซุฮ|ดุฮ/.test(pt)) ids.push('FK-' + sid + '-' + ds);
+      const ids = ['DM-' + sid + '-' + ds + '-' + si, 'WP-' + sid + '-' + ds + '-' + si]; if (/ซุฮ|ดุฮ/.test(pt)) ids.push('FK-' + sid + '-' + ds);
       const bh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);
       if (bh && bh.getLastRow() > 1) { const col = bh.getRange(2, 1, bh.getLastRow() - 1, 1).getValues(); for (let k = col.length - 1; k >= 0; k--) if (ids.indexOf(String(col[k][0])) !== -1) { bh.deleteRow(k + 2); undone++; } }
     }

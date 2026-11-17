@@ -4598,7 +4598,7 @@ async function executePrayerCaptureStep2() {
   const noteInput = document.getElementById('prayerNoteInput');
   const prayerStatus = statusSelect ? statusSelect.value : (typeof window.k8PrayerStatusNow === 'function' ? window.k8PrayerStatusNow(selectedPrayerTime) : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)');
   let prayerNote = noteInput ? noteInput.value.trim() : '';
-  try { const wpz = typeof window.k8WrongPlaceNow === 'function' ? window.k8WrongPlaceNow() : ''; if (wpz) { prayerNote = window.k8WrongPlaceNote(wpz) + (prayerNote ? ' · ' + prayerNote : ''); setTimeout(() => { try { showToast('บันทึกแล้ว แต่ผิดสถานที่: ซุฮริ/อัศรี นักเรียนหญิงต้องเช็คที่มัสยิดอัลฮารอมัยน์', 'warning'); } catch (e) {} }, 1200); } } catch (e) {} // v19.55
+  try { const wpz = typeof window.k8WrongPlaceNow === 'function' ? window.k8WrongPlaceNow() : ''; if (wpz) { prayerNote = window.k8WrongPlaceNote(wpz) + (prayerNote ? ' · ' + prayerNote : ''); window.k8WrongPlaceToast(); } } catch (e) {} // v19.55
   const chosenLoc = locSelect ? locSelect.value : (verifiedLocation ? verifiedLocation.locationName : 'พิกัด GPS');
   let accurateLocName = chosenLoc;
   if (verifiedLocation && verifiedLocation.isWithinZone) {
@@ -4845,7 +4845,7 @@ function captureAndRecordPrayer() {
   const noteInput = document.getElementById('prayerNoteInput');
   const prayerStatus = statusSelect ? statusSelect.value : (typeof window.k8PrayerStatusNow === 'function' ? window.k8PrayerStatusNow(selectedPrayerTime) : 'ตรงเวลา (ญะมาอะฮ์/มัสยิด)');
   let prayerNote = noteInput ? noteInput.value.trim() : '';
-  try { const wpz = typeof window.k8WrongPlaceNow === 'function' ? window.k8WrongPlaceNow() : ''; if (wpz) { prayerNote = window.k8WrongPlaceNote(wpz) + (prayerNote ? ' · ' + prayerNote : ''); setTimeout(() => { try { showToast('บันทึกแล้ว แต่ผิดสถานที่: ซุฮริ/อัศรี นักเรียนหญิงต้องเช็คที่มัสยิดอัลฮารอมัยน์', 'warning'); } catch (e) {} }, 1200); } } catch (e) {} // v19.55
+  try { const wpz = typeof window.k8WrongPlaceNow === 'function' ? window.k8WrongPlaceNow() : ''; if (wpz) { prayerNote = window.k8WrongPlaceNote(wpz) + (prayerNote ? ' · ' + prayerNote : ''); window.k8WrongPlaceToast(); } } catch (e) {} // v19.55
 
   // สร้าง Object ข้อมูลการบันทึก
   const prayerRecord = {

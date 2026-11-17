@@ -3646,7 +3646,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.55';
+  const APP_VERSION = '19.56';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14366,14 +14366,47 @@ window.k8PdWho = function (sid) {
   }
   async function logs() {
     if (B.logs && Date.now() - B.at < 120000) return B.logs;
-    if (!B.busy) B.busy = gasApiCall('getBehaviorData', {}, 30000).then((r) => { if (r && r.success) { B.logs = (r.logs || []).filter((l) => l.ruleId === 'dorm-prayer'); B.at = Date.now(); } return B.logs; }).catch(() => B.logs).finally(() => { B.busy = null; });
+    if (!B.busy) B.busy = gasApiCall('getBehaviorData', {}, 30000).then((r) => { if (r && r.success) { B.logs = (r.logs || []).filter((l) => l.ruleId === 'dorm-prayer' || l.ruleId === 'girl-mosque'); B.at = Date.now(); } return B.logs; }).catch(() => B.logs).finally(() => { B.busy = null; });
     return B.busy;
   }
   const base = (t) => String(t || '').split(' (')[0].replace('ศุบฮิ', 'ซุบฮิ').trim();
   function hit(L, r) {
-    const pre = 'DM-' + nid(r.studentId) + '-' + String(r.date || '').slice(0, 10) + '-'; const sl = base(r.prayerTime || r.prayerName);
+    const pre = (arguments[2] || 'DM-') + nid(r.studentId) + '-' + String(r.date || '').slice(0, 10) + '-'; const sl = base(r.prayerTime || r.prayerName);
     return (L || []).find((l) => String(l.id || '').indexOf(pre) === 0 && (!sl || String(l.note || '').replace('ศุบฮิ', 'ซุบฮิ').indexOf(sl) !== -1)) || null;
   }
+  // v19.56 · นักเรียนหญิงเช็คซุฮริ/อัศรีนอกมัสยิด: หัก 2 คะแนน เว้นแต่แจ้งเหตุจำเป็น (แอดมินยอมรับ/ไม่ยอมรับ · ยกเลิกการหักได้)
+  function girlChip(r, z, put) {
+    const note = String(r.note || ''); const m = note.match(/เหตุจำเป็น\s*:\s*([^·\[]+)/); const reason = m ? m[1].trim() : '';
+    const ok = /แอดมินยอมรับเหตุผล/.test(note);
+    const head = '<b>ผิดสถานที่ · เช็คที่ ' + esc(z.name) + '</b><small>นักเรียนหญิงต้องเช็คละหมาดซุฮริและอัศรีที่มัสยิดอัลฮารอมัยน์</small>' + (reason ? '<small>เหตุจำเป็นที่แจ้ง: <b>' + esc(reason) + '</b></small>' : '');
+    if (!isAdm()) {
+      put(chip('is-warn', head + '<small>' + (ok ? 'แอดมินยอมรับเหตุผลแล้ว · ไม่หักคะแนน' : reason ? 'แจ้งเหตุจำเป็นแล้ว · รอแอดมินพิจารณา' : 'ถูกหัก 2 คะแนน') + '</small>')); return;
+    }
+    put(chip('is-warn', head + '<small>กำลังตรวจการหักคะแนน…</small>'));
+    logs().then((L) => {
+      if (B.cur !== r) return;
+      const h = hit(L, r, 'WP-'); const act = h && (h.status || 'active') === 'active';
+      const lid = esc(r.logId || r.id || ''); const hid = h ? esc(h.id) : '';
+      let tail;
+      if (act) tail = '<small><b>หักแล้ว ' + Math.abs(Number(h.points) || 2) + ' คะแนน</b></small><button type="button" onclick="k8WpAct(\'cancel\',\'' + hid + '\')">ยกเลิกการหัก (มีเหตุจำเป็น)</button>';
+      else if (ok) tail = '<small><b>แอดมินยอมรับเหตุผลแล้ว · ไม่หักคะแนน</b></small>';
+      else if (h) tail = '<small>เคยหักแล้วแต่ยกเลิก · ไม่หักคะแนน</small>';
+      else tail = '<small><b>' + (reason ? 'รอพิจารณา · ยังไม่หัก' : 'ยังไม่ถูกหัก') + '</b></small><span class="k8-dz-acts">' + (reason ? '<button type="button" onclick="k8WpAct(\'accept\',\'' + lid + '\')">ยอมรับเหตุผล</button>' : '') + '<button type="button" class="is-bad" onclick="k8WpAct(\'pen\',\'' + lid + '\')">' + (reason ? 'ไม่ยอมรับ · ' : '') + 'หัก 2 คะแนน</button></span>';
+      put(chip('is-warn', head + tail));
+    });
+  }
+  window.k8WpAct = async function (k, id) {
+    const r = B.cur; if (!r || !id) return;
+    const t = (m, x) => { try { showToast(m, x); } catch (e) {} };
+    let res = null;
+    try {
+      if (k === 'cancel') { if (!confirm('ยกเลิกการหัก 2 คะแนนของรายการนี้?')) return; res = await gasApiCall('cancelBehaviorLog', { logId: id }, 30000); }
+      else if (k === 'pen') { if (!confirm('หัก 2 คะแนน (เช็คซุฮริ/อัศรีนอกมัสยิด)?')) return; res = await gasApiCall('girlPlacePenalty', { data: { logId: id } }, 30000); }
+      else if (k === 'accept') { const nn = String(r.note || '').replace(/\s*\[แก้ไขโดย [^\]]*\]\s*$/, '') + ' · แอดมินยอมรับเหตุผล'; res = await gasApiCall('updatePrayerRecord', { data: { logId: id, note: nn } }, 30000); if (res && res.success) r.note = nn; }
+    } catch (e) { res = { success: false, message: String(e && e.message || e) }; }
+    if (!res || !res.success) { t((res && (res.message || res.error)) || 'ทำรายการไม่สำเร็จ', 'error'); return; }
+    t(res.message || 'เรียบร้อย', 'success'); B.at = 0; window.k8PrayerDelHook(r);
+  };
   function chip(cls, html) { return '<div id="k8DzInfo" class="k8-dz ' + cls + '">' + html + '</div>'; }
   const prev = window.k8PrayerDelHook;
   window.k8PrayerDelHook = function (r) {
@@ -14393,8 +14426,7 @@ window.k8PdWho = function (sid) {
     if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/.test(st.trim())) { put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · สถานะนี้ไม่หักคะแนน')); return; }
     if (boy === false) {
       const wp = window.k8WrongPlace ? window.k8WrongPlace(r) : '';
-      if (wp) put(chip('is-warn', '<b>ผิดสถานที่ · เช็คที่ ' + esc(z.name) + '</b><small>นักเรียนหญิงต้องเช็คละหมาดซุฮริและอัศรีที่มัสยิดอัลฮารอมัยน์</small>'));
-      else put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · นักเรียนหญิงไม่ถูกหักคะแนนละหมาดที่หอพัก'));
+      if (wp) { girlChip(r, z, put); return; } put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · นักเรียนหญิงไม่ถูกหักคะแนนละหมาดที่หอพัก'));
       return;
     }
     if (boy === null && !isAdm()) return;
@@ -14442,7 +14474,7 @@ window.k8PdWho = function (sid) {
   // บันทึกที่มีอยู่แล้ว → ชื่อจุดที่ผิด หรือ ''
   window.k8WrongPlace = function (p) {
     if (!p) return '';
-    const n = String(p.note || ''); const m = n.match(/ผิดสถานที่[^()]*\(เช็คที่ ([^)]+)\)/); if (m) return m[1];
+    const n = String(p.note || ''); const m = n.match(/จุดที่เช็ค:\s*([^·\[]+)/); if (m) return m[1].trim();
     if (/ผิดสถานที่/.test(n)) return 'นอกมัสยิด';
     return why(p.studentId, p.date || String(p.timestamp || '').slice(0, 10), p.prayerName || p.prayerTime, p.status, p.latitude != null ? p.latitude : p.lat, p.longitude != null ? p.longitude : p.lng);
   };
@@ -14450,14 +14482,17 @@ window.k8PdWho = function (sid) {
   window.k8WrongPlaceNow = function () {
     try { if (!currentStudent || !verifiedLocation) return ''; return why(currentStudent.studentId, today(), selectedPrayerTime, '', verifiedLocation.lat, verifiedLocation.lng); } catch (e) { return ''; }
   };
-  window.k8WrongPlaceNote = (z) => '⚠ ผิดสถานที่: นักเรียนหญิงต้องเช็คละหมาดซุฮริ/อัศรีที่มัสยิด (เช็คที่ ' + z + ')';
+  window.k8WrongPlaceReason = () => { const i = document.getElementById('k8WpReason'); return i ? String(i.value || '').trim().slice(0, 120) : ''; };
+  window.k8WrongPlaceNote = (z) => { const r = window.k8WrongPlaceReason(); return '⚠ ผิดสถานที่: นักเรียนหญิงต้องเช็คละหมาดซุฮริ/อัศรีที่มัสยิด · จุดที่เช็ค: ' + z + (r ? ' · เหตุจำเป็น: ' + r.replace(/[()]/g, ' ') : ''); };
+  window.k8WrongPlaceToast = () => { const r = window.k8WrongPlaceReason(); const i = document.getElementById('k8WpReason'); if (i) i.value = ''; setTimeout(() => { try { showToast(r ? 'บันทึกแล้ว · ผิดสถานที่ แต่แจ้งเหตุจำเป็นไว้ รอแอดมินพิจารณา' : 'บันทึกแล้ว แต่ผิดสถานที่ · ถูกหัก 2 คะแนน (ซุฮริ/อัศรี นักเรียนหญิงต้องเช็คที่มัสยิดอัลฮารอมัยน์)', 'warning'); } catch (e) {} }, 1200); };
   let lastWarn = '';
   window.k8WrongPlaceOverlay = function () {
     const box = document.getElementById('k8WpWarn'); if (!box) return;
     const z = window.k8WrongPlaceNow();
     if (!z) { box.hidden = true; lastWarn = ''; return; }
     box.hidden = false;
-    box.innerHTML = '<b>ผิดสถานที่ · ตอนนี้อยู่ที่ ' + String(z).replace(/[<>&]/g, '') + '</b><span>นักเรียนหญิงต้องเช็คละหมาดซุฮริและอัศรีที่มัสยิดอัลฮารอมัยน์ ถ้าบันทึกตรงนี้ รายการจะขึ้นว่า "ผิดสถานที่"</span>';
+    if (lastWarn !== z || !box.querySelector('#k8WpReason')) box.innerHTML = '<b>ผิดสถานที่ · ตอนนี้อยู่ที่ ' + String(z).replace(/[<>&]/g, '') + '</b><span>นักเรียนหญิงต้องเช็คละหมาดซุฮริและอัศรีที่มัสยิดอัลฮารอมัยน์ ถ้าบันทึกตรงนี้โดยไม่มีเหตุจำเป็น จะถูกหัก 2 คะแนน</span>' +
+      '<label for="k8WpReason">มีเหตุจำเป็น? พิมพ์เหตุผลก่อนกดถ่าย (แอดมินจะพิจารณา)</label><input id="k8WpReason" type="text" maxlength="120" placeholder="เช่น ป่วย มีไข้ เดินไม่ไหว" autocomplete="off">';
     if (lastWarn !== z) { lastWarn = z; try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); } catch (e) {} try { showToast('ผิดสถานที่: ซุฮริ/อัศรี นักเรียนหญิงต้องเช็คที่มัสยิดอัลฮารอมัยน์', 'warning'); } catch (e) {} }
   };
 })();
