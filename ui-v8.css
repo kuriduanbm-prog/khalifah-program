@@ -7067,3 +7067,15 @@ html[data-theme="dark"] .k8-br-list strong { color: #fca5a5; }
 html[data-theme="dark"] .k8-dm-scan { background: #0f172a; color: #cbd5e1; }
 html[data-theme="dark"] .k8-dm-scan.is-warn { background: #2a1607; border-color: #9a3412; color: #fdba74; }
 html[data-theme="dark"] .k8-dm-det em.is-pend { background: #3b1d08 !important; color: #fdba74 !important; }
+
+/* v19.47 · แอดมินลบกลุ่มหะละเกาะฮฺ */
+.k8-hqd-tl.has-del li { display: flex; align-items: center; gap: 4px; }
+.k8-hqd-tl.has-del li > button:not(.k8-hqd-del) { flex: 1; min-width: 0; }
+.k8-hqd-tl .k8-hqd-del { flex: none; width: 40px !important; height: 40px; padding: 0 !important; display: grid !important; place-items: center; grid-template-columns: none !important; border-radius: 10px; color: #b91c1c; }
+.k8-hqd-tl .k8-hqd-del:hover { background: #fef2f2 !important; }
+.k8-hqd-delrow { display: flex; justify-content: flex-end; padding: 10px 12px 12px; }
+.k8-hqd-delbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid #fecaca; background: #fff; color: #b91c1c; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.k8-hqd-delbtn:hover { background: #fef2f2; }
+.k8-hqd-del:focus-visible, .k8-hqd-delbtn:focus-visible { outline: 3px solid rgba(185,28,28,.35); outline-offset: 2px; }
+html[data-theme="dark"] .k8-hqd-tl .k8-hqd-del { color: #fca5a5; } html[data-theme="dark"] .k8-hqd-tl .k8-hqd-del:hover { background: #2a1212 !important; }
+html[data-theme="dark"] .k8-hqd-delbtn { background: transparent; border-color: #7f1d1d; color: #fca5a5; } html[data-theme="dark"] .k8-hqd-delbtn:hover { background: #2a1212; }

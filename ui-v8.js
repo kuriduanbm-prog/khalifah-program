@@ -3644,7 +3644,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.46';
+  const APP_VERSION = '19.47';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11556,7 +11556,8 @@ window.k8HfMiss = function (slot) {
       '<div class="k8-hqd-bars">' + B.map((b) => { const p = pct(b.c); return '<div class="k8-hqd-bar"><span class="' + pcls(p) + '">' + (p == null ? '–' : p + '%') + '</span><i><em class="' + pcls(p) + '" style="height:' + (p || 0) + '%"></em></i><small>' + esc(b.label) + '</small></div>'; }).join('') + '</div></section>';
   }
   function teacherHtml(G) {
-    return '<section class="k8-hqd-card"><h3>รายผู้ดูแล <small>· แตะเพื่อดูรายละเอียดกลุ่ม</small></h3><ul class="k8-hqd-tl">' + G.map((g) => { const p = pct(g.total); return '<li><button type="button" onclick="k8HqRepGo(\'' + esc(g.id) + '\')"><span><b>' + esc(tName(g)) + '</b><small>' + esc(g.name) + ' · ' + g.members.length + ' คน · เช็คแล้ว ' + heldTxt(g) + '</small></span><i><em class="' + pcls(p) + '" style="width:' + (p || 0) + '%"></em></i><strong class="' + pcls(p) + '">' + (p == null ? '–' : p + '%') + '</strong></button></li>'; }).join('') + '</ul></section>';
+    const adm = !!(window.k8HqIsAdm && window.k8HqIsAdm()); // v19.47 · แอดมินลบกลุ่มได้
+    return '<section class="k8-hqd-card"><h3>รายผู้ดูแล <small>· แตะเพื่อดูรายละเอียดกลุ่ม</small></h3><ul class="k8-hqd-tl' + (adm ? ' has-del' : '') + '">' + G.map((g) => { const p = pct(g.total); return '<li>' + (adm ? '<button type="button" class="k8-hqd-del" aria-label="ลบกลุ่ม ' + esc(g.name) + ' ของ ' + esc(tName(g)) + '" title="ลบกลุ่มนี้" onclick="k8HqRepDel(\'' + esc(g.id) + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>' : '') + '<button type="button" onclick="k8HqRepGo(\'' + esc(g.id) + '\')"><span><b>' + esc(tName(g)) + '</b><small>' + esc(g.name) + ' · ' + g.members.length + ' คน · เช็คแล้ว ' + heldTxt(g) + '</small></span><i><em class="' + pcls(p) + '" style="width:' + (p || 0) + '%"></em></i><strong class="' + pcls(p) + '">' + (p == null ? '–' : p + '%') + '</strong></button></li>'; }).join('') + '</ul></section>';
   }
   function gridHtml(g) {
     const adm = !!(window.k8HqIsAdm && window.k8HqIsAdm());
@@ -11577,6 +11578,7 @@ window.k8HfMiss = function (slot) {
     return '<article class="k8-hqr-g' + (solo ? ' is-solo' : '') + '">' + (solo ? '<div class="k8-hqr-h">' + head + '</div>' : '<button type="button" class="k8-hqr-h" aria-expanded="' + op + '" onclick="k8HqRepT(\'' + esc(g.id) + '\')">' + head + '</button>') +
       (op ? sessHtml(g, adm) : '') +
       (op ? gridHtml(g) : '') +
+      (op && adm ? '<div class="k8-hqd-delrow"><button type="button" class="k8-hqd-delbtn" onclick="k8HqRepDel(\'' + esc(g.id) + '\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>ลบกลุ่มหะละเกาะฮฺนี้</button></div>' : '') +
       (op ? '<div class="k8-hqr-wrap"><table class="k8-hqr-t"><thead><tr><th scope="col">นักเรียน</th><th scope="col">มา</th><th scope="col">สาย</th><th scope="col">ลา</th><th scope="col">ขาด</th><th scope="col">ไม่เช็ค</th><th scope="col">%</th></tr></thead><tbody>' +
         g.members.map((m) => { const q = pct(m.c); return '<tr><th scope="row">' + esc(m.name) + '<small>' + esc(sg(m)) + ' · ' + esc(m.id) + '</small></th><td>' + m.c.present + '</td><td>' + m.c.late + '</td><td>' + m.c.leave + '</td><td class="' + (m.c.absent ? 'is-bad' : '') + '">' + m.c.absent + '</td><td class="' + (m.c.none ? 'is-bad' : '') + '">' + m.c.none + '</td><td><b>' + (q == null ? '–' : q + '%') + '</b></td></tr>'; }).join('') + '</tbody></table></div>' : '') + '</article>';
   }
@@ -11665,6 +11667,15 @@ window.k8HfMiss = function (slot) {
   let seq = 0;
   async function fetchRep(f, t) { let r = null; try { r = await gasApiCall('getHalaqahReport', { from: f, to: t }, 60000); } catch (e) {} if (r && r.success) cachePut(f, t, r); return r && r.success ? r : null; }
   function prefetchRosters() { const td = ymd(new Date()); ((R.data && R.data.groups) || []).slice(0, 12).forEach((g, i) => { if (window.k8HqPrefetchRoster) setTimeout(() => window.k8HqPrefetchRoster(g.id, td), 300 + i * 250); }); }
+  window.k8HqRepDel = async function (id) {
+    const toast = (m, t) => { try { if (typeof showToast === 'function') showToast(m, t); } catch (e) {} };
+    const g = ((R.data && R.data.groups) || []).find((x) => String(x.id) === String(id)); if (!g) return;
+    if (!confirm('ลบกลุ่ม "' + g.name + '" ของ ' + tName(g) + ' (' + g.members.length + ' คน)?\nกลุ่มจะหายจากรายการและหน้าอาจารย์ · ประวัติการเช็คชื่อที่บันทึกไว้แล้วยังเก็บอยู่')) return;
+    let r = null; try { r = await gasApiCall('deleteHalaqahSession', { data: { id: g.id } }, 25000); } catch (e) {}
+    if (!r || !r.success) { toast((r && r.message) || 'ลบไม่สำเร็จ', 'error'); return; }
+    R.data.groups = R.data.groups.filter((x) => String(x.id) !== String(id)); if (String(R.gsel) === String(id)) R.gsel = '';
+    toast('ลบกลุ่ม "' + g.name + '" แล้ว', 'success'); render();
+  };
   async function load() {
     const my = ++seq; const f = R.from, t = R.to;
     document.getElementById('k8HqRepS').textContent = dTh(f) + ' – ' + dTh(t);
