@@ -2893,26 +2893,44 @@ const GPS_TOLERANCE_MAX_M = 30;
  * หยุดทันทีเมื่อความแม่นยำดีพอ (≤ 15 ม.) หรืออยู่ในรัศมีจุดละหมาดแล้ว
  */
 function k8BestPosition(onOk, onErr, opts) {
-  const MAX_MS = 8000, GOOD_M = 15;
-  let best = null, done = false, wid = null, timer = null;
+  // v19.61 · ในอาคาร/ใต้หลังคามัสยิด GPS ล้วนอาจใช้เวลาเกิน 8 วินาที → เดิมขึ้น "หาตำแหน่งไม่ทันเวลา" ทั้งที่เครื่องหาได้
+  //   ใหม่: (1) ขอพิกัดจาก Wi-Fi/เสาสัญญาณคู่ขนาน (ได้เร็ว) (2) รอ GPS แม่นยำได้นานขึ้นถึง 20 วินาที
+  //         (3) ครบ 8 วินาทีแล้วมีค่าใดค่าหนึ่ง → ใช้ค่าที่ดีที่สุด (4) ไม่ได้เลย → ลองใช้พิกัดล่าสุดของเครื่อง (ไม่เกิน 2 นาที)
+  const SOFT_MS = 8000, HARD_MS = 20000, GOOD_M = 15;
+  let best = null, done = false, wid = null, soft = null, hard = null, lastErr = null;
+  const t0 = Date.now();
+  const stop = () => { try { if (wid !== null) navigator.geolocation.clearWatch(wid); } catch (e) {} clearTimeout(soft); clearTimeout(hard); };
   const finish = (err) => {
-    if (done) return; done = true;
-    try { if (wid !== null) navigator.geolocation.clearWatch(wid); } catch (e) {}
-    clearTimeout(timer);
-    if (best) onOk(best); else onErr(err || { code: 3, message: 'หาตำแหน่งไม่ทันเวลา' });
+    if (done) return;
+    if (best) { done = true; stop(); return onOk(best); }
+    if (err && err.code === 1) { done = true; stop(); return onErr(err); }
+    // ไม่มีพิกัดเลย: ลองค่าที่เครื่องจำไว้ล่าสุด (≤ 2 นาที) ก่อนแจ้งว่าไม่สำเร็จ
+    done = true; stop();
+    try {
+      navigator.geolocation.getCurrentPosition((p) => onOk(p), (e) => onErr(lastErr && lastErr.code !== 3 ? lastErr : (e && e.code !== 3 ? e : { code: 3, message: 'หาตำแหน่งไม่ทันเวลา' })), { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 });
+    } catch (e) { onErr({ code: 3, message: 'หาตำแหน่งไม่ทันเวลา' }); }
   };
   const inZone = (p) => {
     try {
       return Object.values(GEOFENCE_TARGETS).some(t => calculateDistanceInMeters(p.coords.latitude, p.coords.longitude, t.lat, t.lng) <= t.radius);
     } catch (e) { return false; }
   };
+  // ครบ 8 วินาทีแล้ว: ใช้ได้ถ้าอยู่ในเขต หรือคลาดเคลื่อนไม่เกิน 50 ม. (ค่าหยาบกว่านั้นรอ GPS ต่อจนครบ 20 วินาที)
+  const okEnough = (p) => !!p && (inZone(p) || (p.coords.accuracy || 9999) <= 50);
+  const consider = (p) => {
+    if (done || !p || !p.coords) return;
+    if (!best || (p.coords.accuracy || 9999) <= (best.coords.accuracy || 9999)) best = p;
+    if ((p.coords.accuracy || 9999) <= GOOD_M || inZone(p)) finish();
+    else if (Date.now() - t0 >= SOFT_MS && okEnough(best)) finish();
+  };
+  const onE = (e) => { lastErr = e; if (e && e.code === 1) finish(e); /* อื่น ๆ รอค่าถัดไป */ };
   try {
-    wid = navigator.geolocation.watchPosition((p) => {
-      if (!best || (p.coords.accuracy || 9999) <= (best.coords.accuracy || 9999)) best = p;
-      if ((p.coords.accuracy || 9999) <= GOOD_M || inZone(p)) finish();
-    }, (e) => { if (e && e.code === 1) finish(e); /* อื่น ๆ รอค่าถัดไป */ }, { enableHighAccuracy: true, timeout: MAX_MS, maximumAge: 0 });
+    wid = navigator.geolocation.watchPosition(consider, onE, { enableHighAccuracy: true, timeout: HARD_MS, maximumAge: 0 });
   } catch (e) { navigator.geolocation.getCurrentPosition(onOk, onErr, opts); return; }
-  timer = setTimeout(() => finish(), MAX_MS);
+  // พิกัดหยาบแต่เร็ว (Wi-Fi/เสาสัญญาณ) คู่ขนาน · อายุไม่เกิน 30 วินาที
+  try { navigator.geolocation.getCurrentPosition(consider, onE, { enableHighAccuracy: false, timeout: HARD_MS, maximumAge: 30000 }); } catch (e) {}
+  soft = setTimeout(() => { if (okEnough(best)) finish(); }, SOFT_MS);
+  hard = setTimeout(() => finish(), HARD_MS);
 }
 
 function fetchFreshPrayerLocation() {
@@ -4474,7 +4492,7 @@ function k8GeoFail(err) {
   const code = err && err.code;
   if (code === 1) return k8GeoHelp();
   if (code === 2) return showToast('หาตำแหน่งไม่ได้ · เปิด "ตำแหน่ง/GPS" ในแผงตั้งค่าด่วนของมือถือ แล้วกดตรวจสอบพิกัดอีกครั้ง', 'error');
-  if (code === 3) return showToast('หาตำแหน่งไม่ทันเวลา · ออกไปที่โล่งหรือใกล้หน้าต่าง แล้วลองใหม่อีกครั้ง', 'warning');
+  if (code === 3) return showToast('หาตำแหน่งไม่ทันเวลา · เปิด Wi‑Fi และ "ตำแหน่งที่แม่นยำ" ในตั้งค่าตำแหน่งของมือถือ หรือขยับออกไปที่โล่ง/ใกล้ประตู แล้วลองใหม่', 'warning');
   showToast('ไม่สามารถดึงพิกัดได้: ' + ((err && err.message) || err) + ' · ลองใหม่อีกครั้ง', 'error');
 }
 function k8GeoHelp() {
