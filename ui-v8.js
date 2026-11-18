@@ -3646,7 +3646,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.57';
+  const APP_VERSION = '19.58';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5886,7 +5886,8 @@ window.k8RegBirthChange = function (v) {
     if (r.code === 'AUTH_REQUIRED') return 'retry';
     if (noQueue) return 'drop';
     item.tries = (item.tries || 0) + 1;
-    if (item.tries >= 5 || r.code === 'FORBIDDEN' || r.code === 'VALIDATION') { try { const b0 = JSON.parse(item.body || '{}'); const lid = b0.data && (b0.data.logId || b0.data.id); if (lid) { const D = JSON.parse(localStorage.getItem('khalifah_outbox_dropped') || '{}'); D[lid] = { code: r.code || '', message: String(r.message || r.error || '').slice(0, 200), at: Date.now() }; localStorage.setItem('khalifah_outbox_dropped', JSON.stringify(D)); } } catch (e) {} return 'drop'; } // v19.42 · จำเหตุผลที่ระบบไม่รับ
+    // v19.58 · ระบบขัดข้องชั่วคราว (เช่น เซิร์ฟเวอร์ยุ่ง) ส่งซ้ำต่อไป ไม่ทิ้งรูปละหมาดหลังลอง 5 ครั้งเหมือนเดิม · ทิ้งเฉพาะที่ระบบปฏิเสธแน่นอน
+    if (r.code === 'FORBIDDEN' || r.code === 'VALIDATION' || r.holiday || item.tries >= (/^(prayerCheckIn|recordPrayer)$/.test(item.action) ? 60 : 5)) { try { const b0 = JSON.parse(item.body || '{}'); const lid = b0.data && (b0.data.logId || b0.data.id); if (lid) { const D = JSON.parse(localStorage.getItem('khalifah_outbox_dropped') || '{}'); D[lid] = { code: r.code || '', message: String(r.message || r.error || '').slice(0, 200), at: Date.now() }; localStorage.setItem('khalifah_outbox_dropped', JSON.stringify(D)); } } catch (e) {} return 'drop'; } // v19.42 · จำเหตุผลที่ระบบไม่รับ
     try { await put(item); } catch (e) {}
     return 'retry';
   }

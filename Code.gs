@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.57'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.58'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1650,10 +1650,15 @@ function dispatchAction_(action, req, data, session, ctx) {
 
     // ---------- นักเรียนบันทึกข้อมูลของตนเอง ----------
     case 'recordPrayer':
-    case 'prayerCheckIn':
-      if (isStudent && (data && data.date ? isHolidayAt_(data.date, data.time) : isWeeklyHoliday_())) return { success: false, holiday: true, message: 'วันเสาร์เป็นวันหยุดประจำสัปดาห์ · งดเช็คชื่อละหมาด' };
-      if (isStudent) data.studentId = session.userId;
-      return recordPrayer(data);
+    case 'prayerCheckIn': {
+      // v19.58 · การเช็คที่ระบบไม่รับ ต้องมีร่องรอยให้แอดมินตรวจได้ (ชีต "ละหมาดส่งไม่สำเร็จ")
+      if (isStudent && data) data.studentId = session.userId;
+      if (isStudent && (data && data.date ? isHolidayAt_(data.date, data.time) : isWeeklyHoliday_())) { prayerFailLog_(data, 'วันหยุด · ระบบไม่รับการเช็คชื่อ'); return { success: false, holiday: true, code: 'VALIDATION', message: 'วันเสาร์เป็นวันหยุดประจำสัปดาห์ · งดเช็คชื่อละหมาด' }; }
+      let pr;
+      try { pr = recordPrayer(data); } catch (e) { prayerFailLog_(data, 'ข้อผิดพลาดของระบบ: ' + String(e && e.message || e).slice(0, 200)); throw e; }
+      if (pr && pr.success === false) prayerFailLog_(data, String(pr.message || pr.error || 'ไม่ทราบสาเหตุ'));
+      return pr;
+    }
     case 'recordHasanat':
     case 'saveQuranLog':
     case 'saveSunnahLog':
@@ -3287,6 +3292,25 @@ function dormPrayerPenalty_(dm, dateStr, timeStr, prayerThai, statusThai) {
     sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
     return DORM_PRAYER_POINTS_;
   } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+/** v19.58 · บันทึกการเช็คละหมาดที่ระบบไม่รับ/ผิดพลาด (ไม่มีรูป) · รายการเดิม (logId เดียวกัน) นับจำนวนครั้ง */
+const PRAYER_FAIL_SHEET_ = 'ละหมาดส่งไม่สำเร็จ';
+function prayerFailLog_(data, reason) {
+  try {
+    data = data || {};
+    const ss = getSpreadsheet(); let sh = ss.getSheetByName(PRAYER_FAIL_SHEET_);
+    if (!sh) { sh = ss.insertSheet(PRAYER_FAIL_SHEET_); sh.appendRow(['รหัสรายการ', 'รหัสนักเรียน', 'ชื่อ', 'ชั้น', 'เวลาละหมาด', 'วันที่', 'เวลาถ่าย', 'สาเหตุ', 'จำนวนครั้ง', 'ล่าสุดเมื่อ', 'พิกัด']); sh.setFrozenRows(1); }
+    const lid = cleanVal(data.logId || data.id || ''); const stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    if (lid && sh.getLastRow() > 1) {
+      const n = Math.min(sh.getLastRow() - 1, 500), start = sh.getLastRow() - n + 1;
+      const ids = sh.getRange(start, 1, n, 1).getValues();
+      for (let i = n - 1; i >= 0; i--) if (cleanVal(ids[i][0]) === lid) { const r = start + i; sh.getRange(r, 8, 1, 3).setValues([[String(reason).slice(0, 300), (Number(sh.getRange(r, 9).getValue()) || 1) + 1, stamp]]); return; }
+    }
+    const lat = data.latitude != null ? data.latitude : data.lat, lng = data.longitude != null ? data.longitude : data.lng;
+    appendRowFind_(sh, [lid, cleanVal(data.studentId), cleanVal(data.studentName), cleanVal(data.grade), formatPrayerTimeThai(data.prayerTime || data.prayerName || ''), formatSheetDate(data.date) || '', formatSheetTime(data.time) || '',
+      String(reason).slice(0, 300), 1, stamp, (lat && lng) ? (lat + ',' + lng) : ''], { keyCol: 1, text: [2, 6] });
+  } catch (e) {}
 }
 
 /** v19.55 · นักเรียนหญิง: ซุฮริ/อัศรี ต้องเช็คที่มัสยิดอัลฮารอมัยน์เท่านั้น (ตั้งแต่ 18 พ.ย. 2569)

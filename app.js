@@ -4649,9 +4649,12 @@ async function executePrayerCaptureStep2() {
     attemptCount: attemptCount
   };
 
+  // v19.58 · ส่งขึ้นระบบ (คิวในเครื่อง) ก่อน แล้วค่อยเก็บประวัติ · ถ้าพื้นที่เครื่องเต็มจะไม่ทำให้การเช็คหาย
+  let k8Sent = false;
+  try { try { if (typeof window.k8JumuahAfter === 'function') window.k8JumuahAfter(prayerRecord, now); } catch (e) {} syncRecordToGoogleSheet('prayerCheckIn', prayerRecord); k8Sent = true; } catch (e) { try { console.error('[k8] send failed', e); } catch (e2) {} }
   // เก็บลงประวัติถาวรโดยไม่ลบหรือทับบันทึกเดิม! ให้มีประวัติทุกครั้งที่กดบันทึก
   historyList.unshift(prayerRecord);
-  localStorage.setItem('khalifah_prayer_history', JSON.stringify(historyList.slice(0, 250)));
+  k8SafeSetList('khalifah_prayer_history', historyList.slice(0, 250), 3);
 
   // อัปเดต todayPrayers ด้วยบันทึกล่าสุด
   const existingIdx = todayPrayers.findIndex(p => isIdMatch(p.studentId, currentStudent.studentId) && (typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(p.prayerName || p.prayerTime || '') === targetKey : (p.prayerName === selectedPrayerTime || p.prayerTime === selectedPrayerTime)));
@@ -4660,7 +4663,7 @@ async function executePrayerCaptureStep2() {
   } else {
     todayPrayers.unshift(prayerRecord);
   }
-  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+  k8SafeSetList('khalifah_today_prayers', todayPrayers, 2);
 
   // อัปเดต UI ทันทีแบบเรียลไทม์ (v18.71 · แต่ละส่วนพังได้โดยไม่กระทบการบันทึก/ส่งข้อมูล)
   [refreshPrayerChipsStatus, renderTodayPrayerTable, renderDashboardCharts, renderCurrentStudentProfile, renderPrayerHistory].forEach((fn) => { try { fn(); } catch (e) { console.warn('prayer ui', e); } });
@@ -4670,9 +4673,8 @@ async function executePrayerCaptureStep2() {
   }
 
   // v19.17 · วันศุกร์ ซุฮริ (ชาย) เกิน 12:35 น. → มาฟังคุฏบะห์สาย (แจ้งเตือน + สถานะมาสาย)
-  try { if (typeof window.k8JumuahAfter === 'function') window.k8JumuahAfter(prayerRecord, now); } catch (e) {}
-  // บันทึกและซิงค์ข้อมูลขึ้น Google Sheets ทันทีแบบเรียลไทม์
-  syncRecordToGoogleSheet('prayerCheckIn', prayerRecord);
+  // (v19.58 · ย้ายการส่งขึ้นระบบไปทำก่อนเก็บลงเครื่องแล้ว)
+  if (!k8Sent) { showToast('บันทึกไม่สำเร็จ กรุณากดถ่ายใหม่อีกครั้ง', 'error'); prayerCheckStep = 1; try { checkPrayerUnlockState(); } catch (e) {} return; }
 
   // แจ้งเตือนข้อความเดียว ชัดเจน สวยงาม ไม่เด้งซ้อนกัน
   const repeatText = isRepeat ? ` (บันทึกซ้ำครั้งที่ ${attemptCount})` : '';
@@ -4869,9 +4871,9 @@ function captureAndRecordPrayer() {
     photoUrl: photoBase64
   };
 
-  // บันทึกลง Local State
+  // บันทึกลง Local State (v19.58 · พื้นที่เต็มไม่ทำให้ล้ม)
   todayPrayers.unshift(prayerRecord);
-  localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers));
+  k8SafeSetList('khalifah_today_prayers', todayPrayers, 2);
 
   // ปิดกล้องสด
   if (activeCameraStream) {
@@ -4899,6 +4901,30 @@ function captureAndRecordPrayer() {
   syncRecordToGoogleSheet('recordPrayer', prayerRecord);
 
   showToast(`บันทึกการละหมาดเวลา ${selectedPrayerTime} เรียบร้อยแล้ว`, 'success');
+}
+
+/**
+ * v19.58 · บันทึกประวัติลงเครื่องแบบไม่ทำให้การเช็คชื่อล้ม
+ * เดิม: เก็บรูป (base64) ทุกรูปไว้ในเครื่อง → พื้นที่เต็ม → setItem โยน error → ฟังก์ชันหยุดก่อนส่งขึ้นระบบ
+ *       = นักเรียนถ่ายแล้วแต่ "ไม่มีอะไรถึงแอดมิน และในเครื่องก็ไม่มี"
+ * ใหม่: ถ้าเต็ม ตัดรูปในเครื่องของรายการเก่าออก (รูปอยู่บนระบบแล้ว) แล้วลองใหม่ · คืนค่า true/false
+ */
+function k8SafeSetList(key, list, keepPhotos) {
+  const isData = (v) => typeof v === 'string' && v.indexOf('data:image') === 0;
+  const strip = (arr, keep) => arr.map((p, i) => {
+    if (!p || i < keep) return p;
+    if (!isData(p.photo) && !isData(p.photoUrl) && !isData(p.photoBase64)) return p;
+    const q = Object.assign({}, p);
+    ['photo', 'photoUrl', 'photoBase64'].forEach((k) => { if (isData(q[k])) q[k] = ''; });
+    q.photoTrimmed = true; return q;
+  });
+  const tries = [list, strip(list, keepPhotos == null ? 3 : keepPhotos), strip(list, 1), strip(list, 0)];
+  for (let i = 0; i < tries.length; i++) {
+    try { localStorage.setItem(key, JSON.stringify(tries[i])); return true; } catch (e) {
+      if (i === tries.length - 1) { try { console.warn('[k8] storage full:', key, e && e.name); } catch (e2) {} }
+    }
+  }
+  return false;
 }
 
 function getCurrentPrayerTimeSlot() {
@@ -12202,7 +12228,17 @@ async function syncAllDataFromCloud(showToastMsg = false) {
 
     // 5. ซิงค์บันทึกเวลาละหมาด (Prayers)
     if (Array.isArray(db.prayers) && (db.prayers.length > 0 || db.scope === 'school')) { // v19.14 · บัญชีครูต้นสังกัด: แทนที่แคชเดิมเสมอ (ไม่ปนข้อมูลโรงเรียนอื่น)
-      localStorage.setItem('khalifah_prayer_history', JSON.stringify(db.prayers));
+      // v19.58 · รายการในเครื่องของนักเรียนที่ยังไม่อยู่บนระบบ (7 วันล่าสุด) ต้องไม่ถูกลบทิ้งตอนซิงค์ → ขึ้นแถบ "ยังไม่ถึงระบบ" ให้กดส่งซ้ำได้
+      try {
+        if (currentStudent) {
+          const prevH = JSON.parse(localStorage.getItem('khalifah_prayer_history') || '[]');
+          const haveS = new Set(db.prayers.map(p => String(p.logId || p.id || '')));
+          const cut = new Date(Date.now() - 7 * 864e5).toLocaleDateString('sv-SE');
+          const keepL = prevH.filter(p => p && isIdMatch(p.studentId, currentStudent.studentId) && String(p.logId || p.id || '') && !haveS.has(String(p.logId || p.id || '')) && String(p.date || '') >= cut && /^PRY-/.test(String(p.logId || p.id || '')));
+          if (keepL.length) db.prayers = keepL.map(p => Object.assign({}, p, { _unsynced: true })).concat(db.prayers);
+        }
+      } catch (e) {}
+      k8SafeSetList('khalifah_prayer_history', db.prayers, db.prayers.filter(p => p && p._unsynced).length);
       const todayStr = new Date().toLocaleDateString('sv-SE');
       todayPrayers = db.prayers.filter(p => p.date === todayStr);
       // รายการที่ถ่ายแล้วแต่ยังส่งไม่ถึงระบบ (อยู่ในคิว) ต้องไม่หายไปจากหน้าจอ
