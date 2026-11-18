@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.56'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.57'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3099,12 +3099,16 @@ function recordPrayer(data) {
     const hm = tTime.split(':'); const tMin = (+hm[0]) * 60 + (+hm[1]);
     const win = prayerWinOf_(rawPrayerTime || prayerNameThai);
     let verdict = '';
-    if (tDate !== dateStr) verdict = 'ขาด';
+    // v19.57 · อีชาอ์หลังเที่ยงคืน (ก่อนซุบฮิ) นับเป็นของวันก่อนหน้า
+    const nd = new Date(dateStr + 'T12:00:00+07:00'); nd.setDate(nd.getDate() + 1);
+    const ishaNext = /อิชา|อีชา|isha/i.test(String(rawPrayerTime || prayerNameThai)) && tMin < 330 && tDate === Utilities.formatDate(nd, 'Asia/Bangkok', 'yyyy-MM-dd');
+    if (ishaNext) verdict = '';
+    else if (tDate !== dateStr) verdict = 'ขาด';
     else if (win && tMin < win[0] - 20) verdict = 'ขาด';
     else if (win && tMin > win[1] + 20) verdict = 'มาสาย';
     if (verdict && /^(ตรงเวลา|มาสาย)/.test(statusThai)) statusThai = verdict;
     timeFlags += ' · ระบบใช้เวลาถ่ายจริง ' + tDate + ' ' + tTime.slice(0, 5) + (verdict ? ' → ' + (verdict === 'ขาด' ? 'ไม่นับ (นอกช่วงละหมาดนี้)' : 'นับเป็นมาสาย') : ' (ยังอยู่ในช่วงละหมาด นับตามปกติ)');
-    dateStr = tDate; timeStr = tTime; timestamp = T.toISOString();
+    if (!ishaNext) dateStr = tDate; timeStr = tTime; timestamp = T.toISOString();
   }
   // v19.17 · วันศุกร์ ละหมาดซุฮริ (นักเรียนชาย): ต้องเช็คไม่เกิน 12:35 น. เพื่อฟังคุฏบะห์ · เกินเวลา = มาสาย + หัก 2 คะแนน
   let jum = null;

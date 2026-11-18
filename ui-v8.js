@@ -126,7 +126,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     // ช่วงที่กำลังเปิดอยู่
     for (const w of wins) {
       const isIsha = w.name === 'อีชาอ์';
-      const open = isIsha ? (cur >= w.startMin || cur < wins[0].startMin) : (cur >= w.startMin && cur <= w.endMin);
+      const open = isIsha ? (cur >= w.startMin || cur < wins[0].startMin - (function () { try { return isNaN(prayerBufferMinutes) ? 30 : prayerBufferMinutes; } catch (e) { return 30; } })()) : (cur >= w.startMin && cur <= w.endMin); // v19.57 · ใกล้ซุบฮิแล้วไม่โชว์อีชาอ์
       if (open) {
         const done = doneToday.indexOf(slotKey(w.name)) !== -1;
         return { name: w.name, time: fmt(w.startMin), open: true, done, until: isIsha ? 'ก่อนรุ่งอรุณ' : fmt(w.endMin) };
@@ -3646,7 +3646,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.56';
+  const APP_VERSION = '19.57';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14495,5 +14495,46 @@ window.k8PdWho = function (sid) {
       '<label for="k8WpReason">มีเหตุจำเป็น? พิมพ์เหตุผลก่อนกดถ่าย (แอดมินจะพิจารณา)</label><input id="k8WpReason" type="text" maxlength="120" placeholder="เช่น ป่วย มีไข้ เดินไม่ไหว" autocomplete="off">';
     if (lastWarn !== z) { lastWarn = z; try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); } catch (e) {} try { showToast('ผิดสถานที่: ซุฮริ/อัศรี นักเรียนหญิงต้องเช็คที่มัสยิดอัลฮารอมัยน์', 'warning'); } catch (e) {} }
   };
+})();
+
+/* ---------- v19.57 · เวลาละหมาดต้องตรงกับเวลาจริงเสมอ ----------
+ * ปัญหาเดิม: (1) เปิดแอปค้างไว้/สลับแอปกลับมา ระบบไม่เลือกเวลาใหม่ → ตอนซุบฮิยังค้าง "อีชาอ์" ของเมื่อคืน
+ * (2) ช่วงก่อนเข้าซุบฮิถูกนับเป็นอีชาอ์ (3) อีชาอ์หลังเที่ยงคืนถูกบันทึกเป็นของ "วันใหม่" → คืนนั้นเช็คอีชาอ์ไม่ได้ */
+(function () {
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const norm = (x) => { try { return normalizePrayerSlotKey(x); } catch (e) { return String(x || ''); } };
+  // อีชาอ์ที่เช็คหลังเที่ยงคืน (ก่อนเที่ยง) = อีชาอ์ของเมื่อวาน
+  window.k8PrayerDateFor = function (slot, now) {
+    now = now || new Date();
+    if (norm(slot) === 'อีชาอ์' && now.getHours() < 12) { const y = new Date(now); y.setDate(y.getDate() - 1); return ymd(y); }
+    return ymd(now);
+  };
+  let manualAt = 0, lastDay = ymd(new Date());
+  const sp = window.selectPrayerTime;
+  if (typeof sp === 'function') {
+    window.selectPrayerTime = function (t, el, auto) { if (!auto) manualAt = Date.now(); return sp.apply(this, arguments); };
+  }
+  const onPrayer = () => { const v = document.getElementById('view-prayer'); return !!(v && v.offsetParent !== null && !document.hidden); };
+  function check(fromResume) {
+    try {
+      if (!currentStudent || !onPrayer() || typeof detectPrayerTimeSlotWithBuffer !== 'function') return;
+      const today = ymd(new Date()); const dayChanged = today !== lastDay; lastDay = today;
+      const res = detectPrayerTimeSlotWithBuffer(prayerBufferMinutes);
+      const cur = norm(selectedPrayerTime), want = norm(res.prayerName);
+      if (!want || cur === want) return;
+      // นักเรียนเพิ่งเลือกเวลาเอง (เช่น จะส่งคำขอย้อนหลัง) และเวลานั้นยังเช็คได้ → ไม่แย่ง
+      const st = selectedPrayerTime ? getPrayerSlotTimeStatus(selectedPrayerTime) : null;
+      if (!dayChanged && !fromResume && manualAt && Date.now() - manualAt < 10 * 60000 && st && (st.isActive || st.isPast)) return;
+      autoSelectDetectedPrayerSlot(false);
+      if (cur) { try { showToast('เปลี่ยนเป็นละหมาด' + want + 'ตามเวลาปัจจุบันแล้ว', 'info'); } catch (e) {} }
+      try { if (typeof window.updatePrayerV8 === 'function') window.updatePrayerV8(); } catch (e) {}
+    } catch (e) {}
+  }
+  window.k8PrayerSlotCheck = check;
+  setInterval(() => check(false), 15000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { manualAt = 0; setTimeout(() => check(true), 300); } });
+  window.addEventListener('pageshow', () => setTimeout(() => check(true), 300));
+  window.addEventListener('focus', () => setTimeout(() => check(false), 300));
 })();
 

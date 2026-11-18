@@ -2613,7 +2613,8 @@ function getPrayerSlotTimeStatus(slotKey, bufferMins = prayerBufferMinutes) {
     const fajrStart = fajrWin ? fajrWin.startMin : 285; // 04:45
 
     // หากอยู่ในช่วงกลางคืนหลังเริ่มอีชาอ์ (>= 19:30 - buf) หรือเช้ามืดก่อนรุ่งอรุณ (< fajrStart + buf)
-    if (curMin >= (window.startMin - buf) || curMin < (fajrStart + buf)) {
+    // v19.57 · อีชาอ์หมดเมื่อเข้าเวลาซุบฮิ (เดิมเผื่อเลยเข้าไปในช่วงซุบฮิอีก 30 นาที ทำให้ 2 เวลาซ้อนกัน)
+    if (curMin >= (window.startMin - buf) || curMin < fajrStart) {
       return {
         isActive: true,
         isPast: false,
@@ -2623,7 +2624,7 @@ function getPrayerSlotTimeStatus(slotKey, bufferMins = prayerBufferMinutes) {
       };
     } else {
       // กลางวัน (หลังแสงอรุณซุบฮิขึ้น ถึงก่อนเข้าเวลาอีชาอ์ตอนค่ำ)
-      const isMorningPast = curMin >= (fajrStart + buf) && curMin < (12 * 60);
+      const isMorningPast = curMin >= fajrStart && curMin < (12 * 60);
       return {
         isActive: false,
         isPast: isMorningPast,
@@ -2674,7 +2675,8 @@ function detectPrayerTimeSlotWithBuffer(bufferMins = prayerBufferMinutes) {
     if (w.name === 'อีชาอ์') {
       const fajrWin = PRAYER_TIME_WINDOWS.find(x => x.name === 'ซุบฮิ');
       const fajrStart = fajrWin ? fajrWin.startMin : 285;
-      if (curMin >= w.startMin || curMin < fajrStart) {
+      // v19.57 · ช่วงก่อนเข้าซุบฮิ (เผื่อเวลา) ต้องเป็น "ซุบฮิ" ไม่ใช่ "อีชาอ์" ของเมื่อคืน
+      if (curMin >= w.startMin || curMin < fajrStart - buf) {
         return {
           matched: true,
           isExact: true,
@@ -2703,7 +2705,7 @@ function detectPrayerTimeSlotWithBuffer(bufferMins = prayerBufferMinutes) {
     if (w.name === 'อีชาอ์') {
       const fajrWin = PRAYER_TIME_WINDOWS.find(x => x.name === 'ซุบฮิ');
       const fajrStart = fajrWin ? fajrWin.startMin : 285;
-      if (curMin >= (w.startMin - buf) || curMin < (fajrStart + buf)) {
+      if (curMin >= (w.startMin - buf) || curMin < (fajrStart - buf)) {
         const isBefore = curMin < w.startMin && curMin >= (w.startMin - buf);
         return {
           matched: true,
@@ -4630,7 +4632,7 @@ async function executePrayerCaptureStep2() {
     status: prayerStatus,
     note: prayerNote,
     timestamp: now.toISOString(),
-    date: todayYMD,
+    date: (typeof window.k8PrayerDateFor === 'function') ? window.k8PrayerDateFor(selectedPrayerTime, now) : todayYMD,
     time: timeStr,
     latitude: verifiedLocation.lat,
     longitude: verifiedLocation.lng,
@@ -4857,7 +4859,7 @@ function captureAndRecordPrayer() {
     status: prayerStatus,
     note: prayerNote,
     timestamp: now.toISOString(),
-    date: now.toLocaleDateString('sv-SE'),
+    date: (typeof window.k8PrayerDateFor === 'function') ? window.k8PrayerDateFor(selectedPrayerTime, now) : now.toLocaleDateString('sv-SE'),
     time: timeStr,
     latitude: verifiedLocation.lat,
     longitude: verifiedLocation.lng,
