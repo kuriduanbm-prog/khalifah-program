@@ -7228,3 +7228,46 @@ html[data-theme="dark"] .k8-wp-warn b { color: #fdba74 !important; }
 .k8-dz button.is-bad { background: #b91c1c; }
 html[data-theme="dark"] .k8-wp-warn label { color: #fed7aa !important; }
 html[data-theme="dark"] .k8-wp-warn input { background: #1c1917 !important; color: #f5f5f4 !important; border-color: #9a3412 !important; }
+
+/* v19.59 · อาจารย์จัดการรายชื่อในคาบ */
+.k8-ro-bar .k8-ra-open { border: 1px solid #0369a1 !important; color: #0369a1 !important; background: #fff !important; font-weight: 600; }
+.k8-ra-modal { position: fixed; inset: 0; z-index: 10050; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.k8-ra-modal[hidden] { display: none; }
+.k8-ra-box { width: min(560px, 100%); max-height: 88vh; display: flex; flex-direction: column; background: #fff; border-radius: 18px; overflow: hidden; box-shadow: 0 20px 50px rgba(15,23,42,.3); }
+.k8-ra-box header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #e2e8f0; }
+.k8-ra-box h3 { margin: 0; font-size: 16px; font-weight: 600; color: #0f172a; }
+.k8-ra-x { border: 0; background: #f1f5f9; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; color: #334155; flex: none; }
+.k8-ra-body { overflow: auto; padding: 12px 16px 16px; }
+.k8-ra-tabs { display: flex; gap: 4px; background: #f1f5f9; padding: 3px; border-radius: 12px; margin-bottom: 10px; }
+.k8-ra-tabs button { flex: 1; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #475569; padding: 8px 6px; border-radius: 9px; cursor: pointer; min-height: 38px; }
+.k8-ra-tabs button[aria-selected="true"] { background: #fff; color: #0c4a6e; box-shadow: 0 1px 2px rgba(15,23,42,.12); }
+.k8-ra-find { display: flex; gap: 6px; margin-bottom: 8px; }
+.k8-ra-find input { flex: 1; min-width: 0; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 14px; min-height: 40px; }
+.k8-ra-find select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 8px; font: inherit; font-size: 14px; background: #fff; min-height: 40px; }
+.k8-ra-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.k8-ra-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 12px; }
+.k8-ra-who { flex: 1; min-width: 0; display: grid; }
+.k8-ra-who b { font-size: 14px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-ra-who small { font-size: 12px; color: #64748b; }
+.k8-ra-who em { font-style: normal; color: #0369a1; font-weight: 600; }
+.k8-ra-list button { flex: none; border: 1px solid #cbd5e1; background: #fff; color: #0c4a6e; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 10px; cursor: pointer; min-height: 36px; }
+.k8-ra-list button.is-rm { border-color: #fecaca; color: #b91c1c; }
+.k8-ra-list button.is-add { border-color: #0369a1; background: #0369a1; color: #fff; }
+.k8-ra-list button:disabled { opacity: .5; cursor: wait; }
+.k8-ra-empty { margin: 8px 0; font-size: 13px; color: #64748b; text-align: center; }
+.k8-ra-note { margin: 12px 0 0; font-size: 12px; color: #64748b; line-height: 1.5; }
+.k8-ra-modal button:focus-visible, .k8-ra-find input:focus-visible, .k8-ra-find select:focus-visible, .k8-ro-bar .k8-ra-open:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+html[data-theme="dark"] .k8-ro-bar .k8-ra-open { background: #0f172a !important; color: #7dd3fc !important; border-color: #38bdf8 !important; }
+html[data-theme="dark"] .k8-ra-box { background: #0f172a !important; }
+html[data-theme="dark"] .k8-ra-box header { border-color: #334155 !important; }
+html[data-theme="dark"] .k8-ra-box h3, html[data-theme="dark"] .k8-ra-who b { color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-ra-x, html[data-theme="dark"] .k8-ra-tabs { background: #1e293b !important; color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-ra-tabs button { color: #94a3b8 !important; }
+html[data-theme="dark"] .k8-ra-tabs button[aria-selected="true"] { background: #334155 !important; color: #e0f2fe !important; }
+html[data-theme="dark"] .k8-ra-find input, html[data-theme="dark"] .k8-ra-find select { background: #1e293b !important; color: #e2e8f0 !important; border-color: #475569 !important; }
+html[data-theme="dark"] .k8-ra-list li { border-color: #334155 !important; }
+html[data-theme="dark"] .k8-ra-who small, html[data-theme="dark"] .k8-ra-empty, html[data-theme="dark"] .k8-ra-note { color: #94a3b8 !important; }
+html[data-theme="dark"] .k8-ra-who em { color: #7dd3fc !important; }
+html[data-theme="dark"] .k8-ra-list button { background: #1e293b !important; color: #7dd3fc !important; border-color: #475569 !important; }
+html[data-theme="dark"] .k8-ra-list button.is-rm { color: #fca5a5 !important; border-color: #7f1d1d !important; }
+html[data-theme="dark"] .k8-ra-list button.is-add { background: #0369a1 !important; color: #fff !important; border-color: #0369a1 !important; }

@@ -2659,7 +2659,32 @@ window.k8RegBirthChange = function (v) {
   const enrolledFor = () => (S.subject && EN.map && Array.isArray(EN.map[S.subject]) && EN.map[S.subject].length) ? EN.map[S.subject] : null;
   // v17.85 · รายชื่อ = นักเรียนตามตารางเรียนของคาบนี้ (ชั้น + เพศ + เฉพาะ/ละเว้นบางคน) + คนที่สแกนลงทะเบียนเพิ่ม (เช่น เรียนซ้ำ/แก้เกรด)
   //           เดิมถ้ามีคนลงทะเบียนแล้ว จะแสดงเฉพาะคนที่ลงทะเบียน ทำให้คนที่ยังไม่สแกนหายไปจากรายชื่อ
+  // v19.59 · อาจารย์เพิ่ม/ถอนรายชื่อในคาบของตนเอง (ส่วนต่างต่อ วิชา|ชั้น · ไม่แตะตารางสอนของแอดมิน)
+  const RA = { map: readJSON('khalifah_roster_adj', null), loading: false };
+  const rkey = () => String(S.subject || '') + '|' + String(S.grade || '');
+  async function loadAdj(force) {
+    if (RA.loading || (RA.map && !force && RA.fresh)) return; RA.loading = true;
+    let r = null; try { r = await gasApiCall('getRosterAdj', {}, 20000); } catch (e) {}
+    RA.loading = false;
+    if (r && r.success) { RA.map = r.data || {}; RA.fresh = true; try { localStorage.setItem('khalifah_roster_adj', JSON.stringify(RA.map)); } catch (e) {} render(); }
+    else if (!RA.map) RA.map = {};
+  }
+  window.k8TaRosterAdj = () => (RA.map && RA.map[rkey()]) || null;
   function rows() {
+    const b = rows0(); if (EN.all) return b;
+    const adj = RA.map && RA.map[rkey()]; if (!adj) return b;
+    const rm = new Set((adj.r || []).map(norm));
+    const out = b.filter((st) => !rm.has(norm(st.studentId)));
+    const have = new Set(out.map((st) => norm(st.studentId)));
+    const all = (typeof allStudents !== 'undefined' ? allStudents : []);
+    (adj.a || []).forEach((id) => { const n = norm(id); if (have.has(n) || rm.has(n)) return; const st = all.find((y) => norm(y.studentId) === n); if (st) { out.push(Object.assign({}, st, { _added: true })); have.add(n); } });
+    return out;
+  }
+  window.k8TaRows0 = () => rows0();
+  window.k8TaRowsNow = () => rows();
+  window.k8TaKey = () => ({ subject: S.subject, grade: S.grade, label: (subjects().find((x) => String(x.id) === String(S.subject)) || {}).name || S.subject });
+  window.k8TaAdjSaved = function (map) { RA.map = map || {}; try { localStorage.setItem('khalifah_roster_adj', JSON.stringify(RA.map)); } catch (e) {} render(); };
+  function rows0() {
     const all = (typeof allStudents !== 'undefined' ? allStudents : []).filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || '')));
     const inGrade = all.filter((s) => S.grade === 'ALL' || s.grade === S.grade);
     if (EN.all) return inGrade;
@@ -2701,12 +2726,13 @@ window.k8RegBirthChange = function (v) {
     const draft = S.draft[dkey()] || (S.draft[dkey()] = {});
     const cnt = { present: 0, late: 0, leave: 0, absent: 0 }; let unsaved = 0, changed = 0;
     if (EN.map === null) loadEnroll();
+    if (!RA.fresh && !RA.loading) loadAdj();
     // v17.68 · แสดงรายชื่อเฉพาะเมื่อเลือกคาบสอน (ของตัวเอง หรือคาบที่รับสอนแทน) ของวันนั้น
     const Pm = periods();
     const gate = Pm.some((x) => String(x.subj) === String(S.subject) && x.grade === S.grade);
     const list = gate ? rows() : [];
     const en = enrolledFor();
-    const enBar = gate ? '<li class="k8-ro-bar"><span>' + (EN.all ? 'แสดงนักเรียนทั้งชั้น' : 'ตามตารางเรียน <b>' + list.length + '</b> คน' + (en ? ' · สแกนลงทะเบียนแล้ว ' + en.length : '')) + '</span><button type="button" onclick="k8TaEnAll(' + (EN.all ? 'false' : 'true') + ')">' + (EN.all ? 'เฉพาะตามตาราง' : 'แสดงทั้งชั้น') + '</button></li>' : '';
+    const enBar = gate ? '<li class="k8-ro-bar"><span>' + (EN.all ? 'แสดงนักเรียนทั้งชั้น' : 'ตามตารางเรียน <b>' + list.length + '</b> คน' + (en ? ' · สแกนลงทะเบียนแล้ว ' + en.length : '')) + '</span>' + (!EN.all && !S.adminFor ? '<button type="button" class="k8-ra-open" onclick="k8RaOpen()">จัดการรายชื่อ' + ((() => { const a = RA.map && RA.map[rkey()]; const n = a ? (a.a || []).length + (a.r || []).length : 0; return n ? ' · ปรับแล้ว ' + n : ''; })()) + '</button>' : '') + '<button type="button" onclick="k8TaEnAll(' + (EN.all ? 'false' : 'true') + ')">' + (EN.all ? 'เฉพาะตามตาราง' : 'แสดงทั้งชั้น') + '</button></li>' : '';
     listEl.innerHTML = enBar + (list.length ? list.map((s, ix) => {
       const id = cid(s.studentId), k = norm(s.studentId);
       const slv = slvOf(s); const cur = draft[k] || saved[k] || (slv ? 'leave' : 'present');
@@ -3646,7 +3672,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.58';
+  const APP_VERSION = '19.59';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14537,5 +14563,72 @@ window.k8PdWho = function (sid) {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { manualAt = 0; setTimeout(() => check(true), 300); } });
   window.addEventListener('pageshow', () => setTimeout(() => check(true), 300));
   window.addEventListener('focus', () => setTimeout(() => check(false), 300));
+})();
+
+/* ---------- v19.59 · อาจารย์: จัดการรายชื่อนักเรียนในคาบของตนเอง (เพิ่มจากชั้นใดก็ได้ / ถอนออก / คืน) ---------- */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const norm = (id) => String(id == null ? '' : id).replace(/\D/g, '').replace(/^0+/, '');
+  const shortG = (g) => { const m = String(g || '').match(/(\d)/); return m && /มัธยม/.test(g) ? 'ม.' + m[1] : (g || ''); };
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const M = { q: '', g: 'ALL', busy: false, tab: 'in' };
+  const studs = () => { let L = []; try { L = allStudents || []; } catch (e) {} return L.filter((x) => x && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(x.status || ''))); };
+  const byId = (id) => studs().find((x) => norm(x.studentId) === norm(id));
+  const adj = () => { const a = window.k8TaRosterAdj ? window.k8TaRosterAdj() : null; return { a: (a && a.a || []).map(norm), r: (a && a.r || []).map(norm) }; };
+  async function save(next) {
+    const k = window.k8TaKey(); M.busy = true; paint();
+    let r = null; try { r = await gasApiCall('saveRosterAdj', { data: { subject: k.subject, grade: k.grade, add: next.a, remove: next.r } }, 25000); } catch (e) { r = { success: false, message: String(e && e.message || e) }; }
+    M.busy = false;
+    if (r && r.success) { window.k8TaAdjSaved(r.all || {}); toast('บันทึกรายชื่อแล้ว', 'success'); }
+    else toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error');
+    paint();
+  }
+  window.k8RaDo = function (op, id) {
+    if (M.busy) return; id = norm(id); const A = adj(); const base = new Set((window.k8TaRows0() || []).map((x) => norm(x.studentId)));
+    let a = A.a.slice(), r = A.r.slice();
+    if (op === 'rm') { const st = byId(id); if (!confirm('ถอน ' + ((st && st.fullName) || id) + ' ออกจากรายชื่อคาบนี้?\nประวัติการเช็คชื่อเดิมยังอยู่ และคืนรายชื่อได้ภายหลัง')) return; if (a.indexOf(id) !== -1) a = a.filter((x) => x !== id); else if (r.indexOf(id) === -1) r.push(id); }
+    else if (op === 'back') r = r.filter((x) => x !== id);
+    else if (op === 'add') { if (r.indexOf(id) !== -1) r = r.filter((x) => x !== id); if (!base.has(id) && a.indexOf(id) === -1) a.push(id); }
+    save({ a, r });
+  };
+  window.k8RaSet = function (k, v) { M[k] = v; paint(); if (k === 'q') setTimeout(() => { const i = document.getElementById('k8RaQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 0); };
+  function row(st, btn) {
+    return '<li><span class="k8-ra-who"><b>' + esc(st.fullName || st.studentId) + '</b><small>' + esc(shortG(st.grade)) + ' · ' + esc(st.studentId) + (st._added ? ' · <em>เพิ่มโดยอาจารย์</em>' : '') + '</small></span>' + btn + '</li>';
+  }
+  function paint() {
+    const m = document.getElementById('k8RaModal'); if (!m || m.hidden) return;
+    const k = window.k8TaKey(); const A = adj();
+    const cur = window.k8TaRowsNow() || []; const curIds = new Set(cur.map((x) => norm(x.studentId)));
+    m.querySelector('#k8RaT').textContent = 'จัดการรายชื่อ · ' + (k.label || '') + (k.grade && k.grade !== 'ALL' && String(k.grade).indexOf('x:') !== 0 ? ' ' + shortG(k.grade) : '');
+    const tabs = '<div class="k8-ra-tabs" role="tablist">' + [['in', 'ในคาบนี้ ' + cur.length], ['add', 'เพิ่มนักเรียน'], ['out', 'ถอนออกแล้ว ' + A.r.length]].map((t) => '<button type="button" role="tab" aria-selected="' + (M.tab === t[0]) + '" onclick="k8RaSet(\'tab\',\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
+    let h = tabs;
+    const dis = M.busy ? ' disabled' : '';
+    if (M.tab === 'in') {
+      h += cur.length ? '<ul class="k8-ra-list">' + cur.slice().sort((x, y) => String(x.fullName || '').localeCompare(String(y.fullName || ''), 'th')).map((st) => row(st, '<button type="button" class="is-rm"' + dis + ' onclick="k8RaDo(\'rm\',\'' + esc(st.studentId) + '\')">ถอนออก</button>')).join('') + '</ul>' : '<p class="k8-ra-empty">ยังไม่มีนักเรียนในคาบนี้</p>';
+    } else if (M.tab === 'out') {
+      const L = A.r.map(byId).filter(Boolean);
+      h += L.length ? '<ul class="k8-ra-list">' + L.map((st) => row(st, '<button type="button"' + dis + ' onclick="k8RaDo(\'back\',\'' + esc(st.studentId) + '\')">คืนรายชื่อ</button>')).join('') + '</ul>' : '<p class="k8-ra-empty">ยังไม่มีนักเรียนที่ถอนออก</p>';
+    } else {
+      const G = ['ALL', 1, 2, 3, 4, 5, 6];
+      h += '<div class="k8-ra-find"><input id="k8RaQ" type="search" placeholder="ค้นชื่อ หรือรหัสนักเรียน" value="' + esc(M.q) + '" oninput="k8RaSet(\'q\',this.value)" aria-label="ค้นหานักเรียน"><select aria-label="ระดับชั้น" onchange="k8RaSet(\'g\',this.value)">' + G.map((g) => '<option value="' + g + '"' + (String(M.g) === String(g) ? ' selected' : '') + '>' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + g) + '</option>').join('') + '</select></div>';
+      const q = M.q.trim().toLowerCase();
+      const L = studs().filter((st) => !curIds.has(norm(st.studentId)) && (M.g === 'ALL' || String(st.grade || '').indexOf(String(M.g)) !== -1) && (!q || String(st.fullName || '').toLowerCase().indexOf(q) !== -1 || String(st.studentId).indexOf(q) !== -1));
+      h += L.length ? '<ul class="k8-ra-list">' + L.slice(0, 60).map((st) => row(st, '<button type="button" class="is-add"' + dis + ' onclick="k8RaDo(\'add\',\'' + esc(st.studentId) + '\')">+ เพิ่ม</button>')).join('') + '</ul>' + (L.length > 60 ? '<p class="k8-ra-empty">แสดง 60 จาก ' + L.length + ' คน · พิมพ์ชื่อเพื่อค้นหา</p>' : '') : '<p class="k8-ra-empty">ไม่พบนักเรียน</p>';
+    }
+    h += '<p class="k8-ra-note">ใช้กับวิชานี้ในชั้นนี้ทุกคาบ และอาจารย์ที่สอนร่วมเห็นรายชื่อเดียวกัน · ตารางสอนของแอดมินไม่เปลี่ยน' + (M.busy ? ' · กำลังบันทึก…' : '') + '</p>';
+    m.querySelector('.k8-ra-body').innerHTML = h;
+  }
+  window.k8RaOpen = function () {
+    let m = document.getElementById('k8RaModal');
+    if (!m) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal" id="k8RaModal" role="dialog" aria-modal="true" aria-labelledby="k8RaT" hidden><div class="k8-ra-box"><header><h3 id="k8RaT">จัดการรายชื่อ</h3><button type="button" class="k8-ra-x" onclick="k8RaClose()" aria-label="ปิด">✕</button></header><div class="k8-ra-body"></div></div></div>');
+      m = document.getElementById('k8RaModal');
+      m.addEventListener('click', (e) => { if (e.target === m) window.k8RaClose(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !m.hidden) window.k8RaClose(); });
+    }
+    M.tab = 'in'; M.q = ''; m.hidden = false; paint();
+    setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
+  };
+  window.k8RaClose = function () { const m = document.getElementById('k8RaModal'); if (m) m.hidden = true; };
 })();
 

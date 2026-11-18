@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.58'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.59'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1263,7 +1263,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student', reactPrayer: 'staff', getMyPrayerReacts: 'student', aiChat: 'admin', aiStatus: 'admin', aiTicket: 'admin', aiLog: 'admin',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', getRosterAdj: 'staff', saveRosterAdj: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1800,6 +1800,8 @@ function dispatchAction_(action, req, data, session, ctx) {
       return getHasanatDay_(pick('date') || data.date);
     case 'saveHasanatBatch':
       return saveHasanatBatch_(data);
+    case 'getRosterAdj': return { success: true, data: rosterAdjAll_() };
+    case 'saveRosterAdj': return saveRosterAdj_(data, session, ctx);
     case 'getMyTeaching':
       return getMyTeaching_(session);
     case 'approveTeacherLeave':
@@ -4298,6 +4300,40 @@ function ttConfig_(settings) {
 /** v17.12 · วิชาของนักเรียนตามชั้นปี (จากตารางเรียนของชั้น + ตารางพิเศษที่ตัวเองอยู่ · ไม่รวมวิชาที่ถูกละเว้น)
  *  ไม่ขึ้นกับการเปิด/ปิดการมองเห็นตาราง · ถ้ายังไม่มีตารางของชั้นนั้น subjects = null (ให้แสดงทุกวิชาเหมือนเดิม) */
 /** v17.14 · คาบสอนของอาจารย์ (ทุกชั้น + ตารางพิเศษ) สำหรับเลือกตอนแจ้งลา · ไม่ขึ้นกับการเปิด/ปิดการมองเห็นตาราง */
+/* ===================== v19.59 · อาจารย์เพิ่ม/ถอนรายชื่อนักเรียนในคาบของตนเอง =====================
+ * ไม่แก้ตารางสอนของแอดมิน · เก็บเป็นส่วนต่างต่อ "วิชา|ชั้น" ใน Settings key ClassRosterAdj
+ * { "<subject>|<grade>": { a: [เพิ่ม], r: [ถอน], by, at } } · อาจารย์ที่สอนวิชาเดียวกัน (ร่วมสอน) ใช้รายชื่อเดียวกัน */
+function rosterAdjAll_() { try { return JSON.parse(((getSettings().data) || {}).ClassRosterAdj || '{}') || {}; } catch (e) { return {}; } }
+function teacherOwnsSubject_(session, subj) {
+  subj = cleanVal(subj); if (!subj || !session) return false;
+  let subs = []; try { subs = JSON.parse(((getSettings().data) || {}).AppSubjects || '[]') || []; } catch (e) {}
+  const rec = subs.filter(function (x) { return cleanVal(x.id) === subj || (x.code && cleanVal(x.code) === subj); })[0];
+  const keys = [subj]; if (rec) { if (rec.code) keys.push(cleanVal(rec.code)); if (rec.id) keys.push(cleanVal(rec.id)); }
+  const nm = rec ? cleanVal(rec.name) : '';
+  let slots = []; try { slots = getMyTeaching_(session).slots || []; } catch (e) {}
+  if (slots.some(function (x) { return (x.s && keys.indexOf(cleanVal(x.s)) !== -1) || (nm && cleanVal(x.sn) === nm) || cleanVal(x.sn) === subj; })) return true;
+  const me = (getTeachers().data || []).filter(function (t) { return String(t.username || '').toLowerCase() === String(session.userId || '').toLowerCase(); })[0];
+  return !!me && (me.assignedSubjects || []).some(function (id) { return keys.indexOf(cleanVal(id)) !== -1; });
+}
+function saveRosterAdj_(d, session, ctx) {
+  d = d || {};
+  const subj = cleanVal(d.subject).slice(0, 60), grade = cleanVal(d.grade).slice(0, 80);
+  if (!subj) return { success: false, message: 'เลือกรายวิชาก่อน' };
+  if (!(ctx && ctx.isAdmin) && !teacherOwnsSubject_(session, subj)) return { success: false, code: 'FORBIDDEN', message: 'แก้รายชื่อได้เฉพาะรายวิชาที่คุณสอน' };
+  const ids = function (a) { const o = (Array.isArray(a) ? a : []).map(function (x) { return cleanVal(x).replace(/\D/g, '').replace(/^0+/, ''); }).filter(Boolean); return o.filter(function (x, i) { return o.indexOf(x) === i; }).slice(0, 200); };
+  const add = ids(d.add), rem = ids(d.remove).filter(function (x) { return add.indexOf(x) === -1; });
+  const unlock = lockEnter_(15000);
+  try {
+    const all = rosterAdjAll_(); const k = subj + '|' + grade;
+    if (!add.length && !rem.length) delete all[k];
+    else all[k] = { a: add, r: rem, by: cleanVal(session.name || session.userId || ''), at: Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm') };
+    const json = JSON.stringify(all);
+    if (json.length > 45000) return { success: false, message: 'รายชื่อที่ปรับมีมากเกินไป' };
+    saveSetting({ key: 'ClassRosterAdj', value: json, description: 'รายชื่อนักเรียนที่อาจารย์เพิ่ม/ถอนในคาบ (JSON)' });
+    return { success: true, data: all[k] || null, all: all, message: 'บันทึกรายชื่อแล้ว' };
+  } finally { unlock(); }
+}
+
 function getMyTeaching_(session) {
   const st = (getSettings().data) || {};
   const cfg = ttConfig_(st);
