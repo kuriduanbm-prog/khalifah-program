@@ -3672,7 +3672,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.59';
+  const APP_VERSION = '19.60';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14632,3 +14632,6 @@ window.k8PdWho = function (sid) {
   window.k8RaClose = function () { const m = document.getElementById('k8RaModal'); if (m) m.hidden = true; };
 })();
 
+// v19.60 · สัญญาณว่า ui-v8.js ทำงานจนจบไฟล์ (index.html ใช้ตรวจว่าโหลดครบ)
+window.__k8UiReady = true;
+try { const lf = document.getElementById("k8LoadFail"); if (lf) lf.remove(); } catch (e) {}
