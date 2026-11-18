@@ -5940,7 +5940,7 @@
       if (document.getElementById('k8LoadFail')) return;
       var d = document.createElement('div'); d.id = 'k8LoadFail'; d.setAttribute('role', 'alert');
       d.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:2147483000;background:#7c2d12;color:#fff;border-radius:14px;padding:12px 14px;font:14px/1.5 "IBM Plex Sans Thai",sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35);display:flex;gap:10px;align-items:center';
-      d.innerHTML = '<span style="flex:1"><b>โหลดแอปไม่ครบ</b><br>อินเทอร์เน็ตไม่เสถียร · ต่อเน็ตหรือเปิดข้อมูลมือถือ แล้วกดโหลดใหม่</span><button type="button" style="flex:none;border:0;border-radius:10px;background:#fff;color:#7c2d12;font:inherit;font-weight:700;padding:8px 14px;min-height:40px">โหลดใหม่</button>';
+      d.innerHTML = '<style>#k8LoadFail{background:#7c2d12!important;color:#fff!important}#k8LoadFail button{background:#fff!important;color:#7c2d12!important}#k8LoadFail button:focus-visible{outline:2px solid #fff;outline-offset:2px}</style><span style="flex:1"><b>โหลดแอปไม่ครบ</b><br>อินเทอร์เน็ตไม่เสถียร · ต่อเน็ตหรือเปิดข้อมูลมือถือ แล้วกดโหลดใหม่</span><button type="button" style="flex:none;border:0;border-radius:10px;background:#fff;color:#7c2d12;font:inherit;font-weight:700;padding:8px 14px;min-height:40px">โหลดใหม่</button>';
       d.querySelector('button').onclick = function () { location.reload(); };
       document.body.appendChild(d);
     };
