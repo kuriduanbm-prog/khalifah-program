@@ -3675,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.68';
+  const APP_VERSION = '19.69';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14738,7 +14738,7 @@ window.k8PdWho = function (sid) {
     h += '<h4 class="k8-cp-h">งานที่มอบหมายแล้วในคาบนี้</h4>';
     if (T.posts == null) h += '<p class="k8-cp-empty">กำลังโหลด…</p>';
     else if (!T.posts.length) h += '<p class="k8-cp-empty">ยังไม่เคยมอบหมายงานในคาบนี้</p>';
-    else h += '<ul class="k8-cp-list">' + T.posts.map((p) => '<li><div><b>' + esc(p.title) + '</b><small>' + dTh(p.createdAt) + ' ' + tTh(p.createdAt) + ' · ' + (p.recipients || 0) + ' คน' + (p.due ? ' · ส่ง ' + dTh(p.due) : '') + (p.files.length ? ' · ' + p.files.length + ' ไฟล์' : '') + '</small></div><button type="button" class="is-del"' + dis + ' onclick="k8CpDel(\'' + esc(p.id) + '\')">ลบ</button></li>').join('') + '</ul>';
+    else h += '<ul class="k8-cp-list">' + T.posts.map((p) => '<li><div><b>' + esc(p.title) + '</b><small>' + dTh(p.createdAt) + ' ' + tTh(p.createdAt) + ' · ' + (p.recipients || 0) + ' คน' + (p.due ? ' · ส่ง ' + dTh(p.due) : '') + (p.files.length ? ' · ' + p.files.length + ' ไฟล์' : '') + '</small>' + subCount(p) + '</div><button type="button" class="is-del"' + dis + ' onclick="k8CpDel(\'' + esc(p.id) + '\')">ลบ</button></li>').join('') + '</ul>';
     const keep = {}; ['k8CpTitle', 'k8CpBody', 'k8CpDue'].forEach((id) => { const el = document.getElementById(id); if (el) keep[id] = el.value; });
     m.querySelector('.k8-cp-body').innerHTML = h;
     Object.keys(keep).forEach((id) => { const el = document.getElementById(id); if (el) el.value = keep[id]; });
@@ -14797,6 +14797,46 @@ window.k8PdWho = function (sid) {
   function paintRSum() { const c = document.getElementById('k8CpRcpN'); if (c) c.textContent = 'เลือกแล้ว ' + T.sel.size + ' คน'; }
   window.k8CpRAll = function (on) { rcpMatch().forEach((st) => { if (on) T.sel.add(st.studentId); else T.sel.delete(st.studentId); }); paintR(); };
   window.k8CpRClear = function () { T.sel.clear(); paintR(); };
+  /* v19.69 · อาจารย์ดูการส่งงาน: ส่งแล้ว/ยังไม่ส่ง + รายชื่อ + ไฟล์ที่ส่ง */
+  function subCount(p) {
+    if (p.submitted == null) return '';
+    const n = p.recipients || 0, k = p.submitted || 0;
+    return '<div class="k8-cp-sc"><span class="is-ok">ส่งแล้ว ' + k + ' คน</span><span class="is-no">ยังไม่ส่ง ' + Math.max(0, n - k) + ' คน</span><button type="button" onclick="k8CpSubs(\'' + esc(p.id) + '\')">ดูรายชื่อ</button></div>';
+  }
+  const SV = { pid: '', data: null, tab: 'no' };
+  async function loadSV() {
+    const pid = SV.pid; let r = null; try { r = await gasApiCall('getClassSubmissions', { data: { postId: pid } }, 30000); } catch (e) {}
+    if (SV.pid !== pid) return;
+    SV.data = r && r.success ? r : { error: (r && (r.message || r.error)) || 'โหลดไม่สำเร็จ' };
+    if (r && r.success) [T.posts, O.posts].forEach((A) => (A || []).forEach((p) => { if (p.id === pid) { p.submitted = r.post.submitted; p.recipients = r.post.recipients; } }));
+    paintSV();
+  }
+  function paintSV() {
+    const m = document.getElementById('k8CpSV'); if (!m || m.hidden) return;
+    const d = SV.data; const body = m.querySelector('.k8-ra-body');
+    if (!d) { body.innerHTML = '<p class="k8-cp-empty">กำลังโหลด…</p>'; return; }
+    if (d.error) { body.innerHTML = '<p class="k8-cp-warn">' + esc(d.error) + '</p>'; return; }
+    m.querySelector('#k8CpSVT').textContent = 'การส่งงาน · ' + d.post.title;
+    const yes = d.list.filter((x) => x.submitted).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const no = d.list.filter((x) => !x.submitted).sort((a, b) => String(a.name).localeCompare(String(b.name), 'th'));
+    let h = '<div class="k8-ra-tabs" role="tablist"><button type="button" role="tab" aria-selected="' + (SV.tab === 'no') + '" onclick="k8CpSVTab(\'no\')">ยังไม่ส่ง ' + no.length + '</button><button type="button" role="tab" aria-selected="' + (SV.tab === 'yes') + '" onclick="k8CpSVTab(\'yes\')">ส่งแล้ว ' + yes.length + '</button></div>';
+    const L = SV.tab === 'yes' ? yes : no;
+    if (!L.length) h += '<p class="k8-cp-empty">' + (SV.tab === 'yes' ? 'ยังไม่มีใครส่งงาน' : 'ส่งครบทุกคนแล้ว') + '</p>';
+    else h += '<ul class="k8-cp-svl">' + L.map((x) => '<li><div class="k8-cp-svh"><b>' + esc(x.name) + '</b><small>' + esc(shortG(x.grade)) + ' · ' + esc(x.studentId) + '</small></div>' +
+      (x.submitted ? '<small class="k8-cp-svt">ส่งเมื่อ ' + dTh(x.at) + ' ' + tTh(x.at) + (x.late ? ' · <span class="k8-cp-lt">ส่งช้า</span>' : '') + (x.edits ? ' · แก้ไข ' + x.edits + ' ครั้ง' : '') + '</small>' + (x.note ? '<p>' + esc(x.note).replace(/\n/g, '<br>') + '</p>' : '') + (x.files && x.files.length ? '<div class="k8-cp-att">' + x.files.map(fileBtn).join('') + '</div>' : '') : '') + '</li>').join('') + '</ul>';
+    body.innerHTML = h;
+  }
+  window.k8CpSVTab = function (t) { SV.tab = t; paintSV(); };
+  window.k8CpSubs = function (pid) {
+    let m = document.getElementById('k8CpSV');
+    if (!m) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpSV" role="dialog" aria-modal="true" aria-labelledby="k8CpSVT" hidden style="z-index:10060"><div class="k8-ra-box"><header><h3 id="k8CpSVT">การส่งงาน</h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8CpSV\').hidden=true;k8CpSVDone()" aria-label="ปิด">✕</button></header><div class="k8-ra-body"></div></div></div>');
+      m = document.getElementById('k8CpSV'); m.addEventListener('click', (e) => { if (e.target === m) { m.hidden = true; window.k8CpSVDone(); } });
+    }
+    SV.pid = pid; SV.data = null; SV.tab = 'no'; m.hidden = false; paintSV(); loadSV();
+    setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
+  };
+  window.k8CpSVDone = function () { try { paintT(); paintO(); } catch (e) {} };
   window.k8CpPick = async function (inp) {
     const L = Array.from(inp.files || []); inp.value = '';
     for (const f0 of L) {
@@ -14871,7 +14911,7 @@ window.k8PdWho = function (sid) {
     c.hidden = false;
     const p0 = L[0];
     c.innerHTML = '<span class="k8-cp-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>' +
-      '<span class="k8-cp-ct"><b>งานจากอาจารย์' + (nNew ? ' <i>' + nNew + ' ใหม่</i>' : '') + '</b><small>' + esc(p0.subjectName) + ' · ' + esc(p0.title) + '</small></span><span class="k8-cp-go2" aria-hidden="true">›</span>';
+      '<span class="k8-cp-ct"><b>งานจากอาจารย์' + (nNew ? ' <i>' + nNew + ' ใหม่</i>' : '') + '</b><small>' + (L.filter((p) => !p.mySubmission).length ? 'ยังไม่ส่ง ' + L.filter((p) => !p.mySubmission).length + ' งาน · ' : 'ส่งครบทุกงานแล้ว · ') + esc(p0.subjectName) + ' · ' + esc(p0.title) + '</small></span><span class="k8-cp-go2" aria-hidden="true">›</span>';
   }
   function paintS() {
     const m = document.getElementById('k8CpSModal'); if (!m || m.hidden) return;
@@ -14882,8 +14922,57 @@ window.k8PdWho = function (sid) {
         '<small>' + esc(p.subjectName) + ' · ' + esc(p.teacherName) + ' · ' + dTh(p.createdAt) + ' ' + tTh(p.createdAt) + '</small>' +
         (p.due ? '<span class="k8-cp-due' + (p.due < today ? ' is-late' : '') + '">กำหนดส่ง ' + dTh(p.due) + (p.due < today ? ' · เลยกำหนดแล้ว' : '') + '</span>' : '') +
         (p.body ? '<p>' + esc(p.body).replace(/\n/g, '<br>') + '</p>' : '') +
-        (p.files.length ? '<div class="k8-cp-att">' + p.files.map((f) => '<button type="button" onclick="k8CpFile(\'' + esc(f.id) + '\')"><em>' + icon(f.mime, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size || 0) + '</small></span></button>').join('') + '</div>' : '') + '</li>').join('') + '</ul>';
+        (p.files.length ? '<div class="k8-cp-att">' + p.files.map((f) => '<button type="button" onclick="k8CpFile(\'' + esc(f.id) + '\')"><em>' + icon(f.mime, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size || 0) + '</small></span></button>').join('') + '</div>' : '') + subBlock(p) + '</li>').join('') + '</ul>';
   }
+  /* v19.69 · นักเรียนส่งงานคืนให้อาจารย์ (แนบไฟล์/รูป + ข้อความ) */
+  const SB = { files: {}, note: {}, busy: {}, prog: {}, edit: {} };
+  function fileBtn(f) { FMAP[f.id] = f; return '<button type="button" onclick="k8CpOpenF(\'' + esc(f.id) + '\')"><em>' + icon(f.mime, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size || 0) + '</small></span></button>'; }
+  function subBlock(p) {
+    const sb = p.mySubmission; const id = esc(p.id);
+    if (sb && !SB.edit[p.id]) {
+      return '<div class="k8-cp-sub is-done" role="status"><b>✓ ส่งงานเรียบร้อยแล้ว</b><small>' + dTh(sb.at) + ' ' + tTh(sb.at) + (sb.late ? ' · <span class="k8-cp-lt">ส่งช้ากว่ากำหนด</span>' : '') + (sb.edits ? ' · แก้ไข ' + sb.edits + ' ครั้ง' : '') + '</small>' +
+        (sb.note ? '<p>' + esc(sb.note).replace(/\n/g, '<br>') + '</p>' : '') + (sb.files && sb.files.length ? '<div class="k8-cp-att">' + sb.files.map(fileBtn).join('') + '</div>' : '') +
+        '<button type="button" class="k8-cp-sub-edit" onclick="k8CpSubEdit(\'' + id + '\')">ส่งใหม่ / แก้ไขงาน</button></div>';
+    }
+    const L = SB.files[p.id] || []; const busy = !!SB.busy[p.id]; const dis = busy ? ' disabled' : '';
+    return '<div class="k8-cp-sub"><b>ส่งงานให้อาจารย์</b>' + (sb ? '<small>การส่งใหม่จะแทนที่งานที่ส่งไว้เดิม</small>' : '') +
+      '<textarea rows="2" maxlength="2000" placeholder="ข้อความถึงอาจารย์ (ถ้ามี)" aria-label="ข้อความถึงอาจารย์" oninput="k8CpSubNote(\'' + id + '\',this.value)"' + dis + '>' + esc(SB.note[p.id] || '') + '</textarea>' +
+      '<label class="k8-cp-pick"><input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.mp4" onchange="k8CpSubPick(\'' + id + '\',this)"' + dis + '><span>+ แนบไฟล์ หรือถ่ายรูปงาน</span></label>' +
+      (L.length ? '<ul class="k8-cp-files">' + L.map((f, i) => '<li><em>' + icon(f.type, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size) + '</small></span>' + (busy ? '' : '<button type="button" onclick="k8CpSubRm(\'' + id + '\',' + i + ')" aria-label="เอาไฟล์ ' + esc(f.name) + ' ออก">✕</button>') + '</li>').join('') + '</ul>' : '') +
+      '<div class="k8-cp-sub-acts">' + (sb ? '<button type="button" class="is-ghost" onclick="k8CpSubEdit(\'' + id + '\',false)"' + dis + '>ยกเลิก</button>' : '') + '<button type="button" class="k8-cp-go" onclick="k8CpSubSend(\'' + id + '\')"' + dis + '>' + (busy ? esc(SB.prog[p.id] || 'กำลังส่ง…') : 'ส่งงาน') + '</button></div></div>';
+  }
+  const FMAP = {};
+  window.k8CpOpenF = function (id) { const f = FMAP[id]; if (f && typeof window.k8PvOpen === 'function') window.k8PvOpen({ id: f.id, name: f.name, size: f.size, action: 'getClassFile' }); };
+  window.k8CpSubEdit = function (pid, on) { SB.edit[pid] = on !== false; paintS(); };
+  window.k8CpSubNote = function (pid, v) { SB.note[pid] = v; };
+  window.k8CpSubRm = function (pid, i) { (SB.files[pid] || []).splice(i, 1); paintS(); };
+  window.k8CpSubPick = async function (pid, inp) {
+    const L = Array.from(inp.files || []); inp.value = ''; const arr = SB.files[pid] = SB.files[pid] || [];
+    for (const f0 of L) { if (arr.length >= 10) { toast('แนบได้สูงสุด 10 ไฟล์', 'warning'); break; } const f = await shrink(f0); if (f.size > 10 * 1048576) { toast('"' + f.name + '" ใหญ่เกิน 10 MB', 'warning'); continue; } arr.push(f); }
+    paintS();
+  };
+  window.k8CpSubSend = async function (pid) {
+    if (SB.busy[pid]) return;
+    const L = SB.files[pid] || []; const note = String(SB.note[pid] || '').trim();
+    if (!L.length && !note) { toast('แนบไฟล์หรือพิมพ์ข้อความก่อนส่ง', 'warning'); return; }
+    SB.busy[pid] = true; const up = [];
+    try {
+      for (let i = 0; i < L.length; i++) {
+        SB.prog[pid] = 'กำลังอัปโหลด ' + (i + 1) + '/' + L.length + '…'; paintS();
+        const r = await gasApiCall('uploadSubmissionFile', { data: { postId: pid, name: L[i].name, mime: L[i].type, data: await readB64(L[i]) } }, 120000);
+        if (!r || !r.success) throw new Error((r && (r.message || r.error)) || 'อัปโหลด "' + L[i].name + '" ไม่สำเร็จ');
+        up.push(r.file);
+      }
+      SB.prog[pid] = 'กำลังส่งงาน…'; paintS();
+      const r = await gasApiCall('submitClassWork', { data: { postId: pid, note, files: up } }, 60000);
+      if (!r || !r.success) throw new Error((r && (r.message || r.error)) || 'ส่งงานไม่สำเร็จ');
+      const p = (S.posts || []).find((x) => x.id === pid); if (p) p.mySubmission = r.submission;
+      LS.set('khalifah_cp_cache', { sid: S.sid, data: S.posts });
+      SB.files[pid] = []; SB.note[pid] = ''; SB.edit[pid] = false;
+      toast(r.message || 'ส่งงานเรียบร้อยแล้ว', 'success');
+    } catch (e) { toast(String(e.message || e), 'error'); }
+    SB.busy[pid] = false; SB.prog[pid] = ''; paintS(); card();
+  };
   window.k8CpFile = function (id) {
     const all = (S.posts || []).concat(T.posts || [], O.posts || []); let f = null; all.some((p) => (f = (p.files || []).find((x) => x.id === id)));
     if (!f) return;
@@ -14946,7 +15035,7 @@ window.k8PdWho = function (sid) {
     let h = '<div class="k8-cpo-head"><h3 id="k8CpOvT">งานที่มอบหมาย</h3><span>' + (O.posts == null ? 'กำลังโหลด…' : L.length + ' งาน' + (soon ? ' · ครบกำหนดใน 7 วัน ' + soon + ' งาน' : '')) + '</span></div>';
     if (O.posts != null && !L.length) h += '<p class="k8-cp-empty">ยังไม่ได้มอบหมายงาน · มอบหมายงานได้จากปุ่ม "มอบหมายงาน" ด้านบน หรือเมนู "เช็คชื่อ" → เลือกคาบ → "มอบหมายงาน"</p>';
     const shown = O.all ? L : L.slice(0, 5);
-    if (shown.length) h += '<ul class="k8-cpo-list">' + shown.map((p) => { const d = dueTxt(p); return '<li><button type="button" onclick="k8CpOvOpen(\'' + esc(p.id) + '\')"><span class="k8-cpo-t"><b>' + esc(p.title) + '</b><small>' + esc(p.subjectName) + (shortG(p.grade) ? ' ' + shortG(p.grade) : '') + ' · มอบหมาย ' + dTh(p.createdAt) + ' · ' + (p.recipients || 0) + ' คน' + (p.files && p.files.length ? ' · ' + p.files.length + ' ไฟล์' : '') + '</small></span><span class="k8-cpo-due ' + d[1] + '">' + d[0] + '</span></button></li>'; }).join('') + '</ul>';
+    if (shown.length) h += '<ul class="k8-cpo-list">' + shown.map((p) => { const d = dueTxt(p); return '<li><button type="button" onclick="k8CpOvOpen(\'' + esc(p.id) + '\')"><span class="k8-cpo-t"><b>' + esc(p.title) + '</b><small>' + esc(p.subjectName) + (shortG(p.grade) ? ' ' + shortG(p.grade) : '') + ' · มอบหมาย ' + dTh(p.createdAt) + ' · ' + (p.recipients || 0) + ' คน' + (p.files && p.files.length ? ' · ' + p.files.length + ' ไฟล์' : '') + '</small></span><span class="k8-cpo-row2"><span class="k8-cpo-due ' + d[1] + '">' + d[0] + '</span>' + (p.submitted != null ? '<span class="k8-cpo-sub">ส่งแล้ว ' + p.submitted + '/' + (p.recipients || 0) + '</span>' : '') + '</span></button></li>'; }).join('') + '</ul>';
     if (L.length > 5) h += '<button type="button" class="k8-cpo-more" onclick="k8CpOvAll()">' + (O.all ? 'ย่อ' : 'ดูทั้งหมด ' + L.length + ' งาน') + '</button>';
     c.innerHTML = h;
   }
@@ -15001,7 +15090,7 @@ window.k8PdWho = function (sid) {
     m.querySelector('.k8-cp-body').innerHTML = '<ul class="k8-cp-feed"><li><div class="k8-cp-fh"><b>' + esc(p.title) + '</b></div><small>' + esc(p.subjectName) + (shortG(p.grade) ? ' ' + shortG(p.grade) : '') + ' · มอบหมาย ' + dTh(p.createdAt) + ' ' + tTh(p.createdAt) + ' · ส่งถึง ' + (p.recipients || 0) + ' คน</small>' +
       '<span class="k8-cp-due' + (d[1] === 'is-past' ? ' is-late' : '') + '">' + d[0] + '</span>' + (p.body ? '<p>' + esc(p.body).replace(/\n/g, '<br>') + '</p>' : '') +
       (p.files && p.files.length ? '<div class="k8-cp-att">' + p.files.map((f) => '<button type="button" onclick="k8CpFile(\'' + esc(f.id) + '\')"><em>' + icon(f.mime, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size || 0) + '</small></span></button>').join('') + '</div>' : '') +
-      '<div class="k8-cpo-acts"><button type="button" class="is-del" onclick="k8CpOvDel(\'' + esc(p.id) + '\')">ลบงานนี้</button></div></li></ul>';
+      subCount(p) + '<div class="k8-cpo-acts"><button type="button" class="is-del" onclick="k8CpOvDel(\'' + esc(p.id) + '\')">ลบงานนี้</button></div></li></ul>';
     m.hidden = false; setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
   };
   window.k8CpOvDel = async function (id) {

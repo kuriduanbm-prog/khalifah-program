@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.62'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.69'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1263,7 +1263,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student', reactPrayer: 'staff', getMyPrayerReacts: 'student', aiChat: 'admin', aiStatus: 'admin', aiTicket: 'admin', aiLog: 'admin',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', getRosterAdj: 'staff', saveRosterAdj: 'staff', uploadClassFile: 'staff', createClassPost: 'staff', deleteClassPost: 'staff', listClassPosts: 'student', getClassFile: 'student', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', getRosterAdj: 'staff', saveRosterAdj: 'staff', uploadClassFile: 'staff', createClassPost: 'staff', deleteClassPost: 'staff', listClassPosts: 'student', getClassFile: 'student', uploadSubmissionFile: 'student', submitClassWork: 'student', getClassSubmissions: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1805,6 +1805,9 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'deleteClassPost': return deleteClassPost_(pick('id'), session, ctx);
     case 'listClassPosts': return listClassPosts_(data, session, ctx);
     case 'getClassFile': return getClassFile_(pick('fileId'), session, ctx);
+    case 'uploadSubmissionFile': return uploadSubmissionFile_(data, session);
+    case 'submitClassWork': return submitClassWork_(data, session);
+    case 'getClassSubmissions': return getClassSubmissions_(pick('postId'), session, ctx);
     case 'getRosterAdj': return { success: true, data: rosterAdjAll_() };
     case 'saveRosterAdj': return saveRosterAdj_(data, session, ctx);
     case 'getMyTeaching':
@@ -4329,7 +4332,8 @@ function readClassPosts_() {
       due: notifYmd_(r[7]), files: files, audience: String(r[9] || '').split(',').map(hqKey_).filter(Boolean), teacher: cleanVal(r[10]), teacherName: cleanVal(r[11]), status: cleanVal(r[12]) || 'active', notifId: cleanVal(r[13]) };
   }).filter(function (p) { return p.id; });
 }
-function uploadClassFile_(d, session) {
+function uploadClassFile_(d, session) { return saveClassBlob_(d, 'k8class by:' + session.userId); }
+function saveClassBlob_(d, desc) {
   d = d || {};
   const name = cleanVal(d.name).replace(/[\\/:*?"<>|]/g, ' ').trim().substring(0, 150);
   if (!name || !d.data) return { success: false, message: 'ข้อมูลไฟล์ไม่ครบ' };
@@ -4338,7 +4342,7 @@ function uploadClassFile_(d, session) {
   if (bytes.length > CLASS_FILE_MAX_) return { success: false, message: 'ไฟล์ใหญ่เกิน 10 MB' };
   try {
     const f = classPostFolder_().createFile(Utilities.newBlob(bytes, cleanVal(d.mime) || 'application/octet-stream', name));
-    try { f.setDescription('k8class by:' + session.userId); } catch (e) {}
+    try { f.setDescription(desc); } catch (e) {}
     return { success: true, file: { id: f.getId(), name: f.getName(), mime: f.getMimeType(), size: bytes.length } };
   } catch (e) { return { success: false, message: 'บันทึกไฟล์ไม่สำเร็จ (' + e.message + ')' }; }
 }
@@ -4373,10 +4377,71 @@ function createClassPost_(d, session, ctx) {
   appendRowFind_(classPostSheet_(), [id, now, subj, subjectName, grade, title, body, due, JSON.stringify(files), aud.join(','), session.userId, session.name || session.userId, 'active', nid], { keyCol: 1, text: [5, 8] });
   return { success: true, id: id, recipients: aud.length, files: files.length, message: 'ส่งให้นักเรียน ' + aud.length + ' คนแล้ว' };
 }
-function classPostView_(p, withAud) {
+function classPostView_(p, withAud, subs) {
   const o = { id: p.id, createdAt: p.createdAt, subject: p.subject, subjectName: p.subjectName, grade: p.grade, title: p.title, body: p.body, due: p.due, files: p.files, teacher: p.teacher, teacherName: p.teacherName };
-  if (withAud) o.recipients = p.audience.length;
+  if (withAud) {
+    o.recipients = p.audience.length;
+    if (subs) { const got = {}; subs.forEach(function (x) { if (x.postId === p.id && p.audience.indexOf(x.sid) !== -1) got[x.sid] = 1; }); o.submitted = Object.keys(got).length; }
+  }
   return o;
+}
+/* v19.69 · นักเรียนส่งงานคืน · ชีต "ส่งงานรายวิชา" (1 แถว/นักเรียน/งาน · ส่งใหม่ = แทนที่) */
+const CLASS_SUB_SHEET_ = 'ส่งงานรายวิชา';
+const CLASS_SUB_HEAD_ = ['รหัส', 'รหัสงาน', 'รหัสนักเรียน', 'ชื่อ', 'ชั้น', 'ส่งเมื่อ', 'ข้อความ', 'ไฟล์ (JSON)', 'ส่งช้า', 'แก้ไขครั้งที่'];
+function classSubSheet_() {
+  const ss = getSpreadsheet(); let sh = ss.getSheetByName(CLASS_SUB_SHEET_);
+  if (!sh) { sh = ss.insertSheet(CLASS_SUB_SHEET_); sh.appendRow(CLASS_SUB_HEAD_); sh.setFrozenRows(1); }
+  return sh;
+}
+function readClassSubs_() {
+  const sh = classSubSheet_(); if (sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, CLASS_SUB_HEAD_.length).getValues().map(function (r, i) {
+    let files = []; try { files = JSON.parse(String(r[7] || '[]')) || []; } catch (e) {}
+    return { row: i + 2, id: cleanVal(r[0]), postId: cleanVal(r[1]), sid: hqKey_(r[2]), studentId: cleanVal(r[2]), name: cleanVal(r[3]), grade: cleanVal(r[4]), at: notifTs_(r[5]), note: cleanVal(r[6]), files: files, late: String(r[8]) === 'ใช่', edits: Number(r[9]) || 0 };
+  }).filter(function (x) { return x.id && x.postId; });
+}
+function classPostById_(id) { id = cleanVal(id); return readClassPosts_().filter(function (p) { return p.id === id && p.status === 'active'; })[0] || null; }
+function uploadSubmissionFile_(d, session) {
+  d = d || {}; const p = classPostById_(d.postId);
+  if (!p) return { success: false, message: 'ไม่พบงานนี้ (อาจถูกลบแล้ว)' };
+  if (p.audience.indexOf(hqKey_(session.userId)) === -1) return { success: false, code: 'FORBIDDEN', message: 'งานนี้ไม่ได้มอบหมายให้คุณ' };
+  return saveClassBlob_(d, 'k8sub by:' + hqKey_(session.userId) + ' post:' + p.id);
+}
+function submitClassWork_(d, session) {
+  d = d || {}; const p = classPostById_(d.postId); const me = hqKey_(session.userId);
+  if (!p) return { success: false, message: 'ไม่พบงานนี้ (อาจถูกลบแล้ว)' };
+  if (p.audience.indexOf(me) === -1) return { success: false, code: 'FORBIDDEN', message: 'งานนี้ไม่ได้มอบหมายให้คุณ' };
+  const note = cleanVal(d.note).slice(0, 2000);
+  const files = [];
+  (Array.isArray(d.files) ? d.files : []).slice(0, 10).forEach(function (x) {
+    const fid = extractDriveId_(x && x.id); if (!fid) return;
+    try { const f = DriveApp.getFileById(fid); if (String(f.getDescription() || '') !== 'k8sub by:' + me + ' post:' + p.id) return; files.push({ id: fid, name: f.getName(), mime: f.getMimeType(), size: f.getSize() }); } catch (e) {}
+  });
+  if (!files.length && !note) return { success: false, message: 'แนบไฟล์หรือพิมพ์ข้อความก่อนส่ง' };
+  const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+  const late = !!p.due && now.slice(0, 10) > p.due;
+  const st = (getAllStudents().data || []).filter(function (x) { return hqKey_(x.studentId) === me; })[0] || {};
+  const unlock = lockEnter_(15000);
+  try {
+    const sh = classSubSheet_(); const old = readClassSubs_().filter(function (x) { return x.postId === p.id && x.sid === me; })[0];
+    const row = [old ? old.id : 'SUB-' + Date.now() + '-' + Math.floor(Math.random() * 1e4), p.id, cleanVal(st.studentId || session.userId), cleanVal(st.fullName || session.name || ''), cleanVal(st.grade || ''), now, note, JSON.stringify(files), late ? 'ใช่' : '', old ? old.edits + 1 : 0];
+    if (old) {
+      sh.getRange(old.row, 1, 1, row.length).setValues([row]); sh.getRange(old.row, 3).setNumberFormat('@').setValue(row[2]);
+      old.files.forEach(function (f) { if (!files.some(function (n) { return n.id === f.id; })) { try { DriveApp.getFileById(f.id).setTrashed(true); } catch (e) {} } });
+    } else appendRowFind_(sh, row, { keyCol: 1, text: [3] });
+    return { success: true, submission: { at: now, note: note, files: files, late: late, edits: row[9] }, message: late ? 'ส่งงานเรียบร้อยแล้ว (ส่งช้ากว่ากำหนด)' : 'ส่งงานเรียบร้อยแล้ว' };
+  } finally { unlock(); }
+}
+function getClassSubmissions_(postId, session, ctx) {
+  const p = classPostById_(postId); if (!p) return { success: false, message: 'ไม่พบงานนี้' };
+  if (!classPostCanManage_(p, session, ctx)) return { success: false, code: 'FORBIDDEN', message: 'ดูได้เฉพาะงานในวิชาที่คุณสอน' };
+  const subs = {}; readClassSubs_().forEach(function (x) { if (x.postId === p.id) subs[x.sid] = x; });
+  const byId = {}; (getAllStudents().data || []).forEach(function (x) { byId[hqKey_(x.studentId)] = x; });
+  const list = p.audience.map(function (sid) {
+    const st = byId[sid] || {}; const sb = subs[sid];
+    return { studentId: cleanVal(st.studentId || sid), name: cleanVal(st.fullName || (sb && sb.name) || sid), grade: cleanVal(st.grade || ''), submitted: !!sb, at: sb ? sb.at : '', note: sb ? sb.note : '', files: sb ? sb.files : [], late: sb ? sb.late : false, edits: sb ? sb.edits : 0 };
+  });
+  return { success: true, post: classPostView_(p, true, readClassSubs_()), list: list };
 }
 function classPostCanManage_(p, session, ctx) { return !!(ctx && ctx.isAdmin) || String(p.teacher || '').toLowerCase() === String(session.userId || '').toLowerCase() || teacherOwnsSubject_(session, p.subject); }
 function listClassPosts_(d, session, ctx) {
@@ -4384,11 +4449,13 @@ function listClassPosts_(d, session, ctx) {
   const all = readClassPosts_().filter(function (p) { return p.status === 'active'; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
   if (session.role === 'student') {
     const me = hqKey_(session.userId);
-    return { success: true, data: all.filter(function (p) { return p.audience.indexOf(me) !== -1; }).slice(0, 60).map(function (p) { return classPostView_(p, false); }) };
+    const subsS = {}; readClassSubs_().forEach(function (x) { if (x.sid === me) subsS[x.postId] = x; });
+    return { success: true, data: all.filter(function (p) { return p.audience.indexOf(me) !== -1; }).slice(0, 60).map(function (p) { const o = classPostView_(p, false); const sb = subsS[p.id]; if (sb) o.mySubmission = { at: sb.at, note: sb.note, files: sb.files, late: sb.late, edits: sb.edits }; return o; }) };
   }
   const subj = cleanVal(d.subject), grade = cleanVal(d.grade);
   const mine = all.filter(function (p) { return (!subj || p.subject === subj) && (!grade || p.grade === grade) && classPostCanManage_(p, session, ctx); });
-  return { success: true, data: mine.slice(0, 60).map(function (p) { return classPostView_(p, true); }) };
+  const subsT = readClassSubs_();
+  return { success: true, data: mine.slice(0, 60).map(function (p) { return classPostView_(p, true, subsT); }) };
 }
 function deleteClassPost_(id, session, ctx) {
   id = cleanVal(id); const p = readClassPosts_().filter(function (x) { return x.id === id; })[0];
@@ -4401,10 +4468,18 @@ function deleteClassPost_(id, session, ctx) {
 }
 function getClassFile_(fileId, session, ctx) {
   const id = extractDriveId_(fileId); if (!id) return { success: false, message: 'ไม่พบไฟล์' };
-  const p = readClassPosts_().filter(function (x) { return x.status === 'active' && x.files.some(function (f) { return f.id === id; }); })[0];
-  if (!p) return { success: false, message: 'ไม่พบไฟล์ (อาจถูกลบแล้ว)' };
-  if (session.role === 'student') { if (p.audience.indexOf(hqKey_(session.userId)) === -1) return { success: false, code: 'FORBIDDEN', message: 'ไฟล์นี้ไม่ได้ส่งถึงคุณ' }; }
-  else if (!classPostCanManage_(p, session, ctx)) return { success: false, code: 'FORBIDDEN', message: 'ไม่มีสิทธิ์เปิดไฟล์นี้' };
+  let p = readClassPosts_().filter(function (x) { return x.status === 'active' && x.files.some(function (f) { return f.id === id; }); })[0];
+  if (p) {
+    if (session.role === 'student') { if (p.audience.indexOf(hqKey_(session.userId)) === -1) return { success: false, code: 'FORBIDDEN', message: 'ไฟล์นี้ไม่ได้ส่งถึงคุณ' }; }
+    else if (!classPostCanManage_(p, session, ctx)) return { success: false, code: 'FORBIDDEN', message: 'ไม่มีสิทธิ์เปิดไฟล์นี้' };
+  } else {
+    // ไฟล์งานที่นักเรียนส่ง: เจ้าของงาน หรืออาจารย์ของวิชานั้น
+    const sb = readClassSubs_().filter(function (x) { return x.files.some(function (f) { return f.id === id; }); })[0];
+    p = sb ? classPostById_(sb.postId) : null;
+    if (!sb || !p) return { success: false, message: 'ไม่พบไฟล์ (อาจถูกลบแล้ว)' };
+    if (session.role === 'student') { if (sb.sid !== hqKey_(session.userId)) return { success: false, code: 'FORBIDDEN', message: 'ไม่มีสิทธิ์เปิดไฟล์นี้' }; }
+    else if (!classPostCanManage_(p, session, ctx)) return { success: false, code: 'FORBIDDEN', message: 'ไม่มีสิทธิ์เปิดไฟล์นี้' };
+  }
   try {
     const f = DriveApp.getFileById(id); const b = f.getBlob(); const bytes = b.getBytes();
     if (bytes.length > 15 * 1024 * 1024) return { success: false, tooBig: true, message: 'ไฟล์ใหญ่เกินไป' };
