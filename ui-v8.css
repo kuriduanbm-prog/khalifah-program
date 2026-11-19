@@ -7336,3 +7336,33 @@ html[data-theme="dark"] .k8-cp-go2 { color: #7dd3fc !important; }
 html[data-theme="dark"] .k8-cp-due { background: #2a1d05 !important; color: #fde68a !important; }
 html[data-theme="dark"] .k8-cp-due.is-late { background: #2a0f12 !important; color: #fca5a5 !important; }
 html[data-theme="dark"] .k8-cp-warn { background: #2a1d05 !important; color: #fde68a !important; }
+
+/* v19.63 · ภาพรวมอาจารย์: งานที่มอบหมาย */
+#view-teacher #teacher-tab-overview > .k8-cpo, #teacher-tab-overview > .k8-cpo { display: block !important; }
+#teacher-tab-overview > .k8-cpo[hidden] { display: none !important; }
+.k8-cpo { padding: 14px 16px !important; margin-top: 12px; }
+.k8-cpo-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.k8-cpo-head h3 { margin: 0; font-size: 16px; font-weight: 600; color: #0f172a; }
+.k8-cpo-head span { font-size: 12.5px; color: #64748b; }
+.k8-cpo-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.k8-cpo-list button { width: 100%; display: grid; gap: 4px; text-align: left; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 10px 12px; font: inherit; cursor: pointer; color: inherit; }
+.k8-cpo-list button:hover { background: #f8fafc; }
+.k8-cpo-t { display: grid; gap: 2px; min-width: 0; }
+.k8-cpo-t b { font-size: 14px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-cpo-t small { font-size: 12px; color: #64748b; }
+.k8-cpo-due { justify-self: start; font-size: 12.5px; font-weight: 600; color: #0c4a6e; background: #f0f9ff; border-radius: 8px; padding: 2px 8px; }
+.k8-cpo-due.is-soon { color: #92400e; background: #fffbeb; }
+.k8-cpo-due.is-past { color: #b91c1c; background: #fef2f2; }
+.k8-cpo-more { width: 100%; margin-top: 8px; border: 1px dashed #cbd5e1; background: none; border-radius: 10px; padding: 8px; font: inherit; font-size: 13px; color: #0369a1; font-weight: 600; cursor: pointer; }
+.k8-cpo-acts { margin-top: 8px; }
+.k8-cpo-acts .is-del { border: 1px solid #fecaca; background: #fff; color: #b91c1c; border-radius: 10px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 38px; }
+.k8-cpo-list button:focus-visible, .k8-cpo-more:focus-visible, .k8-cpo-acts .is-del:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+html[data-theme="dark"] .k8-cpo-head h3, html[data-theme="dark"] .k8-cpo-t b { color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-cpo-head span, html[data-theme="dark"] .k8-cpo-t small { color: #94a3b8 !important; }
+html[data-theme="dark"] .k8-cpo-list button { background: #0f172a !important; border-color: #334155 !important; }
+html[data-theme="dark"] .k8-cpo-list button:hover { background: #1e293b !important; }
+html[data-theme="dark"] .k8-cpo-due { background: #0b2235 !important; color: #bae6fd !important; }
+html[data-theme="dark"] .k8-cpo-due.is-soon { background: #2a1d05 !important; color: #fde68a !important; }
+html[data-theme="dark"] .k8-cpo-due.is-past { background: #2a0f12 !important; color: #fca5a5 !important; }
+html[data-theme="dark"] .k8-cpo-more { border-color: #475569 !important; color: #7dd3fc !important; }
+html[data-theme="dark"] .k8-cpo-acts .is-del { background: #1e293b !important; color: #fca5a5 !important; border-color: #7f1d1d !important; }
