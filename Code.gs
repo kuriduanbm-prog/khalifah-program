@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.59'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.62'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1263,7 +1263,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student', reactPrayer: 'staff', getMyPrayerReacts: 'student', aiChat: 'admin', aiStatus: 'admin', aiTicket: 'admin', aiLog: 'admin',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', getRosterAdj: 'staff', saveRosterAdj: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', getRosterAdj: 'staff', saveRosterAdj: 'staff', uploadClassFile: 'staff', createClassPost: 'staff', deleteClassPost: 'staff', listClassPosts: 'student', getClassFile: 'student', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1800,6 +1800,11 @@ function dispatchAction_(action, req, data, session, ctx) {
       return getHasanatDay_(pick('date') || data.date);
     case 'saveHasanatBatch':
       return saveHasanatBatch_(data);
+    case 'uploadClassFile': return uploadClassFile_(data, session);
+    case 'createClassPost': return createClassPost_(data, session, ctx);
+    case 'deleteClassPost': return deleteClassPost_(pick('id'), session, ctx);
+    case 'listClassPosts': return listClassPosts_(data, session, ctx);
+    case 'getClassFile': return getClassFile_(pick('fileId'), session, ctx);
     case 'getRosterAdj': return { success: true, data: rosterAdjAll_() };
     case 'saveRosterAdj': return saveRosterAdj_(data, session, ctx);
     case 'getMyTeaching':
@@ -4300,6 +4305,113 @@ function ttConfig_(settings) {
 /** v17.12 · วิชาของนักเรียนตามชั้นปี (จากตารางเรียนของชั้น + ตารางพิเศษที่ตัวเองอยู่ · ไม่รวมวิชาที่ถูกละเว้น)
  *  ไม่ขึ้นกับการเปิด/ปิดการมองเห็นตาราง · ถ้ายังไม่มีตารางของชั้นนั้น subjects = null (ให้แสดงทุกวิชาเหมือนเดิม) */
 /** v17.14 · คาบสอนของอาจารย์ (ทุกชั้น + ตารางพิเศษ) สำหรับเลือกตอนแจ้งลา · ไม่ขึ้นกับการเปิด/ปิดการมองเห็นตาราง */
+/* ===================== v19.62 · อาจารย์ส่งงาน/เอกสาร/รูป ให้นักเรียนในคาบ + แจ้งเตือน =====================
+ * ไฟล์เก็บใน Google Drive โฟลเดอร์ "Khalifah_Class_Posts" แบบไม่แชร์สาธารณะ · เปิดผ่านระบบเท่านั้น (ตรวจสิทธิ์ทุกครั้ง)
+ * ชีต "งานรายวิชา": รายการที่ส่ง · ผู้รับ = รายชื่อในคาบตอนส่ง (รวมที่อาจารย์เพิ่ม/ถอน) */
+const CLASS_POST_SHEET_ = 'งานรายวิชา';
+const CLASS_POST_HEAD_ = ['รหัส', 'ส่งเมื่อ', 'รหัสวิชา', 'ชื่อวิชา', 'ชั้น', 'หัวข้อ', 'รายละเอียด', 'กำหนดส่ง', 'ไฟล์ (JSON)', 'ผู้รับ', 'อาจารย์', 'ชื่ออาจารย์', 'สถานะ', 'รหัสแจ้งเตือน'];
+const CLASS_FILE_MAX_ = 10 * 1024 * 1024;
+const CLASS_FILE_EXT_ = /\.(pdf|jpe?g|png|gif|webp|heic|docx?|xlsx?|csv|pptx?|txt|zip|mp3|m4a|mp4)$/i;
+function classPostSheet_() {
+  const ss = getSpreadsheet(); let sh = ss.getSheetByName(CLASS_POST_SHEET_);
+  if (!sh) { sh = ss.insertSheet(CLASS_POST_SHEET_); sh.appendRow(CLASS_POST_HEAD_); sh.setFrozenRows(1); }
+  return sh;
+}
+function classPostFolder_() {
+  const nm = 'Khalifah_Class_Posts'; const it = DriveApp.getFoldersByName(nm);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(nm);
+}
+function readClassPosts_() {
+  const sh = classPostSheet_(); if (sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, CLASS_POST_HEAD_.length).getValues().map(function (r, i) {
+    let files = []; try { files = JSON.parse(String(r[8] || '[]')) || []; } catch (e) {}
+    return { row: i + 2, id: cleanVal(r[0]), createdAt: notifTs_(r[1]), subject: cleanVal(r[2]), subjectName: cleanVal(r[3]), grade: cleanVal(r[4]), title: cleanVal(r[5]), body: cleanVal(r[6]),
+      due: notifYmd_(r[7]), files: files, audience: String(r[9] || '').split(',').map(hqKey_).filter(Boolean), teacher: cleanVal(r[10]), teacherName: cleanVal(r[11]), status: cleanVal(r[12]) || 'active', notifId: cleanVal(r[13]) };
+  }).filter(function (p) { return p.id; });
+}
+function uploadClassFile_(d, session) {
+  d = d || {};
+  const name = cleanVal(d.name).replace(/[\\/:*?"<>|]/g, ' ').trim().substring(0, 150);
+  if (!name || !d.data) return { success: false, message: 'ข้อมูลไฟล์ไม่ครบ' };
+  if (!CLASS_FILE_EXT_.test(name)) return { success: false, message: 'ชนิดไฟล์นี้ส่งไม่ได้ · รองรับรูป, PDF, Word, Excel, PowerPoint, ข้อความ, zip, เสียง และวิดีโอสั้น' };
+  let bytes; try { bytes = Utilities.base64Decode(String(d.data).replace(/^data:[^,]*,/, '')); } catch (e) { return { success: false, message: 'อ่านไฟล์ไม่สำเร็จ' }; }
+  if (bytes.length > CLASS_FILE_MAX_) return { success: false, message: 'ไฟล์ใหญ่เกิน 10 MB' };
+  try {
+    const f = classPostFolder_().createFile(Utilities.newBlob(bytes, cleanVal(d.mime) || 'application/octet-stream', name));
+    try { f.setDescription('k8class by:' + session.userId); } catch (e) {}
+    return { success: true, file: { id: f.getId(), name: f.getName(), mime: f.getMimeType(), size: bytes.length } };
+  } catch (e) { return { success: false, message: 'บันทึกไฟล์ไม่สำเร็จ (' + e.message + ')' }; }
+}
+function createClassPost_(d, session, ctx) {
+  d = d || {};
+  const subj = cleanVal(d.subject).slice(0, 60), grade = cleanVal(d.grade).slice(0, 80);
+  const title = cleanVal(d.title).slice(0, 150), body = cleanVal(d.body).slice(0, 3000);
+  if (!subj) return { success: false, message: 'เลือกรายวิชาก่อน' };
+  if (!title) return { success: false, message: 'ใส่หัวข้อก่อนส่ง' };
+  if (!(ctx && ctx.isAdmin) && !teacherOwnsSubject_(session, subj)) return { success: false, code: 'FORBIDDEN', message: 'ส่งงานได้เฉพาะรายวิชาที่คุณสอน' };
+  const due = /^\d{4}-\d{2}-\d{2}$/.test(cleanVal(d.due)) ? cleanVal(d.due) : '';
+  const ids = (Array.isArray(d.studentIds) ? d.studentIds : []).map(hqKey_).filter(Boolean);
+  const aud = ids.filter(function (x, i) { return ids.indexOf(x) === i; }).slice(0, 400);
+  if (!aud.length) return { success: false, message: 'ไม่มีนักเรียนในคาบนี้' };
+  // ไฟล์ต้องเป็นไฟล์ที่ผู้ส่งอัปโหลดเองผ่านระบบ
+  const files = [];
+  (Array.isArray(d.files) ? d.files : []).slice(0, 10).forEach(function (x) {
+    const fid = extractDriveId_(x && x.id); if (!fid) return;
+    try { const f = DriveApp.getFileById(fid); if (String(f.getDescription() || '') !== 'k8class by:' + session.userId) return; files.push({ id: fid, name: f.getName(), mime: f.getMimeType(), size: f.getSize() }); } catch (e) {}
+  });
+  const subjectName = cleanVal(d.subjectName).slice(0, 80) || subj;
+  const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+  const id = 'CP-' + Date.now() + '-' + Math.floor(Math.random() * 1e4);
+  // แจ้งเตือนนักเรียนที่ได้รับ (กระดิ่ง)
+  const nid = 'NTF-CP-' + Date.now() + '-' + Math.floor(Math.random() * 1e4);
+  const exp = Utilities.formatDate(new Date(Date.now() + 30 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+  try {
+    ensureSchema();
+    const nb = title + (body ? '\n' + body.slice(0, 300) : '') + (files.length ? '\nแนบ ' + files.length + ' ไฟล์' : '') + (due ? '\nกำหนดส่ง: ' + leaveDateTh_(due) : '') + '\nเปิดดูที่หน้าแรก → "งานจากอาจารย์"';
+    getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow([nid, now, 'งานใหม่ · ' + subjectName, nb, 'students', aud.join(','), 'normal', session.userId, session.name || session.userId, 'active', due && due > exp ? due : exp, 'bell', '']);
+  } catch (e) {}
+  appendRowFind_(classPostSheet_(), [id, now, subj, subjectName, grade, title, body, due, JSON.stringify(files), aud.join(','), session.userId, session.name || session.userId, 'active', nid], { keyCol: 1, text: [5, 8] });
+  return { success: true, id: id, recipients: aud.length, files: files.length, message: 'ส่งให้นักเรียน ' + aud.length + ' คนแล้ว' };
+}
+function classPostView_(p, withAud) {
+  const o = { id: p.id, createdAt: p.createdAt, subject: p.subject, subjectName: p.subjectName, grade: p.grade, title: p.title, body: p.body, due: p.due, files: p.files, teacher: p.teacher, teacherName: p.teacherName };
+  if (withAud) o.recipients = p.audience.length;
+  return o;
+}
+function classPostCanManage_(p, session, ctx) { return !!(ctx && ctx.isAdmin) || String(p.teacher || '').toLowerCase() === String(session.userId || '').toLowerCase() || teacherOwnsSubject_(session, p.subject); }
+function listClassPosts_(d, session, ctx) {
+  d = d || {};
+  const all = readClassPosts_().filter(function (p) { return p.status === 'active'; }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
+  if (session.role === 'student') {
+    const me = hqKey_(session.userId);
+    return { success: true, data: all.filter(function (p) { return p.audience.indexOf(me) !== -1; }).slice(0, 60).map(function (p) { return classPostView_(p, false); }) };
+  }
+  const subj = cleanVal(d.subject), grade = cleanVal(d.grade);
+  const mine = all.filter(function (p) { return (!subj || p.subject === subj) && (!grade || p.grade === grade) && classPostCanManage_(p, session, ctx); });
+  return { success: true, data: mine.slice(0, 60).map(function (p) { return classPostView_(p, true); }) };
+}
+function deleteClassPost_(id, session, ctx) {
+  id = cleanVal(id); const p = readClassPosts_().filter(function (x) { return x.id === id; })[0];
+  if (!p || p.status !== 'active') return { success: false, message: 'ไม่พบรายการ' };
+  if (!classPostCanManage_(p, session, ctx)) return { success: false, code: 'FORBIDDEN', message: 'ลบได้เฉพาะงานในวิชาที่คุณสอน' };
+  classPostSheet_().getRange(p.row, 13).setValue('deleted');
+  if (p.notifId) { try { deleteNotification_(p.notifId); } catch (e) {} }
+  p.files.forEach(function (f) { try { DriveApp.getFileById(f.id).setTrashed(true); } catch (e) {} });
+  return { success: true, message: 'ลบงานแล้ว · นักเรียนจะไม่เห็นอีก' };
+}
+function getClassFile_(fileId, session, ctx) {
+  const id = extractDriveId_(fileId); if (!id) return { success: false, message: 'ไม่พบไฟล์' };
+  const p = readClassPosts_().filter(function (x) { return x.status === 'active' && x.files.some(function (f) { return f.id === id; }); })[0];
+  if (!p) return { success: false, message: 'ไม่พบไฟล์ (อาจถูกลบแล้ว)' };
+  if (session.role === 'student') { if (p.audience.indexOf(hqKey_(session.userId)) === -1) return { success: false, code: 'FORBIDDEN', message: 'ไฟล์นี้ไม่ได้ส่งถึงคุณ' }; }
+  else if (!classPostCanManage_(p, session, ctx)) return { success: false, code: 'FORBIDDEN', message: 'ไม่มีสิทธิ์เปิดไฟล์นี้' };
+  try {
+    const f = DriveApp.getFileById(id); const b = f.getBlob(); const bytes = b.getBytes();
+    if (bytes.length > 15 * 1024 * 1024) return { success: false, tooBig: true, message: 'ไฟล์ใหญ่เกินไป' };
+    return { success: true, id: id, name: f.getName(), mime: f.getMimeType(), converted: false, size: bytes.length, data: Utilities.base64Encode(bytes) };
+  } catch (e) { return { success: false, message: 'เปิดไฟล์ไม่สำเร็จ (' + e.message + ')' }; }
+}
+
 /* ===================== v19.59 · อาจารย์เพิ่ม/ถอนรายชื่อนักเรียนในคาบของตนเอง =====================
  * ไม่แก้ตารางสอนของแอดมิน · เก็บเป็นส่วนต่างต่อ "วิชา|ชั้น" ใน Settings key ClassRosterAdj
  * { "<subject>|<grade>": { a: [เพิ่ม], r: [ถอน], by, at } } · อาจารย์ที่สอนวิชาเดียวกัน (ร่วมสอน) ใช้รายชื่อเดียวกัน */
