@@ -7278,7 +7278,7 @@ html[data-theme="dark"] .k8-ra-list button.is-add { background: #0369a1 !importa
 .k8-cp-form > label { font-size: 13px; font-weight: 600; color: #334155; margin-top: 4px; }
 .k8-cp-form > label b { color: #b91c1c; }
 .k8-cp-form > label small { font-weight: 400; color: #64748b; }
-.k8-cp-form input:not([type="file"]), .k8-cp-form textarea { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 10px; padding: 9px 10px; font: inherit; font-size: 14px; min-height: 42px; background: #fff; color: #0f172a; }
+.k8-cp-form input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), .k8-cp-form textarea { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 10px; padding: 9px 10px; font: inherit; font-size: 14px; min-height: 42px; background: #fff; color: #0f172a; }
 .k8-cp-form textarea { resize: vertical; }
 .k8-cp-pick { position: relative; display: flex; align-items: center; justify-content: center; border: 1.5px dashed #94a3b8; border-radius: 12px; padding: 12px; cursor: pointer; color: #0369a1; font-weight: 600; font-size: 14px; min-height: 48px; }
 .k8-cp-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -7320,7 +7320,7 @@ html[data-theme="dark"] .k8-ra-list button.is-add { background: #0369a1 !importa
 .k8-cp-att { display: grid; gap: 6px; margin-top: 6px; }
 .k8-cp-att button { display: flex; align-items: center; gap: 8px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 10px; font: inherit; cursor: pointer; min-height: 44px; }
 html[data-theme="dark"] .k8-cp-form > label, html[data-theme="dark"] .k8-cp-h, html[data-theme="dark"] .k8-cp-list b, html[data-theme="dark"] .k8-cp-fh b, html[data-theme="dark"] .k8-cp-files span, html[data-theme="dark"] .k8-cp-att span { color: #e2e8f0 !important; }
-html[data-theme="dark"] .k8-cp-form input:not([type="file"]), html[data-theme="dark"] .k8-cp-form textarea { background: #1e293b !important; color: #e2e8f0 !important; border-color: #475569 !important; }
+html[data-theme="dark"] .k8-cp-form input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), html[data-theme="dark"] .k8-cp-form textarea { background: #1e293b !important; color: #e2e8f0 !important; border-color: #475569 !important; }
 html[data-theme="dark"] .k8-cp-pick { border-color: #475569 !important; color: #7dd3fc !important; }
 html[data-theme="dark"] .k8-cp-files li, html[data-theme="dark"] .k8-cp-list li, html[data-theme="dark"] .k8-cp-feed li { border-color: #334155 !important; background: transparent !important; }
 html[data-theme="dark"] .k8-cp-feed li.is-new { border-color: #0369a1 !important; background: #0b2235 !important; }
@@ -7396,8 +7396,8 @@ html[data-theme="dark"] .k8-cp-pickl span { color: #7dd3fc !important; }
 .k8-cp-rtools span { flex: 1; min-width: 100px; }
 .k8-cp-rtools button:disabled { opacity: .5; cursor: default; }
 .k8-cp-rlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 280px; overflow: auto; }
-.k8-cp-rlist label { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; }
-.k8-cp-rlist input { width: 18px; height: 18px; accent-color: #0369a1; flex: none; }
+.k8-cp-rlist label { display: flex; align-items: center; gap: 10px; padding: 6px 10px; min-height: 0; font-weight: 400; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; }
+.k8-cp-rlist input[type="checkbox"] { width: 16px !important; height: 16px !important; min-height: 0 !important; margin: 0; padding: 0; accent-color: #0369a1; flex: none; }
 .k8-cp-rlist span { display: grid; min-width: 0; }
 .k8-cp-rlist b { font-size: 13.5px; font-weight: 600; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .k8-cp-rlist small { font-size: 12px; color: #64748b; }
@@ -7418,7 +7418,7 @@ html[data-theme="dark"] .k8-cp-rlist b { color: #e2e8f0 !important; }
 /* v19.67 · จัดการรายชื่อ: ติ๊กหลายคน */
 .k8-ra-list label.k8-ra-who { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .k8-ra-list label.k8-ra-who > span { display: grid; min-width: 0; }
-.k8-ra-ck { width: 20px; height: 20px; flex: none; accent-color: #0369a1; }
+.k8-ra-ck { width: 16px; height: 16px; margin: 0; flex: none; accent-color: #0369a1; }
 .k8-ra-list li.is-pick { border-color: #7dd3fc; background: #f0f9ff; }
 .k8-ra-bulk { position: sticky; top: -12px; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; padding: 8px 0; background: #fff; }
 .k8-ra-bulk button { border: 1px solid #cbd5e1; background: #fff; color: #0c4a6e; font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 9px; cursor: pointer; min-height: 34px; }
