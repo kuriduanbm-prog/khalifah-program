@@ -7366,3 +7366,13 @@ html[data-theme="dark"] .k8-cpo-due.is-soon { background: #2a1d05 !important; co
 html[data-theme="dark"] .k8-cpo-due.is-past { background: #2a0f12 !important; color: #fca5a5 !important; }
 html[data-theme="dark"] .k8-cpo-more { border-color: #475569 !important; color: #7dd3fc !important; }
 html[data-theme="dark"] .k8-cpo-acts .is-del { background: #1e293b !important; color: #fca5a5 !important; border-color: #7f1d1d !important; }
+/* v19.64 · เลือกคาบสำหรับส่งงาน */
+.k8-cp-pickl { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.k8-cp-pickl button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 12px 14px; font: inherit; cursor: pointer; min-height: 48px; text-align: left; }
+.k8-cp-pickl b { font-size: 14px; font-weight: 600; color: #0f172a; }
+.k8-cp-pickl span { font-size: 13px; color: #0369a1; font-weight: 600; flex: none; }
+.k8-cp-pickl button:hover { background: #f0f9ff; border-color: #bae6fd; }
+.k8-cp-pickl button:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+html[data-theme="dark"] .k8-cp-pickl button { background: #0f172a !important; border-color: #334155 !important; }
+html[data-theme="dark"] .k8-cp-pickl b { color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-cp-pickl span { color: #7dd3fc !important; }

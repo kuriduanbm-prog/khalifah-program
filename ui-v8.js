@@ -3672,7 +3672,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.63';
+  const APP_VERSION = '19.64';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14844,6 +14844,42 @@ window.k8PdWho = function (sid) {
   }
   window.k8CpOvAll = function () { O.all = !O.all; paintO(); };
   window.k8CpOvRefresh = () => loadO(true);
+  /* v19.64 · ปุ่มไอคอน "ส่งงาน/เอกสาร" ในหน้าภาพรวมอาจารย์ → เลือกคาบ (ถ้ามีหลายวิชา/ชั้น) แล้วเปิดหน้าส่งงาน */
+  function myClasses() {
+    const seen = {}, L = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() + i); const ds = d.toLocaleDateString('sv-SE');
+      let A = []; try { A = (window.k8TtMineOn && window.k8TtMineOn(ds)) || []; } catch (e) {}
+      A.forEach((r) => {
+        if (!r || !r.c || (window.k8IsHalaqah && window.k8IsHalaqah(r.c))) return;
+        const subj = r.c.s || ''; if (!subj) return;
+        const grade = String(r.g).indexOf('x:') === 0 ? 'ALL' : 'มัธยมศึกษาปีที่ ' + r.g; // เหมือน GN() ของหน้าเช็คชื่อ
+        const k = subj + '|' + grade; if (seen[k]) return; seen[k] = 1;
+        L.push({ subj, grade, name: r.c.sn || subj, tn: r.c.tn || r.c.t || '', gRaw: r.g, xName: String(r.g).indexOf('x:') === 0 ? (r.xName || r.c.xn || '') : '' });
+      });
+    }
+    return L.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'th') || String(a.grade || '').localeCompare(String(b.grade || '')));
+  }
+  function goClass(x) { try { window.k8TaPick(x.subj, x.grade, x.tn || '', ''); } catch (e) {} const pm = document.getElementById('k8CpPick'); if (pm) pm.hidden = true; window.k8CpOpen(); }
+  window.k8CpQuick = function () {
+    const L = myClasses();
+    if (!L.length) { toast('ยังไม่พบคาบสอนของคุณในตารางสอน 7 วันข้างหน้า', 'warning'); return; }
+    if (L.length === 1) { goClass(L[0]); return; }
+    let m = document.getElementById('k8CpPick');
+    if (!m) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpPick" role="dialog" aria-modal="true" aria-labelledby="k8CpPickT" hidden><div class="k8-ra-box"><header><h3 id="k8CpPickT">ส่งงาน/เอกสาร · เลือกคาบ</h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8CpPick\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body"></div></div></div>');
+      m = document.getElementById('k8CpPick'); m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; });
+    }
+    window.__k8CpPickL = L;
+    m.querySelector('.k8-ra-body').innerHTML = '<p class="k8-cp-empty" style="text-align:left;margin-top:0">เลือกวิชาและชั้นที่จะส่งงานให้</p><ul class="k8-cp-pickl">' + L.map((x, i) => '<li><button type="button" onclick="k8CpPickGo(' + i + ')"><b>' + esc(x.name || x.subj) + '</b><span>' + esc(shortG(x.grade) || String(x.grade || '').replace(/^x:/, 'ตารางพิเศษ ')) + '</span></button></li>').join('') + '</ul>';
+    m.hidden = false; setTimeout(() => { const b = m.querySelector('.k8-cp-pickl button'); if (b) b.focus(); }, 30);
+  };
+  window.k8CpPickGo = function (i) { const x = (window.__k8CpPickL || [])[i]; if (x) goClass(x); };
+  function placeQ() {
+    const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q || !meT() || q.querySelector('.k8-cp-qbtn')) return;
+    q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-lv-qbtn k8-cp-qbtn" onclick="k8CpQuick()" aria-label="ส่งงาน/เอกสารให้นักเรียน"><span style="background:#e0f2fe;color:#0369a1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 18v-6M9.5 14.5 12 12l2.5 2.5"/></svg></span>ส่งงาน/เอกสาร</button>');
+  }
+  setInterval(placeQ, 1500);
   // เข้าแท็บภาพรวมเมื่อไร โหลดรายการล่าสุด (งานที่ส่งจากเครื่องอื่นก็เห็น)
   (function () { const st = window.switchTeacherTab; if (typeof st !== 'function') return; window.switchTeacherTab = function (t) { const r = st.apply(this, arguments); try { if (t === 'overview') setTimeout(() => { paintO(); loadO(true); }, 50); } catch (e) {} return r; }; })();
   window.k8CpOvOpen = function (id) {
