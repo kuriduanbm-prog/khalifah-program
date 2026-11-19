@@ -2684,6 +2684,9 @@ window.k8RegBirthChange = function (v) {
   window.k8TaRowsNow = () => rows();
   window.k8TaKey = () => ({ subject: S.subject, grade: S.grade, label: (subjects().find((x) => String(x.id) === String(S.subject)) || {}).name || S.subject });
   window.k8TaAdjSaved = function (map) { RA.map = map || {}; try { localStorage.setItem('khalifah_roster_adj', JSON.stringify(RA.map)); } catch (e) {} render(); };
+  // v19.67 · อัปเดตรายชื่อบนจอทันที (ยังไม่รอเซิร์ฟเวอร์)
+  window.k8TaAdjLocal = function (key, a, r) { RA.map = Object.assign({}, RA.map || {}); if (!a.length && !r.length) delete RA.map[key]; else RA.map[key] = { a: a.slice(), r: r.slice() }; try { localStorage.setItem('khalifah_roster_adj', JSON.stringify(RA.map)); } catch (e) {} render(); };
+  window.k8TaAdjReload = () => loadAdj(true);
   function rows0() {
     const all = (typeof allStudents !== 'undefined' ? allStudents : []).filter((s) => s && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(s.status || '')));
     const inGrade = all.filter((s) => S.grade === 'ALL' || s.grade === S.grade);
@@ -3672,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.66';
+  const APP_VERSION = '19.67';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14571,30 +14574,75 @@ window.k8PdWho = function (sid) {
   const norm = (id) => String(id == null ? '' : id).replace(/\D/g, '').replace(/^0+/, '');
   const shortG = (g) => { const m = String(g || '').match(/(\d)/); return m && /มัธยม/.test(g) ? 'ม.' + m[1] : (g || ''); };
   const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
-  const M = { q: '', g: 'ALL', busy: false, tab: 'in' };
+  const M = { q: '', g: 'ALL', busy: false, tab: 'in', pick: new Set(), shown: [] };
   const studs = () => { let L = []; try { L = allStudents || []; } catch (e) {} return L.filter((x) => x && !/ลาออก|สำเร็จ|พ้นสภาพ/.test(String(x.status || ''))); };
   const byId = (id) => studs().find((x) => norm(x.studentId) === norm(id));
   const adj = () => { const a = window.k8TaRosterAdj ? window.k8TaRosterAdj() : null; return { a: (a && a.a || []).map(norm), r: (a && a.r || []).map(norm) }; };
-  async function save(next) {
-    const k = window.k8TaKey(); M.busy = true; paint();
-    let r = null; try { r = await gasApiCall('saveRosterAdj', { data: { subject: k.subject, grade: k.grade, add: next.a, remove: next.r } }, 25000); } catch (e) { r = { success: false, message: String(e && e.message || e) }; }
-    M.busy = false;
-    if (r && r.success) { window.k8TaAdjSaved(r.all || {}); toast('บันทึกรายชื่อแล้ว', 'success'); }
-    else toast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error');
+  // v19.67 · เพิ่ม/ถอนแล้วเห็นผลทันที · บันทึกขึ้นระบบเบื้องหลังตามลำดับ (กดติดกันหลายคนได้) · ไม่สำเร็จ → ดึงค่าจริงกลับมา
+  const Q = { pend: null, run: false };
+  async function flush() {
+    if (Q.run) return; Q.run = true; M.busy = true; paint();
+    let fail = '';
+    while (Q.pend) {
+      const job = Q.pend; Q.pend = null;
+      let r = null; try { r = await gasApiCall('saveRosterAdj', { data: { subject: job.subject, grade: job.grade, add: job.a, remove: job.r } }, 25000); } catch (e) { r = { success: false, message: String(e && e.message || e) }; }
+      if (!r || !r.success) { fail = (r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ'; Q.pend = null; break; }
+      if (!Q.pend) { const all = Object.assign({}, r.all || {}); window.k8TaAdjSaved(all); }
+    }
+    Q.run = false; M.busy = false;
+    if (fail) { toast('บันทึกรายชื่อไม่สำเร็จ · ' + fail + ' · คืนค่าเดิมแล้ว', 'error'); try { await window.k8TaAdjReload(); } catch (e) {} }
     paint();
   }
+  function save(next, msg) {
+    const k = window.k8TaKey();
+    window.k8TaAdjLocal(k.subject + '|' + k.grade, next.a, next.r);
+    Q.pend = { subject: k.subject, grade: k.grade, a: next.a, r: next.r };
+    if (msg) toast(msg, 'success');
+    paint(); flush();
+  }
   window.k8RaDo = function (op, id) {
-    if (M.busy) return; id = norm(id); const A = adj(); const base = new Set((window.k8TaRows0() || []).map((x) => norm(x.studentId)));
+    id = norm(id); const A = adj(); const base = new Set((window.k8TaRows0() || []).map((x) => norm(x.studentId)));
     let a = A.a.slice(), r = A.r.slice();
     if (op === 'rm') { const st = byId(id); if (!confirm('ถอน ' + ((st && st.fullName) || id) + ' ออกจากรายชื่อคาบนี้?\nประวัติการเช็คชื่อเดิมยังอยู่ และคืนรายชื่อได้ภายหลัง')) return; if (a.indexOf(id) !== -1) a = a.filter((x) => x !== id); else if (r.indexOf(id) === -1) r.push(id); }
     else if (op === 'back') r = r.filter((x) => x !== id);
     else if (op === 'add') { if (r.indexOf(id) !== -1) r = r.filter((x) => x !== id); if (!base.has(id) && a.indexOf(id) === -1) a.push(id); }
-    save({ a, r });
+    const st0 = byId(id); const nm = (st0 && st0.fullName) || id;
+    save({ a, r }, op === 'rm' ? 'ถอน ' + nm + ' แล้ว' : op === 'back' ? 'คืนรายชื่อ ' + nm + ' แล้ว' : 'เพิ่ม ' + nm + ' แล้ว');
   };
-  window.k8RaSet = function (k, v) { M[k] = v; paint(); if (k === 'q') setTimeout(() => { const i = document.getElementById('k8RaQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 0); };
+  window.k8RaSet = function (k, v) { M[k] = v; if (k === 'tab') M.pick = new Set(); paint(); if (k === 'q') setTimeout(() => { const i = document.getElementById('k8RaQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 0); };
+  // v19.67 · ติ๊กเลือกได้หลายคน แล้วกดทำทีเดียว
   function row(st, btn) {
-    return '<li><span class="k8-ra-who"><b>' + esc(st.fullName || st.studentId) + '</b><small>' + esc(shortG(st.grade)) + ' · ' + esc(st.studentId) + (st._added ? ' · <em>เพิ่มโดยอาจารย์</em>' : '') + '</small></span>' + btn + '</li>';
+    const id = norm(st.studentId); const on = M.pick.has(id);
+    return '<li class="' + (on ? 'is-pick' : '') + '"><label class="k8-ra-who"><input type="checkbox" class="k8-ra-ck"' + (on ? ' checked' : '') + ' onchange="k8RaPick(\'' + esc(id) + '\',this.checked)" aria-label="เลือก ' + esc(st.fullName || st.studentId) + '"><span><b>' + esc(st.fullName || st.studentId) + '</b><small>' + esc(shortG(st.grade)) + ' · ' + esc(st.studentId) + (st._added ? ' · <em>เพิ่มโดยอาจารย์</em>' : '') + '</small></span></label>' + btn + '</li>';
   }
+  const BULK = { in: ['rm', 'ถอนที่เลือก', 'is-rm'], add: ['add', 'เพิ่มที่เลือก', 'is-add'], out: ['back', 'คืนที่เลือก', ''] };
+  function bulkBar(n) {
+    if (!n) return '';
+    const b = BULK[M.tab]; const k = (M.shown || []).filter((id) => M.pick.has(id)).length;
+    return '<div class="k8-ra-bulk"><button type="button" onclick="k8RaPickAll(true)">เลือกทั้งหมดที่แสดง</button><button type="button" onclick="k8RaPickAll(false)"' + (k ? '' : ' disabled') + '>ล้างที่เลือก</button>' +
+      '<button type="button" class="k8-ra-go ' + b[2] + '" id="k8RaGo" onclick="k8RaBulk()"' + (k ? '' : ' disabled') + '>' + b[1] + ' (' + k + ')</button></div>';
+  }
+  function updBulk() {
+    const g = document.getElementById('k8RaGo'); if (!g) return;
+    const k = (M.shown || []).filter((id) => M.pick.has(id)).length; g.disabled = !k; g.textContent = BULK[M.tab][1] + ' (' + k + ')';
+    const c = g.previousElementSibling; if (c) c.disabled = !k;
+  }
+  window.k8RaPick = function (id, on) { if (on) M.pick.add(id); else M.pick.delete(id); const cb = document.querySelector('#k8RaModal .k8-ra-ck[onchange*="\'' + id + '\'"]'); if (cb && cb.closest('li')) cb.closest('li').classList.toggle('is-pick', !!on); updBulk(); };
+  window.k8RaPickAll = function (on) { (M.shown || []).forEach((id) => { if (on) M.pick.add(id); else M.pick.delete(id); }); paint(); };
+  window.k8RaBulk = function () {
+    const ids = (M.shown || []).filter((id) => M.pick.has(id)); if (!ids.length) return;
+    const op = BULK[M.tab][0];
+    if (op === 'rm' && !confirm('ถอนนักเรียน ' + ids.length + ' คนออกจากรายชื่อคาบนี้?\nประวัติการเช็คชื่อเดิมยังอยู่ และคืนรายชื่อได้ภายหลัง')) return;
+    const A = adj(); const base = new Set((window.k8TaRows0() || []).map((x) => norm(x.studentId)));
+    let a = A.a.slice(), r = A.r.slice();
+    ids.forEach((id) => {
+      if (op === 'rm') { if (a.indexOf(id) !== -1) a = a.filter((x) => x !== id); else if (r.indexOf(id) === -1) r.push(id); }
+      else if (op === 'back') r = r.filter((x) => x !== id);
+      else { if (r.indexOf(id) !== -1) r = r.filter((x) => x !== id); if (!base.has(id) && a.indexOf(id) === -1) a.push(id); }
+    });
+    M.pick = new Set();
+    save({ a, r }, (op === 'rm' ? 'ถอน ' : op === 'back' ? 'คืนรายชื่อ ' : 'เพิ่ม ') + ids.length + ' คนแล้ว');
+  };
   function paint() {
     const m = document.getElementById('k8RaModal'); if (!m || m.hidden) return;
     const k = window.k8TaKey(); const A = adj();
@@ -14602,17 +14650,22 @@ window.k8PdWho = function (sid) {
     m.querySelector('#k8RaT').textContent = 'จัดการรายชื่อ · ' + (k.label || '') + (k.grade && k.grade !== 'ALL' && String(k.grade).indexOf('x:') !== 0 ? ' ' + shortG(k.grade) : '');
     const tabs = '<div class="k8-ra-tabs" role="tablist">' + [['in', 'ในคาบนี้ ' + cur.length], ['add', 'เพิ่มนักเรียน'], ['out', 'ถอนออกแล้ว ' + A.r.length]].map((t) => '<button type="button" role="tab" aria-selected="' + (M.tab === t[0]) + '" onclick="k8RaSet(\'tab\',\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
     let h = tabs;
-    const dis = M.busy ? ' disabled' : '';
+    const dis = ''; // v19.67 · กดต่อได้ทันที ไม่ต้องรอบันทึก
     if (M.tab === 'in') {
-      h += cur.length ? '<ul class="k8-ra-list">' + cur.slice().sort((x, y) => String(x.fullName || '').localeCompare(String(y.fullName || ''), 'th')).map((st) => row(st, '<button type="button" class="is-rm"' + dis + ' onclick="k8RaDo(\'rm\',\'' + esc(st.studentId) + '\')">ถอนออก</button>')).join('') + '</ul>' : '<p class="k8-ra-empty">ยังไม่มีนักเรียนในคาบนี้</p>';
+      const Ls = cur.slice().sort((x, y) => String(x.fullName || '').localeCompare(String(y.fullName || ''), 'th')); M.shown = Ls.map((st) => norm(st.studentId));
+      h += bulkBar(Ls.length);
+      h += cur.length ? '<ul class="k8-ra-list">' + Ls.map((st) => row(st, '<button type="button" class="is-rm"' + dis + ' onclick="k8RaDo(\'rm\',\'' + esc(st.studentId) + '\')">ถอนออก</button>')).join('') + '</ul>' : '<p class="k8-ra-empty">ยังไม่มีนักเรียนในคาบนี้</p>';
     } else if (M.tab === 'out') {
-      const L = A.r.map(byId).filter(Boolean);
+      const L = A.r.map(byId).filter(Boolean); M.shown = L.map((st) => norm(st.studentId));
+      h += bulkBar(L.length);
       h += L.length ? '<ul class="k8-ra-list">' + L.map((st) => row(st, '<button type="button"' + dis + ' onclick="k8RaDo(\'back\',\'' + esc(st.studentId) + '\')">คืนรายชื่อ</button>')).join('') + '</ul>' : '<p class="k8-ra-empty">ยังไม่มีนักเรียนที่ถอนออก</p>';
     } else {
       const G = ['ALL', 1, 2, 3, 4, 5, 6];
       h += '<div class="k8-ra-find"><input id="k8RaQ" type="search" placeholder="ค้นชื่อ หรือรหัสนักเรียน" value="' + esc(M.q) + '" oninput="k8RaSet(\'q\',this.value)" aria-label="ค้นหานักเรียน"><select aria-label="ระดับชั้น" onchange="k8RaSet(\'g\',this.value)">' + G.map((g) => '<option value="' + g + '"' + (String(M.g) === String(g) ? ' selected' : '') + '>' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + g) + '</option>').join('') + '</select></div>';
       const q = M.q.trim().toLowerCase();
       const L = studs().filter((st) => !curIds.has(norm(st.studentId)) && (M.g === 'ALL' || String(st.grade || '').indexOf(String(M.g)) !== -1) && (!q || String(st.fullName || '').toLowerCase().indexOf(q) !== -1 || String(st.studentId).indexOf(q) !== -1));
+      M.shown = L.slice(0, 60).map((st) => norm(st.studentId));
+      h += bulkBar(L.length);
       h += L.length ? '<ul class="k8-ra-list">' + L.slice(0, 60).map((st) => row(st, '<button type="button" class="is-add"' + dis + ' onclick="k8RaDo(\'add\',\'' + esc(st.studentId) + '\')">+ เพิ่ม</button>')).join('') + '</ul>' + (L.length > 60 ? '<p class="k8-ra-empty">แสดง 60 จาก ' + L.length + ' คน · พิมพ์ชื่อเพื่อค้นหา</p>' : '') : '<p class="k8-ra-empty">ไม่พบนักเรียน</p>';
     }
     h += '<p class="k8-ra-note">ใช้กับวิชานี้ในชั้นนี้ทุกคาบ และอาจารย์ที่สอนร่วมเห็นรายชื่อเดียวกัน · ตารางสอนของแอดมินไม่เปลี่ยน' + (M.busy ? ' · กำลังบันทึก…' : '') + '</p>';
@@ -14626,7 +14679,7 @@ window.k8PdWho = function (sid) {
       m.addEventListener('click', (e) => { if (e.target === m) window.k8RaClose(); });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !m.hidden) window.k8RaClose(); });
     }
-    M.tab = 'in'; M.q = ''; m.hidden = false; paint();
+    M.tab = 'in'; M.q = ''; M.pick = new Set(); m.hidden = false; paint();
     setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
   };
   window.k8RaClose = function () { const m = document.getElementById('k8RaModal'); if (m) m.hidden = true; };

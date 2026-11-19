@@ -7414,3 +7414,20 @@ html[data-theme="dark"] .k8-cp-rq { background: #1e293b !important; border-color
 html[data-theme="dark"] .k8-cp-rsum b { color: #7dd3fc !important; }
 html[data-theme="dark"] .k8-cp-rlist label { background: #0f172a !important; border-color: #334155 !important; }
 html[data-theme="dark"] .k8-cp-rlist b { color: #e2e8f0 !important; }
+
+/* v19.67 · จัดการรายชื่อ: ติ๊กหลายคน */
+.k8-ra-list label.k8-ra-who { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.k8-ra-list label.k8-ra-who > span { display: grid; min-width: 0; }
+.k8-ra-ck { width: 20px; height: 20px; flex: none; accent-color: #0369a1; }
+.k8-ra-list li.is-pick { border-color: #7dd3fc; background: #f0f9ff; }
+.k8-ra-bulk { position: sticky; top: -12px; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; padding: 8px 0; background: #fff; }
+.k8-ra-bulk button { border: 1px solid #cbd5e1; background: #fff; color: #0c4a6e; font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 9px; cursor: pointer; min-height: 34px; }
+.k8-ra-bulk button:disabled { opacity: .45; cursor: default; }
+.k8-ra-bulk .k8-ra-go { margin-left: auto; background: #0369a1; border-color: #0369a1; color: #fff; }
+.k8-ra-bulk .k8-ra-go.is-rm { background: #b91c1c; border-color: #b91c1c; }
+.k8-ra-bulk button:focus-visible, .k8-ra-ck:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+html[data-theme="dark"] .k8-ra-list li.is-pick { border-color: #0369a1 !important; background: #0b2235 !important; }
+html[data-theme="dark"] .k8-ra-bulk { background: #0f172a !important; }
+html[data-theme="dark"] .k8-ra-bulk button { background: #1e293b !important; border-color: #475569 !important; color: #7dd3fc !important; }
+html[data-theme="dark"] .k8-ra-bulk .k8-ra-go { background: #0369a1 !important; border-color: #0369a1 !important; color: #fff !important; }
+html[data-theme="dark"] .k8-ra-bulk .k8-ra-go.is-rm { background: #b91c1c !important; border-color: #b91c1c !important; color: #fff !important; }
