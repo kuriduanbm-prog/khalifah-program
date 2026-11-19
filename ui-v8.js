@@ -2732,7 +2732,7 @@ window.k8RegBirthChange = function (v) {
     const gate = Pm.some((x) => String(x.subj) === String(S.subject) && x.grade === S.grade);
     const list = gate ? rows() : [];
     const en = enrolledFor();
-    const enBar = gate ? '<li class="k8-ro-bar"><span>' + (EN.all ? 'แสดงนักเรียนทั้งชั้น' : 'ตามตารางเรียน <b>' + list.length + '</b> คน' + (en ? ' · สแกนลงทะเบียนแล้ว ' + en.length : '')) + '</span>' + (!EN.all && !S.adminFor ? '<button type="button" class="k8-ra-open k8-cp-btn" onclick="k8CpOpen()">ส่งงาน/เอกสาร</button>' : '') + (!EN.all && !S.adminFor ? '<button type="button" class="k8-ra-open" onclick="k8RaOpen()">จัดการรายชื่อ' + ((() => { const a = RA.map && RA.map[rkey()]; const n = a ? (a.a || []).length + (a.r || []).length : 0; return n ? ' · ปรับแล้ว ' + n : ''; })()) + '</button>' : '') + '<button type="button" onclick="k8TaEnAll(' + (EN.all ? 'false' : 'true') + ')">' + (EN.all ? 'เฉพาะตามตาราง' : 'แสดงทั้งชั้น') + '</button></li>' : '';
+    const enBar = gate ? '<li class="k8-ro-bar"><span>' + (EN.all ? 'แสดงนักเรียนทั้งชั้น' : 'ตามตารางเรียน <b>' + list.length + '</b> คน' + (en ? ' · สแกนลงทะเบียนแล้ว ' + en.length : '')) + '</span>' + (!EN.all && !S.adminFor ? '<button type="button" class="k8-ra-open k8-cp-btn" onclick="k8CpOpen()">มอบหมายงาน</button>' : '') + (!EN.all && !S.adminFor ? '<button type="button" class="k8-ra-open" onclick="k8RaOpen()">จัดการรายชื่อ' + ((() => { const a = RA.map && RA.map[rkey()]; const n = a ? (a.a || []).length + (a.r || []).length : 0; return n ? ' · ปรับแล้ว ' + n : ''; })()) + '</button>' : '') + '<button type="button" onclick="k8TaEnAll(' + (EN.all ? 'false' : 'true') + ')">' + (EN.all ? 'เฉพาะตามตาราง' : 'แสดงทั้งชั้น') + '</button></li>' : '';
     listEl.innerHTML = enBar + (list.length ? list.map((s, ix) => {
       const id = cid(s.studentId), k = norm(s.studentId);
       const slv = slvOf(s); const cur = draft[k] || saved[k] || (slv ? 'leave' : 'present');
@@ -3672,7 +3672,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.64';
+  const APP_VERSION = '19.65';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14670,7 +14670,7 @@ window.k8PdWho = function (sid) {
   function paintT() {
     const m = document.getElementById('k8CpModal'); if (!m || m.hidden) return;
     const k = window.k8TaKey(); const n = (window.k8TaRowsNow() || []).length;
-    m.querySelector('#k8CpT').textContent = 'ส่งงาน/เอกสาร · ' + (k.label || '') + (shortG(k.grade) ? ' ' + shortG(k.grade) : '');
+    m.querySelector('#k8CpT').textContent = 'มอบหมายงาน · ' + (k.label || '') + (shortG(k.grade) ? ' ' + shortG(k.grade) : '');
     const dis = T.busy ? ' disabled' : '';
     let h = T.old ? '<p class="k8-cp-warn">ระบบหลังบ้านยังเป็นเวอร์ชันเก่า · ให้แอดมิน Deploy Code.gs เวอร์ชันล่าสุดก่อน</p>' : '';
     h += '<form class="k8-cp-form" onsubmit="event.preventDefault();k8CpSend()">' +
@@ -14681,9 +14681,9 @@ window.k8PdWho = function (sid) {
       '<label class="k8-cp-pick"><input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.zip,.mp3,.m4a,.mp4" onchange="k8CpPick(this)"' + dis + '><span>+ เลือกไฟล์ หรือถ่ายรูป</span></label>' +
       (T.files.length ? '<ul class="k8-cp-files">' + T.files.map((f, i) => '<li><em>' + icon(f.type, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size) + '</small></span>' + (T.busy ? '' : '<button type="button" onclick="k8CpRm(' + i + ')" aria-label="เอาไฟล์ ' + esc(f.name) + ' ออก">✕</button>') + '</li>').join('') + '</ul>' : '') +
       '<button type="submit" class="k8-cp-go"' + (T.busy || !n ? ' disabled' : '') + '>' + (T.busy ? esc(T.prog || 'กำลังส่ง…') : 'ส่งให้นักเรียน ' + n + ' คน + แจ้งเตือน') + '</button></form>';
-    h += '<h4 class="k8-cp-h">งานที่ส่งแล้วในคาบนี้</h4>';
+    h += '<h4 class="k8-cp-h">งานที่มอบหมายแล้วในคาบนี้</h4>';
     if (T.posts == null) h += '<p class="k8-cp-empty">กำลังโหลด…</p>';
-    else if (!T.posts.length) h += '<p class="k8-cp-empty">ยังไม่เคยส่งงานในคาบนี้</p>';
+    else if (!T.posts.length) h += '<p class="k8-cp-empty">ยังไม่เคยมอบหมายงานในคาบนี้</p>';
     else h += '<ul class="k8-cp-list">' + T.posts.map((p) => '<li><div><b>' + esc(p.title) + '</b><small>' + dTh(p.createdAt) + ' ' + tTh(p.createdAt) + ' · ' + (p.recipients || 0) + ' คน' + (p.due ? ' · ส่ง ' + dTh(p.due) : '') + (p.files.length ? ' · ' + p.files.length + ' ไฟล์' : '') + '</small></div><button type="button" class="is-del"' + dis + ' onclick="k8CpDel(\'' + esc(p.id) + '\')">ลบ</button></li>').join('') + '</ul>';
     const keep = {}; ['k8CpTitle', 'k8CpBody', 'k8CpDue'].forEach((id) => { const el = document.getElementById(id); if (el) keep[id] = el.value; });
     m.querySelector('.k8-cp-body').innerHTML = h;
@@ -14732,7 +14732,7 @@ window.k8PdWho = function (sid) {
   window.k8CpOpen = function () {
     let m = document.getElementById('k8CpModal');
     if (!m) {
-      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpModal" role="dialog" aria-modal="true" aria-labelledby="k8CpT" hidden><div class="k8-ra-box"><header><h3 id="k8CpT">ส่งงาน/เอกสาร</h3><button type="button" class="k8-ra-x" onclick="k8CpClose()" aria-label="ปิด">✕</button></header><div class="k8-ra-body k8-cp-body"></div></div></div>');
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpModal" role="dialog" aria-modal="true" aria-labelledby="k8CpT" hidden><div class="k8-ra-box"><header><h3 id="k8CpT">มอบหมายงาน</h3><button type="button" class="k8-ra-x" onclick="k8CpClose()" aria-label="ปิด">✕</button></header><div class="k8-ra-body k8-cp-body"></div></div></div>');
       m = document.getElementById('k8CpModal');
       m.addEventListener('click', (e) => { if (e.target === m && !T.busy) window.k8CpClose(); });
     }
@@ -14836,7 +14836,7 @@ window.k8PdWho = function (sid) {
     const L = orderO(O.posts || []);
     const t = ymd0(); const soon = L.filter((p) => p.due && p.due >= t && daysTo(p.due) <= 7).length;
     let h = '<div class="k8-cpo-head"><h3 id="k8CpOvT">งานที่มอบหมาย</h3><span>' + (O.posts == null ? 'กำลังโหลด…' : L.length + ' งาน' + (soon ? ' · ครบกำหนดใน 7 วัน ' + soon + ' งาน' : '')) + '</span></div>';
-    if (O.posts != null && !L.length) h += '<p class="k8-cp-empty">ยังไม่ได้มอบหมายงาน · ส่งงานได้จากเมนู "เช็คชื่อ" → เลือกคาบ → "ส่งงาน/เอกสาร"</p>';
+    if (O.posts != null && !L.length) h += '<p class="k8-cp-empty">ยังไม่ได้มอบหมายงาน · มอบหมายงานได้จากปุ่ม "มอบหมายงาน" ด้านบน หรือเมนู "เช็คชื่อ" → เลือกคาบ → "มอบหมายงาน"</p>';
     const shown = O.all ? L : L.slice(0, 5);
     if (shown.length) h += '<ul class="k8-cpo-list">' + shown.map((p) => { const d = dueTxt(p); return '<li><button type="button" onclick="k8CpOvOpen(\'' + esc(p.id) + '\')"><span class="k8-cpo-t"><b>' + esc(p.title) + '</b><small>' + esc(p.subjectName) + (shortG(p.grade) ? ' ' + shortG(p.grade) : '') + ' · มอบหมาย ' + dTh(p.createdAt) + ' · ' + (p.recipients || 0) + ' คน' + (p.files && p.files.length ? ' · ' + p.files.length + ' ไฟล์' : '') + '</small></span><span class="k8-cpo-due ' + d[1] + '">' + d[0] + '</span></button></li>'; }).join('') + '</ul>';
     if (L.length > 5) h += '<button type="button" class="k8-cpo-more" onclick="k8CpOvAll()">' + (O.all ? 'ย่อ' : 'ดูทั้งหมด ' + L.length + ' งาน') + '</button>';
@@ -14844,7 +14844,7 @@ window.k8PdWho = function (sid) {
   }
   window.k8CpOvAll = function () { O.all = !O.all; paintO(); };
   window.k8CpOvRefresh = () => loadO(true);
-  /* v19.64 · ปุ่มไอคอน "ส่งงาน/เอกสาร" ในหน้าภาพรวมอาจารย์ → เลือกคาบ (ถ้ามีหลายวิชา/ชั้น) แล้วเปิดหน้าส่งงาน */
+  /* v19.64 · ปุ่มไอคอน "มอบหมายงาน" ในหน้าภาพรวมอาจารย์ → เลือกคาบ (ถ้ามีหลายวิชา/ชั้น) แล้วเปิดหน้าส่งงาน */
   function myClasses() {
     const seen = {}, L = [];
     for (let i = 0; i < 7; i++) {
@@ -14867,17 +14867,17 @@ window.k8PdWho = function (sid) {
     if (L.length === 1) { goClass(L[0]); return; }
     let m = document.getElementById('k8CpPick');
     if (!m) {
-      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpPick" role="dialog" aria-modal="true" aria-labelledby="k8CpPickT" hidden><div class="k8-ra-box"><header><h3 id="k8CpPickT">ส่งงาน/เอกสาร · เลือกคาบ</h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8CpPick\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body"></div></div></div>');
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpPick" role="dialog" aria-modal="true" aria-labelledby="k8CpPickT" hidden><div class="k8-ra-box"><header><h3 id="k8CpPickT">มอบหมายงาน · เลือกคาบ</h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8CpPick\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body"></div></div></div>');
       m = document.getElementById('k8CpPick'); m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; });
     }
     window.__k8CpPickL = L;
-    m.querySelector('.k8-ra-body').innerHTML = '<p class="k8-cp-empty" style="text-align:left;margin-top:0">เลือกวิชาและชั้นที่จะส่งงานให้</p><ul class="k8-cp-pickl">' + L.map((x, i) => '<li><button type="button" onclick="k8CpPickGo(' + i + ')"><b>' + esc(x.name || x.subj) + '</b><span>' + esc(shortG(x.grade) || String(x.grade || '').replace(/^x:/, 'ตารางพิเศษ ')) + '</span></button></li>').join('') + '</ul>';
+    m.querySelector('.k8-ra-body').innerHTML = '<p class="k8-cp-empty" style="text-align:left;margin-top:0">เลือกวิชาและชั้นที่จะมอบหมายงาน</p><ul class="k8-cp-pickl">' + L.map((x, i) => '<li><button type="button" onclick="k8CpPickGo(' + i + ')"><b>' + esc(x.name || x.subj) + '</b><span>' + esc(shortG(x.grade) || String(x.grade || '').replace(/^x:/, 'ตารางพิเศษ ')) + '</span></button></li>').join('') + '</ul>';
     m.hidden = false; setTimeout(() => { const b = m.querySelector('.k8-cp-pickl button'); if (b) b.focus(); }, 30);
   };
   window.k8CpPickGo = function (i) { const x = (window.__k8CpPickL || [])[i]; if (x) goClass(x); };
   function placeQ() {
     const q = document.querySelector('#teacher-tab-overview .k8-th-quick'); if (!q || !meT() || q.querySelector('.k8-cp-qbtn')) return;
-    q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-lv-qbtn k8-cp-qbtn" onclick="k8CpQuick()" aria-label="ส่งงาน/เอกสารให้นักเรียน"><span style="background:#e0f2fe;color:#0369a1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 18v-6M9.5 14.5 12 12l2.5 2.5"/></svg></span>ส่งงาน/เอกสาร</button>');
+    q.insertAdjacentHTML('beforeend', '<button type="button" class="k8-lv-qbtn k8-cp-qbtn" onclick="k8CpQuick()" aria-label="มอบหมายงานให้นักเรียน"><span style="background:#e0f2fe;color:#0369a1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 18v-6M9.5 14.5 12 12l2.5 2.5"/></svg></span>มอบหมายงาน</button>');
   }
   setInterval(placeQ, 1500);
   // เข้าแท็บภาพรวมเมื่อไร โหลดรายการล่าสุด (งานที่ส่งจากเครื่องอื่นก็เห็น)
