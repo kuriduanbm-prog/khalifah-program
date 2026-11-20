@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.69'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.72'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -4455,7 +4455,8 @@ function listClassPosts_(d, session, ctx) {
   const subj = cleanVal(d.subject), grade = cleanVal(d.grade);
   const mine = all.filter(function (p) { return (!subj || p.subject === subj) && (!grade || p.grade === grade) && classPostCanManage_(p, session, ctx); });
   const subsT = readClassSubs_();
-  return { success: true, data: mine.slice(0, 60).map(function (p) { return classPostView_(p, true, subsT); }) };
+  const lim = Math.max(1, Math.min(300, Number(d.limit) || 60)); // v19.72 · ประวัติการมอบหมายงานขอได้ถึง 300 รายการ
+  return { success: true, total: mine.length, data: mine.slice(0, lim).map(function (p) { return classPostView_(p, true, subsT); }) };
 }
 function deleteClassPost_(id, session, ctx) {
   id = cleanVal(id); const p = readClassPosts_().filter(function (x) { return x.id === id; })[0];

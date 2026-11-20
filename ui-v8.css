@@ -7497,3 +7497,24 @@ html[data-theme="dark"] .k8-cp-svh b { color: #e2e8f0 !important; }
 #homeF .hf-qk { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
 @media (max-width: 560px) { #homeF .hf-qk { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; row-gap: 14px !important; } }
 .k8-cp-stabs { position: sticky; top: -12px; z-index: 2; margin-bottom: 12px; }
+
+/* ============ v19.72 · ประวัติการมอบหมายงาน ============ */
+#k8CpOModal { z-index: 10055; }
+.k8-cpo-hist { display: flex; align-items: center; justify-content: center; gap: 6px; border-style: solid; background: #f8fafc; color: #0c4a6e; }
+.k8-cpo-sub.is-miss { color: #92400e !important; background: #fffbeb !important; }
+.k8-cp-histbtn { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; border: 1px solid #bae6fd; background: #f0f9ff; border-radius: 14px; padding: 12px 14px; font: inherit; color: #0f172a; cursor: pointer; min-height: 56px; }
+.k8-cp-histbtn > span:first-child { flex: none; width: 40px; height: 40px; border-radius: 12px; background: #0369a1; color: #fff; display: grid; place-items: center; }
+.k8-cp-histbtn > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+.k8-cp-histbtn b { font-size: 15px; color: #0c4a6e; }
+.k8-cp-histbtn small { font-size: 12.5px; color: #475569; }
+.k8-cp-histbtn i { font-style: normal; font-size: 22px; color: #0369a1; }
+.k8-cp-histbtn:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+.k8-cp-hq { width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font: inherit; font-size: 16px; }
+.k8-cp-hq:focus-visible { outline: 2px solid #0369a1; outline-offset: 1px; }
+html[data-theme="dark"] .k8-cpo-hist { background: #0f172a !important; color: #bae6fd !important; }
+html[data-theme="dark"] .k8-cpo-sub.is-miss { background: #2a1d05 !important; color: #fde68a !important; }
+html[data-theme="dark"] .k8-cp-histbtn { background: #0b2235 !important; border-color: #1e4a6b !important; color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-cp-histbtn b { color: #bae6fd !important; }
+html[data-theme="dark"] .k8-cp-histbtn small { color: #cbd5e1 !important; }
+html[data-theme="dark"] .k8-cp-histbtn i { color: #7dd3fc !important; }
+html[data-theme="dark"] .k8-cp-hq { background: #0f172a !important; border-color: #475569 !important; color: #e2e8f0 !important; }

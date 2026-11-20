@@ -3675,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.71';
+  const APP_VERSION = '19.72';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -15064,6 +15064,12 @@ window.k8PdWho = function (sid) {
     else if (!O.posts) O.posts = [];
     paintO();
   }
+  // v19.72 · งานที่เลยกำหนดส่งแล้ว (หรือไม่มีกำหนดส่งและมอบหมายเกิน 14 วัน) ย้ายไปอยู่ "ประวัติการมอบหมายงาน"
+  function isActiveP(p) {
+    const t = ymd0();
+    if (p.due) return p.due >= t;
+    const c = String(p.createdAt || '').slice(0, 10); return !c || daysTo(c) >= -14;
+  }
   function orderO(L) {
     const t = ymd0();
     const up = L.filter((p) => p.due && p.due >= t).sort((a, b) => a.due.localeCompare(b.due));
@@ -15087,13 +15093,14 @@ window.k8PdWho = function (sid) {
     const anchor = document.getElementById('k8TsCard') || hero;
     if (c.previousElementSibling !== anchor) anchor.after(c);
     c.hidden = false;
-    const L = orderO(O.posts || []);
+    const L = orderO((O.posts || []).filter(isActiveP)); const nPast = (O.posts || []).length - L.length;
     const t = ymd0(); const soon = L.filter((p) => p.due && p.due >= t && daysTo(p.due) <= 7).length;
     let h = '<div class="k8-cpo-head"><h3 id="k8CpOvT">งานที่มอบหมาย</h3><span>' + (O.posts == null ? 'กำลังโหลด…' : L.length + ' งาน' + (soon ? ' · ครบกำหนดใน 7 วัน ' + soon + ' งาน' : '')) + '</span></div>';
-    if (O.posts != null && !L.length) h += '<p class="k8-cp-empty">ยังไม่ได้มอบหมายงาน · มอบหมายงานได้จากปุ่ม "มอบหมายงาน" ด้านบน หรือเมนู "เช็คชื่อ" → เลือกคาบ → "มอบหมายงาน"</p>';
+    if (O.posts != null && !L.length) h += '<p class="k8-cp-empty">' + (nPast ? 'ไม่มีงานที่ยังไม่ถึงกำหนดส่ง · งานที่เลยกำหนดแล้วอยู่ใน "ประวัติการมอบหมายงาน"' : 'ยังไม่ได้มอบหมายงาน · มอบหมายงานได้จากปุ่ม "มอบหมายงาน" ด้านบน หรือเมนู "เช็คชื่อ" → เลือกคาบ → "มอบหมายงาน"') + '</p>';
     const shown = O.all ? L : L.slice(0, 5);
     if (shown.length) h += '<ul class="k8-cpo-list">' + shown.map((p) => { const d = dueTxt(p); return '<li><button type="button" onclick="k8CpOvOpen(\'' + esc(p.id) + '\')"><span class="k8-cpo-t"><b>' + esc(p.title) + '</b><small>' + esc(p.subjectName) + (shortG(p.grade) ? ' ' + shortG(p.grade) : '') + ' · มอบหมาย ' + dTh(p.createdAt) + ' · ' + (p.recipients || 0) + ' คน' + (p.files && p.files.length ? ' · ' + p.files.length + ' ไฟล์' : '') + '</small></span><span class="k8-cpo-row2"><span class="k8-cpo-due ' + d[1] + '">' + d[0] + '</span>' + (p.submitted != null ? '<span class="k8-cpo-sub">ส่งแล้ว ' + p.submitted + '/' + (p.recipients || 0) + '</span>' : '') + '</span></button></li>'; }).join('') + '</ul>';
     if (L.length > 5) h += '<button type="button" class="k8-cpo-more" onclick="k8CpOvAll()">' + (O.all ? 'ย่อ' : 'ดูทั้งหมด ' + L.length + ' งาน') + '</button>';
+    if (nPast) h += '<button type="button" class="k8-cpo-more k8-cpo-hist" onclick="k8CpHist()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>ประวัติการมอบหมายงาน · ' + nPast + ' งาน</button>';
     c.innerHTML = h;
   }
   window.k8CpOvAll = function () { O.all = !O.all; paintO(); };
@@ -15117,15 +15124,17 @@ window.k8PdWho = function (sid) {
   function goClass(x) { try { window.k8TaPick(x.subj, x.grade, x.tn || '', ''); } catch (e) {} const pm = document.getElementById('k8CpPick'); if (pm) pm.hidden = true; window.k8CpOpen(); }
   window.k8CpQuick = function () {
     const L = myClasses();
-    if (!L.length) { toast('ยังไม่พบคาบสอนของคุณในตารางสอน 7 วันข้างหน้า', 'warning'); return; }
-    if (L.length === 1) { goClass(L[0]); return; }
     let m = document.getElementById('k8CpPick');
     if (!m) {
-      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpPick" role="dialog" aria-modal="true" aria-labelledby="k8CpPickT" hidden><div class="k8-ra-box"><header><h3 id="k8CpPickT">มอบหมายงาน · เลือกคาบ</h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8CpPick\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body"></div></div></div>');
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpPick" role="dialog" aria-modal="true" aria-labelledby="k8CpPickT" hidden><div class="k8-ra-box"><header><h3 id="k8CpPickT">มอบหมายงาน</h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8CpPick\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body"></div></div></div>');
       m = document.getElementById('k8CpPick'); m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; });
     }
     window.__k8CpPickL = L;
-    m.querySelector('.k8-ra-body').innerHTML = '<p class="k8-cp-empty" style="text-align:left;margin-top:0">เลือกวิชาและชั้นที่จะมอบหมายงาน</p><ul class="k8-cp-pickl">' + L.map((x, i) => '<li><button type="button" onclick="k8CpPickGo(' + i + ')"><b>' + esc(x.name || x.subj) + '</b><span>' + esc(shortG(x.grade) || String(x.grade || '').replace(/^x:/, 'ตารางพิเศษ ')) + '</span></button></li>').join('') + '</ul>';
+    const nPast = (O.posts || []).filter((p) => !isActiveP(p)).length;
+    m.querySelector('.k8-ra-body').innerHTML =
+      '<button type="button" class="k8-cp-histbtn" onclick="k8CpHist()"><span aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span><b>ประวัติการมอบหมายงาน</b><small>' + (O.posts == null ? 'งานที่มอบหมายทั้งหมด · ดูการส่งงานของนักเรียน' : (O.posts.length + ' งาน' + (nPast ? ' · เลยกำหนดส่งแล้ว ' + nPast + ' งาน' : '') + ' · ดูการส่งงานของนักเรียน')) + '</small></span><i aria-hidden="true">›</i></button>' +
+      (L.length ? '<p class="k8-cp-empty" style="text-align:left;margin:14px 0 0">มอบหมายงานใหม่ · เลือกวิชาและชั้น</p><ul class="k8-cp-pickl">' + L.map((x, i) => '<li><button type="button" onclick="k8CpPickGo(' + i + ')"><b>' + esc(x.name || x.subj) + '</b><span>' + esc(shortG(x.grade) || String(x.grade || '').replace(/^x:/, 'ตารางพิเศษ ')) + '</span></button></li>').join('') + '</ul>'
+        : '<p class="k8-cp-warn" style="margin-top:14px">ยังไม่พบคาบสอนของคุณในตารางสอน 7 วันข้างหน้า จึงยังมอบหมายงานใหม่จากที่นี่ไม่ได้</p>');
     m.hidden = false; setTimeout(() => { const b = m.querySelector('.k8-cp-pickl button'); if (b) b.focus(); }, 30);
   };
   window.k8CpPickGo = function (i) { const x = (window.__k8CpPickL || [])[i]; if (x) goClass(x); };
@@ -15150,10 +15159,54 @@ window.k8PdWho = function (sid) {
       subCount(p) + '<div class="k8-cpo-acts"><button type="button" class="is-del" onclick="k8CpOvDel(\'' + esc(p.id) + '\')">ลบงานนี้</button></div></li></ul>';
     m.hidden = false; setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
   };
+  /* v19.72 · ประวัติการมอบหมายงาน (งานทั้งหมดของอาจารย์ · เลยกำหนดส่งแล้วอยู่ที่นี่) */
+  const H = { tab: 'past', q: '', posts: null, busy: false };
+  async function loadH() {
+    const me = meT(); if (!me || H.busy) return; H.busy = true; let r = null;
+    try { r = await gasApiCall('listClassPosts', { data: { limit: 300 } }, 30000); } catch (e) {}
+    H.busy = false;
+    if (r && r.success) {
+      H.posts = (r.data || []).filter((p) => String(p.teacher || '').toLowerCase() === me);
+      // ใช้ข้อมูลชุดนี้ให้หน้ารายละเอียด/ส่งงานเปิดได้ด้วย
+      const ids = {}; (O.posts || []).forEach((p) => { ids[p.id] = 1; }); O.posts = (O.posts || []).concat(H.posts.filter((p) => !ids[p.id]));
+    } else if (!H.posts) H.posts = (O.posts || []).slice();
+    paintH();
+  }
+  function paintH() {
+    const m = document.getElementById('k8CpHist'); if (!m || m.hidden) return;
+    const A = H.posts || O.posts || [];
+    const past = A.filter((p) => !isActiveP(p)).sort((a, b) => String(b.due || b.createdAt).localeCompare(String(a.due || a.createdAt)));
+    const all = A.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    let L = H.tab === 'past' ? past : all;
+    const q = H.q.trim().toLowerCase();
+    if (q) L = L.filter((p) => (p.title + ' ' + p.subjectName + ' ' + shortG(p.grade) + ' ' + (p.body || '')).toLowerCase().indexOf(q) !== -1);
+    const tb = (k, t, n) => '<button type="button" role="tab" aria-selected="' + (H.tab === k) + '" onclick="k8CpHistTab(\'' + k + '\')">' + t + ' ' + n + '</button>';
+    const body = m.querySelector('.k8-ra-body');
+    let h = '<div class="k8-ra-tabs k8-cp-stabs" role="tablist">' + tb('past', 'เลยกำหนดส่งแล้ว', past.length) + tb('all', 'ทั้งหมด', all.length) + '</div>';
+    if (A.length > 6) h += '<input type="search" class="k8-cp-hq" placeholder="ค้นหาชื่องาน วิชา หรือชั้น" aria-label="ค้นหางาน" value="' + esc(H.q) + '" oninput="k8CpHistQ(this.value)">';
+    if (H.posts == null && !A.length) h += '<p class="k8-cp-empty">กำลังโหลด…</p>';
+    else if (!L.length) h += '<p class="k8-cp-empty">' + (q ? 'ไม่พบงานที่ค้นหา' : H.tab === 'past' ? 'ยังไม่มีงานที่เลยกำหนดส่ง' : 'ยังไม่ได้มอบหมายงาน') + '</p>';
+    else h += '<ul class="k8-cpo-list">' + L.map((p) => { const d = dueTxt(p); const full = p.submitted != null && p.recipients && p.submitted >= p.recipients; return '<li><button type="button" onclick="k8CpOvOpen(\'' + esc(p.id) + '\')"><span class="k8-cpo-t"><b>' + esc(p.title) + '</b><small>' + esc(p.subjectName) + (shortG(p.grade) ? ' ' + shortG(p.grade) : '') + ' · มอบหมาย ' + dTh(p.createdAt) + ' · ' + (p.recipients || 0) + ' คน' + (p.files && p.files.length ? ' · ' + p.files.length + ' ไฟล์' : '') + '</small></span><span class="k8-cpo-row2"><span class="k8-cpo-due ' + d[1] + '">' + d[0] + '</span>' + (p.submitted != null ? '<span class="k8-cpo-sub' + (full ? '' : ' is-miss') + '">ส่งแล้ว ' + p.submitted + '/' + (p.recipients || 0) + '</span>' : '') + '</span></button></li>'; }).join('') + '</ul>';
+    const hadFocus = document.activeElement && document.activeElement.classList.contains('k8-cp-hq');
+    body.innerHTML = h;
+    if (hadFocus) { const i = body.querySelector('.k8-cp-hq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+  }
+  window.k8CpHistTab = function (t) { H.tab = t; paintH(); };
+  window.k8CpHistQ = function (v) { H.q = v; paintH(); };
+  window.k8CpHist = function () {
+    const pk = document.getElementById('k8CpPick'); if (pk) pk.hidden = true;
+    let m = document.getElementById('k8CpHist');
+    if (!m) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpHist" role="dialog" aria-modal="true" aria-labelledby="k8CpHistT" hidden><div class="k8-ra-box"><header><h3 id="k8CpHistT">ประวัติการมอบหมายงาน</h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8CpHist\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body"></div></div></div>');
+      m = document.getElementById('k8CpHist'); m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; });
+    }
+    H.q = ''; m.hidden = false; paintH(); loadH();
+    setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
+  };
   window.k8CpOvDel = async function (id) {
     if (!confirm('ลบงานนี้? นักเรียนจะไม่เห็นงานและไฟล์แนบอีก')) return;
     let r = null; try { r = await gasApiCall('deleteClassPost', { data: { id } }, 30000); } catch (e) {}
-    if (r && r.success) { toast(r.message, 'success'); O.posts = (O.posts || []).filter((p) => p.id !== id); T.posts = (T.posts || []).filter((p) => p.id !== id); const m = document.getElementById('k8CpOModal'); if (m) m.hidden = true; paintO(); }
+    if (r && r.success) { toast(r.message, 'success'); O.posts = (O.posts || []).filter((p) => p.id !== id); if (H.posts) { H.posts = H.posts.filter((p) => p.id !== id); paintH(); } T.posts = (T.posts || []).filter((p) => p.id !== id); const m = document.getElementById('k8CpOModal'); if (m) m.hidden = true; paintO(); }
     else toast((r && r.message) || 'ลบไม่สำเร็จ', 'error');
   };
   setInterval(() => {
