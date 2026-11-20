@@ -3675,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.69';
+  const APP_VERSION = '19.70';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5231,6 +5231,7 @@ window.k8RegBirthChange = function (v) {
       '<div class="k8-docs-ttl"><h2 id="k8PvName">-</h2><span id="k8PvSub">-</span></div><span class="k8-pv-saved" id="k8PvSaved" aria-live="polite"></span>' +
       '<button type="button" class="k8-docs-icon" onclick="k8PvDlMenu()" aria-label="ดาวน์โหลด"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></header>' +
       '<div class="k8-pv-scroll" id="k8PvScroll"><div class="k8-pv-pages" id="k8PvPages"></div></div>' +
+      '<div class="k8-pv-nav" id="k8PvNav" hidden><button type="button" class="k8-pv-nb" id="k8PvPrev" onclick="k8PvNav(-1)" aria-label="ไฟล์ก่อนหน้า"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div class="k8-pv-nt" aria-live="polite"><b id="k8PvNavN">-</b><small id="k8PvNavC"></small></div><button type="button" class="k8-pv-nb" id="k8PvNext" onclick="k8PvNav(1)" aria-label="ไฟล์ถัดไป"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div>' +
       '<div class="k8-pv-tools" id="k8PvTools"></div>' +
       '<div class="k8-pv-menu" id="k8PvMenu" hidden><div class="k8-pv-menu-card"><b>ดาวน์โหลดไฟล์</b>' +
       '<button type="button" onclick="k8PvDownload(false)"><span>ไฟล์ต้นฉบับ</span><small>ไม่มีสิ่งที่ฉันขีดเขียน</small></button>' +
@@ -5262,8 +5263,12 @@ window.k8RegBirthChange = function (v) {
   // ---------- เปิดไฟล์ ----------
   window.k8PvIsOpen = () => V.open;
   window.k8PvOpen = async function (f) {
-    const el = shell(); el.hidden = false; V.open = true; V.file = f; V.undo = []; V.redo = []; V.zoom = 1; V.tool = 'pan'; V.pages = []; V.doc = null; V.img = null; V.bytes = null;
-    try { history.pushState({ k8pv: 1 }, ''); } catch (e) {}
+    const el = shell(); const wasOpen = V.open; el.hidden = false; V.open = true; V.file = f; V.undo = [];
+    // v19.70 · รายการไฟล์ให้ปัด/กดไปไฟล์ถัดไป + ซ่อนการ์ดที่เปิดค้างไว้ข้างหลังระหว่างดูไฟล์
+    if (!f._nav) { V.list = Array.isArray(f.list) && f.list.length > 1 ? f.list : null; V.idx = V.list ? Math.max(0, f.idx | 0) : 0; }
+    if (!wasOpen) { V.under = Array.from(document.querySelectorAll('.k8-ra-modal:not([hidden])')); V.under.forEach((m) => m.classList.add('k8-pv-under')); }
+    navPaint(f._dir || 0); V.redo = []; V.zoom = 1; V.tool = 'pan'; V.pages = []; V.doc = null; V.img = null; V.bytes = null;
+    if (!wasOpen) { try { history.pushState({ k8pv: 1 }, ''); } catch (e) {} }
     document.getElementById('k8PvName').textContent = f.name; document.getElementById('k8PvSub').textContent = 'กำลังโหลดไฟล์…';
     document.getElementById('k8PvPages').innerHTML = '<div class="k8-pv-loading"><span class="k8-pv-spin" aria-hidden="true"></span>กำลังเปิดเอกสาร…</div>';
     loadInk(); tools();
@@ -5292,7 +5297,23 @@ window.k8RegBirthChange = function (v) {
       document.getElementById('k8PvPages').innerHTML = '<div class="k8-docs-empty"><b>ไฟล์ชนิดนี้แสดงในแอปไม่ได้</b><span>' + esc(V.fileName) + '</span><button type="button" onclick="k8PvDownload(false)">ดาวน์โหลดไฟล์</button></div>';
     }
   };
-  window.k8PvRetry = function () { if (V.file) window.k8PvOpen(V.file); };
+  window.k8PvRetry = function () { if (V.file) window.k8PvOpen(Object.assign({}, V.file, { _nav: true })); };
+  function navPaint(dir) {
+    const nav = document.getElementById('k8PvNav'); if (!nav) return;
+    const L = V.list; nav.hidden = !L; document.getElementById('k8Pv').classList.toggle('has-nav', !!L);
+    if (!L) return;
+    const cur = L[V.idx] || {};
+    document.getElementById('k8PvNavN').textContent = 'ไฟล์ ' + (V.idx + 1) + ' / ' + L.length;
+    document.getElementById('k8PvNavC').textContent = cur.caption || '';
+    document.getElementById('k8PvPrev').disabled = V.idx <= 0; document.getElementById('k8PvNext').disabled = V.idx >= L.length - 1;
+    const pg = document.getElementById('k8PvPages');
+    if (pg && dir) { pg.classList.remove('k8-pv-in-l', 'k8-pv-in-r'); void pg.offsetWidth; pg.classList.add(dir > 0 ? 'k8-pv-in-r' : 'k8-pv-in-l'); }
+  }
+  window.k8PvNav = function (d) {
+    const L = V.list; if (!V.open || !L) return;
+    const i = V.idx + d; if (i < 0 || i >= L.length) { toast(d > 0 ? 'นี่คือไฟล์สุดท้ายแล้ว' : 'นี่คือไฟล์แรกแล้ว', 'info'); return; }
+    V.idx = i; window.k8PvOpen(Object.assign({}, L[i], { _nav: true, _dir: d }));
+  };
   async function openPdf() {
     V.kind = 'pdf'; tools();
     try {
@@ -5451,6 +5472,15 @@ window.k8RegBirthChange = function (v) {
       if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
       if (pts.size === 2 && start) { e.preventDefault(); const [a, b] = Array.from(pts.values()); const d = Math.hypot(a[0] - b[0], a[1] - b[1]); setZoom(start.z * d / start.d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); }
     }, true);
+    // v19.70 · ปัดซ้าย/ขวาเพื่อไปไฟล์ถัดไป (เฉพาะโหมด "เลื่อน" และไม่ได้ซูม)
+    let sw = null;
+    sc.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && pts.size === 1 && V.list && V.tool === 'pan' && V.zoom <= 1.02) sw = { x: e.clientX, y: e.clientY, t: Date.now(), id: e.pointerId }; else sw = null; }, true);
+    sc.addEventListener('pointerup', (e) => {
+      if (!sw || sw.id !== e.pointerId || V.pinching) { sw = null; return; }
+      const dx = e.clientX - sw.x, dy = e.clientY - sw.y, dt = Date.now() - sw.t; sw = null;
+      if (Math.abs(dx) > 60 && Math.abs(dy) < Math.abs(dx) * 0.6 && dt < 800) window.k8PvNav(dx < 0 ? 1 : -1);
+    }, true);
+    sc.addEventListener('pointercancel', () => { sw = null; }, true);
     const up = (e) => { pts.delete(e.pointerId); V.touches = pts.size; if (pts.size < 2) { start = null; setTimeout(() => { if (pts.size < 2) V.pinching = false; }, 50); } };
     sc.addEventListener('pointerup', up, true); sc.addEventListener('pointercancel', up, true);
     sc.addEventListener('wheel', (e) => { if (!e.ctrlKey) return; e.preventDefault(); setZoom(V.zoom * (e.deltaY < 0 ? 1.1 : 0.9), e.clientX, e.clientY); }, { passive: false });
@@ -5498,13 +5528,13 @@ window.k8RegBirthChange = function (v) {
   };
 
   // ---------- ปิด / ปุ่มย้อนกลับของมือถือ ----------
-  function close() { const el = document.getElementById('k8Pv'); if (el) el.hidden = true; V.open = false; V.doc = null; V.pages = []; V.bytes = null; const w = document.getElementById('k8PvPages'); if (w) w.innerHTML = ''; }
+  function close() { const el = document.getElementById('k8Pv'); if (el) el.hidden = true; V.open = false; (V.under || []).forEach((m) => m.classList.remove('k8-pv-under')); V.under = []; V.list = null; V.doc = null; V.pages = []; V.bytes = null; const w = document.getElementById('k8PvPages'); if (w) w.innerHTML = ''; }
   window.k8PvBack = function () { history.back(); };
   window.addEventListener('popstate', () => {
     const m = document.getElementById('k8PvMenu'); if (m && !m.hidden) { m.hidden = true; }
     if (V.open) close();
   });
-  document.addEventListener('keydown', (e) => { if (!V.open) return; if (e.key === 'Escape') history.back(); if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); e.shiftKey ? window.k8PvRedo() : window.k8PvUndo(); } });
+  document.addEventListener('keydown', (e) => { if (!V.open) return; if (e.key === 'Escape') history.back(); if (V.list && V.tool === 'pan' && !/INPUT|TEXTAREA/.test((e.target && e.target.tagName) || '')) { if (e.key === 'ArrowRight') window.k8PvNav(1); if (e.key === 'ArrowLeft') window.k8PvNav(-1); } if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); e.shiftKey ? window.k8PvRedo() : window.k8PvUndo(); } });
 })();
 
 /* ============ Round 17 · หะละเกาะฮฺอัลกุรอาน (สแกน QR + ประวัติ + จัดการโดยอาจารย์/แอดมิน) ============ */
@@ -14926,7 +14956,8 @@ window.k8PdWho = function (sid) {
   }
   /* v19.69 · นักเรียนส่งงานคืนให้อาจารย์ (แนบไฟล์/รูป + ข้อความ) */
   const SB = { files: {}, note: {}, busy: {}, prog: {}, edit: {} };
-  function fileBtn(f) { FMAP[f.id] = f; return '<button type="button" onclick="k8CpOpenF(\'' + esc(f.id) + '\')"><em>' + icon(f.mime, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size || 0) + '</small></span></button>'; }
+  let FG = 0;
+  function fileBtn(f, i, arr) { FMAP[f.id] = f; if (Array.isArray(arr)) { if (!arr._g) arr._g = ++FG; f._g = arr._g; } return '<button type="button" onclick="k8CpOpenF(\'' + esc(f.id) + '\')"><em>' + icon(f.mime, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size || 0) + '</small></span></button>'; }
   function subBlock(p) {
     const sb = p.mySubmission; const id = esc(p.id);
     if (sb && !SB.edit[p.id]) {
@@ -14942,7 +14973,21 @@ window.k8PdWho = function (sid) {
       '<div class="k8-cp-sub-acts">' + (sb ? '<button type="button" class="is-ghost" onclick="k8CpSubEdit(\'' + id + '\',false)"' + dis + '>ยกเลิก</button>' : '') + '<button type="button" class="k8-cp-go" onclick="k8CpSubSend(\'' + id + '\')"' + dis + '>' + (busy ? esc(SB.prog[p.id] || 'กำลังส่ง…') : 'ส่งงาน') + '</button></div></div>';
   }
   const FMAP = {};
-  window.k8CpOpenF = function (id) { const f = FMAP[id]; if (f && typeof window.k8PvOpen === 'function') window.k8PvOpen({ id: f.id, name: f.name, size: f.size, action: 'getClassFile' }); };
+  window.k8CpOpenF = function (id) {
+    const f = FMAP[id]; if (!f || typeof window.k8PvOpen !== 'function') return;
+    const it = (x, cap) => ({ id: x.id, name: x.name, size: x.size, action: 'getClassFile', caption: cap || '' });
+    let list = null;
+    // v19.70 · เปิดจากหน้า "การส่งงาน" → ปัดดูไฟล์ของนักเรียนทุกคนที่ส่งแล้วต่อกันได้
+    const sv = document.getElementById('k8CpSV');
+    if (sv && !sv.hidden && SV.data && SV.data.list) {
+      const yes = SV.data.list.filter((x) => x.submitted && x.files && x.files.length).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      const all = []; yes.forEach((x) => x.files.forEach((y, k) => all.push(it(y, x.name + ' · ' + shortG(x.grade) + (x.files.length > 1 ? ' · ไฟล์ ' + (k + 1) + '/' + x.files.length : '')))));
+      if (all.some((y) => y.id === id)) list = all;
+    }
+    if (!list && f._g) { const grp = Object.values(FMAP).filter((y) => y._g === f._g); if (grp.length > 1) list = grp.map((y) => it(y)); }
+    const idx = list ? Math.max(0, list.findIndex((y) => y.id === id)) : 0;
+    window.k8PvOpen(Object.assign(it(f), list ? { list, idx } : {}));
+  };
   window.k8CpSubEdit = function (pid, on) { SB.edit[pid] = on !== false; paintS(); };
   window.k8CpSubNote = function (pid, v) { SB.note[pid] = v; };
   window.k8CpSubRm = function (pid, i) { (SB.files[pid] || []).splice(i, 1); paintS(); };
@@ -14974,9 +15019,11 @@ window.k8PdWho = function (sid) {
     SB.busy[pid] = false; SB.prog[pid] = ''; paintS(); card();
   };
   window.k8CpFile = function (id) {
-    const all = (S.posts || []).concat(T.posts || [], O.posts || []); let f = null; all.some((p) => (f = (p.files || []).find((x) => x.id === id)));
+    const all = (S.posts || []).concat(T.posts || [], O.posts || []); let f = null, post = null; all.some((p) => (f = (p.files || []).find((x) => x.id === id)) && (post = p));
     if (!f) return;
-    if (typeof window.k8PvOpen === 'function') window.k8PvOpen({ id: f.id, name: f.name, size: f.size, action: 'getClassFile' });
+    const it = (x) => ({ id: x.id, name: x.name, size: x.size, action: 'getClassFile', caption: post && post.title ? post.title : '' });
+    const files = post && post.files && post.files.length > 1 ? post.files.map(it) : null;
+    if (typeof window.k8PvOpen === 'function') window.k8PvOpen(Object.assign(it(f), files ? { list: files, idx: Math.max(0, files.findIndex((y) => y.id === id)) } : {}));
   };
   window.k8CpStu = function () {
     let m = document.getElementById('k8CpSModal');
