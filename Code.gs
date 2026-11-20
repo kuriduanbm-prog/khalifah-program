@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.75'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.76'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -4526,13 +4526,13 @@ function submitClassWork_(d, session) {
 function getClassSubmissions_(postId, session, ctx) {
   const p = classPostById_(postId); if (!p) return { success: false, message: 'ไม่พบงานนี้' };
   if (!classPostCanManage_(p, session, ctx)) return { success: false, code: 'FORBIDDEN', message: 'ดูได้เฉพาะงานในวิชาที่คุณสอน' };
-  const subs = {}; readClassSubs_().forEach(function (x) { if (x.postId === p.id) subs[x.sid] = x; });
+  const allSubs = readClassSubs_(); const subs = {}; allSubs.forEach(function (x) { if (x.postId === p.id) subs[x.sid] = x; });
   const byId = {}; (getAllStudents().data || []).forEach(function (x) { byId[hqKey_(x.studentId)] = x; });
   const list = p.audience.map(function (sid) {
     const st = byId[sid] || {}; const sb = subs[sid];
     return { studentId: cleanVal(st.studentId || sid), name: cleanVal(st.fullName || (sb && sb.name) || sid), grade: cleanVal(st.grade || ''), submitted: !!sb, at: sb ? sb.at : '', note: sb ? sb.note : '', files: sb ? sb.files : [], late: sb ? sb.late : false, edits: sb ? sb.edits : 0, review: sb ? sb.review : '', reviewNote: sb ? sb.reviewNote : '', reviewedAt: sb ? sb.reviewedAt : '' };
   });
-  return { success: true, post: classPostView_(p, true, readClassSubs_()), list: list };
+  return { success: true, post: classPostView_(p, true, allSubs), list: list };
 }
 /** v19.75 · อาจารย์ตรวจงาน: checked = ตรวจแล้ว · revise = ให้แก้ไขส่งใหม่ · '' = ยกเลิกผลตรวจ · แจ้งนักเรียนทางกระดิ่ง */
 function reviewClassSubmission_(d, session, ctx) {
