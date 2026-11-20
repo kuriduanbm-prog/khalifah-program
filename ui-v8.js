@@ -3675,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.70';
+  const APP_VERSION = '19.71';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14932,28 +14932,37 @@ window.k8PdWho = function (sid) {
     S.busy = false; if (r && r.success && sidNow() === S.sid) { S.posts = r.data || []; S.at = Date.now(); LS.set('khalifah_cp_cache', { sid: S.sid, data: S.posts }); }
     card(); paintS();
   }
+  // v19.71 · เอาการ์ด "งานจากอาจารย์" ออกจากหน้าแรก → ใช้ปุ่มไอคอน "ส่งงาน" ในเมนูลัด + จุดแจ้งเตือนแทน
   function card() {
-    sync(); const hf = document.getElementById('homeF'); let c = document.getElementById('k8CpCard');
-    const L = S.posts || [];
-    if (!isStu() || !hf || !L.length) { if (c) c.hidden = true; return; }
-    const sn = seen(); const nNew = L.filter((p) => !sn[p.id]).length;
-    if (!c) { c = document.createElement('button'); c.type = 'button'; c.id = 'k8CpCard'; c.className = 'k8-cp-card'; c.onclick = () => window.k8CpStu(); const anchor = hf.querySelector('.hf-lg1'); hf.insertBefore(c, anchor || hf.firstChild); }
-    c.hidden = false;
-    const p0 = L[0];
-    c.innerHTML = '<span class="k8-cp-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>' +
-      '<span class="k8-cp-ct"><b>งานจากอาจารย์' + (nNew ? ' <i>' + nNew + ' ใหม่</i>' : '') + '</b><small>' + (L.filter((p) => !p.mySubmission).length ? 'ยังไม่ส่ง ' + L.filter((p) => !p.mySubmission).length + ' งาน · ' : 'ส่งครบทุกงานแล้ว · ') + esc(p0.subjectName) + ' · ' + esc(p0.title) + '</small></span><span class="k8-cp-go2" aria-hidden="true">›</span>';
+    sync(); const old = document.getElementById('k8CpCard'); if (old) old.remove();
+    const b = document.getElementById('hfCpN'); if (!b) return;
+    const L = isStu() ? (S.posts || []) : []; const sn = seen();
+    const todo = L.filter((p) => !p.mySubmission).length; const nNew = L.filter((p) => !sn[p.id]).length;
+    const n = Math.max(todo, nNew);
+    b.hidden = !n; b.textContent = n > 9 ? '9+' : String(n || '');
+    const btn = document.getElementById('hfCpQk');
+    if (btn) btn.setAttribute('aria-label', 'การส่งงาน' + (todo ? ' · ยังไม่ส่ง ' + todo + ' งาน' : '') + (nNew ? ' · ใหม่ ' + nNew + ' งาน' : ''));
   }
+
   function paintS() {
     const m = document.getElementById('k8CpSModal'); if (!m || m.hidden) return;
-    const L = S.posts || []; const sn = seen();
+    const A = S.posts || []; const sn = seen();
     const today = new Date().toLocaleDateString('sv-SE');
-    m.querySelector('.k8-cp-body').innerHTML = !L.length ? '<p class="k8-cp-empty">' + (S.busy ? 'กำลังโหลด…' : 'ยังไม่มีงานจากอาจารย์') + '</p>' :
+    // v19.71 · แท็บ ยังไม่ส่ง / ส่งแล้ว / ทั้งหมด เพื่อดูประวัติการส่งงานและแก้ไข
+    const todoL = A.filter((p) => !p.mySubmission), doneL = A.filter((p) => p.mySubmission);
+    if (!S.tab && A.length) S.tab = todoL.length ? 'todo' : 'all';
+    const L = S.tab === 'todo' ? todoL : S.tab === 'done' ? doneL : A;
+    const tb = (k, t, n) => '<button type="button" role="tab" aria-selected="' + (S.tab === k) + '" onclick="k8CpSTab(\'' + k + '\')">' + t + ' ' + n + '</button>';
+    const tabs = A.length ? '<div class="k8-ra-tabs k8-cp-stabs" role="tablist">' + tb('todo', 'ยังไม่ส่ง', todoL.length) + tb('done', 'ส่งแล้ว', doneL.length) + tb('all', 'ทั้งหมด', A.length) + '</div>' : '';
+    m.querySelector('.k8-cp-body').innerHTML = !A.length ? '<p class="k8-cp-empty">' + (S.busy ? 'กำลังโหลด…' : 'ยังไม่มีงานจากอาจารย์') + '</p>' :
+      tabs + (!L.length ? '<p class="k8-cp-empty">' + (S.tab === 'todo' ? 'ส่งครบทุกงานแล้ว' : 'ยังไม่มีงานที่ส่งแล้ว') + '</p>' :
       '<ul class="k8-cp-feed">' + L.map((p) => '<li class="' + (sn[p.id] ? '' : 'is-new') + '"><div class="k8-cp-fh"><b>' + esc(p.title) + '</b>' + (sn[p.id] ? '' : '<i>ใหม่</i>') + '</div>' +
         '<small>' + esc(p.subjectName) + ' · ' + esc(p.teacherName) + ' · ' + dTh(p.createdAt) + ' ' + tTh(p.createdAt) + '</small>' +
         (p.due ? '<span class="k8-cp-due' + (p.due < today ? ' is-late' : '') + '">กำหนดส่ง ' + dTh(p.due) + (p.due < today ? ' · เลยกำหนดแล้ว' : '') + '</span>' : '') +
         (p.body ? '<p>' + esc(p.body).replace(/\n/g, '<br>') + '</p>' : '') +
-        (p.files.length ? '<div class="k8-cp-att">' + p.files.map((f) => '<button type="button" onclick="k8CpFile(\'' + esc(f.id) + '\')"><em>' + icon(f.mime, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size || 0) + '</small></span></button>').join('') + '</div>' : '') + subBlock(p) + '</li>').join('') + '</ul>';
+        (p.files.length ? '<div class="k8-cp-att">' + p.files.map((f) => '<button type="button" onclick="k8CpFile(\'' + esc(f.id) + '\')"><em>' + icon(f.mime, f.name) + '</em><span>' + esc(f.name) + '<small>' + size(f.size || 0) + '</small></span></button>').join('') + '</div>' : '') + subBlock(p) + '</li>').join('') + '</ul>');
   }
+  window.k8CpSTab = function (t) { S.tab = t; paintS(); const b = document.querySelector('#k8CpSModal .k8-ra-body'); if (b) b.scrollTop = 0; };
   /* v19.69 · นักเรียนส่งงานคืนให้อาจารย์ (แนบไฟล์/รูป + ข้อความ) */
   const SB = { files: {}, note: {}, busy: {}, prog: {}, edit: {} };
   let FG = 0;
@@ -15015,6 +15024,7 @@ window.k8PdWho = function (sid) {
       LS.set('khalifah_cp_cache', { sid: S.sid, data: S.posts });
       SB.files[pid] = []; SB.note[pid] = ''; SB.edit[pid] = false;
       toast(r.message || 'ส่งงานเรียบร้อยแล้ว', 'success');
+      if (S.tab === 'todo') S.tab = 'done'; // v19.71 · ส่งแล้วพาไปแท็บ "ส่งแล้ว" ให้เห็นงานที่เพิ่งส่ง
     } catch (e) { toast(String(e.message || e), 'error'); }
     SB.busy[pid] = false; SB.prog[pid] = ''; paintS(); card();
   };
@@ -15028,11 +15038,11 @@ window.k8PdWho = function (sid) {
   window.k8CpStu = function () {
     let m = document.getElementById('k8CpSModal');
     if (!m) {
-      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpSModal" role="dialog" aria-modal="true" aria-labelledby="k8CpST" hidden><div class="k8-ra-box"><header><h3 id="k8CpST">งานจากอาจารย์</h3><button type="button" class="k8-ra-x" onclick="k8CpSClose()" aria-label="ปิด">✕</button></header><div class="k8-ra-body k8-cp-body"></div></div></div>');
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-cp-modal" id="k8CpSModal" role="dialog" aria-modal="true" aria-labelledby="k8CpST" hidden><div class="k8-ra-box"><header><h3 id="k8CpST">การส่งงาน</h3><button type="button" class="k8-ra-x" onclick="k8CpSClose()" aria-label="ปิด">✕</button></header><div class="k8-ra-body k8-cp-body"></div></div></div>');
       m = document.getElementById('k8CpSModal');
       m.addEventListener('click', (e) => { if (e.target === m) window.k8CpSClose(); });
     }
-    m.hidden = false; paintS(); loadS(true);
+    S.tab = ''; m.hidden = false; paintS(); loadS(true);
     setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
   };
   window.k8CpSClose = function () {

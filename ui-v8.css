@@ -7492,3 +7492,8 @@ html[data-theme="dark"] .k8-cp-svh b { color: #e2e8f0 !important; }
 .k8-pv-pages.k8-pv-in-r { animation: k8PvInR .22s ease-out; }
 .k8-pv-pages.k8-pv-in-l { animation: k8PvInL .22s ease-out; }
 @media (prefers-reduced-motion: reduce) { .k8-pv-pages.k8-pv-in-r, .k8-pv-pages.k8-pv-in-l { animation: none; } .k8-ra-modal.k8-pv-under { transition: none; } }
+
+/* ============ v19.71 · ปุ่มไอคอน "ส่งงาน" ฝั่งนักเรียน (เมนูลัด 6 ปุ่ม) ============ */
+#homeF .hf-qk { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+@media (max-width: 560px) { #homeF .hf-qk { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; row-gap: 14px !important; } }
+.k8-cp-stabs { position: sticky; top: -12px; z-index: 2; margin-bottom: 12px; }
