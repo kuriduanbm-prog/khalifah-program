@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.73'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.74'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', scanJumuah: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1829,6 +1829,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
     case 'scanDormPrayers': return scanDormPrayers_(data);
+    case 'scanJumuah': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return scanJumuah_(data);
     case 'girlPlacePenalty': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return girlPlacePenaltyByLog_(data);
     case 'scanOwnerMismatch': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return ownerMismatch_(data, false, session);
     case 'fixOwnerMismatch': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return ownerMismatch_(data, true, session);
@@ -3128,6 +3129,7 @@ function recordPrayer(data) {
   // v19.17 · วันศุกร์ ละหมาดซุฮริ (นักเรียนชาย): ต้องเช็คไม่เกิน 12:35 น. เพื่อฟังคุฏบะห์ · เกินเวลา = มาสาย + หัก 2 คะแนน
   let jum = null;
   try { jum = jumuahLateOf_(cleanSid, dateStr, timeStr, prayerNameThai, statusThai); } catch (e) { jum = null; }
+  if (!jum) { try { const ju = jumuahUnknownOf_(cleanSid, dateStr, timeStr, prayerNameThai, statusThai); if (ju) timeFlags = (timeFlags ? timeFlags + ' · ' : '') + ju; } catch (e) {} }
   if (jum) {
     if (/^ตรงเวลา/.test(statusThai)) statusThai = 'มาสาย';
     timeFlags = (timeFlags ? timeFlags + ' · ' : '') + 'มาฟังคุฏบะห์สาย (เช็คเวลา ' + String(timeStr).slice(0, 5) + ' น. เกิน ' + jum.deadline + ' น.)';
@@ -3408,6 +3410,69 @@ function girlPlacePenaltyByLog_(d) {
 // ---------- v19.17 · ละหมาดวันศุกร์ (ฟังคุฏบะห์) ----------
 const JUMUAH_DEADLINE_ = '12:35';
 const JUMUAH_LATE_POINTS_ = 2;
+/** v19.74 · เพศแบบ 3 สถานะ: 'ชาย' / 'หญิง' / '' (ยังไม่ระบุ) */
+function jumuahGender_(st) {
+  if (!st) return '';
+  const g = normGender_(st.gender || st.sex || ''); if (g) return g;
+  const pre = genderFromPrefix_(cleanVal(st.prefix || '')); if (pre) return pre;
+  const fn = cleanVal(st.fullName || st.name || '');
+  if (/^(นาย|เด็กชาย|ด\.ช\.)/.test(fn)) return 'ชาย';
+  if (/^(นางสาว|นาง|เด็กหญิง|ด\.ญ\.)/.test(fn)) return 'หญิง';
+  return '';
+}
+function jumuahDeadline_() { let dl = JUMUAH_DEADLINE_; try { const v = cleanVal((getSettings().data || {}).JumuahDeadline || ''); if (/^\d{1,2}:\d{2}$/.test(v)) dl = v; } catch (e) {} return dl; }
+/** v19.74 · วันศุกร์ ซุฮริ เช็คหลังกำหนด แต่ยังไม่ระบุเพศ → คืนข้อความเตือนให้แอดมิน (ระบบยังไม่หักคะแนน) */
+function jumuahUnknownOf_(sid, dateStr, timeStr, prayerThai, statusThai) {
+  if (!/ซุฮ|ดุฮ|dhuhr|zuhr/i.test(String(prayerThai || ''))) return '';
+  if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน/.test(String(statusThai || '').trim())) return '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr || '')) || new Date(dateStr + 'T12:00:00+07:00').getUTCDay() !== 5) return '';
+  const dl = jumuahDeadline_(); const toM = function (t) { const m = String(t || '').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  if (!(toM(timeStr) > toM(dl))) return '';
+  const k = String(sid || '').replace(/\D/g, '').replace(/^0+/, '');
+  const st = (getAllStudents().data || []).filter(function (x) { return String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '') === k; })[0];
+  return st && !jumuahGender_(st) ? 'เช็คซุฮริวันศุกร์หลัง ' + dl + ' น. แต่ยังไม่ได้ระบุเพศ (ระบบยังไม่หักคะแนนคุฏบะห์สาย)' : '';
+}
+/** v19.74 · แอดมิน: ตรวจซุฮริวันศุกร์ที่เช็คหลังกำหนด · ใครหักแล้ว / ยังไม่หัก / ยังไม่ระบุเพศ · apply = หักย้อนหลัง */
+function scanJumuah_(d) {
+  d = d || {}; let ds = formatSheetDate(d.date) || Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ds)) return { success: false, message: 'วันที่ไม่ถูกต้อง' };
+  if (new Date(ds + 'T12:00:00+07:00').getUTCDay() !== 5) return { success: false, message: 'วันที่เลือกไม่ใช่วันศุกร์' };
+  const dl = jumuahDeadline_(); const toM = function (t) { const m = String(t || '').match(/(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  const sh = getSpreadsheet().getSheetByName(SHEETS.PRAYERS); const bh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR);
+  const pen = {}; if (bh && bh.getLastRow() > 1) bh.getRange(2, 1, bh.getLastRow() - 1, 15).getValues().forEach(function (r) { if (/^FK-/.test(String(r[0]))) pen[String(r[0])] = cleanVal(r[14]) === 'cancelled' ? 'cancelled' : 'active'; });
+  const stuBy = {}; (getAllStudents().data || []).forEach(function (x) { stuBy[String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '')] = x; });
+  const first = {}; let total = 0;
+  if (sh && sh.getLastRow() > 1) {
+    const n = sh.getLastRow() - 1; const start = Math.max(0, n - 30000);
+    sh.getRange(2 + start, 1, n - start, 16).getValues().forEach(function (r, i) {
+      if (formatSheetDate(r[6]) !== ds || !/ซุฮ|ดุฮ|dhuhr|zuhr/i.test(String(r[4] || ''))) return;
+      if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน/.test(cleanVal(r[14]))) return;
+      const k = String(r[1] || '').replace(/\D/g, '').replace(/^0+/, ''); if (!k) return;
+      const tm = String(r[7] instanceof Date ? Utilities.formatDate(r[7], 'Asia/Bangkok', 'HH:mm:ss') : r[7]).slice(0, 8);
+      if (!first[k]) total++;
+      if (!first[k] || toM(tm) < toM(first[k].time)) first[k] = { row: 2 + start + i, logId: cleanVal(r[0]), time: tm, status: cleanVal(r[14]) };
+    });
+  }
+  const items = [];
+  Object.keys(first).forEach(function (k) {
+    const f = first[k]; if (!(toM(f.time) > toM(dl))) return;
+    const st = stuBy[k]; const g = jumuahGender_(st); const id = 'FK-' + k + '-' + ds;
+    items.push({ sid: st ? String(st.studentId) : k, name: st ? st.fullName : '', grade: st ? st.grade : '', time: f.time, logId: f.logId, row: f.row, status: f.status, gender: g, penalized: pen[id] === 'active', cancelled: pen[id] === 'cancelled' });
+  });
+  items.sort(function (a, b) { return String(a.time).localeCompare(String(b.time)); });
+  let applied = 0;
+  if (d.apply) items.forEach(function (x) {
+    if (x.gender !== 'ชาย' || x.penalized || x.cancelled) return;
+    const st = stuBy[String(x.sid).replace(/\D/g, '').replace(/^0+/, '')]; if (!st) return;
+    try {
+      if (jumuahPenalty_({ st: st, deadline: dl }, ds, x.time)) { applied++; x.penalized = true; }
+      if (/^ตรงเวลา/.test(x.status)) { sh.getRange(x.row, 15).setValue('มาสาย'); x.status = 'มาสาย'; }
+    } catch (e) {}
+  });
+  if (applied) { try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {} }
+  items.forEach(function (x) { delete x.row; });
+  return { success: true, date: ds, deadline: dl, total: total, items: items, applied: applied };
+}
 function jumuahIsBoy_(st) {
   if (!st) return false;
   const g = normGender_(st.gender || st.sex || '');
@@ -3432,7 +3497,7 @@ function jumuahLateOf_(sid, dateStr, timeStr, prayerThai, statusThai) {
 function jumuahPenalty_(jum, dateStr, timeStr) {
   const st = jum.st; const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR); if (!sh) return 0;
   const id = 'FK-' + String(st.studentId).replace(/\D/g, '').replace(/^0+/, '') + '-' + dateStr;
-  const lock = LockService.getScriptLock(); try { lock.waitLock(15000); } catch (e) {}
+  const unlock = lockEnter_(15000);
   try {
     if (sh.getLastRow() > 1 && sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().some(function (r) { return String(r[0]) === id; })) return 0;
     const stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
@@ -3440,7 +3505,7 @@ function jumuahPenalty_(jum, dateStr, timeStr) {
       'หักอัตโนมัติ: เช็คละหมาดซุฮริวันศุกร์เวลา ' + String(timeStr).slice(0, 5) + ' น. เกินกำหนด ' + jum.deadline + ' น.', 'system', 'ระบบอัตโนมัติ', 'active', '', '', ''];
     sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
     return JUMUAH_LATE_POINTS_;
-  } finally { try { lock.releaseLock(); } catch (e) {} }
+  } finally { unlock(); }
 }
 
 // v18.74 · ตรวจเวลาเครื่องอัตโนมัติ: หาเวลาที่ถ่ายจริง แล้วแก้วันที่/เวลา/สถานะเองโดยไม่ต้องให้แอดมินตรวจ

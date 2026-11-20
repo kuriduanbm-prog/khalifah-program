@@ -3675,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.73';
+  const APP_VERSION = '19.74';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -15222,6 +15222,81 @@ window.k8PdWho = function (sid) {
   const o = window.renderHomeF;
   if (typeof o === 'function') window.renderHomeF = function () { const r = o.apply(this, arguments); try { card(); loadS(false); } catch (e) {} return r; };
   setInterval(() => { try { const v = document.getElementById('view-dashboard'); if (isStu() && v && v.classList.contains('active') && !document.hidden) loadS(false); } catch (e) {} }, 180000);
+})();
+
+/* ============ v19.74 · ซุฮริวันศุกร์ (ฟังคุฏบะห์) · แอดมินตรวจว่าใครเช็คหลังกำหนด ทำไมยังไม่หัก + หักย้อนหลัง ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const dL = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : 'วันศุกร์ที่ ' + d.getDate() + ' ' + MON[d.getMonth()] + ' ' + (d.getFullYear() + 543); };
+  const gN = (g) => { const m = String(g || '').match(/([1-6])/); return m ? 'ม.' + m[1] : (g || '-'); };
+  const lastFri = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 2) % 7)); return ymd(d); };
+  const J = { date: '', res: null, busy: false, setting: {} };
+  function shell() {
+    let m = document.getElementById('k8JkModal'); if (m) return m;
+    document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8JkModal" onclick="if(event.target===this)k8JkClose()"><div class="modal-dialog k8-sheet k8-dm" role="dialog" aria-modal="true" aria-labelledby="k8JkT">' +
+      '<header class="k8-sheet-head"><div><h2 id="k8JkT">ซุฮริวันศุกร์ · ฟังคุฏบะห์</h2><span>นักเรียนชายเช็คหลังเวลากำหนด = มาสาย หัก 2 คะแนน</span></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8JkClose()">✕</button></header>' +
+      '<div class="k8-dm-bar"><div class="k8-dm-nav"><button type="button" aria-label="ศุกร์ก่อนหน้า" onclick="k8JkShift(-7)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><b id="k8JkDate"></b><button type="button" aria-label="ศุกร์ถัดไป" onclick="k8JkShift(7)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button></div></div>' +
+      '<div class="k8-sheet-body k8-dm-body" id="k8JkBody"></div></div></div>');
+    return document.getElementById('k8JkModal');
+  }
+  function paint() {
+    const B = document.getElementById('k8JkBody'); if (!B) return;
+    document.getElementById('k8JkDate').textContent = dL(J.date);
+    const r = J.res;
+    if (J.busy && !r) { B.innerHTML = '<p class="k8-sp-empty">กำลังตรวจบันทึกละหมาด…</p>'; return; }
+    if (!r) { B.innerHTML = '<p class="k8-sp-empty">ตรวจไม่สำเร็จ · ลองใหม่อีกครั้ง</p>'; return; }
+    if (r.old) { B.innerHTML = '<p class="k8-dm-scan is-warn">ต้องอัปเดต Code.gs (เวอร์ชัน 19.74 ขึ้นไป) ก่อนใช้เครื่องมือนี้</p>'; return; }
+    if (!r.success) { B.innerHTML = '<p class="k8-dm-scan is-warn">' + esc(r.message || 'ตรวจไม่สำเร็จ') + '</p>'; return; }
+    const L = r.items || [];
+    const boys = L.filter((x) => x.gender === 'ชาย'), unk = L.filter((x) => !x.gender), girls = L.filter((x) => x.gender === 'หญิง');
+    const pend = boys.filter((x) => !x.penalized && !x.cancelled);
+    let h = '<div class="k8-dm-kpis"><div class="k8-dm-kpi"><span>เช็คซุฮริวันนี้</span><b>' + (r.total || 0) + '<small> คน</small></b></div>' +
+      '<div class="k8-dm-kpi' + (boys.length ? ' is-bad' : '') + '"><span>ชาย · หลัง ' + esc(r.deadline) + ' น.</span><b>' + boys.length + '<small> คน</small></b></div>' +
+      '<div class="k8-dm-kpi' + (unk.length ? ' is-bad' : '') + '"><span>ยังไม่ระบุเพศ</span><b>' + unk.length + '<small> คน</small></b></div></div>';
+    if (pend.length) h += '<div class="k8-dm-scan is-warn"><span>มีนักเรียนชาย <b>' + pend.length + ' คน</b> ที่เช็คหลัง ' + esc(r.deadline) + ' น. แต่ยังไม่ถูกหักคะแนน</span><button type="button" class="k8-jk-go" onclick="k8JkApply()"' + (J.busy ? ' disabled' : '') + '>หักคะแนนย้อนหลัง ' + pend.length + ' คน</button></div>';
+    if (unk.length) h += '<p class="k8-dm-scan is-warn">ระบบหักคะแนนเฉพาะนักเรียนที่รู้ว่าเป็น <b>ชาย</b> · นักเรียนด้านล่างยังไม่ได้ระบุเพศในข้อมูลนักเรียน จึงยังไม่ถูกหัก กด "ชาย" หรือ "หญิง" เพื่อบันทึกเพศ แล้วกดหักคะแนนย้อนหลัง</p>';
+    if (!L.length) h += '<div class="k8-sld-empty"><p>ไม่มีนักเรียนเช็คซุฮริหลัง ' + esc(r.deadline) + ' น. ในวันนี้</p></div>';
+    const row = (x) => {
+      const tag = x.gender === 'หญิง' ? '<em class="k8-jk-tag is-ok">หญิง · ไม่หัก</em>' : !x.gender ? '<em class="k8-jk-tag is-warn">ยังไม่ระบุเพศ</em>' : x.penalized ? '<em class="k8-jk-tag is-pen">หักแล้ว 2 คะแนน</em>' : x.cancelled ? '<em class="k8-jk-tag">แอดมินยกเลิกแล้ว</em>' : '<em class="k8-jk-tag is-warn">ยังไม่หัก</em>';
+      const set = !x.gender ? '<span class="k8-jk-g" role="group" aria-label="ระบุเพศ ' + esc(x.name) + '"><button type="button" onclick="k8JkSex(\'' + esc(x.sid) + '\',\'ชาย\')"' + (J.setting[x.sid] ? ' disabled' : '') + '>ชาย</button><button type="button" onclick="k8JkSex(\'' + esc(x.sid) + '\',\'หญิง\')"' + (J.setting[x.sid] ? ' disabled' : '') + '>หญิง</button></span>' : '';
+      return '<li><div class="k8-jk-row"><span class="k8-jk-tm">' + esc(String(x.time).slice(0, 5)) + '</span><span class="k8-dm-who"><b>' + esc(x.name || x.sid) + '</b><small>' + esc(x.sid) + ' · ' + esc(gN(x.grade)) + ' · ' + esc(x.status || '') + '</small></span>' + tag + '</div>' + set + '</li>';
+    };
+    const order = unk.concat(pend, boys.filter((x) => x.penalized || x.cancelled), girls);
+    if (order.length) h += '<ul class="k8-jk-list">' + order.map(row).join('') + '</ul>';
+    h += '<p class="k8-sld-note">นับจากเวลาเช็คครั้งแรกของซุฮริวันนั้น · เวลากำหนดปัจจุบัน ' + esc(r.deadline) + ' น. · ถ้ามีเหตุจำเป็น แอดมินยกเลิกรายการหักได้ที่ประวัติพฤติกรรมของนักเรียน</p>';
+    B.innerHTML = h;
+  }
+  async function scan(apply) {
+    J.busy = true; if (!apply) J.res = null; paint();
+    let r = null; try { r = await gasApiCall('scanJumuah', { data: { date: J.date, apply: !!apply } }, 60000); } catch (e) {}
+    J.busy = false;
+    if (r && !r.success && /Unknown action|ไม่รู้จัก/i.test(String(r.error || r.message || ''))) r = { old: true };
+    J.res = r; if (apply && r && r.success) toast('หักคะแนนแล้ว ' + (r.applied || 0) + ' คน', 'success');
+    paint();
+  }
+  window.k8JkOpen = function () { shell(); J.date = lastFri(); J.res = null; openModal('k8JkModal'); scan(false); setTimeout(() => { const b = document.querySelector('#k8JkModal .k8-sheet-x'); if (b) b.focus(); }, 60); };
+  window.k8JkClose = function () { try { closeModal('k8JkModal'); } catch (e) {} };
+  window.k8JkShift = function (n) { const d = new Date(J.date + 'T00:00:00'); d.setDate(d.getDate() + n); if (ymd(d) > ymd(new Date())) { toast('ยังไม่ถึงวันศุกร์ถัดไป', 'info'); return; } J.date = ymd(d); scan(false); };
+  window.k8JkApply = function () {
+    const n = ((J.res && J.res.items) || []).filter((x) => x.gender === 'ชาย' && !x.penalized && !x.cancelled).length; if (!n) return;
+    if (!confirm('หักคะแนน 2 คะแนน และเปลี่ยนสถานะเป็น "มาสาย" สำหรับนักเรียนชาย ' + n + ' คน ที่เช็คซุฮริ' + dL(J.date) + ' หลัง ' + J.res.deadline + ' น. ?')) return;
+    scan(true);
+  };
+  window.k8JkSex = async function (sid, g) {
+    J.setting[sid] = 1; paint();
+    let r = null; try { r = await gasApiCall('setStudentGenders', { data: { items: [{ studentId: sid, gender: g }] } }, 45000); } catch (e) {}
+    delete J.setting[sid];
+    if (r && r.success) {
+      toast('บันทึกเพศแล้ว', 'success');
+      try { (window.allStudents || allStudents || []).forEach((s) => { if (String(s.studentId).replace(/^0+/, '') === String(sid).replace(/^0+/, '')) s.gender = g; }); } catch (e) {}
+      const it = ((J.res && J.res.items) || []).find((x) => x.sid === sid); if (it) it.gender = g;
+    } else toast((r && r.message) || 'บันทึกเพศไม่สำเร็จ', 'error');
+    paint();
+  };
+  document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; const m = document.getElementById('k8JkModal'); if (m && (m.classList.contains('open') || m.classList.contains('active'))) window.k8JkClose(); });
 })();
 
 // v19.60 · สัญญาณว่า ui-v8.js ทำงานจนจบไฟล์ (index.html ใช้ตรวจว่าโหลดครบ)

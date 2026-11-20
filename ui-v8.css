@@ -7518,3 +7518,31 @@ html[data-theme="dark"] .k8-cp-histbtn b { color: #bae6fd !important; }
 html[data-theme="dark"] .k8-cp-histbtn small { color: #cbd5e1 !important; }
 html[data-theme="dark"] .k8-cp-histbtn i { color: #7dd3fc !important; }
 html[data-theme="dark"] .k8-cp-hq { background: #0f172a !important; border-color: #475569 !important; color: #e2e8f0 !important; }
+
+/* ============ v19.74 · ซุฮริวันศุกร์ (ฟังคุฏบะห์) ============ */
+.k8-jk-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.k8-jk-list > li { border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; background: #fff; }
+.k8-jk-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.k8-jk-row .k8-dm-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.k8-jk-row .k8-dm-who b { font-size: 14.5px; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k8-jk-row .k8-dm-who small { font-size: 12.5px; color: #475569; }
+.k8-jk-tm { flex: none; font-weight: 700; font-size: 15px; color: #b45309; background: #fffbeb; border-radius: 8px; padding: 4px 8px; font-variant-numeric: tabular-nums; }
+.k8-jk-tag { flex: none; font-style: normal; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 9px; background: #f1f5f9; color: #334155; white-space: nowrap; }
+.k8-jk-tag.is-pen { background: #fef2f2; color: #b91c1c; }
+.k8-jk-tag.is-warn { background: #fffbeb; color: #92400e; }
+.k8-jk-tag.is-ok { background: #f0fdf4; color: #166534; }
+.k8-jk-g { display: flex; gap: 8px; margin-top: 8px; }
+.k8-jk-g button { flex: 1; min-height: 40px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; font: inherit; font-weight: 600; color: #0c4a6e; cursor: pointer; }
+.k8-jk-g button:disabled { opacity: .5; }
+.k8-jk-go { margin-top: 8px; min-height: 42px; padding: 0 16px; border: 0; border-radius: 10px; background: #b91c1c; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.k8-jk-go:disabled { opacity: .6; }
+.k8-jk-g button:focus-visible, .k8-jk-go:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+html[data-theme="dark"] .k8-jk-list > li { background: #0f172a !important; border-color: #334155 !important; }
+html[data-theme="dark"] .k8-jk-row .k8-dm-who b { color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-jk-row .k8-dm-who small { color: #cbd5e1 !important; }
+html[data-theme="dark"] .k8-jk-tm { background: #2a1d05 !important; color: #fde68a !important; }
+html[data-theme="dark"] .k8-jk-tag { background: #1e293b !important; color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-jk-tag.is-pen { background: #2a0f12 !important; color: #fca5a5 !important; }
+html[data-theme="dark"] .k8-jk-tag.is-warn { background: #2a1d05 !important; color: #fde68a !important; }
+html[data-theme="dark"] .k8-jk-tag.is-ok { background: #052e16 !important; color: #86efac !important; }
+html[data-theme="dark"] .k8-jk-g button { background: #0f172a !important; border-color: #475569 !important; color: #bae6fd !important; }
