@@ -3675,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.72';
+  const APP_VERSION = '19.73';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14486,7 +14486,9 @@ window.k8PdWho = function (sid) {
     if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/.test(st.trim())) { put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · สถานะนี้ไม่หักคะแนน')); return; }
     if (boy === false) {
       const wp = window.k8WrongPlace ? window.k8WrongPlace(r) : '';
-      if (wp) { girlChip(r, z, put); return; } put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · นักเรียนหญิงไม่ถูกหักคะแนนละหมาดที่หอพัก'));
+      if (wp) { girlChip(r, z, put); return; }
+      const fri = window.k8FriDhuhr && window.k8FriDhuhr(r.date || String(r.timestamp || '').slice(0, 10), r.prayerName || r.prayerTime);
+      put(chip('is-dorm', '<b>เช็คที่หอพัก: ' + esc(z.name) + '</b> · ' + (fri ? 'ซุฮริวันศุกร์ นักเรียนหญิงละหมาดที่หอพักได้ ไม่หักคะแนน' : 'นักเรียนหญิงไม่ถูกหักคะแนนละหมาดที่หอพัก')));
       return;
     }
     if (boy === null && !isAdm()) return;
@@ -14526,14 +14528,18 @@ window.k8PdWho = function (sid) {
     return /^(นางสาว|นาง|เด็กหญิง|ด\.ญ\.)/.test(String(st.prefix || '') + String(st.fullName || ''));
   }
   function why(sid, date, slot, status, lat, lng) {
-    if (String(date || '').slice(0, 10) < FROM || !SLOT.test(String(slot || '')) || EXC.test(String(status || '').trim())) return '';
+    if (String(date || '').slice(0, 10) < FROM || !SLOT.test(String(slot || '')) || EXC.test(String(status || '').trim()) || friDhuhr(date, slot)) return '';
     if (!girl(stu(sid))) return '';
     const z = zoneAt(lat, lng); if (!z || haram(z)) return '';
     return String(z.name || 'นอกมัสยิด');
   }
   // บันทึกที่มีอยู่แล้ว → ชื่อจุดที่ผิด หรือ ''
+  // v19.73 · วันศุกร์ ซุฮริ นักเรียนหญิงละหมาดที่หอพักได้ (ไม่ผิดสถานที่ · รวมรายการเก่าที่เคยถูกติดป้ายไว้)
+  function friDhuhr(date, slot) { const d = String(date || '').slice(0, 10); return /ซุฮ|ดุฮ|dhuhr|zuhr/i.test(String(slot || '')) && /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00+07:00').getUTCDay() === 5; }
+  window.k8FriDhuhr = friDhuhr;
   window.k8WrongPlace = function (p) {
     if (!p) return '';
+    if (friDhuhr(p.date || String(p.timestamp || '').slice(0, 10), p.prayerName || p.prayerTime)) return '';
     const n = String(p.note || ''); const m = n.match(/จุดที่เช็ค:\s*([^·\[]+)/); if (m) return m[1].trim();
     if (/ผิดสถานที่/.test(n)) return 'นอกมัสยิด';
     return why(p.studentId, p.date || String(p.timestamp || '').slice(0, 10), p.prayerName || p.prayerTime, p.status, p.latitude != null ? p.latitude : p.lat, p.longitude != null ? p.longitude : p.lng);

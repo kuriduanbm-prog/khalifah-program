@@ -343,7 +343,12 @@ function openPrayerHistoryDetailModal(logId) {
   if (pDate) pDate.innerText = dateStr;
   if (pTime) pTime.innerText = timeStr;
   if (pLoc) pLoc.innerText = record.locationName || 'พิกัด GPS';
-  if (pNote) pNote.innerText = record.note ? record.note : 'ไม่มีหมายเหตุเพิ่มเติม';
+  if (pNote) {
+    let nt = String(record.note || '');
+    // v19.73 · ซุฮริวันศุกร์ นักเรียนหญิงละหมาดที่หอพักได้ → ตัดข้อความ "ผิดสถานที่" ของรายการเก่าออก
+    if (nt && window.k8FriDhuhr && window.k8FriDhuhr(record.date || String(record.timestamp || '').slice(0, 10), record.prayerName || record.prayerTime)) nt = nt.replace(/⚠\s*ผิดสถานที่:[^·]*·\s*จุดที่เช็ค:\s*[^·\[]+(·\s*เหตุจำเป็น:[^·\[]+)?/, '').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
+    pNote.innerText = nt || 'ไม่มีหมายเหตุเพิ่มเติม';
+  }
 
   const lat = record.lat || record.latitude;
   const lng = record.lng || record.longitude;

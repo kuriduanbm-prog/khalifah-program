@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.72'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.73'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3137,6 +3137,7 @@ function recordPrayer(data) {
   try { dorm = dormPrayerOf_(cleanSid, dateStr, prayerNameThai, statusThai, lat, lng, data.locationName || ''); } catch (e) { dorm = null; }
   if (dorm) timeFlags = (timeFlags ? timeFlags + ' · ' : '') + 'ละหมาดที่หอพัก (' + dorm.zone + ')';
   let wpZone = ''; try { wpZone = wrongPlaceOf_(cleanSid, dateStr, prayerNameThai, statusThai, lat, lng); } catch (e) {}
+  try { wpFridayFixOnce_(); } catch (e) {}
   {
     const unlock = lockEnter_(20000);
     try {
@@ -3326,9 +3327,30 @@ function prayerFailLog_(data, reason) {
 /** v19.55 · นักเรียนหญิง: ซุฮริ/อัศรี ต้องเช็คที่มัสยิดอัลฮารอมัยน์เท่านั้น (ตั้งแต่ 18 พ.ย. 2569)
  *  คืนชื่อจุดที่เช็ค ถ้าอยู่ในเขตจุดอื่นที่ไม่ใช่มัสยิดฮารอมัยน์ (เช่น หอพัก) · นอกทุกเขต = ไม่ตัดสินที่นี่ */
 const GIRL_MOSQUE_FROM_ = '2026-11-18';
+/** v19.73 · วันศุกร์ ละหมาดซุฮริ นักเรียนหญิงกลับไปละหมาดที่หอพักได้ (ไม่ผิดสถานที่ ไม่หักคะแนน) */
+function girlFridayDhuhr_(dateStr, prayerThai) {
+  if (!/ซุฮ|ดุฮ|dhuhr|zuhr/i.test(String(prayerThai || ''))) return false;
+  const d = String(dateStr || '').slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  return new Date(d + 'T12:00:00+07:00').getUTCDay() === 5;
+}
+/** v19.73 · ยกเลิกคะแนนที่หักไปแล้วของซุฮริวันศุกร์ (ก่อนมีข้อยกเว้นนี้) · ทำครั้งเดียว */
+function wpFridayFixOnce_() {
+  const P = PropertiesService.getScriptProperties(); if (P.getProperty('WP_FRI_FIX_1')) return 0;
+  const sh = getSpreadsheet().getSheetByName(SHEETS.BEHAVIOR); let n = 0;
+  if (sh && sh.getLastRow() > 1) {
+    const col = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues();
+    for (let i = col.length - 1; i >= 0; i--) {
+      const m = String(col[i][0]).match(/^WP-\d+-(\d{4}-\d{2}-\d{2})-1$/);
+      if (m && girlFridayDhuhr_(m[1], 'ซุฮริ')) { sh.deleteRow(i + 2); n++; }
+    }
+  }
+  P.setProperty('WP_FRI_FIX_1', new Date().toISOString() + ' · removed ' + n);
+  return n;
+}
 function wrongPlaceOf_(sid, dateStr, prayerThai, statusThai, lat, lng) {
   let from = GIRL_MOSQUE_FROM_; try { from = PropertiesService.getScriptProperties().getProperty('GIRL_MOSQUE_FROM') || from; } catch (e) {}
   if (String(dateStr) < from) return '';
+  if (girlFridayDhuhr_(dateStr, prayerThai)) return '';
   if (!/ซุฮ|ดุฮ|อัศ|อัส|อาศ/.test(String(prayerThai || ''))) return '';
   if (/^(ขาด|ลา)|ป่วย|อุซุร|ประจำเดือน|บันทึกสถานะพิเศษ/.test(String(statusThai || '').trim())) return '';
   const la = Number(lat), lo = Number(lng);
@@ -3373,6 +3395,7 @@ function girlPlacePenaltyByLog_(d) {
   for (let i = rows.length - 1; i >= 0; i--) {
     const r = rows[i]; if (cleanVal(r[0]) !== lid) continue;
     const ds = formatSheetDate(r[6]); let zone = '';
+    if (girlFridayDhuhr_(ds, r[4])) return { success: false, message: 'ซุฮริวันศุกร์ นักเรียนหญิงละหมาดที่หอพักได้ ไม่หักคะแนน' };
     const m = String(r[15] || '').match(/จุดที่เช็ค:\s*([^·\[]+)/); if (m) zone = m[1].trim();
     if (!zone) zone = wrongPlaceOf_(r[1], ds, r[4], r[14], r[8], r[9]);
     if (!zone) return { success: false, message: 'รายการนี้ไม่ได้เช็คผิดสถานที่' };
