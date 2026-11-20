@@ -3675,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.74';
+  const APP_VERSION = '19.75';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14839,7 +14839,7 @@ window.k8PdWho = function (sid) {
     const n = p.recipients || 0, k = p.submitted || 0;
     return '<div class="k8-cp-sc"><span class="is-ok">ส่งแล้ว ' + k + ' คน</span><span class="is-no">ยังไม่ส่ง ' + Math.max(0, n - k) + ' คน</span><button type="button" onclick="k8CpSubs(\'' + esc(p.id) + '\')">ดูรายชื่อ</button></div>';
   }
-  const SV = { pid: '', data: null, tab: 'no' };
+  const SV = { pid: '', data: null, tab: 'no', busy: {}, rv: {}, rvNote: {} };
   async function loadSV() {
     const pid = SV.pid; let r = null; try { r = await gasApiCall('getClassSubmissions', { data: { postId: pid } }, 30000); } catch (e) {}
     if (SV.pid !== pid) return;
@@ -14853,15 +14853,56 @@ window.k8PdWho = function (sid) {
     if (!d) { body.innerHTML = '<p class="k8-cp-empty">กำลังโหลด…</p>'; return; }
     if (d.error) { body.innerHTML = '<p class="k8-cp-warn">' + esc(d.error) + '</p>'; return; }
     m.querySelector('#k8CpSVT').textContent = 'การส่งงาน · ' + d.post.title;
-    const yes = d.list.filter((x) => x.submitted).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    // v19.75 · ที่ยังไม่ตรวจ/ส่งใหม่ขึ้นก่อน
+    const rk = (x) => (!x.review || x.review === 'resubmitted' ? 0 : x.review === 'revise' ? 1 : 2);
+    const yes = d.list.filter((x) => x.submitted).sort((a, b) => rk(a) - rk(b) || String(a.at).localeCompare(String(b.at)));
+    const nWait = yes.filter((x) => rk(x) === 0).length;
     const no = d.list.filter((x) => !x.submitted).sort((a, b) => String(a.name).localeCompare(String(b.name), 'th'));
-    let h = '<div class="k8-ra-tabs" role="tablist"><button type="button" role="tab" aria-selected="' + (SV.tab === 'no') + '" onclick="k8CpSVTab(\'no\')">ยังไม่ส่ง ' + no.length + '</button><button type="button" role="tab" aria-selected="' + (SV.tab === 'yes') + '" onclick="k8CpSVTab(\'yes\')">ส่งแล้ว ' + yes.length + '</button></div>';
+    let h = '<div class="k8-ra-tabs" role="tablist"><button type="button" role="tab" aria-selected="' + (SV.tab === 'no') + '" onclick="k8CpSVTab(\'no\')">ยังไม่ส่ง ' + no.length + '</button><button type="button" role="tab" aria-selected="' + (SV.tab === 'yes') + '" onclick="k8CpSVTab(\'yes\')">ส่งแล้ว ' + yes.length + (nWait ? ' <span class="k8-cp-rvn">รอตรวจ ' + nWait + '</span>' : '') + '</button></div>';
     const L = SV.tab === 'yes' ? yes : no;
     if (!L.length) h += '<p class="k8-cp-empty">' + (SV.tab === 'yes' ? 'ยังไม่มีใครส่งงาน' : 'ส่งครบทุกคนแล้ว') + '</p>';
-    else h += '<ul class="k8-cp-svl">' + L.map((x) => '<li><div class="k8-cp-svh"><b>' + esc(x.name) + '</b><small>' + esc(shortG(x.grade)) + ' · ' + esc(x.studentId) + '</small></div>' +
-      (x.submitted ? '<small class="k8-cp-svt">ส่งเมื่อ ' + dTh(x.at) + ' ' + tTh(x.at) + (x.late ? ' · <span class="k8-cp-lt">ส่งช้า</span>' : '') + (x.edits ? ' · แก้ไข ' + x.edits + ' ครั้ง' : '') + '</small>' + (x.note ? '<p>' + esc(x.note).replace(/\n/g, '<br>') + '</p>' : '') + (x.files && x.files.length ? '<div class="k8-cp-att">' + x.files.map(fileBtn).join('') + '</div>' : '') : '') + '</li>').join('') + '</ul>';
+    else h += '<ul class="k8-cp-svl">' + L.map((x) => '<li class="' + (x.review ? 'rv-' + x.review : '') + '"><div class="k8-cp-svh"><b>' + esc(x.name) + '</b><small>' + esc(shortG(x.grade)) + ' · ' + esc(x.studentId) + '</small>' + (x.submitted ? rvPill(x) : '') + '</div>' +
+      (x.submitted ? '<small class="k8-cp-svt">ส่งเมื่อ ' + dTh(x.at) + ' ' + tTh(x.at) + (x.late ? ' · <span class="k8-cp-lt">ส่งช้า</span>' : '') + (x.edits ? ' · แก้ไข ' + x.edits + ' ครั้ง' : '') + '</small>' + (x.note ? '<p>' + esc(x.note).replace(/\n/g, '<br>') + '</p>' : '') + (x.files && x.files.length ? '<div class="k8-cp-att">' + x.files.map(fileBtn).join('') + '</div>' : '') + rvBar(x) : '') + '</li>').join('') + '</ul>';
+    const ae = document.activeElement; const keep = ae && ae.dataset && ae.dataset.rvk ? ae.dataset.rvk : '';
     body.innerHTML = h;
+    if (keep) { const t = body.querySelector('[data-rvk="' + keep + '"]'); if (t) { t.focus(); try { t.setSelectionRange(t.value.length, t.value.length); } catch (e) {} } }
   }
+  /* v19.75 · ตรวจงาน: ตรวจแล้ว / แก้ไขส่งใหม่ (+ความเห็น) · นักเรียนเห็นผลและได้แจ้งเตือน */
+  const RVL = { checked: ['✓ ตรวจแล้ว', 'is-ok'], revise: ['แก้ไขส่งใหม่', 'is-rv'], resubmitted: ['ส่งใหม่ · รอตรวจ', 'is-wait'] };
+  function rvPill(x) { const r = RVL[x.review] || ['รอตรวจ', 'is-wait']; return '<em class="k8-cp-rvp ' + r[1] + '">' + r[0] + '</em>'; }
+  function rvBar(x) {
+    const k = String(x.studentId); const ek = esc(k); const busy = !!SV.busy[k]; const dis = busy ? ' disabled' : '';
+    const open = SV.rv[k] === 'revise';
+    let h = '<div class="k8-cp-rvb" role="group" aria-label="ผลตรวจงานของ ' + esc(x.name) + '">' +
+      '<button type="button" class="is-ok" aria-pressed="' + (x.review === 'checked') + '" onclick="k8CpRv(\'' + ek + '\',\'checked\')"' + dis + '><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>ตรวจแล้ว</button>' +
+      '<button type="button" class="is-rv" aria-pressed="' + (x.review === 'revise' || open) + '" onclick="k8CpRv(\'' + ek + '\',\'revise\')"' + dis + '><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>แก้ไขส่งใหม่</button></div>';
+    if (open) h += '<div class="k8-cp-rvf"><textarea rows="2" maxlength="1000" data-rvk="' + ek + '" placeholder="บอกนักเรียนว่าต้องแก้ไขอะไร (ถ้ามี)" aria-label="ความเห็นถึงนักเรียน" oninput="k8CpRvNote(\'' + ek + '\',this.value)"' + dis + '>' + esc(SV.rvNote[k] != null ? SV.rvNote[k] : (x.reviewNote || '')) + '</textarea><div class="k8-cp-sub-acts"><button type="button" class="is-ghost" onclick="k8CpRvCancel(\'' + ek + '\')"' + dis + '>ยกเลิก</button><button type="button" class="k8-cp-go" onclick="k8CpRvSave(\'' + ek + '\')"' + dis + '>' + (busy ? 'กำลังบันทึก…' : 'แจ้งนักเรียนให้แก้ไข') + '</button></div></div>';
+    else if (x.reviewNote && x.review) h += '<p class="k8-cp-rvc"><b>ความเห็นของอาจารย์:</b> ' + esc(x.reviewNote).replace(/\n/g, '<br>') + '</p>';
+    if (x.reviewedAt && x.review && x.review !== 'resubmitted') h += '<small class="k8-cp-svt">ตรวจเมื่อ ' + dTh(x.reviewedAt) + ' ' + tTh(x.reviewedAt) + '</small>';
+    return h;
+  }
+  const rvItem = (k) => ((SV.data && SV.data.list) || []).find((x) => String(x.studentId) === String(k));
+  async function rvSend(k, status, note) {
+    const x = rvItem(k); if (!x || SV.busy[k]) return;
+    const prev = { review: x.review, reviewNote: x.reviewNote, reviewedAt: x.reviewedAt };
+    x.review = status; x.reviewNote = status ? note : ''; x.reviewedAt = status ? new Date().toISOString() : ''; SV.busy[k] = 1; delete SV.rv[k]; paintSV();
+    let r = null; try { r = await gasApiCall('reviewClassSubmission', { data: { postId: SV.pid, studentId: k, status, note } }, 30000); } catch (e) {}
+    delete SV.busy[k];
+    if (r && r.success) { x.review = r.review; x.reviewNote = r.reviewNote; x.reviewedAt = r.reviewedAt; delete SV.rvNote[k]; toast(r.message, 'success'); }
+    else { Object.assign(x, prev); toast((r && (r.message || r.error)) || 'บันทึกผลตรวจไม่สำเร็จ', 'error'); }
+    paintSV();
+  }
+  window.k8CpRv = function (k, st) {
+    const x = rvItem(k); if (!x) return;
+    if (st === 'checked') { rvSend(k, x.review === 'checked' ? '' : 'checked', ''); return; }
+    if (x.review === 'revise' && SV.rv[k] !== 'revise') { SV.rv[k] = 'revise'; SV.rvNote[k] = x.reviewNote || ''; paintSV(); return; }
+    if (SV.rv[k] === 'revise') { delete SV.rv[k]; paintSV(); return; }
+    SV.rv[k] = 'revise'; paintSV();
+    setTimeout(() => { const t = document.querySelector('#k8CpSV [data-rvk="' + String(k).replace(/"/g, '') + '"]'); if (t) t.focus(); }, 30);
+  };
+  window.k8CpRvNote = function (k, v) { SV.rvNote[k] = v; };
+  window.k8CpRvCancel = function (k) { delete SV.rv[k]; delete SV.rvNote[k]; paintSV(); };
+  window.k8CpRvSave = function (k) { const x = rvItem(k); rvSend(k, 'revise', String(SV.rvNote[k] != null ? SV.rvNote[k] : (x && x.reviewNote) || '').trim()); };
   window.k8CpSVTab = function (t) { SV.tab = t; paintSV(); };
   window.k8CpSubs = function (pid) {
     let m = document.getElementById('k8CpSV');
@@ -14943,7 +14984,7 @@ window.k8PdWho = function (sid) {
     sync(); const old = document.getElementById('k8CpCard'); if (old) old.remove();
     const b = document.getElementById('hfCpN'); if (!b) return;
     const L = isStu() ? (S.posts || []) : []; const sn = seen();
-    const todo = L.filter((p) => !p.mySubmission).length; const nNew = L.filter((p) => !sn[p.id]).length;
+    const todo = L.filter((p) => !p.mySubmission || p.mySubmission.review === 'revise').length; const nNew = L.filter((p) => !sn[p.id]).length;
     const n = Math.max(todo, nNew);
     b.hidden = !n; b.textContent = n > 9 ? '9+' : String(n || '');
     const btn = document.getElementById('hfCpQk');
@@ -14955,11 +14996,12 @@ window.k8PdWho = function (sid) {
     const A = S.posts || []; const sn = seen();
     const today = new Date().toLocaleDateString('sv-SE');
     // v19.71 · แท็บ ยังไม่ส่ง / ส่งแล้ว / ทั้งหมด เพื่อดูประวัติการส่งงานและแก้ไข
-    const todoL = A.filter((p) => !p.mySubmission), doneL = A.filter((p) => p.mySubmission);
+    const needs = (p) => !p.mySubmission || p.mySubmission.review === 'revise';
+    const todoL = A.filter(needs), doneL = A.filter((p) => !needs(p));
     if (!S.tab && A.length) S.tab = todoL.length ? 'todo' : 'all';
     const L = S.tab === 'todo' ? todoL : S.tab === 'done' ? doneL : A;
     const tb = (k, t, n) => '<button type="button" role="tab" aria-selected="' + (S.tab === k) + '" onclick="k8CpSTab(\'' + k + '\')">' + t + ' ' + n + '</button>';
-    const tabs = A.length ? '<div class="k8-ra-tabs k8-cp-stabs" role="tablist">' + tb('todo', 'ยังไม่ส่ง', todoL.length) + tb('done', 'ส่งแล้ว', doneL.length) + tb('all', 'ทั้งหมด', A.length) + '</div>' : '';
+    const tabs = A.length ? '<div class="k8-ra-tabs k8-cp-stabs" role="tablist">' + tb('todo', 'ต้องส่ง', todoL.length) + tb('done', 'ส่งแล้ว', doneL.length) + tb('all', 'ทั้งหมด', A.length) + '</div>' : '';
     m.querySelector('.k8-cp-body').innerHTML = !A.length ? '<p class="k8-cp-empty">' + (S.busy ? 'กำลังโหลด…' : 'ยังไม่มีงานจากอาจารย์') + '</p>' :
       tabs + (!L.length ? '<p class="k8-cp-empty">' + (S.tab === 'todo' ? 'ส่งครบทุกงานแล้ว' : 'ยังไม่มีงานที่ส่งแล้ว') + '</p>' :
       '<ul class="k8-cp-feed">' + L.map((p) => '<li class="' + (sn[p.id] ? '' : 'is-new') + '"><div class="k8-cp-fh"><b>' + esc(p.title) + '</b>' + (sn[p.id] ? '' : '<i>ใหม่</i>') + '</div>' +
@@ -14976,9 +15018,13 @@ window.k8PdWho = function (sid) {
   function subBlock(p) {
     const sb = p.mySubmission; const id = esc(p.id);
     if (sb && !SB.edit[p.id]) {
-      return '<div class="k8-cp-sub is-done" role="status"><b>✓ ส่งงานเรียบร้อยแล้ว</b><small>' + dTh(sb.at) + ' ' + tTh(sb.at) + (sb.late ? ' · <span class="k8-cp-lt">ส่งช้ากว่ากำหนด</span>' : '') + (sb.edits ? ' · แก้ไข ' + sb.edits + ' ครั้ง' : '') + '</small>' +
+      const rv = sb.review === 'checked' ? '<div class="k8-cp-rvs is-ok"><b>✓ อาจารย์ตรวจแล้ว</b>' + (sb.reviewedAt ? '<small>' + dTh(sb.reviewedAt) + ' ' + tTh(sb.reviewedAt) + '</small>' : '') + (sb.reviewNote ? '<p>' + esc(sb.reviewNote).replace(/\n/g, '<br>') + '</p>' : '') + '</div>'
+        : sb.review === 'revise' ? '<div class="k8-cp-rvs is-rv" role="alert"><b>อาจารย์ให้แก้ไขแล้วส่งใหม่</b>' + (sb.reviewNote ? '<p>' + esc(sb.reviewNote).replace(/\n/g, '<br>') + '</p>' : '') + '</div>'
+        : sb.review === 'resubmitted' ? '<div class="k8-cp-rvs is-wait"><b>ส่งงานที่แก้ไขแล้ว · รออาจารย์ตรวจอีกครั้ง</b>' + (sb.reviewNote ? '<p>ความเห็นครั้งก่อน: ' + esc(sb.reviewNote).replace(/\n/g, '<br>') + '</p>' : '') + '</div>'
+        : '<div class="k8-cp-rvs is-wait"><b>รออาจารย์ตรวจ</b></div>';
+      return '<div class="k8-cp-sub is-done' + (sb.review === 'revise' ? ' is-rv' : '') + '" role="status">' + rv + '<b>✓ ส่งงานเรียบร้อยแล้ว</b><small>' + dTh(sb.at) + ' ' + tTh(sb.at) + (sb.late ? ' · <span class="k8-cp-lt">ส่งช้ากว่ากำหนด</span>' : '') + (sb.edits ? ' · แก้ไข ' + sb.edits + ' ครั้ง' : '') + '</small>' +
         (sb.note ? '<p>' + esc(sb.note).replace(/\n/g, '<br>') + '</p>' : '') + (sb.files && sb.files.length ? '<div class="k8-cp-att">' + sb.files.map(fileBtn).join('') + '</div>' : '') +
-        '<button type="button" class="k8-cp-sub-edit" onclick="k8CpSubEdit(\'' + id + '\')">ส่งใหม่ / แก้ไขงาน</button></div>';
+        '<button type="button" class="k8-cp-sub-edit' + (sb.review === 'revise' ? ' is-strong' : '') + '" onclick="k8CpSubEdit(\'' + id + '\')">' + (sb.review === 'revise' ? 'แก้ไขงานแล้วส่งใหม่' : 'ส่งใหม่ / แก้ไขงาน') + '</button></div>';
     }
     const L = SB.files[p.id] || []; const busy = !!SB.busy[p.id]; const dis = busy ? ' disabled' : '';
     return '<div class="k8-cp-sub"><b>ส่งงานให้อาจารย์</b>' + (sb ? '<small>การส่งใหม่จะแทนที่งานที่ส่งไว้เดิม</small>' : '') +

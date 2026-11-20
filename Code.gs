@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.74'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.75'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1263,7 +1263,7 @@ const ACTION_ACCESS = {
   addBehaviorLogs: 'inspector', cancelBehaviorLog: 'inspector', getBehaviorData: 'inspector', getMyBehavior: 'student', reactPrayer: 'staff', getMyPrayerReacts: 'student', aiChat: 'admin', aiStatus: 'admin', aiTicket: 'admin', aiLog: 'admin',
   saveBehaviorRules: 'inspector', // แอดมิน + ผู้ตรวจการ (ตรวจสิทธิ์ซ้ำในคำสั่ง)
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
-  updatePrayerRecord: 'staff', getRosterAdj: 'staff', saveRosterAdj: 'staff', uploadClassFile: 'staff', createClassPost: 'staff', deleteClassPost: 'staff', listClassPosts: 'student', getClassFile: 'student', uploadSubmissionFile: 'student', submitClassWork: 'student', getClassSubmissions: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
+  updatePrayerRecord: 'staff', getRosterAdj: 'staff', saveRosterAdj: 'staff', uploadClassFile: 'staff', createClassPost: 'staff', deleteClassPost: 'staff', listClassPosts: 'student', getClassFile: 'student', uploadSubmissionFile: 'student', submitClassWork: 'student', getClassSubmissions: 'staff', reviewClassSubmission: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
@@ -1802,6 +1802,7 @@ function dispatchAction_(action, req, data, session, ctx) {
       return saveHasanatBatch_(data);
     case 'uploadClassFile': return uploadClassFile_(data, session);
     case 'createClassPost': return createClassPost_(data, session, ctx);
+    case 'reviewClassSubmission': return reviewClassSubmission_(data, session, ctx);
     case 'deleteClassPost': return deleteClassPost_(pick('id'), session, ctx);
     case 'listClassPosts': return listClassPosts_(data, session, ctx);
     case 'getClassFile': return getClassFile_(pick('fileId'), session, ctx);
@@ -4475,17 +4476,18 @@ function classPostView_(p, withAud, subs) {
 }
 /* v19.69 · นักเรียนส่งงานคืน · ชีต "ส่งงานรายวิชา" (1 แถว/นักเรียน/งาน · ส่งใหม่ = แทนที่) */
 const CLASS_SUB_SHEET_ = 'ส่งงานรายวิชา';
-const CLASS_SUB_HEAD_ = ['รหัส', 'รหัสงาน', 'รหัสนักเรียน', 'ชื่อ', 'ชั้น', 'ส่งเมื่อ', 'ข้อความ', 'ไฟล์ (JSON)', 'ส่งช้า', 'แก้ไขครั้งที่'];
+const CLASS_SUB_HEAD_ = ['รหัส', 'รหัสงาน', 'รหัสนักเรียน', 'ชื่อ', 'ชั้น', 'ส่งเมื่อ', 'ข้อความ', 'ไฟล์ (JSON)', 'ส่งช้า', 'แก้ไขครั้งที่', 'ผลตรวจ', 'ความเห็นอาจารย์', 'ตรวจเมื่อ', 'ผู้ตรวจ'];
 function classSubSheet_() {
   const ss = getSpreadsheet(); let sh = ss.getSheetByName(CLASS_SUB_SHEET_);
   if (!sh) { sh = ss.insertSheet(CLASS_SUB_SHEET_); sh.appendRow(CLASS_SUB_HEAD_); sh.setFrozenRows(1); }
+  else { try { if (sh.getMaxColumns() < CLASS_SUB_HEAD_.length) sh.insertColumnsAfter(sh.getMaxColumns(), CLASS_SUB_HEAD_.length - sh.getMaxColumns()); if (!cleanVal(sh.getRange(1, 11).getValue())) sh.getRange(1, 11, 1, 4).setValues([CLASS_SUB_HEAD_.slice(10)]); } catch (e) {} }
   return sh;
 }
 function readClassSubs_() {
   const sh = classSubSheet_(); if (sh.getLastRow() < 2) return [];
   return sh.getRange(2, 1, sh.getLastRow() - 1, CLASS_SUB_HEAD_.length).getValues().map(function (r, i) {
     let files = []; try { files = JSON.parse(String(r[7] || '[]')) || []; } catch (e) {}
-    return { row: i + 2, id: cleanVal(r[0]), postId: cleanVal(r[1]), sid: hqKey_(r[2]), studentId: cleanVal(r[2]), name: cleanVal(r[3]), grade: cleanVal(r[4]), at: notifTs_(r[5]), note: cleanVal(r[6]), files: files, late: String(r[8]) === 'ใช่', edits: Number(r[9]) || 0 };
+    return { row: i + 2, id: cleanVal(r[0]), postId: cleanVal(r[1]), sid: hqKey_(r[2]), studentId: cleanVal(r[2]), name: cleanVal(r[3]), grade: cleanVal(r[4]), at: notifTs_(r[5]), note: cleanVal(r[6]), files: files, late: String(r[8]) === 'ใช่', edits: Number(r[9]) || 0, review: cleanVal(r[10]), reviewNote: cleanVal(r[11]), reviewedAt: notifTs_(r[12]), reviewer: cleanVal(r[13]) };
   }).filter(function (x) { return x.id && x.postId; });
 }
 function classPostById_(id) { id = cleanVal(id); return readClassPosts_().filter(function (p) { return p.id === id && p.status === 'active'; })[0] || null; }
@@ -4515,9 +4517,10 @@ function submitClassWork_(d, session) {
     const row = [old ? old.id : 'SUB-' + Date.now() + '-' + Math.floor(Math.random() * 1e4), p.id, cleanVal(st.studentId || session.userId), cleanVal(st.fullName || session.name || ''), cleanVal(st.grade || ''), now, note, JSON.stringify(files), late ? 'ใช่' : '', old ? old.edits + 1 : 0];
     if (old) {
       sh.getRange(old.row, 1, 1, row.length).setValues([row]); sh.getRange(old.row, 3).setNumberFormat('@').setValue(row[2]);
+      if (old.review) sh.getRange(old.row, 11).setValue('resubmitted'); // v19.75 · ส่งใหม่หลังอาจารย์ตรวจ → รอตรวจอีกครั้ง (เก็บความเห็นเดิมไว้)
       old.files.forEach(function (f) { if (!files.some(function (n) { return n.id === f.id; })) { try { DriveApp.getFileById(f.id).setTrashed(true); } catch (e) {} } });
     } else appendRowFind_(sh, row, { keyCol: 1, text: [3] });
-    return { success: true, submission: { at: now, note: note, files: files, late: late, edits: row[9] }, message: late ? 'ส่งงานเรียบร้อยแล้ว (ส่งช้ากว่ากำหนด)' : 'ส่งงานเรียบร้อยแล้ว' };
+    return { success: true, submission: { at: now, note: note, files: files, late: late, edits: row[9], review: old && old.review ? 'resubmitted' : '', reviewNote: old ? old.reviewNote : '', reviewedAt: old ? old.reviewedAt : '' }, message: late ? 'ส่งงานเรียบร้อยแล้ว (ส่งช้ากว่ากำหนด)' : 'ส่งงานเรียบร้อยแล้ว' };
   } finally { unlock(); }
 }
 function getClassSubmissions_(postId, session, ctx) {
@@ -4527,9 +4530,33 @@ function getClassSubmissions_(postId, session, ctx) {
   const byId = {}; (getAllStudents().data || []).forEach(function (x) { byId[hqKey_(x.studentId)] = x; });
   const list = p.audience.map(function (sid) {
     const st = byId[sid] || {}; const sb = subs[sid];
-    return { studentId: cleanVal(st.studentId || sid), name: cleanVal(st.fullName || (sb && sb.name) || sid), grade: cleanVal(st.grade || ''), submitted: !!sb, at: sb ? sb.at : '', note: sb ? sb.note : '', files: sb ? sb.files : [], late: sb ? sb.late : false, edits: sb ? sb.edits : 0 };
+    return { studentId: cleanVal(st.studentId || sid), name: cleanVal(st.fullName || (sb && sb.name) || sid), grade: cleanVal(st.grade || ''), submitted: !!sb, at: sb ? sb.at : '', note: sb ? sb.note : '', files: sb ? sb.files : [], late: sb ? sb.late : false, edits: sb ? sb.edits : 0, review: sb ? sb.review : '', reviewNote: sb ? sb.reviewNote : '', reviewedAt: sb ? sb.reviewedAt : '' };
   });
   return { success: true, post: classPostView_(p, true, readClassSubs_()), list: list };
+}
+/** v19.75 · อาจารย์ตรวจงาน: checked = ตรวจแล้ว · revise = ให้แก้ไขส่งใหม่ · '' = ยกเลิกผลตรวจ · แจ้งนักเรียนทางกระดิ่ง */
+function reviewClassSubmission_(d, session, ctx) {
+  d = d || {}; const p = classPostById_(d.postId); if (!p) return { success: false, message: 'ไม่พบงานนี้' };
+  if (!classPostCanManage_(p, session, ctx)) return { success: false, code: 'FORBIDDEN', message: 'ตรวจได้เฉพาะงานในวิชาที่คุณสอน' };
+  const st = ['checked', 'revise', ''].indexOf(cleanVal(d.status)) !== -1 ? cleanVal(d.status) : null;
+  if (st === null) return { success: false, message: 'ผลตรวจไม่ถูกต้อง' };
+  const note = cleanVal(d.note).slice(0, 1000); const sid = hqKey_(d.studentId);
+  const unlock = lockEnter_(15000);
+  try {
+    const sb = readClassSubs_().filter(function (x) { return x.postId === p.id && x.sid === sid; })[0];
+    if (!sb) return { success: false, message: 'นักเรียนคนนี้ยังไม่ได้ส่งงาน' };
+    const now = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    classSubSheet_().getRange(sb.row, 11, 1, 4).setValues([[st, st ? note : '', st ? now : '', st ? (session.name || session.userId) : '']]);
+    if (st) {
+      try {
+        const nb = p.title + '\n' + (st === 'checked' ? 'อาจารย์ตรวจงานแล้ว' : 'อาจารย์ให้แก้ไขแล้วส่งใหม่') + (note ? '\nความเห็น: ' + note : '') + '\nเปิดดูที่หน้าแรก → "ส่งงาน"';
+        const exp = Utilities.formatDate(new Date(Date.now() + 14 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
+        ensureSchema();
+        getSpreadsheet().getSheetByName(SHEETS.NOTIFS).appendRow(['NTF-RV-' + Date.now() + '-' + Math.floor(Math.random() * 1e4), now, (st === 'checked' ? 'ตรวจแล้ว · ' : 'แก้ไขส่งใหม่ · ') + p.subjectName, nb, 'students', cleanVal(sb.studentId), st === 'revise' ? 'urgent' : 'normal', session.userId, session.name || session.userId, 'active', exp, 'bell', '']);
+      } catch (e) {}
+    }
+    return { success: true, review: st, reviewNote: st ? note : '', reviewedAt: st ? now : '', message: st === 'checked' ? 'บันทึก "ตรวจแล้ว"' : st === 'revise' ? 'แจ้งให้แก้ไขส่งใหม่แล้ว' : 'ยกเลิกผลตรวจแล้ว' };
+  } finally { unlock(); }
 }
 function classPostCanManage_(p, session, ctx) { return !!(ctx && ctx.isAdmin) || String(p.teacher || '').toLowerCase() === String(session.userId || '').toLowerCase() || teacherOwnsSubject_(session, p.subject); }
 function listClassPosts_(d, session, ctx) {
@@ -4538,7 +4565,7 @@ function listClassPosts_(d, session, ctx) {
   if (session.role === 'student') {
     const me = hqKey_(session.userId);
     const subsS = {}; readClassSubs_().forEach(function (x) { if (x.sid === me) subsS[x.postId] = x; });
-    return { success: true, data: all.filter(function (p) { return p.audience.indexOf(me) !== -1; }).slice(0, 60).map(function (p) { const o = classPostView_(p, false); const sb = subsS[p.id]; if (sb) o.mySubmission = { at: sb.at, note: sb.note, files: sb.files, late: sb.late, edits: sb.edits }; return o; }) };
+    return { success: true, data: all.filter(function (p) { return p.audience.indexOf(me) !== -1; }).slice(0, 60).map(function (p) { const o = classPostView_(p, false); const sb = subsS[p.id]; if (sb) o.mySubmission = { at: sb.at, note: sb.note, files: sb.files, late: sb.late, edits: sb.edits, review: sb.review, reviewNote: sb.reviewNote, reviewedAt: sb.reviewedAt }; return o; }) };
   }
   const subj = cleanVal(d.subject), grade = cleanVal(d.grade);
   const mine = all.filter(function (p) { return (!subj || p.subject === subj) && (!grade || p.grade === grade) && classPostCanManage_(p, session, ctx); });
