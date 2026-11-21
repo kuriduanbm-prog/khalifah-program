@@ -7619,3 +7619,8 @@ html[data-theme="dark"] .k8-sr-ok { background: #052e16 !important; color: #86ef
 html[data-theme="dark"] .k8-sr-list.is-rm li { background: #2a1305 !important; border-color: #9a3412 !important; }
 html[data-theme="dark"] .k8-sr-list.is-rm li em { color: #fdba74 !important; }
 html[data-theme="dark"] .k8-sr-list.is-add li { background: #052e16 !important; border-color: #166534 !important; }
+
+/* v19.81 */
+html[data-theme="dark"] #lateReqWindowHint { color: #cbd5e1 !important; }
+.k8-pn-24h { display: block; margin: -4px 2px 12px; font-size: 13px; color: #475569; line-height: 1.45; }
+html[data-theme="dark"] .k8-pn-24h { color: #cbd5e1 !important; }

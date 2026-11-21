@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.79';
+  const APP_VERSION = '19.81';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8476,9 +8476,16 @@ window.k8RegBirthChange = function (v) {
     const dup = slots.filter((sl) => list.some((r) => r.studentId === sid && r.prayerSlot === sl && r.date === date && String(r.status || 'pending').toLowerCase() === 'pending'));
     const todo = slots.filter((sl) => dup.indexOf(sl) === -1);
     if (!todo.length) { toast('ส่งคำร้อง ' + dup.join(', ') + ' ของวันนี้ไปแล้ว · รอแอดมินตรวจสอบ', 'warning'); return; }
+    // v19.81 · แจ้งย้อนหลังได้ภายใน 24 ชั่วโมงนับจากเวลาเข้าละหมาดนั้น (ยกเว้นประจำเดือน/อุซุร) · ลืมเช็ค = ต้องถึงเวลาละหมาดแล้ว
+    if (!/ประจำเดือน|อุซุร/.test(reason)) {
+      const W = window.k8ReqWindow; const late = [], early = [];
+      todo.forEach((sl) => { const w = W && W(date, sl); if (!w) return; if (Date.now() > w.deadline) late.push(sl + ' (หมดเวลาแจ้ง ' + w.dlTh + ')'); else if (/ลืม/.test(reason) && Date.now() < w.start) early.push(sl); });
+      if (late.length) { toast('แจ้งย้อนหลังได้ภายใน 24 ชั่วโมงเท่านั้น · ' + late.join(', '), 'warning'); return; }
+      if (early.length) { toast('ยังไม่ถึงเวลาละหมาด ' + early.join(', ') + ' ของวันที่เลือก', 'warning'); return; }
+    }
     const sv = document.querySelector('.k8-pn-save');
     busy = true; if (sv) { sv.disabled = true; sv.textContent = 'กำลังส่งคำร้อง…'; }
-    let photo = P.photo, ok = 0, fail = 0; const src = P.photo ? P.src : '';
+    let photo = P.photo, ok = 0, fail = 0; const src = P.photo ? P.src : ''; const rej = [];
     const sub = new Date().toLocaleString('th-TH');
     for (let i = 0; i < todo.length; i++) {
       const item = {
@@ -8491,6 +8498,7 @@ window.k8RegBirthChange = function (v) {
       };
       let r = null; try { r = await gasApiCall('prayerLateRequest', { data: item }, 45000); } catch (e) { r = null; }
       if (r && r.success) { ok++; if (r.photoUrl) { photo = r.photoUrl; item.photoUrl = r.photoUrl; } if (r.photoSource) item.photoSourceLabel = r.photoSource; }
+      else if (r && r.success === false && /^LATE_REQ_|GIRLS_ONLY/.test(String(r.code || ''))) { rej.push(r.message); continue; } // v19.81 · ระบบปฏิเสธ: ไม่เก็บ ไม่ส่งซ้ำ
       else { fail++; try { syncRecordToGoogleSheet('prayerLateRequest', item); } catch (e) {} }
       // เก็บในเครื่อง (ไม่เก็บรูป base64 ขนาดใหญ่ซ้ำทุกเวลา)
       const local = Object.assign({}, item); if (/^data:/.test(local.photoUrl) && i > 0) local.photoUrl = '';
@@ -8506,7 +8514,8 @@ window.k8RegBirthChange = function (v) {
     try { updateStudentPendingReqBadge(); } catch (e) {}
     try { refreshPrayerChipsStatus(); } catch (e) {}
     const msg = 'ส่งคำร้อง ' + todo.join(', ') + ' (' + thDate(date) + ') แล้ว · รอแอดมินอนุมัติ' + (dup.length ? ' · ข้าม ' + dup.join(', ') + ' (ส่งไปแล้ว)' : '');
-    toast(fail && !ok ? 'ส่งไม่สำเร็จ ระบบจะลองส่งใหม่อัตโนมัติ' : msg, fail && !ok ? 'warning' : 'success');
+    if (rej.length && !ok && !fail) { toast(rej[0], 'warning'); return; }
+    toast(fail && !ok ? 'ส่งไม่สำเร็จ ระบบจะลองส่งใหม่อัตโนมัติ' : msg + (rej.length ? ' · ' + rej[0] : ''), fail && !ok ? 'warning' : 'success');
   };
 
   // ปุ่ม/ลิงก์ "ลืมเช็คชื่อ" เดิม → เปิดการ์ดนี้แทนหน้าต่างแยก
@@ -8772,6 +8781,16 @@ window.k8RegBirthChange = function (v) {
     return KEYS.map((k, i) => ({ key: k, adhan: adhan[i], iqamah: IQ_FIX[k] != null ? Math.max(IQ_FIX[k], adhan[i]) : adhan[i] + 10, cutoff: c[k], start: [t.fajr, t.dhuhr, t.asr, t.maghrib, bd.iStart][i], end: [t.sunrise, t.asr - 1, t.maghrib - 1, bd.mEnd, 23 * 60 + 59][i] }));
   };
   window.k8PrayerTimes = times;
+  // v19.81 · ช่วงแจ้งย้อนหลัง: ตั้งแต่เวลาเข้าละหมาด ถึง 24 ชม. หลังจากนั้น (ตรงกับระบบ)
+  window.k8ReqWindow = function (ds, slot) {
+    const KEY = { 'ซุบฮิ': 'fajr', 'ซุฮริ': 'dhuhr', 'อัศรฺ': 'asr', 'มัฆริบ': 'maghrib', 'อีชาอ์': 'isha' };
+    let k = slot; try { k = normalizePrayerSlotKey(slot); } catch (e) {}
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ds || '')) || !KEY[k]) return null;
+    const t = times(new Date(ds + 'T12:00:00')); const m = t[KEY[k]]; if (m == null) return null;
+    const start = new Date(ds + 'T00:00:00+07:00').getTime() + m * 60000, deadline = start + 24 * 3600000;
+    const d = new Date(deadline); const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return { start, deadline, dlTh: d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' น.' };
+  };
   window.k8LateCutoffs = cutoffs;
   const norm = (k) => { try { return normalizePrayerSlotKey(k); } catch (e) { return k; } };
   window.k8IsLateNow = function (slot, at) {

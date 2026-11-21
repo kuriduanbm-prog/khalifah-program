@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.80'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.81'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1691,6 +1691,11 @@ function dispatchAction_(action, req, data, session, ctx) {
         return { success: false, code: 'GIRLS_ONLY', message: 'เหตุผล "มีประจำเดือน" ใช้ได้เฉพาะนักเรียนหญิง' };
       }
       if (isStudent) {
+        // v19.81 · ลืมเช็คละหมาด แจ้งย้อนหลังได้ภายใน 24 ชั่วโมงนับจากเวลาเข้าละหมาดนั้น
+        const rsn = cleanVal(data.reasonPreset) + ' ' + cleanVal(data.reasonDetail);
+        const lw = /ประจำเดือน|อุซุร/.test(rsn) ? null : prayerReqWindow_(data.date, data.prayerSlot); // ประจำเดือนใช้ระบบบันทึกอุซุรของตัวเอง
+        if (lw && Date.now() > lw.deadline) return { success: false, code: 'LATE_REQ_EXPIRED', message: 'แจ้งย้อนหลังได้ภายใน 24 ชั่วโมงเท่านั้น · ละหมาด' + lw.slot + ' วันที่ ' + lw.dateTh + ' หมดเวลาแจ้งเมื่อ ' + lw.deadlineTh };
+        if (lw && /ลืม/.test(rsn) && Date.now() < lw.start) return { success: false, code: 'LATE_REQ_EARLY', message: 'ยังไม่ถึงเวลาละหมาด' + lw.slot + ' ของวันที่เลือก' };
         data.studentId = session.userId;
         data.status = 'pending';
         data.approvedBy = '';
@@ -7386,6 +7391,16 @@ function savePrayerRequestPhoto_(raw, studentId, reqId) {
 /**
  * บันทึกคำขออนุมัติละหมาดย้อนหลังลง Google Sheets
  */
+/** v19.81 · ช่วงที่แจ้งย้อนหลังได้: ตั้งแต่เวลาเข้าละหมาดนั้น ถึง 24 ชั่วโมงหลังจากนั้น */
+function prayerReqWindow_(date, slot) {
+  const ds = formatSheetDate(date); const k = spSlot_(slot); if (!/^\d{4}-\d{2}-\d{2}$/.test(ds) || !k) return null;
+  const t = spTimes_(ds, null); const KEY = { 'ซุบฮิ': 'fajr', 'ซุฮริ': 'dhuhr', 'อัศรฺ': 'asr', 'มัฆริบ': 'maghrib', 'อีชาอ์': 'isha' };
+  const start = new Date(ds + 'T00:00:00+07:00').getTime() + t[KEY[k]] * 60000; const deadline = start + 24 * 3600000;
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const th = function (ms) { const d = new Date(ms + 7 * 3600000); return d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + (d.getUTCFullYear() + 543) + ' ' + String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0') + ' น.'; };
+  const p = ds.split('-');
+  return { slot: k, start: start, deadline: deadline, deadlineTh: th(deadline), dateTh: (+p[2]) + ' ' + MON[+p[1] - 1] + ' ' + (+p[0] + 543) };
+}
 function savePrayerLateRequest(data) {
   ensureSchema();
   const ss = getSpreadsheet();

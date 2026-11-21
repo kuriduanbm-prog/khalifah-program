@@ -3481,7 +3481,7 @@ function openPrayerLateApprovalModal(defaultSlot = null) {
   if (nameEl) nameEl.innerText = currentStudent.fullName || currentStudent.name || '-';
   if (idEl) idEl.innerText = currentStudent.studentId || '-';
   if (gradeEl) gradeEl.innerText = currentStudent.grade || '-';
-  if (dateEl) dateEl.value = new Date().toLocaleDateString('sv-SE');
+  if (dateEl) { dateEl.value = new Date().toLocaleDateString('sv-SE'); dateEl.max = dateEl.value; dateEl.min = new Date(Date.now() - 864e5).toLocaleDateString('sv-SE'); } // v19.81 · ย้อนหลังได้ภายใน 24 ชม.
 
   // เลือก Slot เวลาละหมาดเริ่มต้น
   let slotToSelect = defaultSlot || selectedPrayerTime;
@@ -3632,6 +3632,18 @@ async function submitPrayerLateApprovalRequest() {
     return;
   }
 
+  // v19.81 · แจ้งย้อนหลังได้ภายใน 24 ชั่วโมงนับจากเวลาเข้าละหมาดนั้นเท่านั้น
+  try {
+    const KEY = { 'ซุบฮิ': 'fajr', 'ซุฮริ': 'dhuhr', 'อัศรฺ': 'asr', 'มัฆริบ': 'maghrib', 'อีชาอ์': 'isha' };
+    const sk = typeof normalizePrayerSlotKey === 'function' ? normalizePrayerSlotKey(slot) : slot;
+    const T = window.k8PrayerTimes ? window.k8PrayerTimes(new Date(date + 'T12:00:00')) : null;
+    if (T && KEY[sk] && T[KEY[sk]] != null) {
+      const start = new Date(date + 'T00:00:00+07:00').getTime() + T[KEY[sk]] * 60000, dl = start + 24 * 3600000;
+      if (Date.now() > dl) { const d = new Date(dl); showToast('แจ้งย้อนหลังได้ภายใน 24 ชั่วโมงเท่านั้น · ละหมาด' + sk + ' วันที่เลือกหมดเวลาแจ้งเมื่อ ' + d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.', 'warning'); return; }
+      if (Date.now() < start) { showToast('ยังไม่ถึงเวลาละหมาด' + sk + ' ของวันที่เลือก', 'warning'); return; }
+    }
+  } catch (e) {}
+
   // ตรวจสอบว่ามีคำขอที่รอดำเนินการซ้ำซ้อนสำหรับเวลานี้และวันนี้หรือไม่
   const list = getPrayerApprovalsList();
   const duplicate = list.find(r => 
@@ -3672,14 +3684,23 @@ async function submitPrayerLateApprovalRequest() {
     adminNote: ''
   };
 
+  // v19.81 · ส่งถึงระบบก่อน: ถ้าระบบปฏิเสธ (เกิน 24 ชม. ฯลฯ) ไม่บันทึกในเครื่องและไม่ขึ้นว่าส่งสำเร็จ · เน็ตหลุด = เก็บไว้ส่งทีหลังเหมือนเดิม
+  let sent = null;
+  if (typeof gasApiCall === 'function' && navigator.onLine !== false) {
+    try { sent = await gasApiCall('prayerLateRequest', { data: reqItem }, 45000); } catch (e) { sent = null; }
+    if (sent && sent.success === false && (sent.code || sent.message) && !/timeout|network|fetch|เครือข่าย|เชื่อมต่อ/i.test(String(sent.message || sent.error || ''))) {
+      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane"></i> ส่งคำขอให้อาจารย์อนุมัติ'; }
+      showToast('⚠️ ' + (sent.message || sent.error || 'ส่งคำขอไม่สำเร็จ'), 'warning');
+      return;
+    }
+  }
+  if (sent && sent.success && sent.photoUrl) reqItem.photoUrl = sent.photoUrl;
   list.unshift(reqItem);
   savePrayerApprovalsList(list);
 
-  // ส่งข้อมูลไปยัง Google Sheets Backend
-  try {
-    syncRecordToGoogleSheet('prayerLateRequest', reqItem);
-  } catch (err) {
-    console.warn('Sync late prayer request to cloud warning:', err);
+  // ส่งไม่ถึงระบบ (ออฟไลน์/หมดเวลา) → ส่งซ้ำเบื้องหลัง
+  if (!(sent && sent.success)) {
+    try { syncRecordToGoogleSheet('prayerLateRequest', reqItem); } catch (err) { console.warn('Sync late prayer request to cloud warning:', err); }
   }
 
   setTimeout(() => {
