@@ -7659,3 +7659,7 @@ html[data-theme="dark"] .k8-asd-day li.is-late { border-left-color: #fbbf24 !imp
 html[data-theme="dark"] .k8-asd-day li.is-leave { border-left-color: #38bdf8 !important; }
 html[data-theme="dark"] .k8-asd-day h4, html[data-theme="dark"] .k8-asd-top b { color: #e2e8f0 !important; }
 html[data-theme="dark"] .k8-asd-sub, html[data-theme="dark"] .k8-asd-top small, html[data-theme="dark"] .k8-asd-meta, html[data-theme="dark"] .k8-asd-note { color: #cbd5e1 !important; }
+
+/* v19.84 · ส่งออกรายงาน: ค้นหานักเรียน + เพศ */
+.k8-exp-f2 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: 1rem; margin: -0.5rem 0 1.5rem; }
+@media (max-width: 640px) { .k8-exp-f2 { grid-template-columns: 1fr; } }

@@ -2496,7 +2496,7 @@ window.k8RegBirthChange = function (v) {
     'admin-tab-grading': ['เกรดรายวิชา', 'ดูและแก้ไขเกรดของนักเรียนแต่ละวิชา'],
     'admin-tab-subjects': ['รายวิชา', 'รายวิชาทั้งหมดในโรงเรียนและหมวดทักษะ'],
     'admin-tab-promote': ['เลื่อนชั้น', 'เลื่อนระดับชั้นทั้งโรงเรียน รายระดับ หรือรายคน'],
-    'admin-tab-reports': ['ส่งออกรายงาน', 'ดาวน์โหลดข้อมูลเป็น Excel, Word หรือ PDF'],
+    'admin-tab-reports': ['ส่งออกรายงาน', 'ดาวน์โหลดข้อมูลเป็น Excel, Word, PDF หรือรูปภาพ'],
     'admin-tab-logo': ['ตั้งค่า & โลโก้', 'โลโก้ที่แสดงบนแอปและเอกสาร']
   };
   function boot() {
@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.83';
+  const APP_VERSION = '19.84';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -15491,16 +15491,27 @@ window.k8PdWho = function (sid) {
     if (a && !a.value) { const s = new Date(t); s.setDate(s.getDate() - 6); a.value = ymd(s); }
   }
   function filters() { ensureDates(); return { type: ($('exportReportType') || {}).value || 'all', grade: ($('exportGradeSelect') || {}).value || 'all', from: ($('exportStartDate') || {}).value, to: ($('exportEndDate') || {}).value }; }
+  // v19.84 · ตัวกรองเพิ่ม: ค้นหาชื่อ/รหัสนักเรียน + เพศ (กรองในเครื่อง ไม่ต้องดึงข้อมูลใหม่)
+  const genderOf = (s) => { if (s.gender) return s.gender; let st = null; try { st = (allStudents || []).find((x) => nid(x.studentId) === nid(s.sid)); } catch (e) {} const g = st && (st.gender || ''); if (/ชาย|^m/i.test(g)) return 'ชาย'; if (/หญิง|^f/i.test(g)) return 'หญิง'; const n = (st && st.fullName) || s.name || ''; return /^(นางสาว|น\.ส\.|นาง|เด็กหญิง|ด\.ญ\.)/.test(n) ? 'หญิง' : /^(นาย|เด็กชาย|ด\.ช\.)/.test(n) ? 'ชาย' : ''; };
+  function localFilter(r) {
+    const q = String(($('exportStuQ') || {}).value || '').trim().toLowerCase(); const g = ($('exportGender') || {}).value || 'all';
+    if (!q && g === 'all') return r;
+    const keep = {}; const S = (r.students || []).filter((s) => (!q || (s.name + ' ' + s.sid).toLowerCase().indexOf(q) !== -1 || nid(s.sid) === nid(q)) && (g === 'all' || genderOf(s) === g));
+    S.forEach((s) => { keep[nid(s.sid)] = 1; });
+    const f = (L) => (L ? L.filter((x) => keep[nid(x.sid)]) : L);
+    return Object.assign({}, r, { students: S, prayers: f(r.prayers), attendance: f(r.attendance), activities: f(r.activities), qLabel: (q ? 'ค้นหา “' + q + '”' : '') + (q && g !== 'all' ? ' · ' : '') + (g !== 'all' ? 'นักเรียน' + g : '') });
+  }
   async function fetchData() {
     const f = filters();
     if (!f.from || !f.to || f.from > f.to) { toast('กรุณาเลือกช่วงวันที่ให้ถูกต้อง', 'warning'); return null; }
     const key = JSON.stringify(f);
-    if (LAST && LAST.key === key && Date.now() - LAST.at < 60000) return LAST.data;
+    if (LAST && LAST.key === key && Date.now() - LAST.at < 60000) return build(localFilter(LAST.raw));
     toast('กำลังดึงข้อมูลรายงาน…', 'info');
     let r = null; try { r = await gasApiCall('exportReport', { data: f }, 120000); } catch (e) {}
     if (r && !r.success && /Unknown action/i.test(String(r.error || r.message || ''))) { toast('กรุณา Deploy Code.gs เวอร์ชัน 19.82 ขึ้นไปก่อนส่งออกรายงาน', 'warning'); return null; }
     if (!r || !r.success) { toast((r && (r.message || r.error)) || 'ดึงข้อมูลรายงานไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); return null; }
-    const m = build(r); LAST = { key, at: Date.now(), data: m }; return m;
+    LAST = { key, at: Date.now(), raw: r };
+    const m = build(localFilter(r)); if (!m.sections.some((x) => x.rows.length) && !(r.students || []).length) toast('ไม่พบนักเรียนตามเงื่อนไขที่เลือก', 'warning'); return m;
   }
   // ---------- สร้างโครงรายงาน (หัวตาราง + แถว) ----------
   function build(r) {
@@ -15542,9 +15553,10 @@ window.k8PdWho = function (sid) {
         rows: r.activities.slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).map((a) => { const w = who(a.sid); return [dTh(a.date), String(a.time || '').slice(0, 5), a.title, w.sid || a.sid, w.name, gS(w.grade)]; }) });
     }
     const gTxt = r.grade && r.grade !== 'all' ? gS(r.grade) : 'ทุกระดับชั้น';
-    return { title: TYPES[r.type], sub: gTxt + ' · ' + dTh(r.from) + ' – ' + dTh(r.to) + ' · นักเรียน ' + S.length + ' คน', made: 'ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH'), type: r.type, from: r.from, to: r.to, grade: gTxt, sections: sec, truncated: r.truncated };
+    const gSel = ($('exportGender') || {}).value || 'all';
+    return { gTag: gSel !== 'all' ? gSel : (String(($('exportStuQ') || {}).value || '').trim() && S.length === 1 ? S[0].name.replace(/\s+/g, '') : ''), title: TYPES[r.type], sub: gTxt + (r.qLabel ? ' · ' + r.qLabel : '') + ' · ' + dTh(r.from) + ' – ' + dTh(r.to) + ' · นักเรียน ' + S.length + ' คน', made: 'ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH'), type: r.type, from: r.from, to: r.to, grade: gTxt, sections: sec, truncated: r.truncated };
   }
-  const fname = (m, ext) => 'รายงาน_' + ({ all: 'ภาพรวม', prayer: 'ละหมาด', attendance: 'เข้าเรียน', activities: 'กิจกรรม' }[m.type]) + '_' + m.grade.replace(/\s+/g, '') + '_' + m.from + '_ถึง_' + m.to + '.' + ext;
+  const fname = (m, ext) => 'รายงาน_' + ({ all: 'ภาพรวม', prayer: 'ละหมาด', attendance: 'เข้าเรียน', activities: 'กิจกรรม' }[m.type]) + '_' + m.grade.replace(/\s+/g, '') + (m.gTag ? '_' + m.gTag : '') + '_' + m.from + '_ถึง_' + m.to + '.' + ext;
   function html(m, opts) {
     opts = opts || {}; const maxRows = opts.maxRows || 1e9;
     const css = 'body{font-family:"IBM Plex Sans Thai","TH Sarabun New",Tahoma,sans-serif;color:#0f172a;margin:0;padding:' + (opts.pad || 24) + 'px;background:#fff}h1{font-size:22px;color:#0c4a6e;margin:0 0 4px}.sub{font-size:14px;color:#334155;margin:0 0 2px}.made{font-size:12px;color:#64748b;margin:0 0 14px}h2{font-size:16px;color:#0369a1;margin:18px 0 8px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #cbd5e1;padding:5px 7px;text-align:left;vertical-align:top}th{background:#e0f2fe;color:#0c4a6e;font-weight:600}td.n{text-align:right;white-space:nowrap}td.nw{white-space:nowrap}th{white-space:nowrap}tr:nth-child(even) td{background:#f8fafc}.more{font-size:12px;color:#64748b;margin:6px 0 0}.empty{color:#64748b;font-size:13px}';
@@ -15640,6 +15652,12 @@ window.k8PdWho = function (sid) {
       if (o.s.rows.length > MAXR) { x.fillStyle = '#64748b'; x.font = '400 13px ' + F; x.fillText('แสดง ' + MAXR + ' จาก ' + o.s.rows.length + ' รายการ · ข้อมูลทั้งหมดอยู่ในไฟล์ Excel / Word', PAD, y + 15); y += 28; } else y += 6;
     });
     cv.toBlob((b) => { if (b) { download(b, fname(m, 'png')); toast('บันทึกเป็นรูปภาพแล้ว', 'success'); } else toast('สร้างรูปภาพไม่สำเร็จ', 'error'); }, 'image/png');
+  };
+  // รายชื่อแนะนำในช่องค้นหา (ตามชั้นที่เลือก)
+  window.k8ExpFillList = function () {
+    const dl = $('exportStuList'); if (!dl) return; const g = ((($('exportGradeSelect') || {}).value || '').match(/(\d)/) || [])[1] || '';
+    let L = []; try { L = (allStudents || []).filter((x) => x && x.studentId && (!g || String(x.grade || '').indexOf(g) !== -1)); } catch (e) {}
+    dl.innerHTML = L.slice(0, 400).map((x) => '<option value="' + esc(x.fullName || '') + '">' + esc(x.studentId + ' · ' + gS(x.grade)) + '</option>').join('');
   };
   document.addEventListener('DOMContentLoaded', ensureDates);
   if (document.readyState !== 'loading') ensureDates();
