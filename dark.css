@@ -2880,6 +2880,7 @@ html[data-theme="dark"] .k8-sv-t tr { background-color: #121212 !important; bord
 }
 html[data-theme="dark"] .k8ai-uimg { border: 1px solid rgba(51,51,51,0.4) !important; }
 html[data-theme="dark"] .k8-pn-24h { color: #b6bcc3 !important; }
+html[data-theme="dark"] .k8-asum-kpi > button.is-absent { border-color: #522424 !important; }
 /* ---- inline styles ---- */
 html[data-theme="dark"] [style*="background:#f0fdf4"], html[data-theme="dark"] [style*="background:#F0FDF4"], html[data-theme="dark"] [style*="background: #f0fdf4"], html[data-theme="dark"] [style*="background: #F0FDF4"] { background-color: #132e1b !important; }
 html[data-theme="dark"] [style*="background:#f5f3ff"], html[data-theme="dark"] [style*="background:#F5F3FF"], html[data-theme="dark"] [style*="background: #f5f3ff"], html[data-theme="dark"] [style*="background: #F5F3FF"] { background-color: #140e31 !important; }

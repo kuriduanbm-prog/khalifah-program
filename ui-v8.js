@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.82';
+  const APP_VERSION = '19.83';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10859,7 +10859,7 @@ window.k8HfMiss = function (slot) {
       '<div class="k8-asum-dr"><label><span>ตั้งแต่</span><input type="date" value="' + A.from + '" onchange="k8AsumSet(\'from\', this.value)"></label><label><span>ถึง</span><input type="date" value="' + A.to + '" onchange="k8AsumSet(\'to\', this.value)"></label></div></section>';
     if (A.loading && !A.rows) { B.innerHTML = h + '<p class="k8-asum-empty">กำลังโหลดข้อมูลการมาเรียน…</p>'; return; }
     h += '<section class="k8-asum-kpi"><div class="is-big"><small>อัตรามาเรียน</small><b>' + S.pct + '%</b><span>' + sessions + ' คาบ · ' + S.total + ' รายการ</span></div>' +
-      ['present', 'late', 'leave', 'absent'].map((k) => '<div class="is-' + k + '"><small>' + LBL[k] + '</small><b>' + S[k] + '</b></div>').join('') + '</section>';
+      ['present', 'late', 'leave', 'absent'].map((k) => k !== 'present' && S[k] ? '<button type="button" class="is-' + k + ' k8-asum-kb" onclick="k8AsumDet(\'__all\',\'' + k + '\')" aria-label="ดูรายการ' + LBL[k] + 'ทั้งหมด ' + S[k] + ' ครั้ง"><small>' + LBL[k] + ' <i aria-hidden="true">›</i></small><b>' + S[k] + '</b></button>' : '<div class="is-' + k + '"><small>' + LBL[k] + '</small><b>' + S[k] + '</b></div>').join('') + '</section>';
     h += '<div class="k8-asum-tabs" role="tablist">' + [['stu', 'รายนักเรียน'], ['day', 'รายวัน'], ['subj', 'รายวิชา']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (A.view === k) + '" onclick="k8AsumSet(\'view\', \'' + k + '\')">' + l + '</button>').join('') + '</div>';
     if (!L.length) { B.innerHTML = h + '<p class="k8-asum-empty">ไม่มีบันทึกการเช็คชื่อในช่วงที่เลือก</p>'; return; }
     const groups = {};
@@ -10870,10 +10870,36 @@ window.k8HfMiss = function (slot) {
     if (A.view === 'stu' && A.q) G = G.filter((g) => (g.label + ' ' + g.sub).toLowerCase().indexOf(A.q.toLowerCase()) !== -1);
     h += (A.view === 'stu' ? '<input type="search" class="k8-asum-q" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(A.q) + '" oninput="k8AsumQ(this)">' : '') +
       '<div class="k8-asum-tw"><table class="k8-asum-t"><thead><tr><th>' + (A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา') + '</th><th>มา</th><th>สาย</th><th>ลา</th><th>ขาด</th><th>%</th></tr></thead><tbody>' +
-      G.map((g) => '<tr class="' + (g.st.pct < 80 ? 'is-low' : '') + '"><td><b>' + esc(g.label) + '</b><small>' + esc(g.sub) + '</small></td><td>' + g.st.present + '</td><td>' + g.st.late + '</td><td>' + g.st.leave + '</td><td class="' + (g.st.absent ? 'is-ab' : '') + '">' + g.st.absent + '</td><td><span class="k8-asum-pc" style="--p:' + g.st.pct + '">' + g.st.pct + '%</span></td></tr>').join('') + '</tbody></table></div>' +
+      G.map((g) => '<tr class="' + (g.st.pct < 80 ? 'is-low' : '') + '"><td><b>' + esc(g.label) + '</b><small>' + esc(g.sub) + '</small></td><td>' + g.st.present + '</td><td>' + cnt(g, 'late') + '</td><td>' + cnt(g, 'leave') + '</td><td class="' + (g.st.absent ? 'is-ab' : '') + '">' + cnt(g, 'absent') + '</td><td><span class="k8-asum-pc" style="--p:' + g.st.pct + '">' + g.st.pct + '%</span></td></tr>').join('') + '</tbody></table></div>' +
       '<p class="k8-asum-note">% = (มา + สาย) ÷ ทุกครั้งที่เช็คชื่อ · แถวสีแดง = ต่ำกว่า 80%</p>';
     B.innerHTML = h; A.lastG = G;
   }
+  // v19.83 · กดตัวเลข สาย/ลา/ขาด เพื่อดูว่าเป็นวันไหน คาบไหน วิชาอะไร ใครเช็ค
+  function cnt(g, k) { const n = g.st[k]; if (!n) return '0'; return '<button type="button" class="k8-asum-cnt is-' + k + '" onclick="k8AsumDet(\'' + esc(g.k).replace(/'/g, '') + '\',\'' + k + '\')" aria-label="ดูรายการ' + LBL[k] + ' ' + esc(g.label) + ' ' + n + ' ครั้ง">' + n + '</button>'; }
+  window.k8AsumDet = function (gk, k) {
+    const L = A.rows ? filtered() : [];
+    const kf = A.view === 'stu' ? (r) => norm(r.studentId) : A.view === 'day' ? (r) => r.date : (r) => String(r.subjectCode);
+    const list = L.filter((r) => KEY(r.status) === k && (gk === '__all' || kf(r) === gk)).sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')));
+    const g = (A.lastG || []).find((x) => x.k === gk);
+    const showStu = !(A.view === 'stu' && gk !== '__all');
+    let m = document.getElementById('k8AsumD');
+    if (!m) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal" id="k8AsumD" role="dialog" aria-modal="true" aria-labelledby="k8AsumDT" hidden style="z-index:10080"><div class="k8-ra-box"><header><h3 id="k8AsumDT"></h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8AsumD\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body" id="k8AsumDB"></div></div></div>');
+      m = document.getElementById('k8AsumD'); m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !m.hidden) m.hidden = true; });
+    }
+    document.getElementById('k8AsumDT').textContent = LBL[k] + (k === 'leave' ? '' : 'เรียน') + ' ' + list.length + ' ครั้ง · ' + (gk === '__all' ? 'ทั้งหมดในช่วงที่เลือก' : (g ? g.label : ''));
+    const byDay = {}; list.forEach((r) => { (byDay[r.date] = byDay[r.date] || []).push(r); });
+    const subjN = {}; try { (appSubjects || []).forEach((x) => { subjN[String(x.id)] = x.name; }); } catch (e) {}
+    let h = '<p class="k8-asd-sub">' + esc((g && g.sub ? g.sub + ' · ' : '') + dTh(A.from) + (A.from !== A.to ? ' – ' + dTh(A.to) : '')) + '</p>';
+    if (!list.length) h += '<p class="k8-asum-empty">ไม่มีรายการ</p>';
+    h += Object.keys(byDay).map((d) => '<section class="k8-asd-day"><h4>' + esc(dTh(d)) + ' <small>' + byDay[d].length + ' ครั้ง</small></h4><ul>' + byDay[d].map((r) =>
+      '<li class="is-' + k + '"><div class="k8-asd-top">' + (showStu ? '<b>' + esc(r.studentName || r.studentId) + '</b><small>' + esc(String(r.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.')) + ' · ' + esc(r.studentId) + '</small>' : '<b>' + esc(r.subjectName || subjN[String(r.subjectCode)] || r.subjectCode || '-') + '</b>') + '</div>' +
+      '<div class="k8-asd-meta">' + [showStu ? (r.subjectName || subjN[String(r.subjectCode)] || r.subjectCode) : '', r.period ? 'คาบ ' + r.period : '', r.time ? 'เช็คเวลา ' + String(r.time).slice(0, 5) : '', r.checkedBy ? 'ผู้เช็ค: ' + r.checkedBy : ''].filter(Boolean).map(esc).join(' · ') + '</div>' +
+      (r.note ? '<div class="k8-asd-note">หมายเหตุ: ' + esc(r.note) + '</div>' : '') + '</li>').join('') + '</ul></section>').join('');
+    document.getElementById('k8AsumDB').innerHTML = h; m.hidden = false;
+    setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
+  };
   window.k8AsumSet = function (k, v) { A[k] = v; if (k === 'from' || k === 'to') { A.preset = ''; if (A.from > A.to) { const t = A.from; A.from = A.to; A.to = t; } } render(); };
   window.k8AsumPre = function (k) { setPreset(k); render(); };
   let qt = null; window.k8AsumQ = function (el) { clearTimeout(qt); qt = setTimeout(() => { A.q = el.value; const pos = el.selectionStart; render(); const n = document.querySelector('.k8-asum-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };

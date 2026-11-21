@@ -7624,3 +7624,38 @@ html[data-theme="dark"] .k8-sr-list.is-add li { background: #052e16 !important; 
 html[data-theme="dark"] #lateReqWindowHint { color: #cbd5e1 !important; }
 .k8-pn-24h { display: block; margin: -4px 2px 12px; font-size: 13px; color: #475569; line-height: 1.45; }
 html[data-theme="dark"] .k8-pn-24h { color: #cbd5e1 !important; }
+
+/* ============ v19.83 · สรุปการมาเรียน: กดตัวเลข สาย/ลา/ขาด ดูรายละเอียด ============ */
+.k8-asum-kpi > button.k8-asum-kb { background: #fff; border: 1px solid #eef0f4; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; text-align: left; font: inherit; cursor: pointer; }
+.k8-asum-kpi > button.k8-asum-kb:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(15, 23, 42, .06); }
+.k8-asum-kpi > button.k8-asum-kb i { font-style: normal; }
+.k8-asum-kpi > button.is-absent { border-color: #fecaca; }
+.k8-asum-cnt { min-width: 36px; min-height: 32px; padding: 2px 10px; border-radius: 8px; border: 1px solid transparent; background: #f1f5f9; font: inherit; font-weight: 600; color: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.k8-asum-cnt.is-absent { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.k8-asum-cnt.is-late { background: #fffbeb; color: #b45309; }
+.k8-asum-cnt.is-leave { background: #f0f9ff; color: #0369a1; }
+.k8-asum-cnt:hover { border-color: currentColor; }
+.k8-asum-cnt:focus-visible, .k8-asum-kpi > button.k8-asum-kb:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+.k8-asd-sub { margin: 0 0 10px; font-size: 13px; color: #475569; }
+.k8-asd-day h4 { margin: 14px 0 6px; font-size: 14.5px; color: #0f172a; }
+.k8-asd-day h4 small { font-weight: 400; color: #64748b; }
+.k8-asd-day ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.k8-asd-day li { border: 1px solid #e2e8f0; border-left: 4px solid #94a3b8; border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.k8-asd-day li.is-absent { border-left-color: #dc2626; }
+.k8-asd-day li.is-late { border-left-color: #d97706; }
+.k8-asd-day li.is-leave { border-left-color: #0284c7; }
+.k8-asd-top { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
+.k8-asd-top b { font-size: 14px; color: #0f172a; }
+.k8-asd-top small, .k8-asd-meta { font-size: 12.5px; color: #475569; }
+.k8-asd-note { font-size: 13px; color: #334155; }
+html[data-theme="dark"] .k8-asum-kpi > button.k8-asum-kb { background: #1e1e1e !important; border-color: #333 !important; }
+html[data-theme="dark"] .k8-asum-cnt { background: #262626 !important; }
+html[data-theme="dark"] .k8-asum-cnt.is-absent { background: #2a0f12 !important; border-color: #7f1d1d !important; color: #fca5a5 !important; }
+html[data-theme="dark"] .k8-asum-cnt.is-late { background: #2a1d05 !important; color: #fcd34d !important; }
+html[data-theme="dark"] .k8-asum-cnt.is-leave { background: #082f49 !important; color: #7dd3fc !important; }
+html[data-theme="dark"] .k8-asd-day li { border-color: #334155 !important; background: #0f172a !important; }
+html[data-theme="dark"] .k8-asd-day li.is-absent { border-left-color: #f87171 !important; }
+html[data-theme="dark"] .k8-asd-day li.is-late { border-left-color: #fbbf24 !important; }
+html[data-theme="dark"] .k8-asd-day li.is-leave { border-left-color: #38bdf8 !important; }
+html[data-theme="dark"] .k8-asd-day h4, html[data-theme="dark"] .k8-asd-top b { color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-asd-sub, html[data-theme="dark"] .k8-asd-top small, html[data-theme="dark"] .k8-asd-meta, html[data-theme="dark"] .k8-asd-note { color: #cbd5e1 !important; }
