@@ -3675,7 +3675,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.76';
+  const APP_VERSION = '19.77';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14873,8 +14873,8 @@ window.k8PdWho = function (sid) {
     const rk = (x) => (!x.review || x.review === 'resubmitted' ? 0 : x.review === 'revise' ? 1 : 2);
     const yes = d.list.filter((x) => x.submitted).sort((a, b) => rk(a) - rk(b) || String(a.at).localeCompare(String(b.at)));
     const nWait = yes.filter((x) => rk(x) === 0).length;
-    if (!SV.tab) SV.tab = nWait || !no.length ? 'yes' : 'no';
     const no = d.list.filter((x) => !x.submitted).sort((a, b) => String(a.name).localeCompare(String(b.name), 'th'));
+    if (!SV.tab) SV.tab = nWait || !no.length ? 'yes' : 'no';
     let h = '<div class="k8-ra-tabs" role="tablist"><button type="button" role="tab" aria-selected="' + (SV.tab === 'no') + '" onclick="k8CpSVTab(\'no\')">ยังไม่ส่ง ' + no.length + '</button><button type="button" role="tab" aria-selected="' + (SV.tab === 'yes') + '" onclick="k8CpSVTab(\'yes\')">ส่งแล้ว ' + yes.length + (nWait ? ' <span class="k8-cp-rvn">รอตรวจ ' + nWait + '</span>' : '') + '</button></div>';
     const L = SV.tab === 'yes' ? yes : no;
     if (!L.length) h += '<p class="k8-cp-empty">' + (SV.tab === 'yes' ? 'ยังไม่มีใครส่งงาน' : 'ส่งครบทุกคนแล้ว') + '</p>';
