@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.81';
+  const APP_VERSION = '19.82';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -15441,6 +15441,182 @@ window.k8PdWho = function (sid) {
     if (!confirm('แทนที่ประวัติดาวละหมาดสัปดาห์ ' + dS(r.sun) + ' – ' + dS(r.fri) + ' ด้วยรายชื่อใหม่ ' + r.after + ' คน และส่งแจ้งเตือนใหม่ ?')) return;
     run(true);
   };
+})();
+
+/* ============ v19.82 · ศูนย์ส่งออกรายงาน: ดึงข้อมูลจริงตามประเภท/ชั้น/ช่วงวันที่ · Excel · Word · PDF · รูปภาพ ============ */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const dTh = (s) => { const d = new Date(String(s) + 'T00:00:00'); return isNaN(d) ? String(s || '') : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); };
+  const gS = (g) => { const m = String(g || '').match(/([1-6])/); return m ? 'ม.' + m[1] : (g || ''); };
+  const nid = (v) => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+  const TYPES = { all: 'รายงานภาพรวม (เรียน + ละหมาด + กิจกรรม)', prayer: 'รายงานการเช็คละหมาด 5 เวลา และพิกัด', attendance: 'รายงานการเข้าเรียน มาสาย ลา ขาด', activities: 'รายงานการเข้าร่วมกิจกรรม' };
+  const SLOTS = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'];
+  const slotKey = (s) => { try { return normalizePrayerSlotKey(s); } catch (e) { return s; } };
+  const pk = (st) => { st = String(st || ''); if (/อุซุร|ประจำเดือน|ป่วย|^ลา/.test(st)) return 'ex'; if (/ขาด/.test(st)) return 'miss'; if (/สาย|ช้า|อนุมัติ/.test(st)) return 'late'; return 'ok'; };
+  const ak = (st) => { st = String(st || ''); if (/ขาด/.test(st)) return 'absent'; if (/ลา|ป่วย/.test(st)) return 'leave'; if (/สาย/.test(st)) return 'late'; return 'present'; };
+  let LAST = null;
+  function ensureDates() {
+    const a = $('exportStartDate'), b = $('exportEndDate'); const t = new Date();
+    if (b && !b.value) b.value = ymd(t);
+    if (a && !a.value) { const s = new Date(t); s.setDate(s.getDate() - 6); a.value = ymd(s); }
+  }
+  function filters() { ensureDates(); return { type: ($('exportReportType') || {}).value || 'all', grade: ($('exportGradeSelect') || {}).value || 'all', from: ($('exportStartDate') || {}).value, to: ($('exportEndDate') || {}).value }; }
+  async function fetchData() {
+    const f = filters();
+    if (!f.from || !f.to || f.from > f.to) { toast('กรุณาเลือกช่วงวันที่ให้ถูกต้อง', 'warning'); return null; }
+    const key = JSON.stringify(f);
+    if (LAST && LAST.key === key && Date.now() - LAST.at < 60000) return LAST.data;
+    toast('กำลังดึงข้อมูลรายงาน…', 'info');
+    let r = null; try { r = await gasApiCall('exportReport', { data: f }, 120000); } catch (e) {}
+    if (r && !r.success && /Unknown action/i.test(String(r.error || r.message || ''))) { toast('กรุณา Deploy Code.gs เวอร์ชัน 19.82 ขึ้นไปก่อนส่งออกรายงาน', 'warning'); return null; }
+    if (!r || !r.success) { toast((r && (r.message || r.error)) || 'ดึงข้อมูลรายงานไม่สำเร็จ ลองใหม่อีกครั้ง', 'error'); return null; }
+    const m = build(r); LAST = { key, at: Date.now(), data: m }; return m;
+  }
+  // ---------- สร้างโครงรายงาน (หัวตาราง + แถว) ----------
+  function build(r) {
+    const S = (r.students || []).slice().sort((a, b) => String(a.grade).localeCompare(String(b.grade)) || String(a.name).localeCompare(String(b.name), 'th'));
+    const by = {}; S.forEach((s) => { by[nid(s.sid)] = s; });
+    const who = (sid) => by[nid(sid)] || { sid, name: '', grade: '' };
+    const today = ymd(new Date()); let days = 0;
+    for (let d = new Date(r.from + 'T12:00:00'); ymd(d) <= r.to && ymd(d) <= today; d.setDate(d.getDate() + 1)) if (d.getDay() !== 6) days++;
+    const sec = [];
+    const P = {}, A = {}, C = {};
+    if (r.prayers) {
+      const best = {}; const RK = { ok: 3, ex: 2, late: 1, miss: 0 };
+      r.prayers.forEach((p) => { const k = nid(p.sid) + '|' + p.date + '|' + slotKey(p.slot); const kd = pk(p.status); if (!best[k] || RK[kd] > RK[best[k]]) best[k] = kd; });
+      Object.keys(best).forEach((k) => { const sid = k.split('|')[0]; const o = P[sid] || (P[sid] = { ok: 0, late: 0, ex: 0, miss: 0, n: 0 }); o[best[k]]++; o.n++; });
+    }
+    if (r.attendance) r.attendance.forEach((a) => { const o = A[nid(a.sid)] || (A[nid(a.sid)] = { present: 0, late: 0, leave: 0, absent: 0 }); o[ak(a.status)]++; });
+    if (r.activities) r.activities.forEach((a) => { C[nid(a.sid)] = (C[nid(a.sid)] || 0) + 1; });
+    const pct = (a, b) => (b ? Math.round(a * 1000 / b) / 10 + '%' : '-');
+    if (r.type === 'all') {
+      sec.push({ title: 'สรุปรายบุคคล', cols: ['ลำดับ', 'รหัส', 'ชื่อ - นามสกุล', 'ชั้น', 'ละหมาดตรงเวลา', 'ละหมาดสาย', 'ละหมาดไม่ได้เช็ค', 'มาเรียน', 'เรียนสาย', 'ลา', 'ขาดเรียน', 'กิจกรรม'], num: [4, 5, 6, 7, 8, 9, 10, 11],
+        rows: S.map((s, i) => { const p = P[nid(s.sid)] || { ok: 0, late: 0, ex: 0, miss: 0, n: 0 }, a = A[nid(s.sid)] || { present: 0, late: 0, leave: 0, absent: 0 }; const exp = days * 5; return [i + 1, s.sid, s.name, gS(s.grade), p.ok, p.late, Math.max(0, exp - p.n + p.miss), a.present, a.late, a.leave, a.absent, C[nid(s.sid)] || 0]; }) });
+    }
+    if (r.type === 'prayer') {
+      sec.push({ title: 'สรุปการละหมาดรายบุคคล (คาดหวัง ' + days * 5 + ' เวลา · ' + days + ' วัน ไม่นับวันเสาร์)', cols: ['ลำดับ', 'รหัส', 'ชื่อ - นามสกุล', 'ชั้น', 'ตรงเวลา', 'มาสาย', 'ลา/ป่วย/อุซุร', 'ไม่ได้เช็ค/ขาด', 'ตรงเวลา %'], num: [4, 5, 6, 7],
+        rows: S.map((s, i) => { const p = P[nid(s.sid)] || { ok: 0, late: 0, ex: 0, miss: 0, n: 0 }; const exp = days * 5; const miss = Math.max(0, exp - p.n + p.miss); return [i + 1, s.sid, s.name, gS(s.grade), p.ok, p.late, p.ex, miss, pct(p.ok, exp - p.ex)]; }) });
+      sec.push({ title: 'บันทึกการละหมาดทั้งหมด ' + r.prayers.length + ' รายการ', detail: true, cols: ['วันที่', 'เวลาที่เช็ค', 'รหัส', 'ชื่อ - นามสกุล', 'ชั้น', 'เวลาละหมาด', 'สถานะ', 'สถานที่', 'ระยะ (ม.)', 'ในพื้นที่', 'พิกัด', 'หมายเหตุ'], link: 12,
+        rows: r.prayers.slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).map((p) => { const w = who(p.sid); return [dTh(p.date), String(p.time || '').slice(0, 5), w.sid || p.sid, w.name, gS(w.grade), slotKey(p.slot), p.status, p.place, p.dist, p.zone ? 'ใช่' : 'ไม่ใช่', p.lat !== '' && p.lng !== '' ? Number(p.lat).toFixed(5) + ', ' + Number(p.lng).toFixed(5) : '', p.note, p.photo]; }) });
+    }
+    if (r.type === 'attendance') {
+      sec.push({ title: 'สรุปการเข้าเรียนรายบุคคล', cols: ['ลำดับ', 'รหัส', 'ชื่อ - นามสกุล', 'ชั้น', 'มาเรียน', 'มาสาย', 'ลา', 'ขาด', 'มาเรียน %'], num: [4, 5, 6, 7],
+        rows: S.map((s, i) => { const a = A[nid(s.sid)] || { present: 0, late: 0, leave: 0, absent: 0 }; const t = a.present + a.late + a.leave + a.absent; return [i + 1, s.sid, s.name, gS(s.grade), a.present, a.late, a.leave, a.absent, pct(a.present + a.late, t)]; }) });
+      sec.push({ title: 'บันทึกการเข้าเรียนทั้งหมด ' + r.attendance.length + ' รายการ', detail: true, cols: ['วันที่', 'เวลา', 'คาบ', 'วิชา', 'รหัส', 'ชื่อ - นามสกุล', 'ชั้น', 'สถานะ', 'ผู้เช็ค', 'หมายเหตุ'],
+        rows: r.attendance.slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).map((a) => { const w = who(a.sid); return [dTh(a.date), String(a.time || '').slice(0, 5), a.period, a.subject, w.sid || a.sid, w.name, gS(w.grade), a.status, a.by, a.note]; }) });
+    }
+    if (r.type === 'activities') {
+      sec.push({ title: 'สรุปการเข้าร่วมกิจกรรมรายบุคคล', cols: ['ลำดับ', 'รหัส', 'ชื่อ - นามสกุล', 'ชั้น', 'จำนวนกิจกรรม'], num: [4],
+        rows: S.map((s, i) => [i + 1, s.sid, s.name, gS(s.grade), C[nid(s.sid)] || 0]) });
+      sec.push({ title: 'บันทึกการเข้าร่วมกิจกรรม ' + r.activities.length + ' รายการ', detail: true, cols: ['วันที่', 'เวลา', 'กิจกรรม', 'รหัส', 'ชื่อ - นามสกุล', 'ชั้น'],
+        rows: r.activities.slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).map((a) => { const w = who(a.sid); return [dTh(a.date), String(a.time || '').slice(0, 5), a.title, w.sid || a.sid, w.name, gS(w.grade)]; }) });
+    }
+    const gTxt = r.grade && r.grade !== 'all' ? gS(r.grade) : 'ทุกระดับชั้น';
+    return { title: TYPES[r.type], sub: gTxt + ' · ' + dTh(r.from) + ' – ' + dTh(r.to) + ' · นักเรียน ' + S.length + ' คน', made: 'ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH'), type: r.type, from: r.from, to: r.to, grade: gTxt, sections: sec, truncated: r.truncated };
+  }
+  const fname = (m, ext) => 'รายงาน_' + ({ all: 'ภาพรวม', prayer: 'ละหมาด', attendance: 'เข้าเรียน', activities: 'กิจกรรม' }[m.type]) + '_' + m.grade.replace(/\s+/g, '') + '_' + m.from + '_ถึง_' + m.to + '.' + ext;
+  function html(m, opts) {
+    opts = opts || {}; const maxRows = opts.maxRows || 1e9;
+    const css = 'body{font-family:"IBM Plex Sans Thai","TH Sarabun New",Tahoma,sans-serif;color:#0f172a;margin:0;padding:' + (opts.pad || 24) + 'px;background:#fff}h1{font-size:22px;color:#0c4a6e;margin:0 0 4px}.sub{font-size:14px;color:#334155;margin:0 0 2px}.made{font-size:12px;color:#64748b;margin:0 0 14px}h2{font-size:16px;color:#0369a1;margin:18px 0 8px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #cbd5e1;padding:5px 7px;text-align:left;vertical-align:top}th{background:#e0f2fe;color:#0c4a6e;font-weight:600}td.n{text-align:right;white-space:nowrap}td.nw{white-space:nowrap}th{white-space:nowrap}tr:nth-child(even) td{background:#f8fafc}.more{font-size:12px;color:#64748b;margin:6px 0 0}.empty{color:#64748b;font-size:13px}';
+    let h = '<style>' + css + '</style><h1>' + esc(m.title) + '</h1><p class="sub">' + esc(m.sub) + '</p><p class="made">' + esc(m.made) + ' · KHALIFAH PROGRAM</p>';
+    if (m.truncated) h += '<p class="more">ข้อมูลมีมากเกินไป แสดง ' + m.truncated + ' รายการแรก · เลือกช่วงวันที่ให้สั้นลง</p>';
+    m.sections.forEach((s) => {
+      if (opts.summaryOnly && s.detail) return;
+      h += '<h2>' + esc(s.title) + '</h2>';
+      if (!s.rows.length) { h += '<p class="empty">ไม่มีข้อมูลในช่วงที่เลือก</p>'; return; }
+      h += '<table><thead><tr>' + s.cols.map((c) => '<th>' + esc(c) + '</th>').join('') + (s.link && opts.links ? '<th>รูป</th>' : '') + '</tr></thead><tbody>' +
+        s.rows.slice(0, maxRows).map((r) => '<tr>' + s.cols.map((c, i) => '<td' + (s.num && s.num.indexOf(i) !== -1 ? ' class="n"' : (/ชื่อ|หมายเหตุ|สถานที่|กิจกรรม|วิชา|พิกัด/.test(c) ? '' : ' class="nw"')) + '>' + esc(r[i]) + '</td>').join('') + (s.link && opts.links ? '<td>' + (r[s.link] ? '<a href="' + esc(r[s.link]) + '">เปิดรูป</a>' : '') + '</td>' : '') + '</tr>').join('') + '</tbody></table>';
+      if (s.rows.length > maxRows) h += '<p class="more">แสดง ' + maxRows + ' จาก ' + s.rows.length + ' รายการ · ข้อมูลทั้งหมดอยู่ในไฟล์ Excel / Word</p>';
+    });
+    return h;
+  }
+  function download(blob, name) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }
+  window.exportToExcel = async function () {
+    const m = await fetchData(); if (!m) return;
+    if (typeof XLSX === 'undefined') { toast('ยังโหลดตัวสร้างไฟล์ Excel ไม่เสร็จ ลองอีกครั้ง', 'warning'); return; }
+    const wb = XLSX.utils.book_new(); const used = {};
+    m.sections.forEach((s, i) => {
+      const cols = s.link ? s.cols.concat(['ลิงก์รูป']) : s.cols;
+      const aoa = [[m.title], [m.sub], [m.made], [], cols].concat(s.rows.map((r) => s.link ? s.cols.map((c, j) => r[j]).concat([r[s.link] || '']) : r));
+      const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = cols.map((c) => ({ wch: Math.max(8, Math.min(40, String(c).length + 6)) }));
+      let nm = (s.detail ? 'บันทึก' : 'สรุป') + (i ? ' ' + i : ''); while (used[nm]) nm += '_'; used[nm] = 1;
+      XLSX.utils.book_append_sheet(wb, ws, nm.slice(0, 31));
+    });
+    XLSX.writeFile(wb, fname(m, 'xlsx')); toast('ส่งออกไฟล์ Excel แล้ว', 'success');
+  };
+  window.exportToWord = async function () {
+    const m = await fetchData(); if (!m) return;
+    const doc = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>" + esc(m.title) + "</title><style>@page WordSection1{size:841.9pt 595.3pt;mso-page-orientation:landscape;margin:36pt}div.WordSection1{page:WordSection1}</style></head><body><div class='WordSection1'>" + html(m, { links: true, pad: 0 }) + '</div></body></html>';
+    download(new Blob(['﻿' + doc], { type: 'application/msword' }), fname(m, 'doc')); toast('ส่งออกไฟล์ Word แล้ว', 'success');
+  };
+  window.exportToPdfPrint = async function () {
+    const m = await fetchData(); if (!m) return;
+    let f = $('k8ExpFrame'); if (f) f.remove();
+    f = document.createElement('iframe'); f.id = 'k8ExpFrame'; f.setAttribute('aria-hidden', 'true'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+    document.body.appendChild(f);
+    const d = f.contentDocument; d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(fname(m, 'pdf')) + '</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600&display=swap"><style>@page{size:A4 landscape;margin:12mm}thead{display:table-header-group}tr{break-inside:avoid}</style></head><body>' + html(m, { links: false, pad: 0 }) + '</body></html>'); d.close();
+    setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('เปิดหน้าพิมพ์ไม่ได้', 'error'); } }, 700);
+  };
+  // รูปภาพ: วาดตารางลงผืนผ้าใบเอง (ไม่ต้องโหลดไลบรารีภายนอก · ภาษาไทยแสดงถูกต้อง · ไม่ติดธีมมืด)
+  window.k8ExportImage = async function () {
+    const m = await fetchData(); if (!m) return;
+    try { await document.fonts.load('600 16px "IBM Plex Sans Thai"'); await document.fonts.load('400 14px "IBM Plex Sans Thai"'); } catch (e) {}
+    const MAXR = 150, F = '"IBM Plex Sans Thai", Tahoma, sans-serif', PAD = 36, RH = 32, HH = 36;
+    const cv = document.createElement('canvas'); const x = cv.getContext('2d');
+    const secs = m.sections.map((s) => ({ s, rows: s.rows.slice(0, MAXR) }));
+    // ความกว้างคอลัมน์ตามข้อความจริง (จำกัดไม่ให้กว้างเกิน)
+    secs.forEach((o) => {
+      x.font = '600 14px ' + F; o.w = o.s.cols.map((c) => x.measureText(c).width + 20);
+      x.font = '400 14px ' + F;
+      o.rows.forEach((r) => o.s.cols.forEach((c, i) => { o.w[i] = Math.max(o.w[i], Math.min(380, x.measureText(String(r[i] == null ? '' : r[i])).width + 20)); }));
+      o.W = o.w.reduce((a, b) => a + b, 0);
+    });
+    const W = Math.max(900, Math.min(3200, Math.max.apply(null, secs.map((o) => o.W)) + PAD * 2));
+    let H = PAD + 34 + 24 + 22 + 10;
+    secs.forEach((o) => { H += 44 + HH + Math.max(1, o.rows.length) * RH + (o.s.rows.length > MAXR ? 28 : 6); });
+    H += PAD;
+    const SC = Math.min(2, 16000 / Math.max(W, H)); cv.width = Math.round(W * SC); cv.height = Math.round(H * SC); x.scale(SC, SC);
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H); x.textBaseline = 'middle';
+    const fit = (t, w) => { t = String(t == null ? '' : t); if (x.measureText(t).width <= w) return t; while (t.length > 1 && x.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
+    let y = PAD;
+    x.fillStyle = '#0c4a6e'; x.font = '600 26px ' + F; x.fillText(m.title, PAD, y + 15); y += 40;
+    x.fillStyle = '#334155'; x.font = '400 16px ' + F; x.fillText(m.sub, PAD, y + 10); y += 24;
+    x.fillStyle = '#64748b'; x.font = '400 13px ' + F; x.fillText(m.made + ' · KHALIFAH PROGRAM', PAD, y + 9); y += 30;
+    secs.forEach((o) => {
+      x.fillStyle = '#0369a1'; x.font = '600 18px ' + F; x.fillText(o.s.title, PAD, y + 16); y += 40;
+      const k = Math.min(1, (W - PAD * 2) / o.W); const ws = o.w.map((v) => v * k);
+      // หัวตาราง
+      let cx = PAD; x.fillStyle = '#e0f2fe'; x.fillRect(PAD, y, ws.reduce((a, b) => a + b, 0), HH);
+      x.font = '600 14px ' + F; x.fillStyle = '#0c4a6e';
+      o.s.cols.forEach((c, i) => { x.fillText(fit(c, ws[i] - 14), cx + 8, y + HH / 2); cx += ws[i]; });
+      x.strokeStyle = '#cbd5e1'; x.lineWidth = 1; x.strokeRect(PAD + .5, y + .5, ws.reduce((a, b) => a + b, 0), HH); y += HH;
+      if (!o.rows.length) { x.font = '400 14px ' + F; x.fillStyle = '#64748b'; x.fillText('ไม่มีข้อมูลในช่วงที่เลือก', PAD + 8, y + RH / 2); y += RH; }
+      o.rows.forEach((r, ri) => {
+        let cx2 = PAD; const tw = ws.reduce((a, b) => a + b, 0);
+        if (ri % 2) { x.fillStyle = '#f8fafc'; x.fillRect(PAD, y, tw, RH); }
+        x.font = '400 14px ' + F;
+        o.s.cols.forEach((c, i) => {
+          const v = r[i]; const isNum = o.s.num && o.s.num.indexOf(i) !== -1; const t = fit(v, ws[i] - 14);
+          x.fillStyle = /ขาด|ไม่ได้เช็ค|ไม่ใช่/.test(String(v)) ? '#b91c1c' : /สาย/.test(String(v)) ? '#b45309' : '#0f172a';
+          if (isNum) { x.textAlign = 'right'; x.fillText(t, cx2 + ws[i] - 8, y + RH / 2); x.textAlign = 'left'; } else x.fillText(t, cx2 + 8, y + RH / 2);
+          cx2 += ws[i];
+        });
+        x.strokeStyle = '#e2e8f0'; x.beginPath(); x.moveTo(PAD, y + RH + .5); x.lineTo(PAD + tw, y + RH + .5); x.stroke();
+        y += RH;
+      });
+      // เส้นแบ่งคอลัมน์
+      let lx = PAD; const top = y - Math.max(1, o.rows.length) * RH - HH; x.strokeStyle = '#cbd5e1';
+      ws.forEach((v) => { x.beginPath(); x.moveTo(lx + .5, top); x.lineTo(lx + .5, y); x.stroke(); lx += v; }); x.beginPath(); x.moveTo(lx + .5, top); x.lineTo(lx + .5, y); x.stroke();
+      if (o.s.rows.length > MAXR) { x.fillStyle = '#64748b'; x.font = '400 13px ' + F; x.fillText('แสดง ' + MAXR + ' จาก ' + o.s.rows.length + ' รายการ · ข้อมูลทั้งหมดอยู่ในไฟล์ Excel / Word', PAD, y + 15); y += 28; } else y += 6;
+    });
+    cv.toBlob((b) => { if (b) { download(b, fname(m, 'png')); toast('บันทึกเป็นรูปภาพแล้ว', 'success'); } else toast('สร้างรูปภาพไม่สำเร็จ', 'error'); }, 'image/png');
+  };
+  document.addEventListener('DOMContentLoaded', ensureDates);
+  if (document.readyState !== 'loading') ensureDates();
 })();
 
 // v19.60 · สัญญาณว่า ui-v8.js ทำงานจนจบไฟล์ (index.html ใช้ตรวจว่าโหลดครบ)
