@@ -7663,3 +7663,8 @@ html[data-theme="dark"] .k8-asd-sub, html[data-theme="dark"] .k8-asd-top small, 
 /* v19.84 · ส่งออกรายงาน: ค้นหานักเรียน + เพศ */
 .k8-exp-f2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); gap: 1rem; margin: -0.5rem 0 1.5rem; }
 @media (max-width: 640px) { .k8-exp-f2 { grid-template-columns: 1fr; } }
+
+/* v19.86 */
+.k8-asum-h .k8-asum-csv + .k8-asum-csv { margin-left: 0; }
+.k8-asum-h { flex-wrap: nowrap; }
+@media (max-width: 480px) { .k8-asum-bt { display: none; } .k8-asum-csv { padding: 0 10px; } }

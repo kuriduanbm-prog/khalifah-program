@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.85';
+  const APP_VERSION = '19.86';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10912,6 +10912,20 @@ window.k8HfMiss = function (slot) {
   };
   window.k8AsumClose = function () { const el = document.getElementById('k8Asum'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } };
   window.addEventListener('popstate', () => { const el = document.getElementById('k8Asum'); if (el && !el.hidden) window.k8AsumClose(); });
+  // v19.86 · บันทึกหน้าสรุปการมาเรียนเป็นรูปภาพ (ตามตัวกรองและมุมมองที่เลือกอยู่)
+  window.k8AsumPng = function () {
+    const G = A.lastG || []; if (!G.length) { try { showToast('ยังไม่มีข้อมูลให้บันทึก', 'warning'); } catch (e) {} return; }
+    if (typeof window.k8DrawReportPng !== 'function') return;
+    const L = A.rows ? filtered() : []; const S = stats(L); const sessions = new Set(L.map((r) => r.date + '|' + r.subjectCode + '|' + (r.period || ''))).size;
+    let subjName = 'ทุกวิชา'; try { const x = (appSubjects || []).find((y) => String(y.id) === String(A.subj)); if (x) subjName = x.name; } catch (e) {}
+    const view = A.view === 'stu' ? 'รายนักเรียน' : A.view === 'day' ? 'รายวัน' : 'รายวิชา';
+    const m = { title: 'สรุปการมาเรียน', sub: subjName + ' · ' + (A.grade === 'ALL' ? 'ทุกชั้น' : 'ม.' + A.grade) + ' · ' + dTh(A.from) + (A.from !== A.to ? ' – ' + dTh(A.to) : '') + (A.q && A.view === 'stu' ? ' · ค้นหา “' + A.q + '”' : ''), made: 'ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH'),
+      sections: [
+        { title: 'ภาพรวม', cols: ['อัตรามาเรียน', 'จำนวนคาบ', 'รายการเช็คชื่อ', 'มา', 'สาย', 'ลา', 'ขาด'], num: [1, 2, 3, 4, 5, 6], rows: [[S.pct + '%', sessions, S.total, S.present, S.late, S.leave, S.absent]] },
+        { title: view + ' ' + G.length + ' รายการ', cols: [A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา', 'รายละเอียด', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'], num: [2, 3, 4, 5, 6], rows: G.map((g) => [g.label, g.sub, g.st.present, g.st.late, g.st.leave, g.st.absent, g.st.pct + '%']) }
+      ] };
+    window.k8DrawReportPng(m, 'สรุปการมาเรียน_' + view + '_' + A.from + '_' + A.to + '.png');
+  };
   window.k8AsumCsv = function () {
     const G = A.lastG || []; if (!G.length) { try { showToast('ยังไม่มีข้อมูลให้ดาวน์โหลด', 'warning'); } catch (e) {} return; }
     const head = [A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา', 'รายละเอียด', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'];
@@ -15600,8 +15614,9 @@ window.k8PdWho = function (sid) {
     setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('เปิดหน้าพิมพ์ไม่ได้', 'error'); } }, 700);
   };
   // รูปภาพ: วาดตารางลงผืนผ้าใบเอง (ไม่ต้องโหลดไลบรารีภายนอก · ภาษาไทยแสดงถูกต้อง · ไม่ติดธีมมืด)
-  window.k8ExportImage = async function () {
-    const m = await fetchData(); if (!m) return;
+  window.k8ExportImage = async function () { const m = await fetchData(); if (!m) return; window.k8DrawReportPng(m, fname(m, 'png')); };
+  // ผู้วาดตารางเป็นรูป PNG ใช้ร่วมกันหลายหน้า: m = { title, sub, made, sections: [{ title, cols, rows, num? }] }
+  window.k8DrawReportPng = async function (m, name) {
     try { await document.fonts.load('600 16px "IBM Plex Sans Thai"'); await document.fonts.load('400 14px "IBM Plex Sans Thai"'); } catch (e) {}
     const MAXR = 150, F = '"IBM Plex Sans Thai", Tahoma, sans-serif', PAD = 36, RH = 32, HH = 36;
     const cv = document.createElement('canvas'); const x = cv.getContext('2d');
@@ -15651,7 +15666,7 @@ window.k8PdWho = function (sid) {
       ws.forEach((v) => { x.beginPath(); x.moveTo(lx + .5, top); x.lineTo(lx + .5, y); x.stroke(); lx += v; }); x.beginPath(); x.moveTo(lx + .5, top); x.lineTo(lx + .5, y); x.stroke();
       if (o.s.rows.length > MAXR) { x.fillStyle = '#64748b'; x.font = '400 13px ' + F; x.fillText('แสดง ' + MAXR + ' จาก ' + o.s.rows.length + ' รายการ · ข้อมูลทั้งหมดอยู่ในไฟล์ Excel / Word', PAD, y + 15); y += 28; } else y += 6;
     });
-    cv.toBlob((b) => { if (b) { download(b, fname(m, 'png')); toast('บันทึกเป็นรูปภาพแล้ว', 'success'); } else toast('สร้างรูปภาพไม่สำเร็จ', 'error'); }, 'image/png');
+    cv.toBlob((b) => { if (b) { download(b, name || 'รายงาน.png'); toast('บันทึกเป็นรูปภาพแล้ว', 'success'); } else toast('สร้างรูปภาพไม่สำเร็จ', 'error'); }, 'image/png');
   };
   // รายชื่อแนะนำในช่องค้นหา (ตามชั้นที่เลือก)
   window.k8ExpFillList = function () {
