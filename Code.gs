@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.82'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.87'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3177,6 +3177,8 @@ function recordPrayer(data) {
   let restored = 0;
   if (!/ขาด/.test(String(statusThai || ''))) { try { restored = prayerMissRestore_(cleanSid, dateStr, prayerNameThai, 'พบบันทึกละหมาด (ส่งย้อนหลัง)'); } catch (e) {} }
 
+  // v19.87 · นักเรียนหญิงที่ยังอยู่ในช่วงประจำเดือนกลับมาเช็คละหมาดแล้ว = สิ้นสุดประจำเดือนอัตโนมัติ (เวลาก่อนหน้าในวันนั้นบันทึกเป็นอุซุร)
+  let perEnded = false; try { perEnded = periodEndOnCheckin_(cleanSid, dateStr, prayerNameThai, statusThai); } catch (e) {}
   let jumPts = 0, dormPts = 0, wpPts = 0;
   if (jum) { try { jumPts = jumuahPenalty_(jum, dateStr, timeStr); } catch (e) { jumPts = 0; } }
   const wpReason = !!wpZone && GIRL_REASON_RE_.test(String(data.note || ''));
@@ -3185,7 +3187,7 @@ function recordPrayer(data) {
   const msg = [jum ? 'คุณมาฟังคุฏบะห์สายแล้ว' + (jumPts ? ' · ถูกหัก ' + jumPts + ' คะแนน' : '') : '', dorm ? 'ละหมาดที่หอพัก' + (dormPts ? ' · ถูกหัก ' + dormPts + ' คะแนน' : '') : ''].filter(Boolean).join(' · ');
   const msg2 = wpZone ? ('ผิดสถานที่ (ซุฮริ/อัศรี ต้องเช็คที่มัสยิดอัลฮารอมัยน์)' + (wpPts ? ' · ถูกหัก ' + wpPts + ' คะแนน' : wpReason ? ' · แจ้งเหตุจำเป็นแล้ว รอแอดมินพิจารณา' : '')) : '';
   return { success: true, message: [msg, msg2].filter(Boolean).join(' · ') || ('บันทึกการละหมาดเวลา ' + prayerNameThai + ' สำเร็จแล้ว'), logId: logId, photoUrl: photoRef, restored: restored,
-    wrongPlace: wpZone || undefined, wrongPlacePenalty: wpPts || undefined, wrongPlaceReason: wpReason || undefined,
+    periodEnded: perEnded || undefined, wrongPlace: wpZone || undefined, wrongPlacePenalty: wpPts || undefined, wrongPlaceReason: wpReason || undefined,
     jumuahLate: !!jum, jumuahDeadline: jum ? jum.deadline : undefined, penalty: (jumPts + dormPts + wpPts) || undefined, dormPrayer: !!dorm, dormZone: dorm ? dorm.zone : undefined, dormPenalty: dormPts || undefined };
 }
 
@@ -9513,6 +9515,16 @@ function periodFinish_(list, active, end, resume, auto) {
   periodSave_(list);
   try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
   return out.length;
+}
+function periodEndOnCheckin_(sid, dateStr, prayerThai, statusThai) {
+  if (/ประจำเดือน|อุซุร|^ลา|ป่วย|ขาด/.test(String(statusThai || '').trim())) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr || ''))) return false;
+  const list = periodList_(); const a = list.filter(function (x) { return x && x.status === 'active' && isCodeMatch(x.studentId, sid) && String(x.start || '') <= dateStr; })[0];
+  if (!a) return false;
+  const k = ['ซุบฮิ', 'ซุฮริ', 'อัศรฺ', 'มัฆริบ', 'อีชาอ์'].indexOf(spSlot_(prayerThai)); if (k < 0) return false;
+  a.endedBy = 'auto-checkin'; a.endNote = 'สิ้นสุดอัตโนมัติ: เช็คละหมาด' + spSlot_(prayerThai) + ' วันที่ ' + dateStr;
+  periodFinish_(list, a, dateStr, k, false);
+  return true;
 }
 function periodAutoClose_() {
   const today = periodYmd_(new Date());

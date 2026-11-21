@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.86';
+  const APP_VERSION = '19.87';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -5944,7 +5944,7 @@ window.k8RegBirthChange = function (v) {
       const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
       r = await resp.json();
     } catch (e) { return 'retry'; }
-    try { if (r && r.success !== false && (r.dormPenalty || r.dormPrayer)) window.dispatchEvent(new CustomEvent('k8-prayer-result', { detail: r })); } catch (e) {}
+    try { if (r && r.success !== false && (r.dormPenalty || r.dormPrayer || r.periodEnded)) window.dispatchEvent(new CustomEvent('k8-prayer-result', { detail: r })); } catch (e) {}
     if (!r || r.success !== false) return 'ok';
     if (r.code === 'AUTH_REQUIRED') return 'retry';
     if (noQueue) return 'drop';
@@ -8579,7 +8579,9 @@ window.k8RegBirthChange = function (v) {
     const winOf = (k) => { try { return PRAYER_TIME_WINDOWS.find((w) => (w.key || w.name) === k) || null; } catch (e) { return null; } };
     const hm = (m) => pd(Math.floor(m / 60)) + ':' + pd(m % 60);
     const onLv = (st, k) => { try { const w = winOf(k); return !!(window.k8StuLeaveOn && window.k8StuLeaveOn(st.studentId, viewD, w ? hm(w.startMin) : '', w ? hm(Math.min(w.endMin, 1439)) : '', 'pray')); } catch (e) { return false; } }; // v18.29 · ลาเรียนที่อนุมัติ = ได้รับอนุญาต
-    loadPer(); const onPer = (st) => perCovers(cid(st.studentId), viewD); // v18.32 · มีประจำเดือน = อุซุร (ไม่ใช่ขาด)
+    // v19.87 · ถ้าวันนั้นเช็คละหมาดจริงแล้ว (ไม่ใช่อุซุร) = กลับมาละหมาดแล้ว → ช่องอื่นแสดงตามปกติ ไม่ขึ้นประจำเดือน
+    const resumed = {}; rows.forEach((r) => { if (Object.keys(r.p).some((k) => r.p[k] && !/ประจำเดือน|อุซุร/.test(String(r.p[k].status || '')))) resumed[r.sid] = 1; });
+    loadPer(); const onPer = (st) => !resumed[cid(st.studentId)] && perCovers(cid(st.studentId), viewD); // v18.32 · มีประจำเดือน = อุซุร (ไม่ใช่ขาด)
     const missed = (st, k) => { if (viewD > todayS || onLv(st, k) || onPer(st)) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
     const missN = {}; rows.forEach((r) => { missN[r.sid] = slots.filter((x) => !r.p[x.key] && missed(r.s, x.key)).length; });
     const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length, per: rows.filter((r) => onPer(r.s)).length };
@@ -8598,7 +8600,7 @@ window.k8RegBirthChange = function (v) {
     const TMN = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     const thd = (v) => { const m = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + ' ' + TMN[+m[2] - 1] : ''; };
     const perTag = (sid) => {
-      const x = perOf(sid, viewD); if (!x) return '';
+      const x = perOf(sid, viewD); if (!x || resumed[sid]) return '';
       const n = Math.round((new Date(viewD + 'T00:00:00') - new Date(x.start + 'T00:00:00')) / 864e5) + 1;
       const last = x.status === 'active' ? perCap(x.start) : x.end;
       return '<em class="k8-pd-pertag" title="แจ้งเริ่ม ' + esc(x.start) + (x.status === 'active' ? ' · ยังไม่กดสิ้นสุด · ระบบสิ้นสุดให้เองหลัง ' + esc(last) : ' · สิ้นสุด ' + esc(x.end || '')) + '">🌸 เริ่ม ' + esc(thd(x.start)) + ' · วันที่ ' + n + '/15' + (x.status !== 'active' ? ' · สิ้นสุด ' + esc(thd(x.end)) : n >= 13 ? ' · ใกล้ครบ' : '') + '</em>';
@@ -10028,6 +10030,8 @@ window.k8HfMiss = function (slot) {
   const expired = (a) => !!a && dayNo(a) > MAXD;
   window.k8PeriodActive = function () { return stu() && !adm() && girl() && S.active && !expired(S.active) ? S.active : null; };
   function store() { try { if (S.active) localStorage.setItem(key(), JSON.stringify(S.active)); else localStorage.removeItem(key()); } catch (e) {} }
+  // v19.87 · ระบบสิ้นสุดประจำเดือนให้เองเมื่อเช็คละหมาด → อัปเดตหน้าจอทันที
+  window.addEventListener('k8-prayer-result', (e) => { const r = (e && e.detail) || {}; if (!r.periodEnded || !S.active) return; S.active = null; S.mode = false; store(); try { repaint(); } catch (er) {} try { showToast('กลับมาเช็คละหมาดแล้ว ระบบสิ้นสุดช่วงมีประจำเดือนให้อัตโนมัติ', 'success'); } catch (er) {} });
   function repaint() { render(); try { window.renderHomeF && window.renderHomeF(); } catch (e) {} try { window.k8BellPaint && window.k8BellPaint(); } catch (e) {} try { window.k8PrayerWarnCheck && window.k8PrayerWarnCheck(); } catch (e) {} }
   async function load() {
     if (!stu() || adm() || !girl() || preview()) { render(); return; }
