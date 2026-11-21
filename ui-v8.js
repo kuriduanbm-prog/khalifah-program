@@ -103,8 +103,6 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const st = String(p.status || '');
       if (!date || !slot || st.includes('ขาด') || st.toUpperCase() === 'ABSENT') return;
       const k = date + '|' + slot;
-      if (seen[k]) return;
-      seen[k] = true;
       // v17.20 · ประเภทเพื่อลงสีกราฟ: ตรงเวลา / สาย / อนุมัติย้อนหลัง / ลา
       const id = String(p.logId || p.id || '');
       let kind = 'ok';
@@ -112,7 +110,12 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       else if (/อุซุร|ประจำเดือน|ป่วย|^ลา/.test(st)) kind = 'ex';
       else if (typeof window.k8ShouldBeOnTime === 'function' && window.k8ShouldBeOnTime(Object.assign({}, p, { date: date }))) kind = 'ok';
       else if (/สาย|ช้า/.test(st) || (typeof window.k8ShouldBeLate === 'function' && window.k8ShouldBeLate(Object.assign({}, p, { date: date })))) kind = 'late';
-      out.push({ date, d: parseYMD(date), slot, kind, id: String(p.logId || p.id || '') });
+      // v19.79 · หญิงเช็คซุฮริ/อัศรีผิดสถานที่ (ไม่มีเหตุจำเป็น) ไม่นับเป็นดาว · หลายรายการในเวลาเดียวกัน เอารายการที่ดีที่สุด (ตรงกับระบบ)
+      let wp = false; try { wp = !!(window.k8WrongPlace && window.k8WrongPlace(Object.assign({}, p, { date: date }))) && !/เหตุจำเป็น/.test(String(p.note || '')); } catch (e) {}
+      const RK = { ok: 3, ex: 2, appr: 1, late: 1 }; const sc = (x) => (RK[x.kind] || 0) - (x.wp ? 2 : 0);
+      const rec = { date, d: parseYMD(date), slot, kind, wp, id: String(p.logId || p.id || '') };
+      if (seen[k]) { if (sc(rec) > sc(seen[k])) Object.assign(seen[k], rec); return; }
+      seen[k] = rec; out.push(rec);
     });
     return out;
   }
@@ -293,7 +296,8 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       for (let i = 0; i < 6 && ok; i++) {
         const d = new Date(sun); d.setDate(sun.getDate() + i); const ds = ymd(d);
         if (lv(ds)) continue;
-        SLOT_ORDER.forEach((k) => { if (!ok) return; const r = byKey[ds + '|' + k]; if (r) { if (r.kind === 'ok') counted++; else if (r.kind !== 'ex') ok = false; } else if (!roll(k)) ok = false; });
+        const per = (() => { try { const a = window.k8PeriodActive && window.k8PeriodActive(); return !!(a && String(a.start || '') <= ds); } catch (e) { return false; } })();
+        SLOT_ORDER.forEach((k) => { if (!ok) return; const r = byKey[ds + '|' + k]; if (r) { if (r.kind === 'ok' && !r.wp) counted++; else if (r.kind !== 'ex') ok = false; } else if (!roll(k) && !per) ok = false; });
       }
       if (ok && counted >= 10) { n++; if (!last) last = sunS; }
     }
@@ -3675,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.78';
+  const APP_VERSION = '19.79';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -13816,7 +13820,7 @@ window.k8PdWho = function (sid) {
     if (!S.list) { B.innerHTML = '<p class="k8-sp-empty">' + (S.busy ? 'กำลังโหลดประวัติดาว…' : 'โหลดข้อมูลไม่สำเร็จ') + '</p>'; return; }
     const { R, L, people } = rows();
     const nPr = L.filter((x) => x.type === 'prayer').reduce((a, x) => a + (x.stars || 1), 0), nQu = L.filter((x) => x.type === 'quran').reduce((a, x) => a + (x.stars || 1), 0);
-    let h = '<p class="k8-star-range">' + esc(R.label) + '</p><div class="k8-star-kpis"><div class="k8-star-kpi is-main"><span>ดาวทั้งหมด</span><b>' + (nPr + nQu) + '<small> ดวง</small></b></div><div class="k8-star-kpi"><span>นักเรียนที่ได้ดาว</span><b>' + people.length + '<small> คน</small></b></div><div class="k8-star-kpi is-pr"><span>' + ICO.prayer + 'ละหมาดครบสัปดาห์</span><b>' + nPr + '</b></div><div class="k8-star-kpi is-qu"><span>' + ICO.quran + 'อัลกุรอานจบยุซ</span><b>' + nQu + '</b></div></div>';
+    let h = '<div class="k8-star-rc"><p class="k8-star-range">' + esc(R.label) + '</p><button type="button" class="k8-btn-line k8-star-rcb" onclick="k8StarRecalc()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>ตรวจดาวละหมาดสัปดาห์ล่าสุด</button></div><div class="k8-star-kpis"><div class="k8-star-kpi is-main"><span>ดาวทั้งหมด</span><b>' + (nPr + nQu) + '<small> ดวง</small></b></div><div class="k8-star-kpi"><span>นักเรียนที่ได้ดาว</span><b>' + people.length + '<small> คน</small></b></div><div class="k8-star-kpi is-pr"><span>' + ICO.prayer + 'ละหมาดครบสัปดาห์</span><b>' + nPr + '</b></div><div class="k8-star-kpi is-qu"><span>' + ICO.quran + 'อัลกุรอานจบยุซ</span><b>' + nQu + '</b></div></div>';
     if (!L.length) { B.innerHTML = h + '<div class="k8-sld-empty"><span class="k8-star-eico" aria-hidden="true">' + STAR + '</span><b>ยังไม่มีนักเรียนได้ดาวในช่วงนี้</b><small>ดาวละหมาดสรุปทุกวันเสาร์ 05:00 น. · ดาวอัลกุรอานขึ้นทันทีที่นักเรียนบันทึกจบยุซ</small></div>'; return; }
     h += '<section class="k8-star-sec"><h3>นักเรียนที่ได้ดาวมากที่สุด</h3><ol class="k8-star-top">' + people.slice(0, 10).map((p, i) => '<li><span class="k8-star-rk' + (i < 3 ? ' is-' + (i + 1) : '') + '">' + (i + 1) + '</span><button type="button" class="k8-star-who" onclick="k8StarWho(\'' + esc(p.sid) + '\')"><b>' + esc(p.name) + '</b><small>' + esc(gN(p.grade)) + ' · ' + esc(p.sid) + (p.school ? ' · ' + esc(p.school) : '') + '</small></button><span class="k8-star-mix">' + (p.pr ? '<em class="is-pr" title="ละหมาดครบสัปดาห์">' + ICO.prayer + p.pr + '</em>' : '') + (p.qu ? '<em class="is-qu" title="อัลกุรอานจบยุซ">' + ICO.quran + p.qu + '</em>' : '') + '</span><span class="k8-star-n">' + STAR + '<b>' + p.n + '</b></span></li>').join('') + '</ol>' + (people.length > 10 ? '<p class="k8-star-more">และอีก ' + (people.length - 10) + ' คน · ดูทั้งหมดในไฟล์ Excel</p>' : '') + '</section>';
     // ประวัติ: แยกตามวันที่ได้ดาว · ละหมาดรวมเป็นกลุ่มต่อสัปดาห์
@@ -13840,6 +13844,7 @@ window.k8PdWho = function (sid) {
   }
   window.k8StarOpen = function () { try { window.k8StarPopX && window.k8StarPopX(); } catch (e) {} shell(); openModal('k8StarModal'); paint(); load(true); setTimeout(() => { const b = document.querySelector('#k8StarModal .k8-sheet-x'); if (b) b.focus(); }, 60); };
   window.k8StarClose = function () { try { closeModal('k8StarModal'); } catch (e) {} };
+  window.k8StarReload = function () { load(true); }; // v19.79
   window.k8StarSet = function (k, v, soft) { S[k] = v; paint(!!soft); };
   window.k8StarTog = function (k) { S.open[k] = S.open[k] === false; paint(true); };
   window.k8StarWho = function (sid) { if (window.k8SpOpen) { try { window.k8SpOpen(sid); return; } catch (e) {} } };
@@ -15371,6 +15376,52 @@ window.k8PdWho = function (sid) {
     paint();
   };
   document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; const m = document.getElementById('k8JkModal'); if (m && (m.classList.contains('open') || m.classList.contains('active'))) window.k8JkClose(); });
+})();
+
+
+/* ============ v19.79 · แอดมิน: ตรวจ/คำนวณดาวละหมาดรายสัปดาห์ใหม่ (กติกาเดียวกับหน้านักเรียน) ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const dS = (s) => { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.getDate() + ' ' + MON[d.getMonth()] + ' ' + String(d.getFullYear() + 543).slice(2); };
+  const R = { res: null, busy: false };
+  function shell() {
+    let m = document.getElementById('k8SrModal'); if (m) return m;
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal" id="k8SrModal" role="dialog" aria-modal="true" aria-labelledby="k8SrT" hidden style="z-index:10070"><div class="k8-ra-box"><header><h3 id="k8SrT">ตรวจดาวละหมาดสัปดาห์ล่าสุด</h3><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8SrModal\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body" id="k8SrBody"></div></div></div>');
+    m = document.getElementById('k8SrModal'); m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; });
+    return m;
+  }
+  const li = (x, extra) => '<li><b>' + esc(x.name || x.sid) + '</b><small>' + esc(x.grade || '') + ' · ' + esc(x.sid) + '</small>' + (extra ? '<em>' + esc(extra) + '</em>' : '') + '</li>';
+  function paint() {
+    const B = document.getElementById('k8SrBody'); if (!B) return; const r = R.res;
+    if (!r) { B.innerHTML = '<p class="k8-cp-empty">' + (R.busy ? 'กำลังตรวจบันทึกละหมาดทั้งสัปดาห์…' : 'ตรวจไม่สำเร็จ') + '</p>'; return; }
+    if (r.old) { B.innerHTML = '<p class="k8-cp-warn">ต้องอัปเดต Code.gs (เวอร์ชัน 19.79 ขึ้นไป) ก่อนใช้เครื่องมือนี้</p>'; return; }
+    if (!r.success) { B.innerHTML = '<p class="k8-cp-warn">' + esc(r.message || 'ตรวจไม่สำเร็จ') + '</p>'; return; }
+    const same = !r.removed.length && !r.added.length;
+    let h = '<p class="k8-sr-lead">สัปดาห์ ' + esc(dS(r.sun)) + ' – ' + esc(dS(r.fri)) + '</p>' +
+      '<div class="k8-sr-kpis"><div><span>เดิมในประวัติดาว</span><b>' + r.before + ' คน</b></div><div class="is-now"><span>ตามกติกาเดียวกับหน้านักเรียน</span><b>' + r.after + ' คน</b></div></div>';
+    if (same) h += '<p class="k8-sr-ok">รายชื่อตรงกันแล้ว ไม่ต้องแก้ไข</p>';
+    if (r.removed.length) h += '<h4 class="k8-sr-h">ไม่ควรได้ดาว ' + r.removed.length + ' คน <small>(เหตุผลแรกที่พบ)</small></h4><ul class="k8-sr-list is-rm">' + r.removed.map((x) => li(x, x.reason)).join('') + '</ul>';
+    if (r.added.length) h += '<h4 class="k8-sr-h">ควรได้ดาวเพิ่ม ' + r.added.length + ' คน</h4><ul class="k8-sr-list is-add">' + r.added.map((x) => li(x)).join('') + '</ul>';
+    if (r.winners.length) h += '<h4 class="k8-sr-h">ได้ดาวตามกติกา ' + r.winners.length + ' คน</h4><ul class="k8-sr-list">' + r.winners.map((x) => li(x)).join('') + '</ul>';
+    h += '<p class="k8-sr-note">กติกา: อา.–ศ. ทุกเวลาต้องตรงเวลาตามเกณฑ์มาสายจริง (ดูจากเวลาที่เช็ค) · ซุฮริวันศุกร์ชายไม่เกิน 12:35 น. · หญิงเช็คซุฮริ/อัศรีผิดสถานที่ไม่ได้ดาว · ลา/ป่วย/อุซุร/ประจำเดือนไม่นับว่าขาด · ซุบฮิชายแอดมินเช็คให้</p>';
+    if (!same) h += '<div class="k8-cp-sub-acts"><button type="button" class="k8-cp-go" onclick="k8StarRecalcApply()"' + (R.busy ? ' disabled' : '') + '>' + (R.busy ? 'กำลังบันทึก…' : 'แก้ประวัติดาวให้ถูกต้อง (' + r.after + ' คน)') + '</button></div>';
+    B.innerHTML = h;
+  }
+  async function run(apply) {
+    R.busy = true; if (!apply) R.res = null; paint();
+    let r = null; try { r = await gasApiCall('recalcStarWeek', { data: { apply: !!apply } }, 90000); } catch (e) {}
+    R.busy = false; if (r && !r.success && /Unknown action|ไม่รู้จัก/i.test(String(r.error || r.message || ''))) r = { old: true };
+    R.res = r; paint();
+    if (apply && r && r.applied) { toast(r.message, 'success'); try { window.k8StarReload && window.k8StarReload(); } catch (e) {} }
+  }
+  window.k8StarRecalc = function () { shell().hidden = false; run(false); setTimeout(() => { const x = document.querySelector('#k8SrModal .k8-ra-x'); if (x) x.focus(); }, 30); };
+  window.k8StarRecalcApply = function () {
+    const r = R.res; if (!r || !r.success) return;
+    if (!confirm('แทนที่ประวัติดาวละหมาดสัปดาห์ ' + dS(r.sun) + ' – ' + dS(r.fri) + ' ด้วยรายชื่อใหม่ ' + r.after + ' คน และส่งแจ้งเตือนใหม่ ?')) return;
+    run(true);
+  };
 })();
 
 // v19.60 · สัญญาณว่า ui-v8.js ทำงานจนจบไฟล์ (index.html ใช้ตรวจว่าโหลดครบ)

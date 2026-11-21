@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.76'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.79'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', scanJumuah: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', recalcStarWeek: 'admin', deleteMyPrayer: 'student', checkMyPrayers: 'student', scanDormPrayers: 'admin', scanJumuah: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1829,6 +1829,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
+    case 'recalcStarWeek': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return recalcStarWeek_(data);
     case 'scanDormPrayers': return scanDormPrayers_(data);
     case 'scanJumuah': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return scanJumuah_(data);
     case 'girlPlacePenalty': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return girlPlacePenaltyByLog_(data);
@@ -8173,61 +8174,163 @@ function starGradeShort_(g) { const m = String(g || '').match(/([1-6])/); return
 /** ดาวละหมาดตรงเวลาครบสัปดาห์ (อา.–ศ. · เสาร์หยุด) · กติกาเดียวกับหน้านักเรียน:
  *  ทุกเวลาที่ต้องเช็คต้อง "ตรงเวลา" · ลาเรียนที่อนุมัติ = ข้ามวันนั้น · ป่วย/ลา/อุซุร/ประจำเดือน = ไม่นับว่าขาด · ซุบฮิชายที่ไม่มีบันทึก = ข้าม · ต้องตรงเวลาอย่างน้อย 10 ครั้ง
  *  ทำงานครั้งเดียวต่อสัปดาห์ ตั้งแต่วันเสาร์ 05:00 น. */
-function starWeekRun_(nowArg) {
-  const now = nowArg || new Date();
-  const ymd = function (d) { return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd'); };
-  const dow = new Date(ymd(now) + 'T12:00:00+07:00').getUTCDay(); // อา.=0 … ส.=6
-  const hm = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm').split(':'); const curMin = (+hm[0]) * 60 + (+hm[1]);
-  let back = (dow + 2) % 7; if (back === 0) back = 7; if (dow === 6 && curMin < 300) back += 7;
-  const fri = ymd(new Date(now.getTime() - back * 864e5)), sun = ymd(new Date(now.getTime() - (back + 5) * 864e5));
-  if (getProp_('STAR_WEEK_DONE') >= fri) return { skipped: true, week: sun };
-  const days = []; for (let i = 0; i < 6; i++) days.push(ymd(new Date(new Date(sun + 'T12:00:00+07:00').getTime() + i * 864e5)));
+/** v19.79 · เวลาละหมาด + เกณฑ์มาสาย แบบเดียวกับหน้าแอป (ui-v8.js · k8LateCutoffs) เพื่อให้ดาวรายสัปดาห์ตรงกับสีที่นักเรียนเห็น */
+const SP_LAT_ = 6.5967, SP_LNG_ = 101.3444;
+function spTimes_(ds, loc) {
+  const rad = function (d) { return d * Math.PI / 180; }, deg = function (r) { return r * 180 / Math.PI; };
+  const fixA = function (a) { a = a - 360 * Math.floor(a / 360); return a < 0 ? a + 360 : a; }, fixH = function (a) { a = a - 24 * Math.floor(a / 24); return a < 0 ? a + 24 : a; };
+  const p = String(ds).split('-'); let y = +p[0], m = +p[1]; const d = +p[2];
+  const LAT = loc ? +loc.lat : SP_LAT_, LNG = loc ? +loc.lng : SP_LNG_, TZ = 7;
+  if (m <= 2) { y -= 1; m += 12; } const A = Math.floor(y / 100), B = 2 - A + Math.floor(A / 4);
+  const jd = Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + B - 1524.5 - LNG / (15 * 24);
+  const sun = function (j) { const D = j - 2451545.0, g = fixA(357.529 + 0.98560028 * D), q = fixA(280.459 + 0.98564736 * D); const L = fixA(q + 1.915 * Math.sin(rad(g)) + 0.020 * Math.sin(rad(2 * g))), e = 23.439 - 0.00000036 * D; const RA = deg(Math.atan2(Math.cos(rad(e)) * Math.sin(rad(L)), Math.cos(rad(L)))) / 15; return { decl: deg(Math.asin(Math.sin(rad(e)) * Math.sin(rad(L)))), eqt: q / 15 - fixH(RA) }; };
+  const mid = function (t) { return fixH(12 - sun(jd + t).eqt); };
+  const ang = function (a, t, ccw) { const s0 = sun(jd + t), n = mid(t); const v = deg(Math.acos((-Math.sin(rad(a)) - Math.sin(rad(s0.decl)) * Math.sin(rad(LAT))) / (Math.cos(rad(s0.decl)) * Math.cos(rad(LAT))))) / 15; return n + (ccw ? -v : v); };
+  const asrT = function (f, t) { const s0 = sun(jd + t); const a = -deg(Math.atan(1 / (f + Math.tan(rad(Math.abs(LAT - s0.decl)))))); return ang(a, t, false); };
+  let r = { fajr: 5, sunrise: 6, dhuhr: 12, asr: 13, maghrib: 18, isha: 18 };
+  for (let i = 0; i < 2; i++) r = { fajr: ang(20, r.fajr / 24, true), sunrise: ang(0.833, r.sunrise / 24, true), dhuhr: mid(r.dhuhr / 24), asr: asrT(1, r.asr / 24), maghrib: ang(0.833, r.maghrib / 24, false), isha: ang(18, r.isha / 24, false) };
+  const out = {}; Object.keys(r).forEach(function (k) { const mm = (r[k] + TZ - LNG / 15) * 60; out[k] = k === 'sunrise' ? Math.floor(mm) - 2 : Math.ceil(mm) + 2; });
+  return out;
+}
+function spRule_() {
+  const DEF = { fajr: '05:35', zuhr: '12:51', asr: '16:21', maghrib: '19:14', offset: 10 };
+  let v = null; try { v = JSON.parse((getSettings().data || {}).PrayerLateRule || 'null'); } catch (e) {}
+  return Object.assign({}, DEF, v || {});
+}
+function spCutoffs_(ds, loc, rule) {
+  const toMin = function (t) { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1]) * 60 + (+m[2]) : NaN; };
+  const t = spTimes_(ds, loc), off = Math.max(0, Math.min(120, parseInt(rule.offset, 10) || 0));
+  const fx = function (v, st) { return isNaN(v) ? st + off : Math.max(v, st + off); };
+  const mg = toMin(rule.maghrib); const mEnd = isNaN(mg) ? t.isha - 1 : Math.max(t.isha - 1, mg);
+  return { 'ซุบฮิ': fx(toMin(rule.fajr), t.fajr), 'ซุฮริ': fx(toMin(rule.zuhr), t.dhuhr), 'อัศรฺ': fx(toMin(rule.asr), t.asr), 'มัฆริบ': fx(mg, t.maghrib), 'อีชาอ์': Math.max(t.isha, mEnd + 1) + off };
+}
+function spSlot_(name) {
+  const x = String(name || '').toLowerCase();
+  if (/ซุบ|ศุบ|fajr|subh/.test(x)) return 'ซุบฮิ'; if (/ซุฮ|ดุฮ|dhuhr|zuhr/.test(x)) return 'ซุฮริ'; if (/อัศ|อัส|asr/.test(x)) return 'อัศรฺ';
+  if (/มัฆ|maghrib/.test(x)) return 'มัฆริบ'; if (/อิชา|อีชา|isha/.test(x)) return 'อีชาอ์'; return '';
+}
+/** true = สาย · false = ตรงเวลา · null = ไม่ต้องปรับ (แอดมินบันทึก/แก้เอง) — กติกาเดียวกับ effLate() ในแอป */
+function spEffLate_(r, ds, rule, boyFri) {
+  if (ds < '2026-11-01') return null;
+  const id = String(r[0] || '');
+  if (/^PRY-(ROLL|ADM|APPR)/.test(id) || /แก้ไขโดย|อนุมัติ|เช็คโดย|เช็คชื่อโดยแอดมิน/.test(String(r[15] || '') + String(r[7] || ''))) return null;
+  const slot = spSlot_(r[4]); const tm = r[7] instanceof Date ? Utilities.formatDate(r[7], 'Asia/Bangkok', 'HH:mm') : String(r[7] || '');
+  const mm = tm.match(/(\d{1,2})[:.](\d{2})/); if (!mm) return null; const t = (+mm[1]) * 60 + (+mm[2]);
+  const la = parseFloat(r[8]), ln = parseFloat(r[9]);
+  const loc = isFinite(la) && isFinite(ln) && (Math.abs(la - SP_LAT_) > 0.03 || Math.abs(ln - SP_LNG_) > 0.03) ? { lat: la, lng: ln } : null;
+  const c = spCutoffs_(ds, loc, rule); let cut = c[slot]; if (cut == null) return null;
+  if (slot === 'ซุฮริ' && boyFri) cut = 12 * 60 + 35;
+  if (slot === 'อีชาอ์' && t < 12 * 60) return true;
+  return t > cut;
+}
+/** ดาวละหมาดตรงเวลาครบสัปดาห์ (อา.–ศ. · เสาร์หยุด) · v19.79 ใช้กติกาเดียวกับหน้านักเรียนทุกข้อ:
+ *  ทุกเวลาต้อง "ตรงเวลา" ตามเกณฑ์มาสายจริง (คำนวณจากเวลาที่เช็ค ไม่ใช่แค่คำในช่องสถานะ) · ซุฮริวันศุกร์ชายไม่เกิน 12:35
+ *  นักเรียนหญิงเช็คซุฮริ/อัศรีผิดสถานที่ (ไม่มีเหตุจำเป็น) = ไม่ได้ดาว · ลาเรียนที่อนุมัติ (ยกเว้นลาอยู่หอพัก) = ข้ามวันนั้น
+ *  ป่วย/ลา/อุซุร/ประจำเดือน = ไม่นับว่าขาด · ซุบฮิชายที่แอดมินยังไม่เช็คไม่นับ · ต้องตรงเวลาอย่างน้อย 10 เวลา */
+function starWeekCompute_(sun, fri, today) {
+  const days = []; for (let i = 0; i < 6; i++) days.push(Utilities.formatDate(new Date(new Date(sun + 'T12:00:00+07:00').getTime() + i * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'));
   const nid = function (v) { return String(v || '').replace(/\D/g, '').replace(/^0+/, ''); };
-  const studs = (getAllStudents().data || []).filter(function (x) { return x && x.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ|จำหน่าย|พักการเรียน/.test(String(x.status || '')) && (!/^\d{4}-\d{2}-\d{2}/.test(String(x.registeredAt || '')) || String(x.registeredAt).slice(0, 10) <= sun); });
-  const RANK = { ok: 3, ex: 2, late: 1, miss: 0 };
-  const kindOf = function (r) { const st = String(r[14] || '').trim(); if (/อนุมัติ/.test(st) || /^PRY-APPR/.test(String(r[0]))) return 'late'; if (/อุซุร|ประจำเดือน|ป่วย|^ลา/.test(st)) return 'ex'; if (/ขาด/.test(st)) return 'miss'; if (/สาย|ช้า/.test(st)) return 'late'; return 'ok'; };
+  const all = getAllStudents().data || []; const stBy = {}; all.forEach(function (x) { stBy[nid(x.studentId)] = x; });
+  const studs = all.filter(function (x) { return x && x.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ|จำหน่าย|พักการเรียน/.test(String(x.status || '')) && (!/^\d{4}-\d{2}-\d{2}/.test(String(x.registeredAt || '')) || String(x.registeredAt).slice(0, 10) <= sun); });
+  const RANK = { ok: 3, ex: 2, late: 1, wp: 1, miss: 0 }; const rule = spRule_();
+  const kindOf = function (r, ds) {
+    const st = String(r[14] || '').trim();
+    if (/อนุมัติ/.test(st) || /^PRY-APPR/.test(String(r[0]))) return 'late';
+    if (/อุซุร|ประจำเดือน|ป่วย|^ลา/.test(st)) return 'ex';
+    if (/ขาด/.test(st)) return 'miss';
+    const s0 = stBy[nid(r[1])]; const boyFri = new Date(ds + 'T12:00:00+07:00').getUTCDay() === 5 && jumuahGender_(s0) === 'ชาย';
+    let late = /สาย|ช้า/.test(st);
+    const eff = spEffLate_(r, ds, rule, boyFri);
+    if (late && /^(มาสาย|สาย)$/.test(st) && eff === false) late = false;
+    else if (!late && /^ตรงเวลา/.test(st) && eff === true) late = true;
+    if (late) return 'late';
+    const note = String(r[15] || '');
+    if (/ผิดสถานที่/.test(note) && !/เหตุจำเป็น/.test(note) && !girlFridayDhuhr_(ds, r[4])) return 'wp';
+    return 'ok';
+  };
   const best = {};
   const psh = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
   if (psh) readPrayerRows_(psh).forEach(function (r) {
     const ds = formatSheetDate(r[6]); if (ds < sun || ds > fri) return;
-    const k = nid(r[1]) + '|' + ds + '|' + formatPrayerTimeThai(r[4]); const kd = kindOf(r);
+    const k = nid(r[1]) + '|' + ds + '|' + formatPrayerTimeThai(r[4]); const kd = kindOf(r, ds);
     if (!best[k] || RANK[kd] > RANK[best[k]]) best[k] = kd;
   });
-  const leaves = readStuLeaves_().filter(function (x) { return x && x.status === 'approved'; });
+  const leaves = readStuLeaves_().filter(function (x) { return x && x.status === 'approved' && !/^หอพัก/.test(String(x.where || '')); });
   const onLeave = function (sid, ds) { return leaves.some(function (x) { return nid(x.sid) === sid && ds >= x.from && ds <= (x.to || x.from); }); };
-  const today = ymd(now); let periods = []; try { periods = periodList_(); } catch (e) {}
+  let periods = []; try { periods = periodList_(); } catch (e) {}
   const onPeriod = function (sid, ds) { return periods.some(function (x) { return nid(x.studentId) === sid && ds >= String(x.start || '') && ds <= String(x.end || (x.status === 'active' && today) || x.start || ''); }); };
-  const win = [];
+  const WHY = { late: 'มาสาย', wp: 'ผิดสถานที่', miss: 'ขาด', none: 'ไม่ได้เช็ค' };
+  const win = [], why = {};
   studs.forEach(function (st) {
-    const sid = nid(st.studentId); const girl = periodIsGirl_(st); let ok = true, counted = 0;
+    const sid = nid(st.studentId); const girl = periodIsGirl_(st); let ok = true, counted = 0, reason = '';
     days.forEach(function (ds) {
       if (!ok || onLeave(sid, ds)) return;
       PRAYER_SLOTS_.forEach(function (slot0, si) {
-        if (!ok) return; const kd = best[sid + '|' + ds + '|' + formatPrayerTimeThai(slot0)];
+        if (!ok) return; const sl = formatPrayerTimeThai(slot0); const kd = best[sid + '|' + ds + '|' + sl];
         if (kd === 'ok') counted++;
         else if (kd === 'ex') return;
-        else if (kd) ok = false;
+        else if (kd) { ok = false; reason = starDateTh_(ds) + ' ' + sl + ' · ' + WHY[kd]; }
         else if (si === 0 && !girl) return; // ซุบฮิชาย: แอดมินเช็คชื่อให้
         else if (girl && onPeriod(sid, ds)) return;
-        else ok = false;
+        else { ok = false; reason = starDateTh_(ds) + ' ' + sl + ' · ' + WHY.none; }
       });
     });
-    if (ok && counted >= 10) win.push(st);
+    if (ok && counted >= 10) win.push(st); else why[sid] = reason || ('ตรงเวลา ' + counted + ' เวลา (ต้องอย่างน้อย 10)');
   });
-  if (win.length) {
-    win.sort(function (a, b) { return String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName)); });
-    const body = 'สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri) + ' · ละหมาดตรงเวลาครบทุกเวลา ' + win.length + ' คน\n' +
-      win.slice(0, 60).map(function (x, i) { return (i + 1) + '. ' + (x.fullName || x.studentId) + ' (' + starGradeShort_(x.grade) + (x.schoolName ? ' · ' + x.schoolName : '') + ')'; }).join('\n') + (win.length > 60 ? '\nและอีก ' + (win.length - 60) + ' คน' : '');
-    starNotify_('NTF-STAR-W-' + sun, 'นักเรียนได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + win.length + ' คน', body, win.map(function (x) { return x.studentId; }), now);
-    try { starLog_(win.map(function (x) { return { id: 'W-' + sun + '-' + nid(x.studentId), date: ymd(now), type: 'prayer', sid: x.studentId, name: x.fullName || x.studentId, grade: x.grade || '', school: x.schoolName || '', detail: 'สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri), stars: 1, from: sun, to: fri }; })); } catch (e) {} // v19.33 · บันทึกประวัติ
-    // v19.19 · ข้อความชมเชยถึงนักเรียนแต่ละคน
-    win.forEach(function (x) {
-      try { starNotify_('NTF-STAR-WS-' + nid(x.studentId) + '-' + sun, 'ขอชื่นชม คุณได้ดาวละหมาดตรงเวลาครบสัปดาห์',
-        'มาชาอัลลอฮ์ สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri) + ' คุณละหมาดตรงเวลาครบทุกเวลา ขออัลลอฮ์ทรงตอบแทนความดีของคุณ รักษาความดีนี้ไว้ในสัปดาห์หน้านะ', [x.studentId], now, 'students'); } catch (e) {}
-    });
-  }
-  try { setProp_('STAR_WEEK_DONE', fri); } catch (e) {}
-  return { week: sun, winners: win.map(function (x) { return x.studentId; }) };
+  win.sort(function (a, b) { return String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName)); });
+  return { win: win, why: why, days: days };
+}
+function starWeekRange_(now) {
+  const ymd = function (d) { return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd'); };
+  const dow = new Date(ymd(now) + 'T12:00:00+07:00').getUTCDay();
+  const hm = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm').split(':'); const curMin = (+hm[0]) * 60 + (+hm[1]);
+  let back = (dow + 2) % 7; if (back === 0) back = 7; if (dow === 6 && curMin < 300) back += 7;
+  return { fri: ymd(new Date(now.getTime() - back * 864e5)), sun: ymd(new Date(now.getTime() - (back + 5) * 864e5)) };
+}
+function starWeekPublish_(sun, fri, win, now) {
+  const ymd = function (d) { return Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd'); };
+  const nid = function (v) { return String(v || '').replace(/\D/g, '').replace(/^0+/, ''); };
+  if (!win.length) return;
+  const body = 'สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri) + ' · ละหมาดตรงเวลาครบทุกเวลา ' + win.length + ' คน\n' +
+    win.slice(0, 60).map(function (x, i) { return (i + 1) + '. ' + (x.fullName || x.studentId) + ' (' + starGradeShort_(x.grade) + (x.schoolName ? ' · ' + x.schoolName : '') + ')'; }).join('\n') + (win.length > 60 ? '\nและอีก ' + (win.length - 60) + ' คน' : '');
+  starNotify_('NTF-STAR-W-' + sun, 'นักเรียนได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + win.length + ' คน', body, win.map(function (x) { return x.studentId; }), now);
+  try { starLog_(win.map(function (x) { return { id: 'W-' + sun + '-' + nid(x.studentId), date: ymd(now), type: 'prayer', sid: x.studentId, name: x.fullName || x.studentId, grade: x.grade || '', school: x.schoolName || '', detail: 'สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri), stars: 1, from: sun, to: fri }; })); } catch (e) {}
+  win.forEach(function (x) {
+    try { starNotify_('NTF-STAR-WS-' + nid(x.studentId) + '-' + sun, 'ขอชื่นชม คุณได้ดาวละหมาดตรงเวลาครบสัปดาห์',
+      'มาชาอัลลอฮ์ สัปดาห์ ' + starDateTh_(sun) + ' – ' + starDateTh_(fri) + ' คุณละหมาดตรงเวลาครบทุกเวลา ขออัลลอฮ์ทรงตอบแทนความดีของคุณ รักษาความดีนี้ไว้ในสัปดาห์หน้านะ', [x.studentId], now, 'students'); } catch (e) {}
+  });
+}
+function starWeekRun_(nowArg) {
+  const now = nowArg || new Date(); const R = starWeekRange_(now);
+  if (getProp_('STAR_WEEK_DONE') >= R.fri) return { skipped: true, week: R.sun };
+  const res = starWeekCompute_(R.sun, R.fri, Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd'));
+  starWeekPublish_(R.sun, R.fri, res.win, now);
+  try { setProp_('STAR_WEEK_DONE', R.fri); } catch (e) {}
+  return { week: R.sun, winners: res.win.map(function (x) { return x.studentId; }) };
+}
+/** v19.79 · แอดมิน: คำนวณดาวละหมาดของสัปดาห์ใหม่ด้วยกติกาล่าสุด · apply = แทนที่ประวัติดาว + แจ้งเตือนของสัปดาห์นั้น */
+function recalcStarWeek_(d) {
+  d = d || {}; const now = new Date(); let R = starWeekRange_(now);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(d.sun || ''))) { const s = String(d.sun); if (new Date(s + 'T12:00:00+07:00').getUTCDay() !== 0) return { success: false, message: 'วันเริ่มสัปดาห์ต้องเป็นวันอาทิตย์' }; R = { sun: s, fri: Utilities.formatDate(new Date(new Date(s + 'T12:00:00+07:00').getTime() + 5 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd') }; }
+  const nid = function (v) { return String(v || '').replace(/\D/g, '').replace(/^0+/, ''); };
+  const sh = starSheet_(); const old = {};
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues().forEach(function (r) { const m = String(r[0]).match(/^W-(\d{4}-\d{2}-\d{2})-(\d+)$/); if (m && m[1] === R.sun) old[m[2]] = { sid: String(r[3]), name: String(r[4]), grade: String(r[5]) }; });
+  const res = starWeekCompute_(R.sun, R.fri, Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd'));
+  const nowIds = {}; res.win.forEach(function (x) { nowIds[nid(x.studentId)] = 1; });
+  const removed = Object.keys(old).filter(function (k) { return !nowIds[k]; }).map(function (k) { return { sid: old[k].sid, name: old[k].name, grade: starGradeShort_(old[k].grade), reason: res.why[k] || '' }; });
+  const added = res.win.filter(function (x) { return !old[nid(x.studentId)]; }).map(function (x) { return { sid: x.studentId, name: x.fullName, grade: starGradeShort_(x.grade) }; });
+  const out = { success: true, sun: R.sun, fri: R.fri, before: Object.keys(old).length, after: res.win.length, winners: res.win.map(function (x) { return { sid: x.studentId, name: x.fullName, grade: starGradeShort_(x.grade) }; }), removed: removed, added: added };
+  if (!d.apply) return out;
+  const unlock = lockEnter_(30000);
+  try {
+    // ลบประวัติดาว + แจ้งเตือนเดิมของสัปดาห์นั้น แล้วออกใหม่
+    if (sh.getLastRow() > 1) { const col = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues(); for (let i = col.length - 1; i >= 0; i--) { const m = String(col[i][0]).match(/^W-(\d{4}-\d{2}-\d{2})-\d+$/); if (m && m[1] === R.sun) sh.deleteRow(i + 2); } }
+    const ns = getSpreadsheet().getSheetByName(SHEETS.NOTIFS);
+    if (ns && ns.getLastRow() > 1) { const col = ns.getRange(2, 1, ns.getLastRow() - 1, 1).getValues(); const re = new RegExp('^NTF-STAR-(W|WS-\\d+)-' + R.sun + '$'); for (let i = col.length - 1; i >= 0; i--) if (re.test(String(col[i][0]))) ns.deleteRow(i + 2); }
+    starWeekPublish_(R.sun, R.fri, res.win, now);
+  } finally { unlock(); }
+  out.applied = true; out.message = 'คำนวณใหม่แล้ว · ได้ดาว ' + res.win.length + ' คน';
+  return out;
 }
 /** ดาวอัลกุรอาน: อ่านจบ 1 ยุซ = 1 ดาว → แจ้งแอดมินทันทีที่นักเรียนบันทึก */
 function starQuranMaybe_(sid, prevStars, stars, juz, khatam, dateStr) {
