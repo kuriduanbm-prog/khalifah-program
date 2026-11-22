@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.88';
+  const APP_VERSION = '19.89';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8584,6 +8584,8 @@ window.k8RegBirthChange = function (v) {
     loadPer(); const onPer = (st) => !resumed[cid(st.studentId)] && perCovers(cid(st.studentId), viewD); // v18.32 · มีประจำเดือน = อุซุร (ไม่ใช่ขาด)
     const missed = (st, k) => { if (viewD > todayS || onLv(st, k) || onPer(st)) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
     const missN = {}; rows.forEach((r) => { missN[r.sid] = slots.filter((x) => !r.p[x.key] && missed(r.s, x.key)).length; });
+    // v19.89 · ติ๊กให้ทุกคน: คนที่ยังไม่มีบันทึกเวลานั้น (ไม่รวมคนลา/มีประจำเดือน)
+    V.date = viewD; V.bulk = slots.map((x) => { const ids = []; let lv = 0, pr = 0, done = 0; rows.forEach((r) => { if (r.p[x.key]) { done++; return; } if (onPer(r.s)) { pr++; return; } if (onLv(r.s, x.key)) { lv++; return; } ids.push(r.sid); }); return { key: x.key, label: x.label || x.key, ids, lv, pr, done }; });
     const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length, per: rows.filter((r) => onPer(r.s)).length };
     let list = rows.filter((r) => V.f === 'all' || (V.f === 'per' ? onPer(r.s) : V.f === 'full' ? r.n === 5 : V.f === 'part' ? r.n > 0 && r.n < 5 : r.n === 0));
     // v18.82 · กรองตามเวลาละหมาด: แตะการ์ดเวลา = ดูเฉพาะคนที่ยังไม่เช็คเวลานั้น (ไม่รวมคนลา/อุซุร)
@@ -8669,11 +8671,37 @@ window.k8RegBirthChange = function (v) {
     const steps = V.stat.map((x, i) => '<button type="button" class="k8-pq-st is-' + x.st + (V.slot === x.key ? ' is-sel' : '') + '" onclick="k8PdSlot(\'' + x.key + '\')" title="แตะเพื่อดูคนที่ยังไม่เช็ค' + esc(x.label) + '"><span class="k8-pq-dot">' + (x.st === 'past' ? '✓' : (i + 1)) + '</span><b>' + esc(SHORT[x.key] || x.label) + '</b><small>' + esc(x.time) + '</small>' +
       (x.st === 'wait' ? '<em class="is-wait">ยังไม่ถึง</em><i>&nbsp;</i>' : '<em>' + x.n + '/' + N + '</em>' + (x.st === 'now' ? '<i class="is-now">● กำลังเช็คชื่อ</i>' : '<i>ตรงเวลา ' + x.ok + ' · <span>สาย ' + x.late + '</span></i>')) + '</button>').join('');
     const card = sec.closest('.card'); if (card) card.classList.add('k8-pq-on'); const sl = document.getElementById('adminPrayerSlotsGridContainer'); if (sl && sl.previousElementSibling) sl.previousElementSibling.classList.add('k8-pq-hide');
-    el.innerHTML = '<div class="k8-pq-hero">' + '<div class="k8-pq-rw">' + ring + '</div><div><small>เช็คแล้ว' + ((document.getElementById('k8PtDayLbl') || {}).textContent === 'วันนี้' ? 'วันนี้' : 'วันนั้น') + '</small><b>' + done + '<span> / ' + poss + ' ครั้ง</span></b><small>นับเฉพาะเวลาที่ถึงแล้ว · ' + N + ' คน</small></div></div><div class="k8-pq-steps">' + steps + '</div>';
+    const bulk = (V.bulk || []).map((b) => '<button type="button" class="k8-pq-bk" onclick="k8PdBulk(\'' + jsq(b.key) + '\')"' + (b.ids.length ? '' : ' disabled') + ' title="' + esc(b.ids.length ? 'บันทึก ' + b.label + ' (ตรงเวลา) ให้ ' + b.ids.length + ' คนที่ยังไม่เช็ค' : 'ทุกคนมีบันทึก ' + b.label + ' แล้ว') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>' + esc(SHORT[b.key] || b.label) + '<em>' + b.ids.length + '</em></button>').join('');
+    el.innerHTML = '<div class="k8-pq-hero">' + '<div class="k8-pq-rw">' + ring + '</div><div><small>เช็คแล้ว' + ((document.getElementById('k8PtDayLbl') || {}).textContent === 'วันนี้' ? 'วันนี้' : 'วันนั้น') + '</small><b>' + done + '<span> / ' + poss + ' ครั้ง</span></b><small>นับเฉพาะเวลาที่ถึงแล้ว · ' + N + ' คน</small></div></div><div class="k8-pq-steps">' + steps + '</div>' +
+      (bulk ? '<div class="k8-pq-bulk"><span><b>ติ๊กให้ทุกคน</b><small>ละหมาดรวม / บันทึกล่วงหน้า · เฉพาะคนที่ยังไม่เช็ค</small></span><div>' + bulk + '</div></div>' : '');
   }
   const dec0 = decorate; decorate = function () { dec0(); try { pq1(); } catch (e) { console.warn('pq1', e); } };
   const oSlots = window.renderAdminPrayerSlotsGrid;
   if (typeof oSlots === 'function') window.renderAdminPrayerSlotsGrid = function () { const r = oSlots.apply(this, arguments); try { decorate(); } catch (e) {} return r; };
+  // v19.89 · ติ๊กละหมาดให้ทุกคน (เช่น ละหมาดรวมซุฮริกับอัศรีในเวลาเดียวกัน) · ไม่ทับรายการที่นักเรียนเช็คเอง
+  window.k8PdBulk = async function (key) {
+    const k8T = (m, x) => { try { showToast(m, x); } catch (e) {} };
+    const b = (V.bulk || []).find((x) => x.key === key); if (!b || !b.ids.length || V.busy) return;
+    const gsel = document.getElementById('adminPrayerGradeFilter') || document.querySelector('#adminPrayerDailySection select'); const gl = gsel && gsel.selectedIndex >= 0 ? gsel.options[gsel.selectedIndex].text : '';
+    const why = prompt('ติ๊ก "' + b.label + '" (ตรงเวลา) ให้ ' + b.ids.length + ' คน' + (gl ? ' · ' + gl : '') + ' วันที่ ' + V.date +
+      '\n· ข้ามคนที่เช็คแล้ว ' + b.done + ' คน' + (b.lv ? ' · ลา ' + b.lv + ' คน' : '') + (b.pr ? ' · มีประจำเดือน ' + b.pr + ' คน' : '') +
+      '\n\nเหตุผล (แก้ได้) แล้วกด OK เพื่อบันทึก', 'ละหมาดรวม (ญัมอ์) ' + (/ซุฮ|อัศ/.test(key) ? 'ซุฮริ+อัศรี' : '')); 
+    if (why === null) return;
+    const marks = {}; b.ids.forEach((id) => { marks[id] = 'ontime'; });
+    V.busy = 1; k8T('กำลังบันทึก ' + b.ids.length + ' คน…', 'info');
+    let r = null; try { r = await gasApiCall('savePrayerRoll', { data: { date: V.date, slot: key, marks, onlyNew: true, note: String(why || '').trim() } }, 60000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง' }; }
+    V.busy = 0;
+    if (!r || !r.success) { k8T((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); return; }
+    try {
+      const k = 'khalifah_prayer_history'; const hist = JSON.parse(localStorage.getItem(k) || '[]'); const ids = new Set((r.records || []).map((x) => x.logId));
+      const kept = hist.filter((p) => !ids.has(p.logId || p.id)); const tm = new Date().toLocaleTimeString('th-TH', { hour12: false });
+      const note = (String(why || '').trim() ? String(why).trim() + ' ' : '') + '[เช็คโดยแอดมิน]';
+      (r.records || []).filter((x) => !x.removed).forEach((x) => kept.push({ id: x.logId, logId: x.logId, studentId: x.studentId, studentName: x.studentName || '', grade: x.grade || '', prayerTime: r.slot || key, prayerName: r.slot || key, date: V.date, time: tm, timestamp: new Date().toISOString(), status: x.status, note: note, locationName: 'เช็คชื่อโดยแอดมิน', isWithinZone: true }));
+      localStorage.setItem(k, JSON.stringify(kept));
+    } catch (e) {}
+    k8T(r.message || 'บันทึกแล้ว', 'success');
+    try { if (typeof renderAdminPrayerDailyDashboard === 'function') renderAdminPrayerDailyDashboard(); else { render(); decorate(); } } catch (e) {}
+  };
   window.k8PdS = function (s) { V.sort = s; render(); };
   window.k8PdRender = render;
   const o = window.renderAdminPrayerDailyTable;

@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.88'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.89'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -4302,6 +4302,8 @@ function savePrayerRoll_(data, session) {
   if (si === -1) return { success: false, message: 'ไม่รู้จักเวลาละหมาดนี้' };
   const marks = (data.marks && typeof data.marks === 'object') ? data.marks : {};
   const keys = Object.keys(marks).slice(0, 600);
+  // v19.89 · ติ๊กให้ทุกคน (ละหมาดรวม/บันทึกล่วงหน้า): onlyNew = ไม่ทับรายการที่นักเรียนเช็คเองแล้ว · extra = เหตุผลนำหน้าหมายเหตุ
+  const onlyNew = !!data.onlyNew; const extra = cleanVal(data.note || '').replace(/[\[\]]/g, '').slice(0, 80); let skipped = 0;
   if (!keys.length) return { success: false, message: 'ยังไม่ได้เช็คชื่อนักเรียน' };
   const ST = { ontime: 'ตรงเวลา', late: 'มาสาย', absent: 'ขาด', leave: 'ลา' };
   const roster = {};
@@ -4327,7 +4329,8 @@ function savePrayerRoll_(data, session) {
         return;
       }
       if (!ST[v]) return;
-      const note = '[เช็คโดย ' + who + ' ' + stamp + ']';
+      const note = (extra ? extra + ' ' : '') + '[เช็คโดย ' + who + ' ' + stamp + ']';
+      if (idx !== undefined && onlyNew) { skipped++; return; }
       if (idx !== undefined) {
         const keepNote = String(rows[idx][15] || '').replace(/\s*\[เช็คโดย [^\]]*\]\s*$/, '');
         sheet.getRange(idx + 2, 15, 1, 2).setValues([[ST[v], (keepNote ? keepNote + ' ' : '') + note]]);
@@ -4349,7 +4352,8 @@ function savePrayerRoll_(data, session) {
     }
     dels.sort(function (a, b) { return b - a; }).forEach(function (r) { sheet.deleteRow(r); });
     try { if (typeof bumpDataVersion_ === 'function') bumpDataVersion_(); } catch (e) {}
-    return { success: true, date: date, slot: slot, added: adds.length, updated: updated, removed: dels.length, records: out, message: 'บันทึกการเช็คชื่อละหมาด' + slot + 'แล้ว ' + (adds.length + updated) + ' คน' };
+    try { CacheService.getScriptCache().remove('PRAYERS_ALL'); } catch (e) {}
+    return { success: true, date: date, slot: slot, added: adds.length, updated: updated, removed: dels.length, skipped: skipped, records: out, message: 'บันทึกการเช็คชื่อละหมาด' + slot + 'แล้ว ' + (adds.length + updated) + ' คน' + (skipped ? ' · ข้ามคนที่เช็คเองแล้ว ' + skipped + ' คน' : '') };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
