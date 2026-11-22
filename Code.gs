@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.87'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.88'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -8225,7 +8225,7 @@ const TH_MON_ = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.
 function starDateTh_(ymd) { const p = String(ymd).split('-'); return (+p[2]) + ' ' + TH_MON_[(+p[1]) - 1] + ' ' + String((+p[0]) + 543).slice(2); }
 function starGradeShort_(g) { const m = String(g || '').match(/([1-6])/); return m ? 'ม.' + m[1] : cleanVal(g); }
 /** ดาวละหมาดตรงเวลาครบสัปดาห์ (อา.–ศ. · เสาร์หยุด) · กติกาเดียวกับหน้านักเรียน:
- *  ทุกเวลาที่ต้องเช็คต้อง "ตรงเวลา" · ลาเรียนที่อนุมัติ = ข้ามวันนั้น · ป่วย/ลา/อุซุร/ประจำเดือน = ไม่นับว่าขาด · ซุบฮิชายที่ไม่มีบันทึก = ข้าม · ต้องตรงเวลาอย่างน้อย 10 ครั้ง
+ *  ทุกเวลาที่ต้องเช็คต้อง "ตรงเวลา" · (v19.88) ลาทุกกรณี/ป่วย/อุซุร/ประจำเดือน = ไม่ได้ดาว · ซุบฮิชายที่ไม่มีบันทึก = ข้าม
  *  ทำงานครั้งเดียวต่อสัปดาห์ ตั้งแต่วันเสาร์ 05:00 น. */
 /** v19.79 · เวลาละหมาด + เกณฑ์มาสาย แบบเดียวกับหน้าแอป (ui-v8.js · k8LateCutoffs) เพื่อให้ดาวรายสัปดาห์ตรงกับสีที่นักเรียนเห็น */
 const SP_LAT_ = 6.5967, SP_LNG_ = 101.3444;
@@ -8278,8 +8278,8 @@ function spEffLate_(r, ds, rule, boyFri) {
 }
 /** ดาวละหมาดตรงเวลาครบสัปดาห์ (อา.–ศ. · เสาร์หยุด) · v19.79 ใช้กติกาเดียวกับหน้านักเรียนทุกข้อ:
  *  ทุกเวลาต้อง "ตรงเวลา" ตามเกณฑ์มาสายจริง (คำนวณจากเวลาที่เช็ค ไม่ใช่แค่คำในช่องสถานะ) · ซุฮริวันศุกร์ชายไม่เกิน 12:35
- *  นักเรียนหญิงเช็คซุฮริ/อัศรีผิดสถานที่ (ไม่มีเหตุจำเป็น) = ไม่ได้ดาว · ลาเรียนที่อนุมัติ (ยกเว้นลาอยู่หอพัก) = ข้ามวันนั้น
- *  ป่วย/ลา/อุซุร/ประจำเดือน = ไม่นับว่าขาด · ซุบฮิชายที่แอดมินยังไม่เช็คไม่นับ · ต้องตรงเวลาอย่างน้อย 10 เวลา */
+ *  นักเรียนหญิงเช็คซุฮริ/อัศรีผิดสถานที่ (ไม่มีเหตุจำเป็น) = ไม่ได้ดาว · (v19.88) ลาเรียนที่อนุมัติ (ยกเว้นลาอยู่หอพัก)
+ *  ป่วย/ลา/อุซุร/ประจำเดือน = ไม่ได้ดาว (ต้องเขียวครบ) · ซุบฮิชายที่แอดมินยังไม่เช็คไม่นับ */
 function starWeekCompute_(sun, fri, today) {
   const days = []; for (let i = 0; i < 6; i++) days.push(Utilities.formatDate(new Date(new Date(sun + 'T12:00:00+07:00').getTime() + i * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd'));
   const nid = function (v) { return String(v || '').replace(/\D/g, '').replace(/^0+/, ''); };
@@ -8312,23 +8312,23 @@ function starWeekCompute_(sun, fri, today) {
   const onLeave = function (sid, ds) { return leaves.some(function (x) { return nid(x.sid) === sid && ds >= x.from && ds <= (x.to || x.from); }); };
   let periods = []; try { periods = periodList_(); } catch (e) {}
   const onPeriod = function (sid, ds) { return periods.some(function (x) { return nid(x.studentId) === sid && ds >= String(x.start || '') && ds <= String(x.end || (x.status === 'active' && today) || x.start || ''); }); };
-  const WHY = { late: 'มาสาย', wp: 'ผิดสถานที่', miss: 'ขาด', none: 'ไม่ได้เช็ค' };
+  // v19.88 · ดาว = เขียวครบทั้งสัปดาห์ · สาย/ขาด/ลาทุกกรณี (ลา อุซุร ป่วย ประจำเดือน ลาออกนอกหอ)/ผิดสถานที่/ไม่ได้เช็ค = ไม่ได้ดาว
+  const WHY = { late: 'มาสาย', wp: 'ผิดสถานที่', miss: 'ขาด', none: 'ไม่ได้เช็ค', ex: 'ลา/อุซุร', lv: 'ลา (อนุมัติ)', per: 'ประจำเดือน' };
   const win = [], why = {};
   studs.forEach(function (st) {
     const sid = nid(st.studentId); const girl = periodIsGirl_(st); let ok = true, counted = 0, reason = '';
     days.forEach(function (ds) {
-      if (!ok || onLeave(sid, ds)) return;
+      if (!ok) return;
+      if (onLeave(sid, ds)) { ok = false; reason = starDateTh_(ds) + ' · ' + WHY.lv; return; }
       PRAYER_SLOTS_.forEach(function (slot0, si) {
         if (!ok) return; const sl = formatPrayerTimeThai(slot0); const kd = best[sid + '|' + ds + '|' + sl];
         if (kd === 'ok') counted++;
-        else if (kd === 'ex') return;
         else if (kd) { ok = false; reason = starDateTh_(ds) + ' ' + sl + ' · ' + WHY[kd]; }
         else if (si === 0 && !girl) return; // ซุบฮิชาย: แอดมินเช็คชื่อให้
-        else if (girl && onPeriod(sid, ds)) return;
-        else { ok = false; reason = starDateTh_(ds) + ' ' + sl + ' · ' + WHY.none; }
+        else { ok = false; reason = starDateTh_(ds) + ' ' + sl + ' · ' + (girl && onPeriod(sid, ds) ? WHY.per : WHY.none); }
       });
     });
-    if (ok && counted >= 10) win.push(st); else why[sid] = reason || ('ตรงเวลา ' + counted + ' เวลา (ต้องอย่างน้อย 10)');
+    if (ok && counted > 0) win.push(st); else why[sid] = reason || 'ไม่มีบันทึกละหมาดในสัปดาห์นี้';
   });
   win.sort(function (a, b) { return String(a.grade).localeCompare(String(b.grade)) || String(a.fullName).localeCompare(String(b.fullName)); });
   return { win: win, why: why, days: days };

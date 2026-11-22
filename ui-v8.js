@@ -276,7 +276,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       '<div class="hf-p5-grid"><span></span>' + days7.map((d) => '<span class="hf-p5-dh' + (ymd(d) === todayStr ? ' is-today' : '') + '">' + TD[d.getDay()] + '</span>').join('') + grid + '</div>' +
       '<div class="hf-p5-lg"><span class="is-ok">ตรงเวลา</span><span class="is-late">สาย</span><span class="is-appr">อนุมัติย้อนหลัง</span>' + (nLv ? '<span class="is-lv">ลาเรียน (อนุมัติ)</span>' : '') + '<span class="is-ex">ลา</span><span class="is-miss">ไม่ได้เช็ค</span></div></div>';
   }
-  // v18.29 · ดาวละหมาดตรงเวลาครบสัปดาห์ (อา.–ศ. · เสาร์หยุด) · ลา/ประจำเดือน/ลาเรียนที่อนุมัติไม่นับว่าขาด · ซุบฮิชายที่แอดมินยังไม่เช็คไม่นับ
+  // v18.29/v19.88 · ดาวละหมาดตรงเวลาครบสัปดาห์ (อา.–ศ. · เสาร์หยุด) · ต้องเขียวทุกเวลา · ซุบฮิชายที่แอดมินยังไม่เช็คไม่นับ
   function weekStars(prayers, st, now) {
     const sid = st && st.studentId; if (!sid) return { n: 0, last: '' };
     const regOf = () => { const v = String((st.registeredAt || st.registerDate) || ''); const m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (!m) return ''; const y = +m[1] > 2400 ? +m[1] - 543 : +m[1]; return y + '-' + m[2] + '-' + m[3]; };
@@ -295,11 +295,11 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       let ok = true, counted = 0;
       for (let i = 0; i < 6 && ok; i++) {
         const d = new Date(sun); d.setDate(sun.getDate() + i); const ds = ymd(d);
-        if (lv(ds)) continue;
-        const per = (() => { try { const a = window.k8PeriodActive && window.k8PeriodActive(); return !!(a && String(a.start || '') <= ds); } catch (e) { return false; } })();
-        SLOT_ORDER.forEach((k) => { if (!ok) return; const r = byKey[ds + '|' + k]; if (r) { if (r.kind === 'ok' && !r.wp) counted++; else if (r.kind !== 'ex') ok = false; } else if (!roll(k) && !per) ok = false; });
+        // v19.88 · เขียวครบทั้งสัปดาห์เท่านั้น · ลาทุกกรณี/อุซุร/ประจำเดือน = ไม่ได้ดาว
+        if (lv(ds)) { ok = false; break; }
+        SLOT_ORDER.forEach((k) => { if (!ok) return; const r = byKey[ds + '|' + k]; if (r) { if (r.kind === 'ok' && !r.wp) counted++; else ok = false; } else if (!roll(k)) ok = false; });
       }
-      if (ok && counted >= 10) { n++; if (!last) last = sunS; }
+      if (ok && counted > 0) { n++; if (!last) last = sunS; }
     }
     return { n, last };
   }
@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.87';
+  const APP_VERSION = '19.88';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -15468,7 +15468,7 @@ window.k8PdWho = function (sid) {
     if (r.removed.length) h += '<h4 class="k8-sr-h">ไม่ควรได้ดาว ' + r.removed.length + ' คน <small>(เหตุผลแรกที่พบ)</small></h4><ul class="k8-sr-list is-rm">' + r.removed.map((x) => li(x, x.reason)).join('') + '</ul>';
     if (r.added.length) h += '<h4 class="k8-sr-h">ควรได้ดาวเพิ่ม ' + r.added.length + ' คน</h4><ul class="k8-sr-list is-add">' + r.added.map((x) => li(x)).join('') + '</ul>';
     if (r.winners.length) h += '<h4 class="k8-sr-h">ได้ดาวตามกติกา ' + r.winners.length + ' คน</h4><ul class="k8-sr-list">' + r.winners.map((x) => li(x)).join('') + '</ul>';
-    h += '<p class="k8-sr-note">กติกา: อา.–ศ. ทุกเวลาต้องตรงเวลาตามเกณฑ์มาสายจริง (ดูจากเวลาที่เช็ค) · ซุฮริวันศุกร์ชายไม่เกิน 12:35 น. · หญิงเช็คซุฮริ/อัศรีผิดสถานที่ไม่ได้ดาว · ลา/ป่วย/อุซุร/ประจำเดือนไม่นับว่าขาด · ซุบฮิชายแอดมินเช็คให้</p>';
+    h += '<p class="k8-sr-note">กติกา: อา.–ศ. ทุกเวลาต้องตรงเวลาตามเกณฑ์มาสายจริง (ดูจากเวลาที่เช็ค) · ซุฮริวันศุกร์ชายไม่เกิน 12:35 น. · ต้องเป็นสีเขียวครบทุกเวลา: สาย ขาด ลาทุกกรณี (ลา ป่วย อุซุร ประจำเดือน) ผิดสถานที่ หรือไม่ได้เช็ค = ไม่ได้ดาว · ซุบฮิชายแอดมินเช็คให้</p>';
     if (!same) h += '<div class="k8-cp-sub-acts"><button type="button" class="k8-cp-go" onclick="k8StarRecalcApply()"' + (R.busy ? ' disabled' : '') + '>' + (R.busy ? 'กำลังบันทึก…' : 'แก้ประวัติดาวให้ถูกต้อง (' + r.after + ' คน)') + '</button></div>';
     B.innerHTML = h;
   }
