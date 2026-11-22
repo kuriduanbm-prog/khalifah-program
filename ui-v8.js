@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.90';
+  const APP_VERSION = '19.91';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -14234,8 +14234,11 @@ window.k8PdWho = function (sid) {
     let tp = []; try { tp = todayPrayers || []; } catch (e) {}
     tp.concat(readJ('khalifah_today_prayers'), readJ('khalifah_prayer_history')).forEach((p) => {
       const id = lid(p); if (!id || seen[id] || nid(p.studentId) !== nid(st.studentId)) return; seen[id] = 1;
-      if (/เพิ่มโดย|บันทึกโดยแอดมิน/.test(String(p.note || '') + String(p.locationName || ''))) return;
-      const at = Date.parse(p.timestamp || '') || Date.parse((p.date || '') + 'T12:00:00'); if (!(at >= from) || Date.now() - at < 3 * 60000) return;
+      // v19.91 · ตรวจเฉพาะรายการที่นักเรียนถ่ายเอง · ไม่รวมรายการอนุมัติย้อนหลัง/แอดมินเช็คให้/แก้ไข (รายการเหล่านี้อยู่ในระบบอยู่แล้ว)
+      if (/^PRY-(APPR|ROLL|ADM)/.test(String(id)) || /อนุมัติ/.test(String(p.status || '')) || /เพิ่มโดย|บันทึกโดยแอดมิน|เช็คโดย|เช็คชื่อโดยแอดมิน|แก้ไขโดย|อนุมัติ/.test(String(p.note || '') + String(p.locationName || ''))) return;
+      const ts = Date.parse(p.timestamp || ''), dd = /^\d{4}-\d{2}-\d{2}$/.test(String(p.date || '')) ? Date.parse(p.date + 'T12:00:00') : NaN;
+      if (!isNaN(dd) && dd < from) return; // วันที่ของรายการเก่ากว่า 7 วัน = ไม่ตรวจ (แม้เวลาส่งจะใหม่)
+      const at = isNaN(ts) ? dd : ts; if (!(at >= from) || Date.now() - at < 3 * 60000) return;
       if (/^(ขาด|ลา)/.test(String(p.status || ''))) return;
       out.push(p);
     });

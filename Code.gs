@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.89'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.91'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3042,6 +3042,8 @@ function recordPrayer(data) {
       if (logId && cleanVal(ex[i][0]) === logId) {
         if (!cleanSid || sameKey_(ex[i][1], cleanSid)) return { success: true, deduplicated: true, message: 'ข้อมูลการละหมาดรหัสนี้มีอยู่ในฐานข้อมูลแล้ว', logId: logId };
         logId = logId + '-' + String(cleanSid).replace(/\D/g, '').replace(/^0+/, '');
+        // v19.91 · ส่งซ้ำ (กด "ส่งอีกครั้ง") หลังรหัสถูกเติมท้ายไปแล้ว = รายการเดิม ไม่บันทึกซ้ำ
+        for (let j = ex.length - 1; j >= 0; j--) if (cleanVal(ex[j][0]) === logId && sameKey_(ex[j][1], cleanSid)) return { success: true, deduplicated: true, message: 'ข้อมูลการละหมาดรหัสนี้มีอยู่ในฐานข้อมูลแล้ว', logId: logId };
         break;
       }
     }
@@ -3552,9 +3554,10 @@ function checkMyPrayers_(d, session) {
   if (!want.length) return { success: true, found: [], missing: [] };
   const sh = getSpreadsheet().getSheetByName(SHEETS.PRAYERS); const have = {};
   if (sh && sh.getLastRow() > 1) {
-    const from = Utilities.formatDate(new Date(Date.now() - 8 * 864e5), 'Asia/Bangkok', 'yyyy-MM-dd');
-    const n = sh.getLastRow() - 1; const start = Math.max(0, n - 6000);
-    sh.getRange(2 + start, 1, n - start, 7).getValues().forEach(function (r) { if (formatSheetDate(r[6]) >= from && isCodeMatch(cleanVal(r[1]), me)) have[cleanVal(r[0])] = 1; });
+    // v19.91 · ไม่กรองตามวันที่ของรายการ (รายการอนุมัติย้อนหลัง/วันที่ถูกปรับตามเวลาถ่ายจริง เคยถูกนับว่า "ยังไม่ถึงระบบ" ตลอด)
+    // และนับรหัสที่ระบบเติมรหัสนักเรียนต่อท้าย (กันรหัสชนกัน) ว่าเป็นรายการเดียวกัน
+    const n = sh.getLastRow() - 1; const start = Math.max(0, n - 12000); const sfx = '-' + String(me).replace(/\D/g, '').replace(/^0+/, '');
+    sh.getRange(2 + start, 1, n - start, 2).getValues().forEach(function (r) { if (!isCodeMatch(cleanVal(r[1]), me)) return; const id = cleanVal(r[0]); have[id] = 1; if (sfx.length > 1 && id.slice(-sfx.length) === sfx) have[id.slice(0, -sfx.length)] = 1; });
   }
   return { success: true, found: want.filter(function (x) { return have[x]; }), missing: want.filter(function (x) { return !have[x]; }), me: me };
 }
