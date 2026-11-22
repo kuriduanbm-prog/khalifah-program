@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.89';
+  const APP_VERSION = '19.90';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8585,7 +8585,7 @@ window.k8RegBirthChange = function (v) {
     const missed = (st, k) => { if (viewD > todayS || onLv(st, k) || onPer(st)) return false; const reg = regOf(st); if (reg && reg >= viewD) return false; if (viewD < todayS) return true; return nowM > endOf(k) && k !== 'อีชาอ์'; };
     const missN = {}; rows.forEach((r) => { missN[r.sid] = slots.filter((x) => !r.p[x.key] && missed(r.s, x.key)).length; });
     // v19.89 · ติ๊กให้ทุกคน: คนที่ยังไม่มีบันทึกเวลานั้น (ไม่รวมคนลา/มีประจำเดือน)
-    V.date = viewD; V.bulk = slots.map((x) => { const ids = []; let lv = 0, pr = 0, done = 0; rows.forEach((r) => { if (r.p[x.key]) { done++; return; } if (onPer(r.s)) { pr++; return; } if (onLv(r.s, x.key)) { lv++; return; } ids.push(r.sid); }); return { key: x.key, label: x.label || x.key, ids, lv, pr, done }; });
+    V.date = viewD; V.bulk = slots.map((x) => { const ids = [], stu = [], sk = { done: [], lv: [], pr: [] }; rows.forEach((r) => { const t = r.p[x.key] ? 'done' : onPer(r.s) ? 'pr' : onLv(r.s, x.key) ? 'lv' : ''; if (t) { sk[t].push(r.s); return; } ids.push(r.sid); stu.push(r.s); }); return { key: x.key, label: x.label || x.key, ids, stu, sk, lv: sk.lv.length, pr: sk.pr.length, done: sk.done.length }; });
     const cnt = { all: rows.length, full: rows.filter((r) => r.n === 5).length, part: rows.filter((r) => r.n > 0 && r.n < 5).length, zero: rows.filter((r) => r.n === 0).length, per: rows.filter((r) => onPer(r.s)).length };
     let list = rows.filter((r) => V.f === 'all' || (V.f === 'per' ? onPer(r.s) : V.f === 'full' ? r.n === 5 : V.f === 'part' ? r.n > 0 && r.n < 5 : r.n === 0));
     // v18.82 · กรองตามเวลาละหมาด: แตะการ์ดเวลา = ดูเฉพาะคนที่ยังไม่เช็คเวลานั้น (ไม่รวมคนลา/อุซุร)
@@ -8678,28 +8678,73 @@ window.k8RegBirthChange = function (v) {
   const dec0 = decorate; decorate = function () { dec0(); try { pq1(); } catch (e) { console.warn('pq1', e); } };
   const oSlots = window.renderAdminPrayerSlotsGrid;
   if (typeof oSlots === 'function') window.renderAdminPrayerSlotsGrid = function () { const r = oSlots.apply(this, arguments); try { decorate(); } catch (e) {} return r; };
-  // v19.89 · ติ๊กละหมาดให้ทุกคน (เช่น ละหมาดรวมซุฮริกับอัศรีในเวลาเดียวกัน) · ไม่ทับรายการที่นักเรียนเช็คเอง
-  window.k8PdBulk = async function (key) {
-    const k8T = (m, x) => { try { showToast(m, x); } catch (e) {} };
-    const b = (V.bulk || []).find((x) => x.key === key); if (!b || !b.ids.length || V.busy) return;
-    const gsel = document.getElementById('adminPrayerGradeFilter') || document.querySelector('#adminPrayerDailySection select'); const gl = gsel && gsel.selectedIndex >= 0 ? gsel.options[gsel.selectedIndex].text : '';
-    const why = prompt('ติ๊ก "' + b.label + '" (ตรงเวลา) ให้ ' + b.ids.length + ' คน' + (gl ? ' · ' + gl : '') + ' วันที่ ' + V.date +
-      '\n· ข้ามคนที่เช็คแล้ว ' + b.done + ' คน' + (b.lv ? ' · ลา ' + b.lv + ' คน' : '') + (b.pr ? ' · มีประจำเดือน ' + b.pr + ' คน' : '') +
-      '\n\nเหตุผล (แก้ได้) แล้วกด OK เพื่อบันทึก', 'ละหมาดรวม (ญัมอ์) ' + (/ซุฮ|อัศ/.test(key) ? 'ซุฮริ+อัศรี' : '')); 
-    if (why === null) return;
-    const marks = {}; b.ids.forEach((id) => { marks[id] = 'ontime'; });
-    V.busy = 1; k8T('กำลังบันทึก ' + b.ids.length + ' คน…', 'info');
-    let r = null; try { r = await gasApiCall('savePrayerRoll', { data: { date: V.date, slot: key, marks, onlyNew: true, note: String(why || '').trim() } }, 60000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง' }; }
+  // v19.89/v19.90 · ติ๊กละหมาดให้ทุกคน (เช่น ละหมาดรวมซุฮริกับอัศรี) · เปิดรายชื่อแยกชั้น/เพศ ให้ตรวจและเลือกก่อนบันทึกยืนยัน · ไม่ทับรายการที่นักเรียนเช็คเอง
+  const bcid = (v) => { try { return cleanIdString(v); } catch (e) { return String(v || '').trim(); } };
+  const k8T = (m, x) => { try { showToast(m, x); } catch (e) {} };
+  const gOf = (st) => { const m = String((st && st.grade) || '').match(/([1-6])/); return m ? m[1] : '-'; };
+  const girlOf = (st) => !!(window.k8IsGirl && window.k8IsGirl(st));
+  const BK = { key: '', g: 'all', sx: 'all', sel: new Set(), note: '' };
+  const bkVis = (b) => b.stu.filter((st) => (BK.g === 'all' || gOf(st) === BK.g) && (BK.sx === 'all' || (BK.sx === 'f') === girlOf(st)));
+  function bkPaint() {
+    const b = (V.bulk || []).find((x) => x.key === BK.key); const body = document.getElementById('k8PdBkB'); if (!b || !body) return;
+    const vis = bkVis(b); const n = vis.filter((st) => BK.sel.has(bcid(st.studentId))).length;
+    const grades = Array.from(new Set(b.stu.map(gOf))).sort();
+    const chip = (k, v, l, c) => '<button type="button" class="k8-bk-chip" aria-pressed="' + (BK[k] === v) + '" onclick="k8PdBkF(\'' + k + '\',\'' + v + '\')">' + l + (c != null ? ' <em>' + c + '</em>' : '') + '</button>';
+    const cntG = (g) => b.stu.filter((st) => gOf(st) === g && (BK.sx === 'all' || (BK.sx === 'f') === girlOf(st))).length;
+    const cntS = (f) => b.stu.filter((st) => (BK.g === 'all' || gOf(st) === BK.g) && f === girlOf(st)).length;
+    let h = '<label class="k8-bk-why"><span>เหตุผล (บันทึกในหมายเหตุ)</span><input id="k8PdBkWhy" type="text" maxlength="80" value="' + esc(BK.note) + '" oninput="k8PdBkNote(this.value)"></label>' +
+      '<div class="k8-bk-f"><span>ชั้น</span>' + chip('g', 'all', 'ทั้งหมด') + grades.map((g) => chip('g', g, g === '-' ? 'ไม่ระบุ' : 'ม.' + g, cntG(g))).join('') + '</div>' +
+      '<div class="k8-bk-f"><span>เพศ</span>' + chip('sx', 'all', 'ทั้งหมด') + chip('sx', 'm', 'ชาย', cntS(false)) + chip('sx', 'f', 'หญิง', cntS(true)) + '</div>';
+    const groups = []; grades.forEach((g) => [false, true].forEach((f) => { const L = vis.filter((st) => gOf(st) === g && girlOf(st) === f).sort((x, y) => String(x.fullName || '').localeCompare(String(y.fullName || ''), 'th')); if (L.length) groups.push({ g, f, L }); }));
+    h += groups.length ? groups.map((G) => { const on = G.L.filter((st) => BK.sel.has(bcid(st.studentId))).length; const gk = G.g + '|' + (G.f ? 'f' : 'm');
+      return '<section class="k8-bk-grp"><label class="k8-bk-gh"><input type="checkbox"' + (on === G.L.length ? ' checked' : '') + ' onchange="k8PdBkGrp(\'' + gk + '\',this.checked)"' + (on && on < G.L.length ? ' data-mixed="1"' : '') + '><b>' + (G.g === '-' ? 'ไม่ระบุชั้น' : 'ม.' + G.g) + ' · ' + (G.f ? 'หญิง' : 'ชาย') + '</b><small>เลือก ' + on + '/' + G.L.length + '</small></label><ul>' +
+        G.L.map((st) => { const k = bcid(st.studentId); return '<li><label><input type="checkbox"' + (BK.sel.has(k) ? ' checked' : '') + ' onchange="k8PdBkOne(\'' + jsq(k) + '\',this.checked)"><span>' + esc(st.fullName || k) + '</span><small>' + esc(k) + '</small></label></li>'; }).join('') + '</ul></section>'; }).join('')
+      : '<p class="k8-li-empty">ไม่มีนักเรียนที่ยังไม่เช็คในกลุ่มนี้</p>';
+    const skL = [['done', 'เช็คแล้ว (ไม่ทับ)'], ['lv', 'ลา (อนุมัติแล้ว)'], ['pr', 'มีประจำเดือน']].filter(([k]) => b.sk[k].length);
+    if (skL.length) h += '<details class="k8-bk-skip"><summary>ข้ามอัตโนมัติ ' + skL.map(([k, l]) => l + ' ' + b.sk[k].length).join(' · ') + '</summary>' + skL.map(([k, l]) => '<p><b>' + l + ':</b> ' + b.sk[k].map((st) => esc(st.fullName || st.studentId) + ' (ม.' + gOf(st) + ')').join(', ') + '</p>').join('') + '</details>';
+    body.innerHTML = h;
+    body.querySelectorAll('input[data-mixed]').forEach((i) => { i.indeterminate = true; });
+    const btn = document.getElementById('k8PdBkGo'); if (btn) { btn.disabled = !n || !!V.busy; btn.textContent = V.busy ? 'กำลังบันทึก…' : 'บันทึกยืนยัน ' + n + ' คน'; }
+    const all = document.getElementById('k8PdBkAll'); if (all) all.textContent = vis.length && vis.every((st) => BK.sel.has(bcid(st.studentId))) ? 'ไม่เลือกทั้งหมด' : 'เลือกทั้งหมด';
+  }
+  window.k8PdBulk = function (key) {
+    const b = (V.bulk || []).find((x) => x.key === key); if (!b || !b.ids.length) return;
+    BK.key = key; BK.g = 'all'; BK.sx = 'all'; BK.sel = new Set(b.ids); BK.note = 'ละหมาดรวม (ญัมอ์)' + (/ซุฮ|อัศ/.test(key) ? ' ซุฮริ+อัศรี' : /มัฆ|อีชา/.test(key) ? ' มัฆริบ+อีชาอ์' : '');
+    let m = document.getElementById('k8PdBk');
+    if (!m) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-bk" id="k8PdBk" role="dialog" aria-modal="true" aria-labelledby="k8PdBkT" hidden><div class="k8-ra-box"><header><div><h3 id="k8PdBkT"></h3><small id="k8PdBkS"></small></div><button type="button" class="k8-ra-x" onclick="k8PdBkClose()" aria-label="ปิด">✕</button></header><div class="k8-ra-body" id="k8PdBkB"></div><footer class="k8-bk-ft"><button type="button" id="k8PdBkAll" class="k8-bk-alt" onclick="k8PdBkAllT()">เลือกทั้งหมด</button><button type="button" class="k8-bk-alt" onclick="k8PdBkClose()">ยกเลิก</button><button type="button" id="k8PdBkGo" class="k8-bk-go" onclick="k8PdBkSave()">บันทึกยืนยัน</button></footer></div></div>');
+      m = document.getElementById('k8PdBk');
+      m.addEventListener('click', (e) => { if (e.target === m) window.k8PdBkClose(); });
+      m.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.k8PdBkClose(); });
+    }
+    const TMN = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; const dm = String(V.date || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+    document.getElementById('k8PdBkT').textContent = 'ติ๊ก "' + b.label + '" ให้ทุกคน';
+    document.getElementById('k8PdBkS').textContent = (dm ? (+dm[3]) + ' ' + TMN[+dm[2] - 1] + ' ' + String(+dm[1] + 543).slice(2) : '') + ' · บันทึกเป็น "ตรงเวลา" · ยังไม่เช็ค ' + b.ids.length + ' คน';
+    m.hidden = false; bkPaint(); setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
+  };
+  window.k8PdBkClose = function () { const m = document.getElementById('k8PdBk'); if (m) m.hidden = true; };
+  window.k8PdBkNote = function (v) { BK.note = v; };
+  window.k8PdBkF = function (k, v) { BK[k] = v; bkPaint(); };
+  window.k8PdBkOne = function (k, on) { if (on) BK.sel.add(k); else BK.sel.delete(k); bkPaint(); };
+  window.k8PdBkGrp = function (gk, on) { const b = (V.bulk || []).find((x) => x.key === BK.key); if (!b) return; const [g, f] = gk.split('|'); bkVis(b).filter((st) => gOf(st) === g && girlOf(st) === (f === 'f')).forEach((st) => { const k = bcid(st.studentId); if (on) BK.sel.add(k); else BK.sel.delete(k); }); bkPaint(); };
+  window.k8PdBkAllT = function () { const b = (V.bulk || []).find((x) => x.key === BK.key); if (!b) return; const vis = bkVis(b); const on = !(vis.length && vis.every((st) => BK.sel.has(bcid(st.studentId)))); vis.forEach((st) => { const k = bcid(st.studentId); if (on) BK.sel.add(k); else BK.sel.delete(k); }); bkPaint(); };
+  window.k8PdBkSave = async function () {
+    const b = (V.bulk || []).find((x) => x.key === BK.key); if (!b || V.busy) return;
+    const pick = bkVis(b).filter((st) => BK.sel.has(bcid(st.studentId))); if (!pick.length) return;
+    const why = String(BK.note || '').trim(); const key = BK.key;
+    const marks = {}; pick.forEach((st) => { marks[bcid(st.studentId)] = 'ontime'; });
+    V.busy = 1; bkPaint();
+    let r = null; try { r = await gasApiCall('savePrayerRoll', { data: { date: V.date, slot: key, marks, onlyNew: true, note: why } }, 60000); } catch (e) { r = { success: false, message: 'เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง' }; }
     V.busy = 0;
-    if (!r || !r.success) { k8T((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); return; }
+    if (!r || !r.success) { bkPaint(); k8T((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ', 'error'); return; }
     try {
       const k = 'khalifah_prayer_history'; const hist = JSON.parse(localStorage.getItem(k) || '[]'); const ids = new Set((r.records || []).map((x) => x.logId));
       const kept = hist.filter((p) => !ids.has(p.logId || p.id)); const tm = new Date().toLocaleTimeString('th-TH', { hour12: false });
-      const note = (String(why || '').trim() ? String(why).trim() + ' ' : '') + '[เช็คโดยแอดมิน]';
+      const note = (why ? why + ' ' : '') + '[เช็คโดยแอดมิน]';
       (r.records || []).filter((x) => !x.removed).forEach((x) => kept.push({ id: x.logId, logId: x.logId, studentId: x.studentId, studentName: x.studentName || '', grade: x.grade || '', prayerTime: r.slot || key, prayerName: r.slot || key, date: V.date, time: tm, timestamp: new Date().toISOString(), status: x.status, note: note, locationName: 'เช็คชื่อโดยแอดมิน', isWithinZone: true }));
       localStorage.setItem(k, JSON.stringify(kept));
     } catch (e) {}
-    k8T(r.message || 'บันทึกแล้ว', 'success');
+    window.k8PdBkClose(); k8T(r.message || 'บันทึกแล้ว', 'success');
     try { if (typeof renderAdminPrayerDailyDashboard === 'function') renderAdminPrayerDailyDashboard(); else { render(); decorate(); } } catch (e) {}
   };
   window.k8PdS = function (s) { V.sort = s; render(); };
