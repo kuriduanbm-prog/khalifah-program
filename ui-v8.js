@@ -3125,10 +3125,11 @@ window.k8RegBirthChange = function (v) {
     const shown = list.filter((x) => (S.memFilter === 'all' || (S.memFilter === 'amma' && x.num >= 78) || (S.memFilter === 'done' && mem.has(x.num)) || (S.memFilter === 'todo' && !mem.has(x.num))) && (!q || String(x.num) === q || x.name.indexOf(q) !== -1 || (x.arabic || '').indexOf(q) !== -1)).slice().sort((a, b) => b.num - a.num); // v17.76 · เรียงจากซูเราะห์ท้าย (114) ขึ้นบนสุด
     const newToday = ((h.dailyLogs || {})[S.date] || {}).memNew || [];
     return '<section class="k8h-card"><span class="k8h-lbl">ท่องจำได้แล้ว</span><div class="k8h-big">' + mem.size + ' <small>/ 114 ซูเราะห์</small></div><div class="k8h-bar is-green"><span style="width:' + (mem.size / 114 * 100).toFixed(1) + '%"></span></div>' +
-      '<p class="k8h-hint">' + (newToday.length ? 'วันที่เลือกท่องจำใหม่ ' + newToday.length + ' ซูเราะห์' : 'แตะซูเราะห์ที่ท่องจำได้ ระบบบันทึกให้อัตโนมัติ') + '</p></section>' +
+      '<p class="k8h-hint">' + (newToday.length ? 'วันที่เลือกท่องจำใหม่ ' + newToday.length + ' ซูเราะห์' : (memLocked() ? 'อาจารย์หรือแอดมินเป็นผู้บันทึกการท่องจำ' : 'แตะซูเราะห์ที่ท่องจำได้ ระบบบันทึกให้อัตโนมัติ')) + '</p></section>' +
+      (memLocked() ? '<p class="k8h-lock" role="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>นักเรียนชายดูรายการได้อย่างเดียว · เมื่อท่องจำได้ให้ไปท่องกับอาจารย์ แล้วอาจารย์จะติ๊กให้</p>' : '') +
       '<section class="k8h-card"><input type="search" class="k8h-search" placeholder="ค้นหาชื่อซูเราะห์ หรือเลขลำดับ" value="' + esc(S.memQ) + '" oninput="k8HasMemQ(this)">' +
       '<div class="k8h-chips">' + [['all', 'ทั้งหมด'], ['amma', 'ยุซอัมมา'], ['todo', 'ยังไม่ได้ท่อง'], ['done', 'ท่องแล้ว']].map(([k, l]) => '<button type="button" aria-pressed="' + (S.memFilter === k) + '" onclick="k8HasSet(\'memFilter\',\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
-      '<ul class="k8h-surahs">' + (shown.length ? shown.map((x) => { const on = mem.has(x.num); return '<li><button type="button" aria-pressed="' + on + '" onclick="k8HasToggleSurah(' + x.num + ')"><span class="k8h-sn">' + x.num + '</span><span class="k8h-st"><b>' + esc(x.name) + '</b><small>ยุซ ' + x.juz + ' · ' + x.ayahs + ' อายะฮ์</small></span><span class="k8h-ar">' + esc(x.arabic || '') + '</span><span class="k8h-ck" aria-hidden="true">' + (on ? '✓' : '') + '</span></button></li>'; }).join('') : '<li class="k8-li-empty">ไม่พบซูเราะห์</li>') + '</ul></section>';
+      '<ul class="k8h-surahs' + (memLocked() ? ' is-locked' : '') + '">' + (shown.length ? shown.map((x) => { const on = mem.has(x.num); return '<li><button type="button" aria-pressed="' + on + '" onclick="k8HasToggleSurah(' + x.num + ')"><span class="k8h-sn">' + x.num + '</span><span class="k8h-st"><b>' + esc(x.name) + '</b><small>ยุซ ' + x.juz + ' · ' + x.ayahs + ' อายะฮ์</small></span><span class="k8h-ar">' + esc(x.arabic || '') + '</span><span class="k8h-ck" aria-hidden="true">' + (on ? '✓' : '') + '</span></button></li>'; }).join('') : '<li class="k8-li-empty">ไม่พบซูเราะห์</li>') + '</ul></section>';
   }
   function sunTab() {
     if (!S.sun || S.sunDate !== S.date) { const d = daySunnah(S.date); S.sun = d ? JSON.parse(JSON.stringify({ rawatib: d.rawatib || {}, duhaRakaat: d.duhaRakaat || 0, witrRakaat: d.witrRakaat || 0, tahajjudRakaat: d.tahajjudRakaat || 0 })) : { rawatib: {}, duhaRakaat: 0, witrRakaat: 0, tahajjudRakaat: 0 }; S.sunDate = S.date; }
@@ -3191,7 +3192,10 @@ window.k8RegBirthChange = function (v) {
     saveH(h); S.editPage = false; render(); push(S.date, 'อัปเดตหน้าปัจจุบันเป็นหน้า ' + p + ' แล้ว');
   };
   let memTimer = null;
+  // v20.03 · นักเรียนชาย: ดูรายการท่องจำได้ แต่ติ๊ก/แก้เองไม่ได้ (อาจารย์/แอดมินบันทึกให้)
+  function memLocked() { try { return isSelf() && !asTarget() && !(window.k8IsGirl && window.k8IsGirl(stu())); } catch (e) { return false; } }
   window.k8HasToggleSurah = function (num) { if (RO()) { roMsg(); return; }
+    if (memLocked()) { if (typeof showToast === 'function') showToast('นักเรียนชาย: การท่องจำให้อาจารย์หรือแอดมินเป็นผู้บันทึก · แจ้งอาจารย์เมื่อท่องจำได้', 'warning'); return; }
     const h = H(); if (!h || future()) return;
     const mem = new Set(memList(h)); const on = !mem.has(num);
     if (on) mem.add(num); else mem.delete(num);
@@ -3201,11 +3205,16 @@ window.k8RegBirthChange = function (v) {
     const nw = new Set(dl.memNew || []); if (on) nw.add(num); else nw.delete(num); dl.memNew = Array.from(nw);
     saveH(h);
     // คงตำแหน่งเลื่อนของรายการซูเราะห์และหน้าจอไว้ ไม่ให้เด้งขึ้นด้านบนหลังติ๊ก
+    // v20.03 · ยึดตำแหน่งปุ่มที่แตะไว้บนจอ (ข้อความด้านบนเปลี่ยนความสูงหลังติ๊ก ทำให้รายการเด้งขึ้นลง)
+    const sel = 'button[onclick="k8HasToggleSurah(' + num + ')"]';
     const ul = document.querySelector('.k8h-surahs'); const st = ul ? ul.scrollTop : 0; const wy = window.scrollY;
+    const b0 = document.querySelector(sel); const top0 = b0 ? b0.getBoundingClientRect().top : null;
     render();
     const ul2 = document.querySelector('.k8h-surahs'); if (ul2) ul2.scrollTop = st;
     if (Math.abs(window.scrollY - wy) > 1) window.scrollTo(0, wy);
-    const btn = ul2 && ul2.querySelector('button[onclick="k8HasToggleSurah(' + num + ')"]'); if (btn) try { btn.focus({ preventScroll: true }); } catch (e) {}
+    const btn = document.querySelector(sel);
+    if (btn && top0 != null) { const d = btn.getBoundingClientRect().top - top0; if (Math.abs(d) > 1) window.scrollTo(0, window.scrollY + d); }
+    if (btn) try { btn.focus({ preventScroll: true }); } catch (e) {}
     clearTimeout(memTimer); memTimer = setTimeout(() => push(S.date, 'บันทึกการท่องจำแล้ว · รวม ' + arr.length + ' ซูเราะห์'), 900);
   };
   window.k8HasSun = function (k, v) { if (RO()) { roMsg(); render(); return; } S.sun.rawatib[k] = !!v; render(); };
@@ -3679,7 +3688,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.02';
+  const APP_VERSION = '20.03';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

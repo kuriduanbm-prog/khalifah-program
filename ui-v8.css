@@ -7835,3 +7835,9 @@ html[data-theme="dark"] .k8-prx-list li { border-color: #2a2f37 !important; }
 html[data-theme="dark"] .k8-prx-chip { background: #0c2a3d !important; color: #bae6fd !important; }
 html[data-theme="dark"] .k8-prx-chip.is-miss, html[data-theme="dark"] .k8-prx-warn { background: transparent !important; color: #fcd34d !important; }
 html[data-theme="dark"] .k8-prx-add, html[data-theme="dark"] .k8-prx-save { background: #0369a1 !important; color: #fff !important; }
+/* v20.03 · ท่องจำ: นักเรียนชายดูได้อย่างเดียว */
+.k8h-lock { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: #fef3c7; color: #78350f; font-size: 14px; line-height: 1.5; }
+.k8h-lock svg { flex: none; }
+.k8h-surahs.is-locked button { cursor: default; }
+.k8h-surahs.is-locked button[aria-pressed="false"] .k8h-ck { opacity: .45; }
+html[data-theme="dark"] .k8h-lock { background: #422006 !important; color: #fde68a !important; }

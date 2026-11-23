@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.98'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '20.03'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1673,6 +1673,13 @@ function dispatchAction_(action, req, data, session, ctx) {
         const dd = formatSheetDate(data.date) || tdy;
         if (dd > tdy) return { success: false, message: 'บันทึกล่วงหน้าไม่ได้' };
         if (dd < min7) return { success: false, message: 'บันทึกย้อนหลังได้ไม่เกิน 7 วัน · ถ้าจำเป็นให้แจ้งแอดมิน' };
+      }
+      // v20.03 · นักเรียนชายแก้การท่องจำเองไม่ได้ (อาจารย์/แอดมินบันทึกให้เท่านั้น) · ใช้ค่าท่องจำเดิมในระบบ
+      if (isStudent) {
+        try {
+          const me = (getAllStudents().data || []).filter(function (x) { return isCodeMatch(x.studentId, session.userId); })[0];
+          if (me && !periodIsGirl_(me)) { data = Object.assign({}, data); delete data.memorization; delete data.memorizedSurahs; delete data.count; delete data.memorizedCount; }
+        } catch (e) {}
       }
       return recordHasanat(data, isStudent ? 'นักเรียน' : ('แอดมิน' + (session && session.name ? ' · ' + session.name : '')));
     case 'checkInActivity':
