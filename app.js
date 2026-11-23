@@ -12989,6 +12989,11 @@ function setAdminPrayerMode(mode) {
   if (secDaily) secDaily.style.display = mode === 'daily' ? 'block' : 'none';
   if (secIndiv) secIndiv.style.display = mode === 'individual' ? 'block' : 'none';
   if (secApprovals) secApprovals.style.display = mode === 'approvals' ? 'block' : 'none';
+  // v19.92 · แท็บ "ส่งไม่สำเร็จ"
+  const btnFails = document.getElementById('btnPrayerModeFails'); const secFails = document.getElementById('adminPrayerFailsSection');
+  if (btnFails) btnFails.classList.toggle('active', mode === 'fails');
+  if (secFails) secFails.style.display = mode === 'fails' ? 'block' : 'none';
+  if (mode === 'fails') { try { window.k8PfOpen && window.k8PfOpen(); } catch (e) {} return; }
 
   if (mode === 'daily') {
     renderAdminPrayerDailyDashboard();

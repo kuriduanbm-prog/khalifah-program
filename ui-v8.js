@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.91';
+  const APP_VERSION = '19.92';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -6171,6 +6171,7 @@ window.k8RegBirthChange = function (v) {
       if (E.date === today) { try { todayPrayers.unshift(rec); localStorage.setItem('khalifah_today_prayers', JSON.stringify(todayPrayers)); } catch (e) {} }
     }
     closeModal('k8PeModal'); toast(r.message || 'บันทึกแล้ว', 'success'); rerender();
+    try { window.dispatchEvent(new CustomEvent('k8-prayer-edited')); } catch (e) {}
   };
   window.k8PeDelete = async function () {
     if (!E || E.mode !== 'edit') return;
@@ -8647,7 +8648,7 @@ window.k8RegBirthChange = function (v) {
     if (card && !card.classList.contains('k8-pm2')) {
       card.classList.add('k8-pm2');
       const t = card.querySelector('.card-header .card-title'); if (t) t.innerHTML = 'ติดตามการเช็คชื่อละหมาด';
-      const lab = { btnPrayerModeDaily: 'รายวัน', btnPrayerModeIndividual: 'รายบุคคล', btnPrayerModeApprovals: 'คำขอย้อนหลัง' }; Object.keys(lab).forEach((id) => { const b = document.getElementById(id); if (!b) return; const badge = b.querySelector('.badge-pending-count'); b.textContent = lab[id]; if (badge) b.appendChild(badge); });
+      const lab = { btnPrayerModeDaily: 'รายวัน', btnPrayerModeIndividual: 'รายบุคคล', btnPrayerModeApprovals: 'คำขอย้อนหลัง', btnPrayerModeFails: 'ส่งไม่สำเร็จ' }; Object.keys(lab).forEach((id) => { const b = document.getElementById(id); if (!b) return; const badge = b.querySelector('.badge-pending-count'); b.textContent = lab[id]; if (badge) b.appendChild(badge); });
       const fl = card.querySelector('.k8-pt-filters'); const sb0 = card.querySelector('.card-header button[onclick^="syncAllDataFromCloud"]'); if (fl && sb0) { fl.appendChild(sb0); }
       const xb = card.querySelector('.k8-pt-xls'); if (xb) xb.setAttribute('aria-label', 'ส่งออก Excel'); const ib = card.querySelector('.k8-pt-img'); if (ib) ib.setAttribute('aria-label', 'รูปสรุป');
       const sb = card.querySelector('button[onclick^="syncAllDataFromCloud"]'); if (sb) { sb.classList.add('k8-pm-sync'); sb.title = 'ดึงข้อมูลล่าสุดจาก Google Sheets'; sb.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></svg><span>รีเฟรช</span>'; }
@@ -10534,7 +10535,7 @@ window.k8HfMiss = function (slot) {
     const view = document.getElementById('view-admin'); if (!view) return;
     if (l === 'school') {
       // ดูอย่างเดียว: ซ่อนทุกปุ่มที่เพิ่ม/แก้ไข/ลบ/ส่งข้อมูล
-      const RO_SCHOOL = new RegExp(RO_EXEC.source + '|openAdminAdd|k8NewStaff|k8NsSave|k8Bh(Open|Add|Pick|Rule|Save|New)|k8PrMark|k8PrEdit|markPrayer|addPrayer|updatePrayer|k8Pdx|k8PdEdit|k8PdAdd|approve|Approve|reject|Reject|saveSetting|k8Ap|k8PreviewStudent|k8Gx');
+      const RO_SCHOOL = new RegExp(RO_EXEC.source + '|openAdminAdd|k8NewStaff|k8NsSave|k8Bh(Open|Add|Pick|Rule|Save|New)|k8PrMark|k8PrEdit|markPrayer|addPrayer|updatePrayer|k8Pdx|k8PdEdit|k8PdAdd|k8PfAdd|approve|Approve|reject|Reject|saveSetting|k8Ap|k8PreviewStudent|k8Gx');
       view.querySelectorAll('.admin-content-tab button, .admin-content-tab [onclick]').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (RO_SCHOOL.test(oc) && !b.dataset.k8ro) { b.dataset.k8ro = '1'; b.style.setProperty('display', 'none', 'important'); } });
       document.querySelectorAll('.k8-pr-tools button').forEach((b) => { const oc = String(b.getAttribute('onclick') || ''); if (!/prayer-rank|k8DmOpen/.test(oc)) b.style.setProperty('display', 'none', 'important'); });
       ['btnPrayerModeApprovals'].forEach((id) => { const b = document.getElementById(id); if (b) b.style.setProperty('display', 'none', 'important'); });
@@ -15756,6 +15757,73 @@ window.k8PdWho = function (sid) {
   };
   document.addEventListener('DOMContentLoaded', ensureDates);
   if (document.readyState !== 'loading') ensureDates();
+})();
+
+/* ============ v19.92 · แอดมิน: การเช็คละหมาดที่ระบบไม่รับ (ส่งไม่สำเร็จ) พร้อมเหตุผล ============ */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const jsq = (v) => String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const ymd = (d) => d.toLocaleDateString('sv-SE');
+  const thD = (s) => { const m = String(s || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + ' ' + TH_M[+m[2] - 1] + ' ' + String(+m[1] + 543).slice(2) : String(s || ''); };
+  const staff = () => { try { return !!currentAdmin; } catch (e) { return false; } };
+  const P = { range: 'today', q: '', hide: false, why: '', rows: [], busy: false, at: 0, err: '' };
+  const span = () => { const t = new Date(); const back = (n) => ymd(new Date(t.getTime() - n * 864e5)); return P.range === 'yday' ? [back(1), back(1)] : P.range === '7' ? [back(6), ymd(t)] : P.range === '30' ? [back(29), ymd(t)] : [ymd(t), ymd(t)]; };
+  const why0 = (r) => String(r || '').split(/ · |\(|:/)[0].trim().slice(0, 42) || 'ไม่ทราบสาเหตุ';
+  function badge(rows) { const b = document.getElementById('badgePrayerFails'); if (!b) return; const today = ymd(new Date()); const n = rows.filter((x) => x.date === today && !x.resolved).length; b.textContent = n; b.style.display = n ? '' : 'none'; }
+  async function load() {
+    if (P.busy) return; P.busy = true; P.err = ''; paint();
+    const [from, to] = span(); let r = null;
+    try { r = await gasApiCall('listPrayerFails', { data: { from, to } }, 30000); } catch (e) {}
+    P.busy = false;
+    if (!r || !r.success) { P.err = (r && (r.message || r.error)) || 'โหลดไม่สำเร็จ ลองใหม่อีกครั้ง'; paint(); return; }
+    P.rows = r.rows || []; P.at = Date.now(); if (P.range === 'today') badge(P.rows); paint();
+  }
+  function paint() {
+    const el = document.getElementById('adminPrayerFailsSection'); if (!el) return;
+    const q = P.q.trim().toLowerCase();
+    let L = P.rows.filter((x) => !q || (x.studentName + ' ' + x.studentId + ' ' + x.grade).toLowerCase().includes(q));
+    const open = L.filter((x) => !x.resolved).length, done = L.length - open;
+    const cnt = {}; L.forEach((x) => { const k = why0(x.reason); cnt[k] = (cnt[k] || 0) + 1; });
+    const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 6);
+    if (P.hide) L = L.filter((x) => !x.resolved); if (P.why) L = L.filter((x) => why0(x.reason) === P.why);
+    const chip = (v, l) => '<button type="button" class="k8-pfl-chip" aria-pressed="' + (P.range === v) + '" onclick="k8PfRange(\'' + v + '\')">' + l + '</button>';
+    let h = '<div class="k8-pfl-bar"><div class="k8-pfl-rg">' + chip('today', 'วันนี้') + chip('yday', 'เมื่อวาน') + chip('7', '7 วัน') + chip('30', '30 วัน') + '</div>' +
+      '<label class="k8-pfl-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="ค้นหาชื่อ / รหัส / ชั้น" value="' + esc(P.q) + '" oninput="k8PfQ(this.value)" aria-label="ค้นหานักเรียน"></label>' +
+      '<label class="k8-pfl-hide"><input type="checkbox"' + (P.hide ? ' checked' : '') + ' onchange="k8PfHide(this.checked)"> ซ่อนรายการที่มีบันทึกภายหลังแล้ว</label>' +
+      '<button type="button" class="k8-pfl-rf" onclick="k8PfLoad()" aria-label="โหลดใหม่"' + (P.busy ? ' disabled' : '') + '><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></svg></button></div>';
+    h += '<p class="k8-pfl-sum">' + (P.busy && !P.rows.length ? 'กำลังโหลด…' : 'ระบบไม่รับ <b>' + (open + done) + '</b> รายการ · <span class="is-no">ยังไม่มีบันทึก ' + open + '</span> · <span class="is-ok">มีบันทึกภายหลังแล้ว ' + done + '</span>') + '</p>';
+    if (top.length > 1 || P.why) h += '<div class="k8-pfl-why"><span>สาเหตุ</span><button type="button" class="k8-pfl-chip" aria-pressed="' + (!P.why) + '" onclick="k8PfWhy(\'\')">ทั้งหมด</button>' + top.map((k) => '<button type="button" class="k8-pfl-chip" aria-pressed="' + (P.why === k) + '" onclick="k8PfWhy(\'' + jsq(k) + '\')">' + esc(k) + ' <em>' + cnt[k] + '</em></button>').join('') + '</div>';
+    if (P.err) h += '<p class="k8-pfl-err">' + esc(P.err) + '</p>';
+    else if (!P.busy && !L.length) h += '<p class="k8-pfl-empty">' + (P.rows.length ? 'ไม่มีรายการตามตัวกรองนี้' : 'ไม่มีการเช็คละหมาดที่ระบบไม่รับในช่วงนี้') + '</p>';
+    h += '<ul class="k8-pfl-list">' + L.map((x) => {
+      const ll = /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(x.loc) ? '<a href="https://www.google.com/maps?q=' + encodeURIComponent(x.loc) + '" target="_blank" rel="noopener">ดูพิกัด</a>' : '';
+      return '<li class="' + (x.resolved ? 'is-ok' : 'is-no') + '"><div class="k8-pfl-who"><b>' + esc(x.studentName || x.studentId) + '</b><small>' + esc([x.studentId, x.grade].filter(Boolean).join(' · ')) + '</small></div>' +
+        '<div class="k8-pfl-what"><b>' + esc(String(x.slot || '-').split(' (')[0]) + ' · ' + esc(thD(x.date)) + (x.time ? ' · ถ่าย ' + esc(String(x.time).slice(0, 5)) + ' น.' : '') + '</b><p>' + esc(x.reason || 'ไม่ทราบสาเหตุ') + '</p>' +
+        '<small>ส่ง ' + x.tries + ' ครั้ง · ล่าสุด ' + esc(thD(x.last) + ' ' + String(x.last).slice(11, 16)) + (ll ? ' · ' + ll : '') + '</small></div>' +
+        '<div class="k8-pfl-act">' + (x.resolved ? '<span class="k8-pfl-st is-ok">มีบันทึกแล้ว · ' + esc(String(x.nowStatus || '').split(' (')[0] || '-') + '</span>' : '<span class="k8-pfl-st is-no">ยังไม่มีบันทึก</span><button type="button" class="k8-pfl-add" onclick="k8PfAdd(\'' + jsq(x.studentId) + '\',\'' + jsq(x.slot) + '\',\'' + jsq(x.date) + '\')">บันทึกแทน</button>') + '</div></li>';
+    }).join('') + '</ul>';
+    el.innerHTML = '<div class="k8-pfl">' + h + '</div>';
+  }
+  window.k8PfOpen = function () { paint(); if (!P.rows.length || Date.now() - P.at > 60000) load(); };
+  window.k8PfLoad = load;
+  window.k8PfRange = function (v) { P.range = v; P.why = ''; P.rows = []; load(); };
+  window.k8PfQ = function (v) { P.q = v; clearTimeout(P.qt); P.qt = setTimeout(() => { paint(); const i = document.querySelector('.k8-pfl-q input'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 200); };
+  window.k8PfHide = function (v) { P.hide = v; paint(); };
+  window.k8PfWhy = function (v) { P.why = v; paint(); };
+  window.k8PfAdd = function (sid, slot, date) {
+    const di = document.getElementById('adminPrayerDateSelect'); if (di && date) di.value = date;
+    try { window.k8PeAdd(sid, slot); } catch (e) {}
+    const done = () => { P.at = 0; setTimeout(load, 1500); };
+    window.addEventListener('k8-prayer-edited', done, { once: true });
+  };
+  // ป้ายจำนวนบนแท็บ: ตรวจวันนี้เมื่อแอดมินเปิดหน้าติดตามละหมาด (ไม่เกินทุก 10 นาที)
+  let lastB = 0;
+  setInterval(() => {
+    if (!staff() || P.busy || Date.now() - lastB < 600000) return; const b = document.getElementById('btnPrayerModeFails'); if (!b || !b.offsetParent) return;
+    lastB = Date.now(); const t = ymd(new Date());
+    gasApiCall('listPrayerFails', { data: { from: t, to: t } }, 30000).then((r) => { if (r && r.success) badge(r.rows || []); }).catch(() => {});
+  }, 15000);
 })();
 
 // v19.60 · สัญญาณว่า ui-v8.js ทำงานจนจบไฟล์ (index.html ใช้ตรวจว่าโหลดครบ)
