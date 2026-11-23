@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.94';
+  const APP_VERSION = '19.96';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11008,18 +11008,91 @@ window.k8HfMiss = function (slot) {
   window.k8AsumClose = function () { const el = document.getElementById('k8Asum'); if (el && !el.hidden) { el.hidden = true; document.documentElement.classList.remove('k8-docs-open'); } };
   window.addEventListener('popstate', () => { const el = document.getElementById('k8Asum'); if (el && !el.hidden) window.k8AsumClose(); });
   // v19.86 · บันทึกหน้าสรุปการมาเรียนเป็นรูปภาพ (ตามตัวกรองและมุมมองที่เลือกอยู่)
-  window.k8AsumPng = function () {
+  // v19.96 · รูปภาพสรุปการมาเรียน: ออกแบบใหม่ · หัวรายงานมีโลโก้ · การ์ดตัวเลข · ตารางพร้อมแถบร้อยละ
+  window.k8AsumPng = async function () {
     const G = A.lastG || []; if (!G.length) { try { showToast('ยังไม่มีข้อมูลให้บันทึก', 'warning'); } catch (e) {} return; }
-    if (typeof window.k8DrawReportPng !== 'function') return;
     const L = A.rows ? filtered() : []; const S = stats(L); const sessions = new Set(L.map((r) => r.date + '|' + r.subjectCode + '|' + (r.period || ''))).size;
     let subjName = 'ทุกวิชา'; try { const x = (appSubjects || []).find((y) => String(y.id) === String(A.subj)); if (x) subjName = x.name; } catch (e) {}
     const view = A.view === 'stu' ? 'รายนักเรียน' : A.view === 'day' ? 'รายวัน' : 'รายวิชา';
-    const m = { title: 'สรุปการมาเรียน', sub: subjName + ' · ' + (A.grade === 'ALL' ? 'ทุกชั้น' : 'ม.' + A.grade) + ' · ' + dTh(A.from) + (A.from !== A.to ? ' – ' + dTh(A.to) : '') + (A.q ? ' · นักเรียน: ' + A.q : ''), made: 'ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH'),
-      sections: [
-        { title: 'ภาพรวม', cols: ['อัตรามาเรียน', 'จำนวนคาบ', 'รายการเช็คชื่อ', 'มา', 'สาย', 'ลา', 'ขาด'], num: [1, 2, 3, 4, 5, 6], rows: [[S.pct + '%', sessions, S.total, S.present, S.late, S.leave, S.absent]] },
-        { title: view + ' ' + G.length + ' รายการ', cols: [A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา', 'รายละเอียด', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'], num: [2, 3, 4, 5, 6], rows: G.map((g) => [g.label, g.sub, g.st.present, g.st.late, g.st.leave, g.st.absent, g.st.pct + '%']) }
-      ] };
-    window.k8DrawReportPng(m, 'สรุปการมาเรียน_' + view + '_' + A.from + '_' + A.to + '.png');
+    const F = '"IBM Plex Sans Thai", Tahoma, sans-serif';
+    try { await Promise.all(['400 16px', '500 16px', '600 16px', '700 16px'].map((w) => document.fonts.load(w + ' "IBM Plex Sans Thai"'))); } catch (e) {}
+    const logo = await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = 'assets/logo.png'; });
+    const rows = G.slice(0, 400);
+    const W = 1080, PAD = 48, SC = 2, HEAD = 232, KH = 132, TH = 46, RH = 58, FOOT = 88;
+    const H = HEAD + 28 + KH + 40 + 34 + TH + rows.length * RH + (G.length > rows.length ? 40 : 0) + FOOT;
+    const cv = document.createElement('canvas'); cv.width = W * SC; cv.height = H * SC; const x = cv.getContext('2d'); x.scale(SC, SC);
+    const rr = (X, Y, w, h, r) => { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
+    const txt = (t, X, Y, font, col, al) => { x.font = font + ' ' + F; x.fillStyle = col; x.textAlign = al || 'left'; x.fillText(String(t), X, Y); };
+    const fit = (t, max, font) => { x.font = font + ' ' + F; t = String(t); if (x.measureText(t).width <= max) return t; while (t.length > 1 && x.measureText(t + '…').width > max) t = t.slice(0, -1); return t + '…'; };
+    // พื้นหลัง
+    x.fillStyle = '#f1f5f9'; x.fillRect(0, 0, W, H);
+    // หัวรายงาน
+    const g = x.createLinearGradient(0, 0, W, HEAD); g.addColorStop(0, '#0c4a6e'); g.addColorStop(1, '#0369a1'); x.fillStyle = g; x.fillRect(0, 0, W, HEAD);
+    x.save(); x.globalAlpha = 0.07; x.fillStyle = '#fff'; x.beginPath(); x.arc(W - 90, 40, 170, 0, Math.PI * 2); x.fill(); x.beginPath(); x.arc(W - 250, HEAD + 30, 110, 0, Math.PI * 2); x.fill(); x.restore();
+    x.fillStyle = '#fff'; x.beginPath(); x.arc(PAD + 44, 84, 44, 0, Math.PI * 2); x.fill();
+    if (logo) { x.save(); x.beginPath(); x.arc(PAD + 44, 84, 40, 0, Math.PI * 2); x.clip(); x.drawImage(logo, PAD + 4, 44, 80, 80); x.restore(); }
+    txt('KHALIFAH PROGRAM', PAD + 108, 66, '600 15px', '#bae6fd');
+    txt('สรุปการมาเรียน', PAD + 108, 108, '700 38px', '#ffffff');
+    txt('ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) + ' น.', W - PAD, 66, '400 14px', '#e0f2fe', 'right');
+    // ป้ายตัวกรอง
+    const chips = [subjName, A.grade === 'ALL' ? 'ทุกชั้น' : 'ม.' + A.grade, dTh(A.from) + (A.from !== A.to ? ' – ' + dTh(A.to) : '')].concat(A.q ? ['นักเรียน: ' + A.q] : []);
+    let cx = PAD; x.font = '500 15px ' + F;
+    chips.forEach((c) => { const t = fit(c, 420, '500 15px'); const w = x.measureText(t).width + 28; rr(cx, 156, w, 36, 18); x.fillStyle = 'rgba(255,255,255,.16)'; x.fill(); x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = 1; x.stroke(); txt(t, cx + 14, 180, '500 15px', '#ffffff'); cx += w + 10; });
+    // การ์ดตัวเลข
+    let y = HEAD + 28;
+    const cards = [['อัตรามาเรียน', S.pct + '%', sessions + ' คาบ · ' + S.total + ' รายการ', '#0369a1', '#e0f2fe'], ['มาเรียน', S.present, 'ครั้ง', '#047857', '#d1fae5'], ['มาสาย', S.late, 'ครั้ง', '#b45309', '#fef3c7'], ['ลา', S.leave, 'ครั้ง', '#1d4ed8', '#dbeafe'], ['ขาด', S.absent, 'ครั้ง', '#b91c1c', '#fee2e2']];
+    const gap = 14, cw0 = 248, cw = (W - PAD * 2 - cw0 - gap * 4) / 4;
+    cards.forEach((c, i) => {
+      const X = i === 0 ? PAD : PAD + cw0 + gap + (i - 1) * (cw + gap), w = i === 0 ? cw0 : cw;
+      x.save(); x.shadowColor = 'rgba(15,23,42,.08)'; x.shadowBlur = 16; x.shadowOffsetY = 4; rr(X, y, w, KH, 18); x.fillStyle = i === 0 ? '#0c4a6e' : '#ffffff'; x.fill(); x.restore();
+      if (i === 0) {
+        txt(c[0], X + 22, y + 34, '600 15px', '#bae6fd'); txt(c[1], X + 22, y + 88, '700 46px', '#ffffff'); txt(c[2], X + 22, y + 114, '400 13.5px', '#e0f2fe');
+        const R = 30, ccx = X + w - 48, ccy = y + 70; x.lineWidth = 9; x.strokeStyle = 'rgba(255,255,255,.18)'; x.beginPath(); x.arc(ccx, ccy, R, 0, Math.PI * 2); x.stroke();
+        x.strokeStyle = S.pct >= 90 ? '#4ade80' : S.pct >= 75 ? '#fbbf24' : '#f87171'; x.lineCap = 'round'; x.beginPath(); x.arc(ccx, ccy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, S.pct / 100)); x.stroke(); x.lineCap = 'butt';
+      } else {
+        x.save(); rr(X, y, w, KH, 18); x.clip(); x.fillStyle = c[3]; x.fillRect(X, y, 6, KH); x.restore();
+        rr(X + 22, y + 20, 36, 36, 10); x.fillStyle = c[4]; x.fill(); x.fillStyle = c[3]; x.beginPath(); x.arc(X + 40, y + 38, 6, 0, Math.PI * 2); x.fill();
+        txt(c[0], X + 68, y + 44, '600 15px', '#334155'); txt(c[1], X + 22, y + 104, '700 40px', c[3]); x.font = '700 40px ' + F; txt(c[2], X + 30 + x.measureText(String(c[1])).width, y + 104, '400 14px', '#64748b');
+      }
+    });
+    // ตาราง
+    y += KH + 40;
+    txt(view, PAD, y, '700 20px', '#0c4a6e'); x.font = '700 20px ' + F; txt(G.length + ' รายการ', PAD + x.measureText(view).width + 12, y, '400 15px', '#64748b');
+    y += 18;
+    const cols = [{ k: 'n', w: 44, l: '#', al: 'center' }, { k: 'name', w: 0, l: A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา' }, { k: 'present', w: 76, l: 'มา', al: 'center', c: '#047857' }, { k: 'late', w: 76, l: 'สาย', al: 'center', c: '#b45309' }, { k: 'leave', w: 76, l: 'ลา', al: 'center', c: '#1d4ed8' }, { k: 'absent', w: 76, l: 'ขาด', al: 'center', c: '#b91c1c' }, { k: 'pct', w: 210, l: 'ร้อยละมาเรียน' }];
+    const TW = W - PAD * 2; cols[1].w = TW - cols.reduce((a, c) => a + c.w, 0); let ox = PAD; cols.forEach((c) => { c.x = ox; ox += c.w; });
+    x.save(); x.shadowColor = 'rgba(15,23,42,.07)'; x.shadowBlur = 16; x.shadowOffsetY = 4; rr(PAD, y, TW, TH + rows.length * RH, 16); x.fillStyle = '#fff'; x.fill(); x.restore();
+    x.save(); rr(PAD, y, TW, TH + rows.length * RH, 16); x.clip();
+    x.fillStyle = '#e0f2fe'; x.fillRect(PAD, y, TW, TH);
+    cols.forEach((c) => txt(c.l, c.al === 'center' ? c.x + c.w / 2 : c.x + 14, y + 30, '600 15px', c.c || '#0c4a6e', c.al));
+    y += TH;
+    rows.forEach((r, i) => {
+      if (i % 2) { x.fillStyle = '#f8fafc'; x.fillRect(PAD, y, TW, RH); }
+      x.fillStyle = '#e2e8f0'; x.fillRect(PAD, y, TW, 1);
+      const st = r.st || {}; const hasAbs = (st.absent || 0) > 0;
+      txt(i + 1, cols[0].x + cols[0].w / 2, y + 35, '500 14px', '#94a3b8', 'center');
+      txt(fit(r.label, cols[1].w - 28, '600 16px'), cols[1].x + 14, y + 26, '600 16px', hasAbs ? '#991b1b' : '#0f172a');
+      txt(fit(r.sub || '', cols[1].w - 28, '400 13px'), cols[1].x + 14, y + 46, '400 13px', '#64748b');
+      ['present', 'late', 'leave', 'absent'].forEach((k, j) => { const c = cols[2 + j]; const v = st[k] || 0; if (v) { rr(c.x + c.w / 2 - 20, y + 15, 40, 28, 14); x.fillStyle = cards[j + 1][4]; x.fill(); } txt(v, c.x + c.w / 2, y + 35, v ? '700 16px' : '400 15px', v ? c.c : '#cbd5e1', 'center'); });
+      const pc = Number(st.pct) || 0, pcol = pc >= 90 ? '#059669' : pc >= 75 ? '#d97706' : '#dc2626', bx = cols[6].x + 14, bw = cols[6].w - 86;
+      rr(bx, y + 25, bw, 9, 4.5); x.fillStyle = '#e2e8f0'; x.fill(); if (pc > 0) { rr(bx, y + 25, Math.max(9, bw * Math.min(1, pc / 100)), 9, 4.5); x.fillStyle = pcol; x.fill(); }
+      txt(pc + '%', cols[6].x + cols[6].w - 14, y + 35, '700 16px', pcol, 'right');
+      y += RH;
+    });
+    x.restore();
+    if (G.length > rows.length) { txt('… และอีก ' + (G.length - rows.length) + ' รายการ (ดูทั้งหมดได้ในไฟล์ CSV)', W / 2, y + 28, '400 14px', '#64748b', 'center'); y += 40; }
+    // ท้ายรายงาน
+    y = H - FOOT + 16; x.fillStyle = '#cbd5e1'; x.fillRect(PAD, y, TW, 1);
+    if (logo) { x.save(); x.beginPath(); x.arc(PAD + 18, y + 38, 18, 0, Math.PI * 2); x.clip(); x.drawImage(logo, PAD, y + 20, 36, 36); x.restore(); x.strokeStyle = '#cbd5e1'; x.lineWidth = 1; x.beginPath(); x.arc(PAD + 18, y + 38, 18, 0, Math.PI * 2); x.stroke(); }
+    txt('Khalifah Program', PAD + (logo ? 48 : 0), y + 36, '700 15px', '#0c4a6e'); txt('ระบบติดตามการเรียนและพฤติกรรมนักเรียน', PAD + (logo ? 48 : 0), y + 56, '400 13px', '#64748b');
+    txt('เกณฑ์ร้อยละ: ', W - PAD - 250, y + 46, '400 13px', '#64748b', 'right');
+    [['≥ 90%', '#059669'], ['75–89%', '#d97706'], ['< 75%', '#dc2626']].forEach((q, i) => { const X = W - PAD - 240 + i * 82; x.fillStyle = q[1]; x.beginPath(); x.arc(X + 6, y + 41, 6, 0, Math.PI * 2); x.fill(); txt(q[0], X + 16, y + 46, '500 13px', '#334155'); });
+    const name = 'สรุปการมาเรียน_' + view + (A.q ? '_' + String(A.q).trim().replace(/[\\/:*?"<>|\s]+/g, '_') : '') + '_' + A.from + (A.from !== A.to ? '_' + A.to : '') + '.png';
+    cv.toBlob((b) => {
+      if (!b) { try { showToast('สร้างรูปภาพไม่สำเร็จ', 'error'); } catch (e) {} return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      try { showToast('บันทึกเป็นรูปภาพแล้ว', 'success'); } catch (e) {}
+    }, 'image/png');
   };
   window.k8AsumCsv = function () {
     const G = A.lastG || []; if (!G.length) { try { showToast('ยังไม่มีข้อมูลให้ดาวน์โหลด', 'warning'); } catch (e) {} return; }
