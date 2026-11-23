@@ -4550,6 +4550,19 @@ function k8GeoHelp() {
 /**
  * จังหวะที่ 2: ถ่ายรูปและบันทึกข้อมูลเรียลไทม์ทันที (No Overlapping Toasts, Full Repeat History)
  */
+// v19.93 · ตรวจภาพสีดำ (กล้องยังไม่พร้อม/มีสิ่งปิดเลนส์/สิทธิ์กล้องถูกบล็อก) · ภาพสีดำ = ไม่บันทึก
+// ดูเฉพาะส่วนภาพจากกล้อง (ก่อนปั๊มลายน้ำ) · มืดแต่ยังเห็นรายละเอียด (ซุบฮิ/อีชาอ์มีไฟ) ไม่นับว่าดำ
+window.k8IsBlackFrame = function (canvas) {
+  try {
+    const w = 48, h = 36; const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(canvas, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data; let sum = 0, sq = 0, dark = 0, mx = 0; const n = w * h;
+    for (let i = 0; i < d.length; i += 4) { const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; sum += l; sq += l * l; if (l < 14) dark++; if (l > mx) mx = l; }
+    const mean = sum / n, sd = Math.sqrt(Math.max(0, sq / n - mean * mean));
+    return { black: (mean < 8 && sd < 6 && mx < 40) || (dark / n > 0.985 && mx < 28), mean: Math.round(mean), sd: Math.round(sd) };
+  } catch (e) { return { black: false }; }
+};
+window.k8BlackFrameMsg = 'ภาพถ่ายเป็นสีดำ ระบบไม่บันทึก · ตรวจว่าไม่มีอะไรปิดเลนส์ แล้วกดถ่ายใหม่ (ถ้ายังดำ ให้ปิดแล้วเปิดกล้องใหม่)';
 async function executePrayerCaptureStep2() {
   const video = document.getElementById('cameraStream');
   const canvas = document.getElementById('snapshotCanvas');
@@ -4596,6 +4609,19 @@ async function executePrayerCaptureStep2() {
     ctx.restore();
   } else {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  }
+
+  // v19.93 · ภาพสีดำ: ลองดึงเฟรมใหม่อีกครั้ง (กล้องเพิ่งเปิด) ถ้ายังดำ = ไม่บันทึก ให้ถ่ายใหม่
+  if (window.k8IsBlackFrame(canvas).black) {
+    await new Promise((r) => setTimeout(r, 700));
+    const mir = (window.k8CamFacing || currentFacingMode) === 'user';
+    ctx.save(); if (mir) { ctx.scale(-1, 1); ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height); } else ctx.drawImage(video, 0, 0, canvas.width, canvas.height); ctx.restore();
+    if (window.k8IsBlackFrame(canvas).black) {
+      showToast(window.k8BlackFrameMsg, 'error');
+      try { if (navigator.vibrate) navigator.vibrate([80, 40, 80]); } catch (e) {}
+      try { window.dispatchEvent(new CustomEvent('k8-prayer-black-photo')); } catch (e) {}
+      return;
+    }
   }
 
   // ปั๊มลายน้ำพยานการละหมาด (Watermark)
@@ -4857,6 +4883,7 @@ function captureAndRecordPrayer() {
   } else {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   }
+  if (window.k8IsBlackFrame && window.k8IsBlackFrame(canvas).black) { showToast(window.k8BlackFrameMsg, 'error'); return; } // v19.93
 
   // ปั๊มลายน้ำ (Watermark Overlay)
   const now = new Date();
