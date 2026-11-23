@@ -7794,3 +7794,44 @@ html[data-theme="dark"] .k8-asum-one b { color: #7dd3fc !important; }
 html[data-theme="dark"] .k8-asum-one small { color: #cbd5e1 !important; }
 html[data-theme="dark"] .k8-asum-av { background: #0369a1 !important; color: #fff !important; }
 html[data-theme="dark"] .k8-asum-one button { background: #0f172a !important; color: #7dd3fc !important; border-color: #0369a1 !important; }
+/* v19.98 · กำหนดสถานที่ละหมาดเฉพาะรายบุคคล */
+.k8-prx { margin-top: 24px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; display: grid; gap: 12px; }
+.k8-prx-hd { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.k8-prx h2 { margin: 0; font-size: 18px; color: #0c4a6e; }
+.k8-prx-sub { margin: 4px 0 0; font-size: 13px; color: #475569; line-height: 1.55; }
+.k8-prx-add, .k8-prx-save { font: inherit; font-size: 14px; font-weight: 600; border: 0; background: #0369a1; color: #fff; border-radius: 10px; padding: 9px 16px; min-height: 42px; cursor: pointer; }
+.k8-prx-save:disabled { background: #94a3b8; }
+.k8-prx-cancel, .k8-prx-acts button { font: inherit; font-size: 13.5px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; border-radius: 9px; padding: 7px 12px; min-height: 38px; cursor: pointer; }
+.k8-prx-acts button.is-del { color: #b91c1c; border-color: #fecaca; }
+.k8-prx-form { display: grid; gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; }
+.k8-prx-form label > span, .k8-prx-form legend { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px; }
+.k8-prx-form input[type="search"], .k8-prx-form input[type="text"], .k8-prx-form input[type="number"] { font: inherit; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 9px 11px; width: 100%; box-sizing: border-box; background: #fff; color: #0f172a; }
+.k8-prx-pts input[type="number"] { width: 90px !important; }
+.k8-prx-form fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.k8-prx-z { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 12px; font-size: 14px; color: #0f172a; cursor: pointer; }
+.k8-prx-z input { width: 18px; height: 18px; accent-color: #0369a1; }
+.k8-prx-fa { display: flex; gap: 8px; justify-content: flex-end; }
+.k8-prx-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.k8-prx-list li { display: grid; grid-template-columns: minmax(160px, 240px) 1fr auto; gap: 12px; align-items: start; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; }
+.k8-prx-who b { display: block; font-size: 15px; color: #0f172a; } .k8-prx-who small, .k8-prx-zs > small { font-size: 12.5px; color: #475569; }
+.k8-prx-zs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.k8-prx-zs > small { flex-basis: 100%; }
+.k8-prx-chip { font-size: 13px; background: #e0f2fe; color: #0c4a6e; border-radius: 999px; padding: 4px 11px; font-weight: 600; }
+.k8-prx-chip.is-miss { background: #fef3c7; color: #92400e; }
+.k8-prx-warn { flex-basis: 100%; margin: 2px 0 0; font-size: 12.5px; color: #92400e; }
+.k8-prx-acts { display: flex; gap: 6px; }
+.k8-prx-empty { margin: 0; padding: 18px; text-align: center; background: #f8fafc; border-radius: 12px; color: #475569; font-size: 14px; }
+.k8-prx-err { margin: 0; color: #b91c1c; font-size: 13.5px; }
+.k8-prx button:focus-visible, .k8-prx input:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+@media (max-width: 640px) { .k8-prx-list li { grid-template-columns: 1fr; } .k8-prx-acts { justify-content: flex-end; } }
+html[data-theme="dark"] .k8-prx { background: #16191e !important; border-color: #2a2f37 !important; }
+html[data-theme="dark"] .k8-prx h2 { color: #7dd3fc !important; }
+html[data-theme="dark"] .k8-prx-sub, html[data-theme="dark"] .k8-prx-who small, html[data-theme="dark"] .k8-prx-zs > small, html[data-theme="dark"] .k8-prx-form label > span, html[data-theme="dark"] .k8-prx-form legend, html[data-theme="dark"] .k8-prx-empty { color: #cbd5e1 !important; }
+html[data-theme="dark"] .k8-prx-who b { color: #f1f5f9 !important; }
+html[data-theme="dark"] .k8-prx-form, html[data-theme="dark"] .k8-prx-empty { background: #0f172a !important; border-color: #334155 !important; }
+html[data-theme="dark"] .k8-prx-form input, html[data-theme="dark"] .k8-prx-z, html[data-theme="dark"] .k8-prx-cancel, html[data-theme="dark"] .k8-prx-acts button { background: #0b1220 !important; border-color: #334155 !important; color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-prx-acts button.is-del { color: #fca5a5 !important; border-color: #7f1d1d !important; }
+html[data-theme="dark"] .k8-prx-list li { border-color: #2a2f37 !important; }
+html[data-theme="dark"] .k8-prx-chip { background: #0c2a3d !important; color: #bae6fd !important; }
+html[data-theme="dark"] .k8-prx-chip.is-miss, html[data-theme="dark"] .k8-prx-warn { background: transparent !important; color: #fcd34d !important; }
+html[data-theme="dark"] .k8-prx-add, html[data-theme="dark"] .k8-prx-save { background: #0369a1 !important; color: #fff !important; }
