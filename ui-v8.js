@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.98';
+  const APP_VERSION = '19.99';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11030,10 +11030,15 @@ window.k8HfMiss = function (slot) {
     // หัวรายงาน
     const g = x.createLinearGradient(0, 0, W, HEAD); g.addColorStop(0, '#0c4a6e'); g.addColorStop(1, '#0369a1'); x.fillStyle = g; x.fillRect(0, 0, W, HEAD);
     x.save(); x.globalAlpha = 0.07; x.fillStyle = '#fff'; x.beginPath(); x.arc(W - 90, 40, 170, 0, Math.PI * 2); x.fill(); x.beginPath(); x.arc(W - 250, HEAD + 30, 110, 0, Math.PI * 2); x.fill(); x.restore();
-    x.fillStyle = '#fff'; x.beginPath(); x.arc(PAD + 44, 84, 44, 0, Math.PI * 2); x.fill();
-    if (logo) { x.save(); x.beginPath(); x.arc(PAD + 44, 84, 40, 0, Math.PI * 2); x.clip(); x.drawImage(logo, PAD + 4, 44, 80, 80); x.restore(); }
-    txt('KHALIFAH PROGRAM', PAD + 108, 66, '600 15px', '#bae6fd');
-    txt('สรุปการมาเรียน', PAD + 108, 108, '700 38px', '#ffffff');
+    // v19.99 · โลโก้แบบทางการ: ตัดเฉพาะลายเส้น (ไม่มีวงกลม) เป็นสีขาวบนพื้นน้ำเงิน + เส้นคั่นแนวตั้ง
+    const tint = (col) => { if (!logo) return null; const sx = 0, sy = 112, sw = 549, sh = 292; const c = document.createElement('canvas'); c.width = sw; c.height = sh; const k = c.getContext('2d'); k.drawImage(logo, sx, sy, sw, sh, 0, 0, sw, sh);
+      try { const im = k.getImageData(0, 0, sw, sh); const d = im.data; const m = col.match(/\w\w/g).map((h) => parseInt(h, 16)); for (let i = 0; i < d.length; i += 4) { const l = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114); const al = Math.max(0, Math.min(255, (235 - l) * 1.25)) * d[i + 3] / 255; d[i] = m[0]; d[i + 1] = m[1]; d[i + 2] = m[2]; d[i + 3] = al; } k.putImageData(im, 0, 0); } catch (e) {}
+      return c; };
+    const LW = tint('ffffff'), LN = tint('0c4a6e');
+    if (LW) x.drawImage(LW, PAD - 4, 24, 196, 104);
+    x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(PAD + 214, 40, 1.5, 86);
+    txt('KHALIFAH PROGRAM', PAD + 238, 70, '600 15px', '#bae6fd');
+    txt('สรุปการมาเรียน', PAD + 238, 112, '700 38px', '#ffffff');
     txt('ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) + ' น.', W - PAD, 66, '400 14px', '#e0f2fe', 'right');
     // v19.97 · แถบข้อมูลรายงาน (ทางการ): หัวข้อ + ค่า แบ่งช่องด้วยเส้นคั่น · ตัวใหญ่อ่านง่าย
     const info = [['วิชา', subjName], ['ระดับชั้น', A.grade === 'ALL' ? 'ทุกชั้น' : 'มัธยมศึกษาปีที่ ' + A.grade], ['ช่วงวันที่', dTh(A.from) + (A.from !== A.to ? ' – ' + dTh(A.to) : '')]].concat(A.q ? [['นักเรียน', A.q]] : []);
@@ -11091,8 +11096,8 @@ window.k8HfMiss = function (slot) {
     if (G.length > rows.length) { txt('… และอีก ' + (G.length - rows.length) + ' รายการ (ดูทั้งหมดได้ในไฟล์ CSV)', W / 2, y + 28, '400 14px', '#64748b', 'center'); y += 40; }
     // ท้ายรายงาน
     y = H - FOOT + 16; x.fillStyle = '#cbd5e1'; x.fillRect(PAD, y, TW, 1);
-    if (logo) { x.save(); x.beginPath(); x.arc(PAD + 18, y + 38, 18, 0, Math.PI * 2); x.clip(); x.drawImage(logo, PAD, y + 20, 36, 36); x.restore(); x.strokeStyle = '#cbd5e1'; x.lineWidth = 1; x.beginPath(); x.arc(PAD + 18, y + 38, 18, 0, Math.PI * 2); x.stroke(); }
-    txt('Khalifah Program', PAD + (logo ? 48 : 0), y + 36, '700 15px', '#0c4a6e'); txt('ระบบติดตามการเรียนและพฤติกรรมนักเรียน', PAD + (logo ? 48 : 0), y + 56, '400 13px', '#64748b');
+    if (LN) x.drawImage(LN, PAD - 2, y + 18, 84, 45);
+    txt('Khalifah Program', PAD + (LN ? 96 : 0), y + 36, '700 15px', '#0c4a6e'); txt('ระบบติดตามการเรียนและพฤติกรรมนักเรียน', PAD + (LN ? 96 : 0), y + 56, '400 13px', '#64748b');
     txt('เกณฑ์ร้อยละ: ', W - PAD - 250, y + 46, '400 13px', '#64748b', 'right');
     [['≥ 90%', '#059669'], ['75–89%', '#d97706'], ['< 75%', '#dc2626']].forEach((q, i) => { const X = W - PAD - 240 + i * 82; x.fillStyle = q[1]; x.beginPath(); x.arc(X + 6, y + 41, 6, 0, Math.PI * 2); x.fill(); txt(q[0], X + 16, y + 46, '500 13px', '#334155'); });
     const name = 'สรุปการมาเรียน_' + view + (A.q ? '_' + String(A.q).trim().replace(/[\\/:*?"<>|\s]+/g, '_') : '') + '_' + A.from + (A.from !== A.to ? '_' + A.to : '') + '.png';
