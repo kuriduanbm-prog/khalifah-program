@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.00';
+  const APP_VERSION = '20.01';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11019,7 +11019,8 @@ window.k8HfMiss = function (slot) {
     try { await Promise.all(['400 16px', '500 16px', '600 16px', '700 16px'].map((w) => document.fonts.load(w + ' "IBM Plex Sans Thai"'))); } catch (e) {}
     const logo = await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = 'assets/logo.png'; });
     const rows = G.slice(0, 400);
-    const W = 1080, PAD = 48, SC = 2, HEAD = 248, KH = 132, TH = 46, RH = 58, FOOT = 88;
+    let STY = 3; try { STY = Number(window.k8RptStyle || localStorage.getItem('k8_rpt_style')) || 3; } catch (e) {}
+    const W = 1080, PAD = 48, SC = 2, HEAD = ({ 1: 272, 2: 300, 3: 290, 4: 352 })[STY] || 290, KH = 96, TH = 46, RH = 58, FOOT = 88;
     const H = HEAD + 28 + KH + 40 + 34 + TH + rows.length * RH + (G.length > rows.length ? 40 : 0) + FOOT;
     const cv = document.createElement('canvas'); cv.width = W * SC; cv.height = H * SC; const x = cv.getContext('2d'); x.scale(SC, SC);
     const rr = (X, Y, w, h, r) => { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
@@ -11027,46 +11028,80 @@ window.k8HfMiss = function (slot) {
     const fit = (t, max, font) => { x.font = font + ' ' + F; t = String(t); if (x.measureText(t).width <= max) return t; while (t.length > 1 && x.measureText(t + '…').width > max) t = t.slice(0, -1); return t + '…'; };
     // พื้นหลัง
     x.fillStyle = '#f1f5f9'; x.fillRect(0, 0, W, H);
-    // v20.00 · หัวรายงานแบบหัวจดหมาย (ทางการ): พื้นขาว · โลโก้สีน้ำเงินเข้ม · ชื่อโปรแกรม + คำอธิบาย · วันออกรายงานชิดขวา · เส้นคั่น
+    // v20.01 · หัวรายงาน 4 แบบ (มีแถบสีฟ้าทุกแบบ) · เลือกได้ที่ window.k8RptStyle / localStorage k8_rpt_style
     const tint = (col) => { if (!logo) return null; const sx = 0, sy = 112, sw = 549, sh = 292; const c = document.createElement('canvas'); c.width = sw; c.height = sh; const k = c.getContext('2d'); k.drawImage(logo, sx, sy, sw, sh, 0, 0, sw, sh);
       try { const im = k.getImageData(0, 0, sw, sh); const d = im.data; const m = col.match(/\w\w/g).map((h) => parseInt(h, 16)); for (let i = 0; i < d.length; i += 4) { const l = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114); const al = Math.max(0, Math.min(255, (235 - l) * 1.25)) * d[i + 3] / 255; d[i] = m[0]; d[i + 1] = m[1]; d[i + 2] = m[2]; d[i + 3] = al; } k.putImageData(im, 0, 0); } catch (e) {}
       return c; };
-    const LN = tint('0c4a6e');
-    const LH = 112; x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, LH);
-    if (LN) x.drawImage(LN, PAD - 6, 16, 152, 81);
-    x.fillStyle = '#cbd5e1'; x.fillRect(PAD + 160, 30, 1.5, 54);
-    txt('KHALIFAH PROGRAM', PAD + 180, 58, '700 24px', '#0c4a6e');
-    txt('ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม', PAD + 180, 84, '400 15px', '#64748b');
+    const LN = tint('0c4a6e'), LW = tint('ffffff');
+    const BLUE = '#0369a1', NAVY = '#0c4a6e';
     const now = new Date(); const TM = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-    txt('ออกรายงาน ' + now.getDate() + ' ' + TM[now.getMonth()] + ' ' + String(now.getFullYear() + 543).slice(2) + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ' น.', W - PAD, 66, '400 14px', '#475569', 'right');
-    x.fillStyle = '#0c4a6e'; x.fillRect(0, LH, W, 3); x.fillStyle = '#e2e8f0'; x.fillRect(0, LH + 3, W, 1);
-    // ชื่อรายงาน + แถบข้อมูล
-    txt('สรุปการมาเรียน', PAD, LH + 52, '700 30px', '#0c4a6e');
+    const issued = 'ออกรายงาน ' + now.getDate() + ' ' + TM[now.getMonth()] + ' ' + String(now.getFullYear() + 543).slice(2) + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ' น.';
     const info = [['วิชา', subjName], ['ระดับชั้น', A.grade === 'ALL' ? 'ทุกชั้น' : 'มัธยมศึกษาปีที่ ' + A.grade], ['ช่วงวันที่', dTh(A.from) + (A.from !== A.to ? ' – ' + dTh(A.to) : '')]].concat(A.q ? [['นักเรียน', A.q]] : []);
-    const IX = PAD, IY = LH + 70, IW = W - PAD * 2, IHh = 64;
-    rr(IX, IY, IW, IHh, 12); x.fillStyle = '#ffffff'; x.fill(); x.strokeStyle = '#cbd5e1'; x.lineWidth = 1; x.stroke();
-    const wts = info.map((q) => { x.font = '600 19px ' + F; return Math.max(110, x.measureText(q[1]).width); }); const tot = wts.reduce((p2, v) => p2 + v, 0);
-    let ix = IX; info.forEach((q, i) => {
-      const cw2 = IW * wts[i] / tot; const tx = ix + 20;
-      txt(q[0], tx, IY + 24, '500 13.5px', '#64748b'); txt(fit(q[1], cw2 - 36, '600 19px'), tx, IY + 50, '600 19px', '#0f172a');
-      if (i) { x.fillStyle = '#e2e8f0'; x.fillRect(ix, IY + 12, 1, IHh - 24); }
-      ix += cw2;
-    });
+    const infoRow = (IX, IY, IW, IHh, dark, box) => {
+      if (box) { rr(IX, IY, IW, IHh, 12); x.fillStyle = '#ffffff'; x.fill(); x.strokeStyle = '#cbd5e1'; x.lineWidth = 1; x.stroke(); }
+      const wts = info.map((q) => { x.font = '600 19px ' + F; return Math.max(110, x.measureText(q[1]).width); }); const tot = wts.reduce((p2, v) => p2 + v, 0);
+      let ix = IX; info.forEach((q, i) => {
+        const cw2 = IW * wts[i] / tot; const tx = ix + 20;
+        txt(q[0], tx, IY + IHh / 2 - 8, '500 13.5px', dark ? '#bae6fd' : '#64748b'); txt(fit(q[1], cw2 - 36, '600 19px'), tx, IY + IHh / 2 + 18, '600 19px', dark ? '#ffffff' : '#0f172a');
+        if (i) { x.fillStyle = dark ? 'rgba(255,255,255,.3)' : '#e2e8f0'; x.fillRect(ix, IY + 12, 1, IHh - 24); }
+        ix += cw2;
+      });
+    };
+    const brand = (X, Y, logoC, c1, c2, al) => {
+      txt('KHALIFAH PROGRAM', X, Y, '700 24px', c1, al); txt('ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม', X, Y + 26, '400 15px', c2, al);
+    };
+    if (STY === 1) { // หัวจดหมาย + แถบฟ้าชื่อรายงาน
+      x.fillStyle = '#fff'; x.fillRect(0, 0, W, 112);
+      if (LN) x.drawImage(LN, PAD - 6, 16, 152, 81); x.fillStyle = '#cbd5e1'; x.fillRect(PAD + 160, 30, 1.5, 54);
+      brand(PAD + 180, 58, LN, NAVY, '#64748b');
+      txt(issued, W - PAD, 66, '400 14px', '#475569', 'right');
+      const g1 = x.createLinearGradient(0, 0, W, 0); g1.addColorStop(0, NAVY); g1.addColorStop(1, BLUE); x.fillStyle = g1; x.fillRect(0, 112, W, 64);
+      txt('สรุปการมาเรียน', PAD, 156, '700 28px', '#ffffff'); txt('รายงานการเข้าเรียน', W - PAD, 152, '500 15px', '#bae6fd', 'right');
+      infoRow(PAD, 192, W - PAD * 2, 64, false, true);
+    } else if (STY === 2) { // แถบฟ้าเต็มหัว + แถบฟ้าอ่อน
+      const g2 = x.createLinearGradient(0, 0, W, 150); g2.addColorStop(0, NAVY); g2.addColorStop(1, '#0284c7'); x.fillStyle = g2; x.fillRect(0, 0, W, 150);
+      x.save(); x.globalAlpha = 0.08; x.fillStyle = '#fff'; x.beginPath(); x.arc(W - 80, 20, 150, 0, Math.PI * 2); x.fill(); x.restore();
+      if (LW) x.drawImage(LW, PAD - 6, 30, 170, 90); x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(PAD + 178, 44, 1.5, 62);
+      brand(PAD + 200, 76, LW, '#ffffff', '#bae6fd');
+      txt(issued, W - PAD, 84, '400 14px', '#e0f2fe', 'right');
+      x.fillStyle = '#e0f2fe'; x.fillRect(0, 150, W, 150);
+      txt('สรุปการมาเรียน', PAD, 200, '700 28px', NAVY);
+      infoRow(PAD, 218, W - PAD * 2, 64, false, true);
+    } else if (STY === 3) { // แถบฟ้าบาง + การ์ดฟ้ารวมชื่อรายงานและข้อมูล
+      x.fillStyle = '#fff'; x.fillRect(0, 0, W, 122); x.fillStyle = BLUE; x.fillRect(0, 0, W, 10);
+      if (LN) x.drawImage(LN, PAD - 6, 26, 152, 81); x.fillStyle = '#cbd5e1'; x.fillRect(PAD + 160, 40, 1.5, 54);
+      brand(PAD + 180, 68, LN, NAVY, '#64748b');
+      txt(issued, W - PAD, 76, '400 14px', '#475569', 'right');
+      x.fillStyle = '#e2e8f0'; x.fillRect(0, 122, W, 1);
+      const g3 = x.createLinearGradient(PAD, 0, W - PAD, 0); g3.addColorStop(0, NAVY); g3.addColorStop(1, BLUE);
+      rr(PAD, 142, W - PAD * 2, 132, 16); x.fillStyle = g3; x.fill();
+      txt('สรุปการมาเรียน', PAD + 22, 184, '700 28px', '#ffffff');
+      x.fillStyle = 'rgba(255,255,255,.25)'; x.fillRect(PAD + 22, 198, W - PAD * 2 - 44, 1);
+      infoRow(PAD + 2, 202, W - PAD * 2 - 4, 66, true, false);
+    } else { // STY 4 · ทางการกึ่งกลาง
+      x.fillStyle = '#fff'; x.fillRect(0, 0, W, 242); x.fillStyle = BLUE; x.fillRect(0, 0, W, 8);
+      if (LN) x.drawImage(LN, W / 2 - 76, 22, 152, 81);
+      txt('KHALIFAH PROGRAM', W / 2, 132, '700 24px', NAVY, 'center'); txt('ระบบเช็คชื่อ มาเรียน ละหมาด และกิจกรรม', W / 2, 156, '400 15px', '#64748b', 'center');
+      const g4 = x.createLinearGradient(0, 0, W, 0); g4.addColorStop(0, NAVY); g4.addColorStop(0.5, BLUE); g4.addColorStop(1, NAVY); x.fillStyle = g4; x.fillRect(0, 176, W, 58);
+      txt('สรุปการมาเรียน', W / 2, 215, '700 26px', '#ffffff', 'center');
+      txt(issued, W - PAD, 260, '400 13.5px', '#475569', 'right');
+      infoRow(PAD, 272, W - PAD * 2, 64, false, true);
+    }
     // การ์ดตัวเลข
     let y = HEAD + 28;
     const cards = [['อัตรามาเรียน', S.pct + '%', sessions + ' คาบ · ' + S.total + ' รายการ', '#0369a1', '#e0f2fe'], ['มาเรียน', S.present, 'ครั้ง', '#047857', '#d1fae5'], ['มาสาย', S.late, 'ครั้ง', '#b45309', '#fef3c7'], ['ลา', S.leave, 'ครั้ง', '#1d4ed8', '#dbeafe'], ['ขาด', S.absent, 'ครั้ง', '#b91c1c', '#fee2e2']];
-    const gap = 14, cw0 = 248, cw = (W - PAD * 2 - cw0 - gap * 4) / 4;
+    const gap = 12, cw0 = 230, cw = (W - PAD * 2 - cw0 - gap * 4) / 4;
     cards.forEach((c, i) => {
       const X = i === 0 ? PAD : PAD + cw0 + gap + (i - 1) * (cw + gap), w = i === 0 ? cw0 : cw;
-      x.save(); x.shadowColor = 'rgba(15,23,42,.08)'; x.shadowBlur = 16; x.shadowOffsetY = 4; rr(X, y, w, KH, 18); x.fillStyle = i === 0 ? '#0c4a6e' : '#ffffff'; x.fill(); x.restore();
+      x.save(); x.shadowColor = 'rgba(15,23,42,.08)'; x.shadowBlur = 12; x.shadowOffsetY = 3; rr(X, y, w, KH, 14); x.fillStyle = i === 0 ? '#0c4a6e' : '#ffffff'; x.fill(); x.restore();
       if (i === 0) {
-        txt(c[0], X + 22, y + 34, '600 15px', '#bae6fd'); txt(c[1], X + 22, y + 88, '700 46px', '#ffffff'); txt(c[2], X + 22, y + 114, '400 13.5px', '#e0f2fe');
-        const R = 30, ccx = X + w - 48, ccy = y + 70; x.lineWidth = 9; x.strokeStyle = 'rgba(255,255,255,.18)'; x.beginPath(); x.arc(ccx, ccy, R, 0, Math.PI * 2); x.stroke();
+        txt(c[0], X + 20, y + 26, '600 13.5px', '#bae6fd'); txt(c[1], X + 20, y + 66, '700 34px', '#ffffff'); txt(c[2], X + 20, y + 86, '400 12px', '#e0f2fe');
+        const R = 23, ccx = X + w - 40, ccy = y + 48; x.lineWidth = 7; x.strokeStyle = 'rgba(255,255,255,.18)'; x.beginPath(); x.arc(ccx, ccy, R, 0, Math.PI * 2); x.stroke();
         x.strokeStyle = S.pct >= 90 ? '#4ade80' : S.pct >= 75 ? '#fbbf24' : '#f87171'; x.lineCap = 'round'; x.beginPath(); x.arc(ccx, ccy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, S.pct / 100)); x.stroke(); x.lineCap = 'butt';
       } else {
-        x.save(); rr(X, y, w, KH, 18); x.clip(); x.fillStyle = c[3]; x.fillRect(X, y, 6, KH); x.restore();
-        rr(X + 22, y + 20, 36, 36, 10); x.fillStyle = c[4]; x.fill(); x.fillStyle = c[3]; x.beginPath(); x.arc(X + 40, y + 38, 6, 0, Math.PI * 2); x.fill();
-        txt(c[0], X + 68, y + 44, '600 15px', '#334155'); txt(c[1], X + 22, y + 104, '700 40px', c[3]); x.font = '700 40px ' + F; txt(c[2], X + 30 + x.measureText(String(c[1])).width, y + 104, '400 14px', '#64748b');
+        x.save(); rr(X, y, w, KH, 14); x.clip(); x.fillStyle = c[3]; x.fillRect(X, y, 5, KH); x.restore();
+        rr(X + 18, y + 14, 26, 26, 8); x.fillStyle = c[4]; x.fill(); x.fillStyle = c[3]; x.beginPath(); x.arc(X + 31, y + 27, 4.5, 0, Math.PI * 2); x.fill();
+        txt(c[0], X + 52, y + 32, '600 13.5px', '#334155'); txt(c[1], X + 18, y + 80, '700 32px', c[3]); x.font = '700 32px ' + F; txt(c[2], X + 24 + x.measureText(String(c[1])).width, y + 80, '400 12.5px', '#64748b');
       }
     });
     // ตาราง
