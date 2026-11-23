@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '19.93';
+  const APP_VERSION = '19.94';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -10920,7 +10920,17 @@ window.k8HfMiss = function (slot) {
     const subs = subjects(); const allowed = new Set(subs.map((s) => String(s.id)));
     return (A.rows || []).filter((r) => r && r.date && r.subjectCode && r.date >= A.from && r.date <= A.to &&
       (A.subj ? String(r.subjectCode) === String(A.subj) : (isAdm() || allowed.has(String(r.subjectCode)))) &&
-      (A.grade === 'ALL' || String(r.grade || '').indexOf(A.grade) !== -1 || String(r.grade || '').replace(/\D/g, '') === A.grade));
+      (A.grade === 'ALL' || String(r.grade || '').indexOf(A.grade) !== -1 || String(r.grade || '').replace(/\D/g, '') === A.grade) && stuHit(r));
+  }
+  // v19.94 · ค้นหานักเรียนรายบุคคล (ชื่อ/รหัส) · กรองทุกส่วน: ตัวเลขสรุป รายวัน รายวิชา รายละเอียด รูปภาพ CSV
+  function stuHit(r) {
+    const q = String(A.q || '').trim().toLowerCase(); if (!q) return true;
+    if (/^\d+$/.test(q)) return norm(r.studentId) === norm(q) || String(r.studentId || '').indexOf(q) !== -1;
+    return (String(r.studentName || '') + ' ' + String(r.studentId || '')).toLowerCase().indexOf(q) !== -1;
+  }
+  function stuList() {
+    const m = {}; (A.rows || []).forEach((r) => { if (!r || !r.studentId || !r.date || r.date < A.from || r.date > A.to || (A.subj && String(r.subjectCode) !== String(A.subj)) || !(A.grade === 'ALL' || String(r.grade || '').indexOf(A.grade) !== -1 || String(r.grade || '').replace(/\D/g, '') === A.grade)) return; const k = norm(r.studentId); if (!m[k]) m[k] = r; });
+    return Object.keys(m).map((k) => m[k]).sort((a, b) => String(a.studentName || '').localeCompare(String(b.studentName || ''), 'th')).slice(0, 1500);
   }
   function stats(list) { const c = { present: 0, late: 0, leave: 0, absent: 0 }; list.forEach((r) => { c[KEY(r.status)]++; }); c.total = list.length; c.den = c.present + c.late + c.absent; c.pct = c.den ? Math.round((c.present + c.late) / c.den * 100) : (c.total ? 100 : 0); return c; }
   function render() {
@@ -10933,9 +10943,17 @@ window.k8HfMiss = function (slot) {
     let h = '<section class="k8-asum-f">' +
       '<label><span>วิชา</span><select onchange="k8AsumSet(\'subj\', this.value)"><option value="">' + (isAdm() ? 'ทุกวิชา' : 'ทุกวิชาที่สอน') + '</option>' + subs.map((s) => '<option value="' + esc(s.id) + '"' + (String(s.id) === String(A.subj) ? ' selected' : '') + '>' + esc(s.name) + '</option>').join('') + '</select></label>' +
       '<label><span>ชั้นปี</span><select onchange="k8AsumSet(\'grade\', this.value)">' + ['ALL', '1', '2', '3', '4', '5', '6'].map((g) => '<option value="' + g + '"' + (A.grade === g ? ' selected' : '') + '>' + (g === 'ALL' ? 'ทุกชั้น' : 'ม.' + g) + '</option>').join('') + '</select></label>' +
+      '<label class="k8-asum-who"><span>ค้นหานักเรียนรายบุคคล</span><span class="k8-asum-qw"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" class="k8-asum-q2" list="k8AsumDL" placeholder="พิมพ์ชื่อหรือรหัสนักเรียน" value="' + esc(A.q) + '" oninput="k8AsumQ(this)" autocomplete="off"></span></label>' +
+      '<datalist id="k8AsumDL">' + stuList().map((r) => '<option value="' + esc(r.studentName || r.studentId) + '">' + esc(String(r.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.') + ' · ' + r.studentId) + '</option>').join('') + '</datalist>' +
       '<div class="k8-asum-pre">' + [['today', 'วันนี้'], ['week', '7 วัน'], ['month', 'เดือนนี้'], ['term', 'ภาคเรียน']].map(([k, l]) => '<button type="button" aria-pressed="' + (A.preset === k) + '" onclick="k8AsumPre(\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
       '<div class="k8-asum-dr"><label><span>ตั้งแต่</span><input type="date" value="' + A.from + '" onchange="k8AsumSet(\'from\', this.value)"></label><label><span>ถึง</span><input type="date" value="' + A.to + '" onchange="k8AsumSet(\'to\', this.value)"></label></div></section>';
     if (A.loading && !A.rows) { B.innerHTML = h + '<p class="k8-asum-empty">กำลังโหลดข้อมูลการมาเรียน…</p>'; return; }
+    if (String(A.q || '').trim()) {
+      const who = {}; L.forEach((r) => { who[norm(r.studentId)] = r; }); const ks = Object.keys(who);
+      h += '<div class="k8-asum-one">' + (ks.length === 1 ? '<span class="k8-asum-av" aria-hidden="true">' + esc(String(who[ks[0]].studentName || '?').replace(/^(นางสาว|นาง|นาย|เด็กชาย|เด็กหญิง)/, '').trim().charAt(0)) + '</span><div><b>' + esc(who[ks[0]].studentName || who[ks[0]].studentId) + '</b><small>' + esc(String(who[ks[0]].grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.') + ' · รหัส ' + who[ks[0]].studentId) + '</small></div>'
+        : '<div><b>ค้นหา “' + esc(A.q) + '”</b><small>' + (ks.length ? 'พบ ' + ks.length + ' คน · เลือกชื่อจากรายการเพื่อดูรายบุคคล' : 'ไม่พบนักเรียนในช่วงและชั้นที่เลือก') + '</small></div>') +
+        '<button type="button" onclick="k8AsumClr()">ล้างการค้นหา</button></div>';
+    }
     h += '<section class="k8-asum-kpi"><div class="is-big"><small>อัตรามาเรียน</small><b>' + S.pct + '%</b><span>' + sessions + ' คาบ · ' + S.total + ' รายการ</span></div>' +
       ['present', 'late', 'leave', 'absent'].map((k) => k !== 'present' && S[k] ? '<button type="button" class="is-' + k + ' k8-asum-kb" onclick="k8AsumDet(\'__all\',\'' + k + '\')" aria-label="ดูรายการ' + LBL[k] + 'ทั้งหมด ' + S[k] + ' ครั้ง"><small>' + LBL[k] + ' <i aria-hidden="true">›</i></small><b>' + S[k] + '</b></button>' : '<div class="is-' + k + '"><small>' + LBL[k] + '</small><b>' + S[k] + '</b></div>').join('') + '</section>';
     h += '<div class="k8-asum-tabs" role="tablist">' + [['stu', 'รายนักเรียน'], ['day', 'รายวัน'], ['subj', 'รายวิชา']].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (A.view === k) + '" onclick="k8AsumSet(\'view\', \'' + k + '\')">' + l + '</button>').join('') + '</div>';
@@ -10945,9 +10963,7 @@ window.k8HfMiss = function (slot) {
     L.forEach((r) => { const k = kf(r); (groups[k] = groups[k] || []).push(r); });
     let G = Object.keys(groups).map((k) => { const list = groups[k]; const st = stats(list); const r0 = list[0]; return { k, st, label: A.view === 'stu' ? (r0.studentName || r0.studentId) : A.view === 'day' ? dTh(k) : (r0.subjectName || k), sub: A.view === 'stu' ? String(r0.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.') + ' · ' + r0.studentId : A.view === 'day' ? new Set(list.map((r) => r.subjectCode + '|' + (r.period || ''))).size + ' คาบ' : new Set(list.map((r) => r.date + '|' + (r.period || ''))).size + ' คาบ' }; });
     if (A.view === 'day') G.sort((a, b) => b.k.localeCompare(a.k)); else G.sort((a, b) => a.st.pct - b.st.pct || a.label.localeCompare(b.label, 'th'));
-    if (A.view === 'stu' && A.q) G = G.filter((g) => (g.label + ' ' + g.sub).toLowerCase().indexOf(A.q.toLowerCase()) !== -1);
-    h += (A.view === 'stu' ? '<input type="search" class="k8-asum-q" placeholder="ค้นหาชื่อหรือรหัสนักเรียน" value="' + esc(A.q) + '" oninput="k8AsumQ(this)">' : '') +
-      '<div class="k8-asum-tw"><table class="k8-asum-t"><thead><tr><th>' + (A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา') + '</th><th>มา</th><th>สาย</th><th>ลา</th><th>ขาด</th><th>%</th></tr></thead><tbody>' +
+    h += '<div class="k8-asum-tw"><table class="k8-asum-t"><thead><tr><th>' + (A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา') + '</th><th>มา</th><th>สาย</th><th>ลา</th><th>ขาด</th><th>%</th></tr></thead><tbody>' +
       G.map((g) => '<tr class="' + (g.st.pct < 80 ? 'is-low' : '') + '"><td><b>' + esc(g.label) + '</b><small>' + esc(g.sub) + '</small></td><td>' + g.st.present + '</td><td>' + cnt(g, 'late') + '</td><td>' + cnt(g, 'leave') + '</td><td class="' + (g.st.absent ? 'is-ab' : '') + '">' + cnt(g, 'absent') + '</td><td><span class="k8-asum-pc" style="--p:' + g.st.pct + '">' + g.st.pct + '%</span></td></tr>').join('') + '</tbody></table></div>' +
       '<p class="k8-asum-note">% = (มา + สาย) ÷ ทุกครั้งที่เช็คชื่อ · แถวสีแดง = ต่ำกว่า 80%</p>';
     B.innerHTML = h; A.lastG = G;
@@ -10980,7 +10996,8 @@ window.k8HfMiss = function (slot) {
   };
   window.k8AsumSet = function (k, v) { A[k] = v; if (k === 'from' || k === 'to') { A.preset = ''; if (A.from > A.to) { const t = A.from; A.from = A.to; A.to = t; } } render(); };
   window.k8AsumPre = function (k) { setPreset(k); render(); };
-  let qt = null; window.k8AsumQ = function (el) { clearTimeout(qt); qt = setTimeout(() => { A.q = el.value; const pos = el.selectionStart; render(); const n = document.querySelector('.k8-asum-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };
+  window.k8AsumClr = function () { A.q = ''; render(); const n = document.querySelector('.k8-asum-q2'); if (n) n.focus(); };
+  let qt = null; window.k8AsumQ = function (el) { clearTimeout(qt); qt = setTimeout(() => { A.q = el.value; const pos = el.selectionStart; render(); const n = document.querySelector('.k8-asum-q2'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 150); };
   window.k8AsumOpen = function () {
     const el = document.getElementById('k8Asum'); if (!el) return;
     if (!A.from) setPreset('month');
@@ -10997,7 +11014,7 @@ window.k8HfMiss = function (slot) {
     const L = A.rows ? filtered() : []; const S = stats(L); const sessions = new Set(L.map((r) => r.date + '|' + r.subjectCode + '|' + (r.period || ''))).size;
     let subjName = 'ทุกวิชา'; try { const x = (appSubjects || []).find((y) => String(y.id) === String(A.subj)); if (x) subjName = x.name; } catch (e) {}
     const view = A.view === 'stu' ? 'รายนักเรียน' : A.view === 'day' ? 'รายวัน' : 'รายวิชา';
-    const m = { title: 'สรุปการมาเรียน', sub: subjName + ' · ' + (A.grade === 'ALL' ? 'ทุกชั้น' : 'ม.' + A.grade) + ' · ' + dTh(A.from) + (A.from !== A.to ? ' – ' + dTh(A.to) : '') + (A.q && A.view === 'stu' ? ' · ค้นหา “' + A.q + '”' : ''), made: 'ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH'),
+    const m = { title: 'สรุปการมาเรียน', sub: subjName + ' · ' + (A.grade === 'ALL' ? 'ทุกชั้น' : 'ม.' + A.grade) + ' · ' + dTh(A.from) + (A.from !== A.to ? ' – ' + dTh(A.to) : '') + (A.q ? ' · นักเรียน: ' + A.q : ''), made: 'ออกรายงานเมื่อ ' + new Date().toLocaleString('th-TH'),
       sections: [
         { title: 'ภาพรวม', cols: ['อัตรามาเรียน', 'จำนวนคาบ', 'รายการเช็คชื่อ', 'มา', 'สาย', 'ลา', 'ขาด'], num: [1, 2, 3, 4, 5, 6], rows: [[S.pct + '%', sessions, S.total, S.present, S.late, S.leave, S.absent]] },
         { title: view + ' ' + G.length + ' รายการ', cols: [A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา', 'รายละเอียด', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'], num: [2, 3, 4, 5, 6], rows: G.map((g) => [g.label, g.sub, g.st.present, g.st.late, g.st.leave, g.st.absent, g.st.pct + '%']) }
@@ -11008,7 +11025,7 @@ window.k8HfMiss = function (slot) {
     const G = A.lastG || []; if (!G.length) { try { showToast('ยังไม่มีข้อมูลให้ดาวน์โหลด', 'warning'); } catch (e) {} return; }
     const head = [A.view === 'stu' ? 'นักเรียน' : A.view === 'day' ? 'วันที่' : 'วิชา', 'รายละเอียด', 'มา', 'สาย', 'ลา', 'ขาด', 'ร้อยละ'];
     const csv = [head].concat(G.map((g) => [g.label, g.sub, g.st.present, g.st.late, g.st.leave, g.st.absent, g.st.pct])).map((r) => r.map((v) => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })); a.download = 'สรุปการมาเรียน_' + A.from + '_' + A.to + '.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })); a.download = 'สรุปการมาเรียน_' + (A.q ? String(A.q).trim().replace(/[\\/:*?"<>|\s]+/g, '_') + '_' : '') + A.from + '_' + A.to + '.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   };
 })();
 

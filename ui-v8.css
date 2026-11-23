@@ -7775,3 +7775,22 @@ html[data-theme="dark"] .k8-pfl-what b { color: #7dd3fc !important; } html[data-
 html[data-theme="dark"] .k8-pfl-list li.is-ok .k8-pfl-what p { color: #cbd5e1 !important; } html[data-theme="dark"] .k8-pfl-what a { color: #7dd3fc !important; }
 html[data-theme="dark"] .k8-pfl-st.is-no { background: #450a0a !important; color: #fecaca !important; } html[data-theme="dark"] .k8-pfl-st.is-ok { background: #064e3b !important; color: #a7f3d0 !important; }
 html[data-theme="dark"] .k8-pfl-add { background: #0369a1 !important; color: #fff !important; }
+/* v19.94 · สรุปการมาเรียน: ค้นหานักเรียนรายบุคคล */
+.k8-asum-who { grid-column: 1 / -1; }
+.k8-asum-qw { display: flex; align-items: center; gap: 8px; height: 42px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0 10px; background: #fff; color: #64748b; }
+.k8-asum-qw:focus-within { outline: 2px solid #0369a1; outline-offset: 1px; border-color: #0369a1; }
+.k8-asum-f .k8-asum-qw input.k8-asum-q2 { border: 0; height: 40px; padding: 0; flex: 1; min-width: 0; outline: 0; background: transparent; }
+.k8-asum-one { display: flex; align-items: center; gap: 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 14px; padding: 10px 14px; margin-top: 10px; }
+.k8-asum-one > div { flex: 1; min-width: 0; }
+.k8-asum-one b { display: block; font-size: 15.5px; color: #0c4a6e; }
+.k8-asum-one small { font-size: 12.5px; color: #475569; }
+.k8-asum-av { width: 40px; height: 40px; border-radius: 50%; background: #0369a1; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 17px; flex: none; }
+.k8-asum-one button { font: inherit; font-size: 13px; border: 1px solid #0369a1; color: #0369a1; background: #fff; border-radius: 9px; padding: 6px 12px; min-height: 36px; cursor: pointer; white-space: nowrap; }
+.k8-asum-one button:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+html[data-theme="dark"] .k8-asum-qw { background: #0f172a !important; border-color: #334155 !important; color: #94a3b8 !important; }
+html[data-theme="dark"] .k8-asum-f .k8-asum-qw input.k8-asum-q2 { background: transparent !important; color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-asum-one { background: #0c2a3d !important; border-color: #155e75 !important; }
+html[data-theme="dark"] .k8-asum-one b { color: #7dd3fc !important; }
+html[data-theme="dark"] .k8-asum-one small { color: #cbd5e1 !important; }
+html[data-theme="dark"] .k8-asum-av { background: #0369a1 !important; color: #fff !important; }
+html[data-theme="dark"] .k8-asum-one button { background: #0f172a !important; color: #7dd3fc !important; border-color: #0369a1 !important; }
