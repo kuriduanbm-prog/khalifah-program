@@ -7841,3 +7841,22 @@ html[data-theme="dark"] .k8-prx-add, html[data-theme="dark"] .k8-prx-save { back
 .k8h-surahs.is-locked button { cursor: default; }
 .k8h-surahs.is-locked button[aria-pressed="false"] .k8h-ck { opacity: .45; }
 html[data-theme="dark"] .k8h-lock { background: #422006 !important; color: #fde68a !important; }
+/* v20.04 · ท่องจำบางส่วน: ช่องจำนวนอายะฮ์ต่อซูเราะห์ */
+.k8h-surahs li.k8h-srow { display: flex; align-items: stretch; gap: 6px; }
+.k8h-surahs li.k8h-srow > button { flex: 1; min-width: 0; }
+.k8h-ay { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 62px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 4px; cursor: text; }
+.k8h-ay input { width: 44px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 2px; font: inherit; font-size: 15px; font-weight: 700; text-align: center; color: #0c4a6e; background: #f8fafc; -moz-appearance: textfield; }
+.k8h-ay input::-webkit-outer-spin-button, .k8h-ay input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.k8h-ay input:focus-visible { outline: 2px solid #0369a1; outline-offset: 1px; }
+.k8h-ay span { font-size: 11px; color: #64748b; }
+.k8h-srow.is-part > button { background: #fffbeb; border-color: #fde68a; }
+.k8h-srow.is-part .k8h-ay { background: #fffbeb; border-color: #fde68a; }
+.k8h-srow.is-part .k8h-ay input { border-color: #f59e0b; color: #92400e; background: #fff; }
+.k8h-st small em { font-style: normal; color: #b45309; font-weight: 600; }
+.k8h-surahs.is-locked .k8h-ay input { opacity: .6; }
+html[data-theme="dark"] .k8h-ay { background: #16191e !important; border-color: #2a2f37 !important; }
+html[data-theme="dark"] .k8h-ay input { background: #0f172a !important; border-color: #334155 !important; color: #7dd3fc !important; }
+html[data-theme="dark"] .k8h-ay span { color: #94a3b8 !important; }
+html[data-theme="dark"] .k8h-srow.is-part > button, html[data-theme="dark"] .k8h-srow.is-part .k8h-ay { background: #2a2108 !important; border-color: #854d0e !important; }
+html[data-theme="dark"] .k8h-srow.is-part .k8h-ay input { color: #fcd34d !important; border-color: #b45309 !important; }
+html[data-theme="dark"] .k8h-st small em { color: #fcd34d !important; }

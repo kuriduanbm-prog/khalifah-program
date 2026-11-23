@@ -485,7 +485,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     });
     const allH = readJSON('khalifah_student_hasanat', {});
     const mine = allH[sid] || {};
-    if (!memLatest && mine.memorization) memLatest = Number(mine.memorization.count) || (mine.memorization.memorizedSurahs || []).length || 0;
+    if (!memLatest && mine.memorization) memLatest = Number(mine.memorization.count) || (mine.memorization.memorizedSurahs || []).filter((x) => !/\(/.test(String(x))).length || 0;
     let memNew = memLatest;
     if (typeof window.k8HasanatStats === 'function') {
       const ymdL = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -3033,6 +3033,9 @@ window.k8RegBirthChange = function (v) {
       const m = SUR.find((y) => y.name === x || clean(y.name) === clean(x)); return m ? m.num : 0;
     }).filter((x) => x >= 1 && x <= 114))).sort((a, b) => a - b);
   };
+  // v20.04 · ท่องจำบางส่วน: เก็บใน memorizedSurahs เป็น "96(7)" = ซูเราะห์ 96 ท่องได้ 7 อายะฮ์ (ยังไม่ครบ)
+  const memPart = (h) => { const o = {}; ((h && h.memorization && h.memorization.memorizedSurahs) || []).forEach((x) => { const m = String(x).match(/^\s*(\d{1,3})\((\d{1,3})\)\s*$/); if (m) o[+m[1]] = +m[2]; }); return o; };
+  const memAll = (h) => { const full = memList(h); const part = memPart(h); return full.concat(Object.keys(part).filter((n) => !full.includes(+n) && part[n] > 0).map((n) => n + '(' + part[n] + ')')); };
   function quranState(h) {
     const page = Math.max(0, Math.min(PAGES, Number(h && h.quran && h.quran.currentPage) || 0));
     const khatam = Math.max(0, Number(h && h.quran && h.quran.khatamCount) || 0);
@@ -3075,7 +3078,7 @@ window.k8RegBirthChange = function (v) {
     if (RO()) return;
     const payload = { studentId: s.studentId, date: date, studentName: s.fullName, grade: s.grade,
       quran: { pagesToday: dayPages(date), currentPage: q.page, juzCompleted: q.done, stars: q.stars, khatamCount: q.khatam },
-      memorization: { count: memList(h).length, memorizedSurahs: memList(h) },
+      memorization: { count: memList(h).length, memorizedSurahs: memAll(h) },
       sunnah: { totalRakaat: Number(su.totalRakaat) || 0, rawatib: rawatib } };
     upsertRow(date, Object.assign({}, payload, { by: asTarget() ? 'แอดมิน' + (admin() && admin().fullName ? ' · ' + admin().fullName : '') : 'นักเรียน' }));
     try { if (typeof renderHomeF === 'function') renderHomeF(); } catch (e) {}
@@ -3119,17 +3122,19 @@ window.k8RegBirthChange = function (v) {
     return html;
   }
   function memTab() {
-    const h = H(); const mem = new Set(memList(h)); let list = [];
+    const h = H(); const mem = new Set(memList(h)); const part = memPart(h); let list = [];
     try { list = QURAN_SURAHS || []; } catch (e) {}
     const q = (S.memQ || '').trim();
     const shown = list.filter((x) => (S.memFilter === 'all' || (S.memFilter === 'amma' && x.num >= 78) || (S.memFilter === 'done' && mem.has(x.num)) || (S.memFilter === 'todo' && !mem.has(x.num))) && (!q || String(x.num) === q || x.name.indexOf(q) !== -1 || (x.arabic || '').indexOf(q) !== -1)).slice().sort((a, b) => b.num - a.num); // v17.76 · เรียงจากซูเราะห์ท้าย (114) ขึ้นบนสุด
     const newToday = ((h.dailyLogs || {})[S.date] || {}).memNew || [];
     return '<section class="k8h-card"><span class="k8h-lbl">ท่องจำได้แล้ว</span><div class="k8h-big">' + mem.size + ' <small>/ 114 ซูเราะห์</small></div><div class="k8h-bar is-green"><span style="width:' + (mem.size / 114 * 100).toFixed(1) + '%"></span></div>' +
-      '<p class="k8h-hint">' + (newToday.length ? 'วันที่เลือกท่องจำใหม่ ' + newToday.length + ' ซูเราะห์' : (memLocked() ? 'อาจารย์หรือแอดมินเป็นผู้บันทึกการท่องจำ' : 'แตะซูเราะห์ที่ท่องจำได้ ระบบบันทึกให้อัตโนมัติ')) + '</p></section>' +
+      '<p class="k8h-hint">' + (newToday.length ? 'วันที่เลือกท่องจำใหม่ ' + newToday.length + ' ซูเราะห์' : (memLocked() ? 'อาจารย์หรือแอดมินเป็นผู้บันทึกการท่องจำ' : 'แตะซูเราะห์ที่ท่องครบ · ท่องได้บางส่วน ใส่จำนวนอายะฮ์ในช่องตัวเลข')) + (Object.keys(part).filter((n) => !mem.has(+n)).length ? ' · ท่องได้บางส่วน ' + Object.keys(part).filter((n) => !mem.has(+n)).length + ' ซูเราะห์' : '') + '</p></section>' +
       (memLocked() ? '<p class="k8h-lock" role="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>นักเรียนชายดูรายการได้อย่างเดียว · เมื่อท่องจำได้ให้ไปท่องกับอาจารย์ แล้วอาจารย์จะติ๊กให้</p>' : '') +
       '<section class="k8h-card"><input type="search" class="k8h-search" placeholder="ค้นหาชื่อซูเราะห์ หรือเลขลำดับ" value="' + esc(S.memQ) + '" oninput="k8HasMemQ(this)">' +
       '<div class="k8h-chips">' + [['all', 'ทั้งหมด'], ['amma', 'ยุซอัมมา'], ['todo', 'ยังไม่ได้ท่อง'], ['done', 'ท่องแล้ว']].map(([k, l]) => '<button type="button" aria-pressed="' + (S.memFilter === k) + '" onclick="k8HasSet(\'memFilter\',\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
-      '<ul class="k8h-surahs' + (memLocked() ? ' is-locked' : '') + '">' + (shown.length ? shown.map((x) => { const on = mem.has(x.num); return '<li><button type="button" aria-pressed="' + on + '" onclick="k8HasToggleSurah(' + x.num + ')"><span class="k8h-sn">' + x.num + '</span><span class="k8h-st"><b>' + esc(x.name) + '</b><small>ยุซ ' + x.juz + ' · ' + x.ayahs + ' อายะฮ์</small></span><span class="k8h-ar">' + esc(x.arabic || '') + '</span><span class="k8h-ck" aria-hidden="true">' + (on ? '✓' : '') + '</span></button></li>'; }).join('') : '<li class="k8-li-empty">ไม่พบซูเราะห์</li>') + '</ul></section>';
+      '<ul class="k8h-surahs' + (memLocked() ? ' is-locked' : '') + '">' + (shown.length ? shown.map((x) => { const on = mem.has(x.num); const pv = part[x.num] || 0;
+        return '<li class="k8h-srow' + (pv && !on ? ' is-part' : '') + '"><button type="button" aria-pressed="' + on + '" onclick="k8HasToggleSurah(' + x.num + ')"><span class="k8h-sn">' + x.num + '</span><span class="k8h-st"><b>' + esc(x.name) + '</b><small>ยุซ ' + x.juz + ' · ' + x.ayahs + ' อายะฮ์' + (pv && !on ? ' · <em>ท่องได้ ' + pv + '/' + x.ayahs + '</em>' : '') + '</small></span><span class="k8h-ar">' + esc(x.arabic || '') + '</span><span class="k8h-ck" aria-hidden="true">' + (on ? '✓' : '') + '</span></button>' +
+          '<label class="k8h-ay" title="ท่องได้กี่อายะฮ์ (ยังไม่ครบซูเราะห์)"><input type="number" inputmode="numeric" min="0" max="' + x.ayahs + '" value="' + (on ? x.ayahs : (pv || '')) + '" placeholder="–" aria-label="จำนวนอายะฮ์ที่ท่องได้ ซูเราะห์' + esc(x.name) + '" onchange="k8HasAyah(' + x.num + ',this.value)"' + (memLocked() ? ' disabled' : '') + '><span>/' + x.ayahs + '</span></label></li>'; }).join('') : '<li class="k8-li-empty">ไม่พบซูเราะห์</li>') + '</ul></section>';
   }
   function sunTab() {
     if (!S.sun || S.sunDate !== S.date) { const d = daySunnah(S.date); S.sun = d ? JSON.parse(JSON.stringify({ rawatib: d.rawatib || {}, duhaRakaat: d.duhaRakaat || 0, witrRakaat: d.witrRakaat || 0, tahajjudRakaat: d.tahajjudRakaat || 0 })) : { rawatib: {}, duhaRakaat: 0, witrRakaat: 0, tahajjudRakaat: 0 }; S.sunDate = S.date; }
@@ -3200,7 +3205,9 @@ window.k8RegBirthChange = function (v) {
     const mem = new Set(memList(h)); const on = !mem.has(num);
     if (on) mem.add(num); else mem.delete(num);
     const arr = Array.from(mem).sort((a, b) => a - b);
-    h.memorization = Object.assign({}, h.memorization, { memorizedSurahs: arr, count: arr.length, lastUpdated: new Date().toISOString() });
+    const part = memPart(h); delete part[num]; // ติ๊กครบ/ยกเลิก = ล้างจำนวนอายะฮ์บางส่วนของซูเราะห์นี้
+    const all = arr.concat(Object.keys(part).filter((n) => !mem.has(+n) && part[n] > 0).map((n) => n + '(' + part[n] + ')'));
+    h.memorization = Object.assign({}, h.memorization, { memorizedSurahs: all, count: arr.length, lastUpdated: new Date().toISOString() });
     h.dailyLogs = h.dailyLogs || {}; const dl = h.dailyLogs[S.date] = Object.assign({}, h.dailyLogs[S.date] || {}, { date: S.date });
     const nw = new Set(dl.memNew || []); if (on) nw.add(num); else nw.delete(num); dl.memNew = Array.from(nw);
     saveH(h);
@@ -3216,6 +3223,27 @@ window.k8RegBirthChange = function (v) {
     if (btn && top0 != null) { const d = btn.getBoundingClientRect().top - top0; if (Math.abs(d) > 1) window.scrollTo(0, window.scrollY + d); }
     if (btn) try { btn.focus({ preventScroll: true }); } catch (e) {}
     clearTimeout(memTimer); memTimer = setTimeout(() => push(S.date, 'บันทึกการท่องจำแล้ว · รวม ' + arr.length + ' ซูเราะห์'), 900);
+  };
+  // v20.04 · ใส่จำนวนอายะฮ์ที่ท่องได้ (บางส่วน) · ใส่ครบ = ติ๊กทั้งซูเราะห์ · 0/ว่าง = ล้าง
+  window.k8HasAyah = function (num, v) { if (RO()) { roMsg(); return; }
+    if (memLocked()) { if (typeof showToast === 'function') showToast('นักเรียนชาย: การท่องจำให้อาจารย์หรือแอดมินเป็นผู้บันทึก', 'warning'); render(); return; }
+    const h = H(); if (!h || future()) { render(); return; }
+    let SUR = []; try { SUR = QURAN_SURAHS || []; } catch (e) {} const su = SUR.find((x) => x.num === num); if (!su) return;
+    let n = Math.max(0, Math.min(su.ayahs, parseInt(v, 10) || 0));
+    const mem = new Set(memList(h)); const part = memPart(h); const wasOn = mem.has(num);
+    if (n >= su.ayahs) { mem.add(num); delete part[num]; } else { mem.delete(num); if (n > 0) part[num] = n; else delete part[num]; }
+    const arr = Array.from(mem).sort((a, b) => a - b);
+    const all = arr.concat(Object.keys(part).filter((k) => !mem.has(+k) && part[k] > 0).map((k) => k + '(' + part[k] + ')'));
+    h.memorization = Object.assign({}, h.memorization, { memorizedSurahs: all, count: arr.length, lastUpdated: new Date().toISOString() });
+    h.dailyLogs = h.dailyLogs || {}; const dl = h.dailyLogs[S.date] = Object.assign({}, h.dailyLogs[S.date] || {}, { date: S.date });
+    const nw = new Set(dl.memNew || []); if (mem.has(num) && !wasOn) nw.add(num); else if (!mem.has(num)) nw.delete(num); dl.memNew = Array.from(nw);
+    saveH(h);
+    const sel = 'button[onclick="k8HasToggleSurah(' + num + ')"]'; const b0 = document.querySelector(sel); const top0 = b0 ? b0.getBoundingClientRect().top : null;
+    const ul = document.querySelector('.k8h-surahs'); const st = ul ? ul.scrollTop : 0;
+    render();
+    const ul2 = document.querySelector('.k8h-surahs'); if (ul2) ul2.scrollTop = st;
+    const btn = document.querySelector(sel); if (btn && top0 != null) { const d = btn.getBoundingClientRect().top - top0; if (Math.abs(d) > 1) window.scrollTo(0, window.scrollY + d); }
+    clearTimeout(memTimer); memTimer = setTimeout(() => push(S.date, n >= su.ayahs ? 'บันทึกแล้ว · ท่องครบซูเราะห์' + su.name : n > 0 ? 'บันทึกแล้ว · ซูเราะห์' + su.name + ' ท่องได้ ' + n + '/' + su.ayahs + ' อายะฮ์' : 'ล้างการท่องจำซูเราะห์' + su.name + 'แล้ว'), 900);
   };
   window.k8HasSun = function (k, v) { if (RO()) { roMsg(); render(); return; } S.sun.rawatib[k] = !!v; render(); };
   window.k8HasSunN = function (k, n) { if (RO()) { roMsg(); return; } S.sun[k + 'Rakaat'] = n; render(); };
@@ -3688,7 +3716,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.03';
+  const APP_VERSION = '20.04';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -9704,7 +9732,7 @@ try { navigator.serviceWorker && navigator.serviceWorker.addEventListener('messa
   function summary(s) {
     let h = null; try { const all = JSON.parse(localStorage.getItem('khalifah_student_hasanat') || '{}'); h = all[Object.keys(all).find((k) => norm(k) === norm(s.studentId))] || null; } catch (e) {}
     const page = Number(h && h.quran && h.quran.currentPage) || 0;
-    const mem = h && h.memorization ? (Array.isArray(h.memorization.memorizedSurahs) ? h.memorization.memorizedSurahs.length : Number(h.memorization.count) || 0) : 0;
+    const mem = h && h.memorization ? (Array.isArray(h.memorization.memorizedSurahs) ? h.memorization.memorizedSurahs.filter((x) => !/\(/.test(String(x))).length : Number(h.memorization.count) || 0) : 0;
     return 'ยุซที่ ' + Math.min(30, Math.floor(page / PER_JUZ) + 1) + ' · หน้า ' + page + ' · ท่องจำ ' + mem + ' ซูเราะห์';
   }
   function host() { return document.getElementById('k8HaAdmin'); }

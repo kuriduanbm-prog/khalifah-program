@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '20.03'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '20.04'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -2701,7 +2701,8 @@ function getLatestHasanatMapByStudent(ss) {
         const parsedList = rawMemStr.split(',').map(s => s.trim()).filter(Boolean);
         if (parsedList.length > 0) memList = parsedList;
       }
-      const memCount = Math.max(Number(rows[i][10]) || 0, memList.length);
+      // v20.04 · รายการท่องจำบางส่วนเก็บเป็น "96(7)" = ซูเราะห์ 96 ท่องได้ 7 อายะฮ์ · ไม่นับเป็นซูเราะห์ที่ท่องครบ
+      const memCount = Math.max(Number(rows[i][10]) || 0, memList.filter(function (x) { return !/\(/.test(String(x)); }).length);
 
       let rawatib = prev.sunnah.rawatib || {};
       try {
@@ -6519,7 +6520,7 @@ function getHasanat(studentId) {
         khatamCount: Number(rows[i][9]) || 0
       },
       memorization: {
-        count: Number(rows[i][10]) || memArr.length,
+        count: Number(rows[i][10]) || memArr.filter(function (x) { return !/\(/.test(String(x)); }).length,
         memorizedSurahs: memArr
       },
       sunnah: {
