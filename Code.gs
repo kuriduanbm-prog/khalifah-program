@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '19.92'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '19.95'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3434,8 +3434,9 @@ function girlPlacePenalty_(sid, zone, dateStr, timeStr, prayerThai) {
     if (sh.getLastRow() > 1) { const ids = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues(); for (let i = 0; i < ids.length; i++) if (String(ids[i][0]) === id) return { pts: 0, id: id, dup: true }; }
     const stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
     const slot = String(formatPrayerTimeThai(prayerThai)).split(' (')[0];
-    appendRowFind_(sh, [id, dateStr, stamp, currentTerm_(), st.studentId, st.fullName || '', st.grade || '', 'mosque', 'girl-mosque', 'ละหมาดซุฮริ/อัศรีนอกมัสยิด (นักเรียนหญิง)', -GIRL_MOSQUE_POINTS_,
-      'หักอัตโนมัติ: เช็คละหมาด' + slot + 'ที่ ' + zone + ' เวลา ' + String(timeStr || '').slice(0, 5) + ' น. · นักเรียนหญิงต้องเช็คซุฮริ/อัศรีที่มัสยิดอัลฮารอมัยน์', 'system', 'ระบบอัตโนมัติ', 'active', '', '', ''], { keyCol: 1 });
+    // v19.95 · เขียนด้วย setValues เหมือนรายการหักอื่น (appendRow แปลงภาคเรียน "2/2569" เป็นวันที่ ทำให้หน้าคะแนนไม่นับรายการนี้)
+    sh.getRange(sh.getLastRow() + 1, 1, 1, 18).setValues([[id, dateStr, stamp, currentTerm_(), st.studentId, st.fullName || '', st.grade || '', 'mosque', 'girl-mosque', 'ละหมาดซุฮริ/อัศรีนอกมัสยิด (นักเรียนหญิง)', -GIRL_MOSQUE_POINTS_,
+      'หักอัตโนมัติ: เช็คละหมาด' + slot + 'ที่ ' + zone + ' เวลา ' + String(timeStr || '').slice(0, 5) + ' น. · นักเรียนหญิงต้องเช็คซุฮริ/อัศรีที่มัสยิดอัลฮารอมัยน์', 'system', 'ระบบอัตโนมัติ', 'active', '', '', '']]);
     return { pts: GIRL_MOSQUE_POINTS_, id: id };
   } finally { unlock(); }
 }
@@ -8558,12 +8559,18 @@ function getBehaviorLogs_() {
   const rows = sh.getRange(2, 1, sh.getLastRow() - 1, HEADERS.BEHAVIOR.length).getValues();
   return rows.filter(function (r) { return cleanVal(r[0]); }).map(function (r) {
     return {
-      id: cleanVal(r[0]), date: normalizeDateStr_(r[1]), time: cleanVal(r[2]), term: cleanVal(r[3]), studentId: cleanVal(r[4]), studentName: cleanVal(r[5]),
+      id: cleanVal(r[0]), date: normalizeDateStr_(r[1]), time: cleanVal(r[2]), term: termCell_(r[3]), studentId: cleanVal(r[4]), studentName: cleanVal(r[5]),
       grade: cleanVal(r[6]), cat: cleanVal(r[7]), ruleId: cleanVal(r[8]), title: cleanVal(r[9]), points: Number(r[10]) || 0, note: cleanVal(r[11]),
       by: cleanVal(r[12]), byName: cleanVal(r[13]), status: cleanVal(r[14]) || 'active', cancelledBy: cleanVal(r[15]),
       photoUrl: cleanVal(r[16] || ''), photoSource: cleanVal(r[17] || '')
     };
   });
+}
+/** v19.95 · ภาคเรียนที่ชีตแปลงเป็นวันที่ไปแล้ว (เช่น "2/2569" → 1 ก.พ. 2569) อ่านกลับเป็น "2/2569" */
+function termCell_(v) {
+  if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) { let y = Number(Utilities.formatDate(v, 'Asia/Bangkok', 'yyyy')); if (y < 2400) y += 543; return Number(Utilities.formatDate(v, 'Asia/Bangkok', 'MM')) + '/' + y; }
+  const s = cleanVal(v); const m = s.match(/^(\d{4})-(\d{2})-\d{2}/); if (m) return Number(m[2]) + '/' + (Number(m[1]) < 2400 ? Number(m[1]) + 543 : Number(m[1]));
+  return s;
 }
 function normalizeDateStr_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Bangkok', 'yyyy-MM-dd');
