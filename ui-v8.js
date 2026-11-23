@@ -3679,7 +3679,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.01';
+  const APP_VERSION = '20.02';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -11019,8 +11019,8 @@ window.k8HfMiss = function (slot) {
     try { await Promise.all(['400 16px', '500 16px', '600 16px', '700 16px'].map((w) => document.fonts.load(w + ' "IBM Plex Sans Thai"'))); } catch (e) {}
     const logo = await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = 'assets/logo.png'; });
     const rows = G.slice(0, 400);
-    let STY = 3; try { STY = Number(window.k8RptStyle || localStorage.getItem('k8_rpt_style')) || 3; } catch (e) {}
-    const W = 1080, PAD = 48, SC = 2, HEAD = ({ 1: 272, 2: 300, 3: 290, 4: 352 })[STY] || 290, KH = 96, TH = 46, RH = 58, FOOT = 88;
+    let STY = 2; try { STY = Number(window.k8RptStyle || localStorage.getItem('k8_rpt_style')) || 2; } catch (e) {}
+    const W = 1080, PAD = 48, SC = 2, HEAD = ({ 1: 272, 2: 300, 3: 290, 4: 352 })[STY] || 300, KH = 96, TH = 46, RH = 58, FOOT = 88;
     const H = HEAD + 28 + KH + 40 + 34 + TH + rows.length * RH + (G.length > rows.length ? 40 : 0) + FOOT;
     const cv = document.createElement('canvas'); cv.width = W * SC; cv.height = H * SC; const x = cv.getContext('2d'); x.scale(SC, SC);
     const rr = (X, Y, w, h, r) => { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
