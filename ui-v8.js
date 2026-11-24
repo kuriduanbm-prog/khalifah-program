@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.11';
+  const APP_VERSION = '20.12';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12566,7 +12566,7 @@ window.k8HfMiss = function (slot) {
       '<div class="k8h-mini-seg">' + [[true, 'ทั้งวัน'], [false, 'เฉพาะช่วงเวลา']].map(([k, l]) => '<button type="button" aria-pressed="' + (F.allDay === k) + '" onclick="k8SlF(\'allDay\',' + k + ')">' + l + '</button>').join('') + '</div>' +
       (F.allDay ? '' : '<div class="k8-sl-row"><label class="k8-nf-f"><span>ตั้งแต่เวลา</span><input type="time" value="' + F.tFrom + '" onchange="k8SlF(\'tFrom\', this.value, 1)"></label><label class="k8-nf-f"><span>ถึงเวลา</span><input type="time" value="' + F.tTo + '" onchange="k8SlF(\'tTo\', this.value, 1)"></label></div>') +
       '<div class="k8-nf-f"><span>ประเภทการลา</span><div class="k8-sl-types">' + TYPES.map(([k, ic]) => '<button type="button" aria-pressed="' + (F.type === k) + '" onclick="k8SlF(\'type\',\'' + k + '\')"><span aria-hidden="true">' + ic + '</span>' + k + '</button>').join('') + '</div></div>' +
-      '<div class="k8-nf-f"><span>ปัจจุบันอยู่ที่ไหน *</span><div class="k8-sl-types k8-sl-where">' + WHERES.map(([k, ic]) => '<button type="button" aria-pressed="' + (whereKey() === k) + '" onclick="k8SlWhere(\'' + k + '\')"><span aria-hidden="true">' + ic + '</span>' + (k === 'อื่น ๆ' ? 'ที่อื่น ๆ' : 'ที่' + k) + '</button>').join('') + '</div>' +
+      '<div class="k8-nf-f"><span>ต้องการลาอยู่ที่ไหน *</span><div class="k8-sl-types k8-sl-where">' + WHERES.map(([k, ic]) => '<button type="button" aria-pressed="' + (whereKey() === k) + '" onclick="k8SlWhere(\'' + k + '\')"><span aria-hidden="true">' + ic + '</span>' + (k === 'อื่น ๆ' ? 'ที่อื่น ๆ' : 'ที่' + k) + '</button>').join('') + '</div>' +
         (whereKey() === 'อื่น ๆ' ? '<input type="text" id="k8SlWhereO" class="k8-sl-wo" maxlength="80" placeholder="ระบุสถานที่ เช่น โรงพยาบาล / บ้านญาติ" value="' + esc(F.other) + '" oninput="k8SlF(\'other\', this.value, 1)">' : '') +
         (whereKey() === 'หอพัก' ? '<small class="k8-sl-wnote">อยู่หอพัก: ยังต้องเช็คละหมาดและถ่ายรูปรายงานตามปกติ</small>' : '') + '</div>' +
       '<label class="k8-nf-f"><span>รายละเอียด' + (F.type === 'อื่น ๆ' ? ' *' : ' (ไม่บังคับ)') + '</span><textarea id="k8SlReason" rows="3" maxlength="300"' + (F.type === 'อื่น ๆ' ? ' required aria-required="true"' : '') + ' placeholder="' + (F.type === 'อื่น ๆ' ? 'เลือก “อื่น ๆ” กรุณาบอกว่าลาเพราะอะไร เช่น ไปงานแต่งญาติ / ทำบัตรประชาชน' : 'เช่น ไปหาหมอ มีไข้สูง / ไปแข่งฟุตบอลนักเรียน') + '" oninput="k8SlF(\'reason\', this.value, 1)">' + esc(F.reason) + '</textarea></label>' +
