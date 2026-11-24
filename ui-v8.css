@@ -7955,3 +7955,6 @@ html[data-theme="dark"] .k8-slb-ck, html[data-theme="dark"] .k8-slb-hist li span
 html[data-theme="dark"] .k8-slb-sum { background: #0c2a3d !important; border-color: #155e75 !important; color: #bae6fd !important; }
 html[data-theme="dark"] .k8-slb-hist li { border-color: #334155 !important; }
 html[data-theme="dark"] .k8-slb-hist li button { background: #0f172a !important; color: #fca5a5 !important; border-color: #7f1d1d !important; }
+/* v20.17 · เอาการ์ด "ละหมาดวันนี้ ตามระดับชั้น" ออกจากภาพรวมแอดมิน */
+.k8-ov-grades { display: none !important; }
+.k8-ov-row:not(:has(> section:not([hidden]):not(.k8-ov-grades))) { display: none !important; }

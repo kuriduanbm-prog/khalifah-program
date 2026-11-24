@@ -1,5 +1,5 @@
 // KHALIFAH PROGRAM - Production PWA Service Worker (v7.7)
-const CACHE_NAME = 'khalifah-cache-v20.16';
+const CACHE_NAME = 'khalifah-cache-v20.17';
 const NAV_TIMEOUT_MS = 3000;
 
 // Critical local assets required for the app shell to function offline
@@ -8,15 +8,15 @@ const PRECACHE_ASSETS = [
   './index.html',
   './',
   'style.css',
-  'style.css?v=20.16',
-  'ui-v8.css?v=20.16',
-  'dark.css?v=20.16',
-  'ui-v8.js?v=20.16',
+  'style.css?v=20.17',
+  'ui-v8.css?v=20.17',
+  'dark.css?v=20.17',
+  'ui-v8.js?v=20.17',
   'ui-v8.js',
-  'ai.js?v=20.16',
+  'ai.js?v=20.17',
   'ai.js',
   'app.js',
-  'app.js?v=20.16',
+  'app.js?v=20.17',
   'manifest.json',
   'assets/logo.png',
   'assets/icon-192.png',
@@ -34,7 +34,7 @@ const OPTIONAL_CDN_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
 ];
 
-// v20.16 · Vercel (cleanUrls) ตอบ /index.html ด้วยการ redirect ไปที่ /
+// v20.17 · Vercel (cleanUrls) ตอบ /index.html ด้วยการ redirect ไปที่ /
 // Safari/Chrome ไม่ยอมให้ service worker ส่ง response ที่ผ่าน redirect ให้หน้าเว็บ ("Response served by service worker has redirections")
 // จึงต้องเก็บ/ส่งเป็น response ใหม่ที่ไม่มีประวัติ redirect เสมอ
 async function cleanResponse(res) {
@@ -48,7 +48,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       console.log('[KHALIFAH PWA] Pre-caching local app shell');
-      // v20.16 · ไฟล์หลักของแอปต้องเก็บได้ครบ ไม่งั้นยกเลิกการอัปเดตรอบนี้ (คงเวอร์ชันเดิมที่ครบไว้)
+      // v20.17 · ไฟล์หลักของแอปต้องเก็บได้ครบ ไม่งั้นยกเลิกการอัปเดตรอบนี้ (คงเวอร์ชันเดิมที่ครบไว้)
       //   เดิม: เน็ตอ่อนตอนอัปเดต → ui-v8.js เก็บไม่ได้ แต่ยังลบแคชเก่าทิ้ง → เปิดแบบออฟไลน์ หน้าละหมาดค้าง "กำลังคำนวณช่วงเวลา..."
       const CRITICAL = /^(\.\/)?(index\.html|app\.js\?v=|ui-v8\.js\?v=|style\.css\?v=|ui-v8\.css\?v=)/;
       const missing = [];
@@ -114,7 +114,7 @@ self.addEventListener('fetch', (event) => {
   // 1. NAVIGATION REQUESTS (Opening the PWA, refreshing, or clicking links)
   // Strategy: Network-First with Cache Fallback -> Guaranteed to never show "Site can't be reached"
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    // v20.16 · เน็ตอ่อน/ต่อ Wi-Fi แต่ไม่มีอินเทอร์เน็ต/แพ็กเกจหมด: คำขอค้างนานจนหน้าขาว
+    // v20.17 · เน็ตอ่อน/ต่อ Wi-Fi แต่ไม่มีอินเทอร์เน็ต/แพ็กเกจหมด: คำขอค้างนานจนหน้าขาว
     // รอเครือข่ายไม่เกิน 3 วินาที ถ้าไม่ตอบใช้หน้าแอปที่เก็บไว้ในเครื่องทันที (เครือข่ายยังโหลดต่อเบื้องหลังเพื่ออัปเดตแคช)
     const net = fetch(request).then(cleanResponse).then((networkResponse) => {
       if (networkResponse && networkResponse.status === 200) {
@@ -156,7 +156,7 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        // v20.16 · ออฟไลน์และไม่มีไฟล์เวอร์ชันนี้ในแคช → ใช้ไฟล์ชื่อเดียวกันที่เก็บไว้ (ไม่สนเลขเวอร์ชัน) ดีกว่าโหลดไม่ขึ้น
+        // v20.17 · ออฟไลน์และไม่มีไฟล์เวอร์ชันนี้ในแคช → ใช้ไฟล์ชื่อเดียวกันที่เก็บไว้ (ไม่สนเลขเวอร์ชัน) ดีกว่าโหลดไม่ขึ้น
         .catch(() => cachedResponse || caches.match(request, { ignoreSearch: true }).then((r) => r || Response.error()));
 
       return cachedResponse || fetchPromise;
