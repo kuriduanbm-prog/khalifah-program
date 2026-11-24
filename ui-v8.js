@@ -3232,7 +3232,7 @@ window.k8RegBirthChange = function (v) {
       '<section class="k8h-card"><input type="search" class="k8h-search" placeholder="ค้นหาชื่อซูเราะห์ หรือเลขลำดับ" value="' + esc(S.memQ) + '" oninput="k8HasMemQ(this)">' +
       '<div class="k8h-chips">' + [['all', 'ทั้งหมด'], ['amma', 'ยุซอัมมา'], ['todo', 'ยังไม่ได้ท่อง'], ['done', 'ท่องแล้ว']].map(([k, l]) => '<button type="button" aria-pressed="' + (S.memFilter === k) + '" onclick="k8HasSet(\'memFilter\',\'' + k + '\')">' + l + '</button>').join('') + '</div>' +
       '<ul class="k8h-surahs' + (memLocked() ? ' is-locked' : '') + '">' + (shown.length ? shown.map((x) => { const on = mem.has(x.num); const pv = part[x.num] || 0;
-        return '<li class="k8h-srow' + (pv && !on ? ' is-part' : '') + '"><button type="button" aria-pressed="' + on + '" onclick="k8HasToggleSurah(' + x.num + ')"><span class="k8h-sn">' + x.num + '</span><span class="k8h-st"><b>' + esc(x.name) + '</b><small>ยุซ ' + x.juz + ' · ' + x.ayahs + ' อายะฮ์' + (pv && !on ? ' · <em>ท่องได้ ' + pv + '/' + x.ayahs + '</em>' : '') + '</small></span><span class="k8h-ar">' + esc(x.arabic || '') + '</span><span class="k8h-ck" aria-hidden="true">' + (on ? '✓' : '') + '</span></button>' +
+        return '<li class="k8h-srow' + (pv && !on ? ' is-part' : '') + '"><button type="button" aria-pressed="' + on + '" onclick="k8HasToggleSurah(' + x.num + ')"><span class="k8h-sn">' + x.num + '</span><span class="k8h-st"><b>' + esc(x.name) + '</b>' + (pv && !on ? '<small><em>ท่องได้ ' + pv + '/' + x.ayahs + ' อายะฮ์</em></small>' : '') + '</span><span class="k8h-ar">' + esc(x.arabic || '') + '</span><span class="k8h-ck" aria-hidden="true">' + (on ? '✓' : '') + '</span></button>' +
           '<label class="k8h-ay" title="ท่องได้กี่อายะฮ์ (ยังไม่ครบซูเราะห์)"><input type="number" inputmode="numeric" min="0" max="' + x.ayahs + '" value="' + (on ? x.ayahs : (pv || '')) + '" placeholder="–" aria-label="จำนวนอายะฮ์ที่ท่องได้ ซูเราะห์' + esc(x.name) + '" onchange="k8HasAyah(' + x.num + ',this.value)"' + (memLocked() ? ' disabled' : '') + '><span>/' + x.ayahs + '</span></label></li>'; }).join('') : '<li class="k8-li-empty">ไม่พบซูเราะห์</li>') + '</ul></section>';
   }
   function sunTab() {
@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.17';
+  const APP_VERSION = '20.18';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
