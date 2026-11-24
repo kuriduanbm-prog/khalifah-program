@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.18';
+  const APP_VERSION = '20.19';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4059,9 +4059,13 @@ window.k8RegBirthChange = function (v) {
   async function load(force) {
     if (B.loading || (B.loaded && !force)) return;
     B.loading = true;
+    // v20.19 · แสดงข้อมูลล่าสุดในเครื่องทันที (ไม่ต้องรอ 1–3 วินาที) แล้วอัปเดตจากระบบเบื้องหลัง
+    if (!B.loaded && !(B.logs && B.logs.length)) {
+      try { const c = JSON.parse(localStorage.getItem('khalifah_behavior_cache') || 'null'); const who = String((me() && (me().username || me().id || me().name)) || ''); if (c && (c.logs || c.rules) && c.who && c.who === who && Date.now() - (c.at || 0) < 7 * 864e5) { B.rules = c.rules || []; B.logs = c.logs || []; if (c.students && c.students.length) B.students = c.students; if (c.term) serverTerm = c.term; B.fromCache = true; render(); } } catch (e) {}
+    }
     try {
       const r = await api('getBehaviorData');
-      if (r && r.success) { B.oldBackend = !r.photoMax; B.codeVersion = r.codeVersion || ''; if (r.term) serverTerm = r.term; B.rules = r.rules || []; B.logs = r.logs || []; if (r.students && r.students.length) B.students = r.students; B.loaded = true; try { localStorage.setItem('khalifah_behavior_cache', JSON.stringify({ rules: B.rules, logs: B.logs, students: B.students })); } catch (e) {} }
+      if (r && r.success) { B.oldBackend = !r.photoMax; B.codeVersion = r.codeVersion || ''; if (r.term) serverTerm = r.term; B.rules = r.rules || []; B.logs = r.logs || []; if (r.students && r.students.length) B.students = r.students; B.loaded = true; try { localStorage.setItem('khalifah_behavior_cache', JSON.stringify({ rules: B.rules, logs: B.logs, students: B.students, term: serverTerm, at: Date.now(), who: String((me() && (me().username || me().id || me().name)) || '') })); } catch (e) {} }
       else if (r && r.message) toast(r.message, 'error');
     } catch (e) {
       try { const c = JSON.parse(localStorage.getItem('khalifah_behavior_cache') || 'null'); if (c) { B.rules = c.rules || []; B.logs = c.logs || []; B.students = c.students || []; } } catch (er) {}
@@ -4088,7 +4092,7 @@ window.k8RegBirthChange = function (v) {
       let html = tabs ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
       if (admin && !(me() && me().limited) && window.k8BapBanner) html += window.k8BapBanner(); // v19.36
       if (B.oldBackend && B.loaded) html += '<div class="k8-tt-warn" role="alert"><b>Code.gs ที่ใช้งานอยู่ยังเป็นรุ่นเก่า · รูปหลักฐานเก็บได้แค่ 1 รูป</b><span>แอดมิน: วาง Code.gs ตัวล่าสุด แล้วไปที่ Deploy → Manage deployments → กดไอคอนดินสอของ deployment เดิม → Version: New version → Deploy (ห้ามกด New deployment เพราะจะได้ลิงก์ใหม่ที่แอปไม่ได้ใช้)</span></div>';
-      if (!B.loaded && B.loading) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
+      if (!B.loaded && B.loading && !B.fromCache) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
       else html += B.tab === 'record' ? recordHtml() : B.tab === 'scores' ? scoresHtml() : B.tab === 'history' ? historyHtml(admin) : rulesHtml();
       root.innerHTML = html;
     });
