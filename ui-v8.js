@@ -1988,21 +1988,39 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (/สำเร็จ/.test(st)) return ['จบแล้ว', '#eff6ff', '#1d4ed8'];
     return [st, '#f1f5f9', '#475569'];
   }
+  // v20.06 · ละหมาด 6 วันทำการล่าสุด (ไม่นับวันเสาร์ = วันหยุด) · ตาราง 6 วัน × 5 เวลา
+  // pr[sid] = จำนวนเวลาที่มีบันทึก (ไม่นับ "ขาด") · P6 = { days, due[d][i], dueN, cell[sid][d|i] = ok|late|ex|miss }
+  let P6 = { days: [], due: [], dueN: 0, cell: {} };
+  const slotIx = (v) => { const t = String(v || ''); return /ซุบ|ศุบ|ฟัจ|ฟะญ/.test(t) ? 0 : /ซุฮ|ดุฮ|ซุห|ญุม|ญุมุ/.test(t) ? 1 : /อัศ|อัส|อะศ/.test(t) ? 2 : /มัฆ|มัก|มฆ/.test(t) ? 3 : /อิชา|อีชา|อิชาอ์|อีชาอ์/.test(t) ? 4 : -1; };
   function prayer7() {
-    const now = new Date(); const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-    const pad = (n) => String(n).padStart(2, '0');
-    const fromS = from.getFullYear() + '-' + pad(from.getMonth() + 1) + '-' + pad(from.getDate());
-    const map = {}; const seen = {};
+    const pad = (n) => String(n).padStart(2, '0'); const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const now = new Date(); const days = []; for (let i = 0; days.length < 6 && i < 14; i++) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); if (d.getDay() !== 6) days.unshift(d); }
+    const today = ymd(now); const mins = now.getHours() * 60 + now.getMinutes();
+    let st = null; try { st = window.k8PrayerDay ? window.k8PrayerDay(now).map((x) => x.start) : null; } catch (e) {}
+    const due = days.map((d) => [0, 1, 2, 3, 4].map((i) => ymd(d) !== today ? true : st ? mins >= st[i] : mins >= [300, 750, 930, 1080, 1170][i]));
+    const dueN = due.reduce((a, r) => a + r.filter(Boolean).length, 0);
+    const dIx = {}; days.forEach((d, i) => { dIx[ymd(d)] = i; });
+    const map = {}; const cell = {}; const rank = { ok: 3, late: 2, ex: 2, miss: 1 };
     let tp = []; try { tp = todayPrayers || []; } catch (e) {}
     [...readJSON('khalifah_prayer_history', []), ...tp].forEach((p) => {
       if (!p) return;
-      const d = String(p.date || p.timestamp || '').slice(0, 10);
-      if (!d || d < fromS) return;
-      const k = norm(p.studentId) + '|' + d + '|' + (p.prayerTime || p.prayerName || '');
-      if (seen[k]) return; seen[k] = 1;
-      map[norm(p.studentId)] = (map[norm(p.studentId)] || 0) + 1;
+      const d = String(p.date || p.timestamp || '').slice(0, 10); const di = dIx[d]; if (di == null) return;
+      const si = slotIx(p.prayerTime || p.prayerName); if (si < 0) return;
+      const stt = String(p.status || ''); const kind = /^ขาด/.test(stt) ? 'miss' : (/^(ลา|ป่วย)/.test(stt) || /อุซุร|ประจำเดือน|ลาป่วย|ลากิจ|ลาออกนอก/.test(stt)) ? 'ex' : /สาย/.test(stt) ? 'late' : 'ok';
+      const sid = norm(p.studentId); const c = cell[sid] = cell[sid] || {}; const k = di + '|' + si;
+      if (!c[k] || rank[kind] > rank[c[k]]) c[k] = kind;
     });
+    const isDue = (k) => { const [di, si] = k.split('|'); return !!(due[+di] && due[+di][+si]); };
+    Object.keys(cell).forEach((sid) => { map[sid] = Object.keys(cell[sid]).filter((k) => cell[sid][k] !== 'miss' && isDue(k)).length; });
+    P6 = { days: days.map(ymd), due, dueN, cell };
     return map;
+  }
+  const TH_D = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+  function p6Grid(sid) {
+    const c = P6.cell[sid] || {}; const n = Object.keys(c).filter((k) => { const [di, si] = k.split('|'); return c[k] !== 'miss' && P6.due[+di] && P6.due[+di][+si]; }).length; const N = P6.dueN || 1; const pc = n / N;
+    const col = pc >= 0.9 ? '#047857' : pc >= 0.7 ? '#b45309' : '#b91c1c';
+    const g = P6.days.map((ds, di) => '<span class="k8-p6-d"><em>' + TH_D[new Date(ds + 'T12:00:00').getDay()] + '</em>' + [0, 1, 2, 3, 4].map((i) => { const v = c[di + '|' + i]; return '<i class="' + (v || (P6.due[di][i] ? 'miss' : 'na')) + '"></i>'; }).join('') + '</span>').join('');
+    return '<span class="k8-p6" title="ละหมาด 6 วันล่าสุด (ไม่นับวันเสาร์) · ' + n + '/' + N + ' เวลา"><span class="k8-p6-g" aria-hidden="true">' + g + '</span><span class="k8-p6-n" style="color:' + col + '"><b>' + n + '</b>/' + N + '</span></span>';
   }
   function attPct(s) {
     const a = s.attendance || {}; const t = (+a.present || 0) + (+a.late || 0) + (+a.leave || 0) + (+a.absent || 0);
@@ -2040,7 +2058,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
         '<td>' + esc(shortG(s.grade)) + '</td>' +
         '<td><span class="k8-pill" style="background:' + stBg + ';color:' + stInk + '">' + esc(stL) + '</span></td>' +
         '<td class="b" style="color:' + (ap == null ? '#64748b' : ap >= 90 ? '#15803d' : ap >= 75 ? '#b45309' : '#b91c1c') + '">' + (ap == null ? '-' : ap + '%') + '</td>' +
-        '<td><span class="k8-as-pr"><span class="k8-as-prbar"><span style="width:' + pp + '%"></span></span><span>' + pn + '/35</span></span></td>' +
+        '<td><span class="k8-as-pr"><span class="k8-as-prbar"><span style="width:' + Math.round(pn * 100 / (P6.dueN || 1)) + '%"></span></span><span>' + pn + '/' + (P6.dueN || 0) + '</span></span></td>' +
         '<td class="r b">' + gpax(s) + '</td></tr>';
     }).join('') : '<tr><td colspan="6" class="k8-li-empty">ไม่พบนักเรียนตามเงื่อนไข</td></tr>';
     renderSplit(list, pr, cnt, sexOf);
@@ -2055,11 +2073,11 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const odd = !/ปกติ|กำลังศึกษา/.test(stL);
       return '<button type="button" class="k8-ss-row" onclick="k8AsSelect(\'' + esc(id) + '\')">' + pic(s) +
         '<span class="k8-ss-t"><b>' + esc(s.fullName || id) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(id) + ((s.schoolName || s.school) ? ' · ' + esc(s.schoolName || s.school) : '') + (odd ? ' · <i style="color:' + stInk + '">' + esc(stL) + '</i>' : '') + '</small></span>' +
-        '<span class="k8-ss-pr" title="ละหมาด 7 วัน"><b>' + pn + '</b>/35</span></button>';
+        p6Grid(norm(s.studentId)) + '</button>';
     };
     const col = (sx, cls, title) => { const l = list.filter((s) => sexOf(s) === sx); return '<section class="k8-ss-col ' + cls + '" aria-label="' + title + '"><header><span class="k8-ss-dot" aria-hidden="true"></span><b>' + title + '</b><em>' + l.length + ' คน</em></header>' + (l.length ? '<div class="k8-ss-list">' + l.map(card).join('') + '</div>' : '<p class="k8-ss-empty">ไม่มีนักเรียนตามเงื่อนไข</p>') + '</section>'; };
     const un = list.filter((s) => !sexOf(s));
-    box.innerHTML = '<div class="k8-ss-cols">' + col('ชาย', 'is-m', 'นักเรียนชาย') + col('หญิง', 'is-f', 'นักเรียนหญิง') + '</div>' +
+    box.innerHTML = '<p class="k8-p6-lg"><b>ละหมาด 6 วันล่าสุด</b> (ไม่นับวันเสาร์) · <i class="ok"></i>ตรงเวลา <i class="late"></i>สาย <i class="ex"></i>ลา/อุซุร <i class="miss"></i>ขาด <i class="na"></i>ยังไม่ถึงเวลา</p>' + '<div class="k8-ss-cols">' + col('ชาย', 'is-m', 'นักเรียนชาย') + col('หญิง', 'is-f', 'นักเรียนหญิง') + '</div>' +
       (un.length ? '<section class="k8-ss-col is-u"><header><span class="k8-ss-dot" aria-hidden="true"></span><b>ยังไม่ระบุเพศ</b><em>' + un.length + ' คน</em><button type="button" onclick="k8GxOpen()">ระบุเพศ ›</button></header><div class="k8-ss-list is-grid">' + un.map(card).join('') + '</div></section>' : '');
   }
   function renderDetail(pr) {
@@ -2072,7 +2090,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     box.innerHTML = '<div class="k8-as-dh"><span class="k8-as-av">' + esc(initialOf(s.fullName)) + '</span><span class="k8-as-dt"><b>' + esc(s.fullName) + '</b><span>' + esc(id) + ' · ' + esc(shortG(s.grade)) + '</span></span></div>' +
       '<dl class="k8-as-dl"><dt>โรงเรียน</dt><dd>' + esc(s.schoolName || s.school || '-') + '</dd><dt>ผู้ปกครอง</dt><dd>' + esc(s.parentPhone || '-') + '</dd><dt>มาเรียน</dt><dd>' + (ap == null ? '-' : ap + '% (มา ' + (a.present || 0) + ' · สาย ' + (a.late || 0) + ' · ลา ' + (a.leave || 0) + ' · ขาด ' + (a.absent || 0) + ')') + '</dd>' +
       '<dt>วันเกิด</dt><dd>' + (function () { const a = window.k8AgeOf && window.k8AgeOf(s.birthDate); if (!a) return '-'; const MN = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; return a.d + ' ' + MN[a.mo - 1] + ' ' + a.be + ' · <b>อายุ ' + a.y + ' ปี</b>'; })() + '</dd>' +
-      '<dt>ละหมาด 7 วัน</dt><dd>' + (pr[norm(s.studentId)] || 0) + ' / 35 เวลา</dd><dt>GPAX</dt><dd>' + gpax(s) + '</dd>' +
+      '<dt>ละหมาด 6 วัน</dt><dd>' + (pr[norm(s.studentId)] || 0) + ' / ' + (P6.dueN || 0) + ' เวลา <small style="color:#64748b">(ไม่นับวันเสาร์)</small></dd><dt>GPAX</dt><dd>' + gpax(s) + '</dd>' +
       (function () { // v20.05 · ลิงก์เฟซบุ๊ก
         const fb = window.k8FbOf ? window.k8FbOf(id) : '';
         return '<dt>Facebook</dt><dd class="k8-fb-dd">' + (fb ? '<a class="k8-fb-link" href="' + esc(fb) + '" target="_blank" rel="noopener noreferrer"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-7.5h2.5l.4-3h-2.9V8.6c0-.9.3-1.5 1.5-1.5H16.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H8v3h2.5V21h3z"/></svg>ทักเฟซบุ๊ก</a>' : '<span class="k8-fb-none">ยังไม่มีลิงก์</span>') +
@@ -3732,7 +3750,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.05';
+  const APP_VERSION = '20.06';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
