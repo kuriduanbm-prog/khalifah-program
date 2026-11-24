@@ -2072,7 +2072,12 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     box.innerHTML = '<div class="k8-as-dh"><span class="k8-as-av">' + esc(initialOf(s.fullName)) + '</span><span class="k8-as-dt"><b>' + esc(s.fullName) + '</b><span>' + esc(id) + ' · ' + esc(shortG(s.grade)) + '</span></span></div>' +
       '<dl class="k8-as-dl"><dt>โรงเรียน</dt><dd>' + esc(s.schoolName || s.school || '-') + '</dd><dt>ผู้ปกครอง</dt><dd>' + esc(s.parentPhone || '-') + '</dd><dt>มาเรียน</dt><dd>' + (ap == null ? '-' : ap + '% (มา ' + (a.present || 0) + ' · สาย ' + (a.late || 0) + ' · ลา ' + (a.leave || 0) + ' · ขาด ' + (a.absent || 0) + ')') + '</dd>' +
       '<dt>วันเกิด</dt><dd>' + (function () { const a = window.k8AgeOf && window.k8AgeOf(s.birthDate); if (!a) return '-'; const MN = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; return a.d + ' ' + MN[a.mo - 1] + ' ' + a.be + ' · <b>อายุ ' + a.y + ' ปี</b>'; })() + '</dd>' +
-      '<dt>ละหมาด 7 วัน</dt><dd>' + (pr[norm(s.studentId)] || 0) + ' / 35 เวลา</dd><dt>GPAX</dt><dd>' + gpax(s) + '</dd></dl>' +
+      '<dt>ละหมาด 7 วัน</dt><dd>' + (pr[norm(s.studentId)] || 0) + ' / 35 เวลา</dd><dt>GPAX</dt><dd>' + gpax(s) + '</dd>' +
+      (function () { // v20.05 · ลิงก์เฟซบุ๊ก
+        const fb = window.k8FbOf ? window.k8FbOf(id) : '';
+        return '<dt>Facebook</dt><dd class="k8-fb-dd">' + (fb ? '<a class="k8-fb-link" href="' + esc(fb) + '" target="_blank" rel="noopener noreferrer"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-7.5h2.5l.4-3h-2.9V8.6c0-.9.3-1.5 1.5-1.5H16.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H8v3h2.5V21h3z"/></svg>ทักเฟซบุ๊ก</a>' : '<span class="k8-fb-none">ยังไม่มีลิงก์</span>') +
+          '<button type="button" class="k8-fb-edit" onclick="k8FbEdit(\'' + esc(id) + '\')">' + (fb ? 'แก้ลิงก์' : '+ ใส่ลิงก์') + '</button></dd>';
+      })() + '</dl>' +
       '<div class="k8-as-acts"><button type="button" class="k8-btn-pri" onclick="k8SpOpen(\'' + esc(id) + '\')">ดูข้อมูลทั้งหมด</button><button type="button" class="k8-btn-line" onclick="openAdminEditStudentModal(\'' + esc(id) + '\')">แก้ไขข้อมูล</button>' +
       '<button type="button" class="k8-btn-line" onclick="openStudentQuickStatusModal(\'' + esc(id) + '\')">ปรับสถานะ</button>' +
       '<button type="button" class="k8-btn-line" onclick="k8AsPrayerHistory(\'' + esc(id) + '\')">ดูประวัติละหมาด</button>' +
@@ -2081,6 +2086,17 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       '<button type="button" class="k8-as-preview" hidden onclick="k8PreviewStudent(\'' + esc(id) + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>ดูแอปในมุมมองของนักเรียนคนนี้</button>';
   }
   window.k8AsSelect = function (id) { selId = id; render(lastList); };
+  // v20.05 · ลิงก์เฟซบุ๊กนักเรียน: โหลดครั้งเดียว · แอดมินใส่/แก้/ลบได้
+  let FB = null, fbLoading = false;
+  window.k8FbOf = function (id) { if (FB === null && !fbLoading) { fbLoading = true; gasApiCall('getStudentLinks', {}, 20000).then((r) => { FB = (r && r.success && r.links) || {}; fbLoading = false; try { render(lastList); } catch (e) {} }).catch(() => { FB = {}; fbLoading = false; }); } const k = String(id || '').replace(/\D/g, '').replace(/^0+/, ''); return (FB && FB[k] && FB[k].facebook) || ''; };
+  window.k8FbEdit = async function (id) {
+    const cur = window.k8FbOf(id); const v = prompt('ลิงก์เฟซบุ๊กของนักเรียน (เว้นว่าง = ลบลิงก์)\nเช่น https://www.facebook.com/ชื่อผู้ใช้', cur || 'https://www.facebook.com/');
+    if (v === null) return; const val = String(v).trim().replace(/^https?:\/\/(www\.)?facebook\.com\/?$/i, '');
+    let r = null; try { r = await gasApiCall('setStudentLink', { data: { studentId: id, facebook: val } }, 20000); } catch (e) {}
+    if (!r || !r.success) { try { showToast((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ · Deploy Code.gs ตัวล่าสุดก่อน', 'error'); } catch (e) {} return; }
+    FB = FB || {}; const k = String(id || '').replace(/\D/g, '').replace(/^0+/, ''); if (r.facebook) FB[k] = { facebook: r.facebook }; else delete FB[k];
+    try { showToast(r.message, 'success'); } catch (e) {} try { render(lastList); } catch (e) {}
+  };
   window.k8AsGrade = function (v) { const g = document.getElementById('filterGradeSelect'); if (g) { g.value = v; filterAdminStudents(); } };
   window.k8AsSchool = function (v) { window.k8AsSchoolSel = v || ''; try { filterAdminStudents(); } catch (e) {} };
   // เติมรายชื่อโรงเรียนต้นสังกัด (เรียงตามจำนวนนักเรียน)
@@ -3716,7 +3732,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.04';
+  const APP_VERSION = '20.05';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

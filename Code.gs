@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '20.04'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '20.05'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1265,7 +1265,7 @@ const ACTION_ACCESS = {
   // แอดมิน/อาจารย์แก้ไขหรือเพิ่มบันทึกละหมาดของนักเรียน · แอดมินตั้งช่วงเวลาละหมาด
   updatePrayerRecord: 'staff', getRosterAdj: 'staff', saveRosterAdj: 'staff', uploadClassFile: 'staff', createClassPost: 'staff', deleteClassPost: 'staff', listClassPosts: 'student', getClassFile: 'student', uploadSubmissionFile: 'student', submitClassWork: 'student', getClassSubmissions: 'staff', reviewClassSubmission: 'staff', addPrayerForStudent: 'staff', markPrayersLate: 'staff', getTeacherLeaves: 'staff', saveTeacherLeave: 'staff', takeTeacherLeave: 'staff', deleteTeacherLeave: 'staff', approveTeacherLeave: 'admin', getMyTeaching: 'staff', getHasanatDay: 'admin', saveHasanatBatch: 'admin', getEnrollRoom: 'staff', setEnrollOpen: 'staff', removeEnrollment: 'staff', getEnrollments: 'staff', getMyEnrollments: 'student', enrollSubject: 'student', periodStart: 'student', periodEnd: 'student', periodCancel: 'student', getMyPeriod: 'student', getPeriodEpisodes: 'staff', savePrayerWindows: 'admin',
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
-  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getPlaceRestrict: 'admin', savePlaceRestrict: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
+  getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getStudentLinks: 'staff', setStudentLink: 'admin', getPlaceRestrict: 'admin', savePlaceRestrict: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
   getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', recalcStarWeek: 'admin', exportReport: 'staff', deleteMyPrayer: 'student', checkMyPrayers: 'student', listPrayerFails: 'staff', scanDormPrayers: 'admin', scanJumuah: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
@@ -1865,6 +1865,8 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'deleteTimetableArchive': return deleteTimetableArchive_(data);
     case 'getMySubjects':
       return getMySubjects_(isStudent ? session.userId : (data.studentId || ''));
+    case 'getStudentLinks': return studentLinksGet_();
+    case 'setStudentLink': return studentLinkSet_(data, session);
     case 'getPlaceRestrict': return { success: true, list: placeRestrictList_(), zones: geoZones_().map(function (z) { return z.name; }) };
     case 'savePlaceRestrict': return placeRestrictSave_(data, session);
     case 'saveGeoZones': {
@@ -3432,6 +3434,44 @@ function wrongPlaceOf_(sid, dateStr, prayerThai, statusThai, lat, lng) {
   if (!st) return '';
   let g = normGender_(st.gender || st.sex || ''); if (!g) g = genderFromPrefix_(cleanVal(st.prefix || '')); if (!g && /^(นางสาว|นาง|เด็กหญิง|ด\.ญ\.)/.test(cleanVal(st.fullName || ''))) g = 'หญิง';
   return g === 'หญิง' ? String(best.z.name || 'นอกมัสยิด') : '';
+}
+
+/* ===================== v20.05 · ลิงก์เฟซบุ๊กของนักเรียน (แอดมินใส่ไว้ กดทักได้ทันที) ===================== */
+const STUDENT_LINK_SHEET_ = 'ลิงก์นักเรียน';
+function studentLinkSheet_() {
+  const ss = getSpreadsheet(); let sh = ss.getSheetByName(STUDENT_LINK_SHEET_);
+  if (!sh) { sh = ss.insertSheet(STUDENT_LINK_SHEET_); sh.getRange(1, 1, 1, 4).setValues([['รหัสนักเรียน', 'Facebook', 'แก้ไขเมื่อ', 'ผู้แก้ไข']]); sh.setFrozenRows(1); try { sh.getRange('A:A').setNumberFormat('@'); } catch (e) {} }
+  return sh;
+}
+function studentLinksGet_() {
+  const sh = getSpreadsheet().getSheetByName(STUDENT_LINK_SHEET_); const map = {};
+  if (sh && sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues().forEach(function (r) { const k = String(r[0] || '').replace(/\D/g, '').replace(/^0+/, ''); const u = String(r[1] || '').trim(); if (k && u) map[k] = { facebook: u }; });
+  return { success: true, links: map };
+}
+function studentFbClean_(u) {
+  u = String(u || '').trim(); if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, '');
+  u = u.replace(/^http:\/\//i, 'https://');
+  const m = u.match(/^https:\/\/(?:(?:www|m|web|mbasic)\.)?(facebook\.com|fb\.com|fb\.me)\/(.+)$/i);
+  if (!m) return null;
+  const rest = m[2].replace(/[\s<>"']/g, '').slice(0, 200); if (!rest) return null;
+  return 'https://www.' + (m[1].toLowerCase() === 'fb.me' ? 'facebook.com' : m[1].toLowerCase().replace('fb.com', 'facebook.com')) + '/' + rest;
+}
+function studentLinkSet_(d, session) {
+  d = d || {}; const k = String(d.studentId || '').replace(/\D/g, '').replace(/^0+/, ''); if (!k) return { success: false, message: 'ไม่พบรหัสนักเรียน' };
+  const st = (getAllStudents().data || []).filter(function (x) { return String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '') === k; })[0];
+  if (!st) return { success: false, message: 'ไม่พบนักเรียนรหัส ' + d.studentId };
+  const url = studentFbClean_(d.facebook); if (url === null) return { success: false, message: 'ลิงก์ต้องเป็นของ facebook.com เช่น https://www.facebook.com/ชื่อผู้ใช้' };
+  const unlock = lockEnter_(15000);
+  try {
+    const sh = studentLinkSheet_(); const n = sh.getLastRow() - 1; let row = 0;
+    if (n > 0) { const ids = sh.getRange(2, 1, n, 1).getValues(); for (let i = 0; i < ids.length; i++) if (String(ids[i][0]).replace(/\D/g, '').replace(/^0+/, '') === k) { row = i + 2; break; } }
+    const stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'); const who = cleanVal((session && (session.name || session.username)) || 'แอดมิน');
+    if (!url) { if (row) sh.deleteRow(row); return { success: true, studentId: k, facebook: '', message: 'ลบลิงก์เฟซบุ๊กแล้ว' }; }
+    const vals = [[String(st.studentId), url, stamp, who]];
+    if (row) sh.getRange(row, 1, 1, 4).setValues(vals); else sh.getRange(sh.getLastRow() + 1, 1, 1, 4).setValues(vals);
+    return { success: true, studentId: k, facebook: url, message: 'บันทึกลิงก์เฟซบุ๊กแล้ว' };
+  } finally { unlock(); }
 }
 
 /* ===================== v19.98 · กำหนดสถานที่ละหมาดเฉพาะรายบุคคล =====================
