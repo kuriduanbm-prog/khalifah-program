@@ -2002,7 +2002,14 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   // pr[sid] = จำนวนเวลาที่มีบันทึก (ไม่นับ "ขาด") · P6 = { days, due[d][i], dueN, cell[sid][d|i] = ok|late|ex|miss }
   let P6 = { days: [], due: [], dueN: 0, cell: {} };
   const slotIx = (v) => { const t = String(v || ''); return /ซุบ|ศุบ|ฟัจ|ฟะญ/.test(t) ? 0 : /ซุฮ|ดุฮ|ซุห|ญุม|ญุมุ/.test(t) ? 1 : /อัศ|อัส|อะศ/.test(t) ? 2 : /มัฆ|มัก|มฆ/.test(t) ? 3 : /อิชา|อีชา|อิชาอ์|อีชาอ์/.test(t) ? 4 : -1; };
+  let excKick = 0;
   function prayer7() {
+    // v20.11 · โหลดใบลาที่อนุมัติ + ช่วงมีประจำเดือน แล้ววาดใหม่ (ไม่เกินทุก 2 นาที)
+    if (Date.now() - excKick > 120000) { excKick = Date.now();
+      const rr = () => { try { render(lastList); } catch (e) {} };
+      try { const p = window.k8LeaveLoad && window.k8LeaveLoad(true); if (p && p.then) p.then(rr); } catch (e) {}
+      try { window.k8PerOn && window.k8PerOn('0', '1970-01-01'); } catch (e) {}
+      setTimeout(rr, 3500); }
     const pad = (n) => String(n).padStart(2, '0'); const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
     const now = new Date(); const days = []; for (let i = 0; days.length < 6 && i < 14; i++) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); if (d.getDay() !== 6) days.unshift(d); }
     const today = ymd(now); const mins = now.getHours() * 60 + now.getMinutes();
@@ -2022,7 +2029,9 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     });
     const isDue = (k) => { const [di, si] = k.split('|'); return !!(due[+di] && due[+di][+si]); };
     Object.keys(cell).forEach((sid) => { map[sid] = Object.keys(cell[sid]).filter((k) => cell[sid][k] !== 'miss' && isDue(k)).length; });
-    P6 = { days: days.map(ymd), due, dueN, cell };
+    const hmS = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    const win = days.map((d) => { try { return window.k8PrayerDay(d).map((x) => [hmS(x.start), hmS(Math.min(x.end, 1439))]); } catch (e) { return null; } });
+    P6 = { days: days.map(ymd), due, dueN, cell, win, exc: {} };
     return map;
   }
   // v20.07 · ดาวละหมาดตรงเวลา (จากประวัติดาว) · โหลดครั้งเดียว แล้ววาดรายชื่อใหม่
@@ -2058,8 +2067,17 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     try { render(lastList); } catch (e) {}
   };
   const TH_D = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+  // v20.11 · ช่องที่ไม่มีบันทึก แต่มีใบลาที่อนุมัติ หรืออยู่ในช่วงมีประจำเดือน = ลา/อุซุร (ม่วง) ไม่ใช่ขาด
+  function p6Excused(sid, di, si) {
+    const ds = P6.days[di]; const w = P6.win && P6.win[di] && P6.win[di][si];
+    try { if (window.k8StuLeaveOn && window.k8StuLeaveOn(sid, ds, w ? w[0] : '', w ? w[1] : '', 'pray')) return true; } catch (e) {}
+    try { if (window.k8PerSlot && window.k8PerSlot(sid, ds, si)) return true; } catch (e) {}
+    return false;
+  }
   function p6Grid(sid) {
-    const c = P6.cell[sid] || {}; const n = Object.keys(c).filter((k) => { const [di, si] = k.split('|'); return c[k] !== 'miss' && P6.due[+di] && P6.due[+di][+si]; }).length; const N = P6.dueN || 1; const pc = n / N;
+    const c0 = P6.cell[sid] || {}; const c = Object.assign({}, c0);
+    P6.days.forEach((ds, di) => [0, 1, 2, 3, 4].forEach((si) => { const k = di + '|' + si; if ((!c[k] || c[k] === 'miss') && P6.due[di][si] && p6Excused(sid, di, si)) c[k] = 'ex'; }));
+    const n = Object.keys(c).filter((k) => { const [di, si] = k.split('|'); return c[k] !== 'miss' && P6.due[+di] && P6.due[+di][+si]; }).length; const N = P6.dueN || 1; const pc = n / N;
     const col = pc >= 0.9 ? '#047857' : pc >= 0.7 ? '#b45309' : '#b91c1c';
     const g = P6.days.map((ds, di) => '<span class="k8-p6-d"><em>' + TH_D[new Date(ds + 'T12:00:00').getDay()] + '</em>' + [0, 1, 2, 3, 4].map((i) => { const v = c[di + '|' + i]; return '<i class="' + (v || (P6.due[di][i] ? 'miss' : 'na')) + '"></i>'; }).join('') + '</span>').join('');
     return '<span class="k8-p6" title="ละหมาด 6 วันล่าสุด (ไม่นับวันเสาร์) · ' + n + '/' + N + ' เวลา"><span class="k8-p6-g" aria-hidden="true">' + g + '</span><span class="k8-p6-n" style="color:' + col + '"><b>' + n + '</b>/' + N + '</span></span>';
@@ -3797,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.10';
+  const APP_VERSION = '20.11';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
