@@ -7926,3 +7926,5 @@ html[data-theme="dark"] .k8-starm header small, html[data-theme="dark"] .k8-star
 html[data-theme="dark"] .k8-starm-list li { background: #2a2108 !important; border-color: #854d0e !important; }
 html[data-theme="dark"] .k8-starm-list b { color: #fef3c7 !important; } html[data-theme="dark"] .k8-starm-list small { color: #fcd34d !important; }
 html[data-theme="dark"] .k8-starm-list button { background: #1c1917 !important; color: #fca5a5 !important; border-color: #7f1d1d !important; }
+/* v20.14 · ไม่มีการ์ด "เช็คแล้ววันนี้" · แถบ 5 เวลาเต็มความกว้าง */
+.k8-pq { grid-template-columns: minmax(0, 1fr) !important; }

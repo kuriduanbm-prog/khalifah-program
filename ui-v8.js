@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.13';
+  const APP_VERSION = '20.14';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8810,7 +8810,8 @@ window.k8RegBirthChange = function (v) {
       (x.st === 'wait' ? '<em class="is-wait">ยังไม่ถึง</em><i>&nbsp;</i>' : '<em>' + x.n + '/' + N + '</em>' + (x.st === 'now' ? '<i class="is-now">● กำลังเช็คชื่อ</i>' : '<i>ตรงเวลา ' + x.ok + ' · <span>สาย ' + x.late + '</span></i>')) + '</button>').join('');
     const card = sec.closest('.card'); if (card) card.classList.add('k8-pq-on'); const sl = document.getElementById('adminPrayerSlotsGridContainer'); if (sl && sl.previousElementSibling) sl.previousElementSibling.classList.add('k8-pq-hide');
     const bulk = (V.bulk || []).map((b) => '<button type="button" class="k8-pq-bk" onclick="k8PdBulk(\'' + jsq(b.key) + '\')"' + (b.ids.length ? '' : ' disabled') + ' title="' + esc(b.ids.length ? 'บันทึก ' + b.label + ' (ตรงเวลา) ให้ ' + b.ids.length + ' คนที่ยังไม่เช็ค' : 'ทุกคนมีบันทึก ' + b.label + ' แล้ว') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>' + esc(SHORT[b.key] || b.label) + '<em>' + b.ids.length + '</em></button>').join('');
-    el.innerHTML = '<div class="k8-pq-hero">' + '<div class="k8-pq-rw">' + ring + '</div><div><small>เช็คแล้ว' + ((document.getElementById('k8PtDayLbl') || {}).textContent === 'วันนี้' ? 'วันนี้' : 'วันนั้น') + '</small><b>' + done + '<span> / ' + poss + ' ครั้ง</span></b><small>นับเฉพาะเวลาที่ถึงแล้ว · ' + N + ' คน</small></div></div><div class="k8-pq-steps">' + steps + '</div>' +
+    // v20.14 · เอาการ์ด "เช็คแล้ววันนี้" ออก · เหลือแถบ 5 เวลาเต็มความกว้าง
+    el.innerHTML = '<div class="k8-pq-steps">' + steps + '</div>' +
       (bulk ? '<div class="k8-pq-bulk"><span><b>ติ๊กให้ทุกคน</b><small>ละหมาดรวม / บันทึกล่วงหน้า · เฉพาะคนที่ยังไม่เช็ค</small></span><div>' + bulk + '</div></div>' : '');
   }
   const dec0 = decorate; decorate = function () { dec0(); try { pq1(); } catch (e) { console.warn('pq1', e); } };
