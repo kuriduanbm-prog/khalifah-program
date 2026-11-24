@@ -2022,6 +2022,7 @@ function clearSessionData() {
   try { SHARED_DATA_KEYS.forEach(k => localStorage.removeItem(k)); } catch (e) {}
   // v19.77 · แคชรายชื่อการส่งงานของอาจารย์ (มีรหัส/ชื่อนักเรียน) ต้องไม่ค้างหลังออกจากระบบ
   try { Object.keys(localStorage).filter(k => k.indexOf('k8_cpsv_') === 0).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  try { ['khalifah_sld_cache', 'k8_sl_ok'].forEach(k => localStorage.removeItem(k)); } catch (e) {} // v20.15 · ข้อมูลการลา (แอดมิน/อาจารย์)
   try {
     allStudents = [];
     subAdmins = [];
