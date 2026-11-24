@@ -2015,6 +2015,16 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     P6 = { days: days.map(ymd), due, dueN, cell };
     return map;
   }
+  // v20.07 · ดาวละหมาดตรงเวลา (จากประวัติดาว) · โหลดครั้งเดียว แล้ววาดรายชื่อใหม่
+  let STAR = null, starLoading = false;
+  function starInfo() {
+    if (STAR === null && !starLoading) { starLoading = true; gasApiCall('getStarHistory', {}, 30000).then((r) => {
+      const by = {}; let last = '';
+      ((r && r.success && r.list) || []).filter((x) => x.type === 'prayer').forEach((x) => { const k = norm(x.sid); const o = by[k] = by[k] || { n: 0, last: '', name: x.name, grade: x.grade }; o.n += Number(x.stars) || 1; const d = String(x.from || x.date || ''); if (d > o.last) o.last = d; if (d > last) last = d; });
+      STAR = { by, last }; starLoading = false; try { render(lastList); } catch (e) {}
+    }).catch(() => { STAR = { by: {}, last: '' }; starLoading = false; }); }
+    return STAR || { by: {}, last: '' };
+  }
   const TH_D = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
   function p6Grid(sid) {
     const c = P6.cell[sid] || {}; const n = Object.keys(c).filter((k) => { const [di, si] = k.split('|'); return c[k] !== 'miss' && P6.due[+di] && P6.due[+di][+si]; }).length; const N = P6.dueN || 1; const pc = n / N;
@@ -2073,11 +2083,16 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const odd = !/ปกติ|กำลังศึกษา/.test(stL);
       return '<button type="button" class="k8-ss-row" onclick="k8AsSelect(\'' + esc(id) + '\')">' + pic(s) +
         '<span class="k8-ss-t"><b>' + esc(s.fullName || id) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(id) + ((s.schoolName || s.school) ? ' · ' + esc(s.schoolName || s.school) : '') + (odd ? ' · <i style="color:' + stInk + '">' + esc(stL) + '</i>' : '') + '</small></span>' +
+        (function () { const si = starInfo().by[norm(s.studentId)]; if (!si) return ''; const isNew = si.last && si.last === starInfo().last; return '<span class="k8-ss-star' + (isNew ? ' is-new' : '') + '" title="ได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + si.n + ' ครั้ง' + (isNew ? ' · รวมสัปดาห์ล่าสุด' : '') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>' + si.n + '</span>'; })() +
         p6Grid(norm(s.studentId)) + '</button>';
     };
     const col = (sx, cls, title) => { const l = list.filter((s) => sexOf(s) === sx); return '<section class="k8-ss-col ' + cls + '" aria-label="' + title + '"><header><span class="k8-ss-dot" aria-hidden="true"></span><b>' + title + '</b><em>' + l.length + ' คน</em></header>' + (l.length ? '<div class="k8-ss-list">' + l.map(card).join('') + '</div>' : '<p class="k8-ss-empty">ไม่มีนักเรียนตามเงื่อนไข</p>') + '</section>'; };
     const un = list.filter((s) => !sexOf(s));
-    box.innerHTML = '<p class="k8-p6-lg"><b>ละหมาด 6 วันล่าสุด</b> (ไม่นับวันเสาร์) · <i class="ok"></i>ตรงเวลา <i class="late"></i>สาย <i class="ex"></i>ลา/อุซุร <i class="miss"></i>ขาด <i class="na"></i>ยังไม่ถึงเวลา</p>' + '<div class="k8-ss-cols">' + col('ชาย', 'is-m', 'นักเรียนชาย') + col('หญิง', 'is-f', 'นักเรียนหญิง') + '</div>' +
+    const SI = starInfo(); const winners = SI.last ? list.filter((x) => { const o = SI.by[norm(x.studentId)]; return o && o.last === SI.last; }) : [];
+    const TMN = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; const wk = SI.last ? (function () { const d = new Date(SI.last + 'T12:00:00'); const e = new Date(d.getTime() + 5 * 864e5); return d.getDate() + (d.getMonth() !== e.getMonth() ? ' ' + TMN[d.getMonth()] : '') + '–' + e.getDate() + ' ' + TMN[e.getMonth()] + ' ' + String(e.getFullYear() + 543).slice(2); })() : '';
+    const starBar = winners.length ? '<section class="k8-ss-stars" aria-label="นักเรียนที่ได้ดาวละหมาดสัปดาห์ล่าสุด"><header><span class="k8-ss-starI" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg></span><b>ได้ดาวละหมาดตรงเวลาครบสัปดาห์</b><em>' + esc(wk) + ' · ' + winners.length + ' คน</em></header><div>' +
+      winners.map((x) => '<button type="button" onclick="k8AsSelect(\'' + esc(cid(x.studentId)) + '\')">' + esc(window.k8BareName ? window.k8BareName(x) : x.fullName) + '<small>' + esc(shortG(x.grade)) + ' · ⭐' + SI.by[norm(x.studentId)].n + '</small></button>').join('') + '</div></section>' : '';
+    box.innerHTML = starBar + '<p class="k8-p6-lg"><b>ละหมาด 6 วันล่าสุด</b> (ไม่นับวันเสาร์) · <i class="ok"></i>ตรงเวลา <i class="late"></i>สาย <i class="ex"></i>ลา/อุซุร <i class="miss"></i>ขาด <i class="na"></i>ยังไม่ถึงเวลา</p>' + '<div class="k8-ss-cols">' + col('ชาย', 'is-m', 'นักเรียนชาย') + col('หญิง', 'is-f', 'นักเรียนหญิง') + '</div>' +
       (un.length ? '<section class="k8-ss-col is-u"><header><span class="k8-ss-dot" aria-hidden="true"></span><b>ยังไม่ระบุเพศ</b><em>' + un.length + ' คน</em><button type="button" onclick="k8GxOpen()">ระบุเพศ ›</button></header><div class="k8-ss-list is-grid">' + un.map(card).join('') + '</div></section>' : '');
   }
   function renderDetail(pr) {
@@ -3750,7 +3765,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.06';
+  const APP_VERSION = '20.07';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
