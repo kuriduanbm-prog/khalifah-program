@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.14';
+  const APP_VERSION = '20.15';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -13924,7 +13924,7 @@ window.k8PdWho = function (sid) {
   function shell() {
     let m = document.getElementById('k8SldModal'); if (m) return m;
     document.body.insertAdjacentHTML('beforeend', '<div class="modal-overlay" id="k8SldModal" onclick="if(event.target===this)k8SldClose()"><div class="modal-dialog k8-sheet k8-sld" role="dialog" aria-modal="true" aria-labelledby="k8SldT">' +
-      '<header class="k8-sheet-head"><div><h2 id="k8SldT">การลาของนักเรียน</h2><span id="k8SldSub">สรุปรายวัน · ชั้น · สาเหตุ</span></div><div class="k8-sld-hacts"><div class="k8-sld-xw"><button type="button" class="k8-btn-line k8-sld-xb" id="k8SldXBtn" aria-haspopup="true" aria-expanded="false" onclick="k8SldXm()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>ส่งออก</button><div class="k8-sld-xm" id="k8SldXm" hidden role="menu"><button type="button" role="menuitem" onclick="k8SldExport(\'xlsx\')">Excel (.xlsx)</button><button type="button" role="menuitem" onclick="k8SldExport(\'doc\')">Word (.doc)</button><button type="button" role="menuitem" onclick="k8SldExport(\'pdf\')">PDF</button><button type="button" role="menuitem" onclick="k8SldExport(\'jpg\')">รูปภาพ JPG</button></div></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8SldClose()">✕</button></div></header>' +
+      '<header class="k8-sheet-head"><div><h2 id="k8SldT">การลาของนักเรียน</h2><span id="k8SldSub">สรุปรายวัน · ชั้น · สาเหตุ</span></div><div class="k8-sld-hacts"><button type="button" class="k8-btn-line k8-sld-bulkb" onclick="k8SlbOpen()" title="ลาให้นักเรียนทุกคน เช่น วันหยุด"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg><span>ลาให้ทุกคน</span></button><div class="k8-sld-xw"><button type="button" class="k8-btn-line k8-sld-xb" id="k8SldXBtn" aria-haspopup="true" aria-expanded="false" onclick="k8SldXm()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>ส่งออก</button><div class="k8-sld-xm" id="k8SldXm" hidden role="menu"><button type="button" role="menuitem" onclick="k8SldExport(\'xlsx\')">Excel (.xlsx)</button><button type="button" role="menuitem" onclick="k8SldExport(\'doc\')">Word (.doc)</button><button type="button" role="menuitem" onclick="k8SldExport(\'pdf\')">PDF</button><button type="button" role="menuitem" onclick="k8SldExport(\'jpg\')">รูปภาพ JPG</button></div></div><button type="button" class="k8-sheet-x" aria-label="ปิด" onclick="k8SldClose()">✕</button></div></header>' +
       '<div class="k8-sld-bar"><div class="k8-sld-nav"><button type="button" class="k8-sld-arr" aria-label="วันก่อนหน้า" onclick="k8SldDay(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><label class="k8-sld-date"><span class="sr-only-k8">เลือกวันที่</span><input type="date" id="k8SldDate" onchange="k8SldSet(this.value)"><b id="k8SldDateT"></b></label><button type="button" class="k8-sld-arr" aria-label="วันถัดไป" onclick="k8SldDay(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button><button type="button" class="k8-sld-today" id="k8SldToday" onclick="k8SldSet(\'\')">วันนี้</button></div><div class="k8-sld-week" id="k8SldWeek" role="group" aria-label="จำนวนคนลาในสัปดาห์นี้"></div></div>' +
       '<div class="k8-sheet-body k8-sld-body" id="k8SldBody"></div></div></div>');
     return document.getElementById('k8SldModal');
@@ -13981,6 +13981,50 @@ window.k8PdWho = function (sid) {
     setTimeout(() => { const b = document.querySelector('#k8SldModal .k8-sheet-x'); if (b) b.focus(); }, 60);
   };
   window.k8SldClose = function () { try { closeModal('k8SldModal'); } catch (e) {} };
+  // v20.15 · แอดมินลาให้นักเรียนทุกคน (วันหยุด) · อนุมัติทันที + แจ้งเตือนนักเรียน · ยกเลิกทั้งชุดได้
+  const B = { from: '', to: '', type: 'กลับบ้าน', where: 'บ้าน', reason: '', grades: [], gender: 'all', notify: true, busy: false };
+  const bStu = () => { let L = []; try { L = (typeof allStudents !== 'undefined' && allStudents) || []; } catch (e) {} return L.filter((x) => x && x.studentId && !/ลาออก|สำเร็จ|พ้นสภาพ|จบการศึกษา/.test(String(x.status || '')) && (!B.grades.length || B.grades.includes((String(x.grade || '').match(/([1-6])/) || [])[1])) && (B.gender === 'all' || (B.gender === 'f') === !!(window.k8IsGirl && window.k8IsGirl(x)))); };
+  const bThD = (v) => { const m = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/); const TM = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; return m ? (+m[3]) + ' ' + TM[+m[2] - 1] + ' ' + String(+m[1] + 543).slice(2) : ''; };
+  function bPaint() {
+    const b = document.getElementById('k8SlbB'); if (!b) return; const n = bStu().length;
+    const batches = {}; (S.list || []).forEach((x) => { if (x && x.batch && x.status !== 'cancelled') { const o = batches[x.batch] = batches[x.batch] || { n: 0, x }; o.n++; } });
+    const bl = Object.keys(batches).sort().reverse().slice(0, 6);
+    const chip = (k, v, l) => '<button type="button" class="k8-bk-chip" aria-pressed="' + (k === 'g' ? (v === '' ? !B.grades.length : B.grades.includes(v)) : B.gender === v) + '" onclick="k8SlbF(\'' + k + '\',\'' + v + '\')">' + l + '</button>';
+    b.innerHTML = '<div class="k8-slb-grid"><label><span>ตั้งแต่วันที่ *</span><input type="date" value="' + B.from + '" onchange="k8SlbV(\'from\',this.value)"></label><label><span>ถึงวันที่ *</span><input type="date" value="' + B.to + '" onchange="k8SlbV(\'to\',this.value)"></label></div>' +
+      '<label class="k8-slb-f"><span>เหตุผล * (นักเรียนจะเห็นในแจ้งเตือน)</span><input type="text" maxlength="120" placeholder="เช่น วันหยุดยาว / หยุดชดเชย" value="' + esc(B.reason) + '" oninput="k8SlbV(\'reason\',this.value)"></label>' +
+      '<div class="k8-slb-grid"><label><span>ประเภทการลา</span><select onchange="k8SlbV(\'type\',this.value)">' + ['กลับบ้าน', 'ลากิจ', 'กิจกรรมนอกโรงเรียน', 'อื่น ๆ'].map((t) => '<option' + (B.type === t ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label><label><span>ลาอยู่ที่ไหน</span><input type="text" maxlength="60" value="' + esc(B.where) + '" oninput="k8SlbV(\'where\',this.value)"></label></div>' +
+      '<div class="k8-bk-f"><span>ชั้น</span>' + chip('g', '', 'ทุกชั้น') + ['1', '2', '3', '4', '5', '6'].map((g) => chip('g', g, 'ม.' + g)).join('') + '</div>' +
+      '<div class="k8-bk-f"><span>เพศ</span>' + chip('x', 'all', 'ทั้งหมด') + chip('x', 'm', 'ชาย') + chip('x', 'f', 'หญิง') + '</div>' +
+      '<label class="k8-slb-ck"><input type="checkbox"' + (B.notify ? ' checked' : '') + ' onchange="k8SlbV(\'notify\',this.checked)"> แจ้งเตือนนักเรียนที่กระดิ่ง</label>' +
+      '<p class="k8-slb-sum">จะบันทึกการลา <b>' + n + ' คน</b>' + (B.from && B.to ? ' · ' + bThD(B.from) + (B.to !== B.from ? ' – ' + bThD(B.to) : '') + ' (ทั้งวัน)' : '') + ' · อนุมัติทันที · คนที่มีใบลาช่วงนี้อยู่แล้วจะถูกข้าม</p>' +
+      (bl.length ? '<div class="k8-slb-hist"><b>ลาให้ทุกคนที่บันทึกไว้</b><ul>' + bl.map((k) => { const o = batches[k]; return '<li><span>' + esc(o.x.reason || '-') + '<small>' + bThD(o.x.from) + (o.x.to !== o.x.from ? ' – ' + bThD(o.x.to) : '') + ' · ' + o.n + ' คน</small></span><button type="button" onclick="k8SlbCancel(\'' + k + '\')">ยกเลิกทั้งชุด</button></li>'; }).join('') + '</ul></div>' : '');
+    const go = document.getElementById('k8SlbGo'); if (go) { go.disabled = B.busy || !n; go.textContent = B.busy ? 'กำลังบันทึก…' : 'บันทึกการลา ' + n + ' คน'; }
+  }
+  window.k8SlbOpen = function () {
+    const t = new Date().toLocaleDateString('sv-SE'); if (!B.from) { B.from = t; B.to = t; }
+    let m = document.getElementById('k8SlbM');
+    if (!m) { document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-slb" id="k8SlbM" role="dialog" aria-modal="true" aria-labelledby="k8SlbT" hidden><div class="k8-ra-box"><header><div><h3 id="k8SlbT">ลาให้นักเรียนทุกคน</h3><small>เช่น วันหยุดยาว · บันทึกเป็นใบลาที่อนุมัติแล้วให้ทุกคน</small></div><button type="button" class="k8-ra-x" onclick="k8SlbClose()" aria-label="ปิด">✕</button></header><div class="k8-ra-body" id="k8SlbB"></div><footer class="k8-bk-ft"><button type="button" class="k8-bk-alt" onclick="k8SlbClose()">ยกเลิก</button><button type="button" class="k8-bk-go" id="k8SlbGo" onclick="k8SlbSave()">บันทึก</button></footer></div></div>');
+      m = document.getElementById('k8SlbM'); m.addEventListener('click', (e) => { if (e.target === m) window.k8SlbClose(); }); m.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); window.k8SlbClose(); } }); }
+    m.hidden = false; bPaint(); setTimeout(() => { const i = m.querySelector('input[type="date"]'); if (i) i.focus(); }, 30);
+  };
+  window.k8SlbClose = function () { const m = document.getElementById('k8SlbM'); if (m) m.hidden = true; };
+  window.k8SlbV = function (k, v) { B[k] = v; if (k === 'from' && (!B.to || B.to < v)) B.to = v; if (k !== 'reason' && k !== 'where') bPaint(); else { const go = document.getElementById('k8SlbGo'); if (go) go.disabled = B.busy || !bStu().length; } };
+  window.k8SlbF = function (k, v) { if (k === 'g') { if (!v) B.grades = []; else B.grades = B.grades.includes(v) ? B.grades.filter((x) => x !== v) : B.grades.concat(v); } else B.gender = v; bPaint(); };
+  window.k8SlbSave = async function () {
+    if (B.busy) return; if (!B.from || !B.to || B.to < B.from) { toast('เลือกวันที่ให้ถูกต้อง', 'warning'); return; } if (!String(B.reason).trim()) { toast('กรุณาใส่เหตุผล เช่น วันหยุดยาว', 'warning'); return; }
+    const n = bStu().length; if (!confirm('บันทึกการลาให้นักเรียน ' + n + ' คน\n' + bThD(B.from) + (B.to !== B.from ? ' – ' + bThD(B.to) : '') + ' · ' + B.reason + (B.notify ? '\nและแจ้งเตือนนักเรียน' : '') + '\n\nยืนยัน?')) return;
+    B.busy = true; bPaint();
+    let r = null; try { r = await gasApiCall('bulkStudentLeave', { data: { from: B.from, to: B.to, type: B.type, where: B.where, reason: String(B.reason).trim(), grades: B.grades, gender: B.gender, notify: !!B.notify } }, 60000); } catch (e) {}
+    B.busy = false;
+    if (!r || !r.success) { bPaint(); toast((r && /Unknown action/i.test(String(r.error || r.message || ''))) ? 'กรุณา Deploy Code.gs ตัวล่าสุดก่อน' : ((r && (r.message || r.error)) || 'บันทึกไม่สำเร็จ'), 'error'); return; }
+    toast(r.message, 'success'); window.k8SlbClose(); try { await load(true); } catch (e) {} try { window.k8LeaveLoad && window.k8LeaveLoad(true); } catch (e) {} try { paint(); } catch (e) {}
+  };
+  window.k8SlbCancel = async function (batch) {
+    if (!confirm('ยกเลิกการลาทั้งชุดนี้ใช่ไหม? นักเรียนทุกคนในชุดจะถูกยกเลิกการลา')) return;
+    let r = null; try { r = await gasApiCall('cancelBulkStudentLeave', { data: { batch } }, 60000); } catch (e) {}
+    if (!r || !r.success) { toast((r && (r.message || r.error)) || 'ยกเลิกไม่สำเร็จ', 'error'); return; }
+    toast(r.message, 'success'); try { await load(true); } catch (e) {} try { window.k8LeaveLoad && window.k8LeaveLoad(true); } catch (e) {} bPaint(); try { paint(); } catch (e) {}
+  };
   window.k8SldSet = function (d) { S.day = d || ymd(new Date()); paint(); };
   window.k8SldDay = function (n) { S.day = add(S.day, n); paint(); };
   window.k8SldSt = function (k) { S.st = k; paint(); };

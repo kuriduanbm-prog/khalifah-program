@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '20.09'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '20.15'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1285,7 +1285,7 @@ const ACTION_ACCESS = {
   getMyDream: 'student', saveMyDream: 'student', getDreams: 'staff',
   getHalaqahSessions: 'student', halaqahCheckIn: 'student', getMyHalaqah: 'student',
   saveHalaqahSession: 'staff', deleteHalaqahSession: 'staff', getHalaqahQr: 'staff', getHalaqahRoster: 'staff', markHalaqah: 'staff', deleteHalaqahDay: 'staff', skipHalaqahDay: 'staff',
-  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', requestStudentLeave: 'student', attachStudentLeaveDoc: 'student', getMyStudentLeaves: 'student', cancelStudentLeave: 'student', getStudentLeaves: 'staff', respondStudentLeave: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
+  getMyNotifications: 'student', getMyClassLeaves: 'student', getMyDorm: 'student', getHalaqahReport: 'admin', requestStudentLeave: 'student', attachStudentLeaveDoc: 'student', getMyStudentLeaves: 'student', cancelStudentLeave: 'student', getStudentLeaves: 'staff', respondStudentLeave: 'admin', bulkStudentLeave: 'admin', cancelBulkStudentLeave: 'admin', setStudentDorm: 'admin', requestPeriodSwap: 'staff', respondPeriodSwap: 'staff', getPeriodSwaps: 'staff', getMyPortfolio: 'student', addPortfolio: 'staff', deletePortfolio: 'staff', getPortfolioList: 'staff', markNotificationRead: 'student', getPolicy: 'student', acknowledgePolicy: 'student',
   sendNotification: 'admin', listSentNotifications: 'admin', deleteNotification: 'admin', getPolicyAckSummary: 'staff',
   // แอดมินหลักเท่านั้น
   updateLogo: 'owner', batchSync: 'owner',
@@ -1769,6 +1769,8 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'respondStudentLeave':
       return respondStudentLeave_(data, session);
+    case 'bulkStudentLeave': return bulkStudentLeave_(data, session);
+    case 'cancelBulkStudentLeave': return cancelBulkStudentLeave_(data, session);
     case 'getHalaqahReport':
       return halaqahReport_(pick('from'), pick('to'));
     case 'getMyDorm': {
@@ -4097,6 +4099,64 @@ function requestStudentLeave_(d, session) {
   if (!r.success) return r;
   try { sendNotification_({ title: 'คำขอลาเรียน · ' + item.name, body: slTxt_(item) + ' · ' + type + (where ? ' · ไป ' + where : '') + (reason && reason !== type ? ' · ' + reason : '') + (item.docs ? ' · แนบหลักฐาน ' + item.docs.length + ' รูป' : '') + ' · อนุมัติได้ที่เมนู "นักเรียน"', audience: 'admins', values: [], expires: to }, { userId: sid, name: item.name }); } catch (e) {}
   return { success: true, item: item, message: 'ส่งคำขอลาแล้ว · รอแอดมินอนุมัติ' };
+}
+/** v20.15 · แอดมินลาให้นักเรียนทุกคน (เช่น วันหยุดยาว) · อนุมัติทันที · แจ้งเตือนนักเรียน
+ *  d = { from, to, type, where, reason, grades:[1..6] (ว่าง=ทุกชั้น), gender: all|m|f, notify } */
+function bulkStudentLeave_(d, session) {
+  d = d || {}; if (session && session.limit) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมินหลัก' };
+  const from = cleanVal(d.from), to = cleanVal(d.to || d.from);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) return { success: false, message: 'เลือกวันที่ให้ถูกต้อง' };
+  if (slDays_(from, to) > 31) return { success: false, message: 'ลาให้ทุกคนได้ครั้งละไม่เกิน 31 วัน' };
+  const type = SL_TYPES_.indexOf(cleanVal(d.type)) !== -1 ? cleanVal(d.type) : 'อื่น ๆ';
+  const where = cleanVal(d.where || '').substring(0, 120), reason = cleanVal(d.reason || '').substring(0, 300);
+  if (!reason) return { success: false, message: 'กรุณาใส่เหตุผล เช่น วันหยุดยาว' };
+  const grades = (Array.isArray(d.grades) ? d.grades : []).map(function (g) { return String(g).replace(/\D/g, ''); }).filter(function (g) { return /^[1-6]$/.test(g); });
+  const gender = ['m', 'f'].indexOf(cleanVal(d.gender)) !== -1 ? cleanVal(d.gender) : 'all';
+  const studs = (getAllStudents().data || []).filter(function (x) {
+    if (!cleanVal(x.studentId) || /ลาออก|สำเร็จ|พ้นสภาพ|จบการศึกษา/.test(String(x.status || ''))) return false;
+    if (grades.length) { const m = String(x.grade || '').match(/([1-6])/); if (!m || grades.indexOf(m[1]) === -1) return false; }
+    if (gender !== 'all') { const girl = periodIsGirl_(x); if ((gender === 'f') !== girl) return false; }
+    return true;
+  });
+  if (!studs.length) return { success: false, message: 'ไม่พบนักเรียนตามเงื่อนไขที่เลือก' };
+  const batch = 'SLB' + Date.now().toString(36);
+  const who = cleanVal((session && (session.name || session.username)) || 'แอดมิน'); const nowIso = new Date().toISOString();
+  let added = 0, skipped = 0;
+  const r = leaveLock_(function () {
+    const L = readStuLeaves_();
+    const busy = {}; L.forEach(function (x) { if ((x.status === 'approved' || x.status === 'pending') && !(x.to < from || x.from > to) && x.allDay) busy[slKey_(x.sid)] = 1; });
+    studs.forEach(function (x, i) {
+      const k = slKey_(x.studentId); if (busy[k]) { skipped++; return; }
+      L.push({ id: 'SL' + batch.slice(3) + i.toString(36), sid: String(x.studentId), name: cleanVal(x.fullName || ''), grade: cleanVal(x.grade || ''), from: from, to: to, allDay: true, tFrom: '', tTo: '', type: type, where: where, reason: reason,
+        status: 'approved', createdAt: nowIso, by: who, at: nowIso, note: 'แอดมินลาให้ทุกคน', batch: batch });
+      added++;
+    });
+    writeStuLeaves_(L); return { success: true };
+  });
+  if (!r.success) return r;
+  let notified = false;
+  if (d.notify !== false && String(d.notify) !== 'false' && added) {
+    try {
+      const txt = slTxt_({ from: from, to: to, allDay: true });
+      const aud = (grades.length || gender !== 'all') ? 'students' : 'all';
+      const vals = aud === 'students' ? studs.map(function (x) { return x.studentId; }) : [];
+      const nr = sendNotification_({ title: 'แจ้งหยุด · ' + reason, body: 'โรงเรียนอนุญาตให้นักเรียน' + (grades.length ? ' ม.' + grades.join(', ม.') : 'ทุกคน') + (gender === 'm' ? ' (ชาย)' : gender === 'f' ? ' (หญิง)' : '') + ' ลา' + (type !== 'อื่น ๆ' ? type : '') + ' ' + txt + (where ? ' · ' + where : '') + ' · ระบบบันทึกการลาให้แล้ว ไม่ต้องส่งใบลา · ไม่นับขาดละหมาด/ขาดเรียนในช่วงนี้', audience: aud, values: vals, mode: 'bell', expires: to }, session);
+      notified = !!(nr && nr.success);
+    } catch (e) {}
+  }
+  try { bumpDataVersion_(); } catch (e) {}
+  return { success: true, batch: batch, added: added, skipped: skipped, notified: notified, message: 'ลาให้นักเรียน ' + added + ' คนแล้ว' + (skipped ? ' · ข้าม ' + skipped + ' คนที่มีใบลาช่วงนี้อยู่แล้ว' : '') + (notified ? ' · แจ้งเตือนนักเรียนแล้ว' : '') };
+}
+function cancelBulkStudentLeave_(d, session) {
+  const batch = cleanVal((d || {}).batch); if (!/^SLB[\w]+$/.test(batch)) return { success: false, message: 'ไม่พบชุดการลา' };
+  let n = 0; const who = cleanVal((session && (session.name || session.username)) || 'แอดมิน');
+  const r = leaveLock_(function () {
+    const L = readStuLeaves_(); L.forEach(function (x) { if (x.batch === batch && x.status !== 'cancelled') { x.status = 'cancelled'; x.note = 'ยกเลิกทั้งชุดโดย ' + who; x.at = new Date().toISOString(); n++; } });
+    if (n) writeStuLeaves_(L); return { success: true };
+  });
+  if (!r.success) return r;
+  try { bumpDataVersion_(); } catch (e) {}
+  return { success: true, cancelled: n, message: n ? 'ยกเลิกการลาทั้งชุดแล้ว ' + n + ' คน' : 'ชุดนี้ถูกยกเลิกไปแล้ว' };
 }
 function slDorm_(x) { return /^หอพัก/.test(String((x && x.where) || '')); }
 // ---------- v19.22 · หลักฐานการลา (รูปภาพ) ----------
