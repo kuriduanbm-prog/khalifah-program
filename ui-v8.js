@@ -303,9 +303,19 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     }
     return { n, last };
   }
+  // v20.08 · ดาวบนบัตร: ใช้จำนวนจากประวัติดาวในระบบ (ตรงกับหน้ารายชื่อของแอดมิน) · ถ้ายังโหลดไม่ได้ ใช้การคำนวณในเครื่อง
+  const SRV_STAR = {};
+  function srvStars(st, cb) {
+    const k = String(st.studentId || '').replace(/\D/g, '').replace(/^0+/, ''); const c = SRV_STAR[k];
+    if (c && Date.now() - c.at < 10 * 60000) return c.v;
+    if (!c || !c.busy) { SRV_STAR[k] = Object.assign({}, c || {}, { busy: true });
+      gasApiCall('getMyStars', { studentId: st.studentId, data: { studentId: st.studentId } }, 20000).then((r) => { SRV_STAR[k] = { at: Date.now(), v: r && r.success ? { n: Number(r.prayer) || 0, last: r.last || '' } : (c && c.v) || null }; cb && cb(); }).catch(() => { SRV_STAR[k] = { at: Date.now(), v: (c && c.v) || null }; }); }
+    return c && c.v;
+  }
   function paintStars(prayers, st, now) {
     const host = document.querySelector('.hf-lg1-main'); if (!host || !st) return;
-    const r = weekStars(prayers, st, now);
+    const loc = weekStars(prayers, st, now); const sv = srvStars(st, () => { try { paintStars(prayers, st, now); } catch (e) {} });
+    const r = sv ? { n: Math.max(sv.n, 0), last: sv.last || loc.last } : loc;
     let el = document.getElementById('hfStars');
     if (!r.n) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'hfStars'; el.className = 'hf-stars'; el.setAttribute('role', 'img'); host.prepend(el); }
@@ -3765,7 +3775,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.07';
+  const APP_VERSION = '20.08';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
