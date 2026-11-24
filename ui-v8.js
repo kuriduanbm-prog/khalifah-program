@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.12';
+  const APP_VERSION = '20.13';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -12585,7 +12585,7 @@ window.k8HfMiss = function (slot) {
   window.k8SlF = function (k, v, soft) { F[k] = v; if (k === 'type' && v === 'กลับบ้าน' && !F.where) F.where = 'บ้าน'; if (k === 'from' && (!F.range || F.to < v)) F.to = v; if (k === 'range' && !v) F.to = F.from; if (!soft) renderStu(); else { paintSlip(); const el = document.getElementById('k8SlDocs'); if (el && /^(from|to|range)$/.test(k)) el.outerHTML = docsField(); } };
   window.k8SlWhere = function (k) { F.where = k; if (k !== 'อื่น ๆ') F.other = ''; renderStu(); if (k === 'อื่น ๆ') setTimeout(() => { const o = document.getElementById('k8SlWhereO'); if (o) o.focus(); }, 30); };
   window.k8SlSend = async function () {
-    if (!F.where) { toast('เลือกว่าตอนนี้อยู่ที่ไหน (หอพัก / บ้าน / ที่อื่น ๆ)', 'warning'); return; }
+    if (!F.where) { toast('เลือกว่าต้องการลาอยู่ที่ไหน (หอพัก / บ้าน / ที่อื่น ๆ)', 'warning'); return; }
     if (F.where === 'อื่น ๆ' && !String(F.other || '').trim()) { toast('ระบุสถานที่ที่อยู่ตอนนี้ด้วย', 'warning'); const o = document.getElementById('k8SlWhereO'); if (o) o.focus(); return; }
     if (F.type === 'อื่น ๆ' && !F.reason.trim()) { toast('เลือก "อื่น ๆ" ต้องกรอกรายละเอียดด้วย', 'warning'); const o = document.getElementById('k8SlReason'); if (o) o.focus(); return; }
     if (!F.allDay && !(F.tTo > F.tFrom)) { toast('เวลาสิ้นสุดต้องหลังเวลาเริ่ม', 'warning'); return; }
