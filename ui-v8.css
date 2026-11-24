@@ -7907,3 +7907,22 @@ html[data-theme="dark"] .k8-ss-star.is-new { background: #ca8a04 !important; col
 html[data-theme="dark"] .k8-ss-stars { background: #2a2108 !important; border-color: #854d0e !important; }
 html[data-theme="dark"] .k8-ss-stars header b { color: #fde68a !important; } html[data-theme="dark"] .k8-ss-stars header em, html[data-theme="dark"] .k8-ss-stars button small { color: #fcd34d !important; }
 html[data-theme="dark"] .k8-ss-stars button { background: #1c1917 !important; border-color: #854d0e !important; color: #fef3c7 !important; }
+/* v20.09 · จัดการ/ลบดาวละหมาด */
+.k8-ss-star[role="button"] { cursor: pointer; }
+.k8-ss-star[role="button"]:hover { filter: brightness(.96); box-shadow: 0 0 0 2px #fde68a; }
+.k8-ss-star[role="button"]:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+.k8-starm .k8-ra-box { width: min(480px, 100%); }
+.k8-starm header small { display: block; font-size: 13px; color: #475569; margin-top: 2px; }
+.k8-starm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.k8-starm-list li { display: flex; align-items: center; gap: 12px; border: 1px solid #fde68a; background: #fffbeb; border-radius: 12px; padding: 10px 12px; }
+.k8-starm-i { width: 32px; height: 32px; border-radius: 50%; background: #facc15; color: #fff; display: grid; place-items: center; font-size: 17px; flex: none; }
+.k8-starm-list li > span:nth-child(2) { flex: 1; min-width: 0; }
+.k8-starm-list b { display: block; font-size: 14.5px; color: #422006; }
+.k8-starm-list small { font-size: 12.5px; color: #92400e; }
+.k8-starm-list button { font: inherit; font-size: 13px; font-weight: 600; color: #b91c1c; background: #fff; border: 1px solid #fecaca; border-radius: 9px; padding: 6px 12px; min-height: 36px; cursor: pointer; }
+.k8-starm-list button:focus-visible { outline: 2px solid #0369a1; outline-offset: 2px; }
+.k8-starm-note { margin: 12px 0 0; font-size: 12.5px; color: #64748b; line-height: 1.55; }
+html[data-theme="dark"] .k8-starm header small, html[data-theme="dark"] .k8-starm-note { color: #94a3b8 !important; }
+html[data-theme="dark"] .k8-starm-list li { background: #2a2108 !important; border-color: #854d0e !important; }
+html[data-theme="dark"] .k8-starm-list b { color: #fef3c7 !important; } html[data-theme="dark"] .k8-starm-list small { color: #fcd34d !important; }
+html[data-theme="dark"] .k8-starm-list button { background: #1c1917 !important; color: #fca5a5 !important; border-color: #7f1d1d !important; }

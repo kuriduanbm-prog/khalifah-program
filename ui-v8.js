@@ -2030,11 +2030,33 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
   function starInfo() {
     if (STAR === null && !starLoading) { starLoading = true; gasApiCall('getStarHistory', {}, 30000).then((r) => {
       const by = {}; let last = '';
-      ((r && r.success && r.list) || []).filter((x) => x.type === 'prayer').forEach((x) => { const k = norm(x.sid); const o = by[k] = by[k] || { n: 0, last: '', name: x.name, grade: x.grade }; o.n += Number(x.stars) || 1; const d = String(x.from || x.date || ''); if (d > o.last) o.last = d; if (d > last) last = d; });
+      ((r && r.success && r.list) || []).filter((x) => x.type === 'prayer').forEach((x) => { const k = norm(x.sid); const o = by[k] = by[k] || { n: 0, last: '', name: x.name, grade: x.grade, items: [] }; o.items.push(x); o.n += Number(x.stars) || 1; const d = String(x.from || x.date || ''); if (d > o.last) o.last = d; if (d > last) last = d; });
       STAR = { by, last }; starLoading = false; try { render(lastList); } catch (e) {}
     }).catch(() => { STAR = { by: {}, last: '' }; starLoading = false; }); }
     return STAR || { by: {}, last: '' };
   }
+  // v20.09 · แอดมินลบดาว: แตะป้ายดาวหลังชื่อ → รายการดาวรายสัปดาห์ + ปุ่มลบ
+  window.k8StarMgr = function (k) {
+    const o = (STAR && STAR.by[k]) || null; if (!o) return;
+    const TMN = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const wk = (x) => { const a = String(x.from || '').match(/(\d{4})-(\d{2})-(\d{2})/), b = String(x.to || x.date || '').match(/(\d{4})-(\d{2})-(\d{2})/); if (!a) return String(x.detail || x.date || ''); return (+a[3]) + (b && a[2] !== b[2] ? ' ' + TMN[+a[2] - 1] : '') + '–' + (b ? (+b[3]) + ' ' + TMN[+b[2] - 1] + ' ' + String(+b[1] + 543).slice(2) : ''); };
+    let m = document.getElementById('k8StarM');
+    if (!m) { document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-starm" id="k8StarM" role="dialog" aria-modal="true" aria-labelledby="k8StarMT" hidden><div class="k8-ra-box"><header><div><h3 id="k8StarMT">ดาวละหมาดตรงเวลา</h3><small id="k8StarMS"></small></div><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8StarM\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body" id="k8StarMB"></div></div></div>'); m = document.getElementById('k8StarM'); m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; }); m.addEventListener('keydown', (e) => { if (e.key === 'Escape') m.hidden = true; }); }
+    document.getElementById('k8StarMS').textContent = (o.name || k) + ' · ' + o.n + ' ดวง';
+    const items = o.items.slice().sort((a, b) => String(b.from || b.date).localeCompare(String(a.from || a.date)));
+    document.getElementById('k8StarMB').innerHTML = '<ul class="k8-starm-list">' + items.map((x) => '<li><span class="k8-starm-i" aria-hidden="true">★</span><span><b>สัปดาห์ ' + esc(wk(x)) + '</b><small>ได้ดาวเมื่อ ' + esc(String(x.date || '').slice(0, 10)) + '</small></span><button type="button" onclick="k8StarDel(\'' + esc(x.id) + '\',\'' + esc(k) + '\')">ลบดาว</button></li>').join('') + '</ul><p class="k8-starm-note">ลบแล้วดาวจะหายจากหน้ารายชื่อและบัตรนักเรียน และลบข้อความชมเชยของสัปดาห์นั้น · ถ้ากด "ตรวจดาวละหมาดสัปดาห์ล่าสุด" แล้วบันทึกใหม่ ระบบอาจให้ดาวสัปดาห์นั้นคืน</p>';
+    m.hidden = false; setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
+  };
+  window.k8StarDel = async function (id, k) {
+    if (!confirm('ลบดาวรายการนี้ใช่ไหม?')) return;
+    let r = null; try { r = await gasApiCall('deleteStar', { data: { id } }, 20000); } catch (e) {}
+    if (!r || !r.success) { try { showToast((r && (r.message || r.error)) || 'ลบไม่สำเร็จ · Deploy Code.gs ตัวล่าสุดก่อน', 'error'); } catch (e) {} return; }
+    const o = STAR && STAR.by[k]; if (o) { o.items = o.items.filter((x) => x.id !== id); o.n = o.items.reduce((a, x) => a + (Number(x.stars) || 1), 0); o.last = o.items.reduce((a, x) => { const d = String(x.from || x.date || ''); return d > a ? d : a; }, ''); if (!o.items.length) delete STAR.by[k]; }
+    if (STAR) STAR.last = Object.values(STAR.by).reduce((a, x) => x.last > a ? x.last : a, '');
+    try { showToast(r.message, 'success'); } catch (e) {}
+    if (STAR && STAR.by[k]) window.k8StarMgr(k); else { const m = document.getElementById('k8StarM'); if (m) m.hidden = true; }
+    try { render(lastList); } catch (e) {}
+  };
   const TH_D = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
   function p6Grid(sid) {
     const c = P6.cell[sid] || {}; const n = Object.keys(c).filter((k) => { const [di, si] = k.split('|'); return c[k] !== 'miss' && P6.due[+di] && P6.due[+di][+si]; }).length; const N = P6.dueN || 1; const pc = n / N;
@@ -2093,7 +2115,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
       const odd = !/ปกติ|กำลังศึกษา/.test(stL);
       return '<button type="button" class="k8-ss-row" onclick="k8AsSelect(\'' + esc(id) + '\')">' + pic(s) +
         '<span class="k8-ss-t"><b>' + esc(s.fullName || id) + '</b><small>' + esc(shortG(s.grade)) + ' · ' + esc(id) + ((s.schoolName || s.school) ? ' · ' + esc(s.schoolName || s.school) : '') + (odd ? ' · <i style="color:' + stInk + '">' + esc(stL) + '</i>' : '') + '</small></span>' +
-        (function () { const si = starInfo().by[norm(s.studentId)]; if (!si) return ''; const isNew = si.last && si.last === starInfo().last; return '<span class="k8-ss-star' + (isNew ? ' is-new' : '') + '" title="ได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + si.n + ' ครั้ง' + (isNew ? ' · รวมสัปดาห์ล่าสุด' : '') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>' + si.n + '</span>'; })() +
+        (function () { const si = starInfo().by[norm(s.studentId)]; if (!si) return ''; const isNew = si.last && si.last === starInfo().last; return '<span class="k8-ss-star' + (isNew ? ' is-new' : '') + '" role="button" tabindex="0" onclick="event.stopPropagation();k8StarMgr(\'' + esc(norm(s.studentId)) + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();event.stopPropagation();k8StarMgr(\'' + esc(norm(s.studentId)) + '\')}" title="ได้ดาวละหมาดตรงเวลาครบสัปดาห์ ' + si.n + ' ครั้ง' + (isNew ? ' · รวมสัปดาห์ล่าสุด' : '') + ' · แตะเพื่อจัดการ/ลบดาว"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>' + si.n + '</span>'; })() +
         p6Grid(norm(s.studentId)) + '</button>';
     };
     const col = (sx, cls, title) => { const l = list.filter((s) => sexOf(s) === sx); return '<section class="k8-ss-col ' + cls + '" aria-label="' + title + '"><header><span class="k8-ss-dot" aria-hidden="true"></span><b>' + title + '</b><em>' + l.length + ' คน</em></header>' + (l.length ? '<div class="k8-ss-list">' + l.map(card).join('') + '</div>' : '<p class="k8-ss-empty">ไม่มีนักเรียนตามเงื่อนไข</p>') + '</section>'; };
@@ -3775,7 +3797,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.08';
+  const APP_VERSION = '20.09';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));

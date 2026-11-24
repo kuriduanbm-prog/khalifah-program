@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '20.08'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '20.09'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getStudentLinks: 'staff', setStudentLink: 'admin', getPlaceRestrict: 'admin', savePlaceRestrict: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', recalcStarWeek: 'admin', exportReport: 'staff', deleteMyPrayer: 'student', checkMyPrayers: 'student', getMyStars: 'student', listPrayerFails: 'staff', scanDormPrayers: 'admin', scanJumuah: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteStar: 'admin', recalcStarWeek: 'admin', exportReport: 'staff', deleteMyPrayer: 'student', checkMyPrayers: 'student', getMyStars: 'student', listPrayerFails: 'staff', scanDormPrayers: 'admin', scanJumuah: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1841,6 +1841,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     }
     case 'getTimetableTerms': return getTimetableTerms_();
     case 'getStarHistory': return getStarHistory_(data);
+    case 'deleteStar': return deleteStar_(data, session);
     case 'exportReport': return exportReport_(data, session);
     case 'listPrayerFails': return listPrayerFails_(data);
     case 'recalcStarWeek': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return recalcStarWeek_(data);
@@ -8382,6 +8383,22 @@ function starBackfill_() {
   }
   const n = starLog_(rows); try { setProp_('STAR_LOG_BACKFILL', '1'); } catch (e) {}
   return n;
+}
+/** v20.09 · แอดมินลบดาว (ทีละรายการ) · ลบแถวในประวัติดาว + ข้อความชมเชยถึงนักเรียนของสัปดาห์นั้น */
+function deleteStar_(d, session) {
+  const id = cleanVal((d || {}).id); if (!/^(W|Q)-[\w-]+$/.test(id)) return { success: false, message: 'รหัสรายการดาวไม่ถูกต้อง' };
+  const unlock = lockEnter_(20000);
+  try {
+    const sh = starSheet_(); const n = sh.getLastRow() - 1; let row = 0, info = null;
+    if (n > 0) { const v = sh.getRange(2, 1, n, 5).getValues(); for (let i = v.length - 1; i >= 0; i--) if (String(v[i][0]) === id) { row = i + 2; info = { sid: String(v[i][3]), name: String(v[i][4]) }; break; } }
+    if (!row) return { success: false, message: 'ไม่พบรายการดาวนี้ (อาจถูกลบไปแล้ว)' };
+    sh.deleteRow(row);
+    const m = id.match(/^W-(\d{4}-\d{2}-\d{2})-(\d+)$/);
+    if (m) { const ns = getSpreadsheet().getSheetByName(SHEETS.NOTIFS); if (ns && ns.getLastRow() > 1) { const col = ns.getRange(2, 1, ns.getLastRow() - 1, 1).getValues(); const nid = 'NTF-STAR-WS-' + m[2] + '-' + m[1]; for (let i = col.length - 1; i >= 0; i--) if (String(col[i][0]) === nid) ns.deleteRow(i + 2); } }
+    try { setProp_('STAR_LOG_BACKFILL', '1'); } catch (e) {}
+    try { bumpDataVersion_(); } catch (e) {}
+    return { success: true, id: id, message: 'ลบดาวของ ' + (info.name || info.sid) + ' แล้ว' };
+  } finally { unlock(); }
 }
 /** v20.08 · ดาวละหมาดของนักเรียนคนเดียว (จากประวัติดาว = แหล่งเดียวกับหน้ารายชื่อของแอดมิน) */
 function myStars_(sid) {
