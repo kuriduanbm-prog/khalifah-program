@@ -2044,7 +2044,7 @@ setTimeout(() => window.k8LoadTermSetting && window.k8LoadTermSetting(), 1500);
     if (!m) { document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-starm" id="k8StarM" role="dialog" aria-modal="true" aria-labelledby="k8StarMT" hidden><div class="k8-ra-box"><header><div><h3 id="k8StarMT">ดาวละหมาดตรงเวลา</h3><small id="k8StarMS"></small></div><button type="button" class="k8-ra-x" onclick="document.getElementById(\'k8StarM\').hidden=true" aria-label="ปิด">✕</button></header><div class="k8-ra-body" id="k8StarMB"></div></div></div>'); m = document.getElementById('k8StarM'); m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; }); m.addEventListener('keydown', (e) => { if (e.key === 'Escape') m.hidden = true; }); }
     document.getElementById('k8StarMS').textContent = (o.name || k) + ' · ' + o.n + ' ดวง';
     const items = o.items.slice().sort((a, b) => String(b.from || b.date).localeCompare(String(a.from || a.date)));
-    document.getElementById('k8StarMB').innerHTML = '<ul class="k8-starm-list">' + items.map((x) => '<li><span class="k8-starm-i" aria-hidden="true">★</span><span><b>สัปดาห์ ' + esc(wk(x)) + '</b><small>ได้ดาวเมื่อ ' + esc(String(x.date || '').slice(0, 10)) + '</small></span><button type="button" onclick="k8StarDel(\'' + esc(x.id) + '\',\'' + esc(k) + '\')">ลบดาว</button></li>').join('') + '</ul><p class="k8-starm-note">ลบแล้วดาวจะหายจากหน้ารายชื่อและบัตรนักเรียน และลบข้อความชมเชยของสัปดาห์นั้น · ถ้ากด "ตรวจดาวละหมาดสัปดาห์ล่าสุด" แล้วบันทึกใหม่ ระบบอาจให้ดาวสัปดาห์นั้นคืน</p>';
+    document.getElementById('k8StarMB').innerHTML = '<ul class="k8-starm-list">' + items.map((x) => '<li><span class="k8-starm-i" aria-hidden="true">★</span><span><b>สัปดาห์ ' + esc(wk(x)) + '</b><small>ได้ดาวเมื่อ ' + esc((function () { const q = String(x.date || '').match(/(\d{4})-(\d{2})-(\d{2})/); return q ? (+q[3]) + ' ' + TMN[+q[2] - 1] + ' ' + String(+q[1] + 543).slice(2) : String(x.date || ''); })()) + '</small></span><button type="button" onclick="k8StarDel(\'' + esc(x.id) + '\',\'' + esc(k) + '\')">ลบดาว</button></li>').join('') + '</ul><p class="k8-starm-note">ลบแล้วดาวจะหายจากหน้ารายชื่อและบัตรนักเรียน และลบข้อความชมเชยของสัปดาห์นั้น · ถ้ากด "ตรวจดาวละหมาดสัปดาห์ล่าสุด" แล้วบันทึกใหม่ ระบบอาจให้ดาวสัปดาห์นั้นคืน</p>';
     m.hidden = false; setTimeout(() => { const x = m.querySelector('.k8-ra-x'); if (x) x.focus(); }, 30);
   };
   window.k8StarDel = async function (id, k) {
@@ -3797,7 +3797,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.09';
+  const APP_VERSION = '20.10';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
