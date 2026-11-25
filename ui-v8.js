@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.28';
+  const APP_VERSION = '20.29';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -16238,7 +16238,7 @@ window.k8PdWho = function (sid) {
       let r = null; try { r = await gasApiCall('scanPlacePenalties', { data: { from: M.from, to: M.to } }, 60000); } catch (e) {}
       M.busy = false;
       if (!r || !r.success) { M.items = []; toast((r && /Unknown action/i.test(String(r.error || r.message || ''))) ? 'กรุณา Deploy Code.gs ตัวล่าสุดก่อน' : ((r && (r.message || r.error)) || 'ตรวจไม่สำเร็จ'), 'error'); paint(); return; }
-      M.items = (r.items || []).map((x) => Object.assign({}, x, { id: x.logId })); M.sel = new Set(M.items.filter((x) => x.ok).map((x) => x.id));
+      M.items = (r.items || []).map((x) => Object.assign({}, x, { id: x.logId })); M.sel = new Set(M.items.filter((x) => x.ok).map((x) => x.id)); M.oldSrv = !r.photoField; if (M.oldSrv && M.items.length) toast('ยังไม่เห็นรูป: กรุณา Deploy Code.gs v20.29 (New version) ก่อน', 'warning');
     } else {
       let r = null; try { r = await gasApiCall('getBehaviorData', {}, 45000); } catch (e) {}
       M.busy = false;
@@ -16258,7 +16258,7 @@ window.k8PdWho = function (sid) {
   // v20.28 · รูปที่เช็คละหมาด (ย่อ) + พิกัดจริง ไว้เทียบว่าอยู่ที่ไหน
   const has = (x) => x.lat !== '' && x.lat != null && isFinite(Number(x.lat)) && isFinite(Number(x.lng)) && !(Number(x.lat) === 0 && Number(x.lng) === 0);
   const img = (u) => { try { return typeof getDirectImageUrl === 'function' ? getDirectImageUrl(u) : u; } catch (e) { return u; } };
-  const pic = (x, i) => x.photo ? '<button type="button" class="k8-mr-ph" onclick="k8MrPh(' + i + ')" aria-label="ดูรูปที่เช็คละหมาดของ ' + esc(x.name) + '"><img src="' + esc(img(x.photo)) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add(\'is-err\');this.remove()"></button>' : '<span class="k8-mr-ph is-none" aria-hidden="true">ไม่มีรูป</span>';
+  const pic = (x, i) => x.photo ? '<button type="button" class="k8-mr-ph" onclick="k8MrPh(' + i + ')" aria-label="ดูรูปที่เช็คละหมาดของ ' + esc(x.name) + '"><img src="' + esc(img(x.photo)) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add(\'is-err\');this.remove()"></button>' : '<span class="k8-mr-ph is-none" aria-hidden="true">' + (M.oldSrv ? 'รอ Deploy' : 'ไม่มีรูป') + '</span>';
   window.k8MrPh = function (i) { const x = shown()[i]; if (!x || !x.photo) return; const u = img(x.photo); const cap = x.name + ' · ละหมาด' + (x.slot || '') + ' ' + thD(x.date) + (x.time ? ' ' + x.time + ' น.' : '') + (has(x) ? ' · ' + Number(x.lat).toFixed(5) + ', ' + Number(x.lng).toFixed(5) : ''); const o = document.getElementById('k8MrPv'); if (o) o.remove();
     document.body.insertAdjacentHTML('beforeend', '<div class="k8-mr-pv" id="k8MrPv" role="dialog" aria-modal="true" aria-label="รูปที่เช็คละหมาด" onclick="if(event.target===this)this.remove()"><figure><img src="' + esc(u) + '" alt="รูปที่เช็คละหมาดของ ' + esc(x.name) + '" referrerpolicy="no-referrer"><figcaption>' + esc(cap) + '</figcaption><div class="k8-mr-pv-b">' + (has(x) ? '<a href="https://www.google.com/maps?q=' + encodeURIComponent(x.lat + ',' + x.lng) + '" target="_blank" rel="noopener">📍 ดูแผนที่</a>' : '') + '<a href="' + esc(u) + '" target="_blank" rel="noopener">เปิดรูปเต็ม</a><button type="button" onclick="document.getElementById(\'k8MrPv\').remove()">ปิด</button></div></figure></div>');
     const pv = document.getElementById('k8MrPv'); pv.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); pv.remove(); } }); const cb = pv.querySelector('button'); if (cb) cb.focus(); };
