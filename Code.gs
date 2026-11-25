@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '20.21'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '20.28'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -8958,7 +8958,7 @@ function scanPlacePenalties_(d) {
   const rec = {}; const ps = getSpreadsheet().getSheetByName(SHEETS.PRAYERS);
   if (ps && ps.getLastRow() > 1) ps.getRange(2, 1, ps.getLastRow() - 1, 16).getValues().forEach(function (r) {
     const ds = formatSheetDate(r[6]); if (!ds || ds < from || ds > to) return;
-    const k = String(r[1]).replace(/\D/g, '').replace(/^0+/, '') + '|' + ds + '|' + slotI(r[4]); rec[k] = { lat: r[8], lng: r[9], loc: String(r[13] || ''), time: formatSheetTime(r[7]) || String(r[7] || ''), status: String(r[14] || ''), slot: formatPrayerTimeThai(r[4]) };
+    const k = String(r[1]).replace(/\D/g, '').replace(/^0+/, '') + '|' + ds + '|' + slotI(r[4]); rec[k] = { lat: r[8], lng: r[9], loc: String(r[10] || ''), photo: String(r[13] || ''), time: formatSheetTime(r[7]) || String(r[7] || ''), status: String(r[14] || ''), slot: formatPrayerTimeThai(r[4]) };
   });
   const items = logs.map(function (r) {
     const id = String(r[0]); const m = id.match(/^(WP|DM|PR)-(\d+)-(\d{4}-\d{2}-\d{2})-(\d)$/); const kind = m[1], sid = m[2], ds = m[3], si = Number(m[4]);
@@ -8975,7 +8975,7 @@ function scanPlacePenalties_(d) {
         why = ok ? 'ตามพิกัดอยู่ที่ ' + zone + ' (ไม่ผิด)' : 'ยังผิดสถานที่ · ' + zone;
       }
     }
-    return { logId: id, kind: kind, sid: sid, name: cleanVal(r[5]), grade: cleanVal(r[6]), date: ds, slot: p ? String(p.slot).split(' (')[0] : PRAYER_SLOTS_[si] || '', time: p ? String(p.time).slice(0, 5) : '', points: Number(r[10]) || 0, title: cleanVal(r[9]), zone: zone, oldZone: p ? p.loc : '', lat: p ? p.lat : '', lng: p ? p.lng : '', ok: ok, why: why };
+    return { logId: id, kind: kind, sid: sid, name: cleanVal(r[5]), grade: cleanVal(r[6]), date: ds, slot: p ? String(p.slot).split(' (')[0] : PRAYER_SLOTS_[si] || '', time: p ? String(p.time).slice(0, 5) : '', points: Number(r[10]) || 0, title: cleanVal(r[9]), zone: zone, oldZone: p ? p.loc : '', lat: p ? p.lat : '', lng: p ? p.lng : '', photo: p && /^https?:\/\//.test(p.photo) ? p.photo : '', ok: ok, why: why }; // v20.28 · รูปที่เช็คละหมาด (เดิมอ่านคอลัมน์รูปเป็นชื่อสถานที่)
   }).sort(function (a, b) { return (b.ok - a.ok) || String(b.date).localeCompare(String(a.date)); });
   return { success: true, items: items, okCount: items.filter(function (x) { return x.ok; }).length };
 }

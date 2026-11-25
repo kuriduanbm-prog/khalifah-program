@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.27';
+  const APP_VERSION = '20.28';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -16255,6 +16255,13 @@ window.k8PdWho = function (sid) {
     if (q) L = L.filter((x) => (String(x.name) + ' ' + x.sid + ' ' + x.grade).toLowerCase().includes(q));
     return L;
   }
+  // v20.28 · รูปที่เช็คละหมาด (ย่อ) + พิกัดจริง ไว้เทียบว่าอยู่ที่ไหน
+  const has = (x) => x.lat !== '' && x.lat != null && isFinite(Number(x.lat)) && isFinite(Number(x.lng)) && !(Number(x.lat) === 0 && Number(x.lng) === 0);
+  const img = (u) => { try { return typeof getDirectImageUrl === 'function' ? getDirectImageUrl(u) : u; } catch (e) { return u; } };
+  const pic = (x, i) => x.photo ? '<button type="button" class="k8-mr-ph" onclick="k8MrPh(' + i + ')" aria-label="ดูรูปที่เช็คละหมาดของ ' + esc(x.name) + '"><img src="' + esc(img(x.photo)) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add(\'is-err\');this.remove()"></button>' : '<span class="k8-mr-ph is-none" aria-hidden="true">ไม่มีรูป</span>';
+  window.k8MrPh = function (i) { const x = shown()[i]; if (!x || !x.photo) return; const u = img(x.photo); const cap = x.name + ' · ละหมาด' + (x.slot || '') + ' ' + thD(x.date) + (x.time ? ' ' + x.time + ' น.' : '') + (has(x) ? ' · ' + Number(x.lat).toFixed(5) + ', ' + Number(x.lng).toFixed(5) : ''); const o = document.getElementById('k8MrPv'); if (o) o.remove();
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-mr-pv" id="k8MrPv" role="dialog" aria-modal="true" aria-label="รูปที่เช็คละหมาด" onclick="if(event.target===this)this.remove()"><figure><img src="' + esc(u) + '" alt="รูปที่เช็คละหมาดของ ' + esc(x.name) + '" referrerpolicy="no-referrer"><figcaption>' + esc(cap) + '</figcaption><div class="k8-mr-pv-b">' + (has(x) ? '<a href="https://www.google.com/maps?q=' + encodeURIComponent(x.lat + ',' + x.lng) + '" target="_blank" rel="noopener">📍 ดูแผนที่</a>' : '') + '<a href="' + esc(u) + '" target="_blank" rel="noopener">เปิดรูปเต็ม</a><button type="button" onclick="document.getElementById(\'k8MrPv\').remove()">ปิด</button></div></figure></div>');
+    const pv = document.getElementById('k8MrPv'); pv.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); pv.remove(); } }); const cb = pv.querySelector('button'); if (cb) cb.focus(); };
   function paint() {
     const b = document.getElementById('k8MrB'); if (!b) return; const L = shown(); const nSel = (M.items || []).filter((x) => M.sel.has(x.id)).length; const pts = (M.items || []).filter((x) => M.sel.has(x.id)).reduce((a, x) => a + Math.abs(x.points || 0), 0);
     const chip = (k, v, l) => '<button type="button" class="k8-bk-chip" aria-pressed="' + (M[k] === v) + '" onclick="k8MrSet(\'' + k + '\',\'' + v + '\')">' + l + '</button>';
@@ -16267,9 +16274,9 @@ window.k8PdWho = function (sid) {
         '<div class="k8-bk-f"><span>แสดง</span>' + chip('f', 'all', 'ทั้งหมด') + chip('f', 'ok', 'ควรคืน') + chip('f', 'bad', 'ยังผิด') + '</div>';
       else { const rules = Array.from(new Set(M.items.map((x) => x.title))).sort(); h += '<label class="k8-slb-f"><span>หัวข้อ</span><select onchange="k8MrSet(\'rule\',this.value)"><option value="">ทุกหัวข้อ (' + M.items.length + ')</option>' + rules.map((t) => '<option' + (M.rule === t ? ' selected' : '') + ' value="' + esc(t) + '">' + esc(t) + ' (' + M.items.filter((x) => x.title === t).length + ')</option>').join('') + '</select></label>'; }
       h += '<div class="k8-mr-tools"><input type="search" placeholder="ค้นหาชื่อ / รหัส / ชั้น" value="' + esc(M.q) + '" oninput="k8MrQ(this.value)" aria-label="ค้นหา"><button type="button" onclick="k8MrAll(true)">เลือกที่แสดงทั้งหมด</button><button type="button" onclick="k8MrAll(false)">ไม่เลือก</button></div>';
-      h += L.length ? '<ul class="k8-mr-list">' + L.map((x) => '<li class="' + (M.mode === 'place' ? (x.ok ? 'is-ok' : 'is-no') : '') + '"><label><input type="checkbox"' + (M.sel.has(x.id) ? ' checked' : '') + ' onchange="k8MrOne(\'' + esc(x.id) + '\',this.checked)"><span class="k8-mr-t"><b>' + esc(x.name) + '</b><small>' + esc([String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.'), x.sid].filter(Boolean).join(' · ')) + ' · ' + esc(thD(x.date)) + (x.slot ? ' · ' + esc(x.slot) + (x.time ? ' ' + esc(x.time) + ' น.' : '') : '') + '</small>' +
+      h += L.length ? '<ul class="k8-mr-list">' + L.map((x, xi) => '<li class="' + (M.mode === 'place' ? (x.ok ? 'is-ok' : 'is-no') : '') + '">' + (M.mode === 'place' ? pic(x, xi) : '') + '<label><input type="checkbox"' + (M.sel.has(x.id) ? ' checked' : '') + ' onchange="k8MrOne(\'' + esc(x.id) + '\',this.checked)"><span class="k8-mr-t"><b>' + esc(x.name) + '</b><small>' + esc([String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.'), x.sid].filter(Boolean).join(' · ')) + ' · ' + esc(thD(x.date)) + (x.slot ? ' · ' + esc(x.slot) + (x.time ? ' ' + esc(x.time) + ' น.' : '') : '') + '</small>' +
         (M.mode === 'place' ? '<em>' + esc(KIND[x.kind] || '') + ' · ' + esc(x.why || '') + (x.oldZone && x.zone && x.oldZone.indexOf(x.zone) === -1 ? ' · เดิมบันทึกว่า ' + esc(x.oldZone.split(' · ')[0]) : '') + '</em>' : '<em>' + esc(x.title) + (x.note ? ' · ' + esc(String(x.note).slice(0, 80)) : '') + '</em>') + '</span><span class="k8-mr-p">' + (x.points || 0) + '</span></label>' +
-        (M.mode === 'place' && x.lat !== '' && x.lat != null ? '<a href="https://www.google.com/maps?q=' + encodeURIComponent(x.lat + ',' + x.lng) + '" target="_blank" rel="noopener">แผนที่</a>' : '') + '</li>').join('') + '</ul>' : '<p class="k8-li-empty">ไม่มีรายการ</p>';
+        (M.mode === 'place' && has(x) ? '<a class="k8-mr-geo" href="https://www.google.com/maps?q=' + encodeURIComponent(x.lat + ',' + x.lng) + '" target="_blank" rel="noopener" title="เปิดในแผนที่"><span>📍 ' + esc(Number(x.lat).toFixed(5) + ', ' + Number(x.lng).toFixed(5)) + '</span><small>ดูแผนที่</small></a>' : (M.mode === 'place' ? '<span class="k8-mr-geo is-none">ไม่มีพิกัด</span>' : '')) + '</li>').join('') + '</ul>' : '<p class="k8-li-empty">ไม่มีรายการ</p>';
       h += '<label class="k8-slb-f"><span>เหตุผลการคืนคะแนน</span><input type="text" maxlength="120" value="' + esc(M.reason) + '" oninput="k8MrReason(this.value)" placeholder="เช่น ระบบระบุสถานที่ผิด · นักเรียนอยู่ในมัสยิด"></label>';
     }
     b.innerHTML = h;
