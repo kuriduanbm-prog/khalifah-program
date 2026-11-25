@@ -8018,3 +8018,12 @@ html[data-theme="dark"] .k8-mr-tools input, html[data-theme="dark"] .k8-mr-tools
 html[data-theme="dark"] .k8-mr-list li { border-color: #334155 !important; } html[data-theme="dark"] .k8-mr-list li.is-ok { background: #052e1f !important; border-left-color: #059669 !important; } html[data-theme="dark"] .k8-mr-list li.is-no { border-left-color: #dc2626 !important; }
 html[data-theme="dark"] .k8-mr-t b { color: #f1f5f9 !important; } html[data-theme="dark"] .k8-mr-t small { color: #94a3b8 !important; } html[data-theme="dark"] .k8-mr-t em { color: #cbd5e1 !important; } html[data-theme="dark"] .k8-mr-list li.is-ok .k8-mr-t em { color: #6ee7b7 !important; } html[data-theme="dark"] .k8-mr-list li.is-no .k8-mr-t em, html[data-theme="dark"] .k8-mr-p { color: #fca5a5 !important; }
 html[data-theme="dark"] .k8-mr-bar button, html[data-theme="dark"] .k8-mr-scan { background: #0369a1 !important; color: #fff !important; }
+
+/* v20.30 · สิทธิ์แจ้งละหมาดย้อนหลัง 3 ครั้ง/สัปดาห์ */
+.k8-pn-quota { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 8px; padding: 9px 12px; border-radius: 12px; background: #f0f9ff; border: 1px solid #bae6fd; color: #0c4a6e; font: 500 13.5px/1.5 'IBM Plex Sans Thai', sans-serif; }
+.k8-pn-quota[hidden] { display: none; } .k8-pn-quota b { font-weight: 700; }
+.k8-pn-quota.is-low { background: #fffbeb; border-color: #fcd34d; color: #78350f; }
+.k8-pn-quota.is-out { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+html[data-theme="dark"] .k8-pn-quota { background: #0c4a6e !important; border-color: #0369a1 !important; color: #e0f2fe !important; }
+html[data-theme="dark"] .k8-pn-quota.is-low { background: #451a03 !important; border-color: #b45309 !important; color: #fde68a !important; }
+html[data-theme="dark"] .k8-pn-quota.is-out { background: #450a0a !important; border-color: #b91c1c !important; color: #fecaca !important; }

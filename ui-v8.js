@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.29';
+  const APP_VERSION = '20.30';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -8521,10 +8521,31 @@ window.k8RegBirthChange = function (v) {
     inp.max = ymd(new Date(now.getTime() + 7 * 864e5));
     inp.min = ymd(new Date(now.getTime() - 30 * 864e5));
     if (!inp.value) inp.value = ymd(now);
-    if (!inp.dataset.k8) { inp.dataset.k8 = '1'; inp.addEventListener('change', dateLbl); }
+    if (!inp.dataset.k8) { inp.dataset.k8 = '1'; inp.addEventListener('change', dateLbl); inp.addEventListener('change', () => { try { window.k8PnQuota && window.k8PnQuota(false); } catch (e) {} }); }
     dateLbl();
   }
+  // v20.30 · สิทธิ์แจ้งย้อนหลัง 3 ครั้ง/สัปดาห์ (อาทิตย์–ศุกร์) · ถามเซิร์ฟเวอร์ ตามวันที่ที่เลือก
+  const Q = { key: '', at: 0, v: null, busy: false };
+  function quotaPaint() {
+    const el = $('k8PnQuota'); if (!el) return; const q = Q.v;
+    const rsn = (($('prayerNoteInput') || {}).value || '');
+    if (!q || /ประจำเดือน|อุซุร/.test(rsn)) { el.hidden = true; return; }
+    const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const d = (x) => { const p = String(x || '').split('-'); return p.length === 3 ? (+p[2]) + ' ' + M[+p[1] - 1] : ''; };
+    el.hidden = false; el.className = 'k8-pn-quota' + (q.left <= 0 ? ' is-out' : q.left === 1 ? ' is-low' : '');
+    el.innerHTML = '<span aria-hidden="true">' + (q.left <= 0 ? '⛔' : '🎫') + '</span><span>แจ้งย้อนหลังได้สัปดาห์ละ ' + q.limit + ' ครั้ง · สัปดาห์นี้ (' + d(q.weekStart) + '–' + d(q.weekEnd) + ') <b>' + (q.left <= 0 ? 'ใช้ครบแล้ว' : 'เหลือ ' + q.left + ' ครั้ง') + '</b></span>';
+  }
+  async function quota(force) {
+    if (typeof currentStudent === 'undefined' || !currentStudent || typeof gasApiCall !== 'function') return null;
+    const date = ($('k8PnDate') || {}).value || ymd(new Date()); const key = currentStudent.studentId + '|' + date;
+    if (!force && Q.key === key && Date.now() - Q.at < 60000) { quotaPaint(); return Q.v; }
+    if (Q.busy) return Q.v; Q.busy = true;
+    try { const r = await gasApiCall('getPrayerLateQuota', { data: { date: date } }, 15000); if (r && r.success && typeof r.left === 'number') { Q.key = key; Q.at = Date.now(); Q.v = r; } } catch (e) {}
+    Q.busy = false; quotaPaint(); return Q.v;
+  }
+  window.k8PnQuota = quota;
   function mine() {
+    try { quota(false); } catch (e) {}
     const el = $('k8PnMineN'); if (!el) return;
     let n = 0; try { const sid = currentStudent && currentStudent.studentId; n = (getPrayerApprovalsList() || []).filter((r) => r.studentId === sid && String(r.status || 'pending').toLowerCase() === 'pending').length; } catch (e) {}
     el.textContent = n ? '· รออนุมัติ ' + n : '';
@@ -8626,6 +8647,10 @@ window.k8RegBirthChange = function (v) {
       if (late.length) { toast('แจ้งย้อนหลังได้ภายใน 24 ชั่วโมงเท่านั้น · ' + late.join(', '), 'warning'); return; }
       if (early.length) { toast('ยังไม่ถึงเวลาละหมาด ' + early.join(', ') + ' ของวันที่เลือก', 'warning'); return; }
     }
+    if (!/ประจำเดือน|อุซุร/.test(reason)) { // v20.30 · เช็คสิทธิ์ก่อนส่ง (เซิร์ฟเวอร์ตรวจซ้ำอีกชั้น)
+      const q = await quota(true);
+      if (q && todo.length > q.left) { toast(q.left <= 0 ? 'แจ้งละหมาดย้อนหลังได้สัปดาห์ละ ' + q.limit + ' ครั้ง · สัปดาห์นี้ใช้ครบแล้ว' : 'สัปดาห์นี้เหลือสิทธิ์แจ้งย้อนหลัง ' + q.left + ' ครั้ง · เลือกได้ไม่เกิน ' + q.left + ' เวลา', 'warning'); const qe = $('k8PnQuota'); if (qe) qe.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    }
     const sv = document.querySelector('.k8-pn-save');
     busy = true; if (sv) { sv.disabled = true; sv.textContent = 'กำลังส่งคำร้อง…'; }
     let photo = P.photo, ok = 0, fail = 0; const src = P.photo ? P.src : ''; const rej = [];
@@ -8653,7 +8678,7 @@ window.k8RegBirthChange = function (v) {
     if (inp) inp.value = '';
     window.k8PnPhotoClear();
     try { updatePrayerNoteChipsUI(); } catch (e) {}
-    syncSave(); mine();
+    Q.at = 0; syncSave(); mine();
     try { updateStudentPendingReqBadge(); } catch (e) {}
     try { refreshPrayerChipsStatus(); } catch (e) {}
     const msg = 'ส่งคำร้อง ' + todo.join(', ') + ' (' + thDate(date) + ') แล้ว · รอแอดมินอนุมัติ' + (dup.length ? ' · ข้าม ' + dup.join(', ') + ' (ส่งไปแล้ว)' : '');

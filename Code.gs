@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '20.29'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '20.30'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -1267,7 +1267,7 @@ const ACTION_ACCESS = {
   // เช็คชื่อละหมาดแทนนักเรียนทั้งห้อง (เช่น ซุบฮิ ที่นักเรียนไม่มีโทรศัพท์)
   getPrayerRoll: 'staff', savePrayerRoll: 'staff', previewAsStudent: 'admin', previewAsStaff: 'admin', setEvalOpen: 'admin', saveGeoZones: 'admin', getStudentLinks: 'staff', setStudentLink: 'admin', getPlaceRestrict: 'admin', savePlaceRestrict: 'admin', getPreviewAllowed: 'admin', savePreviewAllowed: 'owner',
   // ตารางสอน: แอดมินสร้าง · อาจารย์และนักเรียนดู (ตามที่แอดมินเปิดการมองเห็น)
-  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteStar: 'admin', recalcStarWeek: 'admin', exportReport: 'staff', deleteMyPrayer: 'student', checkMyPrayers: 'student', getMyStars: 'student', listPrayerFails: 'staff', scanDormPrayers: 'admin', scanJumuah: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', scanPlacePenalties: 'admin', cancelBehaviorLogs: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
+  getTimetable: 'student', saveTimetable: 'admin', saveTimetableConfig: 'admin', getTimetableTerms: 'admin', getStarHistory: 'admin', deleteStar: 'admin', recalcStarWeek: 'admin', exportReport: 'staff', deleteMyPrayer: 'student', checkMyPrayers: 'student', getMyStars: 'student', getPrayerLateQuota: 'student', listPrayerFails: 'staff', scanDormPrayers: 'admin', scanJumuah: 'admin', scanOwnerMismatch: 'admin', girlPlacePenalty: 'admin', fixOwnerMismatch: 'admin', cancelBehaviorRange: 'admin', scanPlacePenalties: 'admin', cancelBehaviorLogs: 'admin', getTeacherScores: 'admin', getBehaviorAppeals: 'admin', decideBehaviorAppeal: 'admin', requestBehaviorAppeal: 'student', decideTeacherExcuse: 'admin', getMyTeacherScore: 'staff', requestTeacherExcuse: 'staff', getTimetableArchive: 'admin', setTimetableTerm: 'admin', startTimetableTerm: 'admin', restoreTimetableArchive: 'admin', deleteTimetableArchive: 'admin', saveTimetableExtra: 'admin', deleteTimetableExtra: 'admin',
   // บุคลากร
   getAllStudents: 'staff', getSubAdmins: 'staff', getTeachers: 'staff', getPendingRegistrations: 'staff',
   registerStudent: 'staff', updateStudentFull: 'staff', setStudentGenders: 'admin', normalizeStudentNames: 'admin', updateStudentStatus: 'staff',
@@ -1300,7 +1300,7 @@ const READ_ONLY_ACTIONS = ['ping', 'checkSpreadsheet', 'getSpreadsheetInfo', 'ge
   'loginStudent', 'adminLogin', 'staffLogin'];
 
 const INSPECTOR_EXTRA_ACTIONS = ['getFullDatabase', 'whoami', 'getMyNotifications', 'markNotificationRead', 'updateSubAdminPhoto'];
-READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTeacherScores', 'getMyTeacherScore', 'checkMyPrayers', 'getMyStars', 'listPrayerFails', 'getBehaviorAppeals', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
+READ_ONLY_ACTIONS.push('getMyPrayerReacts', 'getPrayerLateQuota', 'aiChat', 'aiStatus', 'aiTicket', 'aiLog', 'getPrayerRoll', 'getTimetable', 'getTimetableTerms', 'getStarHistory', 'getTeacherScores', 'getMyTeacherScore', 'checkMyPrayers', 'getMyStars', 'listPrayerFails', 'getBehaviorAppeals', 'getTimetableArchive', 'getMySubjects', 'getMyTeaching', 'getHasanatDay', 'getEnrollments', 'getMyEnrollments', 'getHalaqahSessions', 'getMyHalaqah', 'getHalaqahQr', 'getHalaqahRoster', 'getStudyFile', 'getMyDream', 'getDreams', 'getBehaviorData', 'getMyBehavior', 'listStudyDocs', 'getStudyDocsConfig', 'getMyNotifications', 'getPolicy', 'listSentNotifications', 'getPolicyAckSummary');
 
 function jsonOut_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -1709,6 +1709,10 @@ function dispatchAction_(action, req, data, session, ctx) {
         const lw = /ประจำเดือน|อุซุร/.test(rsn) ? null : prayerReqWindow_(data.date, data.prayerSlot); // ประจำเดือนใช้ระบบบันทึกอุซุรของตัวเอง
         if (lw && Date.now() > lw.deadline) return { success: false, code: 'LATE_REQ_EXPIRED', message: 'แจ้งย้อนหลังได้ภายใน 24 ชั่วโมงเท่านั้น · ละหมาด' + lw.slot + ' วันที่ ' + lw.dateTh + ' หมดเวลาแจ้งเมื่อ ' + lw.deadlineTh };
         if (lw && /ลืม/.test(rsn) && Date.now() < lw.start) return { success: false, code: 'LATE_REQ_EARLY', message: 'ยังไม่ถึงเวลาละหมาด' + lw.slot + ' ของวันที่เลือก' };
+        if (!/ประจำเดือน|อุซุร/.test(rsn)) { // v20.30 · จำกัด 3 ครั้งต่อสัปดาห์ละหมาด (6 วัน)
+          const q = prayerLateQuota_(session.userId, data.date, data.prayerSlot);
+          if (!q.same && q.left <= 0) return { success: false, code: 'LATE_REQ_LIMIT', quota: q, message: 'แจ้งละหมาดย้อนหลังได้สัปดาห์ละ ' + q.limit + ' ครั้งเท่านั้น · สัปดาห์นี้ (' + thaiShortDate_(q.weekStart) + '–' + thaiShortDate_(q.weekEnd) + ') ใช้ครบแล้ว' };
+        }
         data.studentId = session.userId;
         data.status = 'pending';
         data.approvedBy = '';
@@ -1858,6 +1862,7 @@ function dispatchAction_(action, req, data, session, ctx) {
     case 'girlPlacePenalty': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return girlPlacePenaltyByLog_(data);
     case 'scanOwnerMismatch': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return ownerMismatch_(data, false, session);
     case 'fixOwnerMismatch': if (!ctx.isAdmin) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะแอดมิน' }; return ownerMismatch_(data, true, session);
+    case 'getPrayerLateQuota': return Object.assign({ success: true }, prayerLateQuota_(isStudent ? session.userId : (data.studentId || ''), data.date || '', ''));
     case 'getMyStars': return myStars_(isStudent ? session.userId : (data.studentId || (data.data || {}).studentId));
     case 'checkMyPrayers': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return checkMyPrayers_(data, session);
     case 'deleteMyPrayer': if (!isStudent) return { success: false, code: 'FORBIDDEN', message: 'เฉพาะนักเรียน' }; return deleteMyPrayer_(data, session);
@@ -7693,6 +7698,31 @@ function exportReport_(d, session) {
   return out;
 }
 /** v19.81 · ช่วงที่แจ้งย้อนหลังได้: ตั้งแต่เวลาเข้าละหมาดนั้น ถึง 24 ชั่วโมงหลังจากนั้น */
+/** v20.30 · สิทธิ์แจ้งละหมาดย้อนหลัง: 3 ครั้ง (3 เวลา) ต่อสัปดาห์ละหมาด 6 วัน (อาทิตย์–ศุกร์ · เสาร์หยุด)
+ *  นับคำร้องของสัปดาห์ที่ "วันที่ละหมาด" อยู่ · ไม่นับ: ประจำเดือน/อุซุร, คำร้องที่ไม่อนุมัติ/ยกเลิก, การส่งซ้ำเวลาเดิม */
+const PRAYER_LATE_QUOTA_ = 3;
+function thaiShortDate_(ds) { const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']; const p = String(ds || '').split('-'); return p.length === 3 ? (+p[2]) + ' ' + M[+p[1] - 1] : String(ds || ''); }
+function prayerLateQuota_(sid, date, slot) {
+  const ds = formatSheetDate(date) || Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+  const d0 = new Date(ds + 'T12:00:00Z'); const dow = d0.getUTCDay(); // 0 = อาทิตย์ (คิดเป็นวันที่ล้วน ไม่ขึ้นกับเขตเวลา)
+  const ws = new Date(d0.getTime() - dow * 86400000).toISOString().slice(0, 10);
+  const we = new Date(d0.getTime() + (5 - dow) * 86400000).toISOString().slice(0, 10); // ถึงวันศุกร์ (แสดงผล) · วันเสาร์นับรวมสัปดาห์เดียวกัน
+  const we2 = new Date(d0.getTime() + (6 - dow) * 86400000).toISOString().slice(0, 10);
+  const key = function (v) { return String(v || '').replace(/\D/g, '').replace(/^0+/, ''); };
+  const me = key(sid); const sl = formatPrayerTimeThai(slot);
+  const sh = getSpreadsheet().getSheetByName(SHEETS.PRAYER_APPROVALS);
+  const rows = sh && sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 11).getValues() : [];
+  const seen = {}; let same = false;
+  rows.forEach(function (r) {
+    if (!me || key(r[1]) !== me) return;
+    const st = String(r[10] || 'pending').toLowerCase(); if (/reject|cancel|ไม่อนุมัติ|ยกเลิก/.test(st)) return;
+    if (/ประจำเดือน|อุซุร/.test(String(r[7] || '') + ' ' + String(r[8] || ''))) return;
+    const d = formatSheetDate(r[6]); if (!d || d < ws || d > we2) return;
+    const k = d + '|' + formatPrayerTimeThai(r[5]); seen[k] = 1; if (slot && d === ds && formatPrayerTimeThai(r[5]) === sl) same = true;
+  });
+  const used = Object.keys(seen).length;
+  return { used: used, limit: PRAYER_LATE_QUOTA_, left: Math.max(0, PRAYER_LATE_QUOTA_ - used), weekStart: ws, weekEnd: we, same: same };
+}
 function prayerReqWindow_(date, slot) {
   const ds = formatSheetDate(date); const k = spSlot_(slot); if (!/^\d{4}-\d{2}-\d{2}$/.test(ds) || !k) return null;
   const t = spTimes_(ds, null); const KEY = { 'ซุบฮิ': 'fajr', 'ซุฮริ': 'dhuhr', 'อัศรฺ': 'asr', 'มัฆริบ': 'maghrib', 'อีชาอ์': 'isha' };
