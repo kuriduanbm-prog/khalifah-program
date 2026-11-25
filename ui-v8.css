@@ -7958,3 +7958,27 @@ html[data-theme="dark"] .k8-slb-hist li button { background: #0f172a !important;
 /* v20.17 · เอาการ์ด "ละหมาดวันนี้ ตามระดับชั้น" ออกจากภาพรวมแอดมิน */
 .k8-ov-grades { display: none !important; }
 .k8-ov-row:not(:has(> section:not([hidden]):not(.k8-ov-grades))) { display: none !important; }
+/* v20.20 · คืนคะแนนหลายคน */
+.k8-mr-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 14px; padding: 10px 14px; margin: 0 0 12px; }
+.k8-mr-bar span { flex: 1; min-width: 200px; } .k8-mr-bar b { display: block; font-size: 14.5px; color: #0c4a6e; } .k8-mr-bar small { font-size: 12.5px; color: #475569; }
+.k8-mr-bar button, .k8-mr-scan { font: inherit; font-size: 14px; font-weight: 600; border: 0; background: #0369a1; color: #fff; border-radius: 10px; padding: 9px 14px; min-height: 40px; cursor: pointer; }
+.k8-mr-scan { width: 100%; margin: 2px 0 10px; } .k8-mr-scan:disabled { background: #94a3b8; }
+.k8-mr .k8-ra-box { width: min(720px, 100%); }
+.k8-mr-sum { margin: 0 0 8px; font-size: 13.5px; color: #334155; } .k8-mr-sum .is-ok { color: #047857; font-weight: 600; } .k8-mr-sum .is-no { color: #b91c1c; font-weight: 600; }
+.k8-mr-tools { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 8px; }
+.k8-mr-tools input { flex: 1 1 200px; font: inherit; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; }
+.k8-mr-tools button { font: inherit; font-size: 13px; border: 1px solid #cbd5e1; background: #fff; border-radius: 9px; padding: 6px 10px; min-height: 38px; cursor: pointer; color: #0f172a; }
+.k8-mr-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; max-height: 46vh; overflow: auto; }
+.k8-mr-list li { display: flex; align-items: center; gap: 8px; border: 1px solid #e2e8f0; border-left: 4px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; }
+.k8-mr-list li.is-ok { border-left-color: #059669; background: #f0fdf4; } .k8-mr-list li.is-no { border-left-color: #dc2626; }
+.k8-mr-list label { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
+.k8-mr-list input[type="checkbox"] { width: 18px; height: 18px; accent-color: #0369a1; flex: none; }
+.k8-mr-t { flex: 1; min-width: 0; } .k8-mr-t b { display: block; font-size: 14px; color: #0f172a; } .k8-mr-t small { display: block; font-size: 12px; color: #64748b; } .k8-mr-t em { display: block; font-style: normal; font-size: 12.5px; color: #334155; overflow-wrap: anywhere; }
+.k8-mr-list li.is-ok .k8-mr-t em { color: #047857; } .k8-mr-list li.is-no .k8-mr-t em { color: #b91c1c; }
+.k8-mr-p { font-weight: 700; color: #b91c1c; font-size: 15px; flex: none; }
+.k8-mr-list a { font-size: 12.5px; color: #0369a1; flex: none; }
+html[data-theme="dark"] .k8-mr-bar { background: #0c2a3d !important; border-color: #155e75 !important; } html[data-theme="dark"] .k8-mr-bar b { color: #7dd3fc !important; } html[data-theme="dark"] .k8-mr-bar small, html[data-theme="dark"] .k8-mr-sum { color: #cbd5e1 !important; }
+html[data-theme="dark"] .k8-mr-tools input, html[data-theme="dark"] .k8-mr-tools button { background: #0f172a !important; border-color: #334155 !important; color: #e2e8f0 !important; }
+html[data-theme="dark"] .k8-mr-list li { border-color: #334155 !important; } html[data-theme="dark"] .k8-mr-list li.is-ok { background: #052e1f !important; border-left-color: #059669 !important; } html[data-theme="dark"] .k8-mr-list li.is-no { border-left-color: #dc2626 !important; }
+html[data-theme="dark"] .k8-mr-t b { color: #f1f5f9 !important; } html[data-theme="dark"] .k8-mr-t small { color: #94a3b8 !important; } html[data-theme="dark"] .k8-mr-t em { color: #cbd5e1 !important; } html[data-theme="dark"] .k8-mr-list li.is-ok .k8-mr-t em { color: #6ee7b7 !important; } html[data-theme="dark"] .k8-mr-list li.is-no .k8-mr-t em, html[data-theme="dark"] .k8-mr-p { color: #fca5a5 !important; }
+html[data-theme="dark"] .k8-mr-bar button, html[data-theme="dark"] .k8-mr-scan { background: #0369a1 !important; color: #fff !important; }

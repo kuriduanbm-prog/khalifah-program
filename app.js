@@ -2969,8 +2969,10 @@ function fetchFreshPrayerLocation() {
           const dist = calculateDistanceInMeters(userLat, userLng, target.lat, target.lng);
           // v17.5 · เผื่อค่าคลาดเคลื่อนของ GPS (สูงสุด 30 ม.) เพราะในอาคาร/ใต้หลังคามัสยิด GPS มักคลาดเคลื่อน 10–40 ม.
           const tol = Math.min(Math.max(Number(accuracy) || 0, 0), GPS_TOLERANCE_MAX_M);
-          if (dist - tol <= target.radius && dist < bestIn) {
-            matchedTarget = target; bestIn = dist;
+          // v20.20 · เลือกจุดที่อยู่ "ลึกที่สุด" (ระยะ ÷ รัศมี) ตรงกับเซิร์ฟเวอร์ · กันอยู่ในมัสยิดแต่ถูกนับเป็นหอพักข้าง ๆ
+          const sc = dist / Math.max(20, Number(target.radius) || 0);
+          if (dist - tol <= target.radius && sc < bestIn) {
+            matchedTarget = target; bestIn = sc;
             minDistance = Math.round(dist);
           }
           if (!matchedTarget && dist < minDistance) {

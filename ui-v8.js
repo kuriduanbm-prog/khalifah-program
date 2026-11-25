@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.19';
+  const APP_VERSION = '20.20';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4091,6 +4091,7 @@ window.k8RegBirthChange = function (v) {
       if ((!admin || (me() && me().limited)) && B.tab === 'rules') B.tab = roS ? 'scores' : 'record';
       let html = tabs ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
       if (admin && !(me() && me().limited) && window.k8BapBanner) html += window.k8BapBanner(); // v19.36
+      if (admin && !(me() && me().limited) && (B.tab === 'history' || B.tab === 'scores')) html += '<div class="k8-mr-bar"><span><b>คืนคะแนนหลายคนในครั้งเดียว</b><small>ตรวจการหักผิดสถานที่ด้วยพิกัดจริง หรือเลือกการหักใดก็ได้หลายรายการ</small></span><button type="button" onclick="k8MrOpen()">คืนคะแนนหลายคน</button></div>'; // v20.20
       if (B.oldBackend && B.loaded) html += '<div class="k8-tt-warn" role="alert"><b>Code.gs ที่ใช้งานอยู่ยังเป็นรุ่นเก่า · รูปหลักฐานเก็บได้แค่ 1 รูป</b><span>แอดมิน: วาง Code.gs ตัวล่าสุด แล้วไปที่ Deploy → Manage deployments → กดไอคอนดินสอของ deployment เดิม → Version: New version → Deploy (ห้ามกด New deployment เพราะจะได้ลิงก์ใหม่ที่แอปไม่ได้ใช้)</span></div>';
       if (!B.loaded && B.loading && !B.fromCache) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
       else html += B.tab === 'record' ? recordHtml() : B.tab === 'scores' ? scoresHtml() : B.tab === 'history' ? historyHtml(admin) : rulesHtml();
@@ -14884,7 +14885,7 @@ window.k8PdWho = function (sid) {
     if (!Z.length) return null;
     const la = Number(r.latitude != null ? r.latitude : r.lat), lo = Number(r.longitude != null ? r.longitude : r.lng);
     if (r.latitude !== '' && r.latitude != null && isFinite(la) && isFinite(lo) && (la || lo)) {
-      let best = null; Z.forEach((z) => { const d = dist(la, lo, +z.lat, +z.lng); if (d <= +z.radius + 15 && (!best || d < best.d)) best = { z, d }; });
+      const ZZ = Z; const best = (() => { let b = null; ZZ.forEach((z) => { const r = Math.max(20, +z.radius || 0); const d = dist(la, lo, +z.lat, +z.lng); if (d > r + 15) return; const sc = d / r; if (!b || sc < b.sc - 1e-9) b = { z, d, sc }; }); return b; })(); // v20.20 · ตรงกับเซิร์ฟเวอร์ geoPickZone_
       return best ? best.z : null;
     }
     const nm = String(r.locationName || ''); if (!nm) return null;
@@ -14991,7 +14992,7 @@ window.k8PdWho = function (sid) {
   function haram(z) { let main = null; try { main = GEOFENCE_TARGETS.MOSQUE; } catch (e) {} return z === main || /ฮารอมัยน์|ฮะรอมัยน์|ฮารอมัย|haramain/i.test(String(z.name || '')); }
   function zoneAt(lat, lng) {
     const la = Number(lat), lo = Number(lng); if (lat === '' || lat == null || !isFinite(la) || !isFinite(lo) || (!la && !lo)) return null;
-    let best = null; zones().forEach((z) => { const d = dist(la, lo, +z.lat, +z.lng); if (d <= +z.radius + 15 && (!best || d < best.d)) best = { z, d }; }); return best ? best.z : null;
+    const ZZ = zones(); const best = (() => { let b = null; ZZ.forEach((z) => { const r = Math.max(20, +z.radius || 0); const d = dist(la, lo, +z.lat, +z.lng); if (d > r + 15) return; const sc = d / r; if (!b || sc < b.sc - 1e-9) b = { z, d, sc }; }); return b; })(); return best ? best.z : null; // v20.20
   }
   function stu(sid) { try { if (currentStudent && nid(currentStudent.studentId) === nid(sid)) return currentStudent; } catch (e) {} let L = []; try { L = allStudents || []; } catch (e) {} return L.find((x) => nid(x.studentId) === nid(sid)) || null; }
   function girl(st) {
@@ -16216,6 +16217,88 @@ window.k8PdWho = function (sid) {
     save(list, 'บันทึกแล้ว');
   };
   window.k8PrxDel = function (i) { const r = X.list[i]; if (!r || !confirm('ยกเลิกการกำหนดสถานที่ของ ' + (r.name || r.sid) + ' ใช่ไหม?')) return; save(X.list.filter((_, j) => j !== i), 'ลบแล้ว'); };
+})();
+
+/* ============ v20.20 · แอดมิน: คืนคะแนนพฤติกรรมหลายคนในครั้งเดียว ============
+ * โหมด "ผิดสถานที่": ตรวจรายการหักผิดสถานที่ย้อนหลังด้วยพิกัดจริง (กติกาเลือกจุดแบบใหม่) · เลือกรายการที่ควรคืนให้อัตโนมัติ
+ * โหมด "ทุกการหัก": เลือกการหักใดก็ได้ ตามช่วงวันที่ / หัวข้อ / ชั้น / ค้นหา */
+(function () {
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = (m, t) => { try { showToast(m, t || 'info'); } catch (e) {} };
+  const TM = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const thD = (v) => { const m = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + ' ' + TM[+m[2] - 1] + ' ' + String(+m[1] + 543).slice(2) : String(v || ''); };
+  const ymd = (d) => d.toLocaleDateString('sv-SE');
+  const M = { mode: 'place', from: '', to: '', items: null, sel: new Set(), f: 'all', q: '', rule: '', busy: false, reason: '' };
+  const KIND = { WP: 'หญิงนอกมัสยิด', DM: 'ชายที่หอพัก', PR: 'นอกสถานที่ที่กำหนด' };
+  async function scan() {
+    M.busy = true; M.items = null; paint();
+    if (M.mode === 'place') {
+      let r = null; try { r = await gasApiCall('scanPlacePenalties', { data: { from: M.from, to: M.to } }, 60000); } catch (e) {}
+      M.busy = false;
+      if (!r || !r.success) { M.items = []; toast((r && /Unknown action/i.test(String(r.error || r.message || ''))) ? 'กรุณา Deploy Code.gs ตัวล่าสุดก่อน' : ((r && (r.message || r.error)) || 'ตรวจไม่สำเร็จ'), 'error'); paint(); return; }
+      M.items = (r.items || []).map((x) => Object.assign({}, x, { id: x.logId })); M.sel = new Set(M.items.filter((x) => x.ok).map((x) => x.id));
+    } else {
+      let r = null; try { r = await gasApiCall('getBehaviorData', {}, 45000); } catch (e) {}
+      M.busy = false;
+      const L = ((r && r.success && r.logs) || []).filter((l) => l && l.status !== 'cancelled' && Number(l.points) < 0 && String(l.date) >= M.from && String(l.date) <= M.to);
+      M.items = L.map((l) => ({ id: l.id, sid: l.studentId, name: l.studentName || l.studentId, grade: l.grade, date: l.date, title: l.title, points: Number(l.points), note: l.note, rule: l.ruleId || l.title }));
+      M.sel = new Set();
+    }
+    paint();
+  }
+  function shown() {
+    const q = M.q.trim().toLowerCase(); let L = M.items || [];
+    if (M.mode === 'place') { if (M.f === 'ok') L = L.filter((x) => x.ok); else if (M.f === 'bad') L = L.filter((x) => !x.ok); }
+    else if (M.rule) L = L.filter((x) => x.title === M.rule);
+    if (q) L = L.filter((x) => (String(x.name) + ' ' + x.sid + ' ' + x.grade).toLowerCase().includes(q));
+    return L;
+  }
+  function paint() {
+    const b = document.getElementById('k8MrB'); if (!b) return; const L = shown(); const nSel = (M.items || []).filter((x) => M.sel.has(x.id)).length; const pts = (M.items || []).filter((x) => M.sel.has(x.id)).reduce((a, x) => a + Math.abs(x.points || 0), 0);
+    const chip = (k, v, l) => '<button type="button" class="k8-bk-chip" aria-pressed="' + (M[k] === v) + '" onclick="k8MrSet(\'' + k + '\',\'' + v + '\')">' + l + '</button>';
+    let h = '<div class="k8-bk-f"><span>แบบ</span>' + chip('mode', 'place', 'หักผิดสถานที่ (ตรวจพิกัดใหม่)') + chip('mode', 'any', 'ทุกการหักคะแนน') + '</div>' +
+      '<div class="k8-slb-grid"><label><span>ตั้งแต่วันที่</span><input type="date" value="' + M.from + '" onchange="k8MrSet(\'from\',this.value)"></label><label><span>ถึงวันที่</span><input type="date" value="' + M.to + '" onchange="k8MrSet(\'to\',this.value)"></label></div>' +
+      '<button type="button" class="k8-mr-scan" onclick="k8MrScan()"' + (M.busy ? ' disabled' : '') + '>' + (M.busy ? 'กำลังตรวจ…' : (M.mode === 'place' ? 'ตรวจรายการหักผิดสถานที่' : 'แสดงรายการหักคะแนน')) + '</button>';
+    if (M.items) {
+      const okN = M.items.filter((x) => x.ok).length;
+      if (M.mode === 'place') h += '<p class="k8-mr-sum">พบการหักผิดสถานที่ <b>' + M.items.length + '</b> รายการ · <span class="is-ok">ตามพิกัดจริงไม่ผิด (ควรคืน) ' + okN + '</span> · <span class="is-no">ยังผิดสถานที่ ' + (M.items.length - okN) + '</span></p>' +
+        '<div class="k8-bk-f"><span>แสดง</span>' + chip('f', 'all', 'ทั้งหมด') + chip('f', 'ok', 'ควรคืน') + chip('f', 'bad', 'ยังผิด') + '</div>';
+      else { const rules = Array.from(new Set(M.items.map((x) => x.title))).sort(); h += '<label class="k8-slb-f"><span>หัวข้อ</span><select onchange="k8MrSet(\'rule\',this.value)"><option value="">ทุกหัวข้อ (' + M.items.length + ')</option>' + rules.map((t) => '<option' + (M.rule === t ? ' selected' : '') + ' value="' + esc(t) + '">' + esc(t) + ' (' + M.items.filter((x) => x.title === t).length + ')</option>').join('') + '</select></label>'; }
+      h += '<div class="k8-mr-tools"><input type="search" placeholder="ค้นหาชื่อ / รหัส / ชั้น" value="' + esc(M.q) + '" oninput="k8MrQ(this.value)" aria-label="ค้นหา"><button type="button" onclick="k8MrAll(true)">เลือกที่แสดงทั้งหมด</button><button type="button" onclick="k8MrAll(false)">ไม่เลือก</button></div>';
+      h += L.length ? '<ul class="k8-mr-list">' + L.map((x) => '<li class="' + (M.mode === 'place' ? (x.ok ? 'is-ok' : 'is-no') : '') + '"><label><input type="checkbox"' + (M.sel.has(x.id) ? ' checked' : '') + ' onchange="k8MrOne(\'' + esc(x.id) + '\',this.checked)"><span class="k8-mr-t"><b>' + esc(x.name) + '</b><small>' + esc([String(x.grade || '').replace('มัธยมศึกษาปีที่ ', 'ม.'), x.sid].filter(Boolean).join(' · ')) + ' · ' + esc(thD(x.date)) + (x.slot ? ' · ' + esc(x.slot) + (x.time ? ' ' + esc(x.time) + ' น.' : '') : '') + '</small>' +
+        (M.mode === 'place' ? '<em>' + esc(KIND[x.kind] || '') + ' · ' + esc(x.why || '') + (x.oldZone && x.zone && x.oldZone.indexOf(x.zone) === -1 ? ' · เดิมบันทึกว่า ' + esc(x.oldZone.split(' · ')[0]) : '') + '</em>' : '<em>' + esc(x.title) + (x.note ? ' · ' + esc(String(x.note).slice(0, 80)) : '') + '</em>') + '</span><span class="k8-mr-p">' + (x.points || 0) + '</span></label>' +
+        (M.mode === 'place' && x.lat !== '' && x.lat != null ? '<a href="https://www.google.com/maps?q=' + encodeURIComponent(x.lat + ',' + x.lng) + '" target="_blank" rel="noopener">แผนที่</a>' : '') + '</li>').join('') + '</ul>' : '<p class="k8-li-empty">ไม่มีรายการ</p>';
+      h += '<label class="k8-slb-f"><span>เหตุผลการคืนคะแนน</span><input type="text" maxlength="120" value="' + esc(M.reason) + '" oninput="k8MrReason(this.value)" placeholder="เช่น ระบบระบุสถานที่ผิด · นักเรียนอยู่ในมัสยิด"></label>';
+    }
+    b.innerHTML = h;
+    const go = document.getElementById('k8MrGo'); if (go) { go.disabled = M.busy || !nSel; go.textContent = M.busy ? 'กำลังดำเนินการ…' : 'คืนคะแนน ' + nSel + ' รายการ' + (pts ? ' (' + pts + ' คะแนน)' : ''); }
+  }
+  window.k8MrOpen = function () {
+    const t = new Date(); if (!M.from) { M.from = ymd(new Date(t.getTime() - 13 * 864e5)); M.to = ymd(t); }
+    if (M.mode === 'place' && !M.reason) M.reason = 'ระบบระบุสถานที่ผิด · ตามพิกัดนักเรียนอยู่ในมัสยิด';
+    let m = document.getElementById('k8MrM');
+    if (!m) { document.body.insertAdjacentHTML('beforeend', '<div class="k8-ra-modal k8-slb k8-mr" id="k8MrM" role="dialog" aria-modal="true" aria-labelledby="k8MrT" hidden><div class="k8-ra-box"><header><div><h3 id="k8MrT">คืนคะแนนหลายคน</h3><small>เลือกหลายรายการ หลายนักเรียน แล้วคืนคะแนนในครั้งเดียว</small></div><button type="button" class="k8-ra-x" onclick="k8MrClose()" aria-label="ปิด">✕</button></header><div class="k8-ra-body" id="k8MrB"></div><footer class="k8-bk-ft"><button type="button" class="k8-bk-alt" onclick="k8MrClose()">ปิด</button><button type="button" class="k8-bk-go" id="k8MrGo" onclick="k8MrGo()" disabled>คืนคะแนน</button></footer></div></div>');
+      m = document.getElementById('k8MrM'); m.addEventListener('click', (e) => { if (e.target === m) window.k8MrClose(); }); m.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); window.k8MrClose(); } }); }
+    m.hidden = false; paint(); if (!M.items) scan();
+  };
+  window.k8MrClose = function () { const m = document.getElementById('k8MrM'); if (m) m.hidden = true; };
+  window.k8MrSet = function (k, v) { M[k] = v; if (k === 'mode') { M.items = null; M.sel = new Set(); M.f = 'all'; M.rule = ''; M.reason = v === 'place' ? 'ระบบระบุสถานที่ผิด · ตามพิกัดนักเรียนอยู่ในมัสยิด' : ''; scan(); return; } if (k === 'from' || k === 'to') { if (M.to < M.from) M.to = M.from; M.items = null; } paint(); };
+  window.k8MrScan = scan;
+  window.k8MrQ = function (v) { M.q = v; clearTimeout(M.qt); M.qt = setTimeout(() => { paint(); const i = document.querySelector('.k8-mr-tools input'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 200); };
+  window.k8MrReason = function (v) { M.reason = v; };
+  window.k8MrOne = function (id, on) { if (on) M.sel.add(id); else M.sel.delete(id); paint(); };
+  window.k8MrAll = function (on) { shown().forEach((x) => { if (on) M.sel.add(x.id); else M.sel.delete(x.id); }); paint(); };
+  window.k8MrGo = async function () {
+    const ids = (M.items || []).filter((x) => M.sel.has(x.id)).map((x) => x.id); if (!ids.length || M.busy) return;
+    const ppl = new Set((M.items || []).filter((x) => M.sel.has(x.id)).map((x) => x.sid)).size;
+    if (!confirm('คืนคะแนน ' + ids.length + ' รายการ ของนักเรียน ' + ppl + ' คน ใช่ไหม?')) return;
+    M.busy = true; paint();
+    let r = null; try { r = await gasApiCall('cancelBehaviorLogs', { data: { logIds: ids, reason: String(M.reason || '').trim() } }, 60000); } catch (e) {}
+    M.busy = false;
+    if (!r || !r.success) { paint(); toast((r && /Unknown action/i.test(String(r.error || r.message || ''))) ? 'กรุณา Deploy Code.gs ตัวล่าสุดก่อน' : ((r && (r.message || r.error)) || 'คืนคะแนนไม่สำเร็จ'), 'error'); return; }
+    toast(r.message, 'success'); M.items = (M.items || []).filter((x) => !M.sel.has(x.id)); M.sel = new Set(); paint();
+    try { window.k8BhReload && window.k8BhReload(); } catch (e) {}
+  };
 })();
 
 // v19.60 · สัญญาณว่า ui-v8.js ทำงานจนจบไฟล์ (index.html ใช้ตรวจว่าโหลดครบ)
