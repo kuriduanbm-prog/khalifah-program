@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.26';
+  const APP_VERSION = '20.27';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -13039,7 +13039,7 @@ window.k8HfMiss = function (slot) {
       if (geo.getCurrentPosition) geo.getCurrentPosition = wrap(geo.getCurrentPosition); if (geo.watchPosition) geo.watchPosition = wrap(geo.watchPosition); geo.__k8wrap = 1;
     }
   } catch (e) {}
-  const merge = (state, kind) => { const f = LS.get('k8_perm_' + kind); if (state === 'granted') return 'granted'; if (state === 'denied') return 'denied'; if (f === 'denied') return 'denied'; if (state === 'unknown') return f === 'ok' ? 'granted' : 'prompt'; return state; };
+  const merge = (state, kind) => { const f = LS.get('k8_perm_' + kind); if (state === 'granted') return 'granted'; if (state === 'denied') return 'denied'; if (f === 'denied') return 'denied'; if (state === 'unknown' || state === 'prompt') return f === 'ok' ? 'granted' : 'prompt'; return state; }; // v20.27 · iPhone/iPad รายงาน 'prompt' ใหม่ทุกครั้งที่เปิดแอป แม้เคยอนุญาตแล้ว → เชื่อผลจริงที่เคยเปิดได้
   async function check() {
     const v = document.getElementById('view-prayer'); if (!v || !v.classList.contains('active')) return;
     const [c, g] = await Promise.all([q('camera'), q('geolocation')]); st = { cam: merge(c, 'cam'), geo: merge(g, 'geo') }; paint();
