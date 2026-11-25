@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.20';
+  const APP_VERSION = '20.21';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -15003,6 +15003,8 @@ window.k8PdWho = function (sid) {
   function why(sid, date, slot, status, lat, lng) {
     if (String(date || '').slice(0, 10) < FROM || !SLOT.test(String(slot || '')) || EXC.test(String(status || '').trim()) || friDhuhr(date, slot)) return '';
     if (!girl(stu(sid))) return '';
+    const la = Number(lat), lo = Number(lng);
+    if (isFinite(la) && isFinite(lo) && (la || lo) && zones().some((q) => haram(q) && dist(la, lo, +q.lat, +q.lng) <= +q.radius + 15)) return ''; // v20.21 · อยู่ในรัศมีฮารอมัยน์ = ไม่ผิด
     const z = zoneAt(lat, lng); if (!z || haram(z)) return '';
     return String(z.name || 'นอกมัสยิด');
   }

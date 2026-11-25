@@ -12,7 +12,7 @@ const TARGET_SPREADSHEET_ID = '1s8p3EYESW7z2oiLVyzfFIPXck5eyeGxxU98lkkzw-ss';
 // ตั้งค่าที่: Apps Script > ⚙️ Project Settings > Script Properties > เพิ่ม MASTER_ADMIN_PASS
 // (ดูฟังก์ชัน setupSecurity() ด้านล่างสำหรับขั้นตอนตั้งค่าครั้งแรก)
 const SCHEMA_VERSION = '11.0';
-const CODE_VERSION = '20.20'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
+const CODE_VERSION = '20.21'; // รุ่นของไฟล์ Code.gs · แอปใช้ตรวจว่า Deploy ตัวล่าสุดแล้วหรือยัง
 
 /**
  * ฟังก์ชันสำหรับกด "เรียกใช้ (Run)" ครั้งแรกใน Apps Script เพื่อเปิดสิทธิ์ส่งอีเมลอัตโนมัติ (GmailApp & MailApp)
@@ -3447,9 +3447,12 @@ function wrongPlaceOf_(sid, dateStr, prayerThai, statusThai, lat, lng) {
   const la = Number(lat), lo = Number(lng);
   if (lat === '' || lng === '' || lat == null || lng == null || !isFinite(la) || !isFinite(lo) || (!la && !lo)) return '';
   const zs = geoZones_(); if (!zs.length) return '';
+  const main = zs.filter(function (z) { return z.main; })[0] || zs[0];
+  // v20.21 · อยู่ในรัศมีมัสยิดอัลฮารอมัยน์ (หรือจุดหลัก) = อยู่มัสยิด ไม่ผิด · แม้จะอยู่ในรัศมีหอพักด้วย
+  const isHaram = function (z) { return z === main || /ฮารอมัยน์|ฮะรอมัยน์|ฮารอมัย|haramain/i.test(String(z.name || '')); };
+  if (zs.some(function (z) { return isHaram(z) && geoDist_(la, lo, Number(z.lat), Number(z.lng)) <= Number(z.radius) + 15; })) return '';
   const best = geoPickZone_(la, lo, zs);
   if (!best) return '';
-  const main = zs.filter(function (z) { return z.main; })[0] || zs[0];
   if (/ฮารอมัยน์|ฮะรอมัยน์|ฮารอมัย|haramain/i.test(String(best.z.name || '')) || best.z === main) return '';
   const k = String(sid || '').replace(/\D/g, '').replace(/^0+/, '');
   const st = (getAllStudents().data || []).filter(function (x) { return String(x.studentId || '').replace(/\D/g, '').replace(/^0+/, '') === k; })[0];
@@ -3548,6 +3551,8 @@ function placeRestrictOf_(sid, dateStr, prayerThai, statusThai, lat, lng, locNam
     const best = geoPickZone_(la, lo, geoZones_());
     zone = best ? String(best.z.name || '') : '';
   }
+  // v20.21 · อยู่ในรัศมีของสถานที่ที่อนุญาตแห่งใดแห่งหนึ่ง = ไม่ผิด
+  if (lat !== '' && lng !== '' && lat != null && lng != null && isFinite(la) && isFinite(lo) && (la || lo) && geoZones_().some(function (z) { return ok(z.name) && geoDist_(la, lo, Number(z.lat), Number(z.lng)) <= Number(z.radius) + 15; })) return null;
   if (!zone) zone = String(locName || '').split(' · ')[0].trim();
   if (!zone) return null; // ไม่ทราบสถานที่ = ไม่หัก
   if (ok(zone)) return null;
