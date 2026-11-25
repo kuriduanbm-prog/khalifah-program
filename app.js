@@ -4469,6 +4469,7 @@ async function startPrayerCheckStep1() {
 
   try {
     const loc = await fetchFreshPrayerLocation();
+    try { const gi = document.getElementById('k8GeoIos'); if (gi) gi.remove(); } catch (e) {}
 
     // ซ่อน Overlay กลางกล้อง
     if (centerOverlay) centerOverlay.style.display = 'none';
@@ -4522,7 +4523,7 @@ async function startPrayerCheckStep1() {
 
 // v20.23 · เครื่องไม่มี GPS / หาตำแหน่งไม่ได้ → ส่งคำร้องพร้อมรูปถ่าย ณ จุดละหมาด ให้แอดมินตรวจและอนุมัติ (ไม่นับจนกว่าอนุมัติ)
 function k8GeoNoGps() {
-  const h = document.getElementById('k8GeoHelp'); if (h) h.remove();
+  ['k8GeoHelp', 'k8GeoIos'].forEach((id) => { const h = document.getElementById(id); if (h) h.remove(); });
   try { if (typeof stopCameraStream === 'function') stopCameraStream(); } catch (e) {}
   let slot = ''; try { const r = detectPrayerTimeSlotWithBuffer(prayerBufferMinutes); if (r && r.matched) slot = r.prayerName; } catch (e) {}
   if (!slot) { try { slot = getCurrentPrayerTimeSlot(); } catch (e) {} }
@@ -4561,6 +4562,14 @@ function k8GeoHelp(mode) {
       'ถ้ายังไม่ได้ ให้ใช้โทรศัพท์มือถือเช็คแทน หรือกด <b>"ส่งรูปให้แอดมินตรวจ"</b> ด้านล่าง (ถ่ายรูปที่จุดละหมาด · แอดมินอนุมัติแล้วจึงนับ)'
     ];
     let e0 = document.getElementById('k8GeoHelp'); if (e0) e0.remove();
+    // v20.24 · แสดงเป็นการ์ดในหน้าเช็คละหมาด (ใต้กล้อง) ไม่บังจอ · อ่านไปทำตามไปได้
+    const box = document.getElementById('cameraBox');
+    if (box && box.parentNode) {
+      const old = document.getElementById('k8GeoIos'); if (old) old.remove();
+      box.insertAdjacentHTML('afterend', '<section class="k8-gi" id="k8GeoIos" role="alert" aria-labelledby="k8GiT"><div class="k8-gi-h"><span class="k8-gi-ic" aria-hidden="true">📍</span><div><h3 id="k8GiT">' + (pad ? 'iPad' : 'iPhone') + ' หาตำแหน่งไม่ได้</h3><p>อนุญาตตำแหน่งแล้ว แต่เครื่องยังหาไม่เจอ' + (pad ? ' (iPad รุ่น Wi‑Fi ไม่มี GPS)' : '') + ' · ทำตามขั้นตอนนี้</p></div><button type="button" class="k8-gi-x" aria-label="ปิด" onclick="document.getElementById(\'k8GeoIos\').remove()">✕</button></div><ol>' + st.map((x) => '<li>' + x + '</li>').join('') + '</ol><div class="k8-gi-b"><button type="button" class="k8-gi-retry" onclick="document.getElementById(\'k8GeoIos\').remove();try{startPrayerCheckStep1()}catch(e){}">ลองอีกครั้ง</button><button type="button" class="k8-gi-nogps" onclick="k8GeoNoGps()">📷 ส่งรูปให้แอดมินตรวจ</button></div></section>');
+      const c = document.getElementById('k8GeoIos'); setTimeout(() => { try { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {} }, 60);
+      return;
+    }
     document.body.insertAdjacentHTML('beforeend', '<div class="k8-geo" id="k8GeoHelp" role="dialog" aria-modal="true" aria-labelledby="k8GeoT"><div class="k8-geo-c"><div class="k8-geo-ic" aria-hidden="true">📍</div><h3 id="k8GeoT">' + (pad ? 'iPad' : 'iPhone') + ' หาตำแหน่งไม่ได้</h3><p>อนุญาตตำแหน่งแล้ว แต่เครื่องยังหาตำแหน่งไม่เจอ ' + (pad ? '(พบบ่อยกับ iPad รุ่น Wi‑Fi ที่ไม่มี GPS)' : '') + ' · ทำตามขั้นตอนนี้</p><ol>' + st.map((x) => '<li>' + x + '</li>').join('') + '</ol><div class="k8-geo-b"><button type="button" class="k8-geo-close" onclick="document.getElementById(\'k8GeoHelp\').remove()">ปิด</button><button type="button" class="k8-geo-retry" onclick="document.getElementById(\'k8GeoHelp\').remove();try{startPrayerCheckStep1()}catch(e){}">ลองอีกครั้ง</button></div><button type="button" class="k8-geo-nogps" onclick="k8GeoNoGps()">📷 ส่งรูปให้แอดมินตรวจ (ไม่มีพิกัด)</button></div></div>');
     return;
   }
