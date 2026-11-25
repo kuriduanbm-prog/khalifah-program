@@ -2915,7 +2915,9 @@ function k8BestPosition(onOk, onErr, opts) {
     // ไม่มีพิกัดเลย: ลองค่าที่เครื่องจำไว้ล่าสุด (≤ 2 นาที) ก่อนแจ้งว่าไม่สำเร็จ
     done = true; stop();
     try {
-      navigator.geolocation.getCurrentPosition((p) => onOk(p), (e) => onErr(lastErr && lastErr.code !== 3 ? lastErr : (e && e.code !== 3 ? e : { code: 3, message: 'หาตำแหน่งไม่ทันเวลา' })), { enableHighAccuracy: false, timeout: 4000, maximumAge: 120000 });
+      // v20.23 · iPad รุ่น Wi‑Fi (ไม่มี GPS) หาตำแหน่งจาก Wi‑Fi ช้ากว่า → รอเพิ่ม 12 วินาที และรับพิกัดที่เครื่องจำไว้ได้ถึง 5 นาที
+      const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      navigator.geolocation.getCurrentPosition((p) => onOk(p), (e) => onErr(lastErr && lastErr.code !== 3 ? lastErr : (e && e.code !== 3 ? e : { code: 3, message: 'หาตำแหน่งไม่ทันเวลา' })), { enableHighAccuracy: false, timeout: ios ? 12000 : 4000, maximumAge: ios ? 300000 : 120000 });
     } catch (e) { onErr({ code: 3, message: 'หาตำแหน่งไม่ทันเวลา' }); }
   };
   const inZone = (p) => {
@@ -4518,6 +4520,24 @@ async function startPrayerCheckStep1() {
   }
 }
 
+// v20.23 · เครื่องไม่มี GPS / หาตำแหน่งไม่ได้ → ส่งคำร้องพร้อมรูปถ่าย ณ จุดละหมาด ให้แอดมินตรวจและอนุมัติ (ไม่นับจนกว่าอนุมัติ)
+function k8GeoNoGps() {
+  const h = document.getElementById('k8GeoHelp'); if (h) h.remove();
+  try { if (typeof stopCameraStream === 'function') stopCameraStream(); } catch (e) {}
+  let slot = ''; try { const r = detectPrayerTimeSlotWithBuffer(prayerBufferMinutes); if (r && r.matched) slot = r.prayerName; } catch (e) {}
+  if (!slot) { try { slot = getCurrentPrayerTimeSlot(); } catch (e) {} }
+  const ua = navigator.userAgent || ''; const pad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  try { if (typeof openPrayerLateApprovalModal === 'function') openPrayerLateApprovalModal(slot); } catch (e) {}
+  setTimeout(() => {
+    const inp = document.getElementById('prayerNoteInput');
+    if (inp) { inp.value = (pad ? 'iPad ' : 'เครื่อง') + 'หาตำแหน่ง GPS ไม่ได้ · ละหมาดแล้ว ขอให้แอดมินตรวจจากรูป'; try { inp.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {} }
+    try { updatePrayerNoteChipsUI(); } catch (e) {}
+    const pb = document.getElementById('k8PnPBtns'); if (pb) { pb.classList.add('k8-pn-hl'); setTimeout(() => pb.classList.remove('k8-pn-hl'), 4000); }
+    showToast('ถ่ายรูปตัวเองที่จุดละหมาดแนบไว้ แล้วกด "ส่งคำร้องให้แอดมิน" · แอดมินอนุมัติแล้วจึงนับว่าเช็คแล้ว', 'info');
+  }, 220);
+}
+window.k8GeoNoGps = k8GeoNoGps;
+
 // v18.60 · พิกัดไม่ได้: แยกสาเหตุ (ไม่ได้อนุญาต / GPS ปิด / หาไม่ทัน) และบอกวิธีแก้ทีละขั้นตามเครื่อง
 function k8GeoFail(err) {
   const code = err && err.code;
@@ -4538,10 +4558,10 @@ function k8GeoHelp(mode) {
       'แอป <b>การตั้งค่า</b> → <b>ความเป็นส่วนตัวและความปลอดภัย</b> → <b>บริการหาตำแหน่ง</b> → เปิด',
       'ในหน้าเดียวกัน แตะ <b>Safari Websites</b> → เลือก <b>ขณะใช้งานแอป</b> และเปิด <b>ตำแหน่งที่แม่นยำ</b>',
       'ขยับไปใกล้ประตู/หน้าต่าง หรือที่โล่ง รอประมาณ 10–20 วินาที แล้วกด "ลองอีกครั้ง"',
-      'ถ้ายังไม่ได้ ให้ใช้โทรศัพท์มือถือเช็คแทน หรือแจ้ง "ลืมเช็คชื่อ" ภายใน 24 ชั่วโมง พร้อมแนบรูป'
+      'ถ้ายังไม่ได้ ให้ใช้โทรศัพท์มือถือเช็คแทน หรือกด <b>"ส่งรูปให้แอดมินตรวจ"</b> ด้านล่าง (ถ่ายรูปที่จุดละหมาด · แอดมินอนุมัติแล้วจึงนับ)'
     ];
     let e0 = document.getElementById('k8GeoHelp'); if (e0) e0.remove();
-    document.body.insertAdjacentHTML('beforeend', '<div class="k8-geo" id="k8GeoHelp" role="dialog" aria-modal="true" aria-labelledby="k8GeoT"><div class="k8-geo-c"><div class="k8-geo-ic" aria-hidden="true">📍</div><h3 id="k8GeoT">' + (pad ? 'iPad' : 'iPhone') + ' หาตำแหน่งไม่ได้</h3><p>อนุญาตตำแหน่งแล้ว แต่เครื่องยังหาตำแหน่งไม่เจอ ' + (pad ? '(พบบ่อยกับ iPad รุ่น Wi‑Fi ที่ไม่มี GPS)' : '') + ' · ทำตามขั้นตอนนี้</p><ol>' + st.map((x) => '<li>' + x + '</li>').join('') + '</ol><div class="k8-geo-b"><button type="button" class="k8-geo-close" onclick="document.getElementById(\'k8GeoHelp\').remove()">ปิด</button><button type="button" class="k8-geo-retry" onclick="document.getElementById(\'k8GeoHelp\').remove();try{startPrayerCheckStep1()}catch(e){}">ลองอีกครั้ง</button></div></div></div>');
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-geo" id="k8GeoHelp" role="dialog" aria-modal="true" aria-labelledby="k8GeoT"><div class="k8-geo-c"><div class="k8-geo-ic" aria-hidden="true">📍</div><h3 id="k8GeoT">' + (pad ? 'iPad' : 'iPhone') + ' หาตำแหน่งไม่ได้</h3><p>อนุญาตตำแหน่งแล้ว แต่เครื่องยังหาตำแหน่งไม่เจอ ' + (pad ? '(พบบ่อยกับ iPad รุ่น Wi‑Fi ที่ไม่มี GPS)' : '') + ' · ทำตามขั้นตอนนี้</p><ol>' + st.map((x) => '<li>' + x + '</li>').join('') + '</ol><div class="k8-geo-b"><button type="button" class="k8-geo-close" onclick="document.getElementById(\'k8GeoHelp\').remove()">ปิด</button><button type="button" class="k8-geo-retry" onclick="document.getElementById(\'k8GeoHelp\').remove();try{startPrayerCheckStep1()}catch(e){}">ลองอีกครั้ง</button></div><button type="button" class="k8-geo-nogps" onclick="k8GeoNoGps()">📷 ส่งรูปให้แอดมินตรวจ (ไม่มีพิกัด)</button></div></div>');
     return;
   }
   const app = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
