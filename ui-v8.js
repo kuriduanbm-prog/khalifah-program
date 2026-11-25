@@ -3815,7 +3815,7 @@ window.k8RegBirthChange = function (v) {
 
 /* ============ Round 10 · Remembered login · fast login · live update & sync · install guide ============ */
 (function () {
-  const APP_VERSION = '20.25';
+  const APP_VERSION = '20.26';
   window.K8_APP_VERSION = APP_VERSION;
   const loggedIn = () => !!(window.getSessionToken && getSessionToken()) && !!(window.currentStudent || window.currentAdmin ||
     localStorage.getItem('khalifah_current_student') || localStorage.getItem('khalifah_current_admin'));
@@ -4091,7 +4091,7 @@ window.k8RegBirthChange = function (v) {
       if ((!admin || (me() && me().limited)) && B.tab === 'rules') B.tab = roS ? 'scores' : 'record';
       let html = tabs ? '<div class="k8-bh-tabs" role="tablist">' + tabs.map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (B.tab === k) + '" onclick="k8BhTab(\'' + k + '\')">' + l + '</button>').join('') + '</div>' : '';
       if (admin && !(me() && me().limited) && window.k8BapBanner) html += window.k8BapBanner(); // v19.36
-      if (admin && !(me() && me().limited) && (B.tab === 'history' || B.tab === 'scores')) html += '<div class="k8-mr-bar"><span><b>คืนคะแนนหลายคนในครั้งเดียว</b><small>ตรวจการหักผิดสถานที่ด้วยพิกัดจริง หรือเลือกการหักใดก็ได้หลายรายการ</small></span><button type="button" onclick="k8MrOpen()">คืนคะแนนหลายคน</button></div>'; // v20.20
+      if (admin && !(me() && me().limited)) html += '<div class="k8-mr-bar"><span><b>คืนคะแนนหลายคนในครั้งเดียว</b><small>ตรวจการหักผิดสถานที่ด้วยพิกัดจริง หรือเลือกการหักใดก็ได้หลายรายการ</small></span><button type="button" onclick="k8MrOpen()">↩︎ คืนคะแนนหลายคน</button></div>'; // v20.20 · v20.26 แสดงทุกแท็บ
       if (B.oldBackend && B.loaded) html += '<div class="k8-tt-warn" role="alert"><b>Code.gs ที่ใช้งานอยู่ยังเป็นรุ่นเก่า · รูปหลักฐานเก็บได้แค่ 1 รูป</b><span>แอดมิน: วาง Code.gs ตัวล่าสุด แล้วไปที่ Deploy → Manage deployments → กดไอคอนดินสอของ deployment เดิม → Version: New version → Deploy (ห้ามกด New deployment เพราะจะได้ลิงก์ใหม่ที่แอปไม่ได้ใช้)</span></div>';
       if (!B.loaded && B.loading && !B.fromCache) html += '<div class="k8-bh-card k8-bh-empty">กำลังโหลด…</div>';
       else html += B.tab === 'record' ? recordHtml() : B.tab === 'scores' ? scoresHtml() : B.tab === 'history' ? historyHtml(admin) : rulesHtml();
