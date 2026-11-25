@@ -4522,12 +4522,28 @@ async function startPrayerCheckStep1() {
 function k8GeoFail(err) {
   const code = err && err.code;
   if (code === 1) return k8GeoHelp();
+  // v20.22 · iPad/iPhone หาตำแหน่งไม่ได้ (iPad รุ่น Wi‑Fi ไม่มี GPS · ใช้ Wi‑Fi รอบ ๆ หาตำแหน่ง) → แสดงขั้นตอนแบบ iOS
+  const ua = navigator.userAgent || ''; const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios && (code === 2 || code === 3)) return k8GeoHelp('ios-unavail');
   if (code === 2) return showToast('หาตำแหน่งไม่ได้ · เปิด "ตำแหน่ง/GPS" ในแผงตั้งค่าด่วนของมือถือ แล้วกดตรวจสอบพิกัดอีกครั้ง', 'error');
   if (code === 3) return showToast('หาตำแหน่งไม่ทันเวลา · เปิด Wi‑Fi และ "ตำแหน่งที่แม่นยำ" ในตั้งค่าตำแหน่งของมือถือ หรือขยับออกไปที่โล่ง/ใกล้ประตู แล้วลองใหม่', 'warning');
   showToast('ไม่สามารถดึงพิกัดได้: ' + ((err && err.message) || err) + ' · ลองใหม่อีกครั้ง', 'error');
 }
-function k8GeoHelp() {
+function k8GeoHelp(mode) {
   const ua = navigator.userAgent || ''; const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (mode === 'ios-unavail') {
+    const pad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const st = [
+      'เปิด <b>Wi‑Fi</b> ไว้เสมอ (ไม่ต้องเชื่อมต่อเครือข่ายก็ได้) ' + (pad ? '· iPad รุ่น Wi‑Fi <b>ไม่มี GPS</b> เครื่องจะหาตำแหน่งจากสัญญาณ Wi‑Fi รอบ ๆ ถ้าปิด Wi‑Fi จะหาตำแหน่งไม่ได้' : '') + ' และปิด <b>โหมดเครื่องบิน</b>',
+      'แอป <b>การตั้งค่า</b> → <b>ความเป็นส่วนตัวและความปลอดภัย</b> → <b>บริการหาตำแหน่ง</b> → เปิด',
+      'ในหน้าเดียวกัน แตะ <b>Safari Websites</b> → เลือก <b>ขณะใช้งานแอป</b> และเปิด <b>ตำแหน่งที่แม่นยำ</b>',
+      'ขยับไปใกล้ประตู/หน้าต่าง หรือที่โล่ง รอประมาณ 10–20 วินาที แล้วกด "ลองอีกครั้ง"',
+      'ถ้ายังไม่ได้ ให้ใช้โทรศัพท์มือถือเช็คแทน หรือแจ้ง "ลืมเช็คชื่อ" ภายใน 24 ชั่วโมง พร้อมแนบรูป'
+    ];
+    let e0 = document.getElementById('k8GeoHelp'); if (e0) e0.remove();
+    document.body.insertAdjacentHTML('beforeend', '<div class="k8-geo" id="k8GeoHelp" role="dialog" aria-modal="true" aria-labelledby="k8GeoT"><div class="k8-geo-c"><div class="k8-geo-ic" aria-hidden="true">📍</div><h3 id="k8GeoT">' + (pad ? 'iPad' : 'iPhone') + ' หาตำแหน่งไม่ได้</h3><p>อนุญาตตำแหน่งแล้ว แต่เครื่องยังหาตำแหน่งไม่เจอ ' + (pad ? '(พบบ่อยกับ iPad รุ่น Wi‑Fi ที่ไม่มี GPS)' : '') + ' · ทำตามขั้นตอนนี้</p><ol>' + st.map((x) => '<li>' + x + '</li>').join('') + '</ol><div class="k8-geo-b"><button type="button" class="k8-geo-close" onclick="document.getElementById(\'k8GeoHelp\').remove()">ปิด</button><button type="button" class="k8-geo-retry" onclick="document.getElementById(\'k8GeoHelp\').remove();try{startPrayerCheckStep1()}catch(e){}">ลองอีกครั้ง</button></div></div></div>');
+    return;
+  }
   const app = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
   const samsung = /SamsungBrowser/i.test(ua);
   const steps = ios ? [

@@ -76,9 +76,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KHALIFAH">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20.21">
-  <link rel="stylesheet" href="ui-v8.css?v=20.21">
-  <link rel="stylesheet" href="dark.css?v=20.21">
+  <link rel="stylesheet" href="style.css?v=20.22">
+  <link rel="stylesheet" href="ui-v8.css?v=20.22">
+  <link rel="stylesheet" href="dark.css?v=20.22">
 </head>
 <body class="auth-locked">
   <script>
@@ -5981,7 +5981,7 @@
     // v19.60 · ถ้าสคริปต์โหลดได้แต่ทำงานไม่จบ (error กลางไฟล์) → แจ้งพร้อมข้อความผิดพลาดย่อ ให้ส่งให้แอดมินได้
     (function () {
       var errs = [];
-      window.addEventListener('error', function (e) { try { if (e && e.message) { errs.push(String(e.message).slice(0, 160) + (e.filename ? ' @' + String(e.filename).split('/').pop().split('?')[0] + ':' + e.lineno : '')); localStorage.setItem('khalifah_last_error', JSON.stringify({ at: new Date().toISOString(), v: '20.21', e: errs.slice(-3) })); } } catch (x) {} });
+      window.addEventListener('error', function (e) { try { if (e && e.message) { errs.push(String(e.message).slice(0, 160) + (e.filename ? ' @' + String(e.filename).split('/').pop().split('?')[0] + ':' + e.lineno : '')); localStorage.setItem('khalifah_last_error', JSON.stringify({ at: new Date().toISOString(), v: '20.22', e: errs.slice(-3) })); } } catch (x) {} });
       window.addEventListener('load', function () {
         setTimeout(function () {
           if (window.__k8UiReady || document.getElementById('k8LoadFail')) return;
@@ -5991,9 +5991,9 @@
       });
     })();
   </script>
-  <script defer src="app.js?v=20.21" onerror="k8ScriptFail(this)"></script>
-  <script defer src="ui-v8.js?v=20.21" onerror="k8ScriptFail(this)"></script>
-  <script defer src="ai.js?v=20.21" onerror="k8ScriptFail(this)"></script>
+  <script defer src="app.js?v=20.22" onerror="k8ScriptFail(this)"></script>
+  <script defer src="ui-v8.js?v=20.22" onerror="k8ScriptFail(this)"></script>
+  <script defer src="ai.js?v=20.22" onerror="k8ScriptFail(this)"></script>
 <div class="k8-asum" id="k8Asum" hidden role="dialog" aria-modal="true" aria-labelledby="k8AsumT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="k8AsumClose()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8AsumT">สรุปการมาเรียน</h2><small id="k8AsumS">เลือกวิชา ชั้นปี และช่วงวันที่</small></div><button type="button" class="k8-asum-csv" onclick="k8AsumPng()" aria-label="บันทึกเป็นรูปภาพ"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span class="k8-asum-bt"> รูปภาพ</span></button><button type="button" class="k8-asum-csv" onclick="k8AsumCsv()">⬇ CSV</button></header><div class="k8-asum-b" id="k8AsumB"></div></div></div>
 <div class="k8-asum k8-pf" id="k8Pf" hidden role="dialog" aria-modal="true" aria-labelledby="k8PfT"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8PfT">กิจกรรม &amp; ผลงาน</h2><small id="k8PfS">แฟ้มสะสมผลงาน</small></div></header><div class="k8-asum-b" id="k8PfB"></div></div></div>
 <div class="k8-asum k8-gs2" id="k8Gs2" hidden role="dialog" aria-modal="true" aria-labelledby="k8Gs2T"><div class="k8-asum-in"><header class="k8-asum-h"><button type="button" class="k8-pg-back" aria-label="ปิด" onclick="history.back()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><div><h2 id="k8Gs2T">สรุปเกรด</h2><small id="k8Gs2S"></small></div></header><div class="k8-asum-b" id="k8Gs2B"></div></div></div>
